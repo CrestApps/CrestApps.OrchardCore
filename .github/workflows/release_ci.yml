@@ -46,7 +46,7 @@ jobs:
         dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true -p:Version=${{ steps.get_version.outputs.VERSION }}
     - name: Unit Tests
       run: |
-        dotnet test -c Release --no-build ./Test/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 
     - name: Deploy release NuGet packages
       if: matrix.os == 'ubuntu-latest'
       run: |

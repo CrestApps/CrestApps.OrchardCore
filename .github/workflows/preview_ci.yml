@@ -40,7 +40,7 @@ jobs:
     - name: Unit Tests
       if: steps.check-publish.outputs.should-publish == 'true'
       run: |
-        dotnet test -c Release --no-build ./Test/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 
     - name: Deploy preview NuGet packages
       if: steps.check-publish.outputs.should-publish == 'true'
       run: |
