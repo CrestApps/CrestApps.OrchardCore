@@ -6,16 +6,19 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Authors>Mike Alhayek</Authors>
     <Company>CrestApps</Company>
-    <!-- <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild> -->
-    <!-- <RunAnalyzersDuringLiveAnalysis>False</RunAnalyzersDuringLiveAnalysis> -->
-    <!-- <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally> -->
-    <!-- <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally> -->
     <PackageIcon>CrestAppsLogo.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <Content Include="CrestAppsLogo.png" />
   </ItemGroup>
+
+  <PropertyGroup>
+    <VersionPrefix>2.0.0</VersionPrefix>
+    <VersionSuffix>preview</VersionSuffix>
+    <VersionSuffix Condition="'$(VersionSuffix)' != '' AND '$(BuildNumber)' != ''">$(VersionSuffix)-$(BuildNumber)</VersionSuffix>
+    <InformationalVersion></InformationalVersion>
+  </PropertyGroup>
 
   <PropertyGroup>
     <!-- https://aka.ms/vs-build-acceleration -->
