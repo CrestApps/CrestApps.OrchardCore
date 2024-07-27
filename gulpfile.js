@@ -16,6 +16,7 @@ var fs = require("graceful-fs"),
     concat = require("gulp-concat"),
     header = require("gulp-header"),
     eol = require("gulp-eol"),
+    util = require('gulp-util'),
     postcss = require('gulp-postcss'),
     rtl = require('postcss-rtl'),
     babel = require('gulp-babel');
@@ -77,7 +78,7 @@ gulp.task("watch", function () {
 });
 
 gulp.task('help', function () {
-    console.log(`
+    util.log(`
   Usage: gulp [TASK]
   Tasks:
       build     Incremental build (each asset group is built only if one or more inputs are newer than the output).
@@ -95,7 +96,7 @@ gulp.task('default', gulp.series(['build']));
 */
 
 function getAssetGroups() {
-    var assetManifestPaths = glob.sync("./src/{Modules,Themes}/*/Assets.json", {});
+    var assetManifestPaths = glob.sync("./src/OrchardCore.{Modules,Themes}/*/Assets.json", {});
     var assetGroups = [];
     assetManifestPaths.forEach(function (assetManifestPath) {
         var assetManifest = require("./" + assetManifestPath);
@@ -110,9 +111,6 @@ function getAssetGroups() {
 function resolveAssetGroupPaths(assetGroup, assetManifestPath) {
     assetGroup.manifestPath = assetManifestPath.replace(/\\/g, '/');
     assetGroup.basePath = path.dirname(assetGroup.manifestPath);
-    var inputPaths = assetGroup.inputs.map(function (inputPath) {
-        return path.resolve(path.join(assetGroup.basePath, inputPath)).replace(/\\/g, '/');
-    });
 
     var inputPaths = [];
 
@@ -206,7 +204,8 @@ function buildCssPipeline(assetGroup, doConcat, doRebuild) {
         .pipe(plumber())
         .pipe(gulpif("*.less", less()))
         .pipe(gulpif("*.scss", scss({
-            precision: 10
+            precision: 10,
+
         })))
         .pipe(gulpif(doConcat, concat(assetGroup.outputFileName)))
         .pipe(gulpif(generateRTL, postcss([rtl()])))

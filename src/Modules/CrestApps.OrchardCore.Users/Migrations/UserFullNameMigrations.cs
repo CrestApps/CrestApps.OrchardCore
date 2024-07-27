@@ -4,7 +4,7 @@ using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Users.Migrations;
 
-public class UserFullNameMigrations : DataMigration
+public sealed class UserFullNameMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {

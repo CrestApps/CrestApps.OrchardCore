@@ -46,7 +46,7 @@
 
         typeMenu.addEventListener('change', (menu) => {
 
-            if (menu.target.value == '@(DisplayNameType.Other.ToString())') {
+            if (menu.target.value == '@namof(DisplayNameType.Other)') {
                 templateWrapper.classList.remove('d-none');
             } else {
                 templateWrapper.classList.add('d-none');

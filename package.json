@@ -1,5 +1,5 @@
 {
-  "name": "dealersolutions",
+  "name": "crestapps.orchardcore",
   "private": true,
   "scripts": {
     "build": "gulp build",
@@ -48,6 +48,7 @@
   },
   "dependencies": {
     "@microsoft/signalr": "^8.0.0",
-    "extendable-media-recorder": "^9.1.7"
+    "extendable-media-recorder": "^9.1.7",
+    "gulp-util": "^3.0.8"
   }
 }

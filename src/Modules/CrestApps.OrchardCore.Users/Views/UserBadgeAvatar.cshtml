@@ -5,7 +5,7 @@
 @model ShapeViewModel<UserBadgeContext>
 
 @if (Model.Value.DisplayUser.TryGet<UserAvatarPart>(out var mediaPart) &&
-mediaPart.Avatar?.Paths?.Length > 0)
+    mediaPart.Avatar?.Paths?.Length > 0)
 {
     <div class="user-profile-avatar">
         <img src="@Orchard.AssetUrl(mediaPart.Avatar.Paths[0], width: 75)" class="user-avatar rounded-circle" alt="@Model.Value.DisplayName" />
