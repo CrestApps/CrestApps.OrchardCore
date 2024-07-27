@@ -76,15 +76,3 @@ Lastly, since we added a recipe step to allow you to re-index users. This step w
 ```
 
 The `includeDisabledUsers` parameter within the `indexUsers` step is optional and allows for the indexing of disabled users if desired. Moreover, the `batchSize` parameter provides the ability to adjust the update batch size. The default value is set at 250 and can be increased to 1000 if necessary.
-
- # Release Notes
-
- ### v1.9
-
- Release date: 11/9/2023
- Due to performance improvements in OrchardCore, this version requires OrchardCore version `1.8.0-preview-17757` and up
-
- ### v1.8
-
- Release date: 2023
- These features are available for projects that use OrchardCore version `1.7.0-preview-17618` and up.

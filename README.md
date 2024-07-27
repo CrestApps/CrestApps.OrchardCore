@@ -26,12 +26,12 @@ To get started with CrestApps, follow these steps:
 
 1. **Clone the Repository**:
     ```sh
-    git clone https://github.com/your-repository/crestapps-orchardcore.git
+    git clone https://github.com/CrestApps/CrestApps.OrchardCore.git
     ```
 
 2. **Navigate to the Project Directory**:
     ```sh
-    cd crestapps-orchardcore
+    cd CrestApps.OrchardCore
     ```
 
 3. **Build the Solution**:
