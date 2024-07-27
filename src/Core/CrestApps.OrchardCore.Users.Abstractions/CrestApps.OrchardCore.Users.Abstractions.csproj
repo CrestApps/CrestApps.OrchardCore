@@ -2,9 +2,14 @@
 
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Description>Provides the abstractions for the CrestApps's Components</Description>
-    <Version>1.10.0-preview-0004</Version>
     <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace("Abstractions", ""))</RootNamespace>
+    <Title>CrestApps OrchardCore Users Abstractions</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Abstractions Users module.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Users Abstractions</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
