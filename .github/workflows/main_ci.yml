@@ -36,4 +36,4 @@ jobs:
         dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true /p:NuGetAudit=false
     - name: Unit Tests
       run: |
-        dotnet test -c Release --no-build ./Test/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 
