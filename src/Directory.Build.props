@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <Content Include="CrestAppsLogo.png" />
+    <None Include="CrestAppsLogo.png" Pack="true" PackagePath=""/>
   </ItemGroup>
 
   <PropertyGroup>
