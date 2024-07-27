@@ -1,0 +1,21 @@
+@media (min-width: 768px) and (max-width: 1199px) {
+    .user-profile-display-name {
+        display: none;
+    }
+}
+
+.user-profile-avatar {
+    display: inline-block;
+}
+
+.badge .user-profile-avatar img {
+    height: 1.1rem !important;
+    width: 1.1rem !important;
+    margin-top: -7px !important;
+    margin-bottom: -3px !important;
+}
+
+.nav-item .user-profile-avatar img {
+    height: 1.5rem !important;
+    width: 1.5rem !important;
+}

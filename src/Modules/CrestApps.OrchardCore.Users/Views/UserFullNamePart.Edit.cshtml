@@ -1,0 +1,40 @@
+@using CrestApps.OrchardCore.Users.Core.ViewModels
+@using CrestApps.OrchardCore.Users.Models
+
+@model UserFullNamePartViewModel
+
+@if (Model.Settings.DisplayName != DisplayNamePropertyType.None)
+{
+    <div class="mb-3">
+        <label asp-for="DisplayName">@T["Display Name"]</label>
+        <input asp-for="DisplayName" class="form-control" />
+        <span asp-validation-for="DisplayName" class="text-danger"></span>
+    </div>
+}
+
+@if (Model.Settings.FirstName != DisplayNamePropertyType.None)
+{
+    <div class="mb-3">
+        <label asp-for="FirstName">@T["First Name"]</label>
+        <input asp-for="FirstName" class="form-control" />
+        <span asp-validation-for="FirstName" class="text-danger"></span>
+    </div>
+}
+
+@if (Model.Settings.MiddleName != DisplayNamePropertyType.None)
+{
+    <div class="mb-3">
+        <label asp-for="MiddleName">@T["Middle Name"]</label>
+        <input asp-for="MiddleName" class="form-control" />
+        <span asp-validation-for="MiddleName" class="text-danger"></span>
+    </div>
+}
+
+@if (Model.Settings.LastName != DisplayNamePropertyType.None)
+{
+    <div class="mb-3">
+        <label asp-for="LastName">@T["Last Name"]</label>
+        <input asp-for="LastName" class="form-control" />
+        <span asp-validation-for="LastName" class="text-danger"></span>
+    </div>
+}

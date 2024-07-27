@@ -1,0 +1,84 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34728.123
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules", "Modules", "{C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{03CAC866-6125-4A34-B0F6-834A20F7C06B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ProjectItems", "ProjectItems", "{E94D7009-1D71-46B8-A78F-88DA48F4FCB6}"
+	ProjectSection(SolutionItems) = preProject
+		.dockerignore = .dockerignore
+		src\Directory.Build.props = src\Directory.Build.props
+		src\Directory.Packages.props = src\Directory.Packages.props
+		Dockerfile = Dockerfile
+		Dockerfile-CI = Dockerfile-CI
+		gulpfile.js = gulpfile.js
+		NuGet.Config = NuGet.Config
+		package.json = package.json
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrestApps.OrchardCore.Users.Abstractions", "src\Core\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj", "{E1F7836C-A540-4633-9B85-372D10E009E5}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrestApps.OrchardCore.Users.Core", "src\Core\CrestApps.OrchardCore.Users.Core\CrestApps.OrchardCore.Users.Core.csproj", "{35268C3A-B5D3-4F40-BEF3-2920545352B4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrestApps.Support", "src\Common\CrestApps.Support\CrestApps.Support.csproj", "{C6DA117A-A2D0-4638-B04B-A6A2A22074F0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Startup", "Startup", "{447572DA-8B6F-49E6-84C9-28FFF3B71CF5}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrestApps.OrchardCore.Abstractions", "src\Core\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj", "{F3E8029C-4DA5-4E82-A3DC-D9F5ADE81851}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Users", "src\Modules\CrestApps.OrchardCore.Users\CrestApps.OrchardCore.Users.csproj", "{BDAA2694-DDA5-44FE-A7CB-3B9BBE85FD1D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrestApps.OrchardCore.Cms.Web", "src\Web\CrestApps.OrchardCore.Cms.Web\CrestApps.OrchardCore.Cms.Web.csproj", "{BFB6CCB8-350B-47F1-ACFE-6001B3A626F1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E1F7836C-A540-4633-9B85-372D10E009E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1F7836C-A540-4633-9B85-372D10E009E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1F7836C-A540-4633-9B85-372D10E009E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1F7836C-A540-4633-9B85-372D10E009E5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35268C3A-B5D3-4F40-BEF3-2920545352B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35268C3A-B5D3-4F40-BEF3-2920545352B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35268C3A-B5D3-4F40-BEF3-2920545352B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35268C3A-B5D3-4F40-BEF3-2920545352B4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C6DA117A-A2D0-4638-B04B-A6A2A22074F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C6DA117A-A2D0-4638-B04B-A6A2A22074F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C6DA117A-A2D0-4638-B04B-A6A2A22074F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C6DA117A-A2D0-4638-B04B-A6A2A22074F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3E8029C-4DA5-4E82-A3DC-D9F5ADE81851}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3E8029C-4DA5-4E82-A3DC-D9F5ADE81851}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3E8029C-4DA5-4E82-A3DC-D9F5ADE81851}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3E8029C-4DA5-4E82-A3DC-D9F5ADE81851}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BDAA2694-DDA5-44FE-A7CB-3B9BBE85FD1D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BDAA2694-DDA5-44FE-A7CB-3B9BBE85FD1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BDAA2694-DDA5-44FE-A7CB-3B9BBE85FD1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BDAA2694-DDA5-44FE-A7CB-3B9BBE85FD1D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BFB6CCB8-350B-47F1-ACFE-6001B3A626F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BFB6CCB8-350B-47F1-ACFE-6001B3A626F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BFB6CCB8-350B-47F1-ACFE-6001B3A626F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BFB6CCB8-350B-47F1-ACFE-6001B3A626F1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E1F7836C-A540-4633-9B85-372D10E009E5} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
+		{35268C3A-B5D3-4F40-BEF3-2920545352B4} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
+		{C6DA117A-A2D0-4638-B04B-A6A2A22074F0} = {03CAC866-6125-4A34-B0F6-834A20F7C06B}
+		{F3E8029C-4DA5-4E82-A3DC-D9F5ADE81851} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
+		{BDAA2694-DDA5-44FE-A7CB-3B9BBE85FD1D} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{BFB6CCB8-350B-47F1-ACFE-6001B3A626F1} = {447572DA-8B6F-49E6-84C9-28FFF3B71CF5}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0E9F9B00-7078-4EA8-87A9-0B2E74375F1E}
+	EndGlobalSection
+EndGlobal

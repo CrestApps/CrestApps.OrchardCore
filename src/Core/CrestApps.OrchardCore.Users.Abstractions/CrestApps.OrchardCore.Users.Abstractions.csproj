@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Description>Provides the abstractions for the CrestApps's Components</Description>
+    <Version>1.10.0-preview-0004</Version>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace("Abstractions", ""))</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+    <PackageReference Include="OrchardCore.Users.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\CrestApps.Support\CrestApps.Support.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Users
+@using CrestApps.OrchardCore.Users.Core.ViewModels
+
+@model UserFullNamePartViewModel
+
+@inject IDisplayNameProvider DisplayNameProvider
+
+<h5 class="float-start ps-2 pe-2">
+    <span class="hint dashed">@await DisplayNameProvider.GetAsync(Model.User)</span>
+</h5>

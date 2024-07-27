@@ -1,0 +1,58 @@
+@using CrestApps.OrchardCore.Users.Core.ViewModels
+@using CrestApps.OrchardCore.Users.Models
+
+@model EditDisplayNameSettingPartViewModel
+
+<div class="mb-3">
+    <label asp-for="Type">@T["Display Name Format"]</label>
+    <select asp-for="Type" class="form-select" asp-items="Model.Types"></select>
+    <span asp-validation-for="Type" class="text-danger"></span>
+</div>
+
+<div class="mb-3" id="TemplateWrapper">
+    <label asp-for="Template">@T["Liquid format"]</label>
+    <input type="text" asp-for="Template" class="form-control" />
+    <span asp-validation-for="Template" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="DisplayName">@T["Display Name"]</label>
+    <select asp-for="DisplayName" class="form-select" asp-items="Model.PropertyTypes"></select>
+    <span asp-validation-for="DisplayName" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="FirstName">@T["First Name"]</label>
+    <select asp-for="FirstName" class="form-select" asp-items="Model.PropertyTypes"></select>
+    <span asp-validation-for="FirstName" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="MiddleName">@T["Middle Name"]</label>
+    <select asp-for="MiddleName" class="form-select" asp-items="Model.PropertyTypes"></select>
+    <span asp-validation-for="MiddleName" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="LastName">@T["Last Name"]</label>
+    <select asp-for="LastName" class="form-select" asp-items="Model.PropertyTypes"></select>
+    <span asp-validation-for="LastName" class="text-danger"></span>
+</div>
+
+<script asp-name="display-name-settings" at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+        let typeMenu = document.getElementById('@Html.IdFor(x => x.Type)');
+        let templateWrapper = document.getElementById('TemplateWrapper');
+
+        typeMenu.addEventListener('change', (menu) => {
+
+            if (menu.target.value == '@(DisplayNameType.Other.ToString())') {
+                templateWrapper.classList.remove('d-none');
+            } else {
+                templateWrapper.classList.add('d-none');
+            }
+        });
+
+        typeMenu.dispatchEvent(new Event('change'));
+    });
+</script>

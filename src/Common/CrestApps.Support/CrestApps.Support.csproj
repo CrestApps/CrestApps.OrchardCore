@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
+    <Version>1.2.2</Version>
+    <PackageIconUrl />
+    <Authors>Mike Alhayek</Authors>
+    <Company>CrestApps</Company>
+    <Description>Provide common c# helpers for things like string, numbers, types, enums, datetimes and others.</Description>
+  </PropertyGroup>
+
+</Project>

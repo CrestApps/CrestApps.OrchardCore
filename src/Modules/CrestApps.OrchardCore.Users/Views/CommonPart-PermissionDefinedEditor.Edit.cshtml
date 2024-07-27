@@ -1,0 +1,40 @@
+@using CrestApps.OrchardCore.Users
+@using CrestApps.OrchardCore.Users.Core
+@using OrchardCore
+@using OrchardCore.Contents.ViewModels
+@using OrchardCore.ContentManagement
+@using OrchardCore.Users.Indexes
+@using OrchardCore.Users.Models
+@using YesSql
+@using CrestApps.Support
+@using OrchardCore.Users
+
+@model OwnerEditorViewModel
+
+@inject ISession Session
+@inject IUserCacheService UserCacheService
+@inject Microsoft.AspNetCore.Identity.ILookupNormalizer Normalizer
+@inject IDisplayNameProvider DisplayNameProvider
+
+@{
+    var normalizedUserName = Normalizer.NormalizeName(Model.OwnerName);
+    var users = await Session.Query<User, UserIndex>(q => q.IsEnabled || q.NormalizedUserName == normalizedUserName).ListAsync();
+    var items = new List<SelectListItem>();
+
+    foreach (var user in users)
+    {
+        await UserCacheService.SetAsync(user);
+
+        var displayName = await DisplayNameProvider.GetAsync(user);
+
+        items.Add(new SelectListItem(displayName, user.UserName));
+    }
+}
+
+<div class="@Orchard.GetWrapperClasses("field-wrapper")">
+    <label asp-for="OwnerName" class="@Orchard.GetLabelClasses()">@T["Owner Name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="OwnerName" class="form-control" asp-items="items"></select>
+        <span class="hint">@T["The name of the owner of the content item."]</span>
+    </div>
+</div>

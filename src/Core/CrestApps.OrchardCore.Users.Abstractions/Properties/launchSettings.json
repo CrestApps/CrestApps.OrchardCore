@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "CrestApps.Components.Abstractions": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:61835;http://localhost:61836"
+    }
+  }
+}
