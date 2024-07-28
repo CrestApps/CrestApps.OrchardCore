@@ -31,7 +31,7 @@ jobs:
         dotnet-version: '8.0.x'
     - name: Set build number
       if: steps.check-publish.outputs.should-publish == 'true'
-      run: echo "BuildNumber=$(( $GITHUB_RUN_NUMBER + 16368 ))" >> $GITHUB_ENV
+      run: echo "BuildNumber=$(( $GITHUB_RUN_NUMBER ))" >> $GITHUB_ENV
     - name: Build
       if: steps.check-publish.outputs.should-publish == 'true'
       # See pr_ci.yml for the reason why we disable NuGet audit warnings.

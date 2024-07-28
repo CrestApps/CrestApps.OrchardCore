@@ -8,6 +8,8 @@
     <Company>CrestApps</Company>
     <PackageIcon>CrestAppsLogo.png</PackageIcon>
     <IsPackable>true</IsPackable>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/CrestApps/CrestApps.OrchardCore</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
