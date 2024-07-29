@@ -1,2 +1,0 @@
-# CrestApps - OrchardCore Users Abstractions
-
