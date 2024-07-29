@@ -2,8 +2,13 @@
 
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Description>Provides the Core services for CrestApps' components</Description>
-    <Version>1.10.0-preview-0004</Version>
+    <Title>CrestApps OrchardCore Users Core</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Core Users module.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Users Core</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

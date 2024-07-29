@@ -2,6 +2,13 @@
 
   <PropertyGroup>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore Users</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Users module.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Users</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
