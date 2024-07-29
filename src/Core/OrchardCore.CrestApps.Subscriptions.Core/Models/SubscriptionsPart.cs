@@ -38,6 +38,11 @@ public class SubscriptionsPart : ContentPart
     ///  Number of days to delay the start of the subscription.
     /// </summary>
     public int? SubscriptionDayDelay { get; set; }
+
+    /// <summary>
+    /// The position the subscription should be sorted by.
+    /// </summary>
+    public int? Sort { get; set; }
 }
 
 public enum BillingDurationType
