@@ -45,4 +45,4 @@ jobs:
       if: steps.check-publish.outputs.should-publish == 'true'
       run: |
         dotnet pack -c Release --no-build
-        dotnet nuget push './src/**/*.nupkg' -t 600 -k ${{secrets.CLOUDSMITH_API_KEY}} -n -s https://nuget.cloudsmith.io/orchardcore/preview/v3/index.json --skip-duplicate
+        dotnet nuget push './src/**/*.nupkg' -t 600 -k ${{secrets.CLOUDSMITH_API_KEY}} -n -s https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json --skip-duplicate

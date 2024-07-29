@@ -2,12 +2,13 @@
 
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
-    <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
-    <Version>1.2.2</Version>
-    <PackageIconUrl />
-    <Authors>Mike Alhayek</Authors>
-    <Company>CrestApps</Company>
-    <Description>Provide common c# helpers for things like string, numbers, types, enums, datetimes and others.</Description>
+    <Title>CrestApps Support</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Provide common c# helpers for things like string, numbers, types, enums, datetimes and others.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps Support</PackageTags>
   </PropertyGroup>
 
 </Project>
