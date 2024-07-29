@@ -1,0 +1,32 @@
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.CrestApps.Subscriptions.Core.Models
+
+@model ShapeViewModel<SubscriptionsPart>
+
+@{
+    var type = Model.Value.DurationType switch
+    {
+        BillingDurationType.Day => T["Day"],
+        BillingDurationType.Week => T["Week"],
+        BillingDurationType.Month => T["Month"],
+        BillingDurationType.Year => T["Year"],
+        _ => throw new InvalidOperationException("Duration type is not supported."),
+    };
+}
+
+<div class="row">
+    @if (Model.Value.InitialAmount.HasValue)
+    {
+        <div class="col-6">@T["Initial Amount"]</div>
+        <div class="col-6">@Model.Value.InitialAmount.Value.ToString("C")</div>
+    }
+
+    <div class="col-6">@T["Billing Amount"]</div>
+    <div class="col-6">@Model.Value.BillingAmount.ToString("C") @T[" per {0} {1}", Model.Value.BillingDuration, type]</div>
+
+    @if (Model.Value.BillingCycleLimit.HasValue)
+    {
+        <div class="col-6">@T["Total payments"]</div>
+        <div class="col-6">@Model.Value.BillingCycleLimit.Value</div>
+    }
+</div>

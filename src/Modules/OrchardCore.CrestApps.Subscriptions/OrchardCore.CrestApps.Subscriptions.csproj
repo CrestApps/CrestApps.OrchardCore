@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\OrchardCore.CrestApps.Subscriptions.Core\OrchardCore.CrestApps.Subscriptions.Core.csproj" />
   </ItemGroup>
 

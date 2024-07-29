@@ -1,0 +1,34 @@
+@using OrchardCore.ContentManagement
+@using OrchardCore.Mvc.Utilities
+@{
+    var contentItem = Model.ContentItem as ContentItem;
+
+    var contentTypeClassName = contentItem?.ContentType?.HtmlClassify() ?? string.Empty;
+}
+
+<div class="card text-bg-light mb-3 content content-@contentTypeClassName">
+
+    @if (Model.Header?.Items != null && Model.Header.Items.Count > 0)
+    {
+        <div class="card-header bg-transparent border-success">
+            @await DisplayAsync(Model.Header)
+            @if (Model.Meta != null)
+            {
+                <div class="metadata">
+                    @await DisplayAsync(Model.Meta)
+                </div>
+            }
+        </div>
+    }
+    <div class="card-body text-success">
+        @await DisplayAsync(Model.Content)
+    </div>
+
+    @if (Model.Footer?.Items != null && Model.Footer.Items.Count > 0)
+    {
+        <div class="card-footer">
+            @await DisplayAsync(Model.Footer)
+
+        </div>
+    }
+</div>

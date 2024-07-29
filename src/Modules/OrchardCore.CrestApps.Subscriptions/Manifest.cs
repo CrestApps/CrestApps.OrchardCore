@@ -1,10 +1,15 @@
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
-    Name = "OrchardCore.CrestApps.Subscriptions",
-    Author = "The Orchard Core Team",
-    Website = "https://orchardcore.net",
-    Version = "0.0.1",
-    Description = "OrchardCore.CrestApps.Subscriptions",
-    Category = "Content Management"
+    Name = "Subscriptions",
+    Author = CrestAppsManifestConstants.Author,
+    Website = CrestAppsManifestConstants.Website,
+    Version = CrestAppsManifestConstants.Version
+)]
+
+[assembly: Feature(
+    Name = "Subscriptions",
+    Id = "OrchardCore.CrestApps.Subscriptions",
+    Description = "Provides a way to process and manage subscriptions.",
+    Category = "Subscriptions"
 )]

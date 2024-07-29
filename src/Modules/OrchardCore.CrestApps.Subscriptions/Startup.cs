@@ -1,22 +1,20 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.CrestApps.Subscriptions.Core.Models;
+using OrchardCore.CrestApps.Subscriptions.Drivers;
+using OrchardCore.CrestApps.Subscriptions.Migrations;
+using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
 
 namespace OrchardCore.CrestApps.Subscriptions;
-public class Startup : StartupBase
+
+public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-    }
-
-    public override void Configure(IApplicationBuilder builder, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes.MapAreaControllerRoute(
-            name: "Home",
-            areaName: "OrchardCore.CrestApps.Subscriptions",
-            pattern: "Home/Index",
-            defaults: new { controller = "Home", action = "Index" }
-        );
+        services.AddDataMigration<SubscriptionsPartMigrations>()
+            .AddContentPart<SubscriptionsPart>()
+            .UseDisplayDriver<SubscriptionsPartDisplayDriver>();
     }
 }
