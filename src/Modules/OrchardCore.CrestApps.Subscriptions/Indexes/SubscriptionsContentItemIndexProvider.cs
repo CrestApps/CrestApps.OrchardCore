@@ -1,29 +1,32 @@
-﻿using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.CrestApps.Subscriptions.Core.Models;
+using OrchardCore.Data;
+using OrchardCore.Modules;
 using YesSql.Indexes;
 
 namespace OrchardCore.CrestApps.Subscriptions.Core.Indexes;
 
-public sealed class SubscriptionsContentItemIndexProvider : IndexProvider<ContentItem>
+public sealed class SubscriptionsContentItemIndexProvider : IndexProvider<ContentItem>, IScopedIndexProvider
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IClock _clock;
 
-    public SubscriptionsContentItemIndexProvider(IContentDefinitionManager contentDefinitionManager)
+    public SubscriptionsContentItemIndexProvider(
+        IContentDefinitionManager contentDefinitionManager,
+        IClock clock)
     {
         _contentDefinitionManager = contentDefinitionManager;
+        _clock = clock;
     }
 
     public override void Describe(DescribeContext<ContentItem> context)
     {
         context.For<SubscriptionsContentItemIndex>()
-            .When(x => x.Published)
             .Map(async contentItem =>
             {
-                var part = contentItem.As<SubscriptionsPart>();
-
-                if (part == null)
+                if (!contentItem.TryGet<SubscriptionsPart>(out var part))
                 {
                     return null;
                 }
@@ -35,13 +38,19 @@ public sealed class SubscriptionsContentItemIndexProvider : IndexProvider<Conten
                     return null;
                 }
 
+                var createdUtc = contentItem.CreatedUtc ?? _clock.UtcNow;
+
                 return new SubscriptionsContentItemIndex()
                 {
                     ContentItemId = contentItem.ContentItemId,
+                    ContentItemVersionId = contentItem.ContentItemVersionId,
                     ContentType = contentItem.ContentType,
-                    Sort = part.Sort ?? 0,
+                    Order = part.Sort ?? 0,
+                    CreatedUtc = createdUtc,
+                    ModifiedUtc = contentItem.ModifiedUtc ?? createdUtc,
+                    Published = contentItem.Published,
+                    Latest = contentItem.Latest,
                 };
             });
-            .
     }
 }

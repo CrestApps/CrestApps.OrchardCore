@@ -1,0 +1,5 @@
+@using OrchardCore.CrestApps.Subscriptions.Core.Models
+
+@model ShapeViewModel<SubscriptionsPart>
+
+<a asp-route="SubscriptionsSignup" asp-route-id="@Model.Value.ContentItem.ContentItemId" class="btn btn-primary">@T["Sign up"]</a>

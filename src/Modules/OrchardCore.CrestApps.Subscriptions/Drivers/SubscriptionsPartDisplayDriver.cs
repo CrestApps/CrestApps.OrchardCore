@@ -21,9 +21,14 @@ public sealed class SubscriptionsPartDisplayDriver : ContentPartDisplayDriver<Su
 
     public override IDisplayResult Display(SubscriptionsPart part, BuildPartDisplayContext context)
     {
-        return View(GetDisplayShapeType(context), part)
+        return Combine(
+            View(GetDisplayShapeType(context), part)
             .Location("Summary", "Content")
-            .Location("Detail", "Content");
+            .Location("Detail", "Content"),
+
+            View("SubscriptionsSignup", part)
+            .Location("Summary", "Footer")
+        );
     }
 
     public override Task<IDisplayResult> EditAsync(SubscriptionsPart part, BuildPartEditorContext context)
