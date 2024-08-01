@@ -1,0 +1,31 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionFlowNavigation
+
+@{
+    var name = Html.NameFor(x => x.Direction);
+}
+
+<div class="d-flex justify-content-between flex-row-reverse">
+
+    @if (!string.IsNullOrEmpty(Model.NextStep))
+    {
+        <button type="submit" class="btn btn-success" name="@name" value="Next">@T["Next"]</button>
+    }
+    else
+    {
+        <button type="submit" class="btn btn-success" name="@name" value="Next">@T["Finish"]</button>
+    }
+
+    <div></div>
+
+    @if (!string.IsNullOrEmpty(Model.PreviousStep))
+    {
+        <button type="submit" class="btn btn-info" name="@name" value="Previous">@T["Previous"]</button>
+    }
+    else
+    {
+        <div></div>
+    }
+
+</div>

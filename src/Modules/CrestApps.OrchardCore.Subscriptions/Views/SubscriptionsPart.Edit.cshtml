@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionPartViewModel
+
+<div class="mb-3">
+    <label asp-for="InitialAmount" class="form-label">@T["Initial Amount"]</label>
+    <input type="number" min="0" step="0.01" asp-for="InitialAmount" class="form-control" />
+    <span asp-validation-for="InitialAmount" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="BillingAmount" class="form-label">@T["Billing Amount"]</label>
+    <input type="number" min="0" step="0.01" asp-for="BillingAmount" class="form-control" />
+    <span asp-validation-for="BillingAmount" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="BillingDuration" class="form-label">@T["Billing Duration"]</label>
+    <input type="number" min="1" step="1" asp-for="BillingDuration" class="form-control" />
+    <span asp-validation-for="BillingDuration" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="DurationType" class="form-label">@T["Duration Type"]</label>
+    <select asp-for="DurationType" asp-items="Model.DurationTypes" class="form-select"></select>
+    <span asp-validation-for="DurationType" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="BillingCycleLimit" class="form-label">@T["Billing Cycle Limit"]</label>
+    <input type="number" min="0" step="1" asp-for="BillingCycleLimit" class="form-control" />
+    <span asp-validation-for="BillingCycleLimit" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="SubscriptionDayDelay" class="form-label">@T["Subscription Day Delay"]</label>
+    <input type="number" min="0" step="1" asp-for="SubscriptionDayDelay" class="form-control" />
+    <span asp-validation-for="SubscriptionDayDelay" class="text-danger"></span>
+</div>

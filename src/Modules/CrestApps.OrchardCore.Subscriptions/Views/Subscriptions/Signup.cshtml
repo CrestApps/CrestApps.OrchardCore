@@ -1,0 +1,38 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@using OrchardCore.DisplayManagement
+
+@model SubscriptionViewModel
+
+@if (Model.Content.Properties.TryGetValue("Steps", out var stepsObj) && stepsObj is IShape steps)
+{
+    <div class="container mt-3 mb-5">
+        <div class="d-flex justify-content-around">
+            @await DisplayAsync(steps)
+        </div>
+    </div>
+}
+<div class="card">
+    <form asp-route="SubscriptionsSignup" asp-route-sessionId="@Model.SessionId">
+
+        @if (Model.Content.Properties.TryGetValue("Header", out var headerObj) && headerObj is IShape header)
+        {
+            <div class="card-header">
+                @await DisplayAsync(header)
+            </div>
+        }
+
+        @if (Model.Content.Properties.TryGetValue("Content", out var contentObj) && contentObj is IShape content)
+        {
+            <div class="card-body">
+                @await DisplayAsync(content)
+            </div>
+        }
+        @if (Model.Content.Properties.TryGetValue("Footer", out var footerObj) && footerObj is IShape footer)
+        {
+            <div class="card-Footer">
+                @await DisplayAsync(footer)
+            </div>
+        }
+
+    </form>
+</div>

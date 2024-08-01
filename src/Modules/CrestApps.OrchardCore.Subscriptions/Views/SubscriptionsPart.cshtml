@@ -1,0 +1,32 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+@using Microsoft.AspNetCore.Mvc.Localization
+
+@model ShapeViewModel<SubscriptionsPart>
+
+@{
+    var amount = Model.Value.DurationType switch
+    {
+        BillingDurationType.Day => T.Plural(Model.Value.BillingDuration, "{0} per day", "{0} per {1} days", Model.Value.BillingAmount.ToString("C"), Model.Value.BillingDuration),
+        BillingDurationType.Week => T.Plural(Model.Value.BillingDuration, "{0} per week", "{0} per {1} weeks", Model.Value.BillingAmount.ToString("C"), Model.Value.BillingDuration),
+        BillingDurationType.Month => T.Plural(Model.Value.BillingDuration, "{0} per month", "{0} per {1} months", Model.Value.BillingAmount.ToString("C"), Model.Value.BillingDuration),
+        BillingDurationType.Year => T.Plural(Model.Value.BillingDuration, "{0} per year", "{0} per {1} years", Model.Value.BillingAmount.ToString("C"), Model.Value.BillingDuration),
+        _ => throw new InvalidOperationException("Duration type is not supported."),
+    };
+}
+
+<div class="row">
+    @if (Model.Value.InitialAmount.HasValue)
+    {
+        <div class="col-6">@T["Initial Amount"]</div>
+        <div class="col-6">@Model.Value.InitialAmount.Value.ToString("C")</div>
+    }
+
+    <div class="col-6">@T["Billing Amount"]</div>
+    <div class="col-6">@amount</div>
+
+    @if (Model.Value.BillingCycleLimit.HasValue)
+    {
+        <div class="col-6">@T["Total payments"]</div>
+        <div class="col-6">@Model.Value.BillingCycleLimit.Value</div>
+    }
+</div>

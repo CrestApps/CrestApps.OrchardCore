@@ -1,0 +1,297 @@
+using System.Security.Claims;
+using CrestApps.OrchardCore.Subscriptions.Core;
+using CrestApps.OrchardCore.Subscriptions.Core.Extensions;
+using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.ViewModels;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OrchardCore;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using YesSql;
+using YesSql.Services;
+
+namespace CrestApps.OrchardCore.Subscriptions.Controllers;
+
+public sealed class SubscriptionsController : Controller
+{
+    private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IContentItemDisplayManager _contentItemDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly IDisplayManager<SubscriptionFlow> _subscriptionFlowDisplayManager;
+    private readonly IEnumerable<ISubscriptionHandler> _subscriptionHandlers;
+    private readonly ILogger<SubscriptionsController> _logger;
+    private readonly IClientIPAddressAccessor _clientIPAddressAccessor;
+    private readonly IClock _clock;
+    private readonly ISession _session;
+
+    public SubscriptionsController(
+        IContentDefinitionManager contentDefinitionManager,
+        IContentItemDisplayManager contentItemDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
+        IDisplayManager<SubscriptionFlow> subscriptionFlowDisplayManager,
+        IEnumerable<ISubscriptionHandler> subscriptionHandlers,
+        ILogger<SubscriptionsController> logger,
+        IClientIPAddressAccessor clientIPAddressAccessor,
+        IClock clock,
+        ISession session)
+    {
+        _contentDefinitionManager = contentDefinitionManager;
+        _contentItemDisplayManager = contentItemDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
+        _subscriptionFlowDisplayManager = subscriptionFlowDisplayManager;
+        _subscriptionHandlers = subscriptionHandlers;
+        _logger = logger;
+        _clientIPAddressAccessor = clientIPAddressAccessor;
+        _clock = clock;
+        _session = session;
+    }
+
+    public async Task<IActionResult> Index(
+        string contentType,
+        PagerParameters pagerParameters,
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory)
+    {
+        var contentTypes = new List<string>();
+
+        if (!string.IsNullOrEmpty(contentType))
+        {
+            var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentType);
+
+            if (definition == null || !definition.StereotypeEquals(SubscriptionsConstants.Stereotype))
+            {
+                return NotFound();
+            }
+
+            contentTypes.Add(definition.Name);
+        }
+
+        if (contentTypes.Count == 0)
+        {
+            contentTypes.AddRange((await _contentDefinitionManager.GetSubscriptionsTypeDefinitionsAsync()).Select(x => x.Name));
+        }
+
+        if (contentTypes.Count == 0)
+        {
+            return NotFound();
+        }
+
+        var query = _session.Query<ContentItem, SubscriptionsContentItemIndex>(item => item.Published && item.ContentType.IsIn(contentTypes))
+            .OrderBy(index => index.Order)
+            .ThenByDescending(index => index.CreatedUtc);
+
+        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+
+        var total = await query.CountAsync();
+
+        var pagerShape = await shapeFactory.PagerAsync(pager, total);
+
+        var startIndex = (pager.Page - 1) * pager.PageSize;
+
+        var contentItems = await query.Skip(startIndex).Take(pager.PageSize).ListAsync();
+
+        var model = new ListSubscriptionsViewModel()
+        {
+            Pager = pagerShape,
+            Subscriptions = []
+        };
+
+        foreach (var contentItem in contentItems)
+        {
+            var shape = await _contentItemDisplayManager.BuildDisplayAsync(contentItem, _updateModelAccessor.ModelUpdater, "Summary");
+
+            model.Subscriptions.Add(shape);
+        }
+
+        return View(model);
+    }
+
+    /// <summary>
+    /// Generate a new signup session for the given subscription id.
+    /// </summary>
+    /// <param name="contentItemId">The content item that represent the subscription.</param>
+    public async Task<IActionResult> Signup(string contentItemId)
+    {
+        var contentItem = await _session.Query<ContentItem, SubscriptionsContentItemIndex>(index => index.Published && index.ContentItemId == contentItemId)
+            .FirstOrDefaultAsync();
+
+        if (contentItem == null)
+        {
+            return NotFound();
+        }
+
+        SubscriptionSession subscriptionSession = null;
+
+        if (User.Identity.IsAuthenticated)
+        {
+            var ownerId = CurrentUserId();
+            var status = nameof(SubscriptionSessionStatus.Pending);
+            var modifiedUtc = _clock.UtcNow.AddDays(-1);
+
+            subscriptionSession = await _session.Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.ContentItemVersionId == contentItem.ContentItemVersionId && x.OwnerId == ownerId && x.Status == status && x.ModifiedUtc > modifiedUtc)
+                .OrderByDescending(x => x.ModifiedUtc)
+                .FirstOrDefaultAsync();
+        }
+
+        if (subscriptionSession == null)
+        {
+            var now = _clock.UtcNow;
+
+            subscriptionSession = new SubscriptionSession()
+            {
+                SessionId = IdGenerator.GenerateId(),
+                ContentItemId = contentItem.ContentItemId,
+                ContentItemVersionId = contentItem.ContentItemVersionId,
+                CreatedUtc = now,
+                ModifiedUtc = now,
+                Status = SubscriptionSessionStatus.Pending,
+            };
+
+            if (User.Identity.IsAuthenticated)
+            {
+                subscriptionSession.OwnerId = CurrentUserId();
+            }
+            else
+            {
+                subscriptionSession.IPAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
+                subscriptionSession.AgentInfo = Request.Headers.UserAgent;
+            }
+        }
+
+        var flow = new SubscriptionFlow(subscriptionSession, contentItem);
+
+        var initializationContext = new SubscriptionFlowInitializationContext(flow);
+        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.InitializingAsync(context), initializationContext, _logger);
+
+        // Current step must be set after 'InitializingAsync' is called and before the editor is built.
+        subscriptionSession.CurrentStep = flow.GetFirstStep()?.Key;
+
+        var model = await _subscriptionFlowDisplayManager.BuildEditorAsync(flow, _updateModelAccessor.ModelUpdater, true);
+
+        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.InitializedAsync(context), initializationContext, _logger);
+
+        await _session.SaveAsync(subscriptionSession);
+
+        return View(new SubscriptionViewModel
+        {
+            SessionId = subscriptionSession.SessionId,
+            Content = model,
+        });
+    }
+
+    [HttpPost]
+    [ActionName(nameof(Signup))]
+    public async Task<IActionResult> SignupPOST(string sessionId)
+    {
+
+        SubscriptionSession subscriptionSession = null;
+        var status = nameof(SubscriptionSessionStatus.Pending);
+        var query = _session.Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.SessionId == sessionId && x.Status == status);
+
+        if (User.Identity.IsAuthenticated)
+        {
+            var ownerId = CurrentUserId();
+
+            subscriptionSession = await query.Where(x => x.OwnerId == ownerId).FirstOrDefaultAsync();
+        }
+        else
+        {
+            subscriptionSession = await query.FirstOrDefaultAsync();
+
+            // Don't trust the user, check for other info
+            var ipAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
+
+            if (string.IsNullOrWhiteSpace(subscriptionSession?.IPAddress) ||
+                subscriptionSession.IPAddress != ipAddress ||
+                string.IsNullOrWhiteSpace(subscriptionSession?.AgentInfo) ||
+                subscriptionSession.AgentInfo != Request.Headers.UserAgent)
+            {
+                // IMPORTANT: the saved session possibly belongs to someone else.
+                // Do not use it.
+                subscriptionSession = null;
+            }
+        }
+
+        if (subscriptionSession == null)
+        {
+            return NotFound();
+        }
+
+        var contentItem = await _session.Query<ContentItem, SubscriptionsContentItemIndex>(index => index.ContentItemVersionId == subscriptionSession.ContentItemVersionId)
+            .FirstOrDefaultAsync();
+
+        if (contentItem == null)
+        {
+            return NotFound();
+        }
+
+        var flow = new SubscriptionFlow(subscriptionSession, contentItem);
+
+        var initializationContext = new SubscriptionFlowInitializationContext(flow);
+        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.InitializingAsync(context), initializationContext, _logger);
+
+        // Current step must be set after 'InitializingAsync' is called and before the editor is built.
+        subscriptionSession.CurrentStep = flow.GetFirstStep()?.Key;
+
+        var model = await _subscriptionFlowDisplayManager.UpdateEditorAsync(flow, _updateModelAccessor.ModelUpdater, true);
+
+        if (_updateModelAccessor.ModelUpdater.ModelState.IsValid)
+        {
+            var now = _clock.UtcNow;
+
+            subscriptionSession.ModifiedUtc = now;
+
+            var nextStep = flow.GetNextStep();
+
+            if (nextStep != null)
+            {
+                subscriptionSession.CurrentStep = nextStep.Key;
+                await _session.SaveAsync(subscriptionSession);
+            }
+            else
+            {
+                subscriptionSession.Status = SubscriptionSessionStatus.Completed;
+                subscriptionSession.CompletedUtc = now;
+
+                var completedContext = new SubscriptionFlowCompletedContext(flow);
+
+                await _subscriptionHandlers.InvokeAsync((handler, context) => handler.CompletedAsync(context), completedContext, _logger);
+
+                try
+                {
+                    // TODO: process payment here.
+                    // Show success notification.
+                    // Redirect the user to thank you page!
+                    await _session.SaveAsync(subscriptionSession);
+                    await _session.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unable to completed a subscription");
+                    // TODO: rollback payment here.
+                    // Show error notification.
+                }
+            }
+        }
+
+        return View(new SubscriptionViewModel
+        {
+            SessionId = subscriptionSession.SessionId,
+            Content = model,
+        });
+    }
+
+    private string _currentUserId;
+
+    private string CurrentUserId()
+        => _currentUserId ??= User.FindFirstValue(ClaimTypes.NameIdentifier);
+}

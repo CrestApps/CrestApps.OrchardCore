@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+
+@model SubscriptionPartSettings
+
+<div class="mb-3" asp-validation-class-for="ContentTypes">
+    <label asp-for="ContentTypes" class="form-label">@T["Content Types"]</label>
+    <span class="hint dashed">@T["Optionally, select content items to create during the subscription process."]</span>
+
+    @await Component.InvokeAsync("SelectContentTypes", new
+        {
+            selectedContentTypes = Model.ContentTypes,
+            htmlName = Html.NameFor(m => m.ContentTypes),
+        })
+
+    <span asp-validation-for="ContentTypes" class="text-danger"></span>
+</div>

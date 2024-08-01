@@ -28,8 +28,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Subscriptions\CrestApps.OrchardCore.Subscriptions.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Users\CrestApps.OrchardCore.Users.csproj" />
-    <ProjectReference Include="..\..\Modules\OrchardCore.CrestApps.Subscriptions\OrchardCore.CrestApps.Subscriptions.csproj" />
   </ItemGroup>
 
 </Project>

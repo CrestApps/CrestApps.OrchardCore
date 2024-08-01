@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+
+@model ShapeViewModel<SubscriptionFlow>
+
+@foreach (var step in Model.Value.GetSortedSteps())
+{
+    <div>
+        <div class="text-bg-light border border-light-subtle rounded-circle p-4" title="@step.Description">
+            @step.Title
+        </div>
+    </div>
+}

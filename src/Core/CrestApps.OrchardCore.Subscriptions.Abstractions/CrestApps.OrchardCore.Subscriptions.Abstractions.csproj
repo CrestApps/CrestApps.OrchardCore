@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace("Abstractions",""))</RootNamespace>
+    <Title>CrestApps OrchardCore Subscriptions Abstractions</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Abstractions project for subscriptions services.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Subscriptions Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Remove="CrestAppsLogo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+  </ItemGroup>
+
+</Project>
