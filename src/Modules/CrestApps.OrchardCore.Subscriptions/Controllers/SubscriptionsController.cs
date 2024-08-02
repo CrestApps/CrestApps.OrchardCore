@@ -121,10 +121,10 @@ public sealed class SubscriptionsController : Controller
     /// <param name="contentItemId">The content item that represent the subscription.</param>
     public async Task<IActionResult> Signup(string contentItemId)
     {
-        var contentItem = await _session.Query<ContentItem, SubscriptionsContentItemIndex>(index => index.Published && index.ContentItemId == contentItemId)
-            .FirstOrDefaultAsync();
+        var subscriptionContentItem = await _session.Query<ContentItem, SubscriptionsContentItemIndex>(index => index.Published && index.ContentItemId == contentItemId)
+        .FirstOrDefaultAsync();
 
-        if (contentItem == null)
+        if (subscriptionContentItem == null)
         {
             return NotFound();
         }
@@ -137,7 +137,7 @@ public sealed class SubscriptionsController : Controller
             var status = nameof(SubscriptionSessionStatus.Pending);
             var modifiedUtc = _clock.UtcNow.AddDays(-1);
 
-            subscriptionSession = await _session.Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.ContentItemVersionId == contentItem.ContentItemVersionId && x.OwnerId == ownerId && x.Status == status && x.ModifiedUtc > modifiedUtc)
+            subscriptionSession = await _session.Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.ContentItemVersionId == subscriptionContentItem.ContentItemVersionId && x.OwnerId == ownerId && x.Status == status && x.ModifiedUtc > modifiedUtc)
                 .OrderByDescending(x => x.ModifiedUtc)
                 .FirstOrDefaultAsync();
         }
@@ -149,8 +149,8 @@ public sealed class SubscriptionsController : Controller
             subscriptionSession = new SubscriptionSession()
             {
                 SessionId = IdGenerator.GenerateId(),
-                ContentItemId = contentItem.ContentItemId,
-                ContentItemVersionId = contentItem.ContentItemVersionId,
+                ContentItemId = subscriptionContentItem.ContentItemId,
+                ContentItemVersionId = subscriptionContentItem.ContentItemVersionId,
                 CreatedUtc = now,
                 ModifiedUtc = now,
                 Status = SubscriptionSessionStatus.Pending,
@@ -165,19 +165,18 @@ public sealed class SubscriptionsController : Controller
                 subscriptionSession.IPAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
                 subscriptionSession.AgentInfo = Request.Headers.UserAgent;
             }
+
+            var initializationContext = new SubscriptionFlowInitializingContext(subscriptionSession, subscriptionContentItem);
+            await _subscriptionHandlers.InvokeAsync((handler, context) => handler.InitializingAsync(context), initializationContext, _logger);
         }
 
-        var flow = new SubscriptionFlow(subscriptionSession, contentItem);
-
-        var initializationContext = new SubscriptionFlowInitializationContext(flow);
-        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.InitializingAsync(context), initializationContext, _logger);
-
-        // Current step must be set after 'InitializingAsync' is called and before the editor is built.
-        subscriptionSession.CurrentStep = flow.GetFirstStep()?.Key;
+        var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
+        subscriptionSession.CurrentStep ??= flow.GetFirstStep()?.Key;
 
         var model = await _subscriptionFlowDisplayManager.BuildEditorAsync(flow, _updateModelAccessor.ModelUpdater, true);
 
-        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.InitializedAsync(context), initializationContext, _logger);
+        var loadedContext = new SubscriptionFlowLoadedContext(flow);
+        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.LoadedAsync(context), loadedContext, _logger);
 
         await _session.SaveAsync(subscriptionSession);
 
@@ -192,55 +191,21 @@ public sealed class SubscriptionsController : Controller
     [ActionName(nameof(Signup))]
     public async Task<IActionResult> SignupPOST(string sessionId)
     {
-
-        SubscriptionSession subscriptionSession = null;
-        var status = nameof(SubscriptionSessionStatus.Pending);
-        var query = _session.Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.SessionId == sessionId && x.Status == status);
-
-        if (User.Identity.IsAuthenticated)
-        {
-            var ownerId = CurrentUserId();
-
-            subscriptionSession = await query.Where(x => x.OwnerId == ownerId).FirstOrDefaultAsync();
-        }
-        else
-        {
-            subscriptionSession = await query.FirstOrDefaultAsync();
-
-            // Don't trust the user, check for other info
-            var ipAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
-
-            if (string.IsNullOrWhiteSpace(subscriptionSession?.IPAddress) ||
-                subscriptionSession.IPAddress != ipAddress ||
-                string.IsNullOrWhiteSpace(subscriptionSession?.AgentInfo) ||
-                subscriptionSession.AgentInfo != Request.Headers.UserAgent)
-            {
-                // IMPORTANT: the saved session possibly belongs to someone else.
-                // Do not use it.
-                subscriptionSession = null;
-            }
-        }
+        var subscriptionSession = await GetSessionAsync(sessionId, nameof(SubscriptionSessionStatus.Pending));
 
         if (subscriptionSession == null)
         {
             return NotFound();
         }
 
-        var contentItem = await _session.Query<ContentItem, SubscriptionsContentItemIndex>(index => index.ContentItemVersionId == subscriptionSession.ContentItemVersionId)
-            .FirstOrDefaultAsync();
+        var subscriptionContentItem = await GetSubscriptionVersion(subscriptionSession.ContentItemVersionId);
 
-        if (contentItem == null)
+        if (subscriptionContentItem == null)
         {
             return NotFound();
         }
 
-        var flow = new SubscriptionFlow(subscriptionSession, contentItem);
-
-        var initializationContext = new SubscriptionFlowInitializationContext(flow);
-        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.InitializingAsync(context), initializationContext, _logger);
-
-        // Current step must be set after 'InitializingAsync' is called and before the editor is built.
-        subscriptionSession.CurrentStep = flow.GetFirstStep()?.Key;
+        var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
 
         var model = await _subscriptionFlowDisplayManager.UpdateEditorAsync(flow, _updateModelAccessor.ModelUpdater, true);
 
@@ -273,6 +238,11 @@ public sealed class SubscriptionsController : Controller
                     // Redirect the user to thank you page!
                     await _session.SaveAsync(subscriptionSession);
                     await _session.SaveChangesAsync();
+
+                    return RedirectToAction(nameof(Confirmation), new
+                    {
+                        sessionId,
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -290,8 +260,66 @@ public sealed class SubscriptionsController : Controller
         });
     }
 
-    private string _currentUserId;
+    public async Task<IActionResult> Confirmation(string sessionId)
+    {
+        var subscriptionSession = await GetSessionAsync(sessionId, nameof(SubscriptionSessionStatus.Completed));
+
+        if (subscriptionSession == null)
+        {
+            return NotFound();
+        }
+
+        var subscriptionContentItem = await GetSubscriptionVersion(subscriptionSession.ContentItemVersionId);
+
+        if (subscriptionContentItem == null)
+        {
+            return NotFound();
+        }
+
+        var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
+
+        var confirmation = await _subscriptionFlowDisplayManager.BuildDisplayAsync(flow, _updateModelAccessor.ModelUpdater, "Confirmation");
+
+        return View(confirmation);
+    }
+
+    private async Task<ContentItem> GetSubscriptionVersion(string versionContentItemId)
+        => await _session.Query<ContentItem, SubscriptionsContentItemIndex>(index => index.ContentItemVersionId == versionContentItemId)
+        .FirstOrDefaultAsync();
+
+    private async Task<SubscriptionSession> GetSessionAsync(string sessionId, string status)
+    {
+        SubscriptionSession subscriptionSession = null;
+
+        var query = _session.Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.SessionId == sessionId && x.Status == status);
+
+        if (User.Identity.IsAuthenticated)
+        {
+            var ownerId = CurrentUserId();
+
+            subscriptionSession = await query.Where(x => x.OwnerId == ownerId).FirstOrDefaultAsync();
+        }
+        else
+        {
+            subscriptionSession = await query.FirstOrDefaultAsync();
+
+            // Don't trust the user, check for additional info.
+            var ipAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
+
+            if (string.IsNullOrWhiteSpace(subscriptionSession?.IPAddress) ||
+                subscriptionSession.IPAddress != ipAddress ||
+                string.IsNullOrWhiteSpace(subscriptionSession?.AgentInfo) ||
+                subscriptionSession.AgentInfo != Request.Headers.UserAgent)
+            {
+                // IMPORTANT: the saved session possibly belongs to someone else.
+                // Do not use it.
+                subscriptionSession = null;
+            }
+        }
+
+        return subscriptionSession;
+    }
 
     private string CurrentUserId()
-        => _currentUserId ??= User.FindFirstValue(ClaimTypes.NameIdentifier);
+        => User.FindFirstValue(ClaimTypes.NameIdentifier);
 }

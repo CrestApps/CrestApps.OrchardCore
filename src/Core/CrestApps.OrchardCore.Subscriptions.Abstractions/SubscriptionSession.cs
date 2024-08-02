@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Subscriptions;
@@ -20,11 +21,13 @@ public sealed class SubscriptionSession : Entity
 
     public DateTime ModifiedUtc { get; set; }
 
-    public DateTime CompletedUtc { get; set; }
+    public DateTime? CompletedUtc { get; set; }
 
     public string OwnerId { get; set; }
 
-    public Dictionary<string, object> SavedSteps { get; set; } = [];
+    public Dictionary<string, object> SavedSteps { get; init; } = [];
+
+    public IList<SubscriptionFlowStep> Steps { get; init; } = [];
 
     public string CurrentStep { get; set; }
 

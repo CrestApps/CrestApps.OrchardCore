@@ -1,0 +1,31 @@
+@if (Model.Steps != null)
+{
+    <div class="container mt-3 mb-5">
+        <div class="d-flex justify-content-around">
+            @await DisplayAsync(Model.Steps)
+        </div>
+    </div>
+}
+
+<div class="card">
+    @if (Model.Header != null)
+    {
+        <div class="card-header">
+            @await DisplayAsync(Model.Header)
+        </div>
+    }
+
+    @if (Model.Content != null)
+    {
+        <div class="card-body">
+            @await DisplayAsync(Model.Content)
+        </div>
+    }
+
+    @if (Model.Footer != null)
+    {
+        <div class="card-Footer">
+            @await DisplayAsync(Model.Footer)
+        </div>
+    }
+</div>

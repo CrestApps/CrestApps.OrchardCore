@@ -5,17 +5,26 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
-public class SubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFlow>
+public sealed class SubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFlow>
 {
+    public override Task<IDisplayResult> DisplayAsync(SubscriptionFlow model, BuildDisplayContext context)
+    {
+        return Task.FromResult<IDisplayResult>(
+            Combine(
+                View("SubscriptionFlowSteps", model).Location("Steps").OnGroup(context.GroupId),
+
+                View("SubscriptionConfirmation", model).Location("Confirmation", "Content")
+            )
+        );
+    }
+
     public override Task<IDisplayResult> EditAsync(SubscriptionFlow model, BuildEditorContext context)
     {
         return Task.FromResult<IDisplayResult>(
             Combine(
-                View("SubscriptionFlowSteps", model)
-                .Location("Steps"),
+                View("SubscriptionFlowSteps", model).Location("Steps"),
 
-                View("SubscriptionDetails", model)
-                .Location("Content:before"),
+                View("SubscriptionDetails", model).Location("Content:before"),
 
                 Initialize<SubscriptionFlowNavigation>("SubscriptionFlowButtons", vm =>
                 {
@@ -23,8 +32,7 @@ public class SubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFlow>
                     vm.PreviousStep = model.GetPreviousStep()?.Key;
                     vm.CurrentStep = model.GetCurrentStep()?.Key;
                     vm.NextStep = model.GetNextStep()?.Key;
-                })
-                .Location("Content:after")
+                }).Location("Content:after")
             )
         );
     }

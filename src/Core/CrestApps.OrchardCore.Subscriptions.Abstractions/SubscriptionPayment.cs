@@ -1,8 +1,6 @@
-using OrchardCore.ContentManagement;
+namespace CrestApps.OrchardCore.Subscriptions;
 
-namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
-
-public sealed class SubscriptionsPart : ContentPart
+public sealed class SubscriptionPayment
 {
     /// <summary>
     /// Initial Payment amount to apply.
@@ -38,9 +36,4 @@ public sealed class SubscriptionsPart : ContentPart
     ///  Number of days to delay the start of the subscription.
     /// </summary>
     public int? SubscriptionDayDelay { get; set; }
-
-    /// <summary>
-    /// The position the subscription should be sorted by.
-    /// </summary>
-    public int? Sort { get; set; }
 }

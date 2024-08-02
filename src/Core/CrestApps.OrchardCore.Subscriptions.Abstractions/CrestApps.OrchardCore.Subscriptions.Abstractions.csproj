@@ -20,4 +20,8 @@
     <PackageReference Include="OrchardCore.DisplayManagement" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\CrestApps.Support\CrestApps.Support.csproj" />
+  </ItemGroup>
+
 </Project>

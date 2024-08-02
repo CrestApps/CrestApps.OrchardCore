@@ -6,32 +6,28 @@ using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
-public class ContentSubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFlow>
+public sealed class ContentSubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFlow>
 {
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ISiteService _siteService;
     private readonly IServiceProvider _serviceProvider;
-    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     public ContentSubscriptionFlowDisplayDriver(
         IContentItemDisplayManager contentItemDisplayManager,
         IHttpContextAccessor httpContextAccessor,
         ISiteService siteService,
-        IServiceProvider serviceProvider,
-        IUpdateModelAccessor updateModelAccessor)
+        IServiceProvider serviceProvider)
     {
         _contentItemDisplayManager = contentItemDisplayManager;
         _httpContextAccessor = httpContextAccessor;
         _siteService = siteService;
         _serviceProvider = serviceProvider;
-        _updateModelAccessor = updateModelAccessor;
     }
 
     public override Task<IDisplayResult> EditAsync(SubscriptionFlow flow, BuildEditorContext context)
@@ -46,13 +42,14 @@ public class ContentSubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFl
             return Task.FromResult<IDisplayResult>(null);
         }
 
-        var contentManager = _serviceProvider.GetRequiredService<IContentManager>();
-
         return Task.FromResult<IDisplayResult>(
             Factory("SubscriptionFlowContentItem", async (shapeBuildContext) =>
             {
-                var contentItem = await contentManager.NewAsync(contentType.ToString());
-                return await _contentItemDisplayManager.BuildEditorAsync(contentItem, context.Updater, true, string.Empty, flow.Session.CurrentStep);
+                flow.Session.SavedSteps.TryGetValue(step.Key, out var contentItemObj);
+
+                var contentItem = (contentItemObj as ContentItem) ?? await GetContentManager().NewAsync(contentType.ToString());
+
+                return await _contentItemDisplayManager.BuildEditorAsync(contentItem, context.Updater, true, groupId: string.Empty, htmlFieldPrefix: step.Key);
             }).Location("Content")
          );
     }
@@ -69,17 +66,22 @@ public class ContentSubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFl
             return null;
         }
 
-        var contentManager = _serviceProvider.GetRequiredService<IContentManager>();
-        var contentItem = await contentManager.NewAsync(contentType.ToString());
+        var contentItem = await GetContentManager().NewAsync(contentType.ToString());
 
         // If there is no logged in user, we'll fallback to the super user as an owner for this content.
         contentItem.Owner = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? (await _siteService.GetSiteSettingsAsync()).SuperUser;
 
-        await _contentItemDisplayManager.UpdateEditorAsync(contentItem, _updateModelAccessor.ModelUpdater, true, step.Key);
+        await _contentItemDisplayManager.UpdateEditorAsync(contentItem, context.Updater, true, groupId: string.Empty, htmlFieldPrefix: step.Key);
 
         flow.Session.SavedSteps[step.Key] = contentItem;
 
         return await EditAsync(flow, context);
+    }
+
+    private IContentManager GetContentManager()
+    {
+        // Lazily load content manager to avoid a possible circular references.
+        return _serviceProvider.GetRequiredService<IContentManager>();
     }
 }

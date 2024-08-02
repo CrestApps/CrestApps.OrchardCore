@@ -18,5 +18,5 @@ public class SubscriptionSessionIndex : MapIndex
 
     public DateTime ModifiedUtc { get; set; }
 
-    public DateTime CompletedUtc { get; set; }
+    public DateTime? CompletedUtc { get; set; }
 }

@@ -32,9 +32,14 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
         S = stringLocalizer;
     }
 
-    public override async Task InitializingAsync(SubscriptionFlowInitializationContext context)
+    public override async Task InitializingAsync(SubscriptionFlowInitializingContext context)
     {
-        var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(context.Flow.ContentItem.ContentType);
+        if (!context.SubscriptionContentItem.TryGet<SubscriptionsPart>(out var subscriptionPart))
+        {
+            return;
+        }
+
+        var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(context.SubscriptionContentItem.ContentType);
 
         var partDefinition = typeDefinition?.Parts?.FirstOrDefault(x => x.Name == nameof(SubscriptionsPart));
 
@@ -61,21 +66,29 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
                 continue;
             }
 
-            // Insert the steps using an increment of 10 for each step,
-            // to allow other handler to inject steps in between if needed.
-            var order = (i + 1) * 10;
-
             var step = new SubscriptionFlowStep()
             {
                 Title = definition.DisplayName,
                 Description = S["Create a new {0}.", definition.DisplayName],
                 Key = $"{ContentPrefix}{contentType}",
-                Order = order,
+                Payment = new SubscriptionPayment()
+                {
+                    InitialAmount = subscriptionPart.InitialAmount,
+                    BillingAmount = subscriptionPart.BillingAmount,
+                    SubscriptionDayDelay = subscriptionPart.SubscriptionDayDelay,
+                    BillingDuration = subscriptionPart.BillingDuration,
+                    DurationType = subscriptionPart.DurationType,
+                    BillingCycleLimit = subscriptionPart.BillingCycleLimit,
+                },
+
+                // Insert the steps using an increment of 10 for each step,
+                // to allow other handler to inject steps in between if needed.
+                Order = (i + 1) * 10,
             };
 
             step.Data.TryAdd("ContentType", contentType);
 
-            context.Flow.Steps.Add(step);
+            context.Session.Steps.Add(step);
         }
     }
 

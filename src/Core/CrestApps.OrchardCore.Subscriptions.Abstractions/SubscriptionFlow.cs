@@ -1,6 +1,4 @@
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.Text.Json.Serialization;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
@@ -11,19 +9,13 @@ public sealed class SubscriptionFlow
 
     public SubscriptionSession Session { get; }
 
-    [JsonIgnore]
     public ContentItem ContentItem { get; }
-
-    [JsonIgnore]
-    public ObservableCollection<SubscriptionFlowStep> Steps { get; }
 
     public SubscriptionFlow(SubscriptionSession session, ContentItem contentItem)
     {
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(contentItem);
 
-        Steps = [];
-        Steps.CollectionChanged += StepsChanged;
         Session = session;
         ContentItem = contentItem;
     }
@@ -37,11 +29,15 @@ public sealed class SubscriptionFlow
 
     public SubscriptionFlowStep[] GetSortedSteps()
     {
-        _sortedSteps ??= Steps.OrderBy(step => step.Order)
-            .ThenBy(step => Steps.IndexOf(step))
-            .ToArray();
+        if (_sortedSteps == null && Session.Steps != null && Session.Steps.Count > 0)
+        {
+            _sortedSteps = Session.Steps
+                .OrderBy(step => step.Order)
+                .ThenBy(Session.Steps.IndexOf)
+                .ToArray();
+        }
 
-        return _sortedSteps;
+        return _sortedSteps ?? [];
     }
 
     public SubscriptionFlowStep GetCurrentStep()
@@ -115,21 +111,4 @@ public sealed class SubscriptionFlow
 
         return null;
     }
-}
-
-public sealed class SubscriptionFlowStep
-{
-    public string Title { get; set; }
-
-    public string Description { get; set; }
-
-    /// <summary>
-    /// Each step must have a unique identifier.
-    /// </summary>
-    public string Key { get; set; }
-
-    public int Order { get; set; }
-
-    public Dictionary<string, object> Data { get; } = [];
-
 }
