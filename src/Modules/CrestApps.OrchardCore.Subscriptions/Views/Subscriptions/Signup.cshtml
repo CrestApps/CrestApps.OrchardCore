@@ -3,7 +3,8 @@
 
 @model SubscriptionViewModel
 
-<form asp-route="SubscriptionsSignup" asp-route-sessionId="@Model.SessionId">
+<form method="post" asp-action="Signup" asp-controller="Subscriptions" asp-route-sessionId="@Model.SessionId">
+    <input type="hidden" name="step" value="@Model.Step" />
+
     @await DisplayAsync(Model.Content)
 </form>
-

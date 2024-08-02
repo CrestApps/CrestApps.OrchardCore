@@ -32,15 +32,17 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<SubscriptionsContentItemIndexMigrations>()
             .AddScopedIndexProvider<SubscriptionsContentItemIndexProvider>();
 
-        services.AddScoped<ISubscriptionHandler, ContentSubscriptionHandler>();
-
         services.AddDataMigration<SubscriptionSessionIndexMigrations>()
             .AddIndexProvider<SubscriptionSessionIndexProvider>();
 
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, SubscriptionFlowDisplayDriver>();
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, ContentSubscriptionFlowDisplayDriver>();
+        services.AddScoped<IDisplayDriver<SubscriptionFlow>, PaymentSubscriptionFlowDisplayDriver>();
 
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, SubscriptionPartSettingsDisplayDriver>();
+
+        services.AddScoped<ISubscriptionHandler, ContentSubscriptionHandler>();
+        services.AddScoped<ISubscriptionHandler, PaymentSubscriptionHandler>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -57,6 +59,20 @@ public sealed class Startup : StartupBase
             areaName: SubscriptionsConstants.Features.ModuleId,
             pattern: "Subscription/{contentItemId}/Signup",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Signup) }
+        );
+
+        routes.MapAreaControllerRoute(
+            name: "SubscriptionsSignupConfirmation",
+            areaName: SubscriptionsConstants.Features.ModuleId,
+            pattern: "Subscription/{sessionId}/Signup/Confirmation",
+            defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Confirmation) }
+        );
+
+        routes.MapAreaControllerRoute(
+            name: "SubscriptionsSignupStep",
+            areaName: SubscriptionsConstants.Features.ModuleId,
+            pattern: "Subscription/{sessionId}/Signup/Step/{step?}",
+            defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.ViewSession) }
         );
     }
 }

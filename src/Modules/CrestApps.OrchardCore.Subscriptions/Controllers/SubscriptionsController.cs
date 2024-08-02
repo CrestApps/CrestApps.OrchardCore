@@ -183,13 +183,14 @@ public sealed class SubscriptionsController : Controller
         return View(new SubscriptionViewModel
         {
             SessionId = subscriptionSession.SessionId,
+            Step = subscriptionSession.CurrentStep,
             Content = model,
         });
     }
 
     [HttpPost]
     [ActionName(nameof(Signup))]
-    public async Task<IActionResult> SignupPOST(string sessionId)
+    public async Task<IActionResult> SignupPOST(string sessionId, string step, string direction)
     {
         var subscriptionSession = await GetSessionAsync(sessionId, nameof(SubscriptionSessionStatus.Pending));
 
@@ -205,7 +206,26 @@ public sealed class SubscriptionsController : Controller
             return NotFound();
         }
 
+        var isGoingBack = string.Equals(direction, "Previous", StringComparison.OrdinalIgnoreCase);
+
+        // If the user requests a specific step,
+        // make sure it is a completed step before rendering it.
+        if (!isGoingBack && !string.IsNullOrEmpty(step) && subscriptionSession.SavedSteps.ContainsKey(step))
+        {
+            subscriptionSession.CurrentStep = step;
+        }
+
         var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
+
+        if (isGoingBack)
+        {
+            var previousStep = flow.GetPreviousStep();
+
+            if (previousStep != null)
+            {
+                flow.SetCurrentStep(previousStep.Key);
+            }
+        }
 
         var model = await _subscriptionFlowDisplayManager.UpdateEditorAsync(flow, _updateModelAccessor.ModelUpdater, true);
 
@@ -219,8 +239,15 @@ public sealed class SubscriptionsController : Controller
 
             if (nextStep != null)
             {
-                subscriptionSession.CurrentStep = nextStep.Key;
+                flow.SetCurrentStep(nextStep.Key);
+
                 await _session.SaveAsync(subscriptionSession);
+
+                return RedirectToAction(nameof(ViewSession), new
+                {
+                    sessionId,
+                    step = nextStep.Key,
+                });
             }
             else
             {
@@ -256,6 +283,42 @@ public sealed class SubscriptionsController : Controller
         return View(new SubscriptionViewModel
         {
             SessionId = subscriptionSession.SessionId,
+            Step = flow.GetCurrentStep()?.Key,
+            Content = model,
+        });
+    }
+
+    public async Task<IActionResult> ViewSession(string sessionId, string step)
+    {
+        var subscriptionSession = await GetSessionAsync(sessionId, nameof(SubscriptionSessionStatus.Pending));
+
+        if (subscriptionSession == null)
+        {
+            return NotFound();
+        }
+
+        var subscriptionContentItem = await GetSubscriptionVersion(subscriptionSession.ContentItemVersionId);
+
+        if (subscriptionContentItem == null)
+        {
+            return NotFound();
+        }
+
+        // If the user requests a specific step,
+        // make sure it is a completed step before rendering it.
+        if (!string.IsNullOrEmpty(step) && subscriptionSession.SavedSteps.ContainsKey(step))
+        {
+            subscriptionSession.CurrentStep = step;
+        }
+
+        var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
+
+        var model = await _subscriptionFlowDisplayManager.BuildEditorAsync(flow, _updateModelAccessor.ModelUpdater, false);
+
+        return View(nameof(Signup), new SubscriptionViewModel
+        {
+            SessionId = subscriptionSession.SessionId,
+            Step = subscriptionSession.CurrentStep,
             Content = model,
         });
     }

@@ -6,5 +6,7 @@ public class SubscriptionViewModel
 {
     public string SessionId { get; set; }
 
+    public string Step { get; set; }
+
     public IShape Content { get; set; }
 }

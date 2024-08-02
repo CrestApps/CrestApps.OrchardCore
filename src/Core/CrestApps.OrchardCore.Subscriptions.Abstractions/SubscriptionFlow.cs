@@ -40,19 +40,44 @@ public sealed class SubscriptionFlow
         return _sortedSteps ?? [];
     }
 
+    private SubscriptionFlowStep _currentStep;
+
     public SubscriptionFlowStep GetCurrentStep()
     {
-        if (Session.CurrentStep == null)
+        if (_currentStep == null)
         {
-            return GetFirstStep();
+            if (string.IsNullOrEmpty(Session.CurrentStep))
+            {
+                _currentStep = GetFirstStep();
+            }
+            else
+            {
+                // Use sorted steps to ensure we always get the first
+                // step incase we have multiple steps with the same key.
+                var step = GetSortedSteps().FirstOrDefault(x => x.Key == Session.CurrentStep);
+
+                _currentStep = step ?? GetFirstStep();
+            }
         }
 
-        // Use sorted steps to ensure we always get the first
-        // step incase we have multiple steps with the same key.
-        var step = GetSortedSteps().FirstOrDefault(x => x.Key == Session.CurrentStep);
-
-        return step ?? GetFirstStep();
+        return _currentStep;
     }
+
+    public void SetCurrentStep(string key)
+    {
+        var step = Session.Steps.FirstOrDefault(x => string.Equals(x.Key, key, StringComparison.OrdinalIgnoreCase));
+
+        if (step == null)
+        {
+            throw new InvalidOperationException($"The step '{key}' does not exists.");
+        }
+
+        Session.CurrentStep = key;
+        _currentStep = null;
+    }
+
+    public bool CurrentStepEquals(string key)
+        => key != null && GetCurrentStep().Key == key;
 
     public SubscriptionFlowStep GetFirstStep()
         => GetSortedSteps().FirstOrDefault();
@@ -62,7 +87,9 @@ public sealed class SubscriptionFlow
 
     public SubscriptionFlowStep GetNextStep()
     {
-        if (Session.CurrentStep == null)
+        var currentStep = GetCurrentStep();
+
+        if (currentStep == null)
         {
             return null;
         }
@@ -73,7 +100,7 @@ public sealed class SubscriptionFlow
         {
             var step = steps[i];
 
-            if (step.Key != Session.CurrentStep)
+            if (string.Equals(step.Key, currentStep.Key, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -91,7 +118,9 @@ public sealed class SubscriptionFlow
 
     public SubscriptionFlowStep GetPreviousStep()
     {
-        if (Session.CurrentStep == null || Session.SavedSteps == null || Session.SavedSteps.Count == 0)
+        var currentStep = GetCurrentStep();
+
+        if (currentStep == null || Session.SavedSteps == null || Session.SavedSteps.Count == 0)
         {
             return null;
         }
@@ -103,7 +132,7 @@ public sealed class SubscriptionFlow
             var step = steps[i];
             var nextIndex = i + 1;
 
-            if (nextIndex < steps.Length && steps[nextIndex].Key == Session.CurrentStep)
+            if (nextIndex < steps.Length && string.Equals(steps[nextIndex].Key, currentStep.Key, StringComparison.OrdinalIgnoreCase))
             {
                 return step;
             }

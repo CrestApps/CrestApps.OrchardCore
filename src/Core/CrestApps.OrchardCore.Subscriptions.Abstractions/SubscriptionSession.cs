@@ -25,7 +25,7 @@ public sealed class SubscriptionSession : Entity
 
     public string OwnerId { get; set; }
 
-    public Dictionary<string, object> SavedSteps { get; init; } = [];
+    public Dictionary<string, object> SavedSteps { get; init; } = new(StringComparer.OrdinalIgnoreCase);
 
     public IList<SubscriptionFlowStep> Steps { get; init; } = [];
 

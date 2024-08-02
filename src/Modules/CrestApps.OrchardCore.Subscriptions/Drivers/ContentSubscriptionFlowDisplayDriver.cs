@@ -45,9 +45,7 @@ public sealed class ContentSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
         return Task.FromResult<IDisplayResult>(
             Factory("SubscriptionFlowContentItem", async (shapeBuildContext) =>
             {
-                flow.Session.SavedSteps.TryGetValue(step.Key, out var contentItemObj);
-
-                var contentItem = (contentItemObj as ContentItem) ?? await GetContentManager().NewAsync(contentType.ToString());
+                var contentItem = await GetOrCreateContentItemAsync(flow, step, contentType);
 
                 return await _contentItemDisplayManager.BuildEditorAsync(contentItem, context.Updater, true, groupId: string.Empty, htmlFieldPrefix: step.Key);
             }).Location("Content")
@@ -66,11 +64,7 @@ public sealed class ContentSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
             return null;
         }
 
-        var contentItem = await GetContentManager().NewAsync(contentType.ToString());
-
-        // If there is no logged in user, we'll fallback to the super user as an owner for this content.
-        contentItem.Owner = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? (await _siteService.GetSiteSettingsAsync()).SuperUser;
+        var contentItem = await GetOrCreateContentItemAsync(flow, step, contentType);
 
         await _contentItemDisplayManager.UpdateEditorAsync(contentItem, context.Updater, true, groupId: string.Empty, htmlFieldPrefix: step.Key);
 
@@ -79,9 +73,27 @@ public sealed class ContentSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
         return await EditAsync(flow, context);
     }
 
-    private IContentManager GetContentManager()
+    private async Task<ContentItem> GetOrCreateContentItemAsync(SubscriptionFlow flow, SubscriptionFlowStep step, object contentType)
     {
-        // Lazily load content manager to avoid a possible circular references.
-        return _serviceProvider.GetRequiredService<IContentManager>();
+        ContentItem contentItem = null;
+
+        if (flow.Session.SavedSteps.TryGetValue(step.Key, out var contentItemObj))
+        {
+            contentItem = contentItemObj as ContentItem;
+        }
+
+        if (contentItem == null)
+        {
+            // Lazily load content manager to avoid a possible circular references.
+            var contentManager = _serviceProvider.GetRequiredService<IContentManager>();
+
+            contentItem = await contentManager.NewAsync(contentType.ToString());
+
+            // If there is no logged in user, we'll fallback to the super user as an owner for this content.
+            contentItem.Owner = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? (await _siteService.GetSiteSettingsAsync()).SuperUser;
+        }
+
+        return contentItem;
     }
 }

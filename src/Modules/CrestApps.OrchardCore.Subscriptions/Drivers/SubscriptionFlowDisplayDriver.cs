@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
@@ -11,9 +12,11 @@ public sealed class SubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFl
     {
         return Task.FromResult<IDisplayResult>(
             Combine(
-                View("SubscriptionFlowSteps", model).Location("Steps").OnGroup(context.GroupId),
+                View("SubscriptionFlowSteps", model)
+                .Location("Confirmation", "Steps"),
 
-                View("SubscriptionConfirmation", model).Location("Confirmation", "Content")
+                View("SubscriptionConfirmation", model)
+                .Location("Confirmation", "Content")
             )
         );
     }
@@ -24,7 +27,7 @@ public sealed class SubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFl
             Combine(
                 View("SubscriptionFlowSteps", model).Location("Steps"),
 
-                View("SubscriptionDetails", model).Location("Content:before"),
+                View("SubscriptionInformation", model).Location("Content:before"),
 
                 Initialize<SubscriptionFlowNavigation>("SubscriptionFlowButtons", vm =>
                 {
@@ -32,6 +35,7 @@ public sealed class SubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFl
                     vm.PreviousStep = model.GetPreviousStep()?.Key;
                     vm.CurrentStep = model.GetCurrentStep()?.Key;
                     vm.NextStep = model.GetNextStep()?.Key;
+                    vm.IsPaymentStep = model.CurrentStepEquals(PaymentSubscriptionHandler.StepKey);
                 }).Location("Content:after")
             )
         );

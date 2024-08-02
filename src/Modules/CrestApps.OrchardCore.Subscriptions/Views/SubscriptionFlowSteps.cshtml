@@ -6,7 +6,16 @@
 {
     <div>
         <div class="text-bg-light border border-light-subtle rounded-circle p-4" title="@step.Description">
-            @step.Title
+            @if (Model.Value.Session.SavedSteps.ContainsKey(step.Key))
+            {
+                <a asp-route="SubscriptionsSignupStep" asp-route-sessionId="@Model.Value.Session.SessionId" asp-route-step="@step.Key">
+                    @step.Title
+                </a>
+            }
+            else
+            {
+                @step.Title
+            }
         </div>
     </div>
 }

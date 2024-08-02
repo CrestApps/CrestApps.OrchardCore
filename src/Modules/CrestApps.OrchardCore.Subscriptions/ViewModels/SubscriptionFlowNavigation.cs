@@ -14,4 +14,7 @@ public class SubscriptionFlowNavigation
 
     [BindNever]
     public string NextStep { get; set; }
+
+    [BindNever]
+    public bool IsPaymentStep { get; set; }
 }
