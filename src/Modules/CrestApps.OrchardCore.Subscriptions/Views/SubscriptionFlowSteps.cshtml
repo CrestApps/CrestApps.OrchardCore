@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Subscriptions
 @using CrestApps.OrchardCore.Subscriptions.Core.Models
 
 @model ShapeViewModel<SubscriptionFlow>
@@ -6,7 +7,8 @@
 {
     <div>
         <div class="text-bg-light border border-light-subtle rounded-circle p-4" title="@step.Description">
-            @if (Model.Value.Session.SavedSteps.ContainsKey(step.Key))
+            @if (Model.Value.Session.Status == SubscriptionSessionStatus.Pending &&
+           Model.Value.Session.SavedSteps.ContainsKey(step.Key))
             {
                 <a asp-route="SubscriptionsSignupStep" asp-route-sessionId="@Model.Value.Session.SessionId" asp-route-step="@step.Key">
                     @step.Title

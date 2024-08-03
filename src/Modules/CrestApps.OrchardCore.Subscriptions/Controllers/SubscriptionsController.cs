@@ -224,6 +224,7 @@ public sealed class SubscriptionsController : Controller
 
         var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
 
+        SubscriptionFlowStep upcomingStep = null;
         if (isGoingBack)
         {
             var previousStep = flow.GetPreviousStep();
@@ -231,6 +232,9 @@ public sealed class SubscriptionsController : Controller
             if (previousStep != null)
             {
                 flow.SetCurrentStep(previousStep.Key);
+
+                // Since we are navigating back, the upcoming page will be the previous page.
+                upcomingStep = previousStep;
             }
         }
 
@@ -242,18 +246,19 @@ public sealed class SubscriptionsController : Controller
 
             subscriptionSession.ModifiedUtc = now;
 
-            var nextStep = flow.GetNextStep();
+            // If the upcoming step is null "meaning we are not navigating back", get the next step if one exists.
+            upcomingStep ??= flow.GetNextStep();
 
-            if (nextStep != null)
+            if (upcomingStep != null)
             {
-                flow.SetCurrentStep(nextStep.Key);
+                flow.SetCurrentStep(upcomingStep.Key);
 
                 await _session.SaveAsync(subscriptionSession);
 
                 return RedirectToAction(nameof(ViewSession), new
                 {
                     sessionId,
-                    step = nextStep.Key,
+                    step = upcomingStep.Key,
                 });
             }
             else

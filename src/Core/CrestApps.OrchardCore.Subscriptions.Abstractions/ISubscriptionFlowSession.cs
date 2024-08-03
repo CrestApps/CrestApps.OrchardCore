@@ -9,6 +9,8 @@ public interface ISubscriptionFlowSession
 
     string CurrentStep { get; set; }
 
+    SubscriptionSessionStatus Status { get; set; }
+
     IList<SubscriptionFlowStep> Steps { get; }
 
     JsonObject SavedSteps { get; }
