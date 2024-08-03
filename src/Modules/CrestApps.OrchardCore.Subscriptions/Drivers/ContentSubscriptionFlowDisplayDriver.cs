@@ -1,12 +1,16 @@
 using System.Security.Claims;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Json;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
@@ -16,17 +20,20 @@ public sealed class ContentSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ISiteService _siteService;
+    private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
     private readonly IServiceProvider _serviceProvider;
 
     public ContentSubscriptionFlowDisplayDriver(
         IContentItemDisplayManager contentItemDisplayManager,
         IHttpContextAccessor httpContextAccessor,
         ISiteService siteService,
+        IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions,
         IServiceProvider serviceProvider)
     {
         _contentItemDisplayManager = contentItemDisplayManager;
         _httpContextAccessor = httpContextAccessor;
         _siteService = siteService;
+        _documentJsonSerializerOptions = documentJsonSerializerOptions.Value;
         _serviceProvider = serviceProvider;
     }
 
@@ -68,7 +75,7 @@ public sealed class ContentSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
 
         await _contentItemDisplayManager.UpdateEditorAsync(contentItem, context.Updater, true, groupId: string.Empty, htmlFieldPrefix: step.Key);
 
-        flow.Session.SavedSteps[step.Key] = contentItem;
+        flow.Session.SavedSteps[step.Key] = JObject.FromObject(contentItem);
 
         return await EditAsync(flow, context);
     }
@@ -77,9 +84,9 @@ public sealed class ContentSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
     {
         ContentItem contentItem = null;
 
-        if (flow.Session.SavedSteps.TryGetValue(step.Key, out var contentItemObj))
+        if (flow.Session.SavedSteps.TryGetPropertyValue(step.Key, out var node))
         {
-            contentItem = contentItemObj as ContentItem;
+            contentItem = node.Deserialize<ContentItem>(_documentJsonSerializerOptions.SerializerOptions);
         }
 
         if (contentItem == null)

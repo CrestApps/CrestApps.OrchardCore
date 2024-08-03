@@ -1,9 +1,10 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Subscriptions;
 
-public sealed class SubscriptionSession : Entity
+public class SubscriptionSession : Entity, ISubscriptionFlowSession
 {
     public string SessionId { get; set; }
 
@@ -25,7 +26,7 @@ public sealed class SubscriptionSession : Entity
 
     public string OwnerId { get; set; }
 
-    public Dictionary<string, object> SavedSteps { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+    public JsonObject SavedSteps { get; init; } = [];
 
     public IList<SubscriptionFlowStep> Steps { get; init; } = [];
 

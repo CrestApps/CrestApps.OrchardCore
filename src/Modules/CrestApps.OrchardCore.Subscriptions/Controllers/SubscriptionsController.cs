@@ -129,6 +129,13 @@ public sealed class SubscriptionsController : Controller
             return NotFound();
         }
 
+        //var items = await _session.Query<SubscriptionSession, SubscriptionSessionIndex>().ListAsync();
+
+        //foreach (var item in items)
+        //{
+        //    _session.Delete(item);
+        //}
+        //await _session.SaveChangesAsync();
         SubscriptionSession subscriptionSession = null;
 
         if (User.Identity.IsAuthenticated)

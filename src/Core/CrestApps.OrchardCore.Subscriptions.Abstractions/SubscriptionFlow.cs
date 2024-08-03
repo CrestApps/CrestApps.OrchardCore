@@ -7,11 +7,11 @@ public sealed class SubscriptionFlow
 {
     public string Direction { get; set; }
 
-    public SubscriptionSession Session { get; }
+    public ISubscriptionFlowSession Session { get; }
 
     public ContentItem ContentItem { get; }
 
-    public SubscriptionFlow(SubscriptionSession session, ContentItem contentItem)
+    public SubscriptionFlow(ISubscriptionFlowSession session, ContentItem contentItem)
     {
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(contentItem);
@@ -65,12 +65,8 @@ public sealed class SubscriptionFlow
 
     public void SetCurrentStep(string key)
     {
-        var step = Session.Steps.FirstOrDefault(x => string.Equals(x.Key, key, StringComparison.OrdinalIgnoreCase));
-
-        if (step == null)
-        {
-            throw new InvalidOperationException($"The step '{key}' does not exists.");
-        }
+        var step = Session.Steps.FirstOrDefault(x => string.Equals(x.Key, key, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException($"The step '{key}' does not exists.");
 
         Session.CurrentStep = key;
         _currentStep = null;
@@ -100,17 +96,10 @@ public sealed class SubscriptionFlow
         {
             var step = steps[i];
 
-            if (string.Equals(step.Key, currentStep.Key, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (i + 1 < steps.Length)
+            if (string.Equals(step.Key, currentStep.Key, StringComparison.OrdinalIgnoreCase) && i + 1 < steps.Length)
             {
                 return steps[i + 1];
             }
-
-            break;
         }
 
         return null;
@@ -127,14 +116,18 @@ public sealed class SubscriptionFlow
 
         var steps = GetSortedSteps();
 
+        if (steps.Length < 2 || string.Equals(steps[0].Key, currentStep.Key, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
         for (var i = 0; i < steps.Length; i++)
         {
             var step = steps[i];
-            var nextIndex = i + 1;
 
-            if (nextIndex < steps.Length && string.Equals(steps[nextIndex].Key, currentStep.Key, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(step.Key, currentStep.Key, StringComparison.OrdinalIgnoreCase))
             {
-                return step;
+                return steps[i - 1];
             }
         }
 
