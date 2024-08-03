@@ -10,26 +10,26 @@
 
     @if (hasNext && Model.IsPaymentStep)
     {
-        <button type="submit" class="btn btn-success" name="Direction" value="Next">@T["Pay & Next"]</button>
+        <button type="submit" class="btn btn-success" name="Direction" value="@SubscriptionFlowNavigation.NextValue">@T["Pay & Next"]</button>
     }
     else if (Model.IsPaymentStep)
     {
-        <button type="submit" class="btn btn-success" name="Direction" value="Next">@T["Pay & Finish"]</button>
+        <button type="submit" class="btn btn-success" name="Direction" value="@SubscriptionFlowNavigation.NextValue">@T["Pay & Finish"]</button>
     }
     else if (hasNext)
     {
-        <button type="submit" class="btn btn-success" name="Direction" value="Next">@T["Next"]</button>
+        <button type="submit" class="btn btn-success" name="Direction" value="@SubscriptionFlowNavigation.NextValue">@T["Next"]</button>
     }
     else
     {
-        <button type="submit" class="btn btn-success" name="Direction" value="Next">@T["Finish"]</button>
+        <button type="submit" class="btn btn-success" name="Direction" value="@SubscriptionFlowNavigation.NextValue">@T["Finish"]</button>
     }
 
     <div></div>
 
     @if (!string.IsNullOrEmpty(Model.PreviousStep))
     {
-        <button type="submit" class="btn btn-info" name="Direction" value="Previous">@T["Previous"]</button>
+        <button type="submit" class="btn btn-info" name="Direction" value="@SubscriptionFlowNavigation.PreviousValue">@T["Previous"]</button>
     }
     else
     {

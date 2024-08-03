@@ -11,7 +11,7 @@ public class Invoice
 
     public Dictionary<BillingDurationKey, double> GetSubtotals()
         => LineItems.GroupBy(x => new BillingDurationKey(x.DurationType, x.BillingDuration))
-        .ToDictionary(x => x.Key, x => x.Sum(y => y.Subtotal));
+        .ToDictionary(x => x.Key, x => x.Sum(y => y.UnitPrice * y.Quantity));
 
     public double GetTotal()
         => GetDueNow() + GetSubtotals().Sum(x => x.Value);

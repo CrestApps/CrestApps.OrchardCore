@@ -39,8 +39,6 @@ public sealed class PaymentSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
                         SubscriptionDayDelay = step.Payment.SubscriptionDayDelay,
                     };
 
-                    lineItem.Subtotal = lineItem.Quantity * lineItem.UnitPrice;
-
                     lineItems.Add(lineItem);
                 }
 

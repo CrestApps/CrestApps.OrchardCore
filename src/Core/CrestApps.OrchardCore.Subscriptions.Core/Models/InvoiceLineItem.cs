@@ -18,11 +18,6 @@ public class InvoiceLineItem
     public double UnitPrice { get; set; }
 
     /// <summary>
-    /// The line item subtotal. The subtotal will be calculated by multiplying <see cref="Quantity"/> with <see cref="UnitPrice"/>.
-    /// </summary>
-    public double Subtotal { get; set; }
-
-    /// <summary>
     /// Any amount that should be paid now.
     /// </summary>
     public double? DueNow { get; set; }

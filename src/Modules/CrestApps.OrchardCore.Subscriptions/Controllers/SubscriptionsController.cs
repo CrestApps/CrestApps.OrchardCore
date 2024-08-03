@@ -213,7 +213,7 @@ public sealed class SubscriptionsController : Controller
             return NotFound();
         }
 
-        var isGoingBack = string.Equals(direction, "Previous", StringComparison.OrdinalIgnoreCase);
+        var isGoingBack = string.Equals(direction, SubscriptionFlowNavigation.PreviousValue, StringComparison.OrdinalIgnoreCase);
 
         // If the user requests a specific step,
         // make sure it is a completed step before rendering it.

@@ -23,7 +23,7 @@
                     <div class="text-center col-3 col-md-2 col-xxl-1">@lineItem.Quantity</div>
                     <div class="text-center col-3 col-md-2 col-xxl-1">@lineItem.UnitPrice.ToString("C")</div>
                     <div class="text-center col-6 col-md-3 col-xxl-4">
-                        @T.GetAmount(lineItem.DurationType, lineItem.BillingDuration, lineItem.Subtotal)
+                        @T.GetAmount(lineItem.DurationType, lineItem.BillingDuration, lineItem.UnitPrice * lineItem.Quantity)
                     </div>
                 </div>
             </li>
