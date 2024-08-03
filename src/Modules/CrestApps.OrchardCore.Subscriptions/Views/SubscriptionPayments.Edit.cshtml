@@ -3,6 +3,7 @@
 
 @model Invoice
 
+
 <div class="mb-3 rounded">
 
     <ul class="list-group">
@@ -23,13 +24,39 @@
                     <div class="text-center col-3 col-md-2 col-xxl-1">@lineItem.UnitPrice.ToString("C")</div>
                     <div class="text-center col-6 col-md-3 col-xxl-4">
                         @T.GetAmount(lineItem.DurationType, lineItem.BillingDuration, lineItem.Subtotal)
-                        @if (lineItem.DueNow.HasValue)
-                        {
-                            @T["Due now: {0}", lineItem.DueNow.Value.ToString("C")]
-                        }
                     </div>
                 </div>
             </li>
         }
+
+        <li class="list-group-item list-group-item-dark">
+            <div class="row">
+                <div class="col-md-9 col-xxl-8 text-end">@T["Due Now"]</div>
+                <div class="text-center col-md-3 col-xxl-4">
+                    @Model.GetDueNow().ToString("C")
+                </div>
+            </div>
+        </li>
+
+        @foreach (var subtotal in Model.GetSubtotals())
+        {
+            <li class="list-group-item list-group-item-dark">
+                <div class="row">
+                    <div class="col-md-9 col-xxl-8 text-end">@T["Sub Total"]</div>
+                    <div class="text-center col-md-3 col-xxl-4">
+                        @T.GetAmount(subtotal.Key.Type, subtotal.Key.Duration, subtotal.Value)
+                    </div>
+                </div>
+            </li>
+        }
+
+        <li class="list-group-item list-group-item-dark">
+            <div class="row">
+                <div class="col-md-9 col-xxl-8 text-end">@T["Total"]</div>
+                <div class="text-center col-md-3 col-xxl-4">
+                    @Model.GetTotal().ToString("C")
+                </div>
+            </div>
+        </li>
     </ul>
 </div>
