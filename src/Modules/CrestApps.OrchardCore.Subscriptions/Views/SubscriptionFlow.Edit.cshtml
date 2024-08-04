@@ -15,12 +15,19 @@
         </div>
     }
 
-    @if (Model.Content != null)
-    {
-        <div class="card-body">
+
+    <div class="card-body">
+        @if (Model.Content != null)
+        {
             @await DisplayAsync(Model.Content)
-        </div>
-    }
+        }
+
+        @if (Model.Actions != null)
+        {
+            @await DisplayAsync(Model.Actions)
+        }
+    </div>
+
 
     @if (Model.Footer != null)
     {

@@ -7,5 +7,7 @@ public static class SubscriptionsConstants
     public static class Features
     {
         public const string ModuleId = "CrestApps.OrchardCore.Subscriptions";
+
+        public const string Stripe = "CrestApps.OrchardCore.Subscriptions.Stripe";
     }
 }

@@ -36,7 +36,7 @@ public sealed class SubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFl
                     vm.CurrentStep = model.GetCurrentStep()?.Key;
                     vm.NextStep = model.GetNextStep()?.Key;
                     vm.IsPaymentStep = model.CurrentStepEquals(PaymentSubscriptionHandler.StepKey);
-                }).Location("Content:after")
+                }).Location("Actions")
             )
         );
     }

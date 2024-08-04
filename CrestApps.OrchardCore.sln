@@ -38,11 +38,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrestApps.OrchardCore.Tests
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrestApps.OrchardCore.Cms.Web", "src\Startup\CrestApps.OrchardCore.Cms.Web\CrestApps.OrchardCore.Cms.Web.csproj", "{DD1D0B6E-2671-47C8-B763-FAEF0DA5DFFA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Subscriptions.Core", "src\Core\CrestApps.OrchardCore.Subscriptions.Core\CrestApps.OrchardCore.Subscriptions.Core.csproj", "{74EA4849-155E-44F4-A75A-613832E2A5B7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrestApps.OrchardCore.Subscriptions.Core", "src\Core\CrestApps.OrchardCore.Subscriptions.Core\CrestApps.OrchardCore.Subscriptions.Core.csproj", "{74EA4849-155E-44F4-A75A-613832E2A5B7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Subscriptions", "src\Modules\CrestApps.OrchardCore.Subscriptions\CrestApps.OrchardCore.Subscriptions.csproj", "{0F2C1E94-AA63-4ED3-8EBB-44A250371186}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrestApps.OrchardCore.Subscriptions", "src\Modules\CrestApps.OrchardCore.Subscriptions\CrestApps.OrchardCore.Subscriptions.csproj", "{0F2C1E94-AA63-4ED3-8EBB-44A250371186}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Subscriptions.Abstractions", "src\Core\CrestApps.OrchardCore.Subscriptions.Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions.csproj", "{5E3220BD-74EF-4D65-BA52-1715459B504D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrestApps.OrchardCore.Subscriptions.Abstractions", "src\Core\CrestApps.OrchardCore.Subscriptions.Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions.csproj", "{5E3220BD-74EF-4D65-BA52-1715459B504D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Stripe", "src\Modules\CrestApps.OrchardCore.Stripe\CrestApps.OrchardCore.Stripe.csproj", "{A0FBFDC5-31C8-453D-872C-D33736427324}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Stripe.Core", "src\Core\CrestApps.OrchardCore.Stripe.Core\CrestApps.OrchardCore.Stripe.Core.csproj", "{88EA0953-2301-4326-A5C6-B0BEE7303391}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -90,6 +94,14 @@ Global
 		{5E3220BD-74EF-4D65-BA52-1715459B504D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5E3220BD-74EF-4D65-BA52-1715459B504D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5E3220BD-74EF-4D65-BA52-1715459B504D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A0FBFDC5-31C8-453D-872C-D33736427324}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0FBFDC5-31C8-453D-872C-D33736427324}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0FBFDC5-31C8-453D-872C-D33736427324}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A0FBFDC5-31C8-453D-872C-D33736427324}.Release|Any CPU.Build.0 = Release|Any CPU
+		{88EA0953-2301-4326-A5C6-B0BEE7303391}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{88EA0953-2301-4326-A5C6-B0BEE7303391}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{88EA0953-2301-4326-A5C6-B0BEE7303391}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{88EA0953-2301-4326-A5C6-B0BEE7303391}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -105,6 +117,8 @@ Global
 		{74EA4849-155E-44F4-A75A-613832E2A5B7} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
 		{0F2C1E94-AA63-4ED3-8EBB-44A250371186} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{5E3220BD-74EF-4D65-BA52-1715459B504D} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
+		{A0FBFDC5-31C8-453D-872C-D33736427324} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{88EA0953-2301-4326-A5C6-B0BEE7303391} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0E9F9B00-7078-4EA8-87A9-0B2E74375F1E}

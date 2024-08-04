@@ -1,0 +1,129 @@
+@using CrestApps.OrchardCore.Stripe.Core
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model StripeViewModel
+
+@if (!Model.IsLive && !string.IsNullOrEmpty(Model.PublishableKey))
+{
+    <div class="alert alert-info" role="alert">
+        @T["Stripe is in test mode."]
+    </div>
+}
+else if (string.IsNullOrEmpty(Model.PublishableKey))
+{
+    <div class="alert alert-warning" role="alert">
+        @T["Stripe has not yet been configured. Please visit the configuration section and configure it."]
+    </div>
+}
+
+<div id="card-errors" role="alert" class="alert alert-danger d-none"></div>
+
+<div id="card-element"></div>
+
+<input type="hidden" asp-for="CustomerId" />
+<input type="hidden" asp-for="PaymentMethodId" />
+
+<script asp-name="stripe-subscription-payment" depends-on="stripe">
+    const stripe = Stripe('@Model.PublishableKey');
+    const elements = stripe.elements();
+    const card = elements.create('card');
+    card.mount('#card-element');
+    const displayError = document.getElementById('card-errors');
+
+    card.on('change', function (event) {
+        displayError.classList.add('d-none');
+        displayError.textContent = '';
+
+        if (event.error) {
+            displayError.textContent = event.error.message;
+            displayError.classList.remove('d-none');
+        }
+    });
+
+    const form = document.getElementById('subscription-form');
+    const customerIdElement = document.getElementById('@Html.IdFor(x => x.CustomerId)');
+    const paymentMethodIdElement = document.getElementById('@Html.IdFor(x => x.PaymentMethodId)');
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        stripe.createPaymentMethod({
+            type: 'card',
+            card: card,
+            billing_details: {
+                // Include any additional collected billing details.
+            },
+        }).then(function (result) {
+            if (result.error) {
+                displayError.textContent = result.error.message;
+                displayError.classList.remove('d-none');
+            } else {
+                displayError.classList.add('d-none');
+
+                fetch('@Url.RouteUrl(StripeConstants.RouteName.CreateSetupIntentEndpoint)', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        paymentMethodId: result.paymentMethod.id
+                    }),
+                }).then(function (response) {
+                    return response.json();
+                }).then(function (setupIntent) {
+                    if (setupIntent.error) {
+                        var errorElement = document.getElementById('card-errors');
+                        errorElement.textContent = setupIntent.error;
+                    } else {
+                        stripe.confirmCardSetup(
+                            setupIntent.client_secret,
+                            {
+                                payment_method: result.paymentMethod.id,
+                            }
+                        ).then(function (result) {
+                            if (result.error) {
+                                var errorElement = document.getElementById('card-errors');
+                                errorElement.textContent = result.error.message;
+                            } else {
+                                // Handle payment intent for the immediate charge
+                                fetch('@Url.RouteUrl(StripeConstants.RouteName.CreatePaymentIntentEndpoint)', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                        paymentMethodId: result.setupIntent.payment_method
+                                    }),
+                                }).then(function (response) {
+                                    return response.json();
+                                }).then(function (paymentIntent) {
+                                    if (paymentIntent.error) {
+                                        var errorElement = document.getElementById('card-errors');
+                                        errorElement.textContent = paymentIntent.error;
+                                    } else {
+                                        stripe.confirmCardPayment(
+                                            paymentIntent.client_secret
+                                        ).then(function (result) {
+                                            displayError.classList.add('d-none');
+                                            if (result.error) {
+                                                displayError.textContent = result.error.message;
+                                                displayError.classList.remove('d-none');
+                                            } else {
+
+                                                customerIdElement.value = setupIntent.customer_id;
+                                                paymentMethodIdElement.value = result.paymentIntent.payment_method;
+
+                                                const submitEvent = new Event("submit", { bubbles: true, cancelable: true });
+                                                form.dispatchEvent(submitEvent)
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    });
+</script>

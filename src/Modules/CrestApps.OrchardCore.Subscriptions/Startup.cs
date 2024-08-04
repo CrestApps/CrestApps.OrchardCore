@@ -76,3 +76,12 @@ public sealed class Startup : StartupBase
         );
     }
 }
+
+[Feature(SubscriptionsConstants.Features.Stripe)]
+public sealed class StripeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IDisplayDriver<SubscriptionFlow>, StripePaymentSubscriptionFlowDisplayDriver>();
+    }
+}
