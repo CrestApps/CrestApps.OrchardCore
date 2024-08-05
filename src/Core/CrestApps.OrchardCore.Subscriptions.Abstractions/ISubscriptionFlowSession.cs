@@ -1,9 +1,10 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Subscriptions;
 
-public interface ISubscriptionFlowSession
+public interface ISubscriptionFlowSession : IEntity
 {
     string SessionId { get; set; }
 

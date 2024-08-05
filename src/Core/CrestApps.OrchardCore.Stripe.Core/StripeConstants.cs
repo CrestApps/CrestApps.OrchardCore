@@ -4,6 +4,8 @@ public static class StripeConstants
 {
     public static class RouteName
     {
+        public const string CreateWebhookEndpoint = "StripeWebhook";
+
         public const string CreatePaymentIntentEndpoint = "StripeCreatePaymentIntent";
 
         public const string CreateSetupIntentEndpoint = "StripeCreateSetupIntent";

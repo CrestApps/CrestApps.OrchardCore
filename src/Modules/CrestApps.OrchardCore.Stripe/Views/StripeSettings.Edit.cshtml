@@ -4,12 +4,12 @@
 
 <div class="mb-3">
     <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="IsLive" checked="@Model.IsLive" role="button" data-bs-toggle="collapse" data-bs-target=".stripe-settings" aria-expanded="@Model.IsLive.ToString().ToLowerInvariant()" aria-controls=".stripe-settings" />
+        <input type="checkbox" class="form-check-input" asp-for="IsLive" role="button" />
         <label class="form-check-label" asp-for="IsLive">@T["Enable Production"]</label>
     </div>
 </div>
 
-<div class=stripe-settings collapse @(Model.IsLive ? " show" : string.Empty)">
+<div class="live-stripe-settings@(Model.IsLive ? string.Empty : " d-none")">
 
     <div class="mb-3" asp-validation-class-for="LivePublishableKey">
         <label asp-for="LivePublishableKey" class="form-label">@T["Production Publishable Key"]</label>
@@ -31,8 +31,7 @@
 
 </div>
 
-
-<div class=stripe-settings collapse @(!Model.IsLive ? " show" : string.Empty)">
+<div class="testing-stripe-settings@(Model.IsLive ? " d-none" : string.Empty)">
 
     <div class="mb-3" asp-validation-class-for="TestingPublishableKey">
         <label asp-for="TestingPublishableKey" class="form-label">@T["Testing Publishable Key"]</label>
@@ -53,3 +52,30 @@
     </div>
 
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const isLiveElement = document.getElementById('@Html.IdFor(m => m.IsLive)');
+        const liveElements = document.querySelectorAll('.live-stripe-settings');
+        const testingElements = document.querySelectorAll('.testing-stripe-settings');
+        const toggleElements = (elements, show) => {
+            for (let i = 0; i < elements.length; i++) {
+                if (show) {
+                    elements[i].classList.remove('d-none');
+                } else {
+                    elements[i].classList.add('d-none');
+                }
+            }
+        }
+
+        isLiveElement.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                toggleElements(liveElements, true);
+                toggleElements(testingElements, false);
+            } else {
+                toggleElements(liveElements, false);
+                toggleElements(testingElements, true);
+            }
+        })
+    });
+</script>

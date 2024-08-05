@@ -9,6 +9,5 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "stripe": "^16.6.0"
   }
 }

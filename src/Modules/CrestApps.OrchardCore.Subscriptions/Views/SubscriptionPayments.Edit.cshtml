@@ -1,7 +1,7 @@
 @using CrestApps.OrchardCore.Subscriptions.Core.Models
 @using CrestApps.OrchardCore.Subscriptions.Extensions
 
-@model Invoice
+@model ShapeViewModel<Invoice>
 
 
 <div class="mb-3 rounded">
@@ -15,7 +15,7 @@
                 <div class="text-center col-6 col-md-3 col-xxl-4">@T["Total"]</div>
             </div>
         </li>
-        @foreach (var lineItem in Model.LineItems)
+        @foreach (var lineItem in Model.Value.LineItems)
         {
             <li class="list-group-item">
                 <div class="row">
@@ -33,12 +33,12 @@
             <div class="row">
                 <div class="col-md-9 col-xxl-8 text-end">@T["Due Now"]</div>
                 <div class="text-center col-md-3 col-xxl-4">
-                    @Model.GetDueNow().ToString("C")
+                    @Model.Value.DueNow.ToString("C")
                 </div>
             </div>
         </li>
 
-        @foreach (var subtotal in Model.GetSubtotals())
+        @foreach (var subtotal in Model.Value.Subtotals)
         {
             <li class="list-group-item list-group-item-dark">
                 <div class="row">
@@ -54,7 +54,7 @@
             <div class="row">
                 <div class="col-md-9 col-xxl-8 text-end">@T["Total"]</div>
                 <div class="text-center col-md-3 col-xxl-4">
-                    @Model.GetTotal().ToString("C")
+                    @Model.Value.GrandTotal.ToString("C")
                 </div>
             </div>
         </li>

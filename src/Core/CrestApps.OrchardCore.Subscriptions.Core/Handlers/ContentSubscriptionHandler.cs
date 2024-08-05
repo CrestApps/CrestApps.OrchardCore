@@ -98,7 +98,7 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
         }
     }
 
-    public override async Task CompletedAsync(SubscriptionFlowCompletedContext context)
+    public override async Task CompletingAsync(SubscriptionFlowCompletedContext context)
     {
         foreach (var item in context.Flow.Session.SavedSteps)
         {

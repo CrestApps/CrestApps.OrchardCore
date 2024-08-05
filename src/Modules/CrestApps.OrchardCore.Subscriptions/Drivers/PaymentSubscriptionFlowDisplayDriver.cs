@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
@@ -16,34 +17,8 @@ public sealed class PaymentSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
         }
 
         return Task.FromResult<IDisplayResult>(
-            Initialize<Invoice>("SubscriptionPayments_Edit", model =>
-            {
-                var lineItems = new List<InvoiceLineItem>();
-
-                foreach (var step in flow.GetSortedSteps())
-                {
-                    if (step.Payment == null)
-                    {
-                        // Steps with no payment information can be ignored.
-                        continue;
-                    }
-
-                    var lineItem = new InvoiceLineItem()
-                    {
-                        Description = step.Title,
-                        Quantity = 1,
-                        UnitPrice = step.Payment.BillingAmount,
-                        DueNow = step.Payment.InitialAmount,
-                        BillingDuration = step.Payment.BillingDuration,
-                        BillingCycleLimit = step.Payment.BillingCycleLimit,
-                        SubscriptionDayDelay = step.Payment.SubscriptionDayDelay,
-                    };
-
-                    lineItems.Add(lineItem);
-                }
-
-                model.LineItems = lineItems.ToArray();
-            }).Location("Content")
+            View("SubscriptionPayments_Edit", flow.Session.As<Invoice>())
+            .Location("Content")
         );
     }
 

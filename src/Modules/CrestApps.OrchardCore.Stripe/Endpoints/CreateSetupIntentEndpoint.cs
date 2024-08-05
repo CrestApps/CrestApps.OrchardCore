@@ -11,7 +11,7 @@ using OrchardCore.Users;
 using OrchardCore.Users.Models;
 using Stripe;
 
-namespace CrestApps.OrchardCore.Stripe.Endpoints.Intents;
+namespace CrestApps.OrchardCore.Stripe.Endpoints;
 
 public static class CreateSetupIntentEndpoint
 {
@@ -34,6 +34,11 @@ public static class CreateSetupIntentEndpoint
     {
         if (string.IsNullOrWhiteSpace(model.PaymentMethodId))
         {
+            if (string.IsNullOrEmpty(stripeOptions.Value.ApiKey))
+            {
+                return TypedResults.Problem("Stripe is not configured.", instance: null, statusCode: 500);
+            }
+
             return TypedResults.BadRequest(new
             {
                 ErrorMessage = "Invalid request data",
@@ -49,6 +54,7 @@ public static class CreateSetupIntentEndpoint
                 DefaultPaymentMethod = model.PaymentMethodId,
                 CustomFields = [],
             },
+            Metadata = model.Metadata,
         };
 
         if (httpContextAccessor.HttpContext.User.Identity.IsAuthenticated)

@@ -1,14 +1,13 @@
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Models;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using Stripe;
 
-namespace CrestApps.OrchardCore.Stripe.Endpoints.Intents;
+namespace CrestApps.OrchardCore.Stripe.Endpoints;
 
 public static class CreateSubscriptionEndpoint
 {
@@ -26,6 +25,11 @@ public static class CreateSubscriptionEndpoint
         [FromBody] CreateSubscriptionRequest model,
         IOptions<StripeOptions> stripeOptions)
     {
+        if (string.IsNullOrEmpty(stripeOptions.Value.ApiKey))
+        {
+            return TypedResults.Problem("Stripe is not configured.", instance: null, statusCode: 500);
+        }
+
         if (!IsValid(model))
         {
             return TypedResults.BadRequest(new
@@ -40,12 +44,14 @@ public static class CreateSubscriptionEndpoint
             Customer = model.CustomerId,
             Items =
             [
-                new() {
+                new()
+                {
                     Plan = model.PlanId,
                 },
             ],
             DefaultPaymentMethod = model.PaymentMethodId,
             Expand = ["latest_invoice.payment_intent"],
+            Metadata = model.Metadata,
         };
 
         var stripeClient = new StripeClient(stripeOptions.Value.ApiKey);

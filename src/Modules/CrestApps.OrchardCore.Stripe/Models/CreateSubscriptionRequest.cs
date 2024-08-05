@@ -7,4 +7,6 @@ public class CreateSubscriptionRequest
     public string PaymentMethodId { get; set; }
 
     public string PlanId { get; set; }
+
+    public Dictionary<string, string> Metadata { get; set; }
 }

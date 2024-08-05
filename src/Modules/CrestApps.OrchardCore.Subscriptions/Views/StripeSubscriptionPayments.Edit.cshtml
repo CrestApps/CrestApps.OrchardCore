@@ -20,29 +20,29 @@ else if (string.IsNullOrEmpty(Model.PublishableKey))
 
 <div id="card-element"></div>
 
-<input type="hidden" asp-for="CustomerId" />
-<input type="hidden" asp-for="PaymentMethodId" />
-
 <script asp-name="stripe-subscription-payment" depends-on="stripe">
     const stripe = Stripe('@Model.PublishableKey');
     const elements = stripe.elements();
     const card = elements.create('card');
     card.mount('#card-element');
-    const displayError = document.getElementById('card-errors');
-
+    const errorElement = document.getElementById('card-errors');
+    const showError = (message) => {
+        errorElement.textContent = message;
+        errorElement.classList.remove('d-none');
+    };
+    const clearError = () => {
+        errorElement.textContent = '';
+        errorElement.classList.add('d-none');
+    };
     card.on('change', function (event) {
-        displayError.classList.add('d-none');
-        displayError.textContent = '';
+        clearError();
 
         if (event.error) {
-            displayError.textContent = event.error.message;
-            displayError.classList.remove('d-none');
+            showError(event.error.message);
         }
     });
 
     const form = document.getElementById('subscription-form');
-    const customerIdElement = document.getElementById('@Html.IdFor(x => x.CustomerId)');
-    const paymentMethodIdElement = document.getElementById('@Html.IdFor(x => x.PaymentMethodId)');
 
     form.addEventListener('submit', function (event) {
         event.preventDefault();
@@ -51,76 +51,101 @@ else if (string.IsNullOrEmpty(Model.PublishableKey))
             type: 'card',
             card: card,
             billing_details: {
-                // Include any additional collected billing details.
+                // Include any additional billing details
             },
         }).then(function (result) {
             if (result.error) {
-                displayError.textContent = result.error.message;
-                displayError.classList.remove('d-none');
+                errorElement.textContent = result.error.message;
             } else {
-                displayError.classList.add('d-none');
-
-                fetch('@Url.RouteUrl(StripeConstants.RouteName.CreateSetupIntentEndpoint)', {
+                // Send payment method ID to the server
+                fetch('@StripeConstants.RouteName.CreateSetupIntentEndpoint', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        paymentMethodId: result.paymentMethod.id
+                        paymentMethodId: result.paymentMethod.id,
+                        Metadata: {
+                            sessionId: '@Model.SessionId'
+                        }
                     }),
-                }).then(function (response) {
+                }).then((response) => {
                     return response.json();
-                }).then(function (setupIntent) {
-                    if (setupIntent.error) {
-                        var errorElement = document.getElementById('card-errors');
-                        errorElement.textContent = setupIntent.error;
+                }).then((data) => {
+                    if (data.error) {
+                        showError(data.error);
                     } else {
-                        stripe.confirmCardSetup(
-                            setupIntent.client_secret,
-                            {
-                                payment_method: result.paymentMethod.id,
-                            }
-                        ).then(function (result) {
-                            if (result.error) {
-                                var errorElement = document.getElementById('card-errors');
-                                errorElement.textContent = result.error.message;
-                            } else {
-                                // Handle payment intent for the immediate charge
-                                fetch('@Url.RouteUrl(StripeConstants.RouteName.CreatePaymentIntentEndpoint)', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify({
-                                        paymentMethodId: result.setupIntent.payment_method
-                                    }),
-                                }).then(function (response) {
-                                    return response.json();
-                                }).then(function (paymentIntent) {
-                                    if (paymentIntent.error) {
-                                        var errorElement = document.getElementById('card-errors');
-                                        errorElement.textContent = paymentIntent.error;
-                                    } else {
-                                        stripe.confirmCardPayment(
-                                            paymentIntent.client_secret
-                                        ).then(function (result) {
-                                            displayError.classList.add('d-none');
-                                            if (result.error) {
-                                                displayError.textContent = result.error.message;
-                                                displayError.classList.remove('d-none');
-                                            } else {
-
-                                                customerIdElement.value = setupIntent.customer_id;
-                                                paymentMethodIdElement.value = result.paymentIntent.payment_method;
-
-                                                const submitEvent = new Event("submit", { bubbles: true, cancelable: true });
-                                                form.dispatchEvent(submitEvent)
+                        stripe.confirmCardSetup(data.client_secret)
+                            .then((result) => {
+                                if (result.error) {
+                                    showError(result.error.message);
+                                } else {
+                                    var paymentMethodId = result.setupIntent.payment_method;
+                                    // Send payment method ID to the server to create payment intent and subscription
+                                    fetch('@StripeConstants.RouteName.CreatePaymentIntentEndpoint', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            customerId: data.customer_id,
+                                            paymentMethodId: paymentMethodId,
+                                            Metadata: {
+                                                sessionId: '@Model.SessionId'
                                             }
-                                        });
-                                    }
-                                });
-                            }
-                        });
+                                        }),
+                                    }).then((response) => {
+                                        return response.json();
+                                    }).then((paymentData) => {
+                                        if (paymentData.error) {
+                                            showError(paymentData.error);
+                                        } else {
+                                            stripe.confirmCardPayment(paymentData.client_secret)
+                                                .then((result) => {
+                                                    if (result.error) {
+                                                        showError(result.error.message);
+                                                    } else {
+                                                        // Handle successful payment
+                                                        fetch('@StripeConstants.RouteName.CreateSubscriptionEndpoint', {
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Content-Type': 'application/json',
+                                                            },
+                                                            body: JSON.stringify({
+                                                                customerId: data.customer_id,
+                                                                paymentMethodId: paymentMethodId,
+                                                                Metadata: {
+                                                                    sessionId: '@Model.SessionId'
+                                                                }
+                                                            }),
+                                                        }).then((response) => {
+                                                            return response.json();
+                                                        }).then((subscriptionData) => {
+                                                            if (subscriptionData.error) {
+                                                                showError(subscriptionData.error);
+                                                            } else {
+                                                                if (subscriptionData.requires_action) {
+                                                                    stripe.confirmCardPayment(subscriptionData.client_secret)
+                                                                        .then(function (result) {
+                                                                            if (result.error) {
+                                                                                showError(result.error.message);
+                                                                            } else {
+                                                                                const submitEvent = new Event("submit", { bubbles: true, cancelable: true });
+                                                                                form.dispatchEvent(submitEvent);
+                                                                            }
+                                                                        });
+                                                                } else {
+                                                                    const submitEvent = new Event("submit", { bubbles: true, cancelable: true });
+                                                                    form.dispatchEvent(submitEvent);
+                                                                }
+                                                            }
+                                                        });
+                                                    }
+                                                });
+                                        }
+                                    });
+                                }
+                            });
                     }
                 });
             }

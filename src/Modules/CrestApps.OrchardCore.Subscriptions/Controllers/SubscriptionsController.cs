@@ -149,6 +149,8 @@ public sealed class SubscriptionsController : Controller
                 .FirstOrDefaultAsync();
         }
 
+        SubscriptionFlow flow = null;
+
         if (subscriptionSession == null)
         {
             var now = _clock.UtcNow;
@@ -173,11 +175,17 @@ public sealed class SubscriptionsController : Controller
                 subscriptionSession.AgentInfo = Request.Headers.UserAgent;
             }
 
-            var initializationContext = new SubscriptionFlowInitializingContext(subscriptionSession, subscriptionContentItem);
-            await _subscriptionHandlers.InvokeAsync((handler, context) => handler.InitializingAsync(context), initializationContext, _logger);
+            var initializingContext = new SubscriptionFlowInitializingContext(subscriptionSession, subscriptionContentItem);
+
+            await _subscriptionHandlers.InvokeAsync((handler, context) => handler.InitializingAsync(context), initializingContext, _logger);
+
+            flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
+            var initializedContext = new SubscriptionFlowInitializedContext(flow);
+
+            await _subscriptionHandlers.InvokeAsync((handler, context) => handler.InitializedAsync(context), initializedContext, _logger);
         }
 
-        var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
+        flow ??= new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
         subscriptionSession.CurrentStep ??= flow.GetFirstStep()?.Key;
 
         var model = await _subscriptionFlowDisplayManager.BuildEditorAsync(flow, _updateModelAccessor.ModelUpdater, true);
@@ -263,20 +271,20 @@ public sealed class SubscriptionsController : Controller
             }
             else
             {
-                subscriptionSession.Status = SubscriptionSessionStatus.Completed;
-                subscriptionSession.CompletedUtc = now;
-
                 var completedContext = new SubscriptionFlowCompletedContext(flow);
-
-                await _subscriptionHandlers.InvokeAsync((handler, context) => handler.CompletedAsync(context), completedContext, _logger);
 
                 try
                 {
-                    // TODO: process payment here.
-                    // Show success notification.
-                    // Redirect the user to thank you page!
+                    // Event handlers could throw exceptions.
+                    await _subscriptionHandlers.InvokeAsync((handler, context) => handler.CompletingAsync(context), completedContext, _logger);
+
+                    subscriptionSession.Status = SubscriptionSessionStatus.Completed;
+                    subscriptionSession.CompletedUtc = now;
+
                     await _session.SaveAsync(subscriptionSession);
                     await _session.SaveChangesAsync();
+
+                    await _subscriptionHandlers.InvokeAsync((handler, context) => handler.CompletedAsync(context), completedContext, _logger);
 
                     return RedirectToAction(nameof(Confirmation), new
                     {
@@ -286,8 +294,7 @@ public sealed class SubscriptionsController : Controller
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Unable to completed a subscription");
-                    // TODO: rollback payment here.
-                    // Show error notification.
+                    await _session.CurrentTransaction.RollbackAsync();
                 }
             }
         }

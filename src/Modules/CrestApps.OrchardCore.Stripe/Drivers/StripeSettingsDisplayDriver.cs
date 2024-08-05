@@ -8,6 +8,7 @@ using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -21,6 +22,7 @@ public sealed class StripeSettingsDisplayDriver : SectionDisplayDriver<ISite, St
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly IShellReleaseManager _shellReleaseManager;
 
     internal readonly IStringLocalizer S;
 
@@ -28,11 +30,13 @@ public sealed class StripeSettingsDisplayDriver : SectionDisplayDriver<ISite, St
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         IDataProtectionProvider dataProtectionProvider,
+        IShellReleaseManager shellReleaseManager,
         IStringLocalizer<StripeSettingsDisplayDriver> stringLocalizer)
     {
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
         _dataProtectionProvider = dataProtectionProvider;
+        _shellReleaseManager = shellReleaseManager;
         S = stringLocalizer;
     }
 
@@ -42,6 +46,8 @@ public sealed class StripeSettingsDisplayDriver : SectionDisplayDriver<ISite, St
         {
             return null;
         }
+
+        context.Shape.Metadata.Wrappers.Add("Settings_Wrapper__Reload");
 
         return Initialize<StripeSettingsViewModel>("StripeSettings_Edit", model =>
         {
@@ -70,10 +76,14 @@ public sealed class StripeSettingsDisplayDriver : SectionDisplayDriver<ISite, St
 
         var protector = _dataProtectionProvider.CreateProtector(ProtectionPurpose);
 
-        settings.LivePublishableKey = model.LivePublishableKey;
+        _shellReleaseManager.RequestRelease();
+
+        settings.IsLive = model.IsLive;
 
         if (model.IsLive)
         {
+            var liveUpdated = settings.LivePublishableKey != model.LivePublishableKey;
+
             if (string.IsNullOrWhiteSpace(model.LivePublishableKey))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.LivePublishableKey), S["Production publishable key is required."]);
@@ -82,6 +92,7 @@ public sealed class StripeSettingsDisplayDriver : SectionDisplayDriver<ISite, St
             if (!string.IsNullOrWhiteSpace(model.LivePrivateSecret))
             {
                 settings.LivePrivateSecret = protector.Protect(model.LivePrivateSecret);
+                liveUpdated = true;
             }
             else if (string.IsNullOrEmpty(settings.LivePrivateSecret))
             {
@@ -91,16 +102,24 @@ public sealed class StripeSettingsDisplayDriver : SectionDisplayDriver<ISite, St
             if (!string.IsNullOrWhiteSpace(model.LiveWebhookSecret))
             {
                 settings.LiveWebhookSecret = protector.Protect(model.LiveWebhookSecret);
+                liveUpdated = true;
             }
             else if (string.IsNullOrEmpty(settings.LiveWebhookSecret))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.LiveWebhookSecret), S["Production Webhook private secret is required."]);
             }
 
-            return await EditAsync(settings, context);
+            settings.LivePublishableKey = model.LivePublishableKey;
+
+            if (liveUpdated)
+            {
+                _shellReleaseManager.RequestRelease();
+            }
+
+            return await EditAsync(site, settings, context);
         }
 
-        settings.TestingPublishableKey = model.TestingPublishableKey;
+        var testingUpdated = settings.TestingPublishableKey != model.TestingPublishableKey;
 
         if (string.IsNullOrWhiteSpace(model.TestingPublishableKey))
         {
@@ -110,6 +129,7 @@ public sealed class StripeSettingsDisplayDriver : SectionDisplayDriver<ISite, St
         if (!string.IsNullOrWhiteSpace(model.TestingPrivateSecret))
         {
             settings.TestingPrivateSecret = protector.Protect(model.TestingPrivateSecret);
+            testingUpdated = true;
         }
         else if (string.IsNullOrEmpty(settings.TestingPrivateSecret))
         {
@@ -119,12 +139,20 @@ public sealed class StripeSettingsDisplayDriver : SectionDisplayDriver<ISite, St
         if (!string.IsNullOrWhiteSpace(model.TestingWebhookSecret))
         {
             settings.TestingWebhookSecret = protector.Protect(model.TestingWebhookSecret);
+            testingUpdated = true;
         }
         else if (string.IsNullOrEmpty(settings.TestingWebhookSecret))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.TestingWebhookSecret), S["Testing Webhook private secret is required."]);
         }
 
-        return await EditAsync(settings, context);
+        settings.TestingPublishableKey = model.TestingPublishableKey;
+
+        if (testingUpdated)
+        {
+            _shellReleaseManager.RequestRelease();
+        }
+
+        return await EditAsync(site, settings, context);
     }
 }

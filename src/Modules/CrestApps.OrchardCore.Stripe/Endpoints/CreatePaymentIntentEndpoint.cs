@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using Stripe;
 
-namespace CrestApps.OrchardCore.Stripe.Endpoints.Intents;
+namespace CrestApps.OrchardCore.Stripe.Endpoints;
 
 public static class CreatePaymentIntentEndpoint
 {
@@ -25,6 +25,11 @@ public static class CreatePaymentIntentEndpoint
         [FromBody] CreatePaymentIntentRequest model,
         IOptions<StripeOptions> stripeOptions)
     {
+        if (string.IsNullOrEmpty(stripeOptions.Value.ApiKey))
+        {
+            return TypedResults.Problem("Stripe is not configured.", instance: null, statusCode: 500);
+        }
+
         if (!IsValid(model))
         {
             return TypedResults.BadRequest(new
@@ -42,6 +47,7 @@ public static class CreatePaymentIntentEndpoint
             ConfirmationMethod = "manual",
             Confirm = true,
             SetupFutureUsage = "off_session",
+            Metadata = model.Metadata,
         };
 
         var stripeClient = new StripeClient(stripeOptions.Value.ApiKey);
