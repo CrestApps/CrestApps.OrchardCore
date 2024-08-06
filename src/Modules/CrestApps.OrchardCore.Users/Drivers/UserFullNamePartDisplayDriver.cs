@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
@@ -66,7 +65,7 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
         return Task.FromResult<IDisplayResult>(result);
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(User user, UserFullNamePart part, IUpdateModel updater, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(User user, UserFullNamePart part, UpdateEditorContext context)
     {
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.EditUsers, user))
         {
@@ -82,22 +81,22 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
 
         if (settings.DisplayName == DisplayNamePropertyType.Required && string.IsNullOrWhiteSpace(model.DisplayName))
         {
-            updater.ModelState.AddModelError(Prefix, nameof(model.DisplayName), S["Display name is a required value."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayName), S["Display name is a required value."]);
         }
 
         if (settings.FirstName == DisplayNamePropertyType.Required && string.IsNullOrWhiteSpace(model.FirstName))
         {
-            updater.ModelState.AddModelError(Prefix, nameof(model.FirstName), S["First name is a required value."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.FirstName), S["First name is a required value."]);
         }
 
         if (settings.LastName == DisplayNamePropertyType.Required && string.IsNullOrWhiteSpace(model.LastName))
         {
-            updater.ModelState.AddModelError(Prefix, nameof(model.LastName), S["Last name is a required value."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.LastName), S["Last name is a required value."]);
         }
 
         if (settings.MiddleName == DisplayNamePropertyType.Required && string.IsNullOrWhiteSpace(model.MiddleName))
         {
-            updater.ModelState.AddModelError(Prefix, nameof(model.MiddleName), S["Middle name is a required value."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MiddleName), S["Middle name is a required value."]);
         }
 
         part.DisplayName = model.DisplayName;

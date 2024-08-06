@@ -70,7 +70,7 @@ public sealed class UserBadgeNameDisplayDriver : DisplayDriver<UserBadgeContext>
 
         return Combine(results);
     }
-    public override IDisplayResult Display(UserBadgeContext model)
+    public override IDisplayResult Display(UserBadgeContext model, BuildDisplayContext buildDisplayContext)
     {
         if (!_displayUserOptions.ConvertAuthorToShape)
         {

@@ -3,77 +3,38 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!-- Special case - this property is used by a DotNetCliToolReference -->
     <DotNetXunitVersion>2.3.0</DotNetXunitVersion>
+    <OrchardCoreVersion>2.0.0-preview-18296</OrchardCoreVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
     <PackageVersion Include="ncrontab" Version="3.3.3" />
 
-    <!-- PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" /-->
-    <!-- PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" /-->
-    <!-- PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="8.0.0" /-->
-    <!-- PackageVersion Include="Microsoft.Extensions.Localization.Abstractions" Version="8.0.1" /-->
     <PackageVersion Include="Microsoft.Extensions.Logging.AzureAppServices" Version="8.0.5" />
 
     <!-- OrchardCore Packages -->
-    <PackageVersion Include="OrchardCore.Abstractions" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Admin" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Admin.Abstractions" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.AdminDashboard" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Alias" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Application.Cms.Core.Targets" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Application.Cms.Targets" Version="2.0.0-preview-18283"/>
-    <PackageVersion Include="OrchardCore.Autoroute" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.ContentFields" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.ContentManagement" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.ContentManagement.Abstractions" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.ContentTypes" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.ContentTypes.Abstractions" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Contents" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Contents.Core" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Contents.TagHelpers" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Data.Abstractions" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Data.YesSql" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Data.YesSql.Abstractions" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.DisplayManagement" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.DynamicCache" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Email.Core" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.FileStorage.Abstractions" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.FileStorage.FileSystem" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Flows" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Forms" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Html" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Infrastructure.Abstractions" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Liquid.Abstractions" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Lists" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Logging.NLog" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Markdown" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Media" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Media.Abstractions" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Media.Azure" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Media.Core" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Menu" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Module.Targets" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Mvc.Core" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Navigation.Core" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Notifications" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Notifications.Abstractions" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Notifications.Core" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.ResourceManagement" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.ResourceManagement.Abstractions" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Resources" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Shells.Azure" Version="2.0.0-preview-18283"/>
-    <PackageVersion Include="OrchardCore.Taxonomies" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Theme.Targets" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Themes" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Title" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Users" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Users.Abstractions" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="OrchardCore.Users.Core" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="TheAdmin" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="TheTheme" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="SafeMode" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="TheAgencyTheme" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="TheComingSoonTheme" Version="2.0.0-preview-18287"/>
-    <PackageVersion Include="TheBlogTheme" Version="2.0.0-preview-18287"/>
+    <PackageVersion Include="OrchardCore.DisplayManagement.Abstractions" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.DisplayManagement" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.Users.Abstractions" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.Users.Core" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.Infrastructure.Abstractions" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.Liquid.Abstractions" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.ContentFields" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.Contents" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.ContentTypes" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.ContentTypes.Abstractions" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.ContentManagement" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.ContentManagement.Abstractions" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.Media" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.Module.Targets" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.Navigation.Core" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.Logging.NLog" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="OrchardCore.Application.Cms.Core.Targets" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="TheAdmin" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="TheTheme" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="SafeMode" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="TheAgencyTheme" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="TheComingSoonTheme" Version="$(OrchardCoreVersion)"/>
+    <PackageVersion Include="TheBlogTheme" Version="$(OrchardCoreVersion)"/>
+
   </ItemGroup>
 </Project>

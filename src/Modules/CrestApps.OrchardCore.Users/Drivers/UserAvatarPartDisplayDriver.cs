@@ -8,7 +8,6 @@ using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Media;
 using OrchardCore.Media.Fields;
@@ -35,18 +34,18 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         AttachedMediaFieldFileService attachedMediaFieldFileService,
-        IStringLocalizer<UserAvatarPartDisplayDriver> stringLocalizer,
         IContentTypeProvider contentTypeProvider,
         IOptions<UserAvatarOptions> userAvatarOptions,
-        IOptions<MediaOptions> mediaOptions)
+        IOptions<MediaOptions> mediaOptions,
+        IStringLocalizer<UserAvatarPartDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _attachedMediaFieldFileService = attachedMediaFieldFileService;
         _mediaOptions = mediaOptions.Value;
-        S = stringLocalizer;
         _contentTypeProvider = contentTypeProvider;
         _userAvatarOptions = userAvatarOptions.Value;
+        S = stringLocalizer;
     }
 
     public override Task<IDisplayResult> EditAsync(User user, UserAvatarPart part, BuildEditorContext context)
@@ -102,7 +101,7 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
         return Task.FromResult<IDisplayResult>(result);
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(User user, UserAvatarPart part, IUpdateModel updater, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(User user, UserAvatarPart part, UpdateEditorContext context)
     {
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, Permissions.ManageMedia))
         {
@@ -111,7 +110,7 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
 
         var model = new EditMediaFieldViewModel();
 
-        if (await updater.TryUpdateModelAsync(model, Prefix, f => f.Paths))
+        if (await context.Updater.TryUpdateModelAsync(model, Prefix, f => f.Paths))
         {
             // Deserializing an empty string doesn't return an array
             var items = string.IsNullOrWhiteSpace(model.Paths)
@@ -131,19 +130,19 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
 
                     if (!settings.AllowedExtensions.Contains(extension))
                     {
-                        updater.ModelState.AddModelError(Prefix, nameof(model.Paths), S["Media extension is not allowed. Only media with '{0}' extensions are allowed.", string.Join(", ", settings.AllowedExtensions)]);
+                        context.Updater.ModelState.AddModelError(Prefix, nameof(model.Paths), S["Media extension is not allowed. Only media with '{0}' extensions are allowed.", string.Join(", ", settings.AllowedExtensions)]);
                     }
                 }
             }
 
             if (settings.Required && field.Paths.Length < 1)
             {
-                updater.ModelState.AddModelError(Prefix, nameof(model.Paths), S["An avatar is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Paths), S["An avatar is required."]);
             }
 
             if (field.Paths.Length > 1 && !settings.Multiple)
             {
-                updater.ModelState.AddModelError(Prefix, nameof(model.Paths), S["Selecting multiple avatars is forbidden."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Paths), S["Selecting multiple avatars is forbidden."]);
             }
 
             if (settings.AllowMediaText)
