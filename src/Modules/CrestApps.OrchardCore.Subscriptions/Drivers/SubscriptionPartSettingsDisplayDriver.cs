@@ -28,6 +28,6 @@ public sealed class SubscriptionPartSettingsDisplayDriver : ContentTypePartDefin
 
         context.Builder.WithSettings(settings);
 
-        return Edit(contentTypePartDefinition);
+        return await EditAsync(contentTypePartDefinition, context);
     }
 }

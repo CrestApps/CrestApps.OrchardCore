@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Mvc.ModelBinding;
@@ -62,7 +61,7 @@ public sealed class StripeSettingsDisplayDriver : SectionDisplayDriver<ISite, St
         .OnGroup(GroupId);
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(ISite site, StripeSettings settings, IUpdateModel updater, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(ISite site, StripeSettings settings, UpdateEditorContext context)
     {
         if (!string.Equals(context.GroupId, GroupId, StringComparison.OrdinalIgnoreCase) ||
             !await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, StripePermissions.ManageStripeSettings))
