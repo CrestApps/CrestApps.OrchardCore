@@ -158,7 +158,7 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
             field.Content.Remove("Anchors");
         }
 
-        return await Edit(user, part, context);
+        return Edit(user, part, context);
     }
 
     private MediaFieldSettings GetDefaultSettings()
