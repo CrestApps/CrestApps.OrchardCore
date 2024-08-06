@@ -15,7 +15,7 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Users.Drivers;
 
-public sealed class DisplayNameSettingsDisplayDriver : SectionDisplayDriver<ISite, DisplayNameSettings>
+public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<DisplayNameSettings>
 {
     public const string GroupId = "userDisplayName";
 
@@ -44,13 +44,11 @@ public sealed class DisplayNameSettingsDisplayDriver : SectionDisplayDriver<ISit
         S = stringLocalizer;
     }
 
-    public override async Task<IDisplayResult> EditAsync(DisplayNameSettings settings, BuildEditorContext context)
-    {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, UserPermissions.ManageDisplaySettings))
-        {
-            return null;
-        }
+    protected override string SettingsGroupId
+        => GroupId;
 
+    public override IDisplayResult Edit(ISite site, DisplayNameSettings settings, BuildEditorContext context)
+    {
         return Initialize<EditDisplayNameSettingPartViewModel>("DisplayNameSettings_Edit", model =>
         {
             model.Type = settings.Type;
@@ -75,15 +73,15 @@ public sealed class DisplayNameSettingsDisplayDriver : SectionDisplayDriver<ISit
                 new SelectListItem(S["Required"], nameof(DisplayNamePropertyType.Required)),
             ];
         }).Location("Content:5")
-        .OnGroup(GroupId);
+        .OnGroup(SettingsGroupId)
+        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, UserPermissions.ManageDisplaySettings));
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(DisplayNameSettings settings, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(ISite site, DisplayNameSettings settings, UpdateEditorContext context)
     {
         var user = _httpContextAccessor.HttpContext?.User;
 
-        if (!context.GroupId.Equals(GroupId, StringComparison.OrdinalIgnoreCase)
-            || !await _authorizationService.AuthorizeAsync(user, UserPermissions.ManageDisplaySettings))
+        if (!await _authorizationService.AuthorizeAsync(user, UserPermissions.ManageDisplaySettings))
         {
             return null;
         }
@@ -121,6 +119,6 @@ public sealed class DisplayNameSettingsDisplayDriver : SectionDisplayDriver<ISit
             }
         }
 
-        return await EditAsync(settings, context);
+        return Edit(site, settings, context);
     }
 }

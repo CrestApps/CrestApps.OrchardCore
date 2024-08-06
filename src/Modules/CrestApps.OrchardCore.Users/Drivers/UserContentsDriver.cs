@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.ViewModels;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Users.Drivers;
@@ -16,7 +17,7 @@ public sealed class UserContentsDriver : ContentDisplayDriver
         _displayUserOptions = displayUserOptions.Value;
     }
 
-    public override IDisplayResult Display(ContentItem contentItem)
+    public override IDisplayResult Display(ContentItem contentItem, BuildDisplayContext buildDisplayContext)
     {
         if (!_displayUserOptions.ConvertAuthorToShape)
         {
