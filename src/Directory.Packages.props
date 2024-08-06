@@ -7,9 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
-    <PackageVersion Include="ncrontab" Version="3.3.3" />
-
-    <PackageVersion Include="Microsoft.Extensions.Logging.AzureAppServices" Version="8.0.5" />
 
     <!-- OrchardCore Packages -->
     <PackageVersion Include="OrchardCore.DisplayManagement.Abstractions" Version="$(OrchardCoreVersion)"/>
