@@ -9,7 +9,7 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Users.Drivers;
 
-public sealed class UserAvatarOptionsDisplayDriver : SectionDisplayDriver<ISite, UserAvatarOptions>
+public sealed class UserAvatarOptionsDisplayDriver : SiteDisplayDriver<UserAvatarOptions>
 {
     public const string GroupId = "avatarOptions";
 
@@ -27,25 +27,23 @@ public sealed class UserAvatarOptionsDisplayDriver : SectionDisplayDriver<ISite,
         _shellReleaseManager = shellReleaseManager;
     }
 
-    public override async Task<IDisplayResult> EditAsync(UserAvatarOptions settings, BuildEditorContext context)
-    {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, UserPermissions.ManageAvatarSettings))
-        {
-            return null;
-        }
+    protected override string SettingsGroupId
+        => GroupId;
 
+    public override IDisplayResult Edit(ISite site, UserAvatarOptions settings, BuildEditorContext context)
+    {
         return Initialize<UserAvatarOptions>("UserAvatarOptions_Edit", model =>
         {
             model.Required = settings.Required;
             model.UseDefaultStyle = settings.UseDefaultStyle;
         }).Location("Content:5")
-        .OnGroup(GroupId);
+        .OnGroup(SettingsGroupId)
+        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, UserPermissions.ManageAvatarSettings));
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(UserAvatarOptions settings, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(ISite site, UserAvatarOptions settings, UpdateEditorContext context)
     {
-        if (!context.GroupId.Equals(GroupId, StringComparison.OrdinalIgnoreCase) ||
-            !await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, UserPermissions.ManageAvatarSettings))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, UserPermissions.ManageAvatarSettings))
         {
             return null;
         }
@@ -62,6 +60,6 @@ public sealed class UserAvatarOptionsDisplayDriver : SectionDisplayDriver<ISite,
             _shellReleaseManager.RequestRelease();
         }
 
-        return await EditAsync(settings, context);
+        return Edit(site, settings, context);
     }
 }
