@@ -33,24 +33,22 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
         _siteService = siteService;
     }
 
-    public override Task<IDisplayResult> DisplayAsync(User user, UserFullNamePart section, BuildDisplayContext context)
+    public override IDisplayResult Display(User user, UserFullNamePart section, BuildDisplayContext context)
     {
-        var result = Initialize<UserFullNamePartViewModel>("UserFullNamePart", async vm =>
+        return Initialize<UserFullNamePartViewModel>("UserFullNamePart", async vm =>
         {
             vm.FirstName = section?.FirstName;
             vm.MiddleName = section?.MiddleName;
             vm.LastName = section?.LastName;
 
             vm.User = user;
-            vm.Settings = (await _siteService.GetSiteSettingsAsync()).As<DisplayNameSettings>();
+            vm.Settings = await _siteService.GetSettingsAsync<DisplayNameSettings>();
         }).Location("SummaryAdmin", "Header:1.5");
-
-        return Task.FromResult<IDisplayResult>(result);
     }
 
-    public override Task<IDisplayResult> EditAsync(User user, UserFullNamePart part, BuildEditorContext context)
+    public override IDisplayResult Edit(User user, UserFullNamePart part, BuildEditorContext context)
     {
-        var result = Initialize<UserFullNamePartViewModel>("UserFullNamePart_Edit", async model =>
+        return Initialize<UserFullNamePartViewModel>("UserFullNamePart_Edit", async model =>
         {
             model.FirstName = part?.FirstName;
             model.MiddleName = part?.MiddleName;
@@ -58,11 +56,9 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
             model.DisplayName = part?.DisplayName;
 
             model.User = user;
-            model.Settings = (await _siteService.GetSiteSettingsAsync()).As<DisplayNameSettings>();
+            model.Settings = await _siteService.GetSettingsAsync<DisplayNameSettings>();
         }).Location("Content:1.5")
-          .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.EditUsers, user));
-
-        return Task.FromResult<IDisplayResult>(result);
+        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.EditUsers, user));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(User user, UserFullNamePart part, UpdateEditorContext context)
@@ -77,7 +73,7 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var settings = (await _siteService.GetSiteSettingsAsync()).As<DisplayNameSettings>();
+        var settings = await _siteService.GetSettingsAsync<DisplayNameSettings>();
 
         if (settings.DisplayName == DisplayNamePropertyType.Required && string.IsNullOrWhiteSpace(model.DisplayName))
         {
@@ -104,6 +100,6 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
         part.LastName = model.LastName;
         part.MiddleName = model.MiddleName;
 
-        return await EditAsync(user, part, context);
+        return Edit(user, part, context);
     }
 }

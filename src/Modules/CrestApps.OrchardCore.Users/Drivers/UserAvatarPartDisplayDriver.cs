@@ -48,12 +48,12 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
         S = stringLocalizer;
     }
 
-    public override Task<IDisplayResult> EditAsync(User user, UserAvatarPart part, BuildEditorContext context)
+    public override IDisplayResult Edit(User user, UserAvatarPart part, BuildEditorContext context)
     {
         var itemPaths = part.Avatar?.Paths?.ToList().Select(p => new EditMediaFieldItemInfo { Path = p })
             .ToArray() ?? [];
 
-        var result = Initialize<EditMediaFieldViewModel>("UserAvatarPart_Edit", model =>
+        return Initialize<EditMediaFieldViewModel>("UserAvatarPart_Edit", model =>
         {
             part.Avatar ??= new MediaField();
             var settings = GetDefaultSettings();
@@ -92,13 +92,8 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
             {
                 PartDefinition = new ContentPartDefinition(nameof(UserAvatarPart)),
             };
-
-            // var partSettings = model.PartFieldDefinition.Settings.ToObject<MaskedTextFieldSettings>();
-            // model.PartFieldDefinition.PopulateSettings(settings);
         }).Location("Content:1.5")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, Permissions.ManageMedia));
-
-        return Task.FromResult<IDisplayResult>(result);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(User user, UserAvatarPart part, UpdateEditorContext context)
@@ -110,61 +105,60 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
 
         var model = new EditMediaFieldViewModel();
 
-        if (await context.Updater.TryUpdateModelAsync(model, Prefix, f => f.Paths))
+        await context.Updater.TryUpdateModelAsync(model, Prefix, f => f.Paths);
+
+        // Deserializing an empty string doesn't return an array
+        var items = string.IsNullOrWhiteSpace(model.Paths)
+            ? []
+            : JsonSerializer.Deserialize<List<EditMediaFieldItemInfo>>(model.Paths, JOptions.CamelCase);
+
+        part.Avatar ??= new MediaField();
+        part.Avatar.Paths = items.Where(p => !p.IsRemoved).Select(p => p.Path).ToArray() ?? [];
+        var field = part.Avatar;
+        var settings = GetDefaultSettings();
+
+        if (settings.AllowedExtensions?.Length > 0)
         {
-            // Deserializing an empty string doesn't return an array
-            var items = string.IsNullOrWhiteSpace(model.Paths)
-                ? []
-                : JsonSerializer.Deserialize<List<EditMediaFieldItemInfo>>(model.Paths, JOptions.CamelCase);
-
-            part.Avatar ??= new MediaField();
-            part.Avatar.Paths = items.Where(p => !p.IsRemoved).Select(p => p.Path).ToArray() ?? [];
-            var field = part.Avatar;
-            var settings = GetDefaultSettings();
-
-            if (settings.AllowedExtensions?.Length > 0)
+            for (var i = 0; i < field.Paths.Length; i++)
             {
-                for (var i = 0; i < field.Paths.Length; i++)
+                var extension = Path.GetExtension(field.Paths[i]);
+
+                if (!settings.AllowedExtensions.Contains(extension))
                 {
-                    var extension = Path.GetExtension(field.Paths[i]);
-
-                    if (!settings.AllowedExtensions.Contains(extension))
-                    {
-                        context.Updater.ModelState.AddModelError(Prefix, nameof(model.Paths), S["Media extension is not allowed. Only media with '{0}' extensions are allowed.", string.Join(", ", settings.AllowedExtensions)]);
-                    }
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.Paths), S["Media extension is not allowed. Only media with '{0}' extensions are allowed.", string.Join(", ", settings.AllowedExtensions)]);
                 }
-            }
-
-            if (settings.Required && field.Paths.Length < 1)
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Paths), S["An avatar is required."]);
-            }
-
-            if (field.Paths.Length > 1 && !settings.Multiple)
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Paths), S["Selecting multiple avatars is forbidden."]);
-            }
-
-            if (settings.AllowMediaText)
-            {
-                field.MediaTexts = items.Select(t => t.MediaText).ToArray();
-            }
-            else
-            {
-                field.MediaTexts = [];
-            }
-
-            if (settings.AllowAnchors)
-            {
-                field.SetAnchors(items.Select(t => t.Anchor).ToArray());
-            }
-            else if (field.Content.ContainsKey("Anchors")) // Less well known properties should be self healing.
-            {
-                field.Content.Remove("Anchors");
             }
         }
 
-        return await EditAsync(user, part, context);
+        if (settings.Required && field.Paths.Length < 1)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Paths), S["An avatar is required."]);
+        }
+
+        if (field.Paths.Length > 1 && !settings.Multiple)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Paths), S["Selecting multiple avatars is forbidden."]);
+        }
+
+        if (settings.AllowMediaText)
+        {
+            field.MediaTexts = items.Select(t => t.MediaText).ToArray();
+        }
+        else
+        {
+            field.MediaTexts = [];
+        }
+
+        if (settings.AllowAnchors)
+        {
+            field.SetAnchors(items.Select(t => t.Anchor).ToArray());
+        }
+        else if (field.Content.ContainsKey("Anchors")) // Less well known properties should be self healing.
+        {
+            field.Content.Remove("Anchors");
+        }
+
+        return await Edit(user, part, context);
     }
 
     private MediaFieldSettings GetDefaultSettings()

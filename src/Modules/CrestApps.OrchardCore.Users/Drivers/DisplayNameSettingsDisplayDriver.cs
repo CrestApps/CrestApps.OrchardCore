@@ -47,13 +47,8 @@ public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<Display
     protected override string SettingsGroupId
         => GroupId;
 
-    public override async Task<IDisplayResult> EditAsync(ISite site, DisplayNameSettings settings, BuildEditorContext context)
+    public override IDisplayResult Edit(ISite site, DisplayNameSettings settings, BuildEditorContext context)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, UserPermissions.ManageDisplaySettings))
-        {
-            return null;
-        }
-
         return Initialize<EditDisplayNameSettingPartViewModel>("DisplayNameSettings_Edit", model =>
         {
             model.Type = settings.Type;
@@ -78,7 +73,8 @@ public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<Display
                 new SelectListItem(S["Required"], nameof(DisplayNamePropertyType.Required)),
             ];
         }).Location("Content:5")
-        .OnGroup(SettingsGroupId);
+        .OnGroup(SettingsGroupId)
+        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, UserPermissions.ManageDisplaySettings));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, DisplayNameSettings settings, UpdateEditorContext context)
@@ -123,6 +119,6 @@ public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<Display
             }
         }
 
-        return await EditAsync(site, settings, context);
+        return Edit(site, settings, context);
     }
 }

@@ -30,19 +30,15 @@ public sealed class UserAvatarOptionsDisplayDriver : SiteDisplayDriver<UserAvata
     protected override string SettingsGroupId
         => GroupId;
 
-    public override async Task<IDisplayResult> EditAsync(ISite site, UserAvatarOptions settings, BuildEditorContext context)
+    public override IDisplayResult Edit(ISite site, UserAvatarOptions settings, BuildEditorContext context)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, UserPermissions.ManageAvatarSettings))
-        {
-            return null;
-        }
-
         return Initialize<UserAvatarOptions>("UserAvatarOptions_Edit", model =>
         {
             model.Required = settings.Required;
             model.UseDefaultStyle = settings.UseDefaultStyle;
         }).Location("Content:5")
-        .OnGroup(SettingsGroupId);
+        .OnGroup(SettingsGroupId)
+        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, UserPermissions.ManageAvatarSettings));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, UserAvatarOptions settings, UpdateEditorContext context)
@@ -64,6 +60,6 @@ public sealed class UserAvatarOptionsDisplayDriver : SiteDisplayDriver<UserAvata
             _shellReleaseManager.RequestRelease();
         }
 
-        return await EditAsync(site, settings, context);
+        return Edit(site, settings, context);
     }
 }

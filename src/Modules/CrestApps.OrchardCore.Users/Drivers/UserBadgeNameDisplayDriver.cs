@@ -37,9 +37,15 @@ public sealed class UserBadgeNameDisplayDriver : DisplayDriver<UserBadgeContext>
 
         var results = new List<IDisplayResult>()
         {
-            View("UserBadgeNameContentMetaIcon", model).Location("AdminSummary", "Header:before"),
+            View("UserBadgeName", model)
+            .Location("Summary", "Header")
+            .Location("AdminSummary", "Header"),
 
-            View("UserBadgeNameContentMeta", model).Location("AdminSummary", "Header")
+            View("UserBadgeNameContentMetaIcon", model)
+            .Location("AdminSummary", "Header:before"),
+
+            View("UserBadgeNameContentMeta", model)
+            .Location("AdminSummary", "Header")
         };
 
         if (context.DisplayType == "Summary")
@@ -69,16 +75,5 @@ public sealed class UserBadgeNameDisplayDriver : DisplayDriver<UserBadgeContext>
         }
 
         return Combine(results);
-    }
-    public override IDisplayResult Display(UserBadgeContext model, BuildDisplayContext buildDisplayContext)
-    {
-        if (!_displayUserOptions.ConvertAuthorToShape)
-        {
-            return null;
-        }
-
-        return View("UserBadgeName", model)
-            .Location("Summary", "Header")
-            .Location("AdminSummary", "Header");
     }
 }
