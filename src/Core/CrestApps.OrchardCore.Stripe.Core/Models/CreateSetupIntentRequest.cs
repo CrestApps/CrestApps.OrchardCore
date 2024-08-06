@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Stripe.Models;
+namespace CrestApps.OrchardCore.Stripe.Core.Models;
 
 public class CreateSetupIntentRequest
 {

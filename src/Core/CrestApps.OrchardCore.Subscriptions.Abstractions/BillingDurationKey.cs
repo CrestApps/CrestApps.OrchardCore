@@ -1,8 +1,10 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
+using Json;
 
 namespace CrestApps.OrchardCore.Subscriptions;
 
 [JsonConverter(typeof(BillingDurationKeyJsonConverter))]
+
 public class BillingDurationKey : IEquatable<BillingDurationKey>
 {
     public int Duration { get; }

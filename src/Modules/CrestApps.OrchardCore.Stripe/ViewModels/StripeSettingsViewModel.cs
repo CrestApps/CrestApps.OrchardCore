@@ -18,15 +18,15 @@ public class StripeSettingsViewModel
 
     public string LiveWebhookSecret { get; set; }
 
-    public string TestingPublishableKey { get; set; }
+    public string TestPublishableKey { get; set; }
 
     [BindNever]
-    public bool HasTestingPrivateSecret { get; set; }
+    public bool HasTestPrivateSecret { get; set; }
 
-    public string TestingPrivateSecret { get; set; }
+    public string TestPrivateSecret { get; set; }
 
     [BindNever]
-    public bool HasTestingWebhookSecret { get; set; }
+    public bool HasTestWebhookSecret { get; set; }
 
-    public string TestingWebhookSecret { get; set; }
+    public string TestWebhookSecret { get; set; }
 }

@@ -10,9 +10,9 @@ public sealed class StripeSettings
 
     public string LiveWebhookSecret { get; set; }
 
-    public string TestingPublishableKey { get; set; }
+    public string TestPublishableKey { get; set; }
 
-    public string TestingPrivateSecret { get; set; }
+    public string TestPrivateSecret { get; set; }
 
-    public string TestingWebhookSecret { get; set; }
+    public string TestWebhookSecret { get; set; }
 }

@@ -1,11 +1,10 @@
 using CrestApps.OrchardCore.Stripe.Core;
-using CrestApps.OrchardCore.Stripe.Models;
+using CrestApps.OrchardCore.Stripe.Core.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
-using Stripe;
 
 namespace CrestApps.OrchardCore.Stripe.Endpoints;
 
@@ -23,6 +22,7 @@ public static class CreatePaymentIntentEndpoint
 
     private static async Task<IResult> HandleAsync(
         [FromBody] CreatePaymentIntentRequest model,
+        IStripePaymentService stripePaymentService,
         IOptions<StripeOptions> stripeOptions)
     {
         if (string.IsNullOrEmpty(stripeOptions.Value.ApiKey))
@@ -39,25 +39,13 @@ public static class CreatePaymentIntentEndpoint
             });
         }
 
-        var paymentIntentOptions = new PaymentIntentCreateOptions
-        {
-            Amount = (int)(model.Amount * 100), // Amount in cents (e.g., 1000 equals $10.00)
-            Currency = model.Currency,
-            PaymentMethod = model.PaymentMethodId,
-            ConfirmationMethod = "manual",
-            Confirm = true,
-            SetupFutureUsage = "off_session",
-            Metadata = model.Metadata,
-        };
-
-        var stripeClient = new StripeClient(stripeOptions.Value.ApiKey);
-        var paymentIntentService = new PaymentIntentService(stripeClient);
-        var paymentIntent = await paymentIntentService.CreateAsync(paymentIntentOptions);
+        var paymentIntent = await stripePaymentService.CreateAsync(model);
 
         return TypedResults.Ok(new
         {
-            client_secret = paymentIntent.ClientSecret,
-            customer_id = paymentIntent.CustomerId
+            clientSecret = paymentIntent.ClientSecret,
+            customerId = paymentIntent.CustomerId,
+            status = paymentIntent.Status,
         });
     }
 
@@ -66,6 +54,7 @@ public static class CreatePaymentIntentEndpoint
         return model.Amount.HasValue &&
             !string.IsNullOrEmpty(model.Currency) &&
             model.Currency.Length == 3 &&
-            !string.IsNullOrWhiteSpace(model.PaymentMethodId);
+            !string.IsNullOrWhiteSpace(model.PaymentMethodId) &&
+            !string.IsNullOrWhiteSpace(model.CustomerId);
     }
 }

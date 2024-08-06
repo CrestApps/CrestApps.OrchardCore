@@ -1,8 +1,10 @@
-namespace CrestApps.OrchardCore.Stripe.Models;
+namespace CrestApps.OrchardCore.Stripe.Core.Models;
 
 public class CreatePaymentIntentRequest
 {
     public string PaymentMethodId { get; set; }
+
+    public string CustomerId { get; set; }
 
     public double? Amount { get; set; }
 
@@ -10,4 +12,3 @@ public class CreatePaymentIntentRequest
 
     public Dictionary<string, string> Metadata { get; set; }
 }
-

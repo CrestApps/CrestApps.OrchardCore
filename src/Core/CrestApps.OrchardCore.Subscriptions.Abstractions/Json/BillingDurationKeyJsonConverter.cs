@@ -1,7 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CrestApps.OrchardCore.Subscriptions;
 
-namespace CrestApps.OrchardCore.Subscriptions;
+namespace Json;
 
 public class BillingDurationKeyJsonConverter : JsonConverter<BillingDurationKey>
 {
@@ -11,7 +12,7 @@ public class BillingDurationKeyJsonConverter : JsonConverter<BillingDurationKey>
     {
         if (reader.TokenType != JsonTokenType.StartObject)
         {
-            throw new JsonException();
+            throw new JsonException($"Expected StartObject token but got {reader.TokenType}.");
         }
 
         var type = BillingDurationType.Year;
@@ -32,14 +33,26 @@ public class BillingDurationKeyJsonConverter : JsonConverter<BillingDurationKey>
                 switch (propertyName)
                 {
                     case nameof(BillingDurationKey.Type):
+                        if (reader.TokenType != JsonTokenType.Number || !Enum.IsDefined(typeof(BillingDurationType), reader.GetInt32()))
+                        {
+                            throw new JsonException($"Invalid value for {nameof(BillingDurationKey.Type)}: {reader.GetString()}");
+                        }
                         type = (BillingDurationType)reader.GetInt32();
                         break;
                     case nameof(BillingDurationKey.Duration):
+                        if (reader.TokenType != JsonTokenType.Number)
+                        {
+                            throw new JsonException($"Invalid value for {nameof(BillingDurationKey.Duration)}: {reader.GetString()}");
+                        }
                         duration = reader.GetInt32();
                         break;
                     default:
-                        break;
+                        throw new JsonException($"Unexpected property: {propertyName}");
                 }
+            }
+            else
+            {
+                throw new JsonException($"Unexpected token: {reader.TokenType}");
             }
         }
 

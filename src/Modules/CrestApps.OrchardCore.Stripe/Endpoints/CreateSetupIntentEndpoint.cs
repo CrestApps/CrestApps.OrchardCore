@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Stripe.Core;
-using CrestApps.OrchardCore.Stripe.Models;
+using CrestApps.OrchardCore.Stripe.Core.Models;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -94,15 +94,18 @@ public static class CreateSetupIntentEndpoint
         var setupIntentOptions = new SetupIntentCreateOptions
         {
             Customer = customer.Id,
+            PaymentMethod = model.PaymentMethodId,
             PaymentMethodTypes = ["card"],
+            Metadata = customer.Metadata,
         };
         var setupIntentService = new SetupIntentService(stripeClient);
         var setupIntent = await setupIntentService.CreateAsync(setupIntentOptions);
 
         return TypedResults.Ok(new
         {
-            client_secret = setupIntent.ClientSecret,
-            customer_id = customer.Id
+            clientSecret = setupIntent.ClientSecret,
+            customerId = customer.Id,
+            status = setupIntent.Status,
         });
     }
 }

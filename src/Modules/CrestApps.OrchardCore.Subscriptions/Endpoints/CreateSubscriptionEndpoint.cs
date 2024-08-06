@@ -1,27 +1,30 @@
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core;
+using CrestApps.OrchardCore.Subscriptions.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.OrchardCore.Stripe.Endpoints;
+namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
 
 public static class CreateSubscriptionEndpoint
 {
-    public static IEndpointRouteBuilder AddCreateSubscriptionEndpoint(this IEndpointRouteBuilder builder)
+    public static IEndpointRouteBuilder AddCreateStripeSubscriptionEndpoint(this IEndpointRouteBuilder builder)
     {
-        builder.MapPost("stripe/create-subscription", HandleAsync)
+        builder.MapPost("subscriptions/stripe/create-subscription", HandleAsync)
             .AllowAnonymous()
-            .WithName(StripeConstants.RouteName.CreateSubscriptionEndpoint)
+            .WithName(SubscriptionsConstants.RouteName.CreateSubscriptionEndpoint)
             .DisableAntiforgery();
 
         return builder;
     }
 
     private static async Task<IResult> HandleAsync(
-        [FromBody] CreateSubscriptionRequest model,
+        [FromBody] CreateSessionSubscriptionPayment model,
+        ISubscriptionSessionStore subscriptionSessionStore,
         IStripeSubscriptionService stripeSubscriptionService,
         IOptions<StripeOptions> stripeOptions)
     {
@@ -39,7 +42,22 @@ public static class CreateSubscriptionEndpoint
             });
         }
 
-        var response = await stripeSubscriptionService.CreateAsync(model);
+        var session = await subscriptionSessionStore.GetAsync(model.SessionId, SubscriptionSessionStatus.Pending);
+
+        if (session == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var request = new CreateSubscriptionRequest()
+        {
+            PaymentMethodId = model.PaymentMethodId,
+            CustomerId = model.CustomerId,
+            PlanId = session.ContentItemVersionId,
+            Metadata = model.Metadata,
+        };
+
+        var response = await stripeSubscriptionService.CreateAsync(request);
 
         if (response.Status == "requires_action")
         {
@@ -56,11 +74,11 @@ public static class CreateSubscriptionEndpoint
         });
     }
 
-    private static bool IsValid(CreateSubscriptionRequest model)
+    private static bool IsValid(CreateSessionSubscriptionPayment model)
     {
         return
             !string.IsNullOrWhiteSpace(model.CustomerId) &&
-            !string.IsNullOrWhiteSpace(model.PlanId) &&
+            !string.IsNullOrWhiteSpace(model.SessionId) &&
             !string.IsNullOrWhiteSpace(model.PaymentMethodId);
     }
 }

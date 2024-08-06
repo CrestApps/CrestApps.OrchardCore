@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.Stripe.Core;
+using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
@@ -27,6 +27,7 @@ public sealed class StripePaymentSubscriptionFlowDisplayDriver : DisplayDriver<S
         return Task.FromResult<IDisplayResult>(
             Initialize<StripeViewModel>("StripeSubscriptionPayments_Edit", model =>
             {
+                model.SessionId = flow.Session.SessionId;
                 model.IsLive = _stripeOptions.IsLive;
                 model.PublishableKey = _stripeOptions.PublishableKey;
             }).Location("Content:after")

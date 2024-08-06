@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Stripe.Core;
-using CrestApps.OrchardCore.Stripe.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -13,6 +12,13 @@ namespace CrestApps.OrchardCore.Stripe.Endpoints;
 
 public static class CreateWebhookEndpoint
 {
+    public static readonly string[] SupportedEvents =
+    [
+        Events.InvoicePaymentSucceeded,
+        Events.CustomerSubscriptionCreated,
+        Events.PaymentIntentSucceeded,
+    ];
+
     public static IEndpointRouteBuilder AddWebhookEndpoint<T>(this IEndpointRouteBuilder builder)
     {
         builder.MapPost("stripe/webhook", HandleAsync<T>)
@@ -108,13 +114,5 @@ public static class CreateWebhookEndpoint
         }
 
         return TypedResults.BadRequest();
-    }
-
-    private static bool IsValid(CreatePaymentIntentRequest model)
-    {
-        return model.Amount.HasValue &&
-            !string.IsNullOrEmpty(model.Currency) &&
-            model.Currency.Length == 3 &&
-            !string.IsNullOrWhiteSpace(model.PaymentMethodId);
     }
 }

@@ -3,7 +3,9 @@ using CrestApps.OrchardCore.Subscriptions.Controllers;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Drivers;
+using CrestApps.OrchardCore.Subscriptions.Endpoints;
 using CrestApps.OrchardCore.Subscriptions.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Migrations;
@@ -12,11 +14,11 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.Json;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.Core.Utilities;
 
@@ -47,11 +49,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<ISubscriptionHandler, ContentSubscriptionHandler>();
         services.AddScoped<ISubscriptionHandler, PaymentSubscriptionHandler>();
 
+        services.AddScoped<ISubscriptionSessionStore, SubscriptionSessionStore>();
+
         services.AddSingleton<SubscriptionPaymentSession>();
-        services.Configure<DocumentJsonSerializerOptions>(options =>
-        {
-            options.SerializerOptions.Converters.Add(BillingDurationKeyJsonConverter.Instance);
-        });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -93,5 +93,12 @@ public sealed class StripeStartup : StartupBase
     {
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, StripePaymentSubscriptionFlowDisplayDriver>();
         services.AddScoped<IPaymentEvent, SubscriptionPaymentHandler>();
+        services.AddScoped<IContentHandler, SubscriptionsContentHandler>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddCreateStripeSubscriptionEndpoint()
+            .AddCreatePaymentIntentEndpoint();
     }
 }

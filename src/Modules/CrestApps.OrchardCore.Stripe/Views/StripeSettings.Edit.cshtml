@@ -1,6 +1,32 @@
+@using CrestApps.OrchardCore.Stripe.Core
+@using CrestApps.OrchardCore.Stripe.Endpoints
 @using CrestApps.OrchardCore.Stripe.ViewModels
+@using Microsoft.AspNetCore.Routing
 
+@inject LinkGenerator LinkGenerator
 @model StripeSettingsViewModel
+
+<div class="alert alert-info" role="alert">
+    @T["To get keys, log into <a href=\"https://stripe.com/\" target=\"_blank\">Stripe</a> dashboard."]
+    @T["Navigate to the <a href=\"https://dashboard.stripe.com/developers\" target=\"_blank\">Developers</a> page. If you want testing keys instead of production, toggle the <code>Test mode</code> button. From the Developers page, click on the <a href=\"https://dashboard.stripe.com/apikeys\" target=\"_blank\">API keys</a> tab. Copy the publishable key token and the secret key token."]
+    @T["To obtain the webhooks secret click on  <a href=\"https://dashboard.stripe.com/webhooks\" target=\"_blank\">Webhooks</a> tab from the Developers page. Then click on <a href=\"https://dashboard.stripe.com/webhooks/create\" target=\"_blank\">Add an endpoint</a> button and fill out the form using the following info:"]
+    <ul>
+        <li>@T["Endpoint URL: <code>{0}</code>", LinkGenerator.GetUriByName(ViewContext.HttpContext, StripeConstants.RouteName.CreateWebhookEndpoint)]</li>
+        <li>
+            @T["Click on <code>Select Events</code> and select the following events:"]
+            <ul>
+                @foreach (var eventName in CreateWebhookEndpoint.SupportedEvents)
+                {
+                    <li>
+                        <code>@eventName</code>
+                    </li>
+                }
+            </ul>
+        </li>
+    </ul>
+
+    @T["In the <code>Sample endpoint</code> look for the <code>endpoint_secret</code> value. The webhooks secret is the value that starts with <code>whsec_</code> copy the value excluding the quotes."]
+</div>
 
 <div class="mb-3">
     <div class="form-check">
@@ -24,7 +50,7 @@
     </div>
 
     <div class="mb-3" asp-validation-class-for="LiveWebhookSecret">
-        <label asp-for="LiveWebhookSecret" class="form-label">@T["Production Webhook Secret"]</label>
+        <label asp-for="LiveWebhookSecret" class="form-label">@T["Production Webhooks Secret"]</label>
         <input asp-for="LiveWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasLiveWebhookSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
         <span asp-validation-for="LiveWebhookSecret"></span>
     </div>
@@ -33,22 +59,22 @@
 
 <div class="testing-stripe-settings@(Model.IsLive ? " d-none" : string.Empty)">
 
-    <div class="mb-3" asp-validation-class-for="TestingPublishableKey">
-        <label asp-for="TestingPublishableKey" class="form-label">@T["Testing Publishable Key"]</label>
-        <input asp-for="TestingPublishableKey" class="form-control" type="text" />
-        <span asp-validation-for="TestingPublishableKey"></span>
+    <div class="mb-3" asp-validation-class-for="TestPublishableKey">
+        <label asp-for="TestPublishableKey" class="form-label">@T["Test Publishable Key"]</label>
+        <input asp-for="TestPublishableKey" class="form-control" type="text" />
+        <span asp-validation-for="TestPublishableKey"></span>
     </div>
 
-    <div class="mb-3" asp-validation-class-for="TestingPrivateSecret">
-        <label asp-for="TestingPrivateSecret" class="form-label">@T["Testing Secret Key"]</label>
-        <input asp-for="TestingPrivateSecret" class="form-control" type="text" placeholder="@(Model.HasTestingPrivateSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
-        <span asp-validation-for="TestingPrivateSecret"></span>
+    <div class="mb-3" asp-validation-class-for="TestPrivateSecret">
+        <label asp-for="TestPrivateSecret" class="form-label">@T["Test Secret Key"]</label>
+        <input asp-for="TestPrivateSecret" class="form-control" type="text" placeholder="@(Model.HasTestPrivateSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
+        <span asp-validation-for="TestPrivateSecret"></span>
     </div>
 
-    <div class="mb-3" asp-validation-class-for="TestingWebhookSecret">
-        <label asp-for="TestingWebhookSecret" class="form-label">@T["Testing Webhook Secret"]</label>
-        <input asp-for="TestingWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasTestingWebhookSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
-        <span asp-validation-for="TestingWebhookSecret"></span>
+    <div class="mb-3" asp-validation-class-for="TestWebhookSecret">
+        <label asp-for="TestWebhookSecret" class="form-label">@T["Test Webhooks Secret"]</label>
+        <input asp-for="TestWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasTestWebhookSecret ? @T["To update a stored key securely, provide a new value."] : string.Empty)" />
+        <span asp-validation-for="TestWebhookSecret"></span>
     </div>
 
 </div>

@@ -46,16 +46,16 @@ internal sealed class StripeOptionsConfiguration : IConfigureOptions<StripeOptio
             return;
         }
 
-        options.PublishableKey = settings.TestingPublishableKey;
+        options.PublishableKey = settings.TestPublishableKey;
 
-        if (!string.IsNullOrEmpty(settings.TestingPrivateSecret))
+        if (!string.IsNullOrEmpty(settings.TestPrivateSecret))
         {
-            options.ApiKey = protector.Unprotect(settings.TestingPrivateSecret);
+            options.ApiKey = protector.Unprotect(settings.TestPrivateSecret);
         }
 
-        if (!string.IsNullOrEmpty(settings.TestingWebhookSecret))
+        if (!string.IsNullOrEmpty(settings.TestWebhookSecret))
         {
-            options.WebhookSecret = protector.Unprotect(settings.TestingWebhookSecret);
+            options.WebhookSecret = protector.Unprotect(settings.TestWebhookSecret);
         }
     }
 }

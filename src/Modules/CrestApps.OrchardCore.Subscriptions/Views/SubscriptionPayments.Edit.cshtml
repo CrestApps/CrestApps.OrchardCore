@@ -31,8 +31,8 @@
 
         <li class="list-group-item list-group-item-dark">
             <div class="row">
-                <div class="col-md-9 col-xxl-8 text-end">@T["Due Now"]</div>
-                <div class="text-center col-md-3 col-xxl-4">
+                <div class="offset-3 offset-md-7 offset-xxl-7 text-center col-3 col-md-2 col-xxl-1">@T["Due Now"]</div>
+                <div class="text-center col-6 col-md-3 col-xxl-4">
                     @Model.Value.DueNow.ToString("C")
                 </div>
             </div>
@@ -42,8 +42,8 @@
         {
             <li class="list-group-item list-group-item-dark">
                 <div class="row">
-                    <div class="col-md-9 col-xxl-8 text-end">@T["Sub Total"]</div>
-                    <div class="text-center col-md-3 col-xxl-4">
+                    <div class="offset-3 offset-md-7 offset-xxl-7 text-center col-3 col-md-2 col-xxl-1">@T["Sub Total"]</div>
+                    <div class="text-center col-6 col-md-3 col-xxl-4">
                         @T.GetAmount(subtotal.Key.Type, subtotal.Key.Duration, subtotal.Value)
                     </div>
                 </div>
@@ -52,8 +52,8 @@
 
         <li class="list-group-item list-group-item-dark">
             <div class="row">
-                <div class="col-md-9 col-xxl-8 text-end">@T["Total"]</div>
-                <div class="text-center col-md-3 col-xxl-4">
+                <div class="offset-3 offset-md-7 offset-xxl-7 text-center col-3 col-md-2 col-xxl-1">@T["Total"]</div>
+                <div class="text-center col-6 col-md-3 col-xxl-4">
                     @Model.Value.GrandTotal.ToString("C")
                 </div>
             </div>
