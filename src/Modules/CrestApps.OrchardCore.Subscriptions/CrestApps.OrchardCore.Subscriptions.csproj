@@ -5,10 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Remove="Views\Subscriptions.Summary.cshtml" />
-    <Content Remove="Views\SubscriptionsPart.cshtml" />
-    <Content Remove="Views\SubscriptionsPart.Edit.cshtml" />
-    <Content Remove="Views\SubscriptionsSignup.cshtml" />
     <Content Remove="Views\Subscriptions\Index.cshtml" />
     <Content Remove="Views\_ViewImports.cshtml" />
   </ItemGroup>

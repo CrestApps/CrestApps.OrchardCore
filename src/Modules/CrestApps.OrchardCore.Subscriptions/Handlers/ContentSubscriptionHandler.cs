@@ -40,14 +40,14 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
 
     public override async Task InitializingAsync(SubscriptionFlowInitializingContext context)
     {
-        if (!context.SubscriptionContentItem.TryGet<SubscriptionsPart>(out var subscriptionPart))
+        if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out var subscriptionPart))
         {
             return;
         }
 
         var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(context.SubscriptionContentItem.ContentType);
 
-        var partDefinition = typeDefinition?.Parts?.FirstOrDefault(x => x.Name == nameof(SubscriptionsPart));
+        var partDefinition = typeDefinition?.Parts?.FirstOrDefault(x => x.Name == nameof(SubscriptionPart));
 
         if (partDefinition == null)
         {

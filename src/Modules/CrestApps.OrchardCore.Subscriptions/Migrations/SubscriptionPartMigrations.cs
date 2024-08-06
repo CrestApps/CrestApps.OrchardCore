@@ -4,20 +4,20 @@ using OrchardCore.Data.Migration;
 
 namespace CrestApps.OrchardCore.Subscriptions.Migrations;
 
-public sealed class SubscriptionsPartMigrations : DataMigration
+public sealed class SubscriptionPartMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
-    public SubscriptionsPartMigrations(IContentDefinitionManager contentDefinitionManager)
+    public SubscriptionPartMigrations(IContentDefinitionManager contentDefinitionManager)
     {
         _contentDefinitionManager = contentDefinitionManager;
     }
 
     public async Task<int> CreateAsync()
     {
-        await _contentDefinitionManager.AlterPartDefinitionAsync("SubscriptionsPart", part => part
+        await _contentDefinitionManager.AlterPartDefinitionAsync("SubscriptionPart", part => part
             .Attachable()
-            .WithDisplayName("Subscriptions")
+            .WithDisplayName("Subscription")
             .WithDescription("Provides the key properties for any subscription.")
         );
 

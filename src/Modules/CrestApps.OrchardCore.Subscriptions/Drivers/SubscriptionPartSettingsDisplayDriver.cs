@@ -6,7 +6,7 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
-public sealed class SubscriptionPartSettingsDisplayDriver : ContentTypePartDefinitionDisplayDriver<SubscriptionsPart>
+public sealed class SubscriptionPartSettingsDisplayDriver : ContentTypePartDefinitionDisplayDriver<SubscriptionPart>
 {
     public override Task<IDisplayResult> EditAsync(ContentTypePartDefinition contentTypePartDefinition, BuildEditorContext context)
     {

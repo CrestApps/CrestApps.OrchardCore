@@ -2,7 +2,7 @@ using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 
-public sealed class SubscriptionsPart : ContentPart
+public sealed class SubscriptionPart : ContentPart
 {
     /// <summary>
     /// Initial Payment amount to apply.

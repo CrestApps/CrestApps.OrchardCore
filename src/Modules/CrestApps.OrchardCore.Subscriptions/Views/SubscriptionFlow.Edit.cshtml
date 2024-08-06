@@ -1,38 +1,36 @@
-@if (Model.Steps != null)
-{
-    <div class="container mt-3 mb-5">
-        <div class="d-flex justify-content-around">
-            @await DisplayAsync(Model.Steps)
-        </div>
-    </div>
-}
+<div class="container">
 
-<div class="card">
-    @if (Model.Header != null)
+    @if (Model.Steps != null)
     {
-        <div class="card-header">
-            @await DisplayAsync(Model.Header)
-        </div>
+        @await DisplayAsync(Model.Steps)
     }
 
-
-    <div class="card-body">
-        @if (Model.Content != null)
+    <div class="card">
+        @if (Model.Header != null)
         {
-            @await DisplayAsync(Model.Content)
+            <div class="card-header">
+                @await DisplayAsync(Model.Header)
+            </div>
         }
 
-        @if (Model.Actions != null)
+        <div class="card-body">
+            @if (Model.Content != null)
+            {
+                @await DisplayAsync(Model.Content)
+            }
+
+            @if (Model.Actions != null)
+            {
+                @await DisplayAsync(Model.Actions)
+            }
+        </div>
+
+
+        @if (Model.Footer != null)
         {
-            @await DisplayAsync(Model.Actions)
+            <div class="card-Footer">
+                @await DisplayAsync(Model.Footer)
+            </div>
         }
     </div>
-
-
-    @if (Model.Footer != null)
-    {
-        <div class="card-Footer">
-            @await DisplayAsync(Model.Footer)
-        </div>
-    }
 </div>

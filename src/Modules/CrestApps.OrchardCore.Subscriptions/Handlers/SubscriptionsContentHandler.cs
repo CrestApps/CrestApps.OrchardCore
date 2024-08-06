@@ -33,7 +33,7 @@ public sealed class SubscriptionsContentHandler : ContentHandlerBase
 
         if (definition == null ||
             !definition.StereotypeEquals(SubscriptionsConstants.Stereotype) ||
-            !context.ContentItem.TryGet<SubscriptionsPart>(out var subscriptionPart))
+            !context.ContentItem.TryGet<SubscriptionPart>(out var subscriptionPart))
         {
             return;
         }
@@ -60,7 +60,7 @@ public sealed class SubscriptionsContentHandler : ContentHandlerBase
 
         if (definition == null ||
             !definition.StereotypeEquals(SubscriptionsConstants.Stereotype) ||
-            !context.ContentItem.TryGet<SubscriptionsPart>(out var subscriptionPart))
+            !context.ContentItem.TryGet<SubscriptionPart>(out var subscriptionPart))
         {
             return;
         }

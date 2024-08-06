@@ -30,9 +30,9 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDataMigration<SubscriptionsPartMigrations>()
-            .AddContentPart<SubscriptionsPart>()
-            .UseDisplayDriver<SubscriptionsPartDisplayDriver>();
+        services.AddDataMigration<SubscriptionPartMigrations>()
+            .AddContentPart<SubscriptionPart>()
+            .UseDisplayDriver<SubscriptionPartDisplayDriver>();
 
         services.AddDataMigration<SubscriptionsContentItemIndexMigrations>()
             .AddScopedIndexProvider<SubscriptionsContentItemIndexProvider>();
@@ -64,21 +64,21 @@ public sealed class Startup : StartupBase
         );
 
         routes.MapAreaControllerRoute(
-            name: "SubscriptionsSignup",
+            name: "SubscriptionSignup",
             areaName: SubscriptionsConstants.Features.ModuleId,
             pattern: "Subscription/{contentItemId}/Signup",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Signup) }
         );
 
         routes.MapAreaControllerRoute(
-            name: "SubscriptionsSignupConfirmation",
+            name: "SubscriptionSignupConfirmation",
             areaName: SubscriptionsConstants.Features.ModuleId,
             pattern: "Subscription/{sessionId}/Signup/Confirmation",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Confirmation) }
         );
 
         routes.MapAreaControllerRoute(
-            name: "SubscriptionsSignupStep",
+            name: "SubscriptionSignupStep",
             areaName: SubscriptionsConstants.Features.ModuleId,
             pattern: "Subscription/{sessionId}/Signup/Step/{step?}",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.ViewSession) }

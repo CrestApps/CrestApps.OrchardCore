@@ -28,7 +28,7 @@ public sealed class SubscriptionsContentItemIndexProvider : IndexProvider<Conten
         context.For<SubscriptionsContentItemIndex>()
             .Map(async contentItem =>
             {
-                if (!contentItem.TryGet<SubscriptionsPart>(out var part))
+                if (!contentItem.TryGet<SubscriptionPart>(out var part))
                 {
                     return null;
                 }

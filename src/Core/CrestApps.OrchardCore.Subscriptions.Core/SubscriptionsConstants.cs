@@ -2,7 +2,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Core;
 
 public static class SubscriptionsConstants
 {
-    public const string Stereotype = "Subscriptions";
+    public const string Stereotype = "Subscription";
 
     public static class RouteName
     {

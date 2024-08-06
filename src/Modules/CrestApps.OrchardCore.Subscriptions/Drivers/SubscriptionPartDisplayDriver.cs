@@ -10,16 +10,16 @@ using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
-public sealed class SubscriptionsPartDisplayDriver : ContentPartDisplayDriver<SubscriptionsPart>
+public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<SubscriptionPart>
 {
     internal readonly IStringLocalizer S;
 
-    public SubscriptionsPartDisplayDriver(IStringLocalizer<SubscriptionsPartDisplayDriver> stringLocalizer)
+    public SubscriptionPartDisplayDriver(IStringLocalizer<SubscriptionPartDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;
     }
 
-    public override Task<IDisplayResult> DisplayAsync(SubscriptionsPart part, BuildPartDisplayContext context)
+    public override Task<IDisplayResult> DisplayAsync(SubscriptionPart part, BuildPartDisplayContext context)
     {
         return Task.FromResult<IDisplayResult>(
             Combine(
@@ -27,13 +27,13 @@ public sealed class SubscriptionsPartDisplayDriver : ContentPartDisplayDriver<Su
                 .Location("Summary", "Content")
                 .Location("Detail", "Content"),
 
-                View("SubscriptionsSignup", part)
+                View("SubscriptionSignup", part)
                 .Location("Summary", "Footer")
             )
         );
     }
 
-    public override Task<IDisplayResult> EditAsync(SubscriptionsPart part, BuildPartEditorContext context)
+    public override Task<IDisplayResult> EditAsync(SubscriptionPart part, BuildPartEditorContext context)
     {
         var shape = Initialize<SubscriptionPartViewModel>(GetEditorShapeType(context), viewModel =>
         {
@@ -55,7 +55,7 @@ public sealed class SubscriptionsPartDisplayDriver : ContentPartDisplayDriver<Su
         return Task.FromResult<IDisplayResult>(shape);
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(SubscriptionsPart part, IUpdateModel updater, UpdatePartEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(SubscriptionPart part, IUpdateModel updater, UpdatePartEditorContext context)
     {
         var viewModel = new SubscriptionPartViewModel();
 
