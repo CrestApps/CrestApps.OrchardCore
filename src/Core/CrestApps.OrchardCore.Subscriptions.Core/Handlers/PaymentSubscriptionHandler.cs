@@ -7,11 +7,13 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 {
     public const string StepKey = "Payment";
+
     private readonly SubscriptionPaymentSession _subscriptionPaymentSession;
 
     internal readonly IStringLocalizer S;
 
-    public PaymentSubscriptionHandler(SubscriptionPaymentSession subscriptionPaymentSession,
+    public PaymentSubscriptionHandler(
+        SubscriptionPaymentSession subscriptionPaymentSession,
         IStringLocalizer<PaymentSubscriptionHandler> stringLocalizer)
     {
         _subscriptionPaymentSession = subscriptionPaymentSession;

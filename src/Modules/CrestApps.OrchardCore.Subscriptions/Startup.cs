@@ -102,3 +102,18 @@ public sealed class StripeStartup : StartupBase
             .AddCreatePaymentIntentEndpoint();
     }
 }
+
+[Feature(SubscriptionsConstants.Features.TenantOnboarding)]
+public sealed class TenantOnboardingStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPart<TenantOnboardingPart>()
+            .UseDisplayDriver<TenantOnboardingPartDisplayDriver>();
+
+        services.AddDataMigration<TenantOnboardingMigrations>();
+        services.AddScoped<ISubscriptionHandler, UserRegistrationSubscriptionHandler>();
+        services.AddScoped<ISubscriptionHandler, TenantOnboardingSubscriptionHandler>();
+
+    }
+}

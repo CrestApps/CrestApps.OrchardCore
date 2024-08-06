@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model TenantOnboardingViewModel
+
+<div class="mb-3">
+    <label asp-for="RecipeName" class="form-label">@T["Recipe"]</label>
+    <select asp-for="RecipeName" asp-items="Model.Recipes" class="form-select"></select>
+    <span asp-validation-for="RecipeName" class="text-danger"></span>
+</div>

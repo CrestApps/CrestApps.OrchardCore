@@ -13,7 +13,12 @@ using OrchardCore.Modules.Manifest;
     Name = "Subscriptions",
     Id = SubscriptionsConstants.Features.ModuleId,
     Description = "Provides a way to process and manage subscriptions.",
-    Category = "Subscriptions"
+    Category = "Subscriptions",
+    Dependencies =
+    [
+        "OrchardCore.Contents",
+        "OrchardCore.ContentTypes",
+    ]
 )]
 
 [assembly: Feature(
@@ -23,6 +28,20 @@ using OrchardCore.Modules.Manifest;
     Category = "Subscriptions",
     Dependencies =
     [
+        SubscriptionsConstants.Features.ModuleId,
+        StripeConstants.Feature.ModuleId,
+    ]
+)]
+
+[assembly: Feature(
+    Name = "Subscriptions - Tenant Onboarding",
+    Id = SubscriptionsConstants.Features.TenantOnboarding,
+    Description = "Provides a way to onboard new tenants using subscriptions.",
+    Category = "Subscriptions",
+    DefaultTenantOnly = true,
+    Dependencies =
+    [
+        SubscriptionsConstants.Features.ModuleId,
         StripeConstants.Feature.ModuleId,
     ]
 )]

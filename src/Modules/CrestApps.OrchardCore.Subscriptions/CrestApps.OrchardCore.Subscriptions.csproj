@@ -20,6 +20,7 @@
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Title" />
+    <PackageReference Include="OrchardCore.Users.Core" />
   </ItemGroup>
 
   <ItemGroup>
