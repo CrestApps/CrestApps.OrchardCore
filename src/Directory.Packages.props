@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!-- Special case - this property is used by a DotNetCliToolReference -->
     <DotNetXunitVersion>2.3.0</DotNetXunitVersion>
-    <OrchardCoreVersion>2.0.0-preview-18296</OrchardCoreVersion>
+    <OrchardCoreVersion>2.0.0-preview-18299</OrchardCoreVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
@@ -32,6 +32,5 @@
     <PackageVersion Include="TheAgencyTheme" Version="$(OrchardCoreVersion)"/>
     <PackageVersion Include="TheComingSoonTheme" Version="$(OrchardCoreVersion)"/>
     <PackageVersion Include="TheBlogTheme" Version="$(OrchardCoreVersion)"/>
-
   </ItemGroup>
 </Project>
