@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
-using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -55,39 +54,39 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
         return Task.FromResult<IDisplayResult>(shape);
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(SubscriptionPart part, IUpdateModel updater, UpdatePartEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(SubscriptionPart part, UpdatePartEditorContext context)
     {
         var viewModel = new SubscriptionPartViewModel();
 
-        await updater.TryUpdateModelAsync(viewModel, Prefix);
+        await context.Updater.TryUpdateModelAsync(viewModel, Prefix);
 
         if (viewModel.InitialAmount.HasValue && viewModel.InitialAmount.Value < 0)
         {
-            updater.ModelState.AddModelError(Prefix, nameof(viewModel.InitialAmount), S["Initial Amount cannot be negative."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.InitialAmount), S["Initial Amount cannot be negative."]);
         }
 
         if (!viewModel.BillingAmount.HasValue)
         {
-            updater.ModelState.AddModelError(Prefix, nameof(viewModel.BillingAmount), S["Billing Amount is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.BillingAmount), S["Billing Amount is required."]);
         }
         else if (viewModel.BillingAmount.Value < 0)
         {
-            updater.ModelState.AddModelError(Prefix, nameof(viewModel.BillingAmount), S["Billing Amount cannot be negative."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.BillingAmount), S["Billing Amount cannot be negative."]);
         }
 
         if (viewModel.BillingDuration < 1)
         {
-            updater.ModelState.AddModelError(Prefix, nameof(viewModel.BillingDuration), S["Billing Duration cannot be less than one."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.BillingDuration), S["Billing Duration cannot be less than one."]);
         }
 
         if (viewModel.BillingCycleLimit.HasValue && viewModel.BillingCycleLimit.Value < 0)
         {
-            updater.ModelState.AddModelError(Prefix, nameof(viewModel.BillingCycleLimit), S["Billing Cycle Limit cannot be negative."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.BillingCycleLimit), S["Billing Cycle Limit cannot be negative."]);
         }
 
         if (viewModel.SubscriptionDayDelay.HasValue && viewModel.SubscriptionDayDelay.Value < 0)
         {
-            updater.ModelState.AddModelError(Prefix, nameof(viewModel.SubscriptionDayDelay), S["Subscription Day Delay cannot be negative."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.SubscriptionDayDelay), S["Subscription Day Delay cannot be negative."]);
         }
 
         part.InitialAmount = viewModel.InitialAmount;

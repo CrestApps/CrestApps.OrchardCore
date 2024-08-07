@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
-using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Recipes.Services;
@@ -37,7 +36,7 @@ public sealed class TenantOnboardingPartDisplayDriver : ContentPartDisplayDriver
         });
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(TenantOnboardingPart part, IUpdateModel updater, UpdatePartEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(TenantOnboardingPart part, UpdatePartEditorContext context)
     {
         var model = new TenantOnboardingViewModel();
 
