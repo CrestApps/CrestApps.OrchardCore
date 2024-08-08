@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
+namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 
 public sealed class SubscriptionFlowInitializedContext : SubscriptionFlowContextBase
 {

@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.Payments;
+namespace CrestApps.OrchardCore.Payments;
 
 public sealed class PaymentIntentSucceededContext : PaymentEventContextBase
 {

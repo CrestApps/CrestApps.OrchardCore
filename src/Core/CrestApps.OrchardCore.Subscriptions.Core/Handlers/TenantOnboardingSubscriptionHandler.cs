@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;

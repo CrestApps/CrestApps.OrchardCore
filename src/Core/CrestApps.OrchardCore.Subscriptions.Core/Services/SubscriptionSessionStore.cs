@@ -50,7 +50,7 @@ public sealed class SubscriptionSessionStore : ISubscriptionSessionStore
         }
         else
         {
-            subscriptionSession = await query.FirstOrDefaultAsync();
+            subscriptionSession = await query.Where(x => x.OwnerId == null).FirstOrDefaultAsync();
 
             // Don't trust the user, check for additional info.
             var ipAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
@@ -77,7 +77,8 @@ public sealed class SubscriptionSessionStore : ISubscriptionSessionStore
             var status = nameof(SubscriptionSessionStatus.Pending);
             var modifiedUtc = _clock.UtcNow.AddDays(-1);
 
-            var subscriptionSession = await _session.Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.ContentItemVersionId == subscriptionContentItem.ContentItemVersionId && x.OwnerId == ownerId && x.Status == status && x.ModifiedUtc > modifiedUtc)
+            var subscriptionSession = await _session
+                .Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.ContentItemVersionId == subscriptionContentItem.ContentItemVersionId && x.OwnerId == ownerId && x.Status == status && x.ModifiedUtc > modifiedUtc)
                 .OrderByDescending(x => x.ModifiedUtc)
                 .FirstOrDefaultAsync();
 
