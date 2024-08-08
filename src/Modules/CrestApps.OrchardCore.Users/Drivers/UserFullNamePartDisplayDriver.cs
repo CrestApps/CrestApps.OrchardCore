@@ -33,16 +33,16 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
         _siteService = siteService;
     }
 
-    public override IDisplayResult Display(User user, UserFullNamePart section, BuildDisplayContext context)
+    public override IDisplayResult Display(User user, UserFullNamePart part, BuildDisplayContext context)
     {
-        return Initialize<UserFullNamePartViewModel>("UserFullNamePart", async vm =>
+        return Initialize<UserFullNamePartViewModel>("UserFullNamePart", async model =>
         {
-            vm.FirstName = section?.FirstName;
-            vm.MiddleName = section?.MiddleName;
-            vm.LastName = section?.LastName;
+            model.FirstName = part?.FirstName;
+            model.MiddleName = part?.MiddleName;
+            model.LastName = part?.LastName;
 
-            vm.User = user;
-            vm.Settings = await _siteService.GetSettingsAsync<DisplayNameSettings>();
+            model.User = user;
+            model.Settings = await _siteService.GetSettingsAsync<DisplayNameSettings>();
         }).Location("SummaryAdmin", "Header:1.5");
     }
 

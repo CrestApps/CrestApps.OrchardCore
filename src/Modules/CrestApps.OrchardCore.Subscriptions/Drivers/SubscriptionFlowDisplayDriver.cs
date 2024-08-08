@@ -10,34 +10,30 @@ public sealed class SubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFl
 {
     public override Task<IDisplayResult> DisplayAsync(SubscriptionFlow model, BuildDisplayContext context)
     {
-        return Task.FromResult<IDisplayResult>(
-            Combine(
-                View("SubscriptionFlowSteps", model)
-                .Location("Confirmation", "Steps"),
+        return CombineAsync(
+            View("SubscriptionFlowSteps", model)
+            .Location("Confirmation", "Steps"),
 
-                View("SubscriptionConfirmation", model)
-                .Location("Confirmation", "Content")
-            )
+            View("SubscriptionConfirmation", model)
+            .Location("Confirmation", "Content")
         );
     }
 
     public override Task<IDisplayResult> EditAsync(SubscriptionFlow model, BuildEditorContext context)
     {
-        return Task.FromResult<IDisplayResult>(
-            Combine(
-                View("SubscriptionFlowSteps", model).Location("Steps"),
+        return CombineAsync(
+            View("SubscriptionFlowSteps", model).Location("Steps"),
 
-                View("SubscriptionInformation", model).Location("Content:before"),
+            View("SubscriptionInformation", model).Location("Content:before"),
 
-                Initialize<SubscriptionFlowNavigation>("SubscriptionFlowButtons", vm =>
-                {
-                    vm.Direction = model.Direction;
-                    vm.PreviousStep = model.GetPreviousStep()?.Key;
-                    vm.CurrentStep = model.GetCurrentStep()?.Key;
-                    vm.NextStep = model.GetNextStep()?.Key;
-                    vm.IsPaymentStep = model.CurrentStepEquals(PaymentSubscriptionHandler.StepKey);
-                }).Location("Actions")
-            )
+            Initialize<SubscriptionFlowNavigation>("SubscriptionFlowButtons", vm =>
+            {
+                vm.Direction = model.Direction;
+                vm.PreviousStep = model.GetPreviousStep()?.Key;
+                vm.CurrentStep = model.GetCurrentStep()?.Key;
+                vm.NextStep = model.GetNextStep()?.Key;
+                vm.IsPaymentStep = model.CurrentStepEquals(PaymentSubscriptionHandler.StepKey);
+            }).Location("Actions")
         );
     }
 

@@ -17,21 +17,19 @@ public sealed class StripePaymentSubscriptionFlowDisplayDriver : DisplayDriver<S
         _stripeOptions = stripeOptions.Value;
     }
 
-    public override Task<IDisplayResult> EditAsync(SubscriptionFlow flow, BuildEditorContext context)
+    public override IDisplayResult Edit(SubscriptionFlow flow, BuildEditorContext context)
     {
         if (!flow.CurrentStepEquals(PaymentSubscriptionHandler.StepKey))
         {
-            return Task.FromResult<IDisplayResult>(null);
+            return null;
         }
 
-        return Task.FromResult<IDisplayResult>(
-            Initialize<StripeViewModel>("StripeSubscriptionPayments_Edit", model =>
-            {
-                model.SessionId = flow.Session.SessionId;
-                model.IsLive = _stripeOptions.IsLive;
-                model.PublishableKey = _stripeOptions.PublishableKey;
-            }).Location("Content:after")
-        );
+        return Initialize<StripeViewModel>("StripeSubscriptionPayments_Edit", model =>
+        {
+            model.SessionId = flow.Session.SessionId;
+            model.IsLive = _stripeOptions.IsLive;
+            model.PublishableKey = _stripeOptions.PublishableKey;
+        }).Location("Content:after");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(SubscriptionFlow model, UpdateEditorContext context)
@@ -43,6 +41,6 @@ public sealed class StripePaymentSubscriptionFlowDisplayDriver : DisplayDriver<S
 
         model.Direction = vm.Direction;
 
-        return await EditAsync(model, context);
+        return Edit(model, context);
     }
 }

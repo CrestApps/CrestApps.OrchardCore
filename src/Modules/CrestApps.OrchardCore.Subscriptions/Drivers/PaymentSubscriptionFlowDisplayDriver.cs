@@ -20,15 +20,15 @@ public sealed class PaymentSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
             .Location("Content");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(SubscriptionFlow model, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(SubscriptionFlow flow, UpdateEditorContext context)
     {
-        var vm = new SubscriptionFlowNavigation();
+        var model = new SubscriptionFlowNavigation();
 
         // Don't use a prefix for Direction.
-        await context.Updater.TryUpdateModelAsync(vm, prefix: string.Empty);
+        await context.Updater.TryUpdateModelAsync(model, prefix: string.Empty);
 
-        model.Direction = vm.Direction;
+        flow.Direction = model.Direction;
 
-        return await EditAsync(model, context);
+        return await EditAsync(flow, context);
     }
 }

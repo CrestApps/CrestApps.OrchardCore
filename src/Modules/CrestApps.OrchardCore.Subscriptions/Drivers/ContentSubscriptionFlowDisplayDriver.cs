@@ -37,7 +37,7 @@ public sealed class ContentSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
         _serviceProvider = serviceProvider;
     }
 
-    public override Task<IDisplayResult> EditAsync(SubscriptionFlow flow, BuildEditorContext context)
+    public override IDisplayResult Edit(SubscriptionFlow flow, BuildEditorContext context)
     {
         var step = flow.GetCurrentStep();
 
@@ -46,17 +46,15 @@ public sealed class ContentSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
             !flow.Session.CurrentStep.StartsWith(ContentSubscriptionHandler.ContentPrefix) ||
             !step.Data.TryGetValue("ContentType", out var contentType))
         {
-            return Task.FromResult<IDisplayResult>(null);
+            return null;
         }
 
-        return Task.FromResult<IDisplayResult>(
-            Factory("SubscriptionFlowContentItem", async (shapeBuildContext) =>
-            {
-                var contentItem = await GetOrCreateContentItemAsync(flow, step, contentType);
+        return Factory("SubscriptionFlowContentItem", async (shapeBuildContext) =>
+        {
+            var contentItem = await GetOrCreateContentItemAsync(flow, step, contentType);
 
-                return await _contentItemDisplayManager.BuildEditorAsync(contentItem, context.Updater, true, groupId: string.Empty, htmlFieldPrefix: step.Key);
-            }).Location("Content")
-         );
+            return await _contentItemDisplayManager.BuildEditorAsync(contentItem, context.Updater, true, groupId: string.Empty, htmlFieldPrefix: step.Key);
+        }).Location("Content");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(SubscriptionFlow flow, UpdateEditorContext context)
@@ -77,7 +75,7 @@ public sealed class ContentSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
 
         flow.Session.SavedSteps[step.Key] = JObject.FromObject(contentItem);
 
-        return await EditAsync(flow, context);
+        return Edit(flow, context);
     }
 
     private async Task<ContentItem> GetOrCreateContentItemAsync(SubscriptionFlow flow, SubscriptionFlowStep step, object contentType)

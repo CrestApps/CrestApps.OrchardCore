@@ -20,29 +20,27 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
 
     public override Task<IDisplayResult> DisplayAsync(SubscriptionPart part, BuildPartDisplayContext context)
     {
-        return Task.FromResult<IDisplayResult>(
-            Combine(
-                View(GetDisplayShapeType(context), part)
-                .Location("Summary", "Content")
-                .Location("Detail", "Content"),
+        return CombineAsync(
+            View(GetDisplayShapeType(context), part)
+            .Location("Summary", "Content")
+            .Location("Detail", "Content"),
 
-                View("SubscriptionSignup", part)
-                .Location("Summary", "Footer")
-            )
+            View("SubscriptionSignup", part)
+            .Location("Summary", "Footer")
         );
     }
 
-    public override Task<IDisplayResult> EditAsync(SubscriptionPart part, BuildPartEditorContext context)
+    public override IDisplayResult Edit(SubscriptionPart part, BuildPartEditorContext context)
     {
-        var shape = Initialize<SubscriptionPartViewModel>(GetEditorShapeType(context), viewModel =>
+        return Initialize<SubscriptionPartViewModel>(GetEditorShapeType(context), model =>
         {
-            viewModel.InitialAmount = part.InitialAmount;
-            viewModel.BillingAmount = part.BillingAmount;
-            viewModel.BillingDuration = Math.Max(part.BillingDuration, 1);
-            viewModel.DurationType = part.DurationType;
-            viewModel.BillingCycleLimit = part.BillingCycleLimit;
-            viewModel.SubscriptionDayDelay = part.SubscriptionDayDelay;
-            viewModel.DurationTypes =
+            model.InitialAmount = part.InitialAmount;
+            model.BillingAmount = part.BillingAmount;
+            model.BillingDuration = Math.Max(part.BillingDuration, 1);
+            model.DurationType = part.DurationType;
+            model.BillingCycleLimit = part.BillingCycleLimit;
+            model.SubscriptionDayDelay = part.SubscriptionDayDelay;
+            model.DurationTypes =
             [
                 new SelectListItem(S["Year"], nameof(BillingDurationType.Year)),
                 new SelectListItem(S["Month"], nameof(BillingDurationType.Month)),
@@ -50,52 +48,50 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
                 new SelectListItem(S["Day"], nameof(BillingDurationType.Day)),
             ];
         });
-
-        return Task.FromResult<IDisplayResult>(shape);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(SubscriptionPart part, UpdatePartEditorContext context)
     {
-        var viewModel = new SubscriptionPartViewModel();
+        var model = new SubscriptionPartViewModel();
 
-        await context.Updater.TryUpdateModelAsync(viewModel, Prefix);
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (viewModel.InitialAmount.HasValue && viewModel.InitialAmount.Value < 0)
+        if (model.InitialAmount.HasValue && model.InitialAmount.Value < 0)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.InitialAmount), S["Initial Amount cannot be negative."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.InitialAmount), S["Initial Amount cannot be negative."]);
         }
 
-        if (!viewModel.BillingAmount.HasValue)
+        if (!model.BillingAmount.HasValue)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.BillingAmount), S["Billing Amount is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.BillingAmount), S["Billing Amount is required."]);
         }
-        else if (viewModel.BillingAmount.Value < 0)
+        else if (model.BillingAmount.Value < 0)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.BillingAmount), S["Billing Amount cannot be negative."]);
-        }
-
-        if (viewModel.BillingDuration < 1)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.BillingDuration), S["Billing Duration cannot be less than one."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.BillingAmount), S["Billing Amount cannot be negative."]);
         }
 
-        if (viewModel.BillingCycleLimit.HasValue && viewModel.BillingCycleLimit.Value < 0)
+        if (model.BillingDuration < 1)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.BillingCycleLimit), S["Billing Cycle Limit cannot be negative."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.BillingDuration), S["Billing Duration cannot be less than one."]);
         }
 
-        if (viewModel.SubscriptionDayDelay.HasValue && viewModel.SubscriptionDayDelay.Value < 0)
+        if (model.BillingCycleLimit.HasValue && model.BillingCycleLimit.Value < 0)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.SubscriptionDayDelay), S["Subscription Day Delay cannot be negative."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.BillingCycleLimit), S["Billing Cycle Limit cannot be negative."]);
         }
 
-        part.InitialAmount = viewModel.InitialAmount;
-        part.BillingAmount = viewModel.BillingAmount ?? 0;
-        part.BillingDuration = viewModel.BillingDuration;
-        part.DurationType = viewModel.DurationType;
-        part.BillingCycleLimit = viewModel.BillingCycleLimit;
-        part.SubscriptionDayDelay = viewModel.SubscriptionDayDelay;
+        if (model.SubscriptionDayDelay.HasValue && model.SubscriptionDayDelay.Value < 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubscriptionDayDelay), S["Subscription Day Delay cannot be negative."]);
+        }
 
-        return await EditAsync(part, context);
+        part.InitialAmount = model.InitialAmount;
+        part.BillingAmount = model.BillingAmount ?? 0;
+        part.BillingDuration = model.BillingDuration;
+        part.DurationType = model.DurationType;
+        part.BillingCycleLimit = model.BillingCycleLimit;
+        part.SubscriptionDayDelay = model.SubscriptionDayDelay;
+
+        return Edit(part, context);
     }
 }

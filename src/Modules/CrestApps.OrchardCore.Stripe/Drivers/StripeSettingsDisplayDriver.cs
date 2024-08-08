@@ -13,7 +13,7 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Stripe.Drivers;
 
-public sealed class StripeSettingsDisplayDriver : SectionDisplayDriver<ISite, StripeSettings>
+public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettings>
 {
     public const string ProtectionPurpose = "StripeSettings";
     public const string GroupId = "stripe";
@@ -39,6 +39,9 @@ public sealed class StripeSettingsDisplayDriver : SectionDisplayDriver<ISite, St
         S = stringLocalizer;
     }
 
+    protected override string SettingsGroupId
+        => GroupId;
+
     public override async Task<IDisplayResult> EditAsync(ISite site, StripeSettings settings, BuildEditorContext context)
     {
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, StripePermissions.ManageStripeSettings))
@@ -46,7 +49,7 @@ public sealed class StripeSettingsDisplayDriver : SectionDisplayDriver<ISite, St
             return null;
         }
 
-        context.Shape.Metadata.Wrappers.Add("Settings_Wrapper__Reload");
+        context.AddTenantReloadWarningWrapper();
 
         return Initialize<StripeSettingsViewModel>("StripeSettings_Edit", model =>
         {
@@ -58,13 +61,12 @@ public sealed class StripeSettingsDisplayDriver : SectionDisplayDriver<ISite, St
             model.HasTestPrivateSecret = !string.IsNullOrEmpty(settings.TestPrivateSecret);
             model.HasTestWebhookSecret = !string.IsNullOrEmpty(settings.TestWebhookSecret);
         }).Location("Content:5")
-        .OnGroup(GroupId);
+        .OnGroup(SettingsGroupId);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, StripeSettings settings, UpdateEditorContext context)
     {
-        if (!string.Equals(context.GroupId, GroupId, StringComparison.OrdinalIgnoreCase) ||
-            !await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, StripePermissions.ManageStripeSettings))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, StripePermissions.ManageStripeSettings))
         {
             return null;
         }
