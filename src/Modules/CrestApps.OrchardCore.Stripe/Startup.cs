@@ -30,6 +30,7 @@ public class Startup : StartupBase
         services.AddScoped<IStripePaymentService, StripePaymentService>();
         services.AddScoped<IStripeProductService, StripeProductService>();
         services.AddScoped<IStripePlanService, StripePlanService>();
+        services.AddScoped<IStripeSetupIntentService, StripeSetupIntentService>();
 
         services.AddScoped(sp =>
         {

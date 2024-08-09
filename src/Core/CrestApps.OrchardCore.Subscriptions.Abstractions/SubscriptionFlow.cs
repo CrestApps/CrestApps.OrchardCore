@@ -11,10 +11,13 @@ public sealed class SubscriptionFlow
 
     public ContentItem ContentItem { get; }
 
-    public SubscriptionFlow(ISubscriptionFlowSession session, ContentItem contentItem)
+    public SubscriptionFlow(
+        ISubscriptionFlowSession session,
+        ContentItem contentItem)
     {
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(contentItem);
+
 
         Session = session;
         ContentItem = contentItem;
@@ -32,6 +35,7 @@ public sealed class SubscriptionFlow
         if (_sortedSteps == null && Session.Steps != null && Session.Steps.Count > 0)
         {
             _sortedSteps = Session.Steps
+                .Where(step => !step.Conceal)
                 .OrderBy(step => step.Order)
                 .ThenBy(Session.Steps.IndexOf)
                 .ToArray();

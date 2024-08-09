@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 
 public sealed class SubscriptionFlowStep
@@ -31,4 +33,10 @@ public sealed class SubscriptionFlowStep
     /// Allow adding custom data for the step.
     /// </summary>
     public Dictionary<string, object> Data { get; init; } = [];
+
+    /// <summary>
+    /// Whether or not to hide the step from rendering.
+    /// </summary>
+    [JsonIgnore]
+    public bool Conceal { get; set; }
 }

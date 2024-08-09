@@ -9,6 +9,8 @@ public static class SubscriptionsConstants
         public const string CreateSubscriptionEndpoint = "Subscriptions_StripeCreateSubscription";
 
         public const string CreatePaymentIntentEndpoint = "Subscriptions_StripeCreatePaymentIntent";
+
+        public const string CreateSetupIntentEndpoint = "Subscriptions_StripeCreateSetupIntent";
     }
 
     public static class Features

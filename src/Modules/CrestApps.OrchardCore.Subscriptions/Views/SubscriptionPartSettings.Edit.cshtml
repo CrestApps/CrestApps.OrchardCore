@@ -2,6 +2,14 @@
 
 @model SubscriptionPartSettings
 
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="AllowGuestSignup">
+        <label class="form-check-label" asp-for="AllowGuestSignup">@T["Allow Guest Signup"]</label>
+        <span class="hint">@T["By default, users need to be logged in to sign up. Enabling this option allows individuals to sign up without having to register on the site."]</span>
+    </div>
+</div>
+
 <div class="mb-3" asp-validation-class-for="ContentTypes">
     <label asp-for="ContentTypes" class="form-label">@T["Content Types"]</label>
     <span class="hint dashed">@T["Optionally, select content items to create during the subscription process."]</span>

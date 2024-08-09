@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Stripe.Endpoints;
 using CrestApps.OrchardCore.Subscriptions.Controllers;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
@@ -9,6 +10,7 @@ using CrestApps.OrchardCore.Subscriptions.Endpoints;
 using CrestApps.OrchardCore.Subscriptions.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Migrations;
+using CrestApps.OrchardCore.Subscriptions.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +23,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.Core.Utilities;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Subscriptions;
 
@@ -43,15 +46,28 @@ public sealed class Startup : StartupBase
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, SubscriptionFlowDisplayDriver>();
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, ContentSubscriptionFlowDisplayDriver>();
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, PaymentSubscriptionFlowDisplayDriver>();
+        services.AddScoped<IDisplayDriver<SubscriptionFlow>, UserRegistrationSubscriptionFlowDisplayDriver>();
 
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, SubscriptionPartSettingsDisplayDriver>();
 
-        services.AddScoped<ISubscriptionHandler, ContentSubscriptionHandler>();
-        services.AddScoped<ISubscriptionHandler, PaymentSubscriptionHandler>();
+        // TODO, we should not depend on the DI registration order.
+        // Important: register UserRegistrationSubscriptionHandler before PaymentSubscriptionHandler  to ensure 
+        // that the conceal logic is applied first. 
+        services.AddScoped<ISubscriptionHandler, UserRegistrationSubscriptionHandler>()
+            .AddScoped<ISubscriptionHandler, PaymentSubscriptionHandler>();
 
+        services.AddScoped<ISubscriptionHandler, ContentSubscriptionHandler>();
         services.AddScoped<ISubscriptionSessionStore, SubscriptionSessionStore>();
 
-        services.AddSingleton<SubscriptionPaymentSession>();
+        services.AddScoped<SubscriptionPaymentSession>();
+        services.AddScoped<IDisplayDriver<SubscriptionRegisterUserForm>, SubscriptionRegisterUserFormDisplayDriver>();
+        services.Configure<SubscriptionPaymentSessionOptions>(options =>
+        {
+            options.MaxLiveSession = TimeSpan.FromDays(1);
+            options.Purposes.Add(SubscriptionPaymentSessionExtensions.InitialPaymentPurpose);
+            options.Purposes.Add(SubscriptionPaymentSessionExtensions.SubscriptionPaymentInfoPurpose);
+            options.Purposes.Add(SubscriptionPaymentSessionExtensions.UserRegistrationPurpose);
+        });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -99,7 +115,8 @@ public sealed class StripeStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.AddCreateStripeSubscriptionEndpoint()
-            .AddCreatePaymentIntentEndpoint();
+            .AddCreatePaymentIntentEndpoint()
+            .AddStripeCreateSetupIntentEndpoint();
     }
 }
 

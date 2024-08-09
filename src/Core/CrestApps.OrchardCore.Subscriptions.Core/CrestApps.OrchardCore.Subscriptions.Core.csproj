@@ -5,6 +5,7 @@
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
     <PackageReference Include="OrchardCore.ContentManagement.Display" />
+    <PackageReference Include="OrchardCore.Users.Core" />
   </ItemGroup>
 
   <ItemGroup>

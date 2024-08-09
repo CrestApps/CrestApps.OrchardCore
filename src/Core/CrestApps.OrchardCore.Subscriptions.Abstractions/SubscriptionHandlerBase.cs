@@ -11,6 +11,9 @@ public abstract class SubscriptionHandlerBase : ISubscriptionHandler
     public virtual Task InitializedAsync(SubscriptionFlowInitializedContext context)
         => Task.CompletedTask;
 
+    public virtual Task LoadingAsync(SubscriptionFlowLoadedContext context)
+        => Task.CompletedTask;
+
     public virtual Task LoadedAsync(SubscriptionFlowLoadedContext context)
         => Task.CompletedTask;
 

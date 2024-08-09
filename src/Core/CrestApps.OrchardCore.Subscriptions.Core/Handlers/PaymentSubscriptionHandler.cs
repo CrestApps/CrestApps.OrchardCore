@@ -74,6 +74,36 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         return Task.CompletedTask;
     }
 
+    public override Task LoadingAsync(SubscriptionFlowLoadedContext context)
+    {
+        if (context.Flow.GetCurrentStep()?.Key != StepKey)
+        {
+            return Task.CompletedTask;
+        }
+
+        // Before loading payment step, make sure all previous steps are completed.
+        // Otherwise, we could process a payment before we can complete the subscription.
+
+        foreach (var step in context.Flow.GetSortedSteps())
+        {
+            if (step.Key == StepKey)
+            {
+                // If we got this far, every step before this one was completed.
+                break;
+            }
+
+            if (!context.Flow.Session.SavedSteps.ContainsKey(step.Key))
+            {
+                // There is a step that was not completed and should be the current step.
+                context.Flow.SetCurrentStep(step.Key);
+
+                break;
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
     public override async Task CompletingAsync(SubscriptionFlowCompletedContext context)
     {
         if (!context.Flow.Session.TryGet<Invoice>(out var invoice))
@@ -88,7 +118,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
             throw new InvalidOperationException("Initial Payment was not collected by the payment provider.");
         }
 
-        if (invoice.DueNow != initialPaymentInfo.InitialPaymentAmount)
+        if (invoice.DueNow > 0 && invoice.DueNow != initialPaymentInfo.InitialPaymentAmount)
         {
             throw new InvalidOperationException("The received initial payment amount did not match the expected initial payment amount.");
         }

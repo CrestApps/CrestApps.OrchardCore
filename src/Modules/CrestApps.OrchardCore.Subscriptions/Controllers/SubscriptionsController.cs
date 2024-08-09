@@ -144,12 +144,13 @@ public sealed class SubscriptionsController : Controller
         var subscriptionSession = await _subscriptionSessionStore.GetOrNewAsync(subscriptionContentItem);
 
         var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
+        var loadedContext = new SubscriptionFlowLoadedContext(flow);
+        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.LoadingAsync(context), loadedContext, _logger);
 
         subscriptionSession.CurrentStep ??= flow.GetFirstStep()?.Key;
 
         var model = await _subscriptionFlowDisplayManager.BuildEditorAsync(flow, _updateModelAccessor.ModelUpdater, true);
 
-        var loadedContext = new SubscriptionFlowLoadedContext(flow);
         await _subscriptionHandlers.InvokeAsync((handler, context) => handler.LoadedAsync(context), loadedContext, _logger);
 
         await _subscriptionSessionStore.SaveAsync(subscriptionSession);
@@ -190,6 +191,8 @@ public sealed class SubscriptionsController : Controller
         }
 
         var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
+        var loadedContext = new SubscriptionFlowLoadedContext(flow);
+        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.LoadingAsync(context), loadedContext, _logger);
 
         SubscriptionFlowStep upcomingStep = null;
         if (isGoingBack)
@@ -230,6 +233,24 @@ public sealed class SubscriptionsController : Controller
             }
             else
             {
+                // Ensure all steps have data.
+                foreach (var sortedStep in flow.GetSortedSteps())
+                {
+                    if (!subscriptionSession.SavedSteps.ContainsKey(sortedStep.Key))
+                    {
+                        // This step is not completed. Redirect the user to this step.
+                        flow.SetCurrentStep(sortedStep.Key);
+
+                        await _subscriptionSessionStore.SaveAsync(subscriptionSession);
+
+                        return RedirectToAction(nameof(ViewSession), new
+                        {
+                            sessionId,
+                            step = sortedStep.Key,
+                        });
+                    }
+                }
+
                 var completedContext = new SubscriptionFlowCompletedContext(flow);
 
                 try
@@ -293,6 +314,8 @@ public sealed class SubscriptionsController : Controller
         }
 
         var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
+        var loadedContext = new SubscriptionFlowLoadedContext(flow);
+        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.LoadingAsync(context), loadedContext, _logger);
 
         var model = await _subscriptionFlowDisplayManager.BuildEditorAsync(flow, _updateModelAccessor.ModelUpdater, false);
 
@@ -321,6 +344,8 @@ public sealed class SubscriptionsController : Controller
         }
 
         var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
+        var loadedContext = new SubscriptionFlowLoadedContext(flow);
+        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.LoadingAsync(context), loadedContext, _logger);
 
         var confirmation = await _subscriptionFlowDisplayManager.BuildDisplayAsync(flow, _updateModelAccessor.ModelUpdater, "Confirmation");
 

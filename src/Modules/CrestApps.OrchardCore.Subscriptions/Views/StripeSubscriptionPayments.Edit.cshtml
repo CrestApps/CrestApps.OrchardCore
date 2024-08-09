@@ -108,6 +108,7 @@ else if (string.IsNullOrEmpty(Model.PublishableKey))
                 showError(event.error.message);
             }
         });
+
         payButton.addEventListener('click', function (event) {
             event.preventDefault();
             enableButton(false);
@@ -123,87 +124,61 @@ else if (string.IsNullOrEmpty(Model.PublishableKey))
                     showError(result.error.message);
                 } else {
                     // Send payment method ID to the server
-                    fetch('@Url.RouteUrl(StripeConstants.RouteName.CreateSetupIntentEndpoint)', {
+                    fetch('@Url.RouteUrl(SubscriptionsConstants.RouteName.CreateSetupIntentEndpoint)', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
                             paymentMethodId: result.paymentMethod.id,
-                            Metadata: {
-                                sessionId: '@Model.SessionId'
-                            }
+                            sessionId: '@Model.SessionId'
                         }),
                     }).then((response) => response.json())
                         .then((data) => {
                             if (data.error) {
                                 showError(data.error);
                             } else {
+
                                 stripe.confirmCardSetup(data.clientSecret)
                                     .then((result) => {
                                         if (result.error) {
                                             showError(result.error.message);
                                         } else {
                                             var paymentMethodId = result.setupIntent.payment_method;
-                                            // Send payment method ID to the server to create payment intent and subscription
-                                            fetch('@Url.RouteUrl(SubscriptionsConstants.RouteName.CreatePaymentIntentEndpoint)', {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/json',
-                                                },
-                                                body: JSON.stringify({
-                                                    customerId: data.customerId,
-                                                    paymentMethodId: paymentMethodId,
-                                                    sessionId: '@Model.SessionId',
-                                                }),
-                                            }).then((response) => response.json())
-                                                .then((paymentData) => {
-                                                    if (paymentData.error) {
-                                                        showError(paymentData.error);
-                                                    } else {
-                                                        stripe.confirmCardPayment(paymentData.clientSecret)
-                                                            .then((result) => {
-                                                                if (result.error) {
-                                                                    showError(result.error.message);
-                                                                } else {
-                                                                    // Handle successful payment
-                                                                    fetch('@Url.RouteUrl(SubscriptionsConstants.RouteName.CreateSubscriptionEndpoint)', {
-                                                                        method: 'POST',
-                                                                        headers: {
-                                                                            'Content-Type': 'application/json',
-                                                                        },
-                                                                        body: JSON.stringify({
-                                                                            customerId: data.customerId,
-                                                                            paymentMethodId: paymentMethodId,
-                                                                            sessionId: '@Model.SessionId',
-                                                                        }),
-                                                                    }).then((response) => response.json())
-                                                                        .then((subscriptionData) => {
-                                                                            if (subscriptionData.error) {
-                                                                                showError(subscriptionData.error);
-                                                                            } else {
-                                                                                const form = document.getElementById('subscription-form');
 
-                                                                                if (subscriptionData.status == 'requires_action') {
-                                                                                    stripe.confirmCardPayment(subscriptionData.clientSecret)
-                                                                                        .then(function (result) {
-                                                                                            if (result.error) {
-                                                                                                showError(result.error.message);
-                                                                                            } else {
-                                                                                                const submitEvent = new Event("submit", { bubbles: true, cancelable: true });
-                                                                                                form.dispatchEvent(submitEvent);
-                                                                                            }
-                                                                                        });
-                                                                                } else {
-                                                                                    const submitEvent = new Event("submit", { bubbles: true, cancelable: true });
-                                                                                    form.dispatchEvent(submitEvent);
-                                                                                }
-                                                                            }
-                                                                        });
-                                                                }
-                                                            });
-                                                    }
-                                                });
+                                            // Check if the initial payment amount is greater than $0.50
+                                            if (data.processInitialPayment) {
+                                                // Process initial payment
+                                                fetch('@Url.RouteUrl(SubscriptionsConstants.RouteName.CreatePaymentIntentEndpoint)', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Content-Type': 'application/json',
+                                                    },
+                                                    body: JSON.stringify({
+                                                        customerId: data.customerId,
+                                                        paymentMethodId: paymentMethodId,
+                                                        sessionId: '@Model.SessionId',
+                                                    }),
+                                                }).then((response) => response.json())
+                                                    .then((paymentData) => {
+                                                        if (paymentData.error) {
+                                                            showError(paymentData.error);
+                                                        } else {
+                                                            stripe.confirmCardPayment(paymentData.clientSecret)
+                                                                .then((result) => {
+                                                                    if (result.error) {
+                                                                        showError(result.error.message);
+                                                                    } else {
+                                                                        // Handle successful payment and schedule the subscription
+                                                                        createSubscription(data.customerId, paymentMethodId);
+                                                                    }
+                                                                });
+                                                        }
+                                                    });
+                                            } else {
+                                                // Skip initial payment and schedule the subscription
+                                                createSubscription(data.customerId, paymentMethodId);
+                                            }
                                         }
                                     });
                             }
@@ -211,5 +186,41 @@ else if (string.IsNullOrEmpty(Model.PublishableKey))
                 }
             });
         });
+
+        const createSubscription = (customerId, paymentMethodId) => {
+            fetch('@Url.RouteUrl(SubscriptionsConstants.RouteName.CreateSubscriptionEndpoint)', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    customerId: customerId,
+                    paymentMethodId: paymentMethodId,
+                    sessionId: '@Model.SessionId',
+                }),
+            }).then((response) => response.json())
+                .then((subscriptionData) => {
+                    if (subscriptionData.error) {
+                        showError(subscriptionData.error);
+                    } else {
+                        const form = document.getElementById('subscription-form');
+
+                        if (subscriptionData.status == 'requires_action') {
+                            stripe.confirmCardPayment(subscriptionData.clientSecret)
+                                .then(function (result) {
+                                    if (result.error) {
+                                        showError(result.error.message);
+                                    } else {
+                                        const submitEvent = new Event("submit", { bubbles: true, cancelable: true });
+                                        form.dispatchEvent(submitEvent);
+                                    }
+                                });
+                        } else {
+                            const submitEvent = new Event("submit", { bubbles: true, cancelable: true });
+                            form.dispatchEvent(submitEvent);
+                        }
+                    }
+                });
+        };
     });
 </script>

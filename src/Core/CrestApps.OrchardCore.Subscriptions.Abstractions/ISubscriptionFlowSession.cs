@@ -15,4 +15,6 @@ public interface ISubscriptionFlowSession : IEntity
     IList<SubscriptionFlowStep> Steps { get; }
 
     JsonObject SavedSteps { get; }
+
+    string OwnerId { get; set; }
 }

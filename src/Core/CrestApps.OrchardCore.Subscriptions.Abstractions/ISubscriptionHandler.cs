@@ -39,4 +39,5 @@ public interface ISubscriptionHandler
     /// <param name="context"></param>
     /// <returns></returns>
     Task CompletedAsync(SubscriptionFlowCompletedContext context);
+    Task LoadingAsync(SubscriptionFlowLoadedContext context);
 }
