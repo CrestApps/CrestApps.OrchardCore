@@ -4,6 +4,12 @@
 @model SubscriptionViewModel
 
 <form id="subscription-form" method="post" asp-action="Signup" asp-controller="Subscriptions" asp-route-sessionId="@Model.SessionId">
+
+    @if (!ViewContext.ModelState.IsValid)
+    {
+        @Html.ValidationSummary()
+    }
+
     <input type="hidden" name="step" value="@Model.Step" />
 
     @await DisplayAsync(Model.Content)

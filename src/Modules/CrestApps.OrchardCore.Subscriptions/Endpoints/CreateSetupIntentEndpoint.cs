@@ -1,15 +1,22 @@
+using System.Text.Json;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using CrestApps.OrchardCore.Subscriptions;
 using CrestApps.OrchardCore.Subscriptions.Core;
+using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Models;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
+using OrchardCore.Json;
+using OrchardCore.Users;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Stripe.Endpoints;
 
@@ -19,7 +26,7 @@ public static class CreateSetupIntentEndpoint
     {
         builder.MapPost("subscriptions/stripe/create-setup-intent", HandleAsync)
             .AllowAnonymous()
-            .WithName(SubscriptionsConstants.RouteName.CreateSetupIntentEndpoint)
+            .WithName(SubscriptionConstants.RouteName.CreateSetupIntentEndpoint)
             .DisableAntiforgery();
 
         return builder;
@@ -29,6 +36,11 @@ public static class CreateSetupIntentEndpoint
         [FromBody] CreateSetupIntentPayment model,
         IOptions<StripeOptions> stripeOptions,
         ISubscriptionSessionStore subscriptionSessionStore,
+        IHttpContextAccessor httpContextAccessor,
+        UserManager<IUser> userManager,
+        IDisplayNameProvider displayNameProvider,
+        IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions,
+        IStripeCustomerService stripeCustomerService,
         IStripeSetupIntentService stripeSetupIntentService)
     {
         if (string.IsNullOrEmpty(stripeOptions.Value.ApiKey))
@@ -54,20 +66,85 @@ public static class CreateSetupIntentEndpoint
 
         var invoice = session.As<Invoice>();
 
-        var request = new CreateSetupIntentRequest
+        if (invoice == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var customerRequest = new CreateCustomerRequest()
         {
             PaymentMethodId = model.PaymentMethodId,
-            Metadata = model.Metadata,
+            Metadata = model.Metadata ?? [],
         };
 
-        var result = await stripeSetupIntentService.CreateAsync(request);
+        if (httpContextAccessor.HttpContext.User.Identity.IsAuthenticated)
+        {
+            var user = await userManager.GetUserAsync(httpContextAccessor.HttpContext.User) as User;
+
+            if (user != null)
+            {
+                await SetCustomerInfoAsync(customerRequest, user, displayNameProvider);
+            }
+            else
+            {
+                customerRequest.Metadata["userName"] = httpContextAccessor.HttpContext.User.Identity.Name;
+            }
+        }
+        else if (session.SavedSteps.TryGetPropertyValue(UserRegistrationSubscriptionHandler.StepKey, out var node))
+        {
+            // If the subscriber is a new user, try to get their info from the session.
+            var user = node.Deserialize<User>(documentJsonSerializerOptions.Value.SerializerOptions);
+            await SetCustomerInfoAsync(customerRequest, user, displayNameProvider);
+        }
+
+        var customerResult = await stripeCustomerService.CreateAsync(customerRequest);
+
+        if (customerResult == null)
+        {
+            return TypedResults.Problem("Unable to create a customer.", instance: null, statusCode: 500);
+        }
+
+        var intentRequest = new CreateSetupIntentRequest
+        {
+            PaymentMethodId = model.PaymentMethodId,
+            CustomerId = customerResult.CustomerId,
+            Metadata = model.Metadata ?? [],
+        };
+        var result = await stripeSetupIntentService.CreateAsync(intentRequest);
+
+        session.Put(new StripeSetupIntentMetadata
+        {
+            PaymentMethodId = model.PaymentMethodId,
+            CustomerId = customerResult.CustomerId,
+        });
+
+        await subscriptionSessionStore.SaveAsync(session);
 
         return TypedResults.Ok(new
         {
             clientSecret = result.ClientSecret,
-            customerId = result.CustomerId,
+            customerId = customerResult.CustomerId,
             status = result.Status,
-            processInitialPayment = invoice.DueNow > 0.5
+            processInitialPayment = invoice.DueNow > GetMinimumAllowed(invoice),
         });
+    }
+
+    private static async Task SetCustomerInfoAsync(CreateCustomerRequest customerRequest, User user, IDisplayNameProvider displayNameProvider)
+    {
+        customerRequest.Name = await displayNameProvider.GetAsync(user);
+        customerRequest.Email = user.Email;
+        customerRequest.Phone = user.PhoneNumber;
+        customerRequest.Metadata["userName"] = user.UserName;
+        customerRequest.Metadata["userId"] = user.UserId;
+    }
+
+    private static double GetMinimumAllowed(Invoice invoice)
+    {
+        if (StripeLimits.TryGetStripePaymentLimit(invoice.Currency, out var limits))
+        {
+            return limits?.Minimum ?? 0;
+        }
+
+        return 0;
     }
 }

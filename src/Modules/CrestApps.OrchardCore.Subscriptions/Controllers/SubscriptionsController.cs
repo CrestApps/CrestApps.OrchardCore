@@ -79,7 +79,7 @@ public sealed class SubscriptionsController : Controller
         {
             var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentType);
 
-            if (definition == null || !definition.StereotypeEquals(SubscriptionsConstants.Stereotype))
+            if (definition == null || !definition.StereotypeEquals(SubscriptionConstants.Stereotype))
             {
                 return NotFound();
             }
@@ -236,7 +236,7 @@ public sealed class SubscriptionsController : Controller
                 // Ensure all steps have data.
                 foreach (var sortedStep in flow.GetSortedSteps())
                 {
-                    if (!subscriptionSession.SavedSteps.ContainsKey(sortedStep.Key))
+                    if (sortedStep.CollectData && !subscriptionSession.SavedSteps.ContainsKey(sortedStep.Key))
                     {
                         // This step is not completed. Redirect the user to this step.
                         flow.SetCurrentStep(sortedStep.Key);

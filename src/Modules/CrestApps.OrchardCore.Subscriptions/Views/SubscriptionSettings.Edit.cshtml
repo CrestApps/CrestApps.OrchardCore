@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionSettingsViewModel
+
+<h6>@T["Subscription Settings"]</h6>
+<div class="mb-3">
+    <label asp-for="Currency" class="form-label">@T["Currency"]</label>
+    <select asp-for="Currency" asp-items="Model.Currencies" class="form-select">
+        <option value="">@T["Select default currency"]</option>
+    </select>
+</div>

@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.Subscriptions.Core;
 
-public static class SubscriptionsConstants
+public static class SubscriptionConstants
 {
     public const string Stereotype = "Subscription";
 

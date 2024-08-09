@@ -9,6 +9,6 @@ public static class ContentDefinitionManagerExtensions
     {
         var types = await manager.ListTypeDefinitionsAsync();
 
-        return types.Where(x => x.StereotypeEquals(SubscriptionsConstants.Stereotype));
+        return types.Where(x => x.StereotypeEquals(SubscriptionConstants.Stereotype));
     }
 }

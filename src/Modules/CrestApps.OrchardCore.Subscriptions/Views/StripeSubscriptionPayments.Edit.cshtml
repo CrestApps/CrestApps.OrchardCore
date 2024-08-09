@@ -6,14 +6,14 @@
 
 @if (!Model.IsLive && !string.IsNullOrEmpty(Model.PublishableKey))
 {
-    <div class="alert alert-info" role="alert">
-        @T["Stripe is in test mode."]
+    <div class="alert alert-warning text-center" role="alert">
+        <h4>@T["Stripe is in test mode."]</h4>
     </div>
 }
 else if (string.IsNullOrEmpty(Model.PublishableKey))
 {
-    <div class="alert alert-warning" role="alert">
-        @T["Stripe has not yet been configured. Please visit the configuration section and configure it."]
+    <div class="alert alert-warning text-center" role="alert">
+        <h4>@T["Stripe has not yet been configured. Please visit the configuration section and configure it."]</h4>
     </div>
 }
 
@@ -124,7 +124,7 @@ else if (string.IsNullOrEmpty(Model.PublishableKey))
                     showError(result.error.message);
                 } else {
                     // Send payment method ID to the server
-                    fetch('@Url.RouteUrl(SubscriptionsConstants.RouteName.CreateSetupIntentEndpoint)', {
+                    fetch('@Url.RouteUrl(SubscriptionConstants.RouteName.CreateSetupIntentEndpoint)', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -146,10 +146,9 @@ else if (string.IsNullOrEmpty(Model.PublishableKey))
                                         } else {
                                             var paymentMethodId = result.setupIntent.payment_method;
 
-                                            // Check if the initial payment amount is greater than $0.50
                                             if (data.processInitialPayment) {
                                                 // Process initial payment
-                                                fetch('@Url.RouteUrl(SubscriptionsConstants.RouteName.CreatePaymentIntentEndpoint)', {
+                                                fetch('@Url.RouteUrl(SubscriptionConstants.RouteName.CreatePaymentIntentEndpoint)', {
                                                     method: 'POST',
                                                     headers: {
                                                         'Content-Type': 'application/json',
@@ -188,7 +187,7 @@ else if (string.IsNullOrEmpty(Model.PublishableKey))
         });
 
         const createSubscription = (customerId, paymentMethodId) => {
-            fetch('@Url.RouteUrl(SubscriptionsConstants.RouteName.CreateSubscriptionEndpoint)', {
+            fetch('@Url.RouteUrl(SubscriptionConstants.RouteName.CreateSubscriptionEndpoint)', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

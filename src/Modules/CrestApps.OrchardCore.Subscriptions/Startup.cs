@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Subscriptions.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Migrations;
 using CrestApps.OrchardCore.Subscriptions.Models;
+using CrestApps.OrchardCore.Subscriptions.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,7 +24,9 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.Core.Utilities;
-using OrchardCore.Users.Models;
+using OrchardCore.Navigation;
+using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Subscriptions;
 
@@ -68,41 +71,54 @@ public sealed class Startup : StartupBase
             options.Purposes.Add(SubscriptionPaymentSessionExtensions.SubscriptionPaymentInfoPurpose);
             options.Purposes.Add(SubscriptionPaymentSessionExtensions.UserRegistrationPurpose);
         });
+
+        services.AddScoped<IDisplayDriver<ISite>, SubscriptionSettingsDisplayDriver>();
+        services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
+        services.AddScoped<INavigationProvider, SubscriptionsAdminMenu>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.MapAreaControllerRoute(
             name: "ListSubscriptions",
-            areaName: SubscriptionsConstants.Features.ModuleId,
+            areaName: SubscriptionConstants.Features.ModuleId,
             pattern: "Subscriptions/{contentType?}",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Index) }
         );
 
         routes.MapAreaControllerRoute(
             name: "SubscriptionSignup",
-            areaName: SubscriptionsConstants.Features.ModuleId,
+            areaName: SubscriptionConstants.Features.ModuleId,
             pattern: "Subscription/{contentItemId}/Signup",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Signup) }
         );
 
         routes.MapAreaControllerRoute(
             name: "SubscriptionSignupConfirmation",
-            areaName: SubscriptionsConstants.Features.ModuleId,
+            areaName: SubscriptionConstants.Features.ModuleId,
             pattern: "Subscription/{sessionId}/Signup/Confirmation",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Confirmation) }
         );
 
         routes.MapAreaControllerRoute(
             name: "SubscriptionSignupStep",
-            areaName: SubscriptionsConstants.Features.ModuleId,
+            areaName: SubscriptionConstants.Features.ModuleId,
             pattern: "Subscription/{sessionId}/Signup/Step/{step?}",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.ViewSession) }
         );
     }
 }
 
-[Feature(SubscriptionsConstants.Features.Stripe)]
+[RequireFeatures("OrchardCore.Roles")]
+public sealed class RolesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IDisplayDriver<ISite>, SubscriptionRoleSettingsDisplayDriver>();
+    }
+}
+
+[Feature(SubscriptionConstants.Features.Stripe)]
 public sealed class StripeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -110,6 +126,7 @@ public sealed class StripeStartup : StartupBase
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, StripePaymentSubscriptionFlowDisplayDriver>();
         services.AddScoped<IPaymentEvent, SubscriptionPaymentHandler>();
         services.AddScoped<IContentHandler, SubscriptionsContentHandler>();
+        services.AddScoped<ISubscriptionHandler, StripeSubscriptionHandler>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -120,7 +137,7 @@ public sealed class StripeStartup : StartupBase
     }
 }
 
-[Feature(SubscriptionsConstants.Features.TenantOnboarding)]
+[Feature(SubscriptionConstants.Features.TenantOnboarding)]
 public sealed class TenantOnboardingStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -131,6 +148,5 @@ public sealed class TenantOnboardingStartup : StartupBase
         services.AddDataMigration<TenantOnboardingMigrations>();
         services.AddScoped<ISubscriptionHandler, UserRegistrationSubscriptionHandler>();
         services.AddScoped<ISubscriptionHandler, TenantOnboardingSubscriptionHandler>();
-
     }
 }

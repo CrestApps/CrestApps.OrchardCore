@@ -35,7 +35,7 @@ public sealed class SubscriptionsContentItemIndexProvider : IndexProvider<Conten
 
                 var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
 
-                if (definition?.StereotypeEquals(SubscriptionsConstants.Stereotype) == false)
+                if (definition?.StereotypeEquals(SubscriptionConstants.Stereotype) == false)
                 {
                     return null;
                 }

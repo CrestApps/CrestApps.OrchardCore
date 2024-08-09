@@ -27,13 +27,13 @@ To test webhooks with Stripe and let Stripe ping back your localhost app, you ca
 5. **Forward webhooks to your localhost**:
    - To start forwarding webhooks from Stripe to your local server, use the following command:
      ```sh
-     stripe listen --forward-to localhost:your-port/stripe/webhook
+     stripe listen --forward-to https://localhost:your-port/stripe/webhook
      ```
    - Replace `your-port` with the port your local server is running on (e.g., `5000`).
 
    For example, if your local server is running on port `5000`, you would run:
    ```sh
-   stripe listen --forward-to localhost:5000/stripe/webhook
+   stripe listen --forward-to https://localhost:5000/stripe/webhook
    ```
 
 By using `stripe-cli`, you can easily test how your application handles Stripe webhooks locally before deploying it to a live environment.

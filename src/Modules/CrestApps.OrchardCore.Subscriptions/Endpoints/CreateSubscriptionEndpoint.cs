@@ -1,12 +1,14 @@
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core;
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
 
@@ -16,7 +18,7 @@ public static class CreateSubscriptionEndpoint
     {
         builder.MapPost("subscriptions/stripe/create-subscription", HandleAsync)
             .AllowAnonymous()
-            .WithName(SubscriptionsConstants.RouteName.CreateSubscriptionEndpoint)
+            .WithName(SubscriptionConstants.RouteName.CreateSubscriptionEndpoint)
             .DisableAntiforgery();
 
         return builder;
@@ -45,6 +47,13 @@ public static class CreateSubscriptionEndpoint
         var session = await subscriptionSessionStore.GetAsync(model.SessionId, SubscriptionSessionStatus.Pending);
 
         if (session == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var invoice = session.As<Invoice>();
+
+        if (invoice == null)
         {
             return TypedResults.NotFound();
         }

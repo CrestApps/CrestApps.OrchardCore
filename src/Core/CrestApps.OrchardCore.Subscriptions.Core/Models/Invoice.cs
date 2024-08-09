@@ -5,6 +5,8 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 
 public class Invoice
 {
+    public string Currency { get; set; }
+
     public double DueNow { get; set; }
 
     public double GrandTotal { get; set; }

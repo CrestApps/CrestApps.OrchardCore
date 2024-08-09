@@ -25,6 +25,7 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
             Title = S["New Site Info"],
             Description = S["Information to be used for setting up your new site."],
             Key = StepKey,
+            CollectData = true,
             Order = 5,
         });
 

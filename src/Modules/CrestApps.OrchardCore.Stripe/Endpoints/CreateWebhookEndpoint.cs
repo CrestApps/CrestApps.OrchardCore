@@ -51,7 +51,27 @@ public static class CreateWebhookEndpoint
 
         try
         {
-            var stripeEvent = EventUtility.ConstructEvent(json, signature, stripeOptions.Value.WebhookSecret);
+            Event stripeEvent = null;
+
+            try
+            {
+                stripeEvent = EventUtility.ConstructEvent(
+                json: json,
+                stripeSignatureHeader: signature,
+                stripeOptions.Value.WebhookSecret,
+                throwOnApiVersionMismatch: false);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unable to deserialize Stripe hook response.");
+
+                return TypedResults.BadRequest();
+            }
+
+            if (stripeEvent == null)
+            {
+                return TypedResults.BadRequest();
+            }
 
             switch (stripeEvent.Type)
             {

@@ -18,7 +18,7 @@ public static class CreatePaymentIntentEndpoint
     {
         builder.MapPost("subscriptions/stripe/create-payment-intent", HandleAsync)
             .AllowAnonymous()
-            .WithName(SubscriptionsConstants.RouteName.CreatePaymentIntentEndpoint)
+            .WithName(SubscriptionConstants.RouteName.CreatePaymentIntentEndpoint)
             .DisableAntiforgery();
 
         return builder;
@@ -53,13 +53,18 @@ public static class CreatePaymentIntentEndpoint
 
         var invoice = session.As<Invoice>();
 
+        if (invoice == null)
+        {
+            return TypedResults.NotFound();
+        }
+
         var request = new CreatePaymentIntentRequest()
         {
             PaymentMethodId = model.PaymentMethodId,
             CustomerId = model.CustomerId,
             Metadata = model.Metadata,
             Amount = invoice.DueNow,
-            Currency = "USD",
+            Currency = invoice.Currency,
         };
 
         var result = await stripePaymentService.CreateAsync(request);

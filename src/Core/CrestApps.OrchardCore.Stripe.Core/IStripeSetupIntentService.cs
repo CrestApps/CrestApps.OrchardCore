@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.Stripe.Core.Models;
+using CrestApps.OrchardCore.Stripe.Core.Models;
 
 namespace CrestApps.OrchardCore.Stripe.Core;
 

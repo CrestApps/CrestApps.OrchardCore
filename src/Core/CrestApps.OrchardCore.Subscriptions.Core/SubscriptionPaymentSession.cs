@@ -132,6 +132,9 @@ public static class SubscriptionPaymentSessionExtensions
             value: GetPasswordProtector(dataProtectionProvider).Protect(rawPassword));
     }
 
+    public static Task RemoveUserPasswordAsync(this SubscriptionPaymentSession session, string sessionId)
+        => session.RemoveAsync(sessionId, UserRegistrationPurpose);
+
     private static IDataProtector GetPasswordProtector(IDataProtectionProvider protectionProvider)
         => protectionProvider.CreateProtector("Subscription_UserRegistration_Password");
 }

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
@@ -9,14 +10,17 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
     public const string StepKey = "Payment";
 
     private readonly SubscriptionPaymentSession _subscriptionPaymentSession;
+    private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
 
     public PaymentSubscriptionHandler(
         SubscriptionPaymentSession subscriptionPaymentSession,
+        ISiteService siteService,
         IStringLocalizer<PaymentSubscriptionHandler> stringLocalizer)
     {
         _subscriptionPaymentSession = subscriptionPaymentSession;
+        _siteService = siteService;
         S = stringLocalizer;
     }
 
@@ -27,12 +31,13 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
             Title = S["Payment"],
             Key = StepKey,
             Order = int.MaxValue,
+            CollectData = false,
         });
 
         return Task.CompletedTask;
     }
 
-    public override Task InitializedAsync(SubscriptionFlowInitializedContext context)
+    public override async Task InitializedAsync(SubscriptionFlowInitializedContext context)
     {
         var invoice = new Invoice();
 
@@ -61,7 +66,8 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 
             lineItems.Add(lineItem);
         }
-
+        var settings = await _siteService.GetSettingsAsync<SubscriptionSettings>();
+        invoice.Currency = settings.Currency;
         invoice.LineItems = lineItems.ToArray();
         invoice.Subtotals = lineItems.GroupBy(x => new BillingDurationKey(x.DurationType, x.BillingDuration))
             .ToDictionary(x => x.Key, x => x.Sum(y => y.UnitPrice * y.Quantity));
@@ -70,8 +76,6 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         invoice.GrandTotal = invoice.DueNow;
 
         context.Flow.Session.Put(invoice);
-
-        return Task.CompletedTask;
     }
 
     public override Task LoadingAsync(SubscriptionFlowLoadedContext context)
@@ -111,24 +115,16 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
             throw new InvalidOperationException("Unable to find an invoice.");
         }
 
-        var initialPaymentInfo = await _subscriptionPaymentSession.GetInitialPaymentInfoAsync(context.Flow.Session.SessionId);
-
-        if (initialPaymentInfo == null)
-        {
-            throw new InvalidOperationException("Initial Payment was not collected by the payment provider.");
-        }
+        var initialPaymentInfo = await _subscriptionPaymentSession.GetInitialPaymentInfoAsync(context.Flow.Session.SessionId)
+            ?? throw new InvalidOperationException("Initial Payment was not collected by the payment provider.");
 
         if (invoice.DueNow > 0 && invoice.DueNow != initialPaymentInfo.InitialPaymentAmount)
         {
             throw new InvalidOperationException("The received initial payment amount did not match the expected initial payment amount.");
         }
 
-        var subscriptionPaymentInfo = await _subscriptionPaymentSession.GetSubscriptionPaymentInfoAsync(context.Flow.Session.SessionId);
-
-        if (subscriptionPaymentInfo == null)
-        {
-            throw new InvalidOperationException("Subscription was not created by the payment provider.");
-        }
+        var subscriptionPaymentInfo = await _subscriptionPaymentSession.GetSubscriptionPaymentInfoAsync(context.Flow.Session.SessionId)
+            ?? throw new InvalidOperationException("Subscription was not created by the payment provider.");
 
         if (context.Flow.ContentItem.ContentItemId != subscriptionPaymentInfo.PlanId)
         {

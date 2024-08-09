@@ -23,6 +23,7 @@ public static class CreateSetupIntentEndpoint
     private static async Task<IResult> HandleAsync(
         [FromBody] CreateSetupIntentRequest model,
         IOptions<StripeOptions> stripeOptions,
+        IStripeCustomerService stripeCustomerService,
         IStripeSetupIntentService stripeSetupIntentService)
     {
         if (string.IsNullOrEmpty(stripeOptions.Value.ApiKey))
@@ -30,7 +31,7 @@ public static class CreateSetupIntentEndpoint
             return TypedResults.Problem("Stripe is not configured.", instance: null, statusCode: 500);
         }
 
-        if (string.IsNullOrWhiteSpace(model.PaymentMethodId))
+        if (string.IsNullOrWhiteSpace(model.PaymentMethodId) || string.IsNullOrWhiteSpace(model.CustomerId))
         {
             return TypedResults.BadRequest(new
             {
@@ -39,19 +40,19 @@ public static class CreateSetupIntentEndpoint
             });
         }
 
-        var request = new CreateSetupIntentRequest
+        var intentRequest = new CreateSetupIntentRequest
         {
             PaymentMethodId = model.PaymentMethodId,
             Metadata = model.Metadata,
         };
 
-        var result = await stripeSetupIntentService.CreateAsync(request);
+        var intentResult = await stripeSetupIntentService.CreateAsync(intentRequest);
 
         return TypedResults.Ok(new
         {
-            clientSecret = result.ClientSecret,
-            customerId = result.CustomerId,
-            status = result.Status,
+            customerId = model.CustomerId,
+            clientSecret = intentResult.ClientSecret,
+            status = intentResult.Status,
         });
     }
 }

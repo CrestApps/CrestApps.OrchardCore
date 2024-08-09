@@ -77,6 +77,7 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
                 Title = definition.DisplayName,
                 Description = S["Create a new {0}.", definition.DisplayName],
                 Key = $"{ContentPrefix}{contentType}",
+                CollectData = true,
                 Payment = new SubscriptionPayment()
                 {
                     InitialAmount = subscriptionPart.InitialAmount,

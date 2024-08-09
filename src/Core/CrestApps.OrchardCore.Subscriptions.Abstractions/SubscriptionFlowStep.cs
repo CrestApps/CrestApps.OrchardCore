@@ -25,6 +25,12 @@ public sealed class SubscriptionFlowStep
     public int Order { get; set; }
 
     /// <summary>
+    /// When set to true, the step will no be considered completed until a data for this step has
+    /// been stored in the <see cref="ISubscriptionFlowSession.SavedSteps"/>.
+    /// </summary>
+    public bool CollectData { get; set; }
+
+    /// <summary>
     /// Any payment information to collect before completing the subscription.
     /// </summary>
     public SubscriptionPayment Payment { get; set; }

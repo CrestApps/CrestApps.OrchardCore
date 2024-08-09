@@ -32,7 +32,7 @@ public sealed class SubscriptionsContentHandler : ContentHandlerBase
         var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(context.ContentItem.ContentType);
 
         if (definition == null ||
-            !definition.StereotypeEquals(SubscriptionsConstants.Stereotype) ||
+            !definition.StereotypeEquals(SubscriptionConstants.Stereotype) ||
             !context.ContentItem.TryGet<SubscriptionPart>(out var subscriptionPart))
         {
             return;
@@ -59,7 +59,7 @@ public sealed class SubscriptionsContentHandler : ContentHandlerBase
         var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(context.ContentItem.ContentType);
 
         if (definition == null ||
-            !definition.StereotypeEquals(SubscriptionsConstants.Stereotype) ||
+            !definition.StereotypeEquals(SubscriptionConstants.Stereotype) ||
             !context.ContentItem.TryGet<SubscriptionPart>(out var subscriptionPart))
         {
             return;
