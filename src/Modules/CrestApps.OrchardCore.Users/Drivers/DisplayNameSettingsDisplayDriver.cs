@@ -69,7 +69,7 @@ public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<Display
             model.PropertyTypes =
             [
                 new SelectListItem(S["Don't use"], nameof(DisplayNamePropertyType.None)),
-                new SelectListItem(S["Optional"],nameof( DisplayNamePropertyType.Optional)),
+                new SelectListItem(S["Optional"], nameof(DisplayNamePropertyType.Optional)),
                 new SelectListItem(S["Required"], nameof(DisplayNamePropertyType.Required)),
             ];
         }).Location("Content:5")

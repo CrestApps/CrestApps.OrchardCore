@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@using OrchardCore.DisplayManagement
+
+@model SubscriptionViewModel
+
+<form id="subscription-form" method="post" asp-action="Signup" asp-controller="Subscriptions" asp-route-sessionId="@Model.SessionId">
+    <input type="hidden" name="step" value="@Model.Step" />
+
+    @await DisplayAsync(Model.Content)
+</form>
