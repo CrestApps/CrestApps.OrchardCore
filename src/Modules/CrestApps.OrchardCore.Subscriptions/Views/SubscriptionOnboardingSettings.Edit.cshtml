@@ -1,0 +1,40 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionOnboardingSettingsViewModel
+
+<div class="mb-3">
+    <div class="form-check">
+        <label class="form-check-label" asp-for="AllowCustomDomains">@T["Use custom domains"]</label>
+        <input type="checkbox" class="form-check-input" asp-for="AllowCustomDomains">
+        <span class="hint">@T["Allow the subscribers to provide their own custom domain names."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label class="form-label" asp-for="LocalDomainType">@T["Local domains"]</label>
+    <select asp-for="LocalDomainType" asp-items="Model.LocalDomainTypes" class="form-select"></select>
+    <span class="hint">@T["Generate domains for new tenants using a template."]</span>
+</div>
+
+<div id="Generated_Template_Wrapper" class="mb-3@(Model.LocalDomainType == LocalDomainType.None || Model.LocalDomainType == LocalDomainType.Prefix ? " d-none": string.Empty)">
+    <label asp-for="LocalDomainTemplate" class="form-label">@T["Generated domain template"]</label>
+    <input asp-for="LocalDomainTemplate" class="form-control" />
+    <span asp-validation-for="LocalDomainTemplate" class="text-danger"></span>
+    <span class="hint">@T["The template must include a valid URL format and may contain the placeholders '{0}' and '{1}'. To generate multiple domains, separate them with a comma.", SubscriptionOnboardingSettings.TenantKeyVariable, SubscriptionOnboardingSettings.CurrentHostVariable]</span>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+        const wrapperElement = document.getElementById('Generated_Template_Wrapper');
+        const typeElement = document.getElementById('@Html.IdFor(m => m.LocalDomainType)');
+
+        typeElement.addEventListener('change', (e) => {
+            if (e.target.value == '@nameof(LocalDomainType.None)' || e.target.value == '@nameof(LocalDomainType.Prefix)') {
+                wrapperElement.classList.add('d-none');
+            } else {
+                wrapperElement.classList.remove('d-none');
+            }
+        });
+    });
+</script>

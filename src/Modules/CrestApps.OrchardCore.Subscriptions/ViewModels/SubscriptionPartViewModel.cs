@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Payments.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -12,7 +12,7 @@ public class SubscriptionPartViewModel
 
     public int BillingDuration { get; set; }
 
-    public BillingDurationType DurationType { get; set; }
+    public DurationType DurationType { get; set; }
 
     public int? BillingCycleLimit { get; set; }
 

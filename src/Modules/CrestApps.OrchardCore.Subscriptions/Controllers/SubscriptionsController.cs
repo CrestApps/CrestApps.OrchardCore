@@ -163,9 +163,15 @@ public sealed class SubscriptionsController : Controller
         });
     }
 
+    /// <summary>
+    /// Save Session.
+    /// </summary>
+    /// <param name="sessionId">The current sessionId.</param>
+    /// <param name="step">The current step the user came from.</param>
+    /// <returns></returns>
     [HttpPost]
     [ActionName(nameof(Signup))]
-    public async Task<IActionResult> SignupPOST(string sessionId, string step, string direction)
+    public async Task<IActionResult> SignupPOST(string sessionId, string step)
     {
         var subscriptionSession = await _subscriptionSessionStore.GetAsync(sessionId, SubscriptionSessionStatus.Pending);
 
@@ -181,32 +187,27 @@ public sealed class SubscriptionsController : Controller
             return NotFound();
         }
 
-        var isGoingBack = string.Equals(direction, SubscriptionFlowNavigation.PreviousValue, StringComparison.OrdinalIgnoreCase);
-
-        // If the user requests a specific step,
-        // make sure it is a completed step before rendering it.
-        if (!isGoingBack && !string.IsNullOrEmpty(step) && subscriptionSession.SavedSteps.ContainsKey(step))
+        if (!string.IsNullOrEmpty(step) &&
+            !string.Equals(step, subscriptionSession.CurrentStep, StringComparison.OrdinalIgnoreCase))
         {
-            subscriptionSession.CurrentStep = step;
+            foreach (var savedStep in subscriptionSession.SavedSteps)
+            {
+                if (!string.Equals(step, savedStep.Key, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                // The requested step exists in the saved steps.
+                // Set the current step to the requested step, ensuring that the user is directed
+                // to the next screen based on their navigation path, rather than where the session suggests they should be.
+                // We use 'savedStep.Key' instead of 'step' to ensure the correct case-sensitive value is passed.
+                subscriptionSession.CurrentStep = savedStep.Key;
+            }
         }
 
         var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
         var loadedContext = new SubscriptionFlowLoadedContext(flow);
         await _subscriptionHandlers.InvokeAsync((handler, context) => handler.LoadingAsync(context), loadedContext, _logger);
-
-        SubscriptionFlowStep upcomingStep = null;
-        if (isGoingBack)
-        {
-            var previousStep = flow.GetPreviousStep();
-
-            if (previousStep != null)
-            {
-                flow.SetCurrentStep(previousStep.Key);
-
-                // Since we are navigating back, the upcoming page will be the previous page.
-                upcomingStep = previousStep;
-            }
-        }
 
         var model = await _subscriptionFlowDisplayManager.UpdateEditorAsync(flow, _updateModelAccessor.ModelUpdater, true);
 
@@ -217,7 +218,7 @@ public sealed class SubscriptionsController : Controller
             subscriptionSession.ModifiedUtc = now;
 
             // If the upcoming step is null "meaning we are not navigating back", get the next step if one exists.
-            upcomingStep ??= flow.GetNextStep();
+            var upcomingStep = flow.GetNextStep();
 
             if (upcomingStep != null)
             {
@@ -225,7 +226,7 @@ public sealed class SubscriptionsController : Controller
 
                 await _subscriptionSessionStore.SaveAsync(subscriptionSession);
 
-                return RedirectToAction(nameof(ViewSession), new
+                return RedirectToAction(nameof(Display), new
                 {
                     sessionId,
                     step = upcomingStep.Key,
@@ -243,7 +244,7 @@ public sealed class SubscriptionsController : Controller
 
                         await _subscriptionSessionStore.SaveAsync(subscriptionSession);
 
-                        return RedirectToAction(nameof(ViewSession), new
+                        return RedirectToAction(nameof(Display), new
                         {
                             sessionId,
                             step = sortedStep.Key,
@@ -290,7 +291,7 @@ public sealed class SubscriptionsController : Controller
         });
     }
 
-    public async Task<IActionResult> ViewSession(string sessionId, string step)
+    public async Task<IActionResult> Display(string sessionId, string step)
     {
         var subscriptionSession = await _subscriptionSessionStore.GetAsync(sessionId, SubscriptionSessionStatus.Pending);
 

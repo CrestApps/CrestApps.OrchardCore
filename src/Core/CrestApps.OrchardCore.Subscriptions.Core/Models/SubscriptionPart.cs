@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payments.Models;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
@@ -26,7 +27,7 @@ public sealed class SubscriptionPart : ContentPart
     /// When <see cref="BillingDuration"/> is set to 1 and type is Year,
     /// This means 1 year billing cycle.
     /// </summary>
-    public BillingDurationType DurationType { get; set; }
+    public DurationType DurationType { get; set; }
 
     /// <summary>
     /// You can set a limit on how many payment cycles to process.

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CrestApps.OrchardCore.Payments.Models;
 using Json;
 
 namespace CrestApps.OrchardCore.Subscriptions;
@@ -9,9 +10,9 @@ public class BillingDurationKey : IEquatable<BillingDurationKey>
 {
     public int Duration { get; }
 
-    public BillingDurationType Type { get; }
+    public DurationType Type { get; }
 
-    public BillingDurationKey(BillingDurationType type, int duration)
+    public BillingDurationKey(DurationType type, int duration)
     {
         Type = type;
         Duration = duration;

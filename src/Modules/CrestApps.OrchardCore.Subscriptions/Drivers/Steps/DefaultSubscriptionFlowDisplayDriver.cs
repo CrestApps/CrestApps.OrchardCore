@@ -1,12 +1,12 @@
-using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
+using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
-namespace CrestApps.OrchardCore.Subscriptions.Drivers;
+namespace CrestApps.OrchardCore.Subscriptions.Drivers.Steps;
 
-public sealed class SubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFlow>
+public sealed class DefaultSubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFlow>
 {
     public override Task<IDisplayResult> DisplayAsync(SubscriptionFlow model, BuildDisplayContext context)
     {
@@ -24,15 +24,15 @@ public sealed class SubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFl
         return CombineAsync(
             View("SubscriptionFlowSteps", model).Location("Steps"),
 
-            View("SubscriptionInformation", model).Location("Content:before"),
+            View("SubscriptionInformation", model).Location("Header"),
 
             Initialize<SubscriptionFlowNavigation>("SubscriptionFlowButtons", vm =>
             {
-                vm.Direction = model.Direction;
+                vm.SessionId = model.Session.SessionId;
                 vm.PreviousStep = model.GetPreviousStep()?.Key;
                 vm.CurrentStep = model.GetCurrentStep()?.Key;
                 vm.NextStep = model.GetNextStep()?.Key;
-                vm.IsPaymentStep = model.CurrentStepEquals(PaymentSubscriptionHandler.StepKey);
+                vm.IsPaymentStep = model.CurrentStepEquals(SubscriptionConstants.StepKey.Payment);
             }).Location("Actions")
         );
     }
@@ -42,8 +42,6 @@ public sealed class SubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFl
         var vm = new SubscriptionFlowNavigation();
 
         await context.Updater.TryUpdateModelAsync(vm, Prefix);
-
-        model.Direction = vm.Direction;
 
         return await EditAsync(model, context);
     }

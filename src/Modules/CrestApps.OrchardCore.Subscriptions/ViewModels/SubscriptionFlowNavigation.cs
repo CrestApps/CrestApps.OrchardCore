@@ -4,11 +4,6 @@ namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
 
 public class SubscriptionFlowNavigation
 {
-    public const string NextValue = "Next";
-    public const string PreviousValue = "Previous";
-
-    public string Direction { get; set; }
-
     [BindNever]
     public string PreviousStep { get; set; }
 
@@ -20,4 +15,7 @@ public class SubscriptionFlowNavigation
 
     [BindNever]
     public bool IsPaymentStep { get; set; }
+
+    [BindNever]
+    public string SessionId { get; set; }
 }

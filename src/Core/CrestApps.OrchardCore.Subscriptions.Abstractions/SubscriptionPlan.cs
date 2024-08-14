@@ -1,7 +1,19 @@
+using CrestApps.OrchardCore.Payments.Models;
+
 namespace CrestApps.OrchardCore.Subscriptions;
 
-public sealed class SubscriptionPayment
+public sealed class SubscriptionPlan
 {
+    /// <summary>
+    /// Item description.
+    /// </summary>
+    public string Description { get; set; }
+
+    /// <summary>
+    /// The plan identifier.
+    /// </summary>
+    public string Id { get; set; }
+
     /// <summary>
     /// Initial Payment amount to apply.
     /// </summary>
@@ -24,7 +36,7 @@ public sealed class SubscriptionPayment
     /// When <see cref="BillingDuration"/> is set to 1 and type is Year,
     /// This means 1 year billing cycle.
     /// </summary>
-    public BillingDurationType DurationType { get; set; }
+    public DurationType DurationType { get; set; }
 
     /// <summary>
     /// You can set a limit on how many payment cycles to process.

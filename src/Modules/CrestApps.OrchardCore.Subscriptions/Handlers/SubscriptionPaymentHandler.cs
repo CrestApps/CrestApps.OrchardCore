@@ -22,7 +22,7 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
             return;
         }
 
-        await _paymentSession.SetAsync(sessionId.ToString(), new InitialPaymentInfo()
+        await _paymentSession.SetAsync(sessionId.ToString(), new InitialPaymentMetadata
         {
             InitialPaymentAmount = context.AmountPaid,
             InitialPaymentCurrency = context.Currency,
@@ -38,7 +38,7 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
             return;
         }
 
-        await _paymentSession.SetAsync(sessionId.ToString(), new SubscriptionPaymentInfo()
+        await _paymentSession.SetAsync(sessionId.ToString(), new SubscriptionPaymentMetadata
         {
             PlanId = context.PlanId,
             Currency = context.PlanCurrency,

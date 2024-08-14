@@ -1,7 +1,14 @@
+using CrestApps.OrchardCore.Payments.Models;
+
 namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 
 public class InvoiceLineItem
 {
+    /// <summary>
+    /// A unique identifier for the line item.
+    /// </summary>
+    public string Id { get; set; }
+
     /// <summary>
     /// Short description of the line item.
     /// </summary>
@@ -34,7 +41,7 @@ public class InvoiceLineItem
     /// When <see cref="BillingDuration"/> is set to 1 and type is Year,
     /// This means 1 year billing cycle.
     /// </summary>
-    public BillingDurationType DurationType { get; set; }
+    public DurationType DurationType { get; set; }
 
     /// <summary>
     /// You can set a limit on how many payment cycles to process.
@@ -46,4 +53,9 @@ public class InvoiceLineItem
     ///  Number of days to delay the start of the subscription.
     /// </summary>
     public int? SubscriptionDayDelay { get; set; }
+
+    /// <summary>
+    /// Any Initial or setup amount.
+    /// </summary>
+    public double? InitialAmount { get; set; }
 }

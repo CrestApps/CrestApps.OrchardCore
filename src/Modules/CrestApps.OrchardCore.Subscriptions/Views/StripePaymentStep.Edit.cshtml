@@ -2,7 +2,7 @@
 @using CrestApps.OrchardCore.Subscriptions.Core
 @using CrestApps.OrchardCore.Subscriptions.ViewModels
 
-@model StripeViewModel
+@model StripePaymentStepViewModel
 
 @if (!Model.IsLive && !string.IsNullOrEmpty(Model.PublishableKey))
 {
@@ -15,6 +15,8 @@ else if (string.IsNullOrEmpty(Model.PublishableKey))
     <div class="alert alert-warning text-center" role="alert">
         <h4>@T["Stripe has not yet been configured. Please visit the configuration section and configure it."]</h4>
     </div>
+
+    return;
 }
 
 <h5 class="card-title py-3">@T["Payment Method"]</h5>

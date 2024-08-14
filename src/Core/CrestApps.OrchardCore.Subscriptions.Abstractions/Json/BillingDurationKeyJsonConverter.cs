@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions;
 
 namespace Json;
@@ -15,7 +16,7 @@ public class BillingDurationKeyJsonConverter : JsonConverter<BillingDurationKey>
             throw new JsonException($"Expected StartObject token but got {reader.TokenType}.");
         }
 
-        var type = BillingDurationType.Year;
+        var type = DurationType.Year;
         var duration = 0;
 
         while (reader.Read())
@@ -33,11 +34,11 @@ public class BillingDurationKeyJsonConverter : JsonConverter<BillingDurationKey>
                 switch (propertyName)
                 {
                     case nameof(BillingDurationKey.Type):
-                        if (reader.TokenType != JsonTokenType.Number || !Enum.IsDefined(typeof(BillingDurationType), reader.GetInt32()))
+                        if (reader.TokenType != JsonTokenType.Number || !Enum.IsDefined(typeof(DurationType), reader.GetInt32()))
                         {
                             throw new JsonException($"Invalid value for {nameof(BillingDurationKey.Type)}: {reader.GetString()}");
                         }
-                        type = (BillingDurationType)reader.GetInt32();
+                        type = (DurationType)reader.GetInt32();
                         break;
                     case nameof(BillingDurationKey.Duration):
                         if (reader.TokenType != JsonTokenType.Number)

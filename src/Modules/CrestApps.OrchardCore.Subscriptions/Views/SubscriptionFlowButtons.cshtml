@@ -8,28 +8,31 @@
 
 <div class="d-flex justify-content-between flex-row-reverse mt-3">
 
-    @if (hasNext && Model.IsPaymentStep)
-    {
-        <button type="submit" class="btn btn-success" name="Direction" value="@SubscriptionFlowNavigation.NextValue" id="Subscription_Next_Button">@T["Pay & Next"]</button>
-    }
-    else if (Model.IsPaymentStep)
-    {
-        <button type="submit" class="btn btn-success" name="Direction" value="@SubscriptionFlowNavigation.NextValue" id="Subscription_Next_Button">@T["Pay & Finish"]</button>
-    }
-    else if (hasNext)
-    {
-        <button type="submit" class="btn btn-success" name="Direction" value="@SubscriptionFlowNavigation.NextValue" id="Subscription_Next_Button">@T["Next"]</button>
-    }
-    else
-    {
-        <button type="submit" class="btn btn-success" name="Direction" value="@SubscriptionFlowNavigation.NextValue" id="Subscription_Next_Button">@T["Finish"]</button>
-    }
+    <button type="submit" class="btn btn-success" id="Subscription_Next_Button">
+
+        @if (hasNext && Model.IsPaymentStep)
+        {
+            @T["Pay & Next"]
+        }
+        else if (Model.IsPaymentStep)
+        {
+            @T["Pay & Finish"]
+        }
+        else if (hasNext)
+        {
+            @T["Next"]
+        }
+        else
+        {
+            @T["Finish"]
+        }
+    </button>
 
     <div></div>
 
     @if (!string.IsNullOrEmpty(Model.PreviousStep))
     {
-        <button type="submit" class="btn btn-info" name="Direction" value="@SubscriptionFlowNavigation.PreviousValue" id="Subscription_Previous_Button">@T["Previous"]</button>
+        <a class="btn btn-info" asp-route="SubscriptionSignupStep" asp-route-sessionId="@Model.SessionId" asp-route-step="@Model.PreviousStep" id="Subscription_Previous_Button">@T["Previous"]</a>
     }
     else
     {

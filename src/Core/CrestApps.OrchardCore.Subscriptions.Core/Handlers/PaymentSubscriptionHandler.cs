@@ -7,8 +7,6 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
 public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 {
-    public const string StepKey = "Payment";
-
     private readonly SubscriptionPaymentSession _subscriptionPaymentSession;
     private readonly ISiteService _siteService;
 
@@ -29,7 +27,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         context.Session.Steps.Add(new SubscriptionFlowStep()
         {
             Title = S["Payment"],
-            Key = StepKey,
+            Key = SubscriptionConstants.StepKey.Payment,
             Order = int.MaxValue,
             CollectData = false,
         });
@@ -45,7 +43,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 
         foreach (var step in context.Flow.GetSortedSteps())
         {
-            if (step.Payment == null)
+            if (step.Plan == null)
             {
                 // Steps with no payment information can be ignored.
                 continue;
@@ -53,16 +51,24 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 
             var lineItem = new InvoiceLineItem()
             {
-                Description = step.Title,
+                Description = step.Plan.Description,
                 Quantity = 1,
-                UnitPrice = step.Payment.BillingAmount,
-                DueNow = step.Payment.InitialAmount,
-                BillingDuration = step.Payment.BillingDuration,
-                BillingCycleLimit = step.Payment.BillingCycleLimit,
-                SubscriptionDayDelay = step.Payment.SubscriptionDayDelay,
+                UnitPrice = step.Plan.BillingAmount,
+                DueNow = step.Plan.InitialAmount,
+                BillingDuration = step.Plan.BillingDuration,
+                BillingCycleLimit = step.Plan.BillingCycleLimit,
+                SubscriptionDayDelay = step.Plan.SubscriptionDayDelay,
+                InitialAmount = step.Plan.InitialAmount,
+                Id = step.Plan.Id,
             };
 
-            invoice.DueNow += step.Payment.InitialAmount ?? 0;
+            if (step.Plan.InitialAmount.HasValue)
+            {
+                invoice.InitialAmount ??= 0;
+                invoice.InitialAmount += step.Plan.InitialAmount.Value;
+            }
+
+            invoice.DueNow += (step.Plan.InitialAmount ?? 0) + step.Plan.BillingAmount;
 
             lineItems.Add(lineItem);
         }
@@ -80,7 +86,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 
     public override Task LoadingAsync(SubscriptionFlowLoadedContext context)
     {
-        if (context.Flow.GetCurrentStep()?.Key != StepKey)
+        if (context.Flow.GetCurrentStep()?.Key != SubscriptionConstants.StepKey.Payment)
         {
             return Task.CompletedTask;
         }
@@ -90,7 +96,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 
         foreach (var step in context.Flow.GetSortedSteps())
         {
-            if (step.Key == StepKey)
+            if (step.Key == SubscriptionConstants.StepKey.Payment)
             {
                 // If we got this far, every step before this one was completed.
                 break;

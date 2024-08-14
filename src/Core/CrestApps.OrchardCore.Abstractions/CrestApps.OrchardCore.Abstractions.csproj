@@ -11,4 +11,12 @@
     <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Abstractions</PackageTags>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Extensions\" />
+  </ItemGroup>
+
 </Project>

@@ -8,14 +8,11 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Json;
 using OrchardCore.Settings;
 using OrchardCore.Users;
-using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
 public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBase
 {
-    public const string StepKey = "UserRegistration";
-
     private readonly UserManager<IUser> _userManager;
     private readonly SignInManager<IUser> _signInManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -52,7 +49,7 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
         {
             Title = S["Create an account"],
             Description = S["Create an account to manage your subscription."],
-            Key = StepKey,
+            Key = SubscriptionConstants.StepKey.UserRegistration,
             Order = 2,
             CollectData = true,
             Conceal = _httpContextAccessor.HttpContext.User?.Identity?.IsAuthenticated ?? false,
@@ -65,7 +62,7 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
     {
         foreach (var step in context.Flow.Session.Steps)
         {
-            if (step.Key != StepKey)
+            if (step.Key != SubscriptionConstants.StepKey.UserRegistration)
             {
                 continue;
             }
@@ -84,12 +81,12 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
             return;
         }
 
-        if (!context.Flow.Session.SavedSteps.TryGetPropertyValue(StepKey, out var node))
+        if (!context.Flow.Session.SavedSteps.TryGetPropertyValue(SubscriptionConstants.StepKey.UserRegistration, out var node))
         {
             return;
         }
 
-        var user = node.Deserialize<User>(_documentJsonSerializerOptions.SerializerOptions);
+        var registrationStep = node.Deserialize<UserRegistrationStep>(_documentJsonSerializerOptions.SerializerOptions);
 
         var settings = await _siteService.GetSettingsAsync<SubscriptionRoleSettings>();
 
@@ -97,13 +94,13 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
         {
             foreach (var roleName in settings.RoleNames)
             {
-                user.RoleNames.Add(roleName);
+                registrationStep.User.RoleNames.Add(roleName);
             }
         }
 
         var password = await _subscriptionPaymentSession.GetUserPasswordAsync(context.Flow.Session.SessionId, _dataProtectionProvider);
 
-        var result = await _userManager.CreateAsync(user, password);
+        var result = await _userManager.CreateAsync(registrationStep.User, password);
 
         if (!result.Succeeded)
         {
@@ -112,14 +109,14 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
 
         _httpContextAccessor.HttpContext.Features.Set(new CustomerCreatedDuringSubscriptionFlow()
         {
-            User = user,
+            User = registrationStep.User,
             Password = password,
         });
 
         await _subscriptionPaymentSession.RemoveUserPasswordAsync(context.Flow.Session.SessionId);
 
         // Since we just created a new user, let's set the user id as the owner of this session.
-        context.Flow.Session.OwnerId = user.UserId;
+        context.Flow.Session.OwnerId = registrationStep.User.UserId;
     }
 
     public override async Task CompletedAsync(SubscriptionFlowCompletedContext context)

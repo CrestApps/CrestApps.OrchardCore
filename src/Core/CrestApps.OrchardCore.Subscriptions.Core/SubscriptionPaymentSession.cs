@@ -93,16 +93,16 @@ public static class SubscriptionPaymentSessionExtensions
     public const string SubscriptionPaymentInfoPurpose = "SubscriptionPaymentInfo";
     public const string UserRegistrationPurpose = "SubscriptionPaymentInfo";
 
-    public static Task<InitialPaymentInfo> GetInitialPaymentInfoAsync(this SubscriptionPaymentSession session, string sessionId)
-        => session.GetAsync<InitialPaymentInfo>(sessionId, InitialPaymentPurpose);
+    public static Task<InitialPaymentMetadata> GetInitialPaymentInfoAsync(this SubscriptionPaymentSession session, string sessionId)
+        => session.GetAsync<InitialPaymentMetadata>(sessionId, InitialPaymentPurpose);
 
-    public static Task SetAsync(this SubscriptionPaymentSession session, string sessionId, InitialPaymentInfo info)
+    public static Task SetAsync(this SubscriptionPaymentSession session, string sessionId, InitialPaymentMetadata info)
         => session.SetAsync(sessionId, InitialPaymentPurpose, info);
 
-    public static Task<SubscriptionPaymentInfo> GetSubscriptionPaymentInfoAsync(this SubscriptionPaymentSession session, string sessionId)
-        => session.GetAsync<SubscriptionPaymentInfo>(sessionId, SubscriptionPaymentInfoPurpose);
+    public static Task<SubscriptionPaymentMetadata> GetSubscriptionPaymentInfoAsync(this SubscriptionPaymentSession session, string sessionId)
+        => session.GetAsync<SubscriptionPaymentMetadata>(sessionId, SubscriptionPaymentInfoPurpose);
 
-    public static Task SetAsync(this SubscriptionPaymentSession session, string sessionId, SubscriptionPaymentInfo info)
+    public static Task SetAsync(this SubscriptionPaymentSession session, string sessionId, SubscriptionPaymentMetadata info)
         => session.SetAsync(sessionId, SubscriptionPaymentInfoPurpose, info);
 
     public static async Task RemovePaymentInfoAsync(this SubscriptionPaymentSession session, string sessionId)

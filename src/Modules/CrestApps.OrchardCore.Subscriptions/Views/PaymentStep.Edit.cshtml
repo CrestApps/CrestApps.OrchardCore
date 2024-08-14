@@ -29,7 +29,19 @@
             </li>
         }
 
-        <li class="list-group-item list-group-item-dark">
+        @if (Model.Value.InitialAmount.HasValue)
+        {
+            <li class="list-group-item list-group-item-secondary">
+                <div class="row">
+                    <div class="offset-3 offset-md-7 offset-xxl-7 text-center col-3 col-md-2 col-xxl-1">@T["Initial Payment"]</div>
+                    <div class="text-center col-6 col-md-3 col-xxl-4">
+                        @Model.Value.InitialAmount.Value.ToString("C")
+                    </div>
+                </div>
+            </li>
+        }
+
+        <li class="list-group-item list-group-item-secondary">
             <div class="row">
                 <div class="offset-3 offset-md-7 offset-xxl-7 text-center col-3 col-md-2 col-xxl-1">@T["Due Now"]</div>
                 <div class="text-center col-6 col-md-3 col-xxl-4">
@@ -40,7 +52,7 @@
 
         @foreach (var subtotal in Model.Value.Subtotals)
         {
-            <li class="list-group-item list-group-item-dark">
+            <li class="list-group-item list-group-item-secondary">
                 <div class="row">
                     <div class="offset-3 offset-md-7 offset-xxl-7 text-center col-3 col-md-2 col-xxl-1">@T["Sub Total"]</div>
                     <div class="text-center col-6 col-md-3 col-xxl-4">

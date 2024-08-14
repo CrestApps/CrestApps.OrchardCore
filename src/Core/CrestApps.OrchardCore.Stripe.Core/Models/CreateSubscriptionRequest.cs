@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Payments.Models;
+
 namespace CrestApps.OrchardCore.Stripe.Core.Models;
 
 public class CreateSubscriptionRequest
@@ -6,7 +8,20 @@ public class CreateSubscriptionRequest
 
     public string PaymentMethodId { get; set; }
 
-    public string PlanId { get; set; }
-
     public Dictionary<string, string> Metadata { get; set; }
+
+    public IList<SubscriptionLineItem> LineItems { get; set; }
+
+    public int? TrialDuration { get; set; }
+
+    public int? BillingCycles { get; set; }
+
+    public DurationType TrialDurationType { get; set; }
+}
+
+public class SubscriptionLineItem
+{
+    public int Quantity { get; set; }
+
+    public string PriceId { get; set; }
 }

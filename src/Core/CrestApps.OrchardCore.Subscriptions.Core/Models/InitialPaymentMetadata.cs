@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 
-public class InitialPaymentInfo
+public class InitialPaymentMetadata
 {
     public double? InitialPaymentAmount { get; set; }
 

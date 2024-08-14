@@ -5,22 +5,26 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
 public sealed class SubscriptionsContentHandler : ContentHandlerBase
 {
+    private readonly ISiteService _siteService;
     private readonly IStripeProductService _stripeProductService;
-    private readonly IStripePlanService _stripePlanService;
+    private readonly IStripePriceService _stripePriceService;
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
     public SubscriptionsContentHandler(
+        ISiteService siteService,
         IStripeProductService stripeProductService,
-        IStripePlanService stripePlanService,
+        IStripePriceService stripePriceService,
         IContentDefinitionManager contentDefinitionManager)
     {
+        _siteService = siteService;
         _stripeProductService = stripeProductService;
-        _stripePlanService = stripePlanService;
+        _stripePriceService = stripePriceService;
         _contentDefinitionManager = contentDefinitionManager;
     }
 
@@ -33,25 +37,25 @@ public sealed class SubscriptionsContentHandler : ContentHandlerBase
 
         if (definition == null ||
             !definition.StereotypeEquals(SubscriptionConstants.Stereotype) ||
-            !context.ContentItem.TryGet<SubscriptionPart>(out var subscriptionPart))
+            !context.ContentItem.TryGet<SubscriptionPart>(out _))
         {
             return;
         }
 
-        var plan = await _stripePlanService.GetAsync(context.ContentItem.ContentItemVersionId);
+        var price = await _stripePriceService.GetAsync(context.ContentItem.ContentItemVersionId);
 
-        if (plan == null)
+        if (price == null)
         {
             return;
         }
 
-        var planRequest = new UpdatePlanRequest()
+        var priceRequest = new UpdatePriceRequest()
         {
             Title = context.ContentItem.DisplayText,
             IsActive = false,
         };
 
-        await _stripePlanService.UpdateAsync(context.ContentItem.ContentItemVersionId, planRequest);
+        await _stripePriceService.UpdateAsync(context.ContentItem.ContentItemVersionId, priceRequest);
     }
 
     private async Task UpdateStripeAsync(PublishContentContext context)
@@ -65,11 +69,11 @@ public sealed class SubscriptionsContentHandler : ContentHandlerBase
             return;
         }
 
-        var plan = await _stripePlanService.GetAsync(context.ContentItem.ContentItemVersionId);
+        var plan = await _stripePriceService.GetAsync(context.ContentItem.ContentItemVersionId);
 
         if (plan != null)
         {
-            await _stripePlanService.UpdateAsync(context.ContentItem.ContentItemVersionId, new UpdatePlanRequest()
+            await _stripePriceService.UpdateAsync(context.ContentItem.ContentItemVersionId, new UpdatePriceRequest()
             {
                 Title = context.ContentItem.DisplayText,
                 IsActive = true,
@@ -93,18 +97,18 @@ public sealed class SubscriptionsContentHandler : ContentHandlerBase
             product = await _stripeProductService.CreateAsync(productRequest);
         }
 
-        var planRequest = new CreatePlanRequest()
+        var settings = await _siteService.GetSettingsAsync<SubscriptionSettings>();
+        var priceRequest = new CreatePriceRequest()
         {
-            Id = context.ContentItem.ContentItemVersionId,
+            LookupKey = context.ContentItem.ContentItemVersionId,
             ProductId = product.Id,
             Title = context.ContentItem.DisplayText,
             Amount = subscriptionPart.BillingAmount,
-            Currency = "USD",
+            Currency = settings.Currency,
             IntervalCount = subscriptionPart.BillingDuration,
             Interval = subscriptionPart.DurationType.ToString(),
-            // TODO, configure Currency, BillingCycleLimit and SubscriptionDayDelay
         };
 
-        await _stripePlanService.CreateAsync(planRequest);
+        await _stripePriceService.CreateAsync(priceRequest);
     }
 }

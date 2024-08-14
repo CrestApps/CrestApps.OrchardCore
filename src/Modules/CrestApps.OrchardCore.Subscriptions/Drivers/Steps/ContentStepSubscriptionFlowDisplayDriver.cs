@@ -13,9 +13,9 @@ using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Json;
 using OrchardCore.Settings;
 
-namespace CrestApps.OrchardCore.Subscriptions.Drivers;
+namespace CrestApps.OrchardCore.Subscriptions.Drivers.Steps;
 
-public sealed class ContentSubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFlow>
+public sealed class ContentStepSubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFlow>
 {
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -23,7 +23,7 @@ public sealed class ContentSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
     private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
     private readonly IServiceProvider _serviceProvider;
 
-    public ContentSubscriptionFlowDisplayDriver(
+    public ContentStepSubscriptionFlowDisplayDriver(
         IContentItemDisplayManager contentItemDisplayManager,
         IHttpContextAccessor httpContextAccessor,
         ISiteService siteService,

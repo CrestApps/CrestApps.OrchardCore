@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.Stripe.Core.Models;
 
-public class PlanResponse
+public class PriceResponse
 {
     public string Id { get; set; }
 

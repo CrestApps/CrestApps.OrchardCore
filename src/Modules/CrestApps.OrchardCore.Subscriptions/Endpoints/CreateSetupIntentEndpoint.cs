@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using CrestApps.OrchardCore.Subscriptions;
 using CrestApps.OrchardCore.Subscriptions.Core;
-using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Users;
@@ -90,11 +89,12 @@ public static class CreateSetupIntentEndpoint
                 customerRequest.Metadata["userName"] = httpContextAccessor.HttpContext.User.Identity.Name;
             }
         }
-        else if (session.SavedSteps.TryGetPropertyValue(UserRegistrationSubscriptionHandler.StepKey, out var node))
+        else if (session.SavedSteps.TryGetPropertyValue(SubscriptionConstants.StepKey.UserRegistration, out var node))
         {
             // If the subscriber is a new user, try to get their info from the session.
-            var user = node.Deserialize<User>(documentJsonSerializerOptions.Value.SerializerOptions);
-            await SetCustomerInfoAsync(customerRequest, user, displayNameProvider);
+            var registrationStep = node.Deserialize<UserRegistrationStep>(documentJsonSerializerOptions.Value.SerializerOptions);
+
+            await SetCustomerInfoAsync(customerRequest, registrationStep.User, displayNameProvider);
         }
 
         var customerResult = await stripeCustomerService.CreateAsync(customerRequest);

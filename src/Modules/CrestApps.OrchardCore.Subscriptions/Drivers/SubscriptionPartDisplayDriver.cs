@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -42,10 +43,10 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
             model.SubscriptionDayDelay = part.SubscriptionDayDelay;
             model.DurationTypes =
             [
-                new SelectListItem(S["Year"], nameof(BillingDurationType.Year)),
-                new SelectListItem(S["Month"], nameof(BillingDurationType.Month)),
-                new SelectListItem(S["Week"], nameof(BillingDurationType.Week)),
-                new SelectListItem(S["Day"], nameof(BillingDurationType.Day)),
+                new SelectListItem(S["Year"], nameof(DurationType.Year)),
+                new SelectListItem(S["Month"], nameof(DurationType.Month)),
+                new SelectListItem(S["Week"], nameof(DurationType.Week)),
+                new SelectListItem(S["Day"], nameof(DurationType.Day)),
             ];
         });
     }

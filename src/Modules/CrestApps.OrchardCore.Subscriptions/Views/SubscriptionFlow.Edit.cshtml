@@ -14,6 +14,14 @@
         }
 
         <div class="card-body">
+
+            @if (!ViewContext.ModelState.IsValid)
+            {
+                <div class="alert alert-danger" role="alert">
+                    @Html.ValidationSummary()
+                </div>
+            }
+
             @if (Model.Content != null)
             {
                 @await DisplayAsync(Model.Content)
@@ -34,3 +42,9 @@
         }
     </div>
 </div>
+
+<style at="Foot">
+    .alert > .validation-summary-errors > ul {
+        margin-bottom: 0 !important;
+    }
+</style>

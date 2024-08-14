@@ -62,9 +62,20 @@ public static class CreateSubscriptionEndpoint
         {
             PaymentMethodId = model.PaymentMethodId,
             CustomerId = model.CustomerId,
-            PlanId = session.ContentItemVersionId,
+            LineItems = [],
             Metadata = model.Metadata,
         };
+
+        foreach (var lineItem in invoice.LineItems)
+        {
+            request.LineItems.Add(new SubscriptionLineItem()
+            {
+                Quantity = lineItem.Quantity,
+                PriceId = lineItem.Id,
+            });
+        }
+
+        request.BillingCycles = invoice.BillingCycles;
 
         var response = await stripeSubscriptionService.CreateAsync(request);
 

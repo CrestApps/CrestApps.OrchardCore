@@ -60,7 +60,8 @@ public static class CreateSubscriptionEndpoint
     {
         return
             !string.IsNullOrWhiteSpace(model.CustomerId) &&
-            !string.IsNullOrWhiteSpace(model.PlanId) &&
+            model.LineItems != null &&
+            model.LineItems.All(x => !string.IsNullOrEmpty(x.PriceId) && x.Quantity > 0) &&
             !string.IsNullOrWhiteSpace(model.PaymentMethodId);
     }
 }

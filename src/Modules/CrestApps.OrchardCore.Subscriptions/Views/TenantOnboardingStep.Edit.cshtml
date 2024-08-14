@@ -1,0 +1,90 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+@using CrestApps.OrchardCore.Subscriptions.Drivers
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model TenantOnboardingStepViewModel
+
+
+<div class="mb-3">
+    <label asp-for="TenantTitle" class="form-label">@T["Site Name"]</label>
+    <input asp-for="TenantTitle" class="form-control" autofocus />
+    <span asp-validation-for="TenantTitle" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="TenantName" class="form-label">@T["Site Key"]</label>
+    <input asp-for="TenantName" class="form-control" pattern="@TenantOnboardingStepSubscriptionFlowDisplayDriver.KeyNameRegexPattern" title="@T["Site Key must start with a letter and can only contain letters, numbers, underscores, and hyphens."]" />
+    <span asp-validation-for="TenantName" class="text-danger"></span>
+    <span class="hint">@T["The site key can only contain alphanumeric characters, underscores, or hyphens, and must start with a letter."]</span>
+</div>
+
+<div class="mb-3">
+    @if (Model.AllowCustomDomain)
+    {
+        <label asp-for="DomainName" class="form-label">@T["Domain Names"]</label>
+        <input asp-for="DomainName" class="form-control" />
+        <span asp-validation-for="DomainName" class="text-danger"></span>
+        <span class="hint">@T["You may provide comma separated domain names."]</span>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.DomainsTemplate))
+    {
+        <div id="DomainTemplates" class="d-none" data-template="@Model.DomainsTemplate"></div>
+
+        <script at="Foot">
+            document.addEventListener('DOMContentLoaded', () => {
+                const templateElement = document.getElementById('DomainTemplates');
+                const template = templateElement.getAttribute('data-template');
+                const tenantKey = document.getElementById('@Html.IdFor(x => x.TenantName)');
+                const pattern = /@TenantOnboardingStepSubscriptionFlowDisplayDriver.KeyNameRegexPattern/;
+
+                tenantKey.addEventListener('keyup', (e) => {
+
+                    if (e.target.value) {
+
+                        if (!pattern.test(e.target.value)) {
+                            templateElement.innerHTML = '<span class="text-danger">@T["Invalid site key!"] @T["The site key can only contain alphanumeric characters, underscores, or hyphens, and must start with a letter."]</span>';
+                        } else {
+                            templateElement.innerHTML = '<span class="text-success"><strong>@T["Site domain:"]</strong> ' + template.replaceAll('@SubscriptionOnboardingSettings.TenantKeyVariable', e.target.value)
+                                .replaceAll(',', '<br />') + '</span>';
+
+                            templateElement.classList.remove('d-none');
+                        }
+                    } else {
+                        templateElement.classList.add('d-none');
+                    }
+                });
+
+                tenantKey.dispatchEvent(new Event('keyup'));
+            });
+        </script>
+    }
+</div>
+
+<hr />
+
+<h5 class="my-3">@T["New Site Admin Account"]</h5>
+<div class="mb-3">
+    <label asp-for="AdminUsername" class="form-label">@T["Username"]</label>
+    <input asp-for="AdminUsername" class="form-control" autocomplete="new-password" />
+    <span asp-validation-for="AdminUsername" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="AdminEmail" class="form-label">@T["Email Address"]</label>
+    <input type="email" asp-for="AdminEmail" class="form-control" autocomplete="new-password" />
+    <span asp-validation-for="AdminEmail" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="AdminPassword" class="form-label">@T["Password"]</label>
+    <input type="password" asp-for="AdminPassword" class="form-control" autocomplete="new-password" />
+    <span asp-validation-for="AdminPassword" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="AdminPasswordConfirmation" class="form-label">@T["Password Confirmation"]</label>
+    <input type="password" asp-for="AdminPasswordConfirmation" class="form-control" autocomplete="new-password" />
+    <span asp-validation-for="AdminPasswordConfirmation" class="text-danger"></span>
+</div>
+

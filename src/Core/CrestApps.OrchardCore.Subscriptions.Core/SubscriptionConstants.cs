@@ -21,4 +21,13 @@ public static class SubscriptionConstants
 
         public const string Stripe = "CrestApps.OrchardCore.Subscriptions.Stripe";
     }
+
+    public static class StepKey
+    {
+        public const string UserRegistration = "UserRegistration";
+
+        public const string TenantOnboarding = "TenantOnboarding";
+
+        public const string Payment = "Payment";
+    }
 }

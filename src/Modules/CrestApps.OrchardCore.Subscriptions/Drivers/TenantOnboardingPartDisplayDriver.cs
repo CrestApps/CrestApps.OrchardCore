@@ -6,21 +6,21 @@ using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
-using OrchardCore.Recipes.Services;
+using OrchardCore.Setup.Services;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
 public sealed class TenantOnboardingPartDisplayDriver : ContentPartDisplayDriver<TenantOnboardingPart>
 {
-    private readonly IEnumerable<IRecipeHarvester> _recipeHarvesters;
+    private readonly ISetupService _setupService;
 
     internal readonly IStringLocalizer S;
 
     public TenantOnboardingPartDisplayDriver(
-        IEnumerable<IRecipeHarvester> recipeHarvesters,
+        ISetupService setupService,
         IStringLocalizer<TenantOnboardingPartDisplayDriver> stringLocalizer)
     {
-        _recipeHarvesters = recipeHarvesters;
+        _setupService = setupService;
         S = stringLocalizer;
     }
 
@@ -28,11 +28,9 @@ public sealed class TenantOnboardingPartDisplayDriver : ContentPartDisplayDriver
     {
         return Initialize<TenantOnboardingViewModel>(GetEditorShapeType(context), async model =>
         {
-            var recipeCollections = await Task.WhenAll(_recipeHarvesters.Select(harvester => harvester.HarvestRecipesAsync()));
-            model.Recipes = recipeCollections.SelectMany(recipe => recipe)
-            .Where(x => x.IsSetupRecipe)
-            .Select(x => new SelectListItem(x.DisplayName, x.Name))
-            .ToArray();
+            var recipeCollections = await _setupService.GetSetupRecipesAsync();
+
+            model.Recipes = recipeCollections.Select(x => new SelectListItem(x.DisplayName, x.Name)).ToArray();
         });
     }
 
@@ -48,11 +46,11 @@ public sealed class TenantOnboardingPartDisplayDriver : ContentPartDisplayDriver
         }
         else
         {
-            var recipeCollections = await Task.WhenAll(_recipeHarvesters.Select(harvester => harvester.HarvestRecipesAsync()));
+            var recipeCollections = await _setupService.GetSetupRecipesAsync();
 
-            if (!recipeCollections.Any(recipes => recipes.Any(recipe => recipe.IsSetupRecipe && recipe.Name == model.RecipeName)))
+            if (!recipeCollections.Any(recipe => recipe.Name == model.RecipeName))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.RecipeName), S["Invalid recipe."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.RecipeName), S["Invalid recipe name."]);
             }
         }
 

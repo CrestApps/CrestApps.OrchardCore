@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 
-public class SubscriptionPaymentInfo
+public class SubscriptionPaymentMetadata
 {
     public string PlanId { get; set; }
 

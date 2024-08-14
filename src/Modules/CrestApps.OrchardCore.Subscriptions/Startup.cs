@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Drivers;
+using CrestApps.OrchardCore.Subscriptions.Drivers.Steps;
 using CrestApps.OrchardCore.Subscriptions.Endpoints;
 using CrestApps.OrchardCore.Subscriptions.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Indexes;
@@ -46,9 +47,9 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<SubscriptionSessionIndexMigrations>()
             .AddIndexProvider<SubscriptionSessionIndexProvider>();
 
-        services.AddScoped<IDisplayDriver<SubscriptionFlow>, SubscriptionFlowDisplayDriver>();
-        services.AddScoped<IDisplayDriver<SubscriptionFlow>, ContentSubscriptionFlowDisplayDriver>();
-        services.AddScoped<IDisplayDriver<SubscriptionFlow>, PaymentSubscriptionFlowDisplayDriver>();
+        services.AddScoped<IDisplayDriver<SubscriptionFlow>, DefaultSubscriptionFlowDisplayDriver>();
+        services.AddScoped<IDisplayDriver<SubscriptionFlow>, ContentStepSubscriptionFlowDisplayDriver>();
+        services.AddScoped<IDisplayDriver<SubscriptionFlow>, PaymentStepSubscriptionFlowDisplayDriver>();
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, UserRegistrationSubscriptionFlowDisplayDriver>();
 
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, SubscriptionPartSettingsDisplayDriver>();
@@ -104,7 +105,7 @@ public sealed class Startup : StartupBase
             name: "SubscriptionSignupStep",
             areaName: SubscriptionConstants.Features.ModuleId,
             pattern: "Subscription/{sessionId}/Signup/Step/{step?}",
-            defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.ViewSession) }
+            defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Display) }
         );
     }
 }
@@ -148,5 +149,7 @@ public sealed class TenantOnboardingStartup : StartupBase
         services.AddDataMigration<TenantOnboardingMigrations>();
         services.AddScoped<ISubscriptionHandler, UserRegistrationSubscriptionHandler>();
         services.AddScoped<ISubscriptionHandler, TenantOnboardingSubscriptionHandler>();
+        services.AddScoped<IDisplayDriver<SubscriptionFlow>, TenantOnboardingStepSubscriptionFlowDisplayDriver>();
+        services.AddScoped<IDisplayDriver<ISite>, SubscriptionOnboardingSettingsDisplayDriver>();
     }
 }

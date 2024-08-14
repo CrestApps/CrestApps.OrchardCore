@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Subscriptions.Core;
-using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
@@ -15,9 +14,9 @@ using OrchardCore.Json;
 using OrchardCore.Settings;
 using OrchardCore.Users.Models;
 
-namespace CrestApps.OrchardCore.Subscriptions.Drivers;
+namespace CrestApps.OrchardCore.Subscriptions.Drivers.Steps;
 
-public sealed class UserRegistrationSubscriptionFlowDisplayDriver : DisplayDriver<SubscriptionFlow>
+public sealed class UserRegistrationSubscriptionFlowDisplayDriver : SubscriptionFlowDisplayDriver
 {
     public const string UserRegistrationFormGroupId = "Subscription";
 
@@ -44,38 +43,31 @@ public sealed class UserRegistrationSubscriptionFlowDisplayDriver : DisplayDrive
         _documentJsonSerializerOptions = documentJsonSerializerOptions.Value;
     }
 
-    public override IDisplayResult Edit(SubscriptionFlow flow, BuildEditorContext context)
-    {
-        if (!flow.CurrentStepEquals(UserRegistrationSubscriptionHandler.StepKey))
-        {
-            return null;
-        }
+    protected override string StepKey
+        => UserRegistrationFormGroupId;
 
-        return Initialize<UserRegistrationStepViewModel>("RegisterUserFormSubscription_Edit", async model =>
+    protected override IDisplayResult EditStep(SubscriptionFlow flow, BuildEditorContext context)
+    {
+        return Initialize<UserRegistrationStepViewModel>("UserRegistrationStep_Edit", async model =>
         {
             var form = new SubscriptionRegisterUserForm();
 
-            if (flow.Session.SavedSteps.TryGetPropertyValue(UserRegistrationSubscriptionHandler.StepKey, out var node))
+            if (flow.Session.SavedSteps.TryGetPropertyValue(SubscriptionConstants.StepKey.UserRegistration, out var node))
             {
-                var user = node.Deserialize<User>(_documentJsonSerializerOptions.SerializerOptions);
+                var stepInfo = node.Deserialize<UserRegistrationStep>(_documentJsonSerializerOptions.SerializerOptions);
 
-                form.UserName = user.UserName;
-                form.Email = user.Email;
+                form.UserName = stepInfo.User.UserName;
+                form.Email = stepInfo.User.Email;
             }
 
-            model.SignupForm = await _registerUserDisplayManager.BuildEditorAsync(form, context.Updater, false, UserRegistrationFormGroupId, UserRegistrationSubscriptionHandler.StepKey);
+            model.SignupForm = await _registerUserDisplayManager.BuildEditorAsync(form, context.Updater, false, UserRegistrationFormGroupId, SubscriptionConstants.StepKey.UserRegistration);
 
             model.AllowGuestSignup = await ShouldAllowGuestSignupAsync(flow);
         }).Location("Content");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(SubscriptionFlow flow, UpdateEditorContext context)
+    protected override async Task<IDisplayResult> UpdateStepAsync(SubscriptionFlow flow, UpdateEditorContext context)
     {
-        if (!flow.CurrentStepEquals(UserRegistrationSubscriptionHandler.StepKey))
-        {
-            return null;
-        }
-
         var model = new UserRegistrationStepViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
@@ -87,7 +79,7 @@ public sealed class UserRegistrationSubscriptionFlowDisplayDriver : DisplayDrive
             var settings = await _siteService.GetSettingsAsync<RegistrationSettings>();
 
             // Validate
-            await _registerUserDisplayManager.UpdateEditorAsync(form, context.Updater, false, UserRegistrationFormGroupId, UserRegistrationSubscriptionHandler.StepKey);
+            await _registerUserDisplayManager.UpdateEditorAsync(form, context.Updater, false, UserRegistrationFormGroupId, SubscriptionConstants.StepKey.UserRegistration);
 
             var user = new User
             {
@@ -97,7 +89,10 @@ public sealed class UserRegistrationSubscriptionFlowDisplayDriver : DisplayDrive
                 IsEnabled = true,
             };
 
-            flow.Session.SavedSteps[UserRegistrationSubscriptionHandler.StepKey] = JObject.FromObject(user);
+            flow.Session.SavedSteps[SubscriptionConstants.StepKey.UserRegistration] = JObject.FromObject(new UserRegistrationStep
+            {
+                User = user,
+            });
 
             if (context.Updater.ModelState.IsValid)
             {
@@ -106,7 +101,7 @@ public sealed class UserRegistrationSubscriptionFlowDisplayDriver : DisplayDrive
             }
         }
 
-        return Edit(flow, context);
+        return EditStep(flow, context);
     }
 
     private bool? _allowGuests;

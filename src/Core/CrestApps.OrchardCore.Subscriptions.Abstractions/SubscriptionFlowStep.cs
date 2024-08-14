@@ -33,7 +33,7 @@ public sealed class SubscriptionFlowStep
     /// <summary>
     /// Any payment information to collect before completing the subscription.
     /// </summary>
-    public SubscriptionPayment Payment { get; set; }
+    public SubscriptionPlan Plan { get; set; }
 
     /// <summary>
     /// Allow adding custom data for the step.
@@ -45,4 +45,5 @@ public sealed class SubscriptionFlowStep
     /// </summary>
     [JsonIgnore]
     public bool Conceal { get; set; }
+    public object Id { get; set; }
 }

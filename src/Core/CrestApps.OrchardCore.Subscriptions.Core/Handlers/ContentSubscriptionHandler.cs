@@ -78,8 +78,10 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
                 Description = S["Create a new {0}.", definition.DisplayName],
                 Key = $"{ContentPrefix}{contentType}",
                 CollectData = true,
-                Payment = new SubscriptionPayment()
+                Plan = new SubscriptionPlan()
                 {
+                    Description = context.SubscriptionContentItem.DisplayText,
+                    Id = context.Session.ContentItemVersionId,
                     InitialAmount = subscriptionPart.InitialAmount,
                     BillingAmount = subscriptionPart.BillingAmount,
                     SubscriptionDayDelay = subscriptionPart.SubscriptionDayDelay,
@@ -108,15 +110,18 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
                 continue;
             }
 
-            var contentItem = item.Value.Deserialize<ContentItem>(_documentJsonSerializerOptions.SerializerOptions);
+            var contentStep = item.Value.Deserialize<ContentStep>(_documentJsonSerializerOptions.SerializerOptions);
 
-            if (contentItem == null)
+            if (contentStep == null)
             {
                 continue;
             }
 
-            await _contentManager.CreateAsync(contentItem, VersionOptions.Draft);
-            await _contentManager.PublishAsync(contentItem);
+            foreach (var contentItem in contentStep.ContentItems)
+            {
+                await _contentManager.CreateAsync(contentItem, VersionOptions.Draft);
+                await _contentManager.PublishAsync(contentItem);
+            }
         }
     }
 }
