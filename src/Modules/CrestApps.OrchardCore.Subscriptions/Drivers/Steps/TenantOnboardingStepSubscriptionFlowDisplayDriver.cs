@@ -116,6 +116,8 @@ public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : 
         stepInfo.TenantTitle = model.TenantTitle;
         stepInfo.AdminEmail = model.AdminEmail;
         stepInfo.AdminUsername = model.AdminUsername;
+        stepInfo.RecipeName = flow.GetCurrentStep().Data["RecipeName"]?.ToString();
+        stepInfo.FeatureProfile = flow.GetCurrentStep().Data["FeatureProfile"]?.ToString();
 
         var settings = await _siteService.GetSettingsAsync<SubscriptionOnboardingSettings>();
 
@@ -202,7 +204,6 @@ public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : 
 
         return true;
     }
-
 
     private static void PopulateViewModel(TenantOnboardingStepViewModel model, TenantOnboardingStep stepInfo)
     {

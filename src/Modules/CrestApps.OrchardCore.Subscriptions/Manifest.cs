@@ -43,5 +43,8 @@ using OrchardCore.Modules.Manifest;
     [
         SubscriptionConstants.Features.ModuleId,
         StripeConstants.Feature.ModuleId,
+
+        // Tenants adds setup services.
+        "OrchardCore.Tenants",
     ]
 )]

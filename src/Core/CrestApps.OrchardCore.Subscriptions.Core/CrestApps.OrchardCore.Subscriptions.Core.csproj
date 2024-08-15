@@ -1,18 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
-    <PackageReference Include="OrchardCore.DisplayManagement" />
-    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
-    <PackageReference Include="OrchardCore.ContentManagement.Display" />
-    <PackageReference Include="OrchardCore.Users.Core" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+		<PackageReference Include="OrchardCore.DisplayManagement" />
+		<PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+		<PackageReference Include="OrchardCore.ContentManagement.Display" />
+		<PackageReference Include="OrchardCore.Users.Core" />
+		<PackageReference Include="OrchardCore.Setup.Abstractions" />
+		<PackageReference Include="OrchardCore.Workflows.Abstractions" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Stripe.Core\CrestApps.OrchardCore.Stripe.Core.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Subscriptions.Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+		<ProjectReference Include="..\CrestApps.OrchardCore.Stripe.Core\CrestApps.OrchardCore.Stripe.Core.csproj" />
+		<ProjectReference Include="..\CrestApps.OrchardCore.Subscriptions.Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions.csproj" />
+		<ProjectReference Include="..\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
+	</ItemGroup>
 
 </Project>

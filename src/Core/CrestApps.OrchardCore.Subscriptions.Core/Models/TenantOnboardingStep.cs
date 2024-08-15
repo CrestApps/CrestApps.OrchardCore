@@ -18,6 +18,10 @@ public sealed class TenantOnboardingStep
 
     public string Prefix { get; set; }
 
+    public string RecipeName { get; set; }
+
+    public string FeatureProfile { get; set; }
+
     public string[] GetDomains()
         => (Domains ?? []).Concat(LocalDomains ?? [])
         .Distinct(StringComparer.OrdinalIgnoreCase)

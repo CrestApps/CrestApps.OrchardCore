@@ -149,3 +149,16 @@ public sealed class TenantOnboardingStartup : StartupBase
         services.AddScoped<IDisplayDriver<ISite>, SubscriptionOnboardingSettingsDisplayDriver>();
     }
 }
+
+[Feature(SubscriptionConstants.Features.TenantOnboarding)]
+[RequireFeatures("OrchardCore.Tenants.FeatureProfiles")]
+public sealed class FeatureProfileTenantOnboardingStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPart<TenantOnboardingPart>()
+            .UseDisplayDriver<FeatureProfilesTenantOnboardingPartDisplayDriver>();
+
+        services.AddScoped<IDisplayDriver<SubscriptionFlow>, FeatureProfileTenantOnboardingStepSubscriptionFlowDisplayDriver>();
+    }
+}
