@@ -54,13 +54,10 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, SubscriptionPartSettingsDisplayDriver>();
 
-        // TODO, we should not depend on the DI registration order.
-        // Important: register UserRegistrationSubscriptionHandler before PaymentSubscriptionHandler  to ensure 
-        // that the conceal logic is applied first. 
-        services.AddScoped<ISubscriptionHandler, UserRegistrationSubscriptionHandler>()
-            .AddScoped<ISubscriptionHandler, PaymentSubscriptionHandler>();
-
+        services.AddScoped<ISubscriptionHandler, UserRegistrationSubscriptionHandler>();
+        services.AddScoped<ISubscriptionHandler, PaymentSubscriptionHandler>();
         services.AddScoped<ISubscriptionHandler, ContentSubscriptionHandler>();
+
         services.AddScoped<ISubscriptionSessionStore, SubscriptionSessionStore>();
 
         services.AddScoped<SubscriptionPaymentSession>();
@@ -147,7 +144,6 @@ public sealed class TenantOnboardingStartup : StartupBase
             .UseDisplayDriver<TenantOnboardingPartDisplayDriver>();
 
         services.AddDataMigration<TenantOnboardingMigrations>();
-        services.AddScoped<ISubscriptionHandler, UserRegistrationSubscriptionHandler>();
         services.AddScoped<ISubscriptionHandler, TenantOnboardingSubscriptionHandler>();
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, TenantOnboardingStepSubscriptionFlowDisplayDriver>();
         services.AddScoped<IDisplayDriver<ISite>, SubscriptionOnboardingSettingsDisplayDriver>();

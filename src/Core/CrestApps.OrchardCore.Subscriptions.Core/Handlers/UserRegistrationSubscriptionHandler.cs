@@ -43,7 +43,7 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(SubscriptionFlowInitializingContext context)
+    public override Task ActivatingAsync(SubscriptionFlowActivatingContext context)
     {
         context.Session.Steps.Add(new SubscriptionFlowStep()
         {
@@ -58,9 +58,9 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
         return Task.CompletedTask;
     }
 
-    public override Task LoadingAsync(SubscriptionFlowLoadedContext context)
+    public override Task InitializingAsync(SubscriptionFlowInitializingContext context)
     {
-        foreach (var step in context.Flow.Session.Steps)
+        foreach (var step in context.Session.Steps)
         {
             if (step.Key != SubscriptionConstants.StepKey.UserRegistration)
             {
@@ -74,7 +74,7 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
         return Task.CompletedTask;
     }
 
-    public override async Task CompletingAsync(SubscriptionFlowCompletedContext context)
+    public override async Task CompletingAsync(SubscriptionFlowCompletingContext context)
     {
         if (_httpContextAccessor.HttpContext.User?.Identity?.IsAuthenticated == true)
         {

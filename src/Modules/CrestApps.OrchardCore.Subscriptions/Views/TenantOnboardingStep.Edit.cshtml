@@ -72,19 +72,19 @@
 
 <div class="mb-3">
     <label asp-for="AdminEmail" class="form-label">@T["Email Address"]</label>
-    <input type="email" asp-for="AdminEmail" class="form-control" autocomplete="new-password" />
+    <input type="email" type="email" asp-for="AdminEmail" class="form-control" autocomplete="new-password" />
     <span asp-validation-for="AdminEmail" class="text-danger"></span>
 </div>
 
 <div class="mb-3">
     <label asp-for="AdminPassword" class="form-label">@T["Password"]</label>
-    <input type="password" asp-for="AdminPassword" class="form-control" autocomplete="new-password" />
+    <input type="password" asp-for="AdminPassword" class="form-control" autocomplete="new-password" placeholder="@(Model.HasSavedPassword ? T["A password is securely stored. Provide a new one to replace it."]: T["Set a password for the admin account on the new site."])" />
     <span asp-validation-for="AdminPassword" class="text-danger"></span>
 </div>
 
 <div class="mb-3">
     <label asp-for="AdminPasswordConfirmation" class="form-label">@T["Password Confirmation"]</label>
-    <input type="password" asp-for="AdminPasswordConfirmation" class="form-control" autocomplete="new-password" />
+    <input type="password" asp-for="AdminPasswordConfirmation" class="form-control" autocomplete="new-password" placeholder="@(Model.HasSavedPassword ? T["A password is securely stored. Provide a new one to replace it."]: T["Please confirm the admin account password for the new site."])" />
     <span asp-validation-for="AdminPasswordConfirmation" class="text-danger"></span>
 </div>
 

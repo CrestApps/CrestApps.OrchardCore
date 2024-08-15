@@ -3,6 +3,15 @@
 @model SubscriptionSettingsViewModel
 
 <h6>@T["Subscription Settings"]</h6>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="AllowGuestSignup">
+        <label class="form-check-label" asp-for="AllowGuestSignup">@T["Allow Guest Signup"]</label>
+        <span class="hint">@T["By default, users need to be logged in to sign up. Enabling this option allows individuals to sign up without having to register on the site."]</span>
+    </div>
+</div>
+
 <div class="mb-3">
     <label asp-for="Currency" class="form-label">@T["Currency"]</label>
     <select asp-for="Currency" asp-items="Model.Currencies" class="form-select">

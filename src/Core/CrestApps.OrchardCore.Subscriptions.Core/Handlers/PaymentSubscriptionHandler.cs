@@ -22,7 +22,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(SubscriptionFlowInitializingContext context)
+    public override Task ActivatingAsync(SubscriptionFlowActivatingContext context)
     {
         context.Session.Steps.Add(new SubscriptionFlowStep()
         {
@@ -35,7 +35,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         return Task.CompletedTask;
     }
 
-    public override async Task InitializedAsync(SubscriptionFlowInitializedContext context)
+    public override async Task ActivatedAsync(SubscriptionFlowActivatedContext context)
     {
         var invoice = new Invoice();
 
@@ -84,7 +84,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         context.Flow.Session.Put(invoice);
     }
 
-    public override Task LoadingAsync(SubscriptionFlowLoadedContext context)
+    public override Task LoadingAsync(SubscriptionFlowLoadingContext context)
     {
         if (context.Flow.GetCurrentStep()?.Key != SubscriptionConstants.StepKey.Payment)
         {
@@ -93,7 +93,6 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 
         // Before loading payment step, make sure all previous steps are completed.
         // Otherwise, we could process a payment before we can complete the subscription.
-
         foreach (var step in context.Flow.GetSortedSteps())
         {
             if (step.Key == SubscriptionConstants.StepKey.Payment)
@@ -114,7 +113,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         return Task.CompletedTask;
     }
 
-    public override async Task CompletingAsync(SubscriptionFlowCompletedContext context)
+    public override async Task CompletingAsync(SubscriptionFlowCompletingContext context)
     {
         if (!context.Flow.Session.TryGet<Invoice>(out var invoice))
         {

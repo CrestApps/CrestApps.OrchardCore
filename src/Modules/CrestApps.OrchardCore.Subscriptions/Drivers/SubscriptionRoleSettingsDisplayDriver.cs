@@ -55,7 +55,7 @@ public sealed class SubscriptionRoleSettingsDisplayDriver : SiteDisplayDriver<Su
             }
 
             model.Roles = roleEntries.ToArray();
-        }).Location("Content:5")
+        }).Location("Content:10")
         .RenderWhen(() => Task.FromResult(roleNames.Any()))
         .OnGroup(SettingsGroupId);
     }

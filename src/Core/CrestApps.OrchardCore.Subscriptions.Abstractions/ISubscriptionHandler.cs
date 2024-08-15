@@ -6,38 +6,50 @@ namespace CrestApps.OrchardCore.Subscriptions;
 public interface ISubscriptionHandler
 {
     /// <summary>
-    /// Triggered before a new session is initialized.
+    /// Triggered before a new session is activated.
     /// </summary>
     /// <param name="context"></param>
-    /// <returns></returns>
+    Task ActivatingAsync(SubscriptionFlowActivatingContext context);
+
+    /// <summary>
+    /// Triggered after a new session is activated.
+    /// </summary>
+    /// <param name="context"></param>
+    Task ActivatedAsync(SubscriptionFlowActivatedContext context);
+
+    /// <summary>
+    /// Triggered before a session is initialized.
+    /// </summary>
+    /// <param name="context"></param>
     Task InitializingAsync(SubscriptionFlowInitializingContext context);
 
     /// <summary>
-    /// Triggered after a new session is initialized.
+    /// Triggered after a session is initialized.
     /// </summary>
     /// <param name="context"></param>
-    /// <returns></returns>
     Task InitializedAsync(SubscriptionFlowInitializedContext context);
+
+    /// <summary>
+    /// Triggered before a session is loaded.
+    /// </summary>
+    /// <param name="context"></param>
+    Task LoadingAsync(SubscriptionFlowLoadingContext context);
 
     /// <summary>
     /// Triggered after a session is loaded.
     /// </summary>
     /// <param name="context"></param>
-    /// <returns></returns>
     Task LoadedAsync(SubscriptionFlowLoadedContext context);
 
     /// <summary>
     /// Triggered before a session is completed after everything was validated.
     /// </summary>
     /// <param name="context"></param>
-    /// <returns></returns>
-    Task CompletingAsync(SubscriptionFlowCompletedContext context);
+    Task CompletingAsync(SubscriptionFlowCompletingContext context);
 
     /// <summary>
     /// Triggered after a session is completed and everything was validated.
     /// </summary>
     /// <param name="context"></param>
-    /// <returns></returns>
     Task CompletedAsync(SubscriptionFlowCompletedContext context);
-    Task LoadingAsync(SubscriptionFlowLoadedContext context);
 }

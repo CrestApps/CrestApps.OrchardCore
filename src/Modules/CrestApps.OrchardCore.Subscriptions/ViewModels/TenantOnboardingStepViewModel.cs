@@ -22,5 +22,8 @@ public class TenantOnboardingStepViewModel
     public bool AllowCustomDomain { get; set; }
 
     [BindNever]
+    public bool HasSavedPassword { get; set; }
+
+    [BindNever]
     public string DomainsTemplate { get; set; }
 }

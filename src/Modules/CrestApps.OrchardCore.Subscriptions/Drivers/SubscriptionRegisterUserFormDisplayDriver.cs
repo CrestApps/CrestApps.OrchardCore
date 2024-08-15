@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Users;
-using OrchardCore.Users.ViewModels;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
@@ -31,10 +31,11 @@ public sealed class SubscriptionRegisterUserFormDisplayDriver : DisplayDriver<Su
 
     public override IDisplayResult Edit(SubscriptionRegisterUserForm model, BuildEditorContext context)
     {
-        return Initialize<RegisterViewModel>("SubscriptionRegisterUserFormIdentifier", vm =>
+        return Initialize<CreateUserViewModel>("CreateUser", vm =>
         {
             vm.UserName = model.UserName;
             vm.Email = model.Email;
+            vm.HasSavedPassword = model.HasSavedPassword;
         }).Location("Content")
         .OnGroup(UserRegistrationSubscriptionFlowDisplayDriver.UserRegistrationFormGroupId);
     }
@@ -46,7 +47,7 @@ public sealed class SubscriptionRegisterUserFormDisplayDriver : DisplayDriver<Su
             return null;
         }
 
-        var model = new RegisterViewModel();
+        var model = new CreateUserViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
@@ -61,8 +62,47 @@ public sealed class SubscriptionRegisterUserFormDisplayDriver : DisplayDriver<Su
 
         form.UserName = model.UserName;
         form.Email = model.Email;
-        form.Password = model.Password;
+
+        ValidateAndProtectPassword(context.Updater, model, form);
 
         return Edit(form, context);
+    }
+
+    private void ValidateAndProtectPassword(IUpdateModel updater, CreateUserViewModel model, SubscriptionRegisterUserForm form)
+    {
+        var validatePassword =
+            !form.HasSavedPassword ||
+            !string.IsNullOrEmpty(model.Password) ||
+            !string.IsNullOrEmpty(model.ConfirmPassword);
+
+        if (!validatePassword)
+        {
+            return;
+        }
+
+        var hasValidPassword = true;
+
+        if (string.IsNullOrEmpty(model.Password))
+        {
+            hasValidPassword = false;
+            updater.ModelState.AddModelError(Prefix, nameof(model.Password), S["Password is a required value"]);
+        }
+
+        if (string.IsNullOrEmpty(model.ConfirmPassword))
+        {
+            hasValidPassword = false;
+            updater.ModelState.AddModelError(Prefix, nameof(model.ConfirmPassword), S["Password Confirmation is a required value"]);
+        }
+
+        if (model.Password != model.ConfirmPassword)
+        {
+            hasValidPassword = false;
+            updater.ModelState.AddModelError(Prefix, nameof(model.ConfirmPassword), S["Password and Password Confirmation values must be the same."]);
+        }
+
+        if (hasValidPassword)
+        {
+            form.Password = model.Password;
+        }
     }
 }

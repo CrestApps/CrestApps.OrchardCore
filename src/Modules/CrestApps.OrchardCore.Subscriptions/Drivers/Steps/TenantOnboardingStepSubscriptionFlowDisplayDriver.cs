@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -19,12 +20,14 @@ namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
 public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : SubscriptionFlowDisplayDriver
 {
+    public const string ProtectorPurpose = "TenantOnboardingStep";
     public const string KeyNameRegexPattern = @"^[a-zA-Z][a-zA-Z0-9_-]*$";
 
     private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
     private readonly IShellHost _shellHost;
     private readonly ISiteService _siteService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -33,12 +36,14 @@ public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : 
         ISiteService siteService,
         IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions,
         IHttpContextAccessor httpContextAccessor,
+        IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<TenantOnboardingStepSubscriptionFlowDisplayDriver> stringLocalizer)
     {
         _documentJsonSerializerOptions = documentJsonSerializerOptions.Value;
         _shellHost = shellHost;
         _siteService = siteService;
         _httpContextAccessor = httpContextAccessor;
+        _dataProtectionProvider = dataProtectionProvider;
         S = stringLocalizer;
     }
 
@@ -66,16 +71,9 @@ public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : 
 
             model.AllowCustomDomain = settings.AllowCustomDomains;
 
-            if (flow.Session.SavedSteps.TryGetPropertyValue(SubscriptionConstants.StepKey.TenantOnboarding, out var node))
+            if (TryGetStepInfo(flow.Session, out var stepInfo))
             {
-                var info = node.Deserialize<TenantOnboardingStep>(_documentJsonSerializerOptions.SerializerOptions);
-
-                model.TenantName = info.TenantName;
-                model.TenantTitle = info.TenantTitle;
-                model.AdminUsername = info.AdminUsername;
-                model.AdminEmail = info.AdminEmail;
-                model.AdminPassword = info.AdminPassword;
-                model.DomainName = info.Domains?.Length > 0 ? string.Join(',', info.Domains) : null;
+                PopulateViewModel(model, stepInfo);
             }
         }).Location("Content");
     }
@@ -85,6 +83,13 @@ public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : 
         var model = new TenantOnboardingStepViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        if (TryGetStepInfo(flow.Session, out var stepInfo))
+        {
+            PopulateViewModel(model, stepInfo);
+        }
+
+        stepInfo ??= new TenantOnboardingStep();
 
         // TODO: add settings to generate tenant name.
         if (string.IsNullOrEmpty(model.TenantName))
@@ -105,30 +110,14 @@ public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : 
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.AdminUsername), S["Username is a required value"]);
         }
 
-        if (string.IsNullOrEmpty(model.AdminPassword))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AdminPassword), S["Password is a required value"]);
-        }
+        ValidateAndProtectPassword(context.Updater, model, stepInfo);
 
-        if (string.IsNullOrEmpty(model.AdminPasswordConfirmation))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AdminPassword), S["Password Confirmation is a required value"]);
-        }
-        if (model.AdminPassword != model.AdminPasswordConfirmation)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AdminPasswordConfirmation), S["Password and Password Confirmation values must be the same."]);
-        }
+        stepInfo.TenantName = model.TenantName;
+        stepInfo.TenantTitle = model.TenantTitle;
+        stepInfo.AdminEmail = model.AdminEmail;
+        stepInfo.AdminUsername = model.AdminUsername;
 
         var settings = await _siteService.GetSettingsAsync<SubscriptionOnboardingSettings>();
-
-        var stepInfo = new TenantOnboardingStep
-        {
-            TenantName = model.TenantName,
-            TenantTitle = model.TenantTitle,
-            AdminUsername = model.AdminUsername,
-            AdminEmail = model.AdminEmail,
-            AdminPassword = model.AdminPassword,
-        };
 
         if (settings.AllowCustomDomains)
         {
@@ -159,6 +148,70 @@ public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : 
         flow.Session.SavedSteps[SubscriptionConstants.StepKey.TenantOnboarding] = JObject.FromObject(stepInfo);
 
         return EditStep(flow, context);
+    }
+
+    private void ValidateAndProtectPassword(IUpdateModel updater, TenantOnboardingStepViewModel model, TenantOnboardingStep stepInfo)
+    {
+        var validatePassword =
+            string.IsNullOrEmpty(stepInfo.AdminPassword) ||
+            !string.IsNullOrEmpty(model.AdminPassword) ||
+            !string.IsNullOrEmpty(model.AdminPasswordConfirmation);
+
+        if (!validatePassword)
+        {
+            return;
+        }
+
+        var hasValidPassword = true;
+
+        if (string.IsNullOrEmpty(model.AdminPassword))
+        {
+            hasValidPassword = false;
+            updater.ModelState.AddModelError(Prefix, nameof(model.AdminPassword), S["Password is a required value"]);
+        }
+
+        if (string.IsNullOrEmpty(model.AdminPasswordConfirmation))
+        {
+            hasValidPassword = false;
+            updater.ModelState.AddModelError(Prefix, nameof(model.AdminPassword), S["Password Confirmation is a required value"]);
+        }
+
+        if (model.AdminPassword != model.AdminPasswordConfirmation)
+        {
+            hasValidPassword = false;
+            updater.ModelState.AddModelError(Prefix, nameof(model.AdminPasswordConfirmation), S["Password and Password Confirmation values must be the same."]);
+        }
+
+        if (hasValidPassword)
+        {
+            var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
+            stepInfo.AdminPassword = protector.Protect(model.AdminPassword);
+        }
+    }
+
+    private bool TryGetStepInfo(ISubscriptionFlowSession session, out TenantOnboardingStep stepInfo)
+    {
+        if (!session.SavedSteps.TryGetPropertyValue(SubscriptionConstants.StepKey.TenantOnboarding, out var node))
+        {
+            stepInfo = null;
+
+            return false;
+        }
+
+        stepInfo = node.Deserialize<TenantOnboardingStep>(_documentJsonSerializerOptions.SerializerOptions);
+
+        return true;
+    }
+
+
+    private static void PopulateViewModel(TenantOnboardingStepViewModel model, TenantOnboardingStep stepInfo)
+    {
+        model.TenantName = stepInfo.TenantName;
+        model.TenantTitle = stepInfo.TenantTitle;
+        model.AdminUsername = stepInfo.AdminUsername;
+        model.AdminEmail = stepInfo.AdminEmail;
+        model.HasSavedPassword = !string.IsNullOrEmpty(stepInfo.AdminPassword);
+        model.DomainName = stepInfo.Domains?.Length > 0 ? string.Join(',', stepInfo.Domains) : null;
     }
 
     private string[] GetLocalDomains(IUpdateModel updater, TenantOnboardingStepViewModel model, string template)

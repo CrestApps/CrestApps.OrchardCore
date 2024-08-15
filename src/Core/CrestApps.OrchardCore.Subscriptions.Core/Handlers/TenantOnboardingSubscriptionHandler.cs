@@ -25,7 +25,7 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(SubscriptionFlowInitializingContext context)
+    public override Task ActivatingAsync(SubscriptionFlowActivatingContext context)
     {
         if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out var subscriptionPart))
         {
@@ -55,7 +55,7 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
         return Task.CompletedTask;
     }
 
-    public override Task CompletingAsync(SubscriptionFlowCompletedContext context)
+    public override Task CompletingAsync(SubscriptionFlowCompletingContext context)
     {
         if (!context.Flow.Session.SavedSteps.TryGetPropertyValue(SubscriptionConstants.StepKey.TenantOnboarding, out var node))
         {

@@ -73,7 +73,14 @@ public sealed class ContentStepSubscriptionFlowDisplayDriver : DisplayDriver<Sub
 
         await _contentItemDisplayManager.UpdateEditorAsync(contentItem, context.Updater, true, groupId: string.Empty, htmlFieldPrefix: step.Key);
 
-        flow.Session.SavedSteps[step.Key] = JObject.FromObject(contentItem);
+        var stepInfo = new ContentStep
+        {
+            ContentItems = [],
+        };
+
+        stepInfo.ContentItems.Add(contentItem);
+
+        flow.Session.SavedSteps[step.Key] = JObject.FromObject(stepInfo);
 
         return Edit(flow, context);
     }
@@ -84,7 +91,10 @@ public sealed class ContentStepSubscriptionFlowDisplayDriver : DisplayDriver<Sub
 
         if (flow.Session.SavedSteps.TryGetPropertyValue(step.Key, out var node))
         {
-            contentItem = node.Deserialize<ContentItem>(_documentJsonSerializerOptions.SerializerOptions);
+            var stepInfo = node.Deserialize<ContentStep>(_documentJsonSerializerOptions.SerializerOptions);
+
+            // TODO, allow capturing more than one content items.
+            contentItem = stepInfo.ContentItems.FirstOrDefault();
         }
 
         if (contentItem == null)

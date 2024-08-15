@@ -5,12 +5,33 @@
 @if (Model.AllowGuestSignup)
 {
     <div class="form-check">
-        <input class="form-check-input" type="radio" asp-for="ContinueAsGuest" checked="@Model.ContinueAsGuest" role="button" data-bs-toggle="collapse" data-bs-target="#User_Registration_Subscription" aria-expanded="false" aria-controls="User_Registration_Subscription">
+        <input class="form-check-input" type="checkbox" asp-for="ContinueAsGuest" checked="@Model.ContinueAsGuest" role="button" data-bs-toggle="collapse" data-bs-target="#User_Registration_Subscription" aria-expanded="false" aria-controls="User_Registration_Subscription">
         <label class="form-check-label" asp-for="ContinueAsGuest">
             @T["Subscribe as guest"]
         </label>
-        <span>@T["Subscribing as a guest will not give you access to manage your subscription."]</span>
+        <span class="hint dashed">@T["Subscribing as a guest does not include the ability to manage your subscription."]</span>
     </div>
+
+    <style at="Foot">
+        .hint {
+            font-size: 0.875em;
+            color: var(--bs-secondary) !important;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            -ms-word-break: break-all;
+            word-break: break-all;
+            word-break: break-word;
+            -ms-hyphens: auto;
+            -moz-hyphens: auto;
+            -webkit-hyphens: auto;
+            hyphens: auto;
+        }
+
+            .hint.dashed::before,
+            .text-muted.dashed::before {
+                content: "— ";
+            }
+    </style>
 }
 
 <div id="User_Registration_Subscription" class="collapse@(!Model.AllowGuestSignup || !Model.ContinueAsGuest ? " show" : string.Empty)">

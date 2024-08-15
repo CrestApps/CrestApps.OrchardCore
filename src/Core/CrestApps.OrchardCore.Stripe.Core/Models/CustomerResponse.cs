@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.Stripe.Core.Models;
+namespace CrestApps.OrchardCore.Stripe.Core.Models;
 
 public class CustomerResponse
 {

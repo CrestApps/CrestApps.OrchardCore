@@ -44,7 +44,7 @@ public sealed class UserRegistrationSubscriptionFlowDisplayDriver : Subscription
     }
 
     protected override string StepKey
-        => UserRegistrationFormGroupId;
+        => SubscriptionConstants.StepKey.UserRegistration;
 
     protected override IDisplayResult EditStep(SubscriptionFlow flow, BuildEditorContext context)
     {
@@ -58,11 +58,12 @@ public sealed class UserRegistrationSubscriptionFlowDisplayDriver : Subscription
 
                 form.UserName = stepInfo.User.UserName;
                 form.Email = stepInfo.User.Email;
+
+                form.HasSavedPassword = await _subscriptionPaymentSession.UserPasswordExistsAsync(flow.Session.SessionId);
             }
 
             model.SignupForm = await _registerUserDisplayManager.BuildEditorAsync(form, context.Updater, false, UserRegistrationFormGroupId, SubscriptionConstants.StepKey.UserRegistration);
-
-            model.AllowGuestSignup = await ShouldAllowGuestSignupAsync(flow);
+            model.AllowGuestSignup = (await _siteService.GetSettingsAsync<SubscriptionSettings>()).AllowGuestSignup;
         }).Location("Content");
     }
 
@@ -71,52 +72,45 @@ public sealed class UserRegistrationSubscriptionFlowDisplayDriver : Subscription
         var model = new UserRegistrationStepViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+        var subscriptionSessions = await _siteService.GetSettingsAsync<SubscriptionSettings>();
 
-        if (!await ShouldAllowGuestSignupAsync(flow) || !model.ContinueAsGuest)
+        var stepInfo = new UserRegistrationStep();
+
+        if (!subscriptionSessions.AllowGuestSignup || !model.ContinueAsGuest)
         {
-            var form = new SubscriptionRegisterUserForm();
+            var form = new SubscriptionRegisterUserForm
+            {
+                HasSavedPassword = await _subscriptionPaymentSession.UserPasswordExistsAsync(flow.Session.SessionId),
+            };
 
-            var settings = await _siteService.GetSettingsAsync<RegistrationSettings>();
+            var registrationSettings = await _siteService.GetSettingsAsync<RegistrationSettings>();
 
-            // Validate
             await _registerUserDisplayManager.UpdateEditorAsync(form, context.Updater, false, UserRegistrationFormGroupId, SubscriptionConstants.StepKey.UserRegistration);
 
             var user = new User
             {
                 UserName = form.UserName,
                 Email = form.Email,
-                EmailConfirmed = !settings.UsersMustValidateEmail,
+                EmailConfirmed = !registrationSettings.UsersMustValidateEmail,
                 IsEnabled = true,
             };
 
-            flow.Session.SavedSteps[SubscriptionConstants.StepKey.UserRegistration] = JObject.FromObject(new UserRegistrationStep
-            {
-                User = user,
-            });
+            stepInfo.User = user;
+            stepInfo.IsGuest = false;
 
-            if (context.Updater.ModelState.IsValid)
+            if (context.Updater.ModelState.IsValid && !string.IsNullOrEmpty(form.Password))
             {
                 // Save the password in the cache not in the database.
                 await _subscriptionPaymentSession.SetUserPasswordAsync(flow.Session.SessionId, form.Password, _dataProtectionProvider);
             }
         }
-
-        return EditStep(flow, context);
-    }
-
-    private bool? _allowGuests;
-
-    private async Task<bool> ShouldAllowGuestSignupAsync(SubscriptionFlow flow)
-    {
-        if (_allowGuests == null)
+        else
         {
-            var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(flow.ContentItem.ContentType);
-
-            var settings = typeDefinition?.Parts?.FirstOrDefault(x => x.Name == nameof(SubscriptionPart))?.GetSettings<SubscriptionPartSettings>();
-
-            _allowGuests = settings?.AllowGuestSignup ?? false;
+            stepInfo.IsGuest = true;
         }
 
-        return _allowGuests ?? false;
+        flow.Session.SavedSteps[SubscriptionConstants.StepKey.UserRegistration] = JObject.FromObject(stepInfo);
+
+        return EditStep(flow, context);
     }
 }

@@ -4,5 +4,5 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 
 public sealed class ContentStep
 {
-    public ContentItem[] ContentItems { get; set; }
+    public List<ContentItem> ContentItems { get; set; }
 }

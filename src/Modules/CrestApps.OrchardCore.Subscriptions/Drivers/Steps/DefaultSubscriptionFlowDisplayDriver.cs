@@ -11,7 +11,7 @@ public sealed class DefaultSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
     public override Task<IDisplayResult> DisplayAsync(SubscriptionFlow model, BuildDisplayContext context)
     {
         return CombineAsync(
-            View("SubscriptionFlowSteps", model)
+            View("SubscriptionFlowStepper", model)
             .Location("Confirmation", "Steps"),
 
             View("SubscriptionConfirmation", model)
@@ -22,7 +22,7 @@ public sealed class DefaultSubscriptionFlowDisplayDriver : DisplayDriver<Subscri
     public override Task<IDisplayResult> EditAsync(SubscriptionFlow model, BuildEditorContext context)
     {
         return CombineAsync(
-            View("SubscriptionFlowSteps", model).Location("Steps"),
+            View("SubscriptionFlowStepper", model).Location("Steps"),
 
             View("SubscriptionInformation", model).Location("Header"),
 

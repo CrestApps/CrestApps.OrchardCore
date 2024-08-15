@@ -45,6 +45,7 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
 
         return Initialize<SubscriptionSettingsViewModel>("SubscriptionSettings_Edit", model =>
         {
+            model.AllowGuestSignup = settings.AllowGuestSignup;
             model.Currency = settings.Currency;
             model.Currencies = GetCurrencies();
         }).Location("Content:5")
@@ -100,6 +101,7 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Currency), S["Invalid currency value."]);
         }
 
+        settings.AllowGuestSignup = model.AllowGuestSignup;
         settings.Currency = model.Currency;
 
         return await EditAsync(site, settings, context);

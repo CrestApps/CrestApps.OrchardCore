@@ -123,6 +123,13 @@ public static class SubscriptionPaymentSessionExtensions
         return null;
     }
 
+    public static async Task<bool> UserPasswordExistsAsync(this SubscriptionPaymentSession session, string sessionId)
+    {
+        var protectedPassword = await session.GetAsync<string>(sessionId, UserRegistrationPurpose);
+
+        return !string.IsNullOrEmpty(protectedPassword);
+    }
+
     public static async Task SetUserPasswordAsync(this SubscriptionPaymentSession session, string sessionId, string rawPassword, IDataProtectionProvider dataProtectionProvider)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rawPassword);

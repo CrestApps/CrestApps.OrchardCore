@@ -117,16 +117,16 @@ public sealed class SubscriptionSessionStore : ISubscriptionSessionStore
             subscriptionSession.AgentInfo = _contextAccessor.HttpContext.Request.Headers.UserAgent;
         }
 
-        var initializingContext = new SubscriptionFlowInitializingContext(subscriptionSession, subscriptionContentItem);
+        var activatingContext = new SubscriptionFlowActivatingContext(subscriptionSession, subscriptionContentItem);
 
-        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.InitializingAsync(context), initializingContext, _logger);
+        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.ActivatingAsync(context), activatingContext, _logger);
 
         var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
-        var initializedContext = new SubscriptionFlowInitializedContext(flow);
+        var activatedContext = new SubscriptionFlowActivatedContext(flow);
 
         subscriptionSession.CurrentStep = flow.GetFirstStep()?.Key;
 
-        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.InitializedAsync(context), initializedContext, _logger);
+        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.ActivatedAsync(context), activatedContext, _logger);
 
         return subscriptionSession;
     }

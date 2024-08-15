@@ -38,7 +38,7 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
         S = stringLocalizer;
     }
 
-    public override async Task InitializingAsync(SubscriptionFlowInitializingContext context)
+    public override async Task ActivatingAsync(SubscriptionFlowActivatingContext context)
     {
         if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out var subscriptionPart))
         {
@@ -101,7 +101,7 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
         }
     }
 
-    public override async Task CompletingAsync(SubscriptionFlowCompletedContext context)
+    public override async Task CompletingAsync(SubscriptionFlowCompletingContext context)
     {
         foreach (var item in context.Flow.Session.SavedSteps)
         {
@@ -112,7 +112,7 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
 
             var contentStep = item.Value.Deserialize<ContentStep>(_documentJsonSerializerOptions.SerializerOptions);
 
-            if (contentStep == null)
+            if (contentStep?.ContentItems == null)
             {
                 continue;
             }
