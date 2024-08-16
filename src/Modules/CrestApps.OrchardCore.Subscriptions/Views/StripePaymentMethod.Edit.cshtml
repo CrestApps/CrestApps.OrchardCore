@@ -1,0 +1,54 @@
+@using CrestApps.OrchardCore.Stripe.Core
+@using CrestApps.OrchardCore.Subscriptions.Core
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model StripePaymentMethodViewModel
+
+<div class="payment-method-wrapper d-none" data-method-name="@StripePaymentMethodViewModel.Key">
+    @if (!Model.IsLive && !string.IsNullOrEmpty(Model.PublishableKey))
+    {
+        <div class="alert alert-warning text-center" role="alert">
+            <h4>@T["Stripe is in test mode."]</h4>
+        </div>
+    }
+    else if (string.IsNullOrEmpty(Model.PublishableKey))
+    {
+        <div class="alert alert-warning text-center" role="alert">
+            <h4>@T["Stripe has not yet been configured. Please visit the configuration section and configure it."]</h4>
+        </div>
+
+        return;
+    }
+
+    <div id="card-errors" role="alert" class="alert alert-danger d-none"></div>
+
+    <!-- Additional input fields for billing details -->
+    <div class="mb-1">
+        <label for="NameOnBankCard" class="visually-hidden"></label>
+        <input id="NameOnBankCard" type="text" class="form-control" placeholder="@T["Name as it appears on card"]">
+    </div>
+
+    <div id="card-element" class="form-control"></div>
+
+    <script asp-name="stripe-subscription-processor"></script>
+    <script asp-name="subscription-payment-methods"></script>
+    <script at="Foot" depends-on="stripe-subscription-processor,subscription-payment-methods">
+        const payButtonElement = document.getElementById('Subscription_Next_Button');
+        const config = {
+            payButtonElement: payButtonElement,
+            publishableKey: '@Model.PublishableKey',
+            sessionId: '@Model.SessionId',
+            stepIntentEndpoint: '@Url.RouteUrl(SubscriptionConstants.RouteName.CreateSetupIntentEndpoint)',
+            paymentIntentEndpoint: '@Url.RouteUrl(SubscriptionConstants.RouteName.CreatePaymentIntentEndpoint)',
+            subscriptionEndpoint: '@Url.RouteUrl(SubscriptionConstants.RouteName.CreateSubscriptionEndpoint)',
+            nameOnCardElement: document.getElementById('NameOnBankCard'),
+            invalidNameErrorMessage: '@T["Please provide the name as it appears on the card."]'
+        };
+
+        config.enablePayButtonButton = (enable) => {
+            return enablePayButtonButton(payButtonElement, enable);
+        }
+
+        stripePaymentProcessing.initialize(config);
+    </script>
+</div>

@@ -1,2 +1,8 @@
 [
+  {
+    "inputs": [
+      "Assets/js/stripe-subscription-payment-processing.js"
+    ],
+    "output": "wwwroot/Scripts/stripe-subscription-payment-processing.js"
+  }
 ]

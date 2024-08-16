@@ -47,8 +47,8 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
     {
         context.Session.Steps.Add(new SubscriptionFlowStep()
         {
-            Title = S["Create an account"],
-            Description = S["Create an account to manage your subscription."],
+            Title = S["Registration"],
+            Description = S["Manage Your Subscription by Creating an Account."],
             Key = SubscriptionConstants.StepKey.UserRegistration,
             Order = 2,
             CollectData = true,
@@ -88,6 +88,11 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
 
         var registrationStep = node.Deserialize<UserRegistrationStep>(_documentJsonSerializerOptions.SerializerOptions);
 
+        if (registrationStep.IsGuest)
+        {
+            return;
+        }
+
         var settings = await _siteService.GetSettingsAsync<SubscriptionRoleSettings>();
 
         if (settings.RoleNames != null)
@@ -117,6 +122,7 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
 
         // Since we just created a new user, let's set the user id as the owner of this session.
         context.Flow.Session.OwnerId = registrationStep.User.UserId;
+
     }
 
     public override async Task CompletedAsync(SubscriptionFlowCompletedContext context)

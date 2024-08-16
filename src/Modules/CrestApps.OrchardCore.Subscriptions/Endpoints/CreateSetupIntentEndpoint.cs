@@ -94,7 +94,14 @@ public static class CreateSetupIntentEndpoint
             // If the subscriber is a new user, try to get their info from the session.
             var registrationStep = node.Deserialize<UserRegistrationStep>(documentJsonSerializerOptions.Value.SerializerOptions);
 
-            await SetCustomerInfoAsync(customerRequest, registrationStep.User, displayNameProvider);
+            if (!registrationStep.IsGuest)
+            {
+                await SetCustomerInfoAsync(customerRequest, registrationStep.User, displayNameProvider);
+            }
+            else
+            {
+                customerRequest.Metadata.Add("userId", "guest");
+            }
         }
 
         var customerResult = await stripeCustomerService.CreateAsync(customerRequest);

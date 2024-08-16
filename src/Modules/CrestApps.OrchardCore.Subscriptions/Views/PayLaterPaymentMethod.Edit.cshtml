@@ -1,0 +1,41 @@
+@using CrestApps.OrchardCore.Subscriptions.Core
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+
+@model ShapeViewModel<SubscriptionFlowPaymentMethod>
+
+<div class="payment-method-wrapper d-none" data-method-name="PayLater">
+    <script asp-name="subscription-payment-methods"></script>
+    <script at="Foot" depends-on="subscription-payment-methods">
+        document.addEventListener('DOMContentLoaded', () => {
+            const payButtonElement = document.getElementById('Subscription_Next_Button');
+            if (payButtonElement.getAttribute('data-method-name') != 'PayLater') {
+                return;
+            }
+            enablePayButtonButton(payButtonElement, false);
+            fetch('@(SubscriptionConstants.RouteName.CreatePayLaterEndpoint)', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sessionId: '@(Model.Value.Flow.Session.SessionId)'
+                }),
+            }).then((response) => response.json())
+                .then(data => {
+                    const form = document.getElementById('subscription-form');
+
+                    if (data.status == 'completed') {
+                        var submitEvent = new Event("submit", {
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        form.dispatchEvent(submitEvent);
+                    } else {
+                        enablePayButtonButton(payButtonElement, true);
+
+                        alert('@T["Unexpected error. Please try again."]');
+                    }
+                })
+        });
+    </script>
+</div>

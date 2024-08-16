@@ -34,6 +34,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Name = "Subscriptions - Pay Later",
+    Id = SubscriptionConstants.Features.PayLater,
+    Description = "Provides a way to pay subscriptions later.",
+    Category = "Subscriptions",
+    Dependencies =
+    [
+        SubscriptionConstants.Features.ModuleId,
+    ]
+)]
+
+[assembly: Feature(
     Name = "Subscriptions - Tenant Onboarding",
     Id = SubscriptionConstants.Features.TenantOnboarding,
     Description = "Provides a way to onboard new tenants using subscriptions.",

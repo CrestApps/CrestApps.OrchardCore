@@ -6,7 +6,6 @@ using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
-using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -24,7 +23,6 @@ public sealed class UserRegistrationSubscriptionFlowDisplayDriver : Subscription
     private readonly SubscriptionPaymentSession _subscriptionPaymentSession;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IDisplayManager<SubscriptionRegisterUserForm> _registerUserDisplayManager;
-    private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
 
     public UserRegistrationSubscriptionFlowDisplayDriver(
@@ -32,14 +30,12 @@ public sealed class UserRegistrationSubscriptionFlowDisplayDriver : Subscription
         SubscriptionPaymentSession subscriptionPaymentSession,
         IDataProtectionProvider dataProtectionProvider,
         IDisplayManager<SubscriptionRegisterUserForm> registerUserDisplayManager,
-        IContentDefinitionManager contentDefinitionManager,
         IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions)
     {
         _siteService = siteService;
         _subscriptionPaymentSession = subscriptionPaymentSession;
         _dataProtectionProvider = dataProtectionProvider;
         _registerUserDisplayManager = registerUserDisplayManager;
-        _contentDefinitionManager = contentDefinitionManager;
         _documentJsonSerializerOptions = documentJsonSerializerOptions.Value;
     }
 
@@ -56,10 +52,16 @@ public sealed class UserRegistrationSubscriptionFlowDisplayDriver : Subscription
             {
                 var stepInfo = node.Deserialize<UserRegistrationStep>(_documentJsonSerializerOptions.SerializerOptions);
 
-                form.UserName = stepInfo.User.UserName;
-                form.Email = stepInfo.User.Email;
-
-                form.HasSavedPassword = await _subscriptionPaymentSession.UserPasswordExistsAsync(flow.Session.SessionId);
+                if (stepInfo.IsGuest)
+                {
+                    model.ContinueAsGuest = true;
+                }
+                else
+                {
+                    form.UserName = stepInfo.User.UserName;
+                    form.Email = stepInfo.User.Email;
+                    form.HasSavedPassword = await _subscriptionPaymentSession.UserPasswordExistsAsync(flow.Session.SessionId);
+                }
             }
 
             model.SignupForm = await _registerUserDisplayManager.BuildEditorAsync(form, context.Updater, false, UserRegistrationFormGroupId, SubscriptionConstants.StepKey.UserRegistration);

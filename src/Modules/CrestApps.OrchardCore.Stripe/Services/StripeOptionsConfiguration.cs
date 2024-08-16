@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Settings;
 
-namespace CrestApps.OrchardCore.Stripe;
+namespace CrestApps.OrchardCore.Stripe.Services;
 
 internal sealed class StripeOptionsConfiguration : IConfigureOptions<StripeOptions>
 {

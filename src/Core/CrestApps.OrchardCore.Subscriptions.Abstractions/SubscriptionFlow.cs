@@ -5,8 +5,6 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 
 public sealed class SubscriptionFlow
 {
-    public string Direction { get; set; }
-
     public ISubscriptionFlowSession Session { get; }
 
     public ContentItem ContentItem { get; }

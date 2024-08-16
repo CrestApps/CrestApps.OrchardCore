@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
 
-public class StripePaymentStepViewModel
+public class StripePaymentMethodViewModel
 {
+    public const string Key = "Stripe";
+
     [BindNever]
     public string SessionId { get; set; }
 

@@ -1,43 +1,43 @@
 <Project>
-	<PropertyGroup>
-		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-		<!-- Special case - this property is used by a DotNetCliToolReference -->
-		<DotNetXunitVersion>2.3.0</DotNetXunitVersion>
-		<OrchardCoreVersion>2.0.0-preview-18299</OrchardCoreVersion>
-	</PropertyGroup>
-	<ItemGroup>
-		<!-- Miscellaneous Packages-->
-		<PackageVersion Include="Stripe.net" Version="45.6.0 " />
-
-		<!-- OrchardCore Packages -->
-		<PackageVersion Include="OrchardCore.Abstractions" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.DisplayManagement.Abstractions" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.DisplayManagement" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.Users.Abstractions" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.Users.Core" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.Users" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.Infrastructure.Abstractions" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.Liquid.Abstractions" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.ContentFields" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.Contents" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.ContentTypes" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.ContentTypes.Abstractions" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.ContentManagement" Version="$(OrchardCoreVersion)"/>
-		<PackageVersion Include="OrchardCore.ContentManagement.Abstractions" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.ContentManagement.Display" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.Media" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.Module.Targets" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.Navigation.Core" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.Logging.NLog" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.Application.Cms.Core.Targets" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.Title" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.Setup.Abstractions" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="OrchardCore.Workflows.Abstractions" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="TheAdmin" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="TheTheme" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="SafeMode" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="TheAgencyTheme" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="TheComingSoonTheme" Version="$(OrchardCoreVersion)" />
-		<PackageVersion Include="TheBlogTheme" Version="$(OrchardCoreVersion)" />
-	</ItemGroup>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Special case - this property is used by a DotNetCliToolReference -->
+    <DotNetXunitVersion>2.3.0</DotNetXunitVersion>
+    <OrchardCoreVersion>2.0.0-preview-18299</OrchardCoreVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Miscellaneous Packages-->
+    <PackageVersion Include="Microsoft.AspNetCore.Html.Abstractions" Version="2.2.0" />
+    <PackageVersion Include="Stripe.net" Version="45.6.0 " />
+    <!-- OrchardCore Packages -->
+    <PackageVersion Include="OrchardCore.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.DisplayManagement.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.DisplayManagement" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Users.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Users.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Users" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Infrastructure.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Liquid.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.ContentFields" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Contents" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.ContentTypes" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.ContentTypes.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.ContentManagement" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.ContentManagement.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.ContentManagement.Display" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Media" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Module.Targets" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Navigation.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Logging.NLog" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Application.Cms.Core.Targets" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Title" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Setup.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Workflows.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="TheAdmin" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="TheTheme" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="SafeMode" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="TheAgencyTheme" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="TheComingSoonTheme" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="TheBlogTheme" Version="$(OrchardCoreVersion)" />
+  </ItemGroup>
 </Project>

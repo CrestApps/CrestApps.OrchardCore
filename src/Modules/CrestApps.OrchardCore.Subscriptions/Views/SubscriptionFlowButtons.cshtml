@@ -12,11 +12,25 @@
 
         @if (hasNext && Model.IsPaymentStep)
         {
-            @T["Pay & Next"]
+            <span class="payment-processing d-none">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span role="status">@T["Processing..."]</span>
+            </span>
+
+            <span class="payment-label">
+                @T["Pay & Next"]
+            </span>
         }
         else if (Model.IsPaymentStep)
         {
-            @T["Pay & Finish"]
+            <span class="payment-processing d-none">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span role="status">@T["Processing..."]</span>
+            </span>
+
+            <span class="payment-label">
+                @T["Pay & Finish"]
+            </span>
         }
         else if (hasNext)
         {

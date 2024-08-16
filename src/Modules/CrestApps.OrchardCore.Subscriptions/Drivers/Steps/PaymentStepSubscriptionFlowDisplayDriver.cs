@@ -13,7 +13,12 @@ public sealed class PaymentStepSubscriptionFlowDisplayDriver : SubscriptionFlowD
 
     protected override IDisplayResult EditStep(SubscriptionFlow flow, BuildEditorContext context)
     {
-        return View("PaymentStep_Edit", flow.Session.As<Invoice>())
-            .Location("Content");
+        return Combine(
+            View("PaymentStepInvoice_Edit", flow.Session.As<Invoice>())
+            .Location("Content"),
+
+            View("PaymentMethods_Edit", flow)
+            .Location("Content:after")
+        );
     }
 }

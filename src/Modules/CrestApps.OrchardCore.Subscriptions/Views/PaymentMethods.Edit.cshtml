@@ -1,0 +1,17 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+@using OrchardCore.DisplayManagement
+@using OrchardCore.DisplayManagement.ModelBinding
+
+@inject IDisplayManager<SubscriptionFlowPaymentMethod> DisplayManager
+@inject IUpdateModelAccessor UpdateModelAccessor
+
+@model ShapeViewModel<SubscriptionFlow>
+
+@{
+    var shape = await DisplayManager.BuildEditorAsync(
+        model: new SubscriptionFlowPaymentMethod { Flow = Model.Value },
+        updater: UpdateModelAccessor.ModelUpdater,
+        isNew: true);
+}
+
+@await DisplayAsync(shape)

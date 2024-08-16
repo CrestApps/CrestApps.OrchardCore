@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Stripe.Endpoints;
 using CrestApps.OrchardCore.Subscriptions.Controllers;
 using CrestApps.OrchardCore.Subscriptions.Core;
@@ -16,6 +17,7 @@ using CrestApps.OrchardCore.Subscriptions.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
@@ -26,6 +28,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.Core.Utilities;
 using OrchardCore.Navigation;
+using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 
@@ -52,6 +55,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, PaymentStepSubscriptionFlowDisplayDriver>();
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, UserRegistrationSubscriptionFlowDisplayDriver>();
 
+
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, SubscriptionPartSettingsDisplayDriver>();
 
         services.AddScoped<ISubscriptionHandler, UserRegistrationSubscriptionHandler>();
@@ -73,6 +77,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<IDisplayDriver<ISite>, SubscriptionSettingsDisplayDriver>();
         services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
         services.AddScoped<INavigationProvider, SubscriptionsAdminMenu>();
+        services.AddScoped<IDisplayDriver<SubscriptionFlowPaymentMethod>, PaymentMethodsDisplayDriver>();
+
+        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, SubscriptionResourceManagementOptionsConfiguration>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -121,10 +128,21 @@ public sealed class StripeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IDisplayDriver<SubscriptionFlow>, StripePaymentSubscriptionFlowDisplayDriver>();
+        services.AddScoped<IDisplayDriver<SubscriptionFlowPaymentMethod>, StripePaymentSubscriptionFlowDisplayDriver>();
+
         services.AddScoped<IPaymentEvent, SubscriptionPaymentHandler>();
         services.AddScoped<IContentHandler, SubscriptionsContentHandler>();
         services.AddScoped<ISubscriptionHandler, StripeSubscriptionHandler>();
+        services.AddTransient<IPostConfigureOptions<PaymentMethodOptions>, DefaultPaymentMethodConfigurations>();
+        services.Configure<PaymentMethodOptions>(options =>
+        {
+            options.PaymentMethods.Add(new PaymentMethod
+            {
+                Key = "Stripe",
+                Title = "Stripe",
+                HasProcessor = true,
+            });
+        });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -132,6 +150,29 @@ public sealed class StripeStartup : StartupBase
         routes.AddCreateStripeSubscriptionEndpoint()
             .AddCreatePaymentIntentEndpoint()
             .AddStripeCreateSetupIntentEndpoint();
+    }
+}
+
+[Feature(SubscriptionConstants.Features.PayLater)]
+public sealed class PayLaterStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IDisplayDriver<SubscriptionFlowPaymentMethod>, PayLaterPaymentSubscriptionFlowDisplayDriver>();
+        services.Configure<PaymentMethodOptions>(options =>
+        {
+            options.PaymentMethods.Add(new PaymentMethod
+            {
+                Key = "PayLater",
+                Title = "Pay Later",
+                HasProcessor = false,
+            });
+        });
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddCreatePayLaterEndpoint();
     }
 }
 

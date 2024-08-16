@@ -31,4 +31,10 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Users.Core\CrestApps.OrchardCore.Users.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Assets.json">
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

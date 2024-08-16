@@ -1,15 +1,23 @@
 @using CrestApps.OrchardCore.Subscriptions.ViewModels
+@using Microsoft.Extensions.Options
+@using OrchardCore.Users
+
+@inject IOptions<UserOptions> UserOptions
 
 @model UserRegistrationStepViewModel
-
+<div class="mb-3">
+    @T["Already registered?"] <a class="link-underline link-underline-opacity-10" asp-route="Login" asp-area="OrchardCore.Users">@T["Click here to log in."]</a>
+</div>
 @if (Model.AllowGuestSignup)
 {
-    <div class="form-check">
-        <input class="form-check-input" type="checkbox" asp-for="ContinueAsGuest" checked="@Model.ContinueAsGuest" role="button" data-bs-toggle="collapse" data-bs-target="#User_Registration_Subscription" aria-expanded="false" aria-controls="User_Registration_Subscription">
-        <label class="form-check-label" asp-for="ContinueAsGuest">
-            @T["Subscribe as guest"]
-        </label>
-        <span class="hint dashed">@T["Subscribing as a guest does not include the ability to manage your subscription."]</span>
+    <div class="mb-3">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" asp-for="ContinueAsGuest" checked="@Model.ContinueAsGuest" role="button" data-bs-toggle="collapse" data-bs-target="#User_Registration_Subscription" aria-expanded="false" aria-controls="User_Registration_Subscription">
+            <label class="form-check-label" asp-for="ContinueAsGuest">
+                @T["Subscribe as guest"]
+            </label>
+            <span class="hint dashed">@T["Subscribing as a guest does not include the ability to manage your subscription."]</span>
+        </div>
     </div>
 
     <style at="Foot">
@@ -35,5 +43,6 @@
 }
 
 <div id="User_Registration_Subscription" class="collapse@(!Model.AllowGuestSignup || !Model.ContinueAsGuest ? " show" : string.Empty)">
+    <h5>@T["Create an account"]</h5>
     @await DisplayAsync(Model.SignupForm)
 </div>

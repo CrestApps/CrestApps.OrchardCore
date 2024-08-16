@@ -4,6 +4,17 @@
 
 <h6>@T["Subscription Settings"]</h6>
 
+@if (Model.PaymentMethods.Any())
+{
+    <div class="mb-3">
+        <label asp-for="DefaultPaymentMethod" class="form-label">@T["Default Payment Method"]</label>
+        <select asp-for="DefaultPaymentMethod" asp-items="Model.PaymentMethods" class="form-select">
+            <option value="">@T["Select a method"]</option>
+        </select>
+
+    </div>
+}
+
 <div class="mb-3">
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="AllowGuestSignup">

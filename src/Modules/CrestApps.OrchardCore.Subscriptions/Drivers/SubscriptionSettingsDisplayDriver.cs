@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -20,6 +22,7 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
+    private readonly PaymentMethodOptions _paymentMethodOptions;
 
     internal IStringLocalizer S;
 
@@ -29,10 +32,12 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
     public SubscriptionSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
+        IOptions<PaymentMethodOptions> paymentMethodOptions,
         IStringLocalizer<SubscriptionSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        _paymentMethodOptions = paymentMethodOptions.Value;
         S = stringLocalizer;
     }
 
@@ -45,6 +50,7 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
 
         return Initialize<SubscriptionSettingsViewModel>("SubscriptionSettings_Edit", model =>
         {
+            model.DefaultPaymentMethod = settings.DefaultPaymentMethod;
             model.AllowGuestSignup = settings.AllowGuestSignup;
             model.Currency = settings.Currency;
             model.Currencies = GetCurrencies();
@@ -101,6 +107,12 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Currency), S["Invalid currency value."]);
         }
 
+        if (_paymentMethodOptions.PaymentMethods.Count > 1 && string.IsNullOrEmpty(model.DefaultPaymentMethod))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PaymentMethods), S["Default Payment Method is required."]);
+        }
+
+        settings.DefaultPaymentMethod = model.DefaultPaymentMethod;
         settings.AllowGuestSignup = model.AllowGuestSignup;
         settings.Currency = model.Currency;
 
