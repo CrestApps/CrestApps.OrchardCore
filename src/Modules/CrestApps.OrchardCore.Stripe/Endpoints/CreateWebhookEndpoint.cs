@@ -78,6 +78,10 @@ public static class CreateWebhookEndpoint
                 case Events.InvoicePaymentSucceeded:
                     var invoice = stripeEvent.Data.Object as Invoice;
 
+                    if (invoice == null)
+                    {
+                        break;
+                    }
                     var successContext = new PaymentSucceededContext()
                     {
                         AmountPaid = invoice.AmountPaid / 100.0,
@@ -88,18 +92,23 @@ public static class CreateWebhookEndpoint
                     {
                         successContext.Data[data.Key] = data.Value;
                     }
-                    foreach (var line in invoice.Lines)
+
+                    foreach (var data in invoice.SubscriptionDetails?.Metadata ?? [])
                     {
-                        foreach (var data in line.Metadata ?? [])
-                        {
-                            successContext.Data[data.Key] = data.Value;
-                        }
+                        successContext.Data[data.Key] = data.Value;
                     }
+
                     await paymentEvents.InvokeAsync((handler, context) => handler.PaymentSucceededAsync(context), successContext, logger);
                     break;
 
                 case Events.CustomerSubscriptionCreated:
                     var subscription = stripeEvent.Data.Object as Subscription;
+
+                    if (subscription == null)
+                    {
+                        break;
+                    }
+
                     var createdContext = new CustomerSubscriptionCreatedContext();
 
                     foreach (var data in subscription.Metadata)
@@ -120,6 +129,12 @@ public static class CreateWebhookEndpoint
 
                 case Events.PaymentIntentSucceeded:
                     var paymentIntent = stripeEvent.Data.Object as PaymentIntent;
+
+                    if (paymentIntent == null)
+                    {
+                        break;
+                    }
+
                     var succeededContext = new PaymentIntentSucceededContext();
 
                     foreach (var data in paymentIntent.Metadata)
