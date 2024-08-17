@@ -28,4 +28,7 @@ public abstract class SubscriptionHandlerBase : ISubscriptionHandler
 
     public virtual Task CompletedAsync(SubscriptionFlowCompletedContext context)
         => Task.CompletedTask;
+
+    public virtual Task FailedAsync(SubscriptionFlowFailedContext context)
+        => Task.CompletedTask;
 }

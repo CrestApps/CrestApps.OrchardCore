@@ -233,6 +233,7 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
         shellSettings["DatabaseProvider"] = _shellSettings["DatabaseProvider"];
 
         await _shellHost.UpdateShellSettingsAsync(shellSettings);
+
         return shellSettings;
     }
 }

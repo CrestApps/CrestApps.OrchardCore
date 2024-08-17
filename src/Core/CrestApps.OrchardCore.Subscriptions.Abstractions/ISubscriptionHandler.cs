@@ -52,4 +52,10 @@ public interface ISubscriptionHandler
     /// </summary>
     /// <param name="context"></param>
     Task CompletedAsync(SubscriptionFlowCompletedContext context);
+
+    /// <summary>
+    /// Triggered only if session is failed.
+    /// </summary>
+    /// <param name="context"></param>
+    Task FailedAsync(SubscriptionFlowFailedContext context);
 }

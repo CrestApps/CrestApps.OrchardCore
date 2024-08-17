@@ -118,8 +118,6 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
             Password = password,
         });
 
-        await _subscriptionPaymentSession.RemoveUserPasswordAsync(context.Flow.Session.SessionId);
-
         // Since we just created a new user, let's set the user id as the owner of this session.
         context.Flow.Session.OwnerId = registrationStep.User.UserId;
     }
@@ -133,6 +131,27 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
             return;
         }
 
+        await _subscriptionPaymentSession.RemoveUserPasswordAsync(context.Flow.Session.SessionId);
+
         await _signInManager.PasswordSignInAsync(subscriber.User, subscriber.Password, isPersistent: false, lockoutOnFailure: true);
+    }
+
+    public override async Task FailedAsync(SubscriptionFlowFailedContext context)
+    {
+        var subscriber = _httpContextAccessor.HttpContext.Features.Get<CustomerCreatedDuringSubscriptionFlow>();
+
+        if (subscriber == null)
+        {
+            return;
+        }
+
+        // If the session creation fails, we need to delete the user account.
+        // To ensure safety, we will first verify that we can log in with the expected password before proceeding with the deletion.
+        var result = await _signInManager.CheckPasswordSignInAsync(subscriber.User, subscriber.Password, false);
+
+        if (result.Succeeded)
+        {
+            await _userManager.DeleteAsync(subscriber.User);
+        }
     }
 }

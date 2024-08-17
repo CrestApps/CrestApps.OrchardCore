@@ -288,7 +288,8 @@ public sealed class SubscriptionsController : Controller
                 catch (Exception ex)
                 {
                     await _session.CancelAsync();
-
+                    await _subscriptionHandlers.InvokeAsync(
+                        (handler, context) => handler.FailedAsync(context), new SubscriptionFlowFailedContext(flow), _logger);
                     _logger.LogError(ex, "Unable to completed a subscription");
 
                     await _notifier.ErrorAsync(H["Unable to process the subscription at this time. If the issue persists, please contact support."]);
