@@ -4,5 +4,5 @@ public class PaymentMethodOptions
 {
     public string DefaultPaymentMethod { get; set; }
 
-    public IList<PaymentMethod> PaymentMethods { get; } = [];
+    public Dictionary<string, PaymentMethod> PaymentMethods { get; } = [];
 }

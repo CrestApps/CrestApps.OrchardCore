@@ -62,10 +62,12 @@ public static class CreatePaymentIntentEndpoint
         {
             PaymentMethodId = model.PaymentMethodId,
             CustomerId = model.CustomerId,
-            Metadata = model.Metadata,
+            Metadata = model.Metadata ?? [],
             Amount = invoice.DueNow,
             Currency = invoice.Currency,
         };
+
+        request.Metadata["sessionId"] = model.SessionId;
 
         var result = await stripePaymentService.CreateAsync(request);
 

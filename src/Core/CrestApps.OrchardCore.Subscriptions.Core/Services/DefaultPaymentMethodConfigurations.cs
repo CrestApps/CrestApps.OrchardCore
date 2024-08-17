@@ -31,8 +31,11 @@ public sealed class DefaultPaymentMethodConfigurations : IPostConfigureOptions<P
         else
         {
             options.DefaultPaymentMethod = options.PaymentMethods
-                .OrderBy(x => x.HasProcessor ? 0 : 1)
-                .ThenBy(options.PaymentMethods.IndexOf)
+                .Select(x => new
+                {
+                    x.Key,
+                    x.Value.HasProcessor,
+                }).OrderBy(m => m.HasProcessor ? 0 : 1)
                 .FirstOrDefault()?.Key;
         }
     }

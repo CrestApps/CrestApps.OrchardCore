@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Payments.Models;
+using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Endpoints;
 using CrestApps.OrchardCore.Subscriptions.Controllers;
 using CrestApps.OrchardCore.Subscriptions.Core;
@@ -77,7 +78,6 @@ public sealed class Startup : StartupBase
         services.AddScoped<IDisplayDriver<ISite>, SubscriptionSettingsDisplayDriver>();
         services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
         services.AddScoped<INavigationProvider, SubscriptionsAdminMenu>();
-        services.AddScoped<IDisplayDriver<SubscriptionFlowPaymentMethod>, PaymentMethodsDisplayDriver>();
 
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, SubscriptionResourceManagementOptionsConfiguration>();
     }
@@ -136,9 +136,8 @@ public sealed class StripeStartup : StartupBase
         services.AddTransient<IPostConfigureOptions<PaymentMethodOptions>, DefaultPaymentMethodConfigurations>();
         services.Configure<PaymentMethodOptions>(options =>
         {
-            options.PaymentMethods.Add(new PaymentMethod
+            options.PaymentMethods.Add(StripeConstants.ProcessorKey, new PaymentMethod
             {
-                Key = "Stripe",
                 Title = "Stripe",
                 HasProcessor = true,
             });
@@ -161,9 +160,8 @@ public sealed class PayLaterStartup : StartupBase
         services.AddScoped<IDisplayDriver<SubscriptionFlowPaymentMethod>, PayLaterPaymentSubscriptionFlowDisplayDriver>();
         services.Configure<PaymentMethodOptions>(options =>
         {
-            options.PaymentMethods.Add(new PaymentMethod
+            options.PaymentMethods.Add(SubscriptionConstants.PayLaterProcessorKey, new PaymentMethod
             {
-                Key = "PayLater",
                 Title = "Pay Later",
                 HasProcessor = false,
             });

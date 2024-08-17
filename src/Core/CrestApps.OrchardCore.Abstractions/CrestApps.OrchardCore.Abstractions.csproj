@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace("Abstractions",""))</RootNamespace>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace(".Abstractions",""))</RootNamespace>
     <Title>CrestApps OrchardCore Abstractions</Title>
     <Description>
       $(OCCMSDescription)

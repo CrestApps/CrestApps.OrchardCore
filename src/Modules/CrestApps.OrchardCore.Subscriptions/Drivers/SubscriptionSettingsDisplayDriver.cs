@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -22,6 +23,7 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IShellReleaseManager _shellReleaseManager;
     private readonly PaymentMethodOptions _paymentMethodOptions;
 
     internal IStringLocalizer S;
@@ -33,10 +35,12 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IOptions<PaymentMethodOptions> paymentMethodOptions,
+        IShellReleaseManager shellReleaseManager,
         IStringLocalizer<SubscriptionSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        _shellReleaseManager = shellReleaseManager;
         _paymentMethodOptions = paymentMethodOptions.Value;
         S = stringLocalizer;
     }
@@ -47,6 +51,7 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
         {
             return null;
         }
+        context.AddTenantReloadWarningWrapper();
 
         return Initialize<SubscriptionSettingsViewModel>("SubscriptionSettings_Edit", model =>
         {
@@ -54,6 +59,9 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
             model.AllowGuestSignup = settings.AllowGuestSignup;
             model.Currency = settings.Currency;
             model.Currencies = GetCurrencies();
+            model.PaymentMethods = _paymentMethodOptions.PaymentMethods
+            .Select(m => new SelectListItem(m.Value.Title, m.Key))
+            .OrderBy(m => m.Text);
         }).Location("Content:5")
         .OnGroup(SettingsGroupId);
     }
@@ -107,14 +115,22 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Currency), S["Invalid currency value."]);
         }
 
-        if (_paymentMethodOptions.PaymentMethods.Count > 1 && string.IsNullOrEmpty(model.DefaultPaymentMethod))
+        var providedPaymentMethod = !string.IsNullOrEmpty(model.DefaultPaymentMethod);
+
+        if (_paymentMethodOptions.PaymentMethods.Count > 1 && !providedPaymentMethod)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.PaymentMethods), S["Default Payment Method is required."]);
+        }
+        else if (providedPaymentMethod && !_paymentMethodOptions.PaymentMethods.ContainsKey(model.DefaultPaymentMethod))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PaymentMethods), S["Invalid Default Payment Method."]);
         }
 
         settings.DefaultPaymentMethod = model.DefaultPaymentMethod;
         settings.AllowGuestSignup = model.AllowGuestSignup;
         settings.Currency = model.Currency;
+
+        _shellReleaseManager.RequestRelease();
 
         return await EditAsync(site, settings, context);
     }

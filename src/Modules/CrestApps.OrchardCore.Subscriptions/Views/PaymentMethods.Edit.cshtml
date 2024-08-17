@@ -1,17 +1,42 @@
 @using CrestApps.OrchardCore.Subscriptions.Core.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
 @using OrchardCore.DisplayManagement
 @using OrchardCore.DisplayManagement.ModelBinding
 
 @inject IDisplayManager<SubscriptionFlowPaymentMethod> DisplayManager
 @inject IUpdateModelAccessor UpdateModelAccessor
 
-@model ShapeViewModel<SubscriptionFlow>
+@model PaymentMethodsViewModel
 
-@{
-    var shape = await DisplayManager.BuildEditorAsync(
-        model: new SubscriptionFlowPaymentMethod { Flow = Model.Value },
-        updater: UpdateModelAccessor.ModelUpdater,
-        isNew: true);
+<script at="Foot" asp-name="subscription-payment-methods"></script>
+
+@if (Model.PaymentMethods.Length > 1)
+{
+    <h5 class="py-3">@T["Payment Method"]</h5>
+    <div class="mb-3">
+        @for (var i = 0; i < Model.PaymentMethods.Length; i++)
+        {
+            var method = Model.PaymentMethods[i];
+            var htmlId = @Html.IdFor(x => x.PaymentMethods[i]) + "_" + method.Value;
+
+            <div class="form-check">
+                <input class="form-check-input" type="radio" value="@method.Value" name="PaymentMethod" id="@htmlId" @(Model.PaymentMethod == method.Value ? "checked" : string.Empty) />
+                <label class="form-check-label" for="@htmlId">
+                    @method.Text
+                </label>
+            </div>
+
+        }
+    </div>
 }
 
-@await DisplayAsync(shape)
+@foreach (var method in Model.PaymentMethods)
+{
+    var shape = await DisplayManager.BuildEditorAsync(
+    model: new SubscriptionFlowPaymentMethod { Flow = Model.Flow },
+    updater: UpdateModelAccessor.ModelUpdater,
+    isNew: false, method.Value);
+    <div class="payment-method-wrapper d-none" data-method-name="@method.Value">
+        @await DisplayAsync(shape)
+    </div>
+}

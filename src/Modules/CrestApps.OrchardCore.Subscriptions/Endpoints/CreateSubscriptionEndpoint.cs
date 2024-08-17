@@ -63,7 +63,7 @@ public static class CreateSubscriptionEndpoint
             PaymentMethodId = model.PaymentMethodId,
             CustomerId = model.CustomerId,
             LineItems = [],
-            Metadata = model.Metadata,
+            Metadata = model.Metadata ?? [],
         };
 
         foreach (var lineItem in invoice.LineItems)
@@ -76,6 +76,7 @@ public static class CreateSubscriptionEndpoint
         }
 
         request.BillingCycles = invoice.BillingCycles;
+        request.Metadata["sessionId"] = model.SessionId;
 
         var response = await stripeSubscriptionService.CreateAsync(request);
 

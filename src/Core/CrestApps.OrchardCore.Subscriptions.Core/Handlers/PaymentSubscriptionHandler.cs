@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.Subscriptions.Core.Exceptions;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
 
@@ -7,18 +9,26 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
 public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 {
+    /// <summary>
+    /// Maximum time in seconds to attempt payment confirmation before aborting.
+    /// </summary>
+    private const int _maxAttempts = 60;
+
     private readonly SubscriptionPaymentSession _subscriptionPaymentSession;
     private readonly ISiteService _siteService;
+    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
     public PaymentSubscriptionHandler(
         SubscriptionPaymentSession subscriptionPaymentSession,
         ISiteService siteService,
+        ILogger<PaymentSubscriptionHandler> logger,
         IStringLocalizer<PaymentSubscriptionHandler> stringLocalizer)
     {
         _subscriptionPaymentSession = subscriptionPaymentSession;
         _siteService = siteService;
+        _logger = logger;
         S = stringLocalizer;
     }
 
@@ -120,21 +130,50 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
             throw new InvalidOperationException("Unable to find an invoice.");
         }
 
-        var initialPaymentInfo = await _subscriptionPaymentSession.GetInitialPaymentInfoAsync(context.Flow.Session.SessionId)
-            ?? throw new InvalidOperationException("Initial Payment was not collected by the payment provider.");
+        // There may be a delay between processing the payment within the app and receiving confirmation from the external provider.
+        // We allow the payment provider up to '_maxAttempts' seconds to notify us that the payment was successfully processed.
+        // If we don't receive confirmation within this time frame, the payment is considered failed.
+        var attemptCount = 0;
 
-        if (invoice.DueNow > 0 && invoice.DueNow != initialPaymentInfo.InitialPaymentAmount)
+        do
         {
-            throw new InvalidOperationException("The received initial payment amount did not match the expected initial payment amount.");
-        }
+            try
+            {
+                var initialPaymentInfo = await _subscriptionPaymentSession.GetInitialPaymentInfoAsync(context.Flow.Session.SessionId)
+                    ?? throw new DataNotFoundException("Initial Payment was not collected by the payment provider.");
 
-        var subscriptionPaymentInfo = await _subscriptionPaymentSession.GetSubscriptionPaymentInfoAsync(context.Flow.Session.SessionId)
-            ?? throw new InvalidOperationException("Subscription was not created by the payment provider.");
+                if (invoice.DueNow > 0 && invoice.DueNow != initialPaymentInfo.InitialPaymentAmount)
+                {
+                    throw new PaymentValidationException("The received initial payment amount did not match the expected initial payment amount.");
+                }
 
-        if (context.Flow.ContentItem.ContentItemId != subscriptionPaymentInfo.PlanId)
-        {
-            throw new InvalidOperationException("The scheduled plan id did not match the scheduled plan id at the payment provider.");
-        }
+                var subscriptionPaymentInfo = await _subscriptionPaymentSession.GetSubscriptionPaymentInfoAsync(context.Flow.Session.SessionId)
+                    ?? throw new DataNotFoundException("Subscription was not created by the payment provider.");
+
+                if (context.Flow.ContentItem.ContentItemVersionId != subscriptionPaymentInfo.PlanId)
+                {
+                    throw new PaymentValidationException("The scheduled plan id did not match the scheduled plan id at the payment provider.");
+                }
+
+                // If we got here, we received the confirmation.
+                break;
+            }
+            catch (DataNotFoundException ex)
+            {
+                if (attemptCount++ >= _maxAttempts)
+                {
+                    throw;
+                }
+
+                _logger.LogDebug(ex, "Delaying 1 second before attempt number: {AttemptCount}", attemptCount);
+
+                await Task.Delay(1_000);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        } while (true);
     }
 
     public override async Task CompletedAsync(SubscriptionFlowCompletedContext context)

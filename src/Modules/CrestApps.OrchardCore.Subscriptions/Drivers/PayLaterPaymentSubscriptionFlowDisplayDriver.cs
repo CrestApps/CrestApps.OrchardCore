@@ -1,4 +1,5 @@
-﻿using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core;
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -8,6 +9,8 @@ public sealed class PayLaterPaymentSubscriptionFlowDisplayDriver : DisplayDriver
 {
     public override IDisplayResult Edit(SubscriptionFlowPaymentMethod method, BuildEditorContext context)
     {
-        return View("PayLaterPaymentMethod_Edit", method).Location("Content");
+        return View("PayLaterPaymentMethod_Edit", method)
+            .Location("Content")
+            .OnGroup(SubscriptionConstants.PayLaterProcessorKey);
     }
 }

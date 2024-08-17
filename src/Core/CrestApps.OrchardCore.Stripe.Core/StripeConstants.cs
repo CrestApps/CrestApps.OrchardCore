@@ -2,6 +2,8 @@ namespace CrestApps.OrchardCore.Stripe.Core;
 
 public static class StripeConstants
 {
+    public const string ProcessorKey = "Stripe";
+
     public static class RouteName
     {
         public const string CreateWebhookEndpoint = "StripeWebhook";

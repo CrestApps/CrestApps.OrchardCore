@@ -3,8 +3,21 @@
 ** Any changes made directly to this file will be overwritten next time its asset group is processed by Gulp.
 */
 
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
+function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 stripePaymentProcessing = function () {
-  var initialize = function initialize(config) {
+  var initialize = function initialize(options) {
+    var defaultOptions = {
+      processorKey: 'Stripe',
+      cardElement: '#card-element'
+    };
+
+    // Extend the default options with the provided options.
+    var config = _objectSpread(_objectSpread({}, defaultOptions), options);
     document.addEventListener('DOMContentLoaded', function () {
       var errorElement = document.getElementById('card-errors');
       var showError = function showError(message) {
@@ -53,7 +66,7 @@ stripePaymentProcessing = function () {
       var cardElement = elements.create('card', {
         style: cardStyles
       });
-      cardElement.mount('#card-element');
+      cardElement.mount(config.cardElement);
       cardElement.on('change', function (event) {
         clearError();
         config.enablePayButtonButton(true);
@@ -62,20 +75,20 @@ stripePaymentProcessing = function () {
         }
       });
       config.payButtonElement.addEventListener('click', function (event) {
-        if (config.payButtonElement.getAttribute('data-method-name') != 'Stripe') {
+        if (config.payButtonElement.getAttribute('data-method-name') != config.processorKey) {
           return;
         }
+        event.preventDefault();
         if (config.nameOnBankCardElement && !config.nameOnBankCardElement.value) {
           showError(config.invalidNameErrorMessage);
           return;
         }
-        event.preventDefault();
         config.enablePayButtonButton(false);
         stripe.createPaymentMethod({
           type: 'card',
           card: cardElement,
           billing_details: {
-            name: nameOnBankCardElement.value || ''
+            name: config.nameOnBankCardElement.value || ''
           }
         }).then(function (result) {
           if (result.error) {
@@ -158,7 +171,7 @@ stripePaymentProcessing = function () {
           if (subscriptionData.error) {
             showError(subscriptionData.error);
           } else {
-            var form = document.getElementById('subscription-form');
+            var form = config.formElement;
             if (subscriptionData.status == 'requires_action') {
               stripe.confirmCardPayment(subscriptionData.clientSecret).then(function (result) {
                 if (result.error) {

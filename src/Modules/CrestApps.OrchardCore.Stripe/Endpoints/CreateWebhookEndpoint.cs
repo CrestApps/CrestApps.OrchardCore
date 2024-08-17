@@ -84,9 +84,16 @@ public static class CreateWebhookEndpoint
                         Currency = invoice.Currency,
                     };
 
-                    foreach (var data in invoice.Metadata)
+                    foreach (var data in invoice.Metadata ?? [])
                     {
-                        successContext.Data.Add(data.Key, data.Value);
+                        successContext.Data[data.Key] = data.Value;
+                    }
+                    foreach (var line in invoice.Lines)
+                    {
+                        foreach (var data in line.Metadata ?? [])
+                        {
+                            successContext.Data[data.Key] = data.Value;
+                        }
                     }
                     await paymentEvents.InvokeAsync((handler, context) => handler.PaymentSucceededAsync(context), successContext, logger);
                     break;

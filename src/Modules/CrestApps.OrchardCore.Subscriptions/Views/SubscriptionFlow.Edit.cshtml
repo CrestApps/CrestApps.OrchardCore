@@ -1,46 +1,43 @@
-<div class="container">
+@if (Model.Steps != null)
+{
+    @await DisplayAsync(Model.Steps)
+}
 
-    @if (Model.Steps != null)
+<div class="card">
+    @if (Model.Header != null)
     {
-        @await DisplayAsync(Model.Steps)
+        <div class="card-header">
+            @await DisplayAsync(Model.Header)
+        </div>
     }
 
-    <div class="card">
-        @if (Model.Header != null)
+    <div class="card-body">
+
+        @if (!ViewContext.ModelState.IsValid)
         {
-            <div class="card-header">
-                @await DisplayAsync(Model.Header)
+            <div class="alert alert-danger" role="alert">
+                @Html.ValidationSummary()
             </div>
         }
 
-        <div class="card-body">
-
-            @if (!ViewContext.ModelState.IsValid)
-            {
-                <div class="alert alert-danger" role="alert">
-                    @Html.ValidationSummary()
-                </div>
-            }
-
-            @if (Model.Content != null)
-            {
-                @await DisplayAsync(Model.Content)
-            }
-
-            @if (Model.Actions != null)
-            {
-                @await DisplayAsync(Model.Actions)
-            }
-        </div>
-
-
-        @if (Model.Footer != null)
+        @if (Model.Content != null)
         {
-            <div class="card-Footer">
-                @await DisplayAsync(Model.Footer)
-            </div>
+            @await DisplayAsync(Model.Content)
+        }
+
+        @if (Model.Actions != null)
+        {
+            @await DisplayAsync(Model.Actions)
         }
     </div>
+
+
+    @if (Model.Footer != null)
+    {
+        <div class="card-Footer">
+            @await DisplayAsync(Model.Footer)
+        </div>
+    }
 </div>
 
 <style at="Foot">

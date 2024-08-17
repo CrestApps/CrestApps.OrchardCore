@@ -4,8 +4,6 @@ namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
 
 public class StripePaymentMethodViewModel
 {
-    public const string Key = "Stripe";
-
     [BindNever]
     public string SessionId { get; set; }
 

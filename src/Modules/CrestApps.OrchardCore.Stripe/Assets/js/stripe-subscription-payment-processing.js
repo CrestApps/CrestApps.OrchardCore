@@ -1,6 +1,15 @@
 stripePaymentProcessing = function () {
 
-    const initialize = (config) => {
+    const initialize = (options) => {
+
+        const defaultOptions = {
+            processorKey: 'Stripe',
+            cardElement: '#card-element'
+        };
+
+        // Extend the default options with the provided options.
+        const config = { ...defaultOptions, ...options };
+
         document.addEventListener('DOMContentLoaded', () => {
 
             const errorElement = document.getElementById('card-errors');
@@ -47,7 +56,6 @@ stripePaymentProcessing = function () {
                     },
                 };
             }
-
             const stripe = Stripe(config.publishableKey);
             const elements = stripe.elements();
 
@@ -61,7 +69,7 @@ stripePaymentProcessing = function () {
                 {
                     style: cardStyles
                 });
-            cardElement.mount('#card-element');
+            cardElement.mount(config.cardElement);
             cardElement.on('change', function (event) {
                 clearError();
                 config.enablePayButtonButton(true);
@@ -73,25 +81,25 @@ stripePaymentProcessing = function () {
 
             config.payButtonElement.addEventListener('click', function (event) {
 
-                if (config.payButtonElement.getAttribute('data-method-name') != 'Stripe') {
+                if (config.payButtonElement.getAttribute('data-method-name') != config.processorKey) {
                     return;
                 }
 
-                if (config.nameOnBankCardElement && !config.nameOnBankCardElement.value) {
+                event.preventDefault();
 
+                if (config.nameOnBankCardElement && !config.nameOnBankCardElement.value) {
                     showError(config.invalidNameErrorMessage);
 
                     return;
                 }
 
-                event.preventDefault();
                 config.enablePayButtonButton(false);
 
                 stripe.createPaymentMethod({
                     type: 'card',
                     card: cardElement,
                     billing_details: {
-                        name: nameOnBankCardElement.value || '',
+                        name: config.nameOnBankCardElement.value || '',
                     },
                 }).then(function (result) {
                     if (result.error) {
@@ -176,7 +184,7 @@ stripePaymentProcessing = function () {
                         if (subscriptionData.error) {
                             showError(subscriptionData.error);
                         } else {
-                            const form = document.getElementById('subscription-form');
+                            const form = config.formElement;
 
                             if (subscriptionData.status == 'requires_action') {
                                 stripe.confirmCardPayment(subscriptionData.clientSecret)

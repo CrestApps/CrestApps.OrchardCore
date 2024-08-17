@@ -3,16 +3,19 @@
 
 @model ShapeViewModel<SubscriptionFlowPaymentMethod>
 
-<div class="payment-method-wrapper d-none" data-method-name="PayLater">
-    <script asp-name="subscription-payment-methods"></script>
-    <script at="Foot" depends-on="subscription-payment-methods">
-        document.addEventListener('DOMContentLoaded', () => {
-            const payButtonElement = document.getElementById('Subscription_Next_Button');
-            if (payButtonElement.getAttribute('data-method-name') != 'PayLater') {
+<script asp-name="subscription-payment-methods"></script>
+<script at="Foot" depends-on="subscription-payment-methods">
+    document.addEventListener('DOMContentLoaded', () => {
+        const payButtonElement = document.getElementById('Subscription_Next_Button');
+        payButtonElement.addEventListener('click', (e) => {
+
+            if (payButtonElement.getAttribute('data-method-name') != '@SubscriptionConstants.PayLaterProcessorKey') {
                 return;
             }
+            e.preventDefault();
+
             enablePayButtonButton(payButtonElement, false);
-            fetch('@(SubscriptionConstants.RouteName.CreatePayLaterEndpoint)', {
+            fetch('@Url.RouteUrl(SubscriptionConstants.RouteName.CreatePayLaterEndpoint)', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -35,7 +38,8 @@
 
                         alert('@T["Unexpected error. Please try again."]');
                     }
-                })
+                });
         });
-    </script>
-</div>
+
+    });
+</script>

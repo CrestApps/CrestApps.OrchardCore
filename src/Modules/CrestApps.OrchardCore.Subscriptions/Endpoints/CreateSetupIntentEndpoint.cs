@@ -76,6 +76,8 @@ public static class CreateSetupIntentEndpoint
             Metadata = model.Metadata ?? [],
         };
 
+        customerRequest.Metadata["sessionId"] = model.SessionId;
+
         if (httpContextAccessor.HttpContext.User.Identity.IsAuthenticated)
         {
             var user = await userManager.GetUserAsync(httpContextAccessor.HttpContext.User) as User;
@@ -117,6 +119,8 @@ public static class CreateSetupIntentEndpoint
             CustomerId = customerResult.CustomerId,
             Metadata = model.Metadata ?? [],
         };
+        intentRequest.Metadata["sessionId"] = model.SessionId;
+
         var result = await stripeSetupIntentService.CreateAsync(intentRequest);
 
         session.Put(new StripeSetupIntentMetadata

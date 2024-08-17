@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -21,11 +22,11 @@ public static class CreatePayLaterEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        [FromBody] string sessionId,
+        [FromBody] PayLaterRequest model,
         ISubscriptionSessionStore subscriptionSessionStore,
         SubscriptionPaymentSession subscriptionPaymentSession)
     {
-        if (string.IsNullOrEmpty(sessionId))
+        if (string.IsNullOrEmpty(model?.SessionId))
         {
             return TypedResults.BadRequest(new
             {
@@ -34,7 +35,7 @@ public static class CreatePayLaterEndpoint
             });
         }
 
-        var session = await subscriptionSessionStore.GetAsync(sessionId, SubscriptionSessionStatus.Pending);
+        var session = await subscriptionSessionStore.GetAsync(model.SessionId, SubscriptionSessionStatus.Pending);
 
         if (session == null)
         {
@@ -48,12 +49,12 @@ public static class CreatePayLaterEndpoint
             return TypedResults.NotFound();
         }
 
-        await subscriptionPaymentSession.SetAsync(sessionId, new InitialPaymentMetadata()
+        await subscriptionPaymentSession.SetAsync(model.SessionId, new InitialPaymentMetadata()
         {
             InitialPaymentAmount = invoice.DueNow,
         });
 
-        await subscriptionPaymentSession.SetAsync(sessionId, new SubscriptionPaymentMetadata()
+        await subscriptionPaymentSession.SetAsync(model.SessionId, new SubscriptionPaymentMetadata()
         {
             PlanId = session.ContentItemVersionId,
         });

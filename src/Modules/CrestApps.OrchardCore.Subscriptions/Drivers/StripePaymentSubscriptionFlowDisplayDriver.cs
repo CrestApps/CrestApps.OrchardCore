@@ -23,6 +23,7 @@ public sealed class StripePaymentSubscriptionFlowDisplayDriver : DisplayDriver<S
             model.SessionId = method.Flow.Session.SessionId;
             model.IsLive = _stripeOptions.IsLive;
             model.PublishableKey = _stripeOptions.PublishableKey;
-        }).Location("Content");
+        }).Location("Content")
+        .OnGroup(StripeConstants.ProcessorKey);
     }
 }

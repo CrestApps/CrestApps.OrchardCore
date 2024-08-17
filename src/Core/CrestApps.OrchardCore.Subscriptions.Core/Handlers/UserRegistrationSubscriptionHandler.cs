@@ -122,7 +122,6 @@ public sealed class UserRegistrationSubscriptionHandler : SubscriptionHandlerBas
 
         // Since we just created a new user, let's set the user id as the owner of this session.
         context.Flow.Session.OwnerId = registrationStep.User.UserId;
-
     }
 
     public override async Task CompletedAsync(SubscriptionFlowCompletedContext context)

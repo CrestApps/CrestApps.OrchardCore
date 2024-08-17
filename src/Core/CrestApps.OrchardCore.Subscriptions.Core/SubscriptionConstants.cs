@@ -4,6 +4,8 @@ public static class SubscriptionConstants
 {
     public const string Stereotype = "Subscription";
 
+    public const string PayLaterProcessorKey = "PayLater";
+
     public static class RouteName
     {
         public const string CreateSubscriptionEndpoint = "Subscriptions_StripeCreateSubscription";

@@ -18,10 +18,3 @@ public class CreateSubscriptionRequest
 
     public DurationType TrialDurationType { get; set; }
 }
-
-public class SubscriptionLineItem
-{
-    public int Quantity { get; set; }
-
-    public string PriceId { get; set; }
-}
