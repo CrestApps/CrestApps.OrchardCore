@@ -86,17 +86,38 @@ public static class CreateWebhookEndpoint
                     {
                         AmountPaid = invoice.AmountPaid / 100.0,
                         Currency = invoice.Currency,
+                        TransactionId = invoice.Id,
+                        Mode = invoice.Livemode ? GatewayMode.Production : GatewayMode.Development,
                     };
+
+                    successContext.Data["billing_reason"] = invoice.BillingReason;
 
                     foreach (var data in invoice.Metadata ?? [])
                     {
                         successContext.Data[data.Key] = data.Value;
                     }
 
-                    foreach (var data in invoice.SubscriptionDetails?.Metadata ?? [])
+                    successContext.Subscription = new SubscriptionPaymentInfo()
                     {
-                        successContext.Data[data.Key] = data.Value;
+                        SubscriptionId = invoice.Subscription?.Id,
+                    };
+
+                    if (invoice.SubscriptionDetails != null)
+                    {
+                        foreach (var data in invoice.SubscriptionDetails.Metadata ?? [])
+                        {
+                            successContext.Subscription.Data[data.Key] = data.Value;
+                        }
                     }
+
+                    successContext.Reason = invoice.BillingReason switch
+                    {
+                        "subscription_create" => PaymentReason.SubscriptionCreate,
+                        "subscription_cycle" => PaymentReason.SubscriptionCycle,
+                        "subscription_update" => PaymentReason.SubscriptionUpdate,
+                        "manual" => PaymentReason.Manual,
+                        _ => PaymentReason.Other,
+                    };
 
                     await paymentEvents.InvokeAsync((handler, context) => handler.PaymentSucceededAsync(context), successContext, logger);
                     break;
@@ -116,8 +137,11 @@ public static class CreateWebhookEndpoint
                         createdContext.Data.Add(data.Key, data.Value);
                     }
 
+
                     if (subscription.Items != null && subscription.Items.Any())
                     {
+                        createdContext.SubscriptionId = subscription.Id;
+                        createdContext.Mode = subscription.Livemode ? GatewayMode.Production : GatewayMode.Development;
                         createdContext.PlanId = subscription.Items.Data[0].Plan.Id;
                         createdContext.PlanAmount = subscription.Items.Data[0].Plan.Amount / 100.0; // Amount in dollars
                         createdContext.PlanCurrency = subscription.Items.Data[0].Plan.Currency;

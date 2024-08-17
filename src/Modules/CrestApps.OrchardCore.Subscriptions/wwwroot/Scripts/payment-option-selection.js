@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', function () {
     for (var i = 0; i < wrappers.length; i++) {
       wrappers[i].classList.remove('d-none');
     }
+    if (wrappers.length > 0) {
+      payButton.setAttribute('data-method-name', wrappers[0].getAttribute('data-method-name'));
+    }
     return;
   }
   var handleWrappers = function handleWrappers(element) {

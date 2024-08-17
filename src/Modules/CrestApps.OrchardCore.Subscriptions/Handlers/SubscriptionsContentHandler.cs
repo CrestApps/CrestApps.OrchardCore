@@ -106,7 +106,7 @@ public sealed class SubscriptionsContentHandler : ContentHandlerBase
             Amount = subscriptionPart.BillingAmount,
             Currency = settings.Currency,
             IntervalCount = subscriptionPart.BillingDuration,
-            Interval = subscriptionPart.DurationType.ToString(),
+            Interval = subscriptionPart.DurationType.ToString().ToLowerInvariant(),
         };
 
         await _stripePriceService.CreateAsync(priceRequest);

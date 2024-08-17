@@ -42,6 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
             wrappers[i].classList.remove('d-none');
         }
 
+        if (wrappers.length > 0) {
+            payButton.setAttribute('data-method-name', wrappers[0].getAttribute('data-method-name'));
+
+        }
+
         return;
     }
 

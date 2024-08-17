@@ -29,7 +29,7 @@ public sealed class TenantOnboardingPartDisplayDriver : ContentPartDisplayDriver
         return Initialize<TenantOnboardingViewModel>(GetEditorShapeType(context), async model =>
         {
             var recipeCollections = await _setupService.GetSetupRecipesAsync();
-
+            model.RecipeName = part.RecipeName;
             model.Recipes = recipeCollections.Select(x => new SelectListItem(x.DisplayName, x.Name)).ToArray();
         });
     }

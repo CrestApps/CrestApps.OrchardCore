@@ -17,9 +17,14 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (!context.Data.TryGetValue("sessionId", out var sessionId))
+        object sessionId;
+
+        if (!context.Data.TryGetValue("sessionId", out sessionId))
         {
-            return;
+            if (context.Subscription == null || !context.Subscription.Data.TryGetValue("sessionId", out sessionId))
+            {
+                return;
+            }
         }
 
         await _paymentSession.SetAsync(sessionId.ToString(), new InitialPaymentMetadata
@@ -43,6 +48,8 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
             PlanId = context.PlanId,
             Currency = context.PlanCurrency,
             Amount = context.PlanAmount,
+            Mode = context.Mode,
+            SubscriptionId = context.SubscriptionId,
         });
     }
 }
