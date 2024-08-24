@@ -18,5 +18,5 @@ public sealed class CustomerSubscriptionCreatedContext : PaymentEventContextBase
 public enum GatewayMode
 {
     Production,
-    Development,
+    Testing,
 }

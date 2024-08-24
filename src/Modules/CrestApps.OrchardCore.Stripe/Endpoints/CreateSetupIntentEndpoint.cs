@@ -31,7 +31,8 @@ public static class CreateSetupIntentEndpoint
             return TypedResults.Problem("Stripe is not configured.", instance: null, statusCode: 500);
         }
 
-        if (string.IsNullOrWhiteSpace(model.PaymentMethodId) || string.IsNullOrWhiteSpace(model.CustomerId))
+        if (string.IsNullOrWhiteSpace(model.PaymentMethodId) ||
+            string.IsNullOrWhiteSpace(model.CustomerId))
         {
             return TypedResults.BadRequest(new
             {
@@ -43,13 +44,14 @@ public static class CreateSetupIntentEndpoint
         var intentRequest = new CreateSetupIntentRequest
         {
             PaymentMethodId = model.PaymentMethodId,
-            Metadata = model.Metadata,
+            Metadata = model.Metadata ?? [],
         };
 
         var intentResult = await stripeSetupIntentService.CreateAsync(intentRequest);
 
         return TypedResults.Ok(new
         {
+            id = intentResult.Id,
             customerId = model.CustomerId,
             clientSecret = intentResult.ClientSecret,
             status = intentResult.Status,

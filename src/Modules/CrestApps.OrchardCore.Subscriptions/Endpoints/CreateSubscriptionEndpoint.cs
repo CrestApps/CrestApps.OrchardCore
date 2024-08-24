@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
+using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
@@ -28,6 +29,7 @@ public static class CreateSubscriptionEndpoint
         [FromBody] CreateSessionSubscriptionPayment model,
         ISubscriptionSessionStore subscriptionSessionStore,
         IStripeSubscriptionService stripeSubscriptionService,
+        IStripePriceService stripePriceService,
         IOptions<StripeOptions> stripeOptions)
     {
         if (string.IsNullOrEmpty(stripeOptions.Value.ApiKey))
@@ -58,6 +60,18 @@ public static class CreateSubscriptionEndpoint
             return TypedResults.NotFound();
         }
 
+        var stripeMetadata = session.As<StripeMetadata>();
+
+        if (stripeMetadata.CustomerId != model.CustomerId ||
+            stripeMetadata.PaymentMethodId != model.PaymentMethodId)
+        {
+            return TypedResults.BadRequest(new
+            {
+                ErrorMessage = "Invalid request data",
+                ErrorCode = 2,
+            });
+        }
+
         var request = new CreateSubscriptionRequest()
         {
             PaymentMethodId = model.PaymentMethodId,
@@ -68,30 +82,55 @@ public static class CreateSubscriptionEndpoint
 
         foreach (var lineItem in invoice.LineItems)
         {
+            if (lineItem.Subscription == null)
+            {
+                // At this point, this isn't a subscription line item. Ignore it.
+                continue;
+            }
+
+            var price = await stripePriceService.GetAsync(lineItem.Id);
+
+            if (price == null)
+            {
+                continue;
+            }
+
             request.LineItems.Add(new SubscriptionLineItem()
             {
                 Quantity = lineItem.Quantity,
-                PriceId = lineItem.Id,
+                PriceId = price.Id,
+                Metadata = new Dictionary<string, string>()
+                {
+                    { nameof(ContentItem.ContentItemVersionId), lineItem.Id },
+                },
             });
         }
 
         request.BillingCycles = invoice.BillingCycles;
         request.Metadata["sessionId"] = model.SessionId;
 
-        var response = await stripeSubscriptionService.CreateAsync(request);
+        var result = await stripeSubscriptionService.CreateAsync(request);
 
-        if (response.Status == "requires_action")
+        stripeMetadata.SubscriptionId = result.Id;
+
+        session.Put(stripeMetadata);
+
+        await subscriptionSessionStore.SaveAsync(session);
+
+        if (result.Status == "requires_action")
         {
             return TypedResults.Ok(new
             {
+                id = result.Id,
                 status = "requires_action",
-                clientSecret = response.ClientSecret
+                clientSecret = result.ClientSecret
             });
         }
 
         return TypedResults.Ok(new
         {
-            status = response.Status,
+            id = result.Id,
+            status = result.Status,
         });
     }
 

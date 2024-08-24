@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.Payments.Models;
 
 namespace CrestApps.OrchardCore.Subscriptions;
 
-public sealed class SubscriptionPlan
+public class BillingItem
 {
     /// <summary>
     /// Item description.
@@ -15,15 +15,15 @@ public sealed class SubscriptionPlan
     public string Id { get; set; }
 
     /// <summary>
-    /// Initial Payment amount to apply.
-    /// </summary>
-    public double? InitialAmount { get; set; }
-
-    /// <summary>
     /// The billing amount to collect every billing cycle.
     /// </summary>
     public double BillingAmount { get; set; }
 
+    public SubscriptionPlan Subscription { get; set; }
+}
+
+public sealed class SubscriptionPlan
+{
     /// <summary>
     /// The number of payments pet duration type.
     /// For example, 1 Year, 30 Days, 4 Weeks, etc.

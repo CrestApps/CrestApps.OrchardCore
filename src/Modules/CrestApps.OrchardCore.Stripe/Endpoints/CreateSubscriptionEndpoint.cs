@@ -45,6 +45,7 @@ public static class CreateSubscriptionEndpoint
         {
             return TypedResults.Ok(new
             {
+                id = response.Id,
                 status = "requires_action",
                 clientSecret = response.ClientSecret
             });
@@ -52,6 +53,7 @@ public static class CreateSubscriptionEndpoint
 
         return TypedResults.Ok(new
         {
+            id = response.Id,
             status = response.Status,
         });
     }

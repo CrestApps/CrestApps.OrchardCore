@@ -6,7 +6,7 @@
 
 @model UserRegistrationStepViewModel
 <div class="mb-3">
-    @T["Already registered?"] <a class="link-underline link-underline-opacity-10" asp-route="Login" asp-area="OrchardCore.Users">@T["Click here to log in."]</a>
+    @T["Already registered?"] <a class="link-underline link-underline-opacity-10" asp-route="Login" asp-area="OrchardCore.Users" asp-route-returnUrl="@FullRequestPath">@T["Click here to log in."]</a>
 </div>
 @if (Model.AllowGuestSignup)
 {

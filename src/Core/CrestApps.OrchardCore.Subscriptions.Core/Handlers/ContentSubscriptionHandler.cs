@@ -78,22 +78,42 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
                 Description = S["Create a new {0}.", definition.DisplayName],
                 Key = $"{ContentPrefix}{contentType}",
                 CollectData = true,
-                Plan = new SubscriptionPlan()
-                {
-                    Description = context.SubscriptionContentItem.DisplayText,
-                    Id = context.Session.ContentItemVersionId,
-                    InitialAmount = subscriptionPart.InitialAmount,
-                    BillingAmount = subscriptionPart.BillingAmount,
-                    SubscriptionDayDelay = subscriptionPart.SubscriptionDayDelay,
-                    BillingDuration = subscriptionPart.BillingDuration,
-                    DurationType = subscriptionPart.DurationType,
-                    BillingCycleLimit = subscriptionPart.BillingCycleLimit,
-                },
 
                 // Insert the steps using an increment of 10 for each step,
                 // to allow other handler to inject steps in between if needed.
                 Order = (i + 1) * 10,
             };
+
+            var billingItems = new List<BillingItem>()
+            {
+                new()
+                {
+                    Id = context.Session.ContentItemVersionId,
+                    Description = context.SubscriptionContentItem.DisplayText,
+                    BillingAmount = subscriptionPart.BillingAmount,
+                    Subscription = new()
+                    {
+                        SubscriptionDayDelay = subscriptionPart.SubscriptionDayDelay,
+                        BillingDuration = subscriptionPart.BillingDuration,
+                        DurationType = subscriptionPart.DurationType,
+                        BillingCycleLimit = subscriptionPart.BillingCycleLimit,
+                    },
+                },
+            };
+
+            if (subscriptionPart.InitialAmount.HasValue && subscriptionPart.InitialAmount.Value > 0)
+            {
+                var initialSetupItem = new BillingItem()
+                {
+                    Id = context.Session.ContentItemVersionId + SubscriptionConstants.InitialFeeIdPrefix,
+                    BillingAmount = subscriptionPart.InitialAmount.Value,
+                    Description = subscriptionPart.InitialAmountDescription,
+                };
+
+                billingItems.Add(initialSetupItem);
+            }
+
+            step.BillingItems = billingItems.ToArray();
 
             step.Data.TryAdd("ContentType", contentType);
 

@@ -84,10 +84,10 @@ public static class CreateWebhookEndpoint
                     }
                     var successContext = new PaymentSucceededContext()
                     {
-                        AmountPaid = invoice.AmountPaid / 100.0,
+                        AmountPaid = Math.Round(invoice.AmountPaid / 100d, 2),
                         Currency = invoice.Currency,
                         TransactionId = invoice.Id,
-                        Mode = invoice.Livemode ? GatewayMode.Production : GatewayMode.Development,
+                        Mode = invoice.Livemode ? GatewayMode.Production : GatewayMode.Testing,
                     };
 
                     successContext.Data["billing_reason"] = invoice.BillingReason;
@@ -141,9 +141,12 @@ public static class CreateWebhookEndpoint
                     if (subscription.Items != null && subscription.Items.Any())
                     {
                         createdContext.SubscriptionId = subscription.Id;
-                        createdContext.Mode = subscription.Livemode ? GatewayMode.Production : GatewayMode.Development;
+                        createdContext.Mode = subscription.Livemode ? GatewayMode.Production : GatewayMode.Testing;
                         createdContext.PlanId = subscription.Items.Data[0].Plan.Id;
-                        createdContext.PlanAmount = subscription.Items.Data[0].Plan.Amount / 100.0; // Amount in dollars
+                        if (subscription.Items.Data[0].Plan.Amount.HasValue)
+                        {
+                            createdContext.PlanAmount = Math.Round(subscription.Items.Data[0].Plan.Amount.Value / 100d, 2); // Amount in dollars
+                        }
                         createdContext.PlanCurrency = subscription.Items.Data[0].Plan.Currency;
                         createdContext.PlanInterval = subscription.Items.Data[0].Plan.Interval;
                     }
@@ -159,7 +162,12 @@ public static class CreateWebhookEndpoint
                         break;
                     }
 
-                    var succeededContext = new PaymentIntentSucceededContext();
+                    var succeededContext = new PaymentIntentSucceededContext()
+                    {
+                        Mode = paymentIntent.Livemode ? GatewayMode.Production : GatewayMode.Testing,
+                        Currency = paymentIntent.Currency,
+                        AmountPaid = Math.Round(paymentIntent.Amount / 100d, 2),
+                    };
 
                     foreach (var data in paymentIntent.Metadata)
                     {

@@ -14,6 +14,7 @@
                 <div class="text-center col-6 col-md-3 col-xxl-4">@T["Total"]</div>
             </div>
         </li>
+
         @foreach (var lineItem in Model.Value.LineItems)
         {
             <li class="list-group-item">
@@ -22,19 +23,14 @@
                     <div class="text-center col-3 col-md-2 col-xxl-1">@lineItem.Quantity</div>
                     <div class="text-center col-3 col-md-2 col-xxl-1">@lineItem.UnitPrice.ToString("C")</div>
                     <div class="text-center col-6 col-md-3 col-xxl-4">
-                        @T.GetAmount(lineItem.DurationType, lineItem.BillingDuration, lineItem.UnitPrice * lineItem.Quantity)
-                    </div>
-                </div>
-            </li>
-        }
-
-        @if (Model.Value.InitialAmount.HasValue)
-        {
-            <li class="list-group-item list-group-item-secondary">
-                <div class="row">
-                    <div class="offset-3 offset-md-7 offset-xxl-7 text-center col-3 col-md-2 col-xxl-1">@T["Initial Payment"]</div>
-                    <div class="text-center col-6 col-md-3 col-xxl-4">
-                        @Model.Value.InitialAmount.Value.ToString("C")
+                        @if (lineItem.Subscription != null)
+                        {
+                            @T.GetAmount(lineItem.Subscription.DurationType, lineItem.Subscription.BillingDuration, lineItem.UnitPrice * lineItem.Quantity)
+                        }
+                        else
+                        {
+                            @(lineItem.GetLineTotal().ToString("C"))
+                        }
                     </div>
                 </div>
             </li>
@@ -53,7 +49,7 @@
         {
             <li class="list-group-item list-group-item-secondary">
                 <div class="row">
-                    <div class="offset-3 offset-md-7 offset-xxl-7 text-center col-3 col-md-2 col-xxl-1">@T["Sub Total"]</div>
+                    <div class="offset-3 offset-md-7 offset-xxl-7 text-center col-3 col-md-2 col-xxl-1">@T["Subtotal"]</div>
                     <div class="text-center col-6 col-md-3 col-xxl-4">
                         @T.GetAmount(subtotal.Key.Type, subtotal.Key.Duration, subtotal.Value)
                     </div>

@@ -6,6 +6,11 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 public sealed class SubscriptionPart : ContentPart
 {
     /// <summary>
+    /// The line item description for the initial amount.
+    /// </summary>
+    public string InitialAmountDescription { get; set; }
+
+    /// <summary>
     /// Initial Payment amount to apply.
     /// </summary>
     public double? InitialAmount { get; set; }

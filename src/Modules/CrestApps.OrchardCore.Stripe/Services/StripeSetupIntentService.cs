@@ -29,6 +29,7 @@ public sealed class StripeSetupIntentService : IStripeSetupIntentService
 
         return new CreateSetupIntentResponse()
         {
+            Id = setupIntent.Id,
             Status = setupIntent.Status,
             ClientSecret = setupIntent.ClientSecret,
         };

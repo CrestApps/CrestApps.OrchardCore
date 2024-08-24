@@ -6,7 +6,9 @@ public interface IStripePriceService
 {
     Task<PriceResponse> CreateAsync(CreatePriceRequest model);
 
-    Task<PriceResponse> GetAsync(string id);
+    Task<PriceResponse> GetAsync(string lookupKey);
 
-    Task<PriceResponse> UpdateAsync(string id, UpdatePriceRequest model);
+    Task<PriceResponse[]> ListAsync();
+
+    Task<PriceResponse> UpdateAsync(string lookupKey, UpdatePriceRequest model);
 }

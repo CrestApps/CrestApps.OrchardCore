@@ -34,6 +34,9 @@ public sealed class SubscriptionSessionStore : ISubscriptionSessionStore
         _session = session;
     }
 
+    public Task<SubscriptionSession> GetAsync(string sessionId)
+        => _session.Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.SessionId == sessionId).FirstOrDefaultAsync();
+
     public async Task<SubscriptionSession> GetAsync(string sessionId, SubscriptionSessionStatus status)
     {
         SubscriptionSession subscriptionSession = null;

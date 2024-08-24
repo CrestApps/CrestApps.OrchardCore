@@ -70,19 +70,37 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
             Description = S["Information to be used for setting up your new site."],
             Key = SubscriptionConstants.StepKey.TenantOnboarding,
             CollectData = true,
-            Plan = new SubscriptionPlan()
-            {
-                Description = context.SubscriptionContentItem.DisplayText,
-                Id = context.Session.ContentItemVersionId,
-                InitialAmount = subscriptionPart.InitialAmount,
-                BillingAmount = subscriptionPart.BillingAmount,
-                SubscriptionDayDelay = subscriptionPart.SubscriptionDayDelay,
-                BillingDuration = subscriptionPart.BillingDuration,
-                DurationType = subscriptionPart.DurationType,
-                BillingCycleLimit = subscriptionPart.BillingCycleLimit,
-            },
             Order = 100,
         };
+
+        var plans = new List<BillingItem>()
+        {
+            new()
+            {
+                Id = context.Session.ContentItemVersionId,
+                Description = context.SubscriptionContentItem.DisplayText,
+                BillingAmount = subscriptionPart.BillingAmount,
+                Subscription = new SubscriptionPlan()
+                {
+                    SubscriptionDayDelay = subscriptionPart.SubscriptionDayDelay,
+                    BillingDuration = subscriptionPart.BillingDuration,
+                    DurationType = subscriptionPart.DurationType,
+                    BillingCycleLimit = subscriptionPart.BillingCycleLimit,
+                },
+            },
+        };
+
+        if (subscriptionPart.InitialAmount.HasValue && subscriptionPart.InitialAmount.Value > 0)
+        {
+            plans.Add(new BillingItem()
+            {
+                Id = context.Session.ContentItemVersionId + SubscriptionConstants.InitialFeeIdPrefix,
+                Description = subscriptionPart.InitialAmountDescription,
+                BillingAmount = subscriptionPart.InitialAmount.Value,
+            });
+        }
+
+        step.BillingItems = plans.ToArray();
 
         step.Data.TryAdd("RecipeName", tenantOnboardingPart.RecipeName);
         step.Data.TryAdd("FeatureProfile", tenantOnboardingPart.FeatureProfile);

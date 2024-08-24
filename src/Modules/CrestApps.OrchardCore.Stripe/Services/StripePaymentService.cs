@@ -13,6 +13,27 @@ public sealed class StripePaymentService : IStripePaymentService
         _paymentIntentService = new PaymentIntentService(stripeClient);
     }
 
+    public async Task<ConfirmPaymentIntentResponse> ConfirmAsync(ConfirmPaymentIntentRequest model)
+    {
+        var confirmOptions = new PaymentIntentConfirmOptions();
+
+        if (!string.IsNullOrEmpty(model.PaymentMethodId))
+        {
+            confirmOptions.PaymentMethod = model.PaymentMethodId;
+        }
+
+        var result = await _paymentIntentService.ConfirmAsync(model.PaymentIntentId, confirmOptions);
+
+        return new ConfirmPaymentIntentResponse
+        {
+            Status = result.Status,
+            Id = result.Id,
+            Amount = result.Amount,
+            Currency = result.Currency,
+            CustomerId = result.Customer?.Id,
+        };
+    }
+
     public async Task<CreatePaymentIntentResponse> CreateAsync(CreatePaymentIntentRequest model)
     {
         ArgumentNullException.ThrowIfNull(model);
@@ -36,6 +57,7 @@ public sealed class StripePaymentService : IStripePaymentService
 
         return new CreatePaymentIntentResponse()
         {
+            Id = paymentIntent.Id,
             ClientSecret = paymentIntent.ClientSecret,
             CustomerId = paymentIntent.CustomerId,
             Status = paymentIntent.Status,

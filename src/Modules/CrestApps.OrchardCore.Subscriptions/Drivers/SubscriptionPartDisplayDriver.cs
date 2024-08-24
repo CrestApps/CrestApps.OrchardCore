@@ -36,6 +36,7 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
         return Initialize<SubscriptionPartViewModel>(GetEditorShapeType(context), model =>
         {
             model.InitialAmount = part.InitialAmount;
+            model.InitialAmountDescription = part.InitialAmountDescription;
             model.BillingAmount = part.BillingAmount;
             model.BillingDuration = Math.Max(part.BillingDuration, 1);
             model.DurationType = part.DurationType;
@@ -62,6 +63,11 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.InitialAmount), S["Initial Amount cannot be negative."]);
         }
 
+        if (model.InitialAmount > 0 && string.IsNullOrWhiteSpace(model.InitialAmountDescription))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.InitialAmount), S["Initial Amount Description is required."]);
+        }
+
         if (!model.BillingAmount.HasValue)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.BillingAmount), S["Billing Amount is required."]);
@@ -86,6 +92,7 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubscriptionDayDelay), S["Subscription Day Delay cannot be negative."]);
         }
 
+        part.InitialAmountDescription = model.InitialAmountDescription;
         part.InitialAmount = model.InitialAmount;
         part.BillingAmount = model.BillingAmount ?? 0;
         part.BillingDuration = model.BillingDuration;

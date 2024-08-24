@@ -7,7 +7,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
-public class StripeSubscriptionHandler : SubscriptionHandlerBase
+public sealed class StripeSubscriptionHandler : SubscriptionHandlerBase
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IStripeCustomerService _stripeCustomerService;
@@ -27,7 +27,7 @@ public class StripeSubscriptionHandler : SubscriptionHandlerBase
     {
         var subscriber = _httpContextAccessor.HttpContext.Features.Get<CustomerCreatedDuringSubscriptionFlow>();
 
-        if (subscriber?.User == null || !context.Flow.Session.TryGet<StripeSetupIntentMetadata>(out var metadata))
+        if (subscriber?.User == null || !context.Flow.Session.TryGet<StripeMetadata>(out var metadata))
         {
             return;
         }

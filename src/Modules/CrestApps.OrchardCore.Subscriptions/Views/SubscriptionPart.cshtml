@@ -8,7 +8,7 @@
 <div class="row">
     @if (Model.Value.InitialAmount.HasValue)
     {
-        <div class="col-6">@T["Initial Amount"]</div>
+        <div class="col-6">@Model.Value.InitialAmountDescription</div>
         <div class="col-6">@Model.Value.InitialAmount.Value.ToString("C")</div>
     }
 

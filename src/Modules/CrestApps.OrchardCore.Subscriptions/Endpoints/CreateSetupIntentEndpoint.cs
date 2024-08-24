@@ -123,16 +123,18 @@ public static class CreateSetupIntentEndpoint
 
         var result = await stripeSetupIntentService.CreateAsync(intentRequest);
 
-        session.Put(new StripeSetupIntentMetadata
+        session.Put(new StripeMetadata
         {
-            PaymentMethodId = model.PaymentMethodId,
             CustomerId = customerResult.CustomerId,
+            PaymentMethodId = model.PaymentMethodId,
+            SetupIntentId = result.Id,
         });
 
         await subscriptionSessionStore.SaveAsync(session);
 
         return TypedResults.Ok(new
         {
+            id = result.Id,
             clientSecret = result.ClientSecret,
             customerId = customerResult.CustomerId,
             status = result.Status,

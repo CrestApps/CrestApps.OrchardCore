@@ -28,9 +28,6 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
 
     internal IStringLocalizer S;
 
-    protected override string SettingsGroupId
-        => GroupId;
-
     public SubscriptionSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -45,12 +42,16 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
         S = stringLocalizer;
     }
 
+    protected override string SettingsGroupId
+        => GroupId;
+
     public override async Task<IDisplayResult> EditAsync(ISite model, SubscriptionSettings settings, BuildEditorContext context)
     {
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, SubscriptionPermissions.ManageSubscriptionsSettings))
         {
             return null;
         }
+
         context.AddTenantReloadWarningWrapper();
 
         return Initialize<SubscriptionSettingsViewModel>("SubscriptionSettings_Edit", model =>
@@ -64,6 +65,50 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
             .OrderBy(m => m.Text);
         }).Location("Content:5")
         .OnGroup(SettingsGroupId);
+    }
+
+    public override async Task<IDisplayResult> UpdateAsync(ISite site, SubscriptionSettings settings, UpdateEditorContext context)
+    {
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, SubscriptionPermissions.ManageSubscriptionsSettings))
+        {
+            return null;
+        }
+
+        var model = new SubscriptionSettingsViewModel();
+
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        if (string.IsNullOrEmpty(model.Currency))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Currency), S["Currency is required field."]);
+        }
+        else if (!GetCurrencies().Any(x => x.Value == model.Currency))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Currency), S["Invalid currency value."]);
+        }
+        else
+        {
+            // Update the currency only if a valid value is provided, as other components may depend on the existing values.
+            settings.Currency = model.Currency;
+        }
+
+        var providedPaymentMethod = !string.IsNullOrEmpty(model.DefaultPaymentMethod);
+
+        if (_paymentMethodOptions.PaymentMethods.Count > 1 && !providedPaymentMethod)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PaymentMethods), S["Default Payment Method is required."]);
+        }
+        else if (providedPaymentMethod && !_paymentMethodOptions.PaymentMethods.ContainsKey(model.DefaultPaymentMethod))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PaymentMethods), S["Invalid Default Payment Method."]);
+        }
+
+        settings.DefaultPaymentMethod = model.DefaultPaymentMethod;
+        settings.AllowGuestSignup = model.AllowGuestSignup;
+
+        _shellReleaseManager.RequestRelease();
+
+        return await EditAsync(site, settings, context);
     }
 
     private static SelectListItem[] _currencies;
@@ -93,45 +138,5 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
         }
 
         return _currencies;
-    }
-
-    public override async Task<IDisplayResult> UpdateAsync(ISite site, SubscriptionSettings settings, UpdateEditorContext context)
-    {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, SubscriptionPermissions.ManageSubscriptionsSettings))
-        {
-            return null;
-        }
-
-        var model = new SubscriptionSettingsViewModel();
-
-        await context.Updater.TryUpdateModelAsync(model, Prefix);
-
-        if (string.IsNullOrEmpty(model.Currency))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Currency), S["Currency is required field."]);
-        }
-        else if (!GetCurrencies().Any(x => x.Value == model.Currency))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Currency), S["Invalid currency value."]);
-        }
-
-        var providedPaymentMethod = !string.IsNullOrEmpty(model.DefaultPaymentMethod);
-
-        if (_paymentMethodOptions.PaymentMethods.Count > 1 && !providedPaymentMethod)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PaymentMethods), S["Default Payment Method is required."]);
-        }
-        else if (providedPaymentMethod && !_paymentMethodOptions.PaymentMethods.ContainsKey(model.DefaultPaymentMethod))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PaymentMethods), S["Invalid Default Payment Method."]);
-        }
-
-        settings.DefaultPaymentMethod = model.DefaultPaymentMethod;
-        settings.AllowGuestSignup = model.AllowGuestSignup;
-        settings.Currency = model.Currency;
-
-        _shellReleaseManager.RequestRelease();
-
-        return await EditAsync(site, settings, context);
     }
 }

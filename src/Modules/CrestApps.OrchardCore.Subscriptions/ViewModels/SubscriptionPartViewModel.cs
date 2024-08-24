@@ -8,6 +8,8 @@ public class SubscriptionPartViewModel
 {
     public double? InitialAmount { get; set; }
 
+    public string InitialAmountDescription { get; set; }
+
     public double? BillingAmount { get; set; }
 
     public int BillingDuration { get; set; }

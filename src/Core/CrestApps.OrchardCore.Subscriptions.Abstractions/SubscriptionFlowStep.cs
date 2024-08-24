@@ -33,7 +33,7 @@ public sealed class SubscriptionFlowStep
     /// <summary>
     /// Any payment information to collect before completing the subscription.
     /// </summary>
-    public SubscriptionPlan Plan { get; set; }
+    public BillingItem[] BillingItems { get; set; }
 
     /// <summary>
     /// Allow adding custom data for the step.

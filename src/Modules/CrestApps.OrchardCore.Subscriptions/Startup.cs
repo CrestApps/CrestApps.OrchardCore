@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
@@ -26,6 +27,7 @@ using OrchardCore.ContentTypes.Editors;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.Core.Utilities;
 using OrchardCore.Navigation;
@@ -126,21 +128,30 @@ public sealed class RolesStartup : StartupBase
 [Feature(SubscriptionConstants.Features.Stripe)]
 public sealed class StripeStartup : StartupBase
 {
+    private readonly AdminOptions _adminOptions;
+
+    public StripeStartup(IOptions<AdminOptions> adminOptions)
+    {
+        _adminOptions = adminOptions.Value;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IDisplayDriver<SubscriptionFlowPaymentMethod>, StripePaymentSubscriptionFlowDisplayDriver>();
-
+        services.AddScoped<StripePriceSyncService>();
+        services.AddScoped<IFeatureEventHandler, StripePriceSyncHandler>();
         services.AddScoped<IPaymentEvent, SubscriptionPaymentHandler>();
         services.AddScoped<IContentHandler, SubscriptionsContentHandler>();
         services.AddScoped<ISubscriptionHandler, StripeSubscriptionHandler>();
         services.AddTransient<IPostConfigureOptions<PaymentMethodOptions>, DefaultPaymentMethodConfigurations>();
+        services.AddScoped<IDisplayDriver<ISite>, CurrencySubscriptionSettingsDisplayDriver>();
         services.Configure<PaymentMethodOptions>(options =>
         {
-            options.PaymentMethods.Add(StripeConstants.ProcessorKey, new PaymentMethod
+            options.PaymentMethods[StripeConstants.ProcessorKey] = new PaymentMethod
             {
                 Title = "Stripe",
                 HasProcessor = true,
-            });
+            };
         });
     }
 
@@ -149,6 +160,13 @@ public sealed class StripeStartup : StartupBase
         routes.AddCreateStripeSubscriptionEndpoint()
             .AddCreatePaymentIntentEndpoint()
             .AddStripeCreateSetupIntentEndpoint();
+
+        routes.MapAreaControllerRoute(
+            name: "StripeSyncPrices",
+            areaName: SubscriptionConstants.Features.ModuleId,
+            pattern: _adminOptions.AdminUrlPrefix + "/stripe-sync/prices",
+            defaults: new { controller = typeof(StripeSyncController).ControllerName(), action = nameof(StripeSyncController.Prices) }
+        );
     }
 }
 
@@ -160,11 +178,11 @@ public sealed class PayLaterStartup : StartupBase
         services.AddScoped<IDisplayDriver<SubscriptionFlowPaymentMethod>, PayLaterPaymentSubscriptionFlowDisplayDriver>();
         services.Configure<PaymentMethodOptions>(options =>
         {
-            options.PaymentMethods.Add(SubscriptionConstants.PayLaterProcessorKey, new PaymentMethod
+            options.PaymentMethods[SubscriptionConstants.PayLaterProcessorKey] = new PaymentMethod
             {
                 Title = "Pay Later",
                 HasProcessor = false,
-            });
+            };
         });
     }
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
@@ -53,43 +54,62 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
 
         foreach (var step in context.Flow.GetSortedSteps())
         {
-            if (step.Plan == null)
+            if (step.BillingItems == null)
             {
                 // Steps with no payment information can be ignored.
                 continue;
             }
 
-            var lineItem = new InvoiceLineItem()
+            foreach (var plan in step.BillingItems)
             {
-                Description = step.Plan.Description,
-                Quantity = 1,
-                UnitPrice = step.Plan.BillingAmount,
-                DueNow = step.Plan.InitialAmount,
-                BillingDuration = step.Plan.BillingDuration,
-                BillingCycleLimit = step.Plan.BillingCycleLimit,
-                SubscriptionDayDelay = step.Plan.SubscriptionDayDelay,
-                InitialAmount = step.Plan.InitialAmount,
-                Id = step.Plan.Id,
-            };
+                var lineItem = new InvoiceLineItem()
+                {
+                    Id = plan.Id,
+                    Description = plan.Description,
+                    Quantity = 1,
+                    UnitPrice = plan.BillingAmount,
+                    Subscription = plan.Subscription,
+                };
 
-            if (step.Plan.InitialAmount.HasValue)
-            {
-                invoice.InitialAmount ??= 0;
-                invoice.InitialAmount += step.Plan.InitialAmount.Value;
+                if (plan.Subscription == null)
+                {
+                    invoice.InitialPaymentAmount ??= 0;
+                    invoice.InitialPaymentAmount += lineItem.GetLineTotal();
+                    invoice.DueNow += lineItem.GetLineTotal();
+
+                }
+                else if (lineItem.Subscription.SubscriptionDayDelay == null || lineItem.Subscription.SubscriptionDayDelay == 0)
+                {
+                    invoice.FirstSubscriptionPaymentAmount ??= 0;
+                    invoice.FirstSubscriptionPaymentAmount += lineItem.GetLineTotal();
+                    invoice.DueNow += lineItem.GetLineTotal();
+                }
+
+                lineItems.Add(lineItem);
             }
-
-            invoice.DueNow += (step.Plan.InitialAmount ?? 0) + step.Plan.BillingAmount;
-
-            lineItems.Add(lineItem);
         }
+
         var settings = await _siteService.GetSettingsAsync<SubscriptionSettings>();
         invoice.Currency = settings.Currency;
         invoice.LineItems = lineItems.ToArray();
-        invoice.Subtotals = lineItems.GroupBy(x => new BillingDurationKey(x.DurationType, x.BillingDuration))
+        invoice.Subtotals = lineItems.Where(x => x.Subscription != null)
+            .GroupBy(x => new BillingDurationKey(x.Subscription.DurationType, x.Subscription.BillingDuration))
             .ToDictionary(x => x.Key, x => x.Sum(y => y.UnitPrice * y.Quantity));
 
+        if (invoice.InitialPaymentAmount.HasValue)
+        {
+            invoice.InitialPaymentAmount = Math.Round(invoice.InitialPaymentAmount.Value, 2);
+        }
+
+        if (invoice.FirstSubscriptionPaymentAmount.HasValue)
+        {
+            invoice.FirstSubscriptionPaymentAmount = Math.Round(invoice.FirstSubscriptionPaymentAmount.Value, 2);
+        }
+
+        invoice.DueNow = Math.Round(invoice.DueNow, 2);
+
         // TODO, add tax.
-        invoice.GrandTotal = invoice.DueNow;
+        invoice.GrandTotal = Math.Round(invoice.DueNow, 2);
 
         context.Flow.Session.Put(invoice);
     }
@@ -142,7 +162,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
                 var initialPaymentInfo = await _subscriptionPaymentSession.GetInitialPaymentInfoAsync(context.Flow.Session.SessionId)
                     ?? throw new DataNotFoundException("Initial Payment was not collected by the payment provider.");
 
-                if (invoice.DueNow > 0 && invoice.DueNow != initialPaymentInfo.InitialPaymentAmount)
+                if (invoice.InitialPaymentAmount > 0 && invoice.InitialPaymentAmount != initialPaymentInfo.Amount)
                 {
                     throw new PaymentValidationException("The received initial payment amount did not match the expected initial payment amount.");
                 }
@@ -150,7 +170,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
                 var subscriptionPaymentInfo = await _subscriptionPaymentSession.GetSubscriptionPaymentInfoAsync(context.Flow.Session.SessionId)
                     ?? throw new DataNotFoundException("Subscription was not created by the payment provider.");
 
-                if (context.Flow.ContentItem.ContentItemVersionId != subscriptionPaymentInfo.PlanId)
+                if (invoice.FirstSubscriptionPaymentAmount > 0 && invoice.FirstSubscriptionPaymentAmount != subscriptionPaymentInfo.Amount)
                 {
                     throw new PaymentValidationException("The scheduled plan id did not match the scheduled plan id at the payment provider.");
                 }

@@ -43,6 +43,7 @@ public static class CreatePaymentIntentEndpoint
 
         return TypedResults.Ok(new
         {
+            id = paymentIntent.Id,
             clientSecret = paymentIntent.ClientSecret,
             customerId = paymentIntent.CustomerId,
             status = paymentIntent.Status,

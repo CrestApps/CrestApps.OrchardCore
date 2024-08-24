@@ -58,12 +58,24 @@ public static class CreatePaymentIntentEndpoint
             return TypedResults.NotFound();
         }
 
+        var stripeMetadata = session.As<StripeMetadata>();
+
+        if (stripeMetadata.CustomerId != model.CustomerId ||
+            stripeMetadata.PaymentMethodId != model.PaymentMethodId)
+        {
+            return TypedResults.BadRequest(new
+            {
+                ErrorMessage = "Invalid request data",
+                ErrorCode = 2,
+            });
+        }
+
         var request = new CreatePaymentIntentRequest()
         {
             PaymentMethodId = model.PaymentMethodId,
             CustomerId = model.CustomerId,
             Metadata = model.Metadata ?? [],
-            Amount = invoice.DueNow,
+            Amount = invoice.InitialPaymentAmount ?? 0,
             Currency = invoice.Currency,
         };
 
@@ -71,8 +83,13 @@ public static class CreatePaymentIntentEndpoint
 
         var result = await stripePaymentService.CreateAsync(request);
 
+        stripeMetadata.PaymentIntentId = result.Id;
+        session.Put(stripeMetadata);
+        await subscriptionSessionStore.SaveAsync(session);
+
         return TypedResults.Ok(new
         {
+            result.Id,
             clientSecret = result.ClientSecret,
             customerId = result.CustomerId,
             status = result.Status,

@@ -30,6 +30,7 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
             {
                 Price = x.PriceId,
                 Quantity = x.Quantity,
+                Metadata = x.Metadata,
             }).ToList(),
             PaymentBehavior = "allow_incomplete",
             DefaultPaymentMethod = model.PaymentMethodId,
@@ -84,6 +85,7 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
 
         return new CreateSubscriptionResponse()
         {
+            Id = subscription.Id,
             Status = subscription.Status,
             ClientSecret = subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action"
             ? subscription.LatestInvoice.PaymentIntent.ClientSecret

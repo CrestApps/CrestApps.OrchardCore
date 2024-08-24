@@ -17,7 +17,6 @@ public sealed class StripePriceService : IStripePriceService
     {
         ArgumentException.ThrowIfNullOrEmpty(lookupKey);
 
-
         var prices = await _priceService.ListAsync(new PriceListOptions()
         {
             LookupKeys = [lookupKey],
@@ -34,6 +33,7 @@ public sealed class StripePriceService : IStripePriceService
         return new PriceResponse()
         {
             Id = price.Id,
+            LookupKey = price.LookupKey,
             Title = price.Nickname,
             ProductId = price.ProductId,
             IsActive = price.Active,
@@ -58,14 +58,15 @@ public sealed class StripePriceService : IStripePriceService
             },
         };
 
-        var plan = await _priceService.CreateAsync(planOptions);
+        var price = await _priceService.CreateAsync(planOptions);
 
         return new PriceResponse()
         {
-            Id = plan.Id,
-            Title = plan.Nickname,
-            ProductId = plan.ProductId,
-            IsActive = plan.Active,
+            Id = price.Id,
+            LookupKey = price.LookupKey,
+            Title = price.Nickname,
+            ProductId = price.ProductId,
+            IsActive = price.Active,
         };
     }
 
@@ -88,8 +89,23 @@ public sealed class StripePriceService : IStripePriceService
         return new PriceResponse()
         {
             Id = result.Id,
+            LookupKey = lookupKey,
             Title = result.Nickname,
             ProductId = result.ProductId,
         };
+    }
+
+    public async Task<PriceResponse[]> ListAsync()
+    {
+        var prices = await _priceService.ListAsync();
+
+        return prices.Select(price => new PriceResponse()
+        {
+            Id = price.Id,
+            LookupKey = price.LookupKey,
+            Title = price.Nickname,
+            ProductId = price.ProductId,
+            IsActive = price.Active,
+        }).ToArray();
     }
 }

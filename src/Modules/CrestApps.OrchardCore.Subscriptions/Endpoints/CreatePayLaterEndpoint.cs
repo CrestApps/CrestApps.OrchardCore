@@ -35,7 +35,7 @@ public static class CreatePayLaterEndpoint
             });
         }
 
-        var session = await subscriptionSessionStore.GetAsync(model.SessionId, SubscriptionSessionStatus.Pending);
+        var session = await subscriptionSessionStore.GetAsync(model.SessionId);
 
         if (session == null)
         {
@@ -51,12 +51,16 @@ public static class CreatePayLaterEndpoint
 
         await subscriptionPaymentSession.SetAsync(model.SessionId, new InitialPaymentMetadata()
         {
-            InitialPaymentAmount = invoice.DueNow,
+            Amount = invoice.InitialPaymentAmount ?? 0,
+            Currency = invoice.Currency,
+            Mode = Payments.GatewayMode.Production,
         });
 
         await subscriptionPaymentSession.SetAsync(model.SessionId, new SubscriptionPaymentMetadata()
         {
-            PlanId = session.ContentItemVersionId,
+            Amount = invoice.FirstSubscriptionPaymentAmount ?? 0,
+            Currency = invoice.Currency,
+            Mode = Payments.GatewayMode.Production,
         });
 
         return TypedResults.Ok(new

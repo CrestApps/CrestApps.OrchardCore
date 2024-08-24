@@ -6,6 +6,8 @@ public static class SubscriptionConstants
 
     public const string PayLaterProcessorKey = "PayLater";
 
+    public const string InitialFeeIdPrefix = "__InitialFee";
+
     public static class RouteName
     {
         public const string CreateSubscriptionEndpoint = "Subscriptions_StripeCreateSubscription";
