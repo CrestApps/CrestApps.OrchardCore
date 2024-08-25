@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.Payments.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -40,7 +41,8 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
 
     public override async Task ActivatingAsync(SubscriptionFlowActivatingContext context)
     {
-        if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out var subscriptionPart))
+        if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out var subscriptionPart) ||
+            !context.SubscriptionContentItem.TryGet<ProductPart>(out var productPart))
         {
             return;
         }
@@ -90,7 +92,7 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
                 {
                     Id = context.Session.ContentItemVersionId,
                     Description = context.SubscriptionContentItem.DisplayText,
-                    BillingAmount = subscriptionPart.BillingAmount,
+                    BillingAmount = productPart.Price,
                     Subscription = new()
                     {
                         SubscriptionDayDelay = subscriptionPart.SubscriptionDayDelay,

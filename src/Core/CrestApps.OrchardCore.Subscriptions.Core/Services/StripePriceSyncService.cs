@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Payments.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
@@ -57,7 +59,8 @@ public class StripePriceSyncService
         ArgumentNullException.ThrowIfNull(definition);
 
         if (!definition.StereotypeEquals(SubscriptionConstants.Stereotype) ||
-            !contentItem.TryGet<SubscriptionPart>(out var subscriptionPart))
+            !contentItem.TryGet<SubscriptionPart>(out var subscriptionPart) ||
+            !contentItem.TryGet<ProductPart>(out var productPart))
         {
             return;
         }
@@ -88,7 +91,7 @@ public class StripePriceSyncService
             LookupKey = contentItem.ContentItemVersionId,
             ProductId = product.Id,
             Title = contentItem.DisplayText,
-            Amount = subscriptionPart.BillingAmount,
+            Amount = productPart.Price,
             Currency = currency,
             IntervalCount = subscriptionPart.BillingDuration,
             Interval = subscriptionPart.DurationType.ToString().ToLowerInvariant(),
@@ -222,7 +225,8 @@ public class StripePriceSyncService
 
             foreach (var contentItem in contentItems)
             {
-                if (!contentItem.TryGet<SubscriptionPart>(out var subscriptionPart))
+                if (!contentItem.TryGet<SubscriptionPart>(out var subscriptionPart) ||
+                    !contentItem.TryGet<ProductPart>(out var productPart))
                 {
                     continue;
                 }
@@ -232,7 +236,7 @@ public class StripePriceSyncService
                     LookupKey = contentItem.ContentItemVersionId,
                     ProductId = contentItem.ContentType,
                     Title = contentItem.DisplayText,
-                    Amount = subscriptionPart.BillingAmount,
+                    Amount = productPart.Price,
                     Currency = currency,
                     IntervalCount = subscriptionPart.BillingDuration,
                     Interval = subscriptionPart.DurationType.ToString().ToLowerInvariant(),
@@ -254,12 +258,14 @@ public class StripePriceSyncService
             return product;
         }
 
+        var productPartSettings = definition.Parts.FirstOrDefault(x => x.Name == nameof(ProductPart))?.GetSettings<ProductPartSettings>();
+
         var productRequest = new CreateProductRequest()
         {
             Id = definition.Name,
             Title = definition.DisplayName,
             Description = definition.GetDescription(),
-            Type = "service",
+            Type = productPartSettings?.Type ?? ProductType.Service,
         };
 
         return await _stripeProductService.CreateAsync(productRequest);

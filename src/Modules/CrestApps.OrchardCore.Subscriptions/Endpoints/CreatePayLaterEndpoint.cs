@@ -35,7 +35,7 @@ public static class CreatePayLaterEndpoint
             });
         }
 
-        var session = await subscriptionSessionStore.GetAsync(model.SessionId);
+        var session = await subscriptionSessionStore.GetAsync(model.SessionId, SubscriptionSessionStatus.Pending);
 
         if (session == null)
         {
@@ -53,14 +53,14 @@ public static class CreatePayLaterEndpoint
         {
             Amount = invoice.InitialPaymentAmount ?? 0,
             Currency = invoice.Currency,
-            Mode = Payments.GatewayMode.Production,
+            Mode = Payments.GatewayMode.Live,
         });
 
         await subscriptionPaymentSession.SetAsync(model.SessionId, new SubscriptionPaymentMetadata()
         {
             Amount = invoice.FirstSubscriptionPaymentAmount ?? 0,
             Currency = invoice.Currency,
-            Mode = Payments.GatewayMode.Production,
+            Mode = Payments.GatewayMode.Live,
         });
 
         return TypedResults.Ok(new

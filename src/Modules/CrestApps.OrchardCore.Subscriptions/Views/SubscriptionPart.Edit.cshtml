@@ -15,12 +15,6 @@
 </div>
 
 <div class="mb-3">
-    <label asp-for="BillingAmount" class="form-label">@T["Billing Amount"]</label>
-    <input type="number" min="0" step="0.01" asp-for="BillingAmount" class="form-control" />
-    <span asp-validation-for="BillingAmount" class="text-danger"></span>
-</div>
-
-<div class="mb-3">
     <label asp-for="BillingDuration" class="form-label">@T["Billing Duration"]</label>
     <input type="number" min="1" step="1" asp-for="BillingDuration" class="form-control" />
     <span asp-validation-for="BillingDuration" class="text-danger"></span>

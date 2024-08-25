@@ -16,11 +16,6 @@ public sealed class SubscriptionPart : ContentPart
     public double? InitialAmount { get; set; }
 
     /// <summary>
-    /// The billing amount to collect every billing cycle.
-    /// </summary>
-    public double BillingAmount { get; set; }
-
-    /// <summary>
     /// The number of payments pet duration type.
     /// For example, 1 Year, 30 Days, 4 Weeks, etc.
     /// <see cref="DurationType"/> to define the duration limit.

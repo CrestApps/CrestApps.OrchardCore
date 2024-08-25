@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductPartSettingsViewModel
+
+<div class="mb-3">
+    <label asp-for="Type" class="form-label">@T["Product Type"]</label>
+    <select asp-for="Type" asp-items="Model.Types" class="form-select"></select>
+    <span asp-validation-for="Type" class="text-danger"></span>
+</div>

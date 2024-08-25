@@ -58,7 +58,7 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
             }
         }
 
-        var session = await _subscriptionSessionStore.GetAsync(sessionId.ToString(), SubscriptionSessionStatus.Pending);
+        var session = await _subscriptionSessionStore.GetAsync(sessionId.ToString());
 
         if (session == null)
         {

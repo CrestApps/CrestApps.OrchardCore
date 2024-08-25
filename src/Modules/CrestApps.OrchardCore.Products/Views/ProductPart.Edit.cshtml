@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductPartViewModel
+
+<div class="mb-3">
+    <label asp-for="Price" class="form-label">@T["Price"]</label>
+    <input type="number" min="0" step="0.01" asp-for="Price" class="form-control" />
+    <span asp-validation-for="Price" class="text-danger"></span>
+</div>

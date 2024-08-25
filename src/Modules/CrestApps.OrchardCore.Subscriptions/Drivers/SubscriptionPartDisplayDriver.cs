@@ -1,8 +1,10 @@
+using CrestApps.OrchardCore.Payments.Core.Models;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
@@ -22,8 +24,18 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
     public override Task<IDisplayResult> DisplayAsync(SubscriptionPart part, BuildPartDisplayContext context)
     {
         return CombineAsync(
-            View(GetDisplayShapeType(context), part)
-            .Location("Summary", "Content")
+            Initialize<DisplaySubscriptionViewModel>(GetDisplayShapeType(context), model =>
+            {
+                var price = part.ContentItem.As<ProductPart>();
+
+                model.Price = price?.Price ?? 0;
+                model.DurationType = part.DurationType;
+                model.BillingDuration = part.BillingDuration;
+                model.SubscriptionDayDelay = part.SubscriptionDayDelay;
+                model.InitialAmountDescription = part.InitialAmountDescription;
+                model.InitialAmount = part.InitialAmount;
+                model.BillingCycleLimit = part.BillingCycleLimit;
+            }).Location("Summary", "Content")
             .Location("Detail", "Content"),
 
             View("SubscriptionSignup", part)
@@ -37,7 +49,6 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
         {
             model.InitialAmount = part.InitialAmount;
             model.InitialAmountDescription = part.InitialAmountDescription;
-            model.BillingAmount = part.BillingAmount;
             model.BillingDuration = Math.Max(part.BillingDuration, 1);
             model.DurationType = part.DurationType;
             model.BillingCycleLimit = part.BillingCycleLimit;
@@ -68,15 +79,6 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.InitialAmount), S["Initial Amount Description is required."]);
         }
 
-        if (!model.BillingAmount.HasValue)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.BillingAmount), S["Billing Amount is required."]);
-        }
-        else if (model.BillingAmount.Value < 0)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.BillingAmount), S["Billing Amount cannot be negative."]);
-        }
-
         if (model.BillingDuration < 1)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.BillingDuration), S["Billing Duration cannot be less than one."]);
@@ -94,7 +96,6 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
 
         part.InitialAmountDescription = model.InitialAmountDescription;
         part.InitialAmount = model.InitialAmount;
-        part.BillingAmount = model.BillingAmount ?? 0;
         part.BillingDuration = model.BillingDuration;
         part.DurationType = model.DurationType;
         part.BillingCycleLimit = model.BillingCycleLimit;

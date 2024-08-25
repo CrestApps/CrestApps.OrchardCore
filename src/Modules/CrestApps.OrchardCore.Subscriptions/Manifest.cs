@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using OrchardCore.Modules.Manifest;
@@ -18,6 +19,7 @@ using OrchardCore.Modules.Manifest;
     [
         "OrchardCore.Contents",
         "OrchardCore.ContentTypes",
+        ProductConstants.Feature.ModuleId,
     ]
 )]
 

@@ -28,6 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Products\CrestApps.OrchardCore.Products.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Stripe\CrestApps.OrchardCore.Stripe.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Subscriptions\CrestApps.OrchardCore.Subscriptions.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Users\CrestApps.OrchardCore.Users.csproj" />

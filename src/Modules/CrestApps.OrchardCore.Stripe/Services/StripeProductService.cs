@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using Stripe;
@@ -22,7 +23,13 @@ public sealed class StripeProductService : IStripeProductService
             Id = model.Id,
             Name = model.Title,
             Description = model.Description,
-            Type = model.Type,
+            // Valid values 'good', 'service', or 'planet'
+            Type = model.Type switch
+            {
+                ProductType.Good => "good",
+                ProductType.Planet => "planet",
+                _ => "service",
+            },
         };
 
         var product = await _productService.CreateAsync(productOptions);

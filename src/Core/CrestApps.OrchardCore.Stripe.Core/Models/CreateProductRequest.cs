@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Products.Core.Models;
+
 namespace CrestApps.OrchardCore.Stripe.Core.Models;
 
 public class CreateProductRequest
@@ -8,8 +10,5 @@ public class CreateProductRequest
 
     public string Description { get; set; }
 
-    /// <summary>
-    /// Valid values 'good', 'service', or 'planet'
-    /// </summary>
-    public string Type { get; set; }
+    public ProductType Type { get; set; }
 }

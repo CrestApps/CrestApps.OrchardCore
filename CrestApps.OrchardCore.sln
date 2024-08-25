@@ -50,6 +50,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrestApps.OrchardCore.Strip
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrestApps.OrchardCore.Payments.Abstractions", "src\Core\CrestApps.OrchardCore.Payments.Abstractions\CrestApps.OrchardCore.Payments.Abstractions.csproj", "{2A777E1D-B189-4F74-BF15-919D5D0F4F80}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Payments.Core", "src\Core\CrestApps.OrchardCore.Payments.Core\CrestApps.OrchardCore.Payments.Core.csproj", "{549861E0-50A7-4346-91C0-3FE30FA1768A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Products", "src\Modules\CrestApps.OrchardCore.Products\CrestApps.OrchardCore.Products.csproj", "{0BACCD4A-97CA-4BDF-8D4A-247A1172039E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Products.Core", "src\Core\CrestApps.OrchardCore.Products.Core\CrestApps.OrchardCore.Products.Core.csproj", "{D5D6587D-17E7-40D0-BBBA-20CA97DBF946}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -108,6 +114,18 @@ Global
 		{2A777E1D-B189-4F74-BF15-919D5D0F4F80}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2A777E1D-B189-4F74-BF15-919D5D0F4F80}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2A777E1D-B189-4F74-BF15-919D5D0F4F80}.Release|Any CPU.Build.0 = Release|Any CPU
+		{549861E0-50A7-4346-91C0-3FE30FA1768A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{549861E0-50A7-4346-91C0-3FE30FA1768A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{549861E0-50A7-4346-91C0-3FE30FA1768A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{549861E0-50A7-4346-91C0-3FE30FA1768A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0BACCD4A-97CA-4BDF-8D4A-247A1172039E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0BACCD4A-97CA-4BDF-8D4A-247A1172039E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0BACCD4A-97CA-4BDF-8D4A-247A1172039E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0BACCD4A-97CA-4BDF-8D4A-247A1172039E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D5D6587D-17E7-40D0-BBBA-20CA97DBF946}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5D6587D-17E7-40D0-BBBA-20CA97DBF946}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5D6587D-17E7-40D0-BBBA-20CA97DBF946}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5D6587D-17E7-40D0-BBBA-20CA97DBF946}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -126,6 +144,9 @@ Global
 		{A0FBFDC5-31C8-453D-872C-D33736427324} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{88EA0953-2301-4326-A5C6-B0BEE7303391} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
 		{2A777E1D-B189-4F74-BF15-919D5D0F4F80} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
+		{549861E0-50A7-4346-91C0-3FE30FA1768A} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
+		{0BACCD4A-97CA-4BDF-8D4A-247A1172039E} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{D5D6587D-17E7-40D0-BBBA-20CA97DBF946} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0E9F9B00-7078-4EA8-87A9-0B2E74375F1E}

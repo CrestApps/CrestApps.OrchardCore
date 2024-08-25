@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <None Remove="CrestAppsLogo.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="CrestAppsLogo.png">
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+</Project>

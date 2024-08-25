@@ -87,7 +87,7 @@ public static class CreateWebhookEndpoint
                         AmountPaid = Math.Round(invoice.AmountPaid / 100d, 2),
                         Currency = invoice.Currency,
                         TransactionId = invoice.Id,
-                        Mode = invoice.Livemode ? GatewayMode.Production : GatewayMode.Testing,
+                        Mode = invoice.Livemode ? GatewayMode.Live : GatewayMode.Testing,
                     };
 
                     successContext.Data["billing_reason"] = invoice.BillingReason;
@@ -141,7 +141,7 @@ public static class CreateWebhookEndpoint
                     if (subscription.Items != null && subscription.Items.Any())
                     {
                         createdContext.SubscriptionId = subscription.Id;
-                        createdContext.Mode = subscription.Livemode ? GatewayMode.Production : GatewayMode.Testing;
+                        createdContext.Mode = subscription.Livemode ? GatewayMode.Live : GatewayMode.Testing;
                         createdContext.PlanId = subscription.Items.Data[0].Plan.Id;
                         if (subscription.Items.Data[0].Plan.Amount.HasValue)
                         {
@@ -164,7 +164,7 @@ public static class CreateWebhookEndpoint
 
                     var succeededContext = new PaymentIntentSucceededContext()
                     {
-                        Mode = paymentIntent.Livemode ? GatewayMode.Production : GatewayMode.Testing,
+                        Mode = paymentIntent.Livemode ? GatewayMode.Live : GatewayMode.Testing,
                         Currency = paymentIntent.Currency,
                         AmountPaid = Math.Round(paymentIntent.Amount / 100d, 2),
                     };

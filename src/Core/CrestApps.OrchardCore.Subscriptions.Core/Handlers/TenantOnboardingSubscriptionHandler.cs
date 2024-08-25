@@ -1,8 +1,8 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.Payments.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,7 +11,6 @@ using OrchardCore.ContentManagement;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Json;
 using OrchardCore.Modules;
-using OrchardCore.Recipes.Models;
 using OrchardCore.Setup.Services;
 using OrchardCore.Workflows.Services;
 
@@ -54,7 +53,8 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
 
     public override Task ActivatingAsync(SubscriptionFlowActivatingContext context)
     {
-        if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out var subscriptionPart))
+        if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out var subscriptionPart) ||
+            !context.SubscriptionContentItem.TryGet<ProductPart>(out var productPart))
         {
             return Task.CompletedTask;
         }
@@ -79,7 +79,7 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
             {
                 Id = context.Session.ContentItemVersionId,
                 Description = context.SubscriptionContentItem.DisplayText,
-                BillingAmount = subscriptionPart.BillingAmount,
+                BillingAmount = productPart.Price,
                 Subscription = new SubscriptionPlan()
                 {
                     SubscriptionDayDelay = subscriptionPart.SubscriptionDayDelay,
@@ -110,7 +110,7 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
         return Task.CompletedTask;
     }
 
-    public override Task CompletingAsync(SubscriptionFlowCompletingContext context)
+    public override async Task CompletingAsync(SubscriptionFlowCompletingContext context)
     {
         if (!context.Flow.Session.SavedSteps.TryGetPropertyValue(SubscriptionConstants.StepKey.TenantOnboarding, out var node))
         {
@@ -138,7 +138,12 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
             throw new InvalidOperationException("Provided prefix belong to another tenant.");
         }
 
-        return Task.CompletedTask;
+        var recipes = await _setupService.GetSetupRecipesAsync();
+
+        if (!recipes.Any())
+        {
+            throw new InvalidOperationException("No startup recipes found!");
+        }
     }
 
     public override async Task CompletedAsync(SubscriptionFlowCompletedContext context)
@@ -150,32 +155,15 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
 
         var info = node.Deserialize<TenantOnboardingStep>(_documentJsonSerializerOptions.SerializerOptions);
 
+        var recipes = await _setupService.GetSetupRecipesAsync();
         using var shellSettings = await CreateTenantAsync(info);
-
-        RecipeDescriptor recipeDescriptor = null;
-
-        if (string.IsNullOrEmpty(info.RecipeName))
-        {
-            var tempFilename = Path.GetTempFileName();
-
-            await File.WriteAllTextAsync(tempFilename, info.RecipeName);
-
-            var fileProvider = new PhysicalFileProvider(Path.GetDirectoryName(tempFilename));
-
-            recipeDescriptor = new RecipeDescriptor
-            {
-                FileProvider = fileProvider,
-                BasePath = string.Empty,
-                RecipeFileInfo = fileProvider.GetFileInfo(Path.GetFileName(tempFilename))
-            };
-        }
 
         var setupContext = new SetupContext
         {
             ShellSettings = shellSettings,
             EnabledFeatures = [],
             Errors = new Dictionary<string, string>(),
-            Recipe = recipeDescriptor,
+            Recipe = recipes.FirstOrDefault(x => x.Name == info.RecipeName) ?? recipes.First(),
             Properties = new Dictionary<string, object>
             {
                 { SetupConstants.SiteName, shellSettings.Name },
