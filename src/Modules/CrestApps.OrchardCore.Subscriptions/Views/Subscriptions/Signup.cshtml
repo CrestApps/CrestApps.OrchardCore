@@ -3,7 +3,7 @@
 
 @model SubscriptionViewModel
 
-<form id="subscription-form" method="post" asp-action="Signup" asp-controller="Subscriptions" asp-route-sessionId="@Model.SessionId">
+<form id="subscription-form" method="post" asp-route-contentItemId="@Model.ContentItemId" asp-route-sessionId="@Model.SessionId">
 
     <input type="hidden" name="step" value="@Model.Step" />
 

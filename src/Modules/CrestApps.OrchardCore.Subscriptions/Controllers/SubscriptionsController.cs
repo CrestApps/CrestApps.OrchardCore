@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Extensions;
 using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -141,7 +142,8 @@ public sealed class SubscriptionsController : Controller
             return NotFound();
         }
 
-        var subscriptionSession = await _subscriptionSessionStore.GetOrNewAsync(subscriptionContentItem);
+        var subscriptionSession = await _subscriptionSessionStore.NewAsync(subscriptionContentItem);
+
         await _subscriptionHandlers.InvokeAsync(
             (handler, context) => handler.InitializingAsync(context), new SubscriptionFlowInitializingContext(subscriptionSession, subscriptionContentItem), _logger);
         var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
@@ -157,11 +159,10 @@ public sealed class SubscriptionsController : Controller
         await _subscriptionHandlers.InvokeAsync(
             (handler, context) => handler.LoadedAsync(context), new SubscriptionFlowLoadedContext(flow), _logger);
 
-        await _subscriptionSessionStore.SaveAsync(subscriptionSession);
-
         return View(new SubscriptionViewModel
         {
-            SessionId = subscriptionSession.SessionId,
+            ContentItemId = contentItemId,
+            SessionId = null,
             Step = subscriptionSession.CurrentStep,
             Content = model,
         });
@@ -175,39 +176,48 @@ public sealed class SubscriptionsController : Controller
     /// <returns></returns>
     [HttpPost]
     [ActionName(nameof(Signup))]
-    public async Task<IActionResult> SignupPOST(string sessionId, string step)
+    public async Task<IActionResult> SignupPOST(string sessionId, string contentItemId, string step)
     {
-        var subscriptionSession = await _subscriptionSessionStore.GetAsync(sessionId, SubscriptionSessionStatus.Pending);
-
-        if (subscriptionSession == null)
+        if (string.IsNullOrWhiteSpace(contentItemId))
         {
             return NotFound();
         }
 
-        var subscriptionContentItem = await GetSubscriptionVersion(subscriptionSession.ContentItemVersionId);
+        var subscriptionContentItem = await _session.Query<ContentItem, SubscriptionsContentItemIndex>(index => index.Published && index.ContentItemId == contentItemId)
+            .FirstOrDefaultAsync();
 
         if (subscriptionContentItem == null)
         {
             return NotFound();
         }
 
-        if (!string.IsNullOrEmpty(step) &&
-            !string.Equals(step, subscriptionSession.CurrentStep, StringComparison.OrdinalIgnoreCase))
-        {
-            foreach (var savedStep in subscriptionSession.SavedSteps)
-            {
-                if (!string.Equals(step, savedStep.Key, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
+        SubscriptionSession subscriptionSession = null;
 
-                // The requested step exists in the saved steps.
-                // Set the current step to the requested step, ensuring that the user is directed
-                // to the next screen based on their navigation path, rather than where the session suggests they should be.
-                // We use 'savedStep.Key' instead of 'step' to ensure the correct case-sensitive value is passed.
-                subscriptionSession.CurrentStep = savedStep.Key;
+        if (!string.IsNullOrWhiteSpace(sessionId))
+        {
+            subscriptionSession = await _subscriptionSessionStore.GetAsync(sessionId, SubscriptionSessionStatus.Pending);
+
+            if (subscriptionSession != null &&
+                !string.IsNullOrEmpty(step) &&
+                !string.Equals(step, subscriptionSession.CurrentStep, StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var savedStep in subscriptionSession.SavedSteps)
+                {
+                    if (!string.Equals(step, savedStep.Key, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    // The requested step exists in the saved steps.
+                    // Set the current step to the requested step, ensuring that the user is directed
+                    // to the next screen based on their navigation path, rather than where the session suggests they should be.
+                    // We use 'savedStep.Key' instead of 'step' to ensure the correct case-sensitive value is passed.
+                    subscriptionSession.CurrentStep = savedStep.Key;
+                }
             }
         }
+
+        subscriptionSession ??= await _subscriptionSessionStore.NewAsync(subscriptionContentItem);
 
         await _subscriptionHandlers.InvokeAsync(
             (handler, context) => handler.InitializingAsync(context), new SubscriptionFlowInitializingContext(subscriptionSession, subscriptionContentItem), _logger);
@@ -221,6 +231,8 @@ public sealed class SubscriptionsController : Controller
 
         if (_updateModelAccessor.ModelUpdater.ModelState.IsValid)
         {
+            var cookieManager = new SubscriptionCookieManager(HttpContext);
+            cookieManager.Append(contentItemId, subscriptionSession.SessionId);
             var now = _clock.UtcNow;
 
             subscriptionSession.ModifiedUtc = now;
@@ -236,7 +248,7 @@ public sealed class SubscriptionsController : Controller
 
                 return RedirectToAction(nameof(Display), new
                 {
-                    sessionId,
+                    sessionId = subscriptionSession.SessionId,
                     step = upcomingStep.Key,
                 });
             }
@@ -254,7 +266,7 @@ public sealed class SubscriptionsController : Controller
 
                         return RedirectToAction(nameof(Display), new
                         {
-                            sessionId,
+                            sessionId = subscriptionSession.SessionId,
                             step = sortedStep.Key,
                         });
                     }
@@ -280,9 +292,11 @@ public sealed class SubscriptionsController : Controller
                     await _subscriptionHandlers.InvokeAsync(
                         (handler, context) => handler.CompletedAsync(context), new SubscriptionFlowCompletedContext(flow), _logger);
 
+                    cookieManager.Remove(contentItemId);
+
                     return RedirectToAction(nameof(Confirmation), new
                     {
-                        sessionId,
+                        sessionId = subscriptionSession.SessionId,
                     });
                 }
                 catch (Exception ex)
@@ -295,11 +309,21 @@ public sealed class SubscriptionsController : Controller
                     await _notifier.ErrorAsync(H["Unable to process the subscription at this time. If the issue persists, please contact support."]);
                 }
             }
+
+            return View(new SubscriptionViewModel
+            {
+                ContentItemId = contentItemId,
+                SessionId = subscriptionSession.SessionId,
+                Step = flow.GetCurrentStep()?.Key,
+                Content = model,
+            });
         }
 
         return View(new SubscriptionViewModel
         {
-            SessionId = subscriptionSession.SessionId,
+            ContentItemId = contentItemId,
+            // At this point sessionId does not belong to a saved session. So we set it to null.
+            SessionId = null,
             Step = flow.GetCurrentStep()?.Key,
             Content = model,
         });

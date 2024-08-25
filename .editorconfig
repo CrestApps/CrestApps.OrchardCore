@@ -67,7 +67,7 @@ dotnet_diagnostic.IDE0060.severity                         = warning        # Us
 dotnet_diagnostic.IDE0051.severity                         = warning        # Private member is unused
 dotnet_diagnostic.IDE0052.severity                         = warning        # Private member can be removed as the value assigned to it is never read
 dotnet_diagnostic.IDE0065.severity                         = warning        # Using directives must be placed outside of a namespace declaration
-csharp_using_directive_placement             4             = outside_namespace
+csharp_using_directive_placement             4              = outside_namespace
 
 dotnet_diagnostic.IDE0100.severity                         = silent         # Use block body for constructor
 dotnet_diagnostic.IDE0200.severity                         = silent         # Lambda expression can be removed
@@ -80,11 +80,10 @@ dotnet_diagnostic.IDE0078.severity                         = silent         # Us
 
 dotnet_style_prefer_conditional_expression_over_assignment = silent   # Remove redundant equality, e.g. Disabled == false
 
-dotnet_diagnostic.CA2263.severity                          = warning         # Prefer generic overload when type is known
+dotnet_diagnostic.CA2263.severity                         = warning         # Prefer generic overload when type is known
 
 # Sort using and Import directives with System.* appearing first
 dotnet_sort_system_directives_first                        = true
-dotnet_usings_order                                        = alphabetical_system_first
 
 # Code-block preferences
 csharp_prefer_braces                                       = true

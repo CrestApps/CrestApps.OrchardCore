@@ -6,13 +6,13 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
 public sealed class StripePriceSyncHandler : FeatureEventHandler
 {
-    public override async Task EnabledAsync(IFeatureInfo feature)
+    public override Task EnabledAsync(IFeatureInfo feature)
     {
         if (feature.Id != SubscriptionConstants.Features.Stripe)
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        await StripePriceSyncService.SyncAllPricesInBackground();
+        return StripePriceSyncService.SyncAllPricesInBackground();
     }
 }
