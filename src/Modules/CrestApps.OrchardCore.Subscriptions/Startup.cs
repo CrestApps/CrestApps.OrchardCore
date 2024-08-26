@@ -219,3 +219,12 @@ public sealed class FeatureProfileTenantOnboardingStartup : StartupBase
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, FeatureProfileTenantOnboardingStepSubscriptionFlowDisplayDriver>();
     }
 }
+
+[Feature(SubscriptionConstants.Features.ReCaptcha)]
+public sealed class ReCaptchaStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IDisplayDriver<SubscriptionFlow>, ReCaptchaSubscriptionFlowDisplayDriver>();
+    }
+}

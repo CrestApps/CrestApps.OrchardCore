@@ -47,6 +47,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Name = "Subscriptions - reCaptcha",
+    Id = SubscriptionConstants.Features.ReCaptcha,
+    Description = "Provides reCaptcha to the subscription process.",
+    Category = "Subscriptions",
+    Dependencies =
+    [
+        SubscriptionConstants.Features.ModuleId,
+        "OrchardCore.ReCaptcha",
+    ]
+)]
+
+[assembly: Feature(
     Name = "Subscriptions - Tenant Onboarding",
     Id = SubscriptionConstants.Features.TenantOnboarding,
     Description = "Provides a way to onboard new tenants using subscriptions.",
@@ -56,7 +68,6 @@ using OrchardCore.Modules.Manifest;
     [
         SubscriptionConstants.Features.ModuleId,
         StripeConstants.Feature.ModuleId,
-
         // Tenants adds setup services.
         "OrchardCore.Tenants",
     ]

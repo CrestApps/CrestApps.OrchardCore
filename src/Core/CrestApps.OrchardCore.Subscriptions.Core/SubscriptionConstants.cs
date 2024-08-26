@@ -23,6 +23,8 @@ public static class SubscriptionConstants
     {
         public const string ModuleId = "CrestApps.OrchardCore.Subscriptions";
 
+        public const string ReCaptcha = "CrestApps.OrchardCore.Subscriptions.ReCaptcha";
+
         public const string TenantOnboarding = "CrestApps.OrchardCore.Subscriptions.TenantOnboarding";
 
         public const string Stripe = "CrestApps.OrchardCore.Subscriptions.Stripe";
