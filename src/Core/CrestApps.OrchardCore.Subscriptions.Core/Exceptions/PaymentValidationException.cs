@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.Subscriptions.Core.Exceptions;
+namespace CrestApps.OrchardCore.Subscriptions.Core.Exceptions;
 
 public class PaymentValidationException : Exception
 {
