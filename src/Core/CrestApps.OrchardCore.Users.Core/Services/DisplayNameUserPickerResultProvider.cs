@@ -9,7 +9,7 @@ using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Users.Core.Services;
 
-public class DisplayNameUserPickerResultProvider : IUserPickerResultProvider
+public sealed class DisplayNameUserPickerResultProvider : IUserPickerResultProvider
 {
     private readonly RoleManager<IRole> _roleManager;
     private readonly UserManager<IUser> _userManager;

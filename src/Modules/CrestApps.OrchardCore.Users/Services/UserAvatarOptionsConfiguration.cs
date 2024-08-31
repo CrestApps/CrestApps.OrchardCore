@@ -15,7 +15,9 @@ public sealed class UserAvatarOptionsConfiguration : IConfigureOptions<UserAvata
 
     public void Configure(UserAvatarOptions options)
     {
-        var settings = _siteService.GetSettingsAsync<UserAvatarOptions>().GetAwaiter().GetResult();
+        var settings = _siteService.GetSettingsAsync<UserAvatarOptions>()
+            .GetAwaiter()
+            .GetResult();
 
         options.Required = settings.Required;
         options.UseDefaultStyle = settings.UseDefaultStyle;

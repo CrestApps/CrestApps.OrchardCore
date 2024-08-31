@@ -8,7 +8,7 @@ using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Users.Indexes;
 
-public class UserFullNameIndexProvider : IndexProvider<User>
+public sealed class UserFullNameIndexProvider : IndexProvider<User>
 {
     private readonly ILookupNormalizer _lookupNormalizer;
 
