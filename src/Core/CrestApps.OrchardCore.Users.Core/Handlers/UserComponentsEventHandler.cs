@@ -4,7 +4,7 @@ using OrchardCore.Users.Handlers;
 
 namespace CrestApps.OrchardCore.Users.Core.Handlers;
 
-public class UserComponentsEventHandler : IUserEventHandler
+public class UserComponentsEventHandler : UserEventHandlerBase
 {
     private readonly IServiceProvider _serviceProvider;
 
@@ -15,29 +15,20 @@ public class UserComponentsEventHandler : IUserEventHandler
         _serviceProvider = serviceProvider;
     }
 
-    public Task CreatedAsync(UserCreateContext context)
+    public override Task CreatedAsync(UserCreateContext context)
         => RemoveTagAsync(context.User);
 
-    public Task CreatingAsync(UserCreateContext context)
-        => Task.CompletedTask;
-
-    public Task DeletedAsync(UserDeleteContext context)
+    public override Task DeletedAsync(UserDeleteContext context)
         => RemoveTagAsync(context.User);
 
-    public Task DeletingAsync(UserDeleteContext context)
-        => Task.CompletedTask;
-
-    public Task DisabledAsync(UserContext context)
+    public override Task DisabledAsync(UserContext context)
         => RemoveTagAsync(context.User);
 
-    public Task EnabledAsync(UserContext context)
+    public override Task EnabledAsync(UserContext context)
         => RemoveTagAsync(context.User);
 
-    public Task UpdatedAsync(UserUpdateContext context)
+    public override Task UpdatedAsync(UserUpdateContext context)
         => RemoveTagAsync(context.User);
-
-    public Task UpdatingAsync(UserUpdateContext context)
-        => Task.CompletedTask;
 
     private Task RemoveTagAsync(IUser user)
     {

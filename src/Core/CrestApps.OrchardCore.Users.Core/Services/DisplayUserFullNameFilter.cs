@@ -5,7 +5,7 @@ using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Users.Core.Services;
 
-public class DisplayUserFullNameFilter : ILiquidFilter
+public sealed class DisplayUserFullNameFilter : ILiquidFilter
 {
     private readonly IDisplayNameProvider _displayNameProvider;
 

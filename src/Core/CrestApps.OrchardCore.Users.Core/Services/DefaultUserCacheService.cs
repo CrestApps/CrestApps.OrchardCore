@@ -4,7 +4,7 @@ using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Users.Core.Services;
 
-public class DefaultUserCacheService : IUserCacheService
+public sealed class DefaultUserCacheService : IUserCacheService
 {
     private readonly Dictionary<string, User> _users = [];
 

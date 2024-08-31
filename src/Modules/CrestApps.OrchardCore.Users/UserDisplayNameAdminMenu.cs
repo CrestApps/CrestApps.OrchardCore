@@ -4,9 +4,9 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Users;
 
-public class UserDisplayNameAdminMenu : INavigationProvider
+public sealed class UserDisplayNameAdminMenu : INavigationProvider
 {
-    protected readonly IStringLocalizer S;
+    internal readonly IStringLocalizer S;
 
     public UserDisplayNameAdminMenu(IStringLocalizer<UserDisplayNameAdminMenu> stringLocalizer)
     {

@@ -5,7 +5,7 @@ using OrchardCore.ResourceManagement;
 
 namespace CrestApps.OrchardCore.Users.Filters;
 
-public class AvatarStylesFilter : IAsyncResultFilter
+public sealed class AvatarStylesFilter : IAsyncResultFilter
 {
     private readonly IResourceManager _resourceManager;
     private readonly UserAvatarOptions _avatarOptions;

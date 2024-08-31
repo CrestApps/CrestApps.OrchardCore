@@ -3,7 +3,7 @@ using OrchardCore.ResourceManagement;
 
 namespace CrestApps.OrchardCore.Users;
 
-public class AvatarResourceManagementOptionsConfiguration : IConfigureOptions<ResourceManagementOptions>
+public sealed class AvatarResourceManagementOptionsConfiguration : IConfigureOptions<ResourceManagementOptions>
 {
     private static readonly ResourceManifest _manifest;
 

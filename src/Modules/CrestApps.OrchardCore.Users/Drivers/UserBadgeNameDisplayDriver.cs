@@ -38,8 +38,7 @@ public sealed class UserBadgeNameDisplayDriver : DisplayDriver<UserBadgeContext>
         var results = new List<IDisplayResult>()
         {
             View("UserBadgeName", model)
-            .Location("Summary", "Header")
-            .Location("AdminSummary", "Header"),
+            .Location("Summary", "Header"),
 
             View("UserBadgeNameContentMetaIcon", model)
             .Location("AdminSummary", "Header:before"),

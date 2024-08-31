@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Users.Core;
 using CrestApps.OrchardCore.Users.Core.ViewModels;
 using CrestApps.OrchardCore.Users.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -115,7 +116,7 @@ public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<Display
 
             if (context.Updater.ModelState.IsValid)
             {
-                await _tagCache.RemoveTagAsync("user-display-name");
+                await _tagCache.RemoveTagAsync(UsersConstants.UserDisplayNameCacheTag);
             }
         }
 

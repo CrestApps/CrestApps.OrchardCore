@@ -13,7 +13,7 @@ using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Users.Core.Services;
 
-public class DisplayNameUsersAdminListFilterProvider : IUsersAdminListFilterProvider
+public sealed class DisplayNameUsersAdminListFilterProvider : IUsersAdminListFilterProvider
 {
     public const string DefaultTermName = "display-name";
 

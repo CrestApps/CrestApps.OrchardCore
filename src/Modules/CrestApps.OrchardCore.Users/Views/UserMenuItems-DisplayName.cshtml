@@ -1,5 +1,6 @@
-﻿@{
+@using CrestApps.OrchardCore.Users.Core
+@{
     var username = User.Identity.Name;
 }
 
-<shape type="UserProfileTitle" prop-authorName="@username" cache-id="user-menu-title-@username" cache-tag="user-display-name,username:@username" />
+<shape type="UserProfileTitle" prop-authorName="@username" cache-id="user-menu-title" cache-context="user" cache-tag="@(UsersConstants.UserDisplayNameCacheTag),@(UsersConstants.UserDisplayNameCacheTag):@username" />
