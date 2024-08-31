@@ -2,6 +2,8 @@ namespace CrestApps.OrchardCore.Users.Core;
 
 public class UsersConstants
 {
+    public const string UserDisplayNameCacheTag = "user-display-name";
+
     public class Feature
     {
         public const string Users = "CrestApps.OrchardCore.Users";

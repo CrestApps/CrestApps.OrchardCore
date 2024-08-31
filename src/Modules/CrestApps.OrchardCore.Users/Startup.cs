@@ -29,7 +29,6 @@ using OrchardCore.Navigation;
 using OrchardCore.Recipes.Services;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Settings;
 using OrchardCore.Users;
 using OrchardCore.Users.Handlers;
 using OrchardCore.Users.Models;
@@ -103,10 +102,10 @@ public sealed class DisplayNameStartup : StartupBase
         services.AddDataMigration<UserFullNameMigrations>();
         services.AddIndexProvider<UserFullNameIndexProvider>();
 
-        services.AddScoped<IPermissionProvider, UserDisplayNamePermissionsProvider>();
+        services.AddPermissionProvider<UserDisplayNamePermissionsProvider>();
 
-        services.AddScoped<IDisplayDriver<ISite>, DisplayNameSettingsDisplayDriver>();
-        services.AddScoped<INavigationProvider, UserDisplayNameAdminMenu>();
+        services.AddSiteDisplayDriver<DisplayNameSettingsDisplayDriver>();
+        services.AddNavigationProvider<UserDisplayNameAdminMenu>();
 
         services.AddContentField<UserPickerField>()
             .RemoveDisplayDriver<UserPickerFieldDisplayDriver>()
@@ -158,10 +157,10 @@ public sealed class AvatarStartup : StartupBase
         {
             options.Filters.Add<AvatarStylesFilter>();
         });
-        services.AddScoped<IPermissionProvider, AvatarPermissionsProvider>();
-        services.AddScoped<INavigationProvider, AvatarAdminMenu>();
+        services.AddPermissionProvider<AvatarPermissionsProvider>();
+        services.AddNavigationProvider<AvatarAdminMenu>();
         services.AddTransient<IConfigureOptions<UserAvatarOptions>, UserAvatarOptionsConfiguration>();
-        services.AddScoped<IDisplayDriver<ISite>, UserAvatarOptionsDisplayDriver>();
+        services.AddSiteDisplayDriver<UserAvatarOptionsDisplayDriver>();
         services.AddScoped<IDisplayDriver<UserBadgeContext>, UserBadgeAvatarDisplayDriver>();
         services.AddScoped<IShapeTableProvider, AvatarUserShapeTableProvider>();
     }
