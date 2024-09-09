@@ -3,7 +3,7 @@ using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Subscriptions.Indexes;
 
-public class SubscriptionSessionIndexProvider : IndexProvider<SubscriptionSession>
+public sealed class SubscriptionSessionIndexProvider : IndexProvider<SubscriptionSession>
 {
     public override void Describe(DescribeContext<SubscriptionSession> context)
     {

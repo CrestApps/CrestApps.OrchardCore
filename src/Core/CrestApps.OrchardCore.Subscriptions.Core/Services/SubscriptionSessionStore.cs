@@ -35,12 +35,11 @@ public sealed class SubscriptionSessionStore : ISubscriptionSessionStore
     }
 
     public Task<SubscriptionSession> GetAsync(string sessionId)
-        => _session.Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.SessionId == sessionId).FirstOrDefaultAsync();
+        => _session.Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.SessionId == sessionId)
+        .FirstOrDefaultAsync();
 
     public async Task<SubscriptionSession> GetAsync(string sessionId, SubscriptionSessionStatus status)
     {
-        SubscriptionSession subscriptionSession = null;
-
         var statusValue = status.ToString();
 
         var query = _session.Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.SessionId == sessionId && x.Status == statusValue);
@@ -49,60 +48,58 @@ public sealed class SubscriptionSessionStore : ISubscriptionSessionStore
         {
             var ownerId = CurrentUserId();
 
-            subscriptionSession = await query.Where(x => x.OwnerId == ownerId).FirstOrDefaultAsync();
+            return await query.Where(x => x.OwnerId == ownerId).FirstOrDefaultAsync();
         }
-        else
+
+        var subscriptionSession = await query.Where(x => x.OwnerId == null).FirstOrDefaultAsync();
+
+        // Don't trust the user, check for additional info.
+        var ipAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
+
+        if (string.IsNullOrWhiteSpace(subscriptionSession?.IPAddress) ||
+            subscriptionSession.IPAddress != ipAddress ||
+            string.IsNullOrWhiteSpace(subscriptionSession?.AgentInfo) ||
+            subscriptionSession.AgentInfo != _contextAccessor.HttpContext.Request.Headers.UserAgent)
         {
-            subscriptionSession = await query.Where(x => x.OwnerId == null).FirstOrDefaultAsync();
-
-            // Don't trust the user, check for additional info.
-            var ipAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
-
-            if (string.IsNullOrWhiteSpace(subscriptionSession?.IPAddress) ||
-                subscriptionSession.IPAddress != ipAddress ||
-                string.IsNullOrWhiteSpace(subscriptionSession?.AgentInfo) ||
-                subscriptionSession.AgentInfo != _contextAccessor.HttpContext.Request.Headers.UserAgent)
-            {
-                // IMPORTANT: the saved session possibly belongs to someone else.
-                // Do not use it.
-                subscriptionSession = null;
-            }
+            // IMPORTANT: The saved session may belong to another user. Do not it.
+            return null;
         }
 
         return subscriptionSession;
-    }
-
-    public async Task<SubscriptionSession> GetOrNewAsync(ContentItem subscriptionContentItem)
-    {
-        if (_contextAccessor.HttpContext.User.Identity.IsAuthenticated)
-        {
-            var ownerId = CurrentUserId();
-            var status = nameof(SubscriptionSessionStatus.Pending);
-            var modifiedUtc = _clock.UtcNow.AddDays(-1);
-
-            var subscriptionSession = await _session
-                .Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.ContentItemVersionId == subscriptionContentItem.ContentItemVersionId && x.OwnerId == ownerId && x.Status == status && x.ModifiedUtc > modifiedUtc)
-                .OrderByDescending(x => x.ModifiedUtc)
-                .FirstOrDefaultAsync();
-
-            if (subscriptionSession != null)
-            {
-                return subscriptionSession;
-            }
-        }
-
-        return await NewAsync(subscriptionContentItem);
     }
 
     public async Task<SubscriptionSession> NewAsync(ContentItem subscriptionContentItem)
     {
         ArgumentNullException.ThrowIfNull(subscriptionContentItem);
 
+        var subscriptionSession = await GetNewSessionAsync(subscriptionContentItem);
+
+        var activatingContext = new SubscriptionFlowActivatingContext(subscriptionSession, subscriptionContentItem);
+
+        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.ActivatingAsync(context), activatingContext, _logger);
+
+        var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
+
+        var activatedContext = new SubscriptionFlowActivatedContext(flow);
+
+        subscriptionSession.CurrentStep = flow.GetFirstStep()?.Key;
+
+        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.ActivatedAsync(context), activatedContext, _logger);
+
+        return subscriptionSession;
+    }
+
+    public Task SaveAsync(SubscriptionSession session)
+        => _session.SaveAsync(session);
+
+    private async Task<SubscriptionSession> GetNewSessionAsync(ContentItem subscriptionContentItem)
+    {
         var now = _clock.UtcNow;
 
         var subscriptionSession = new SubscriptionSession()
         {
             SessionId = IdGenerator.GenerateId(),
+            ContentType = subscriptionContentItem.ContentType,
             ContentItemId = subscriptionContentItem.ContentItemId,
             ContentItemVersionId = subscriptionContentItem.ContentItemVersionId,
             CreatedUtc = now,
@@ -120,22 +117,8 @@ public sealed class SubscriptionSessionStore : ISubscriptionSessionStore
             subscriptionSession.AgentInfo = _contextAccessor.HttpContext.Request.Headers.UserAgent;
         }
 
-        var activatingContext = new SubscriptionFlowActivatingContext(subscriptionSession, subscriptionContentItem);
-
-        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.ActivatingAsync(context), activatingContext, _logger);
-
-        var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
-        var activatedContext = new SubscriptionFlowActivatedContext(flow);
-
-        subscriptionSession.CurrentStep = flow.GetFirstStep()?.Key;
-
-        await _subscriptionHandlers.InvokeAsync((handler, context) => handler.ActivatedAsync(context), activatedContext, _logger);
-
         return subscriptionSession;
     }
-
-    public Task SaveAsync(SubscriptionSession session)
-        => _session.SaveAsync(session);
 
     private string CurrentUserId()
         => _contextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);

@@ -170,9 +170,11 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
                 var subscriptionPaymentInfo = await _subscriptionPaymentSession.GetSubscriptionPaymentInfoAsync(context.Flow.Session.SessionId)
                     ?? throw new DataNotFoundException("Subscription was not created by the payment provider.");
 
-                if (invoice.FirstSubscriptionPaymentAmount > 0 && invoice.FirstSubscriptionPaymentAmount != subscriptionPaymentInfo.Amount)
+                var totalSubscriptionPayments = subscriptionPaymentInfo.Payments.Sum(x => x.Value.Amount ?? 0);
+
+                if (invoice.FirstSubscriptionPaymentAmount > 0 && invoice.FirstSubscriptionPaymentAmount != totalSubscriptionPayments)
                 {
-                    throw new PaymentValidationException("The scheduled plan id did not match the scheduled plan id at the payment provider.");
+                    throw new PaymentValidationException($"The subscriptions payments received '{totalSubscriptionPayments}' did not match the expected amount of '{invoice.FirstSubscriptionPaymentAmount}'.");
                 }
 
                 // If we got here, we received the confirmation.

@@ -88,6 +88,7 @@ public static class CreateWebhookEndpoint
                         Currency = invoice.Currency,
                         TransactionId = invoice.Id,
                         Mode = invoice.Livemode ? GatewayMode.Live : GatewayMode.Testing,
+                        Gateway = StripeConstants.ProcessorKey,
                     };
 
                     successContext.Data["billing_reason"] = invoice.BillingReason;
@@ -99,7 +100,7 @@ public static class CreateWebhookEndpoint
 
                     successContext.Subscription = new SubscriptionPaymentInfo()
                     {
-                        SubscriptionId = invoice.Subscription?.Id,
+                        SubscriptionId = invoice.SubscriptionId ?? invoice.Subscription?.Id,
                     };
 
                     if (invoice.SubscriptionDetails != null)
@@ -142,6 +143,7 @@ public static class CreateWebhookEndpoint
                     {
                         createdContext.SubscriptionId = subscription.Id;
                         createdContext.Mode = subscription.Livemode ? GatewayMode.Live : GatewayMode.Testing;
+                        createdContext.Gateway = StripeConstants.ProcessorKey;
                         createdContext.PlanId = subscription.Items.Data[0].Plan.Id;
                         if (subscription.Items.Data[0].Plan.Amount.HasValue)
                         {
@@ -165,6 +167,7 @@ public static class CreateWebhookEndpoint
                     var succeededContext = new PaymentIntentSucceededContext()
                     {
                         Mode = paymentIntent.Livemode ? GatewayMode.Live : GatewayMode.Testing,
+                        Gateway = StripeConstants.ProcessorKey,
                         Currency = paymentIntent.Currency,
                         AmountPaid = Math.Round(paymentIntent.Amount / 100d, 2),
                     };

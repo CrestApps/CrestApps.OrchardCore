@@ -41,20 +41,14 @@ public static class CreateSubscriptionEndpoint
 
         var response = await stripeSubscriptionService.CreateAsync(model);
 
-        if (response.Status == "requires_action")
+        return TypedResults.Ok(new List<object>
         {
-            return TypedResults.Ok(new
+            new
             {
                 id = response.Id,
-                status = "requires_action",
-                clientSecret = response.ClientSecret
-            });
-        }
-
-        return TypedResults.Ok(new
-        {
-            id = response.Id,
-            status = response.Status,
+                status = response.Status,
+                clientSecret = response.Status == "requires_action" ? response.ClientSecret : null
+            }
         });
     }
 

@@ -51,9 +51,7 @@ public static class CreatePaymentIntentEndpoint
             return TypedResults.NotFound();
         }
 
-        var invoice = session.As<Invoice>();
-
-        if (invoice == null)
+        if (!session.TryGet<Invoice>(out var invoice))
         {
             return TypedResults.NotFound();
         }

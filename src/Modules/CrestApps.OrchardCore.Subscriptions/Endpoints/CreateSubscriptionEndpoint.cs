@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
 
@@ -27,6 +29,7 @@ public static class CreateSubscriptionEndpoint
 
     private static async Task<IResult> HandleAsync(
         [FromBody] CreateSessionSubscriptionPayment model,
+        IClock clock,
         ISubscriptionSessionStore subscriptionSessionStore,
         IStripeSubscriptionService stripeSubscriptionService,
         IStripePriceService stripePriceService,
@@ -53,9 +56,7 @@ public static class CreateSubscriptionEndpoint
             return TypedResults.NotFound();
         }
 
-        var invoice = session.As<Invoice>();
-
-        if (invoice == null)
+        if (!session.TryGet<Invoice>(out var invoice))
         {
             return TypedResults.NotFound();
         }
@@ -72,66 +73,87 @@ public static class CreateSubscriptionEndpoint
             });
         }
 
-        var request = new CreateSubscriptionRequest()
+        // Group line items by subscription duration, ensuring that each subscription has a single, unified expiration date.
+        var subscriptionGroups = invoice.GetSubscriptionGroups();
+
+        var now = clock.UtcNow;
+        var results = new List<object>();
+        stripeMetadata.Subscriptions ??= [];
+
+        foreach (var subscription in subscriptionGroups)
         {
-            PaymentMethodId = model.PaymentMethodId,
-            CustomerId = model.CustomerId,
-            LineItems = [],
-            Metadata = model.Metadata ?? [],
-        };
-
-        foreach (var lineItem in invoice.LineItems)
-        {
-            if (lineItem.Subscription == null)
+            var request = new CreateSubscriptionRequest
             {
-                // At this point, this isn't a subscription line item. Ignore it.
-                continue;
-            }
+                PaymentMethodId = model.PaymentMethodId,
+                CustomerId = model.CustomerId,
+                LineItems = [],
+                Metadata = model.Metadata ?? [],
+                BillingCycles = invoice.BillingCycles,
+            };
 
-            var price = await stripePriceService.GetAsync(lineItem.Id);
+            request.Metadata["sessionId"] = model.SessionId;
 
-            if (price == null)
+            foreach (var lineItem in subscription.Value)
             {
-                continue;
-            }
+                var price = await stripePriceService.GetAsync(lineItem.Id);
 
-            request.LineItems.Add(new SubscriptionLineItem()
-            {
-                Quantity = lineItem.Quantity,
-                PriceId = price.Id,
-                Metadata = new Dictionary<string, string>()
+                if (price == null)
                 {
-                    { nameof(ContentItem.ContentItemVersionId), lineItem.Id },
-                },
-            });
+                    continue;
+                }
+
+                request.LineItems.Add(new SubscriptionLineItem()
+                {
+                    Quantity = lineItem.Quantity,
+                    PriceId = price.Id,
+                    Metadata = new Dictionary<string, string>()
+                    {
+                        { nameof(ContentItem.ContentItemVersionId), lineItem.Id },
+                    },
+                });
+
+                var result = await stripeSubscriptionService.CreateAsync(request);
+
+                results.Add(new
+                {
+                    id = result.Id,
+                    status = result.Status,
+                    clientSecret = result.Status == "requires_action" ? result.ClientSecret : null,
+                });
+
+                stripeMetadata.Subscriptions[result.Id] = new StripeSubscriptionMetadata()
+                {
+                    SubscriptionId = result.Id,
+                    CreatedAt = now,
+                    ExpiresAt = subscription.Key.Type switch
+                    {
+                        DurationType.Day => now.AddDays(subscription.Key.Duration),
+                        DurationType.Week => now.AddDays(subscription.Key.Duration * 7),
+                        DurationType.Month => now.AddMonths(subscription.Key.Duration),
+                        DurationType.Year => now.AddYears(subscription.Key.Duration),
+                        _ => null
+                    },
+                };
+            }
         }
 
-        request.BillingCycles = invoice.BillingCycles;
-        request.Metadata["sessionId"] = model.SessionId;
-
-        var result = await stripeSubscriptionService.CreateAsync(request);
-
-        stripeMetadata.SubscriptionId = result.Id;
-
         session.Put(stripeMetadata);
+        session.Put(new SubscriptionCollectionMetadata()
+        {
+            Subscriptions = stripeMetadata.Subscriptions.Values.Select(x => new SubscriptionMetadata()
+            {
+                ExpiresAt = x.ExpiresAt,
+                StartedAt = x.CreatedAt,
+                SubscriptionId = x.SubscriptionId,
+                Gateway = StripeConstants.ProcessorKey,
+                GatewayMode = stripeOptions.Value.IsLive ? Payments.GatewayMode.Live : Payments.GatewayMode.Testing,
+                GatewayCustomerId = model.CustomerId,
+            }).ToArray(),
+        });
 
         await subscriptionSessionStore.SaveAsync(session);
 
-        if (result.Status == "requires_action")
-        {
-            return TypedResults.Ok(new
-            {
-                id = result.Id,
-                status = "requires_action",
-                clientSecret = result.ClientSecret
-            });
-        }
-
-        return TypedResults.Ok(new
-        {
-            id = result.Id,
-            status = result.Status,
-        });
+        return TypedResults.Ok(results);
     }
 
     private static bool IsValid(CreateSessionSubscriptionPayment model)

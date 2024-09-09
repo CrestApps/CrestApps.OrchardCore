@@ -67,17 +67,42 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
 
         var stripeMetadata = session.As<StripeMetadata>();
 
+        var subscriptionId = context.Subscription?.SubscriptionId ?? string.Empty;
+
+        var newValue = new SubscriptionPaymentsMetadata
+        {
+            Payments = [],
+        };
+
+        newValue.Payments[subscriptionId] = new SubscriptionPaymentMetadata
+        {
+            Currency = context.Currency,
+            Amount = context.AmountPaid,
+            GatewayMode = context.Mode,
+            GatewayId = context.Gateway,
+        };
+
+        var updatedValue = await _paymentSession.AddOrUpdateAsync(sessionId.ToString(), newValue, (existingValue) =>
+        {
+            existingValue.Payments.TryGetValue(subscriptionId, out var payment);
+
+            existingValue.Payments[subscriptionId] = new SubscriptionPaymentMetadata
+            {
+                Amount = (payment?.Amount ?? 0) + context.AmountPaid,
+            };
+        });
+
         if (string.IsNullOrEmpty(stripeMetadata.PaymentIntentId))
         {
             return;
         }
 
-        await _paymentSession.SetAsync(sessionId.ToString(), new SubscriptionPaymentMetadata
+        if (stripeMetadata.Subscriptions == null ||
+            updatedValue.Payments.Keys.Count != stripeMetadata.Subscriptions.Count ||
+            updatedValue.Payments.Keys.Count != updatedValue.Payments.Keys.Union(stripeMetadata.Subscriptions.Keys).Count())
         {
-            Currency = context.Currency,
-            Amount = context.AmountPaid,
-            Mode = context.Mode,
-        });
+            return;
+        }
 
         // When this succeed, the webhook will trigger the 'PaymentIntentSucceededAsync' event.
         await _stripePaymentService.ConfirmAsync(new ConfirmPaymentIntentRequest

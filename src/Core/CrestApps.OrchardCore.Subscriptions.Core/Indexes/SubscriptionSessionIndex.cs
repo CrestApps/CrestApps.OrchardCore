@@ -2,7 +2,7 @@ using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Indexes;
 
-public class SubscriptionSessionIndex : MapIndex
+public sealed class SubscriptionSessionIndex : MapIndex
 {
     public string SessionId { get; set; }
 

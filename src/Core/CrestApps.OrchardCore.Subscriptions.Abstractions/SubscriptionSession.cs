@@ -4,9 +4,11 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Subscriptions;
 
-public class SubscriptionSession : Entity, ISubscriptionFlowSession
+public sealed class SubscriptionSession : Entity, ISubscriptionFlowSession
 {
     public string SessionId { get; set; }
+
+    public string ContentType { get; set; }
 
     public string ContentItemId { get; set; }
 
@@ -35,12 +37,4 @@ public class SubscriptionSession : Entity, ISubscriptionFlowSession
     public string IPAddress { get; set; }
 
     public string AgentInfo { get; set; }
-}
-
-public enum SubscriptionSessionStatus
-{
-    Pending,
-    Canceled,
-    Suspended,
-    Completed,
 }

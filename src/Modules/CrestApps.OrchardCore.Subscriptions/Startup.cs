@@ -33,7 +33,6 @@ using OrchardCore.Mvc.Core.Utilities;
 using OrchardCore.Navigation;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Subscriptions;
 
@@ -77,10 +76,10 @@ public sealed class Startup : StartupBase
             options.Purposes.Add(SubscriptionPaymentSessionExtensions.UserRegistrationPurpose);
         });
 
-        services.AddScoped<IDisplayDriver<ISite>, SubscriptionSettingsDisplayDriver>();
+        services.AddSiteDisplayDriver<SubscriptionSettingsDisplayDriver>();
         services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
-        services.AddScoped<INavigationProvider, SubscriptionsAdminMenu>();
-
+        services.AddNavigationProvider<SubscriptionsAdminMenu>();
+        services.AddIndexProvider<SubscriptionIndexProvider>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, SubscriptionResourceManagementOptionsConfiguration>();
     }
 
@@ -110,7 +109,7 @@ public sealed class Startup : StartupBase
         routes.MapAreaControllerRoute(
             name: "SubscriptionSignupStep",
             areaName: SubscriptionConstants.Features.ModuleId,
-            pattern: "Subscription/{sessionId}/Signup/Step/{step?}",
+            pattern: "Subscription/{sessionId}/Signup/Step",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Display) }
         );
     }
@@ -121,7 +120,7 @@ public sealed class RolesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IDisplayDriver<ISite>, SubscriptionRoleSettingsDisplayDriver>();
+        services.AddSiteDisplayDriver<SubscriptionRoleSettingsDisplayDriver>();
     }
 }
 
@@ -144,7 +143,7 @@ public sealed class StripeStartup : StartupBase
         services.AddScoped<IContentHandler, SubscriptionsContentHandler>();
         services.AddScoped<ISubscriptionHandler, StripeSubscriptionHandler>();
         services.AddTransient<IPostConfigureOptions<PaymentMethodOptions>, DefaultPaymentMethodConfigurations>();
-        services.AddScoped<IDisplayDriver<ISite>, CurrencySubscriptionSettingsDisplayDriver>();
+        services.AddSiteDisplayDriver<CurrencySubscriptionSettingsDisplayDriver>();
         services.Configure<PaymentMethodOptions>(options =>
         {
             options.PaymentMethods[StripeConstants.ProcessorKey] = new PaymentMethod
@@ -203,7 +202,7 @@ public sealed class TenantOnboardingStartup : StartupBase
         services.AddDataMigration<TenantOnboardingMigrations>();
         services.AddScoped<ISubscriptionHandler, TenantOnboardingSubscriptionHandler>();
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, TenantOnboardingStepSubscriptionFlowDisplayDriver>();
-        services.AddScoped<IDisplayDriver<ISite>, SubscriptionOnboardingSettingsDisplayDriver>();
+        services.AddSiteDisplayDriver<SubscriptionOnboardingSettingsDisplayDriver>();
     }
 }
 
@@ -217,6 +216,7 @@ public sealed class FeatureProfileTenantOnboardingStartup : StartupBase
             .UseDisplayDriver<FeatureProfilesTenantOnboardingPartDisplayDriver>();
 
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, FeatureProfileTenantOnboardingStepSubscriptionFlowDisplayDriver>();
+        services.AddIndexProvider<SubscriptionTenantIndexProvider>();
     }
 }
 

@@ -23,7 +23,7 @@ public class Startup : StartupBase
         services.AddScoped<IDisplayDriver<ISite>, StripeSettingsDisplayDriver>();
         services.AddTransient<IConfigureOptions<StripeOptions>, StripeOptionsConfiguration>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
-        services.AddScoped<INavigationProvider, AdminMenu>();
+        services.AddNavigationProvider<AdminMenu>();
         services.AddScoped<IPermissionProvider, StripePermissionsProvider>();
 
         services.AddScoped<IStripeSubscriptionService, StripeSubscriptionService>();
