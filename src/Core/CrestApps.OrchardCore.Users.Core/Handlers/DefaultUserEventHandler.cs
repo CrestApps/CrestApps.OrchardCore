@@ -4,7 +4,7 @@ using OrchardCore.Users.Handlers;
 
 namespace CrestApps.OrchardCore.Users.Core.Handlers;
 
-public class DefaultUserEventHandler : UserEventHandlerBase
+public sealed class DefaultUserEventHandler : UserEventHandlerBase
 {
     private readonly ITagCache _tagCache;
 
@@ -29,5 +29,5 @@ public class DefaultUserEventHandler : UserEventHandlerBase
         => RemoveTagAsync(context.User);
 
     private Task RemoveTagAsync(IUser user)
-        => _tagCache.RemoveTagAsync($"username:{user.UserName}");
+        => _tagCache.RemoveTagAsync($"{UsersConstants.UserDisplayNameCacheTag}:{user.UserName}");
 }

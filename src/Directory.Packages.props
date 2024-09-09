@@ -1,10 +1,16 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <OrchardCoreVersion>2.0.0-preview-18325</OrchardCoreVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <!-- Special case - this property is used by a DotNetCliToolReference -->
     <DotNetXunitVersion>2.3.0</DotNetXunitVersion>
     <OrchardCoreVersion>2.0.0-preview-18319</OrchardCoreVersion>
   </PropertyGroup>
+
   <ItemGroup>
     <!-- Miscellaneous Packages-->
     <PackageVersion Include="Stripe.net" Version="45.6.0 " />

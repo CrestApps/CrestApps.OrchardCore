@@ -2,7 +2,7 @@ using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Users.Core.Indexes;
 
-public class UserFullNameIndex : MapIndex
+public sealed class UserFullNameIndex : MapIndex
 {
     public string FirstName { get; set; }
 

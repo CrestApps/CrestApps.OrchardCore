@@ -1,4 +1,5 @@
 @using CrestApps.OrchardCore.Users
+@using CrestApps.OrchardCore.Users.Core
 @using OrchardCore.ContentManagement
 @using System.Globalization
 @using OrchardCore.ContentManagement.Display.ViewModels
@@ -21,5 +22,5 @@
 }
 @if (!string.IsNullOrEmpty(contentItem.Author))
 {
-    <shape Type="ContentsMeta_SummaryAdmin_Author" prop-authorName="@(contentItem.Author)" cache-id="content-author-@(contentItem.Author)" cache-tag="user-display-name,username:@(contentItem.Author)" />
+    <shape Type="ContentsMeta_SummaryAdmin_Author" prop-authorName="@(contentItem.Author)" cache-id="content-author" cache-context="user" cache-tag="@(UsersConstants.UserDisplayNameCacheTag),@(UsersConstants.UserDisplayNameCacheTag):@contentItem.Author" />
 }

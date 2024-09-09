@@ -12,7 +12,7 @@ using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Users.Core.Services;
 
-public class DisplayNameProvider : IDisplayNameProvider
+public sealed class DisplayNameProvider : IDisplayNameProvider
 {
     private readonly ISiteService _siteService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;

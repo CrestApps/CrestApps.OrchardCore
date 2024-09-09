@@ -29,7 +29,6 @@ using OrchardCore.Navigation;
 using OrchardCore.Recipes.Services;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Settings;
 using OrchardCore.Users;
 using OrchardCore.Users.Handlers;
 using OrchardCore.Users.Models;
@@ -103,7 +102,7 @@ public sealed class DisplayNameStartup : StartupBase
         services.AddDataMigration<UserFullNameMigrations>();
         services.AddIndexProvider<UserFullNameIndexProvider>();
 
-        services.AddScoped<IPermissionProvider, UserDisplayNamePermissionsProvider>();
+        services.AddPermissionProvider<UserDisplayNamePermissionsProvider>();
 
         services.AddSiteDisplayDriver<DisplayNameSettingsDisplayDriver>();
         services.AddNavigationProvider<UserDisplayNameAdminMenu>();
@@ -158,7 +157,7 @@ public sealed class AvatarStartup : StartupBase
         {
             options.Filters.Add<AvatarStylesFilter>();
         });
-        services.AddScoped<IPermissionProvider, AvatarPermissionsProvider>();
+        services.AddPermissionProvider<AvatarPermissionsProvider>();
         services.AddNavigationProvider<AvatarAdminMenu>();
         services.AddTransient<IConfigureOptions<UserAvatarOptions>, UserAvatarOptionsConfiguration>();
         services.AddSiteDisplayDriver<UserAvatarOptionsDisplayDriver>();
