@@ -11,8 +11,4 @@
     <PackageTags>$(PackageTags) CrestApps Support</PackageTags>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="C:\Code\CrestApps\CrestApps.OrchardCore\src\/CrestAppsLogo.png" />
-  </ItemGroup>
-
 </Project>
