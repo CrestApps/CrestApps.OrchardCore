@@ -13,8 +13,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="CrestAppsLogo.png" />
-    <None Include="CrestAppsLogo.png" Pack="true" PackagePath=""/>
+    <None Include="$(MSBuildThisFileDirectory)/CrestAppsLogo.png">
+      <Pack>True</Pack>
+      <PackagePath>CrestAppsLogo.png</PackagePath>
+    </None>
   </ItemGroup>
 
   <PropertyGroup>

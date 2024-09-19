@@ -16,6 +16,9 @@
   <ItemGroup>
     <Watch Include="**\*.cs" Exclude="Recipes\**;Assets\**;node_modules\**\*;**\*.js.map;obj\**\*;bin\**\*" />
   </ItemGroup>
+  <ItemGroup>
+    <None Remove="C:\Code\CrestApps\CrestApps.OrchardCore\src\/CrestAppsLogo.png" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Application.Cms.Core.Targets" />
