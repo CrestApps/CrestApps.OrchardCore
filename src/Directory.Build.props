@@ -13,12 +13,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="CrestAppsLogo.png" />
-    <None Include="CrestAppsLogo.png" Pack="true" PackagePath=""/>
+    <None Include="$(MSBuildThisFileDirectory)/CrestAppsLogo.png">
+      <Pack>True</Pack>
+      <PackagePath>CrestAppsLogo.png</PackagePath>
+    </None>
   </ItemGroup>
 
   <PropertyGroup>
-    <VersionPrefix>2.0.0</VersionPrefix>
+    <VersionPrefix>1.1.0</VersionPrefix>
     <VersionSuffix>preview</VersionSuffix>
     <VersionSuffix Condition="'$(VersionSuffix)' != '' AND '$(BuildNumber)' != ''">$(VersionSuffix)-$(BuildNumber)</VersionSuffix>
     <InformationalVersion></InformationalVersion>
