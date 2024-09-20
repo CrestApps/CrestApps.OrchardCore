@@ -6,7 +6,7 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Stripe;
 
-public sealed class AdminMenu : INavigationProvider
+public sealed class AdminMenu : AdminNavigationProvider
 {
     private static readonly RouteValueDictionary _routeValues = new()
     {
@@ -21,13 +21,8 @@ public sealed class AdminMenu : INavigationProvider
         S = localizer;
     }
 
-    public Task BuildNavigationAsync(string name, NavigationBuilder builder)
+    protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        if (!NavigationHelper.IsAdminMenu(name))
-        {
-            return Task.CompletedTask;
-        }
-
         builder
             .Add(S["Configuration"], configuration => configuration
                 .Add(S["Settings"], settings => settings
@@ -45,6 +40,6 @@ public sealed class AdminMenu : INavigationProvider
                 )
             );
 
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 }

@@ -6,7 +6,7 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Subscriptions.Services;
 
-public sealed class SubscriptionsAdminMenu : INavigationProvider
+public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
 {
     private static readonly RouteValueDictionary _routeValues = new()
     {
@@ -21,13 +21,8 @@ public sealed class SubscriptionsAdminMenu : INavigationProvider
         S = localizer;
     }
 
-    public Task BuildNavigationAsync(string name, NavigationBuilder builder)
+    protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        if (!NavigationHelper.IsAdminMenu(name))
-        {
-            return Task.CompletedTask;
-        }
-
         builder
             .Add(S["Configuration"], configuration => configuration
                 .Add(S["Settings"], settings => settings
@@ -41,6 +36,6 @@ public sealed class SubscriptionsAdminMenu : INavigationProvider
                 )
             );
 
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 }
