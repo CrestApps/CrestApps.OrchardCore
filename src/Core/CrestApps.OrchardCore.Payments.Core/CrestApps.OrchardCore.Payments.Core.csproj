@@ -1,8 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Payments Core</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Core project for payments services.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Payments Core</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

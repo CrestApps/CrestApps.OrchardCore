@@ -1,7 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Stripe Core</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Core project for Stripe services.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Stripe Core</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

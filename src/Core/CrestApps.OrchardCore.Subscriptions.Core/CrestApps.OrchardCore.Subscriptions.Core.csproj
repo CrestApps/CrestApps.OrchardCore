@@ -1,5 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Subscriptions Core</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Core project for subscriptions services.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Subscriptions Core</PackageTags>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />

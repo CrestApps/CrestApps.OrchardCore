@@ -1,6 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Stripe</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Module project for Stripe payment provider.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Stripe</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
   </PropertyGroup>
 

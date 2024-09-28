@@ -1,3 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Products Core</Title>
+    <Description>
+      $(OCCMSDescription)
 
+      Core project for products services.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Products Core</PackageTags>
+  </PropertyGroup>
 </Project>

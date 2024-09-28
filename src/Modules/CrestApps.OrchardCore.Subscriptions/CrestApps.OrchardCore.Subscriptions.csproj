@@ -1,6 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Subscriptions</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Module project for subscriptions.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Subscriptions</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
   </PropertyGroup>
 

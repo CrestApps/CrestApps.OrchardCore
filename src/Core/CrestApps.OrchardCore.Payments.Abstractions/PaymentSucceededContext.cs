@@ -11,5 +11,4 @@ public sealed class PaymentSucceededContext : PaymentEventContextBase
     public SubscriptionPaymentInfo Subscription { get; set; }
 
     public PaymentReason Reason { get; set; }
-
 }
