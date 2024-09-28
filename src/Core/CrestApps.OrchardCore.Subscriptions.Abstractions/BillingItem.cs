@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.Subscriptions;
+namespace CrestApps.OrchardCore.Subscriptions;
 
 public class BillingItem
 {
