@@ -6,7 +6,7 @@ using OrchardCore.DisplayManagement.Notify;
 
 namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
-[Admin]
+[Admin("stripe-sync/{action}")]
 public sealed class StripeSyncController : Controller
 {
     private readonly INotifier _notifier;

@@ -136,7 +136,7 @@ public static class CreateSetupIntentEndpoint
             clientSecret = result.ClientSecret,
             customerId = customerResult.CustomerId,
             status = result.Status,
-            processInitialPayment = invoice.DueNow > GetMinimumAllowed(invoice),
+            processInitialPayment = (invoice.InitialPaymentAmount ?? 0) > GetMinimumAllowed(invoice.Currency),
         });
     }
 
@@ -149,9 +149,9 @@ public static class CreateSetupIntentEndpoint
         customerRequest.Metadata["userId"] = user.UserId;
     }
 
-    private static double GetMinimumAllowed(Invoice invoice)
+    private static double GetMinimumAllowed(string currency)
     {
-        if (StripeLimits.TryGetStripePaymentLimit(invoice.Currency, out var limits))
+        if (StripeLimits.TryGetStripePaymentLimit(currency, out var limits))
         {
             return limits?.Minimum ?? 0;
         }

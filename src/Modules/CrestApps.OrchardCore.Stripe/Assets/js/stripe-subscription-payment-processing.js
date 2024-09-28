@@ -50,8 +50,7 @@ stripePaymentProcessing = function () {
                         color: styles.color || 'black',
                         fontSize: styles['font-size'] || '16px',
                         fontFamily: styles['font-family'] || 'Arial, sans-serif',
-                        lineHeight: styles['line-height'] || '1.4',
-                        border: `${styles['border-width'] || '1px'} ${styles['border-style'] || 'solid'} ${styles['border-color'] || 'black'}`
+                        lineHeight: styles['line-height'] || '1.4'
                     },
                 };
             };
@@ -186,9 +185,7 @@ stripePaymentProcessing = function () {
                     }
 
                     // Dispatch the form submit event after all subscriptions are processed
-                    const submitEvent = new Event("submit", { bubbles: true, cancelable: true });
-                    config.formElement.dispatchEvent(submitEvent);
-
+                    config.formElement.submit();
                 } catch (error) {
                     showError(error.message);
                 }

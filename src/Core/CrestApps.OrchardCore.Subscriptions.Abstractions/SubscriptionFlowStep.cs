@@ -45,5 +45,4 @@ public sealed class SubscriptionFlowStep
     /// </summary>
     [JsonIgnore]
     public bool Conceal { get; set; }
-    public object Id { get; set; }
 }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
@@ -10,5 +11,6 @@ public class SubscriptionViewModel
 
     public string Step { get; set; }
 
+    [BindNever]
     public IShape Content { get; set; }
 }

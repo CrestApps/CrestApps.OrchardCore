@@ -176,14 +176,14 @@ public sealed class SubscriptionsController : Controller
     /// <returns></returns>
     [HttpPost]
     [ActionName(nameof(Signup))]
-    public async Task<IActionResult> SignupPOST(string sessionId, string contentItemId, string step)
+    public async Task<IActionResult> SignupPOST(SubscriptionViewModel model)
     {
-        if (string.IsNullOrWhiteSpace(contentItemId))
+        if (string.IsNullOrWhiteSpace(model.ContentItemId))
         {
             return NotFound();
         }
 
-        var subscriptionContentItem = await _session.Query<ContentItem, SubscriptionsContentItemIndex>(index => index.Published && index.ContentItemId == contentItemId)
+        var subscriptionContentItem = await _session.Query<ContentItem, SubscriptionsContentItemIndex>(index => index.Published && index.ContentItemId == model.ContentItemId)
             .FirstOrDefaultAsync();
 
         if (subscriptionContentItem == null)
@@ -193,17 +193,17 @@ public sealed class SubscriptionsController : Controller
 
         SubscriptionSession subscriptionSession = null;
 
-        if (!string.IsNullOrWhiteSpace(sessionId))
+        if (!string.IsNullOrWhiteSpace(model.SessionId))
         {
-            subscriptionSession = await _subscriptionSessionStore.GetAsync(sessionId, SubscriptionSessionStatus.Pending);
+            subscriptionSession = await _subscriptionSessionStore.GetAsync(model.SessionId, SubscriptionSessionStatus.Pending);
 
             if (subscriptionSession != null &&
-                !string.IsNullOrEmpty(step) &&
-                !string.Equals(step, subscriptionSession.CurrentStep, StringComparison.OrdinalIgnoreCase))
+                !string.IsNullOrEmpty(model.Step) &&
+                !string.Equals(model.Step, subscriptionSession.CurrentStep, StringComparison.OrdinalIgnoreCase))
             {
                 foreach (var savedStep in subscriptionSession.SavedSteps)
                 {
-                    if (!string.Equals(step, savedStep.Key, StringComparison.OrdinalIgnoreCase))
+                    if (!string.Equals(model.Step, savedStep.Key, StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
                     }
@@ -221,18 +221,21 @@ public sealed class SubscriptionsController : Controller
 
         await _subscriptionHandlers.InvokeAsync(
             (handler, context) => handler.InitializingAsync(context), new SubscriptionFlowInitializingContext(subscriptionSession, subscriptionContentItem), _logger);
+
         var flow = new SubscriptionFlow(subscriptionSession, subscriptionContentItem);
+
         await _subscriptionHandlers.InvokeAsync(
             (handler, context) => handler.LoadingAsync(context), new SubscriptionFlowLoadingContext(flow), _logger);
+
         await _subscriptionHandlers.InvokeAsync(
             (handler, context) => handler.InitializedAsync(context), new SubscriptionFlowInitializedContext(flow), _logger);
 
-        var model = await _subscriptionFlowDisplayManager.UpdateEditorAsync(flow, _updateModelAccessor.ModelUpdater, true);
+        var shape = await _subscriptionFlowDisplayManager.UpdateEditorAsync(flow, _updateModelAccessor.ModelUpdater, true);
 
         if (_updateModelAccessor.ModelUpdater.ModelState.IsValid)
         {
             var cookieManager = new SubscriptionCookieManager(HttpContext);
-            cookieManager.Append(contentItemId, subscriptionSession.SessionId);
+            cookieManager.Append(model.ContentItemId, subscriptionSession.SessionId);
             var now = _clock.UtcNow;
 
             subscriptionSession.ModifiedUtc = now;
@@ -292,7 +295,7 @@ public sealed class SubscriptionsController : Controller
                     await _subscriptionHandlers.InvokeAsync(
                         (handler, context) => handler.CompletedAsync(context), new SubscriptionFlowCompletedContext(flow), _logger);
 
-                    cookieManager.Remove(contentItemId);
+                    cookieManager.Remove(model.ContentItemId);
 
                     return RedirectToAction(nameof(Confirmation), new
                     {
@@ -310,22 +313,19 @@ public sealed class SubscriptionsController : Controller
                 }
             }
 
-            return View(new SubscriptionViewModel
-            {
-                ContentItemId = contentItemId,
-                SessionId = subscriptionSession.SessionId,
-                Step = flow.GetCurrentStep()?.Key,
-                Content = model,
-            });
+            model.Step = flow.GetCurrentStep()?.Key;
+            model.Content = shape;
+
+            return View(model);
         }
 
         return View(new SubscriptionViewModel
         {
-            ContentItemId = contentItemId,
+            ContentItemId = model.ContentItemId,
             // At this point sessionId does not belong to a saved session. So we set it to null.
             SessionId = null,
             Step = flow.GetCurrentStep()?.Key,
-            Content = model,
+            Content = shape,
         });
     }
 
@@ -360,13 +360,14 @@ public sealed class SubscriptionsController : Controller
         await _subscriptionHandlers.InvokeAsync(
             (handler, context) => handler.InitializedAsync(context), new SubscriptionFlowInitializedContext(flow), _logger);
 
-        var model = await _subscriptionFlowDisplayManager.BuildEditorAsync(flow, _updateModelAccessor.ModelUpdater, false);
+        var shape = await _subscriptionFlowDisplayManager.BuildEditorAsync(flow, _updateModelAccessor.ModelUpdater, false);
 
         return View(nameof(Signup), new SubscriptionViewModel
         {
+            ContentItemId = subscriptionContentItem.ContentItemId,
             SessionId = subscriptionSession.SessionId,
             Step = subscriptionSession.CurrentStep,
-            Content = model,
+            Content = shape,
         });
     }
 

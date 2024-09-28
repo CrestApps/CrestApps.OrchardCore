@@ -19,7 +19,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
@@ -57,7 +56,6 @@ public sealed class Startup : StartupBase
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, PaymentStepSubscriptionFlowDisplayDriver>();
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, UserRegistrationSubscriptionFlowDisplayDriver>();
 
-
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, SubscriptionPartSettingsDisplayDriver>();
 
         services.AddScoped<ISubscriptionHandler, UserRegistrationSubscriptionHandler>();
@@ -79,7 +77,8 @@ public sealed class Startup : StartupBase
         services.AddSiteDisplayDriver<SubscriptionSettingsDisplayDriver>();
         services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
         services.AddNavigationProvider<SubscriptionsAdminMenu>();
-        services.AddIndexProvider<SubscriptionIndexProvider>();
+        services.AddDataMigration<SubscriptionIndexMigrations>()
+            .AddIndexProvider<SubscriptionIndexProvider>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, SubscriptionResourceManagementOptionsConfiguration>();
     }
 
@@ -95,21 +94,21 @@ public sealed class Startup : StartupBase
         routes.MapAreaControllerRoute(
             name: "SubscriptionSignup",
             areaName: SubscriptionConstants.Features.ModuleId,
-            pattern: "Subscription/{contentItemId}/Signup",
+            pattern: "Subscription/Signup/{contentItemId}",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Signup) }
         );
 
         routes.MapAreaControllerRoute(
-            name: "SubscriptionSignupConfirmation",
+            name: "SubscriptionConfirmation",
             areaName: SubscriptionConstants.Features.ModuleId,
-            pattern: "Subscription/{sessionId}/Signup/Confirmation",
+            pattern: "Subscription/Confirmation/{sessionId}",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Confirmation) }
         );
 
         routes.MapAreaControllerRoute(
-            name: "SubscriptionSignupStep",
+            name: "SubscriptionStep",
             areaName: SubscriptionConstants.Features.ModuleId,
-            pattern: "Subscription/{sessionId}/Signup/Step",
+            pattern: "Subscription/Step/{sessionId}",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Display) }
         );
     }
@@ -127,13 +126,6 @@ public sealed class RolesStartup : StartupBase
 [Feature(SubscriptionConstants.Features.Stripe)]
 public sealed class StripeStartup : StartupBase
 {
-    private readonly AdminOptions _adminOptions;
-
-    public StripeStartup(IOptions<AdminOptions> adminOptions)
-    {
-        _adminOptions = adminOptions.Value;
-    }
-
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IDisplayDriver<SubscriptionFlowPaymentMethod>, StripePaymentSubscriptionFlowDisplayDriver>();
@@ -159,13 +151,6 @@ public sealed class StripeStartup : StartupBase
         routes.AddCreateStripeSubscriptionEndpoint()
             .AddCreatePaymentIntentEndpoint()
             .AddStripeCreateSetupIntentEndpoint();
-
-        routes.MapAreaControllerRoute(
-            name: "StripeSyncPrices",
-            areaName: SubscriptionConstants.Features.ModuleId,
-            pattern: _adminOptions.AdminUrlPrefix + "/stripe-sync/prices",
-            defaults: new { controller = typeof(StripeSyncController).ControllerName(), action = nameof(StripeSyncController.Prices) }
-        );
     }
 }
 

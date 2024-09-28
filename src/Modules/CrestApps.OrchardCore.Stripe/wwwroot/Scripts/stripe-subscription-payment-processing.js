@@ -50,8 +50,7 @@ stripePaymentProcessing = function () {
             color: styles.color || 'black',
             fontSize: styles['font-size'] || '16px',
             fontFamily: styles['font-family'] || 'Arial, sans-serif',
-            lineHeight: styles['line-height'] || '1.4',
-            border: "".concat(styles['border-width'] || '1px', " ").concat(styles['border-style'] || 'solid', " ").concat(styles['border-color'] || 'black')
+            lineHeight: styles['line-height'] || '1.4'
           }
         };
       };
@@ -193,7 +192,7 @@ stripePaymentProcessing = function () {
       });
       var createSubscriptions = /*#__PURE__*/function () {
         var _ref2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(customerId, paymentMethodId) {
-          var response, subscriptionDataArray, _iterator, _step, subscriptionData, result, submitEvent;
+          var response, subscriptionDataArray, _iterator, _step, subscriptionData, result;
           return _regeneratorRuntime().wrap(function _callee2$(_context2) {
             while (1) switch (_context2.prev = _context2.next) {
               case 0:
@@ -262,22 +261,18 @@ stripePaymentProcessing = function () {
                 return _context2.finish(29);
               case 32:
                 // Dispatch the form submit event after all subscriptions are processed
-                submitEvent = new Event("submit", {
-                  bubbles: true,
-                  cancelable: true
-                });
-                config.formElement.dispatchEvent(submitEvent);
-                _context2.next = 39;
+                config.formElement.submit();
+                _context2.next = 38;
                 break;
-              case 36:
-                _context2.prev = 36;
+              case 35:
+                _context2.prev = 35;
                 _context2.t1 = _context2["catch"](0);
                 showError(_context2.t1.message);
-              case 39:
+              case 38:
               case "end":
                 return _context2.stop();
             }
-          }, _callee2, null, [[0, 36], [11, 26, 29, 32]]);
+          }, _callee2, null, [[0, 35], [11, 26, 29, 32]]);
         }));
         return function createSubscriptions(_x2, _x3) {
           return _ref2.apply(this, arguments);

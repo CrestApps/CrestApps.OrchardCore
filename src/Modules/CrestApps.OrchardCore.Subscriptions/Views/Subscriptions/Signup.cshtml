@@ -3,10 +3,10 @@
 
 @model SubscriptionViewModel
 
-<form id="subscription-form" method="post" asp-route-sessionId="@Model.SessionId">
+<form id="subscription-form" method="post" asp-action="Signup" asp-route-contentItemId="@Model.ContentItemId">
 
     <input type="hidden" name="step" value="@Model.Step" />
-    <input type="hidden" name="contentItemId" value="@Model.ContentItemId" />
+    <input type="hidden" name="sessionId" value="@Model.SessionId" />
 
     @await DisplayAsync(Model.Content)
 </form>

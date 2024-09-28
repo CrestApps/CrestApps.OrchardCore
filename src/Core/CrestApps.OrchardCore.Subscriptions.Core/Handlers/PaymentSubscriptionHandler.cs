@@ -159,22 +159,38 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         {
             try
             {
-                var initialPaymentInfo = await _subscriptionPaymentSession.GetInitialPaymentInfoAsync(context.Flow.Session.SessionId)
-                    ?? throw new DataNotFoundException("Initial Payment was not collected by the payment provider.");
+                var minAllowedValue = GetMinimumAllowed(invoice.Currency);
 
-                if (invoice.InitialPaymentAmount > 0 && invoice.InitialPaymentAmount != initialPaymentInfo.Amount)
+                if (invoice.InitialPaymentAmount.HasValue && invoice.InitialPaymentAmount > minAllowedValue)
                 {
-                    throw new PaymentValidationException("The received initial payment amount did not match the expected initial payment amount.");
+                    var initialPaymentInfo = await _subscriptionPaymentSession.GetInitialPaymentInfoAsync(context.Flow.Session.SessionId);
+
+                    if (initialPaymentInfo == null)
+                    {
+                        throw new DataNotFoundException("Initial Payment was not collected by the payment provider.");
+                    }
+
+                    if (invoice.InitialPaymentAmount > 0 && invoice.InitialPaymentAmount != initialPaymentInfo.Amount)
+                    {
+                        throw new PaymentValidationException("The received initial payment amount did not match the expected initial payment amount.");
+                    }
                 }
 
-                var subscriptionPaymentInfo = await _subscriptionPaymentSession.GetSubscriptionPaymentInfoAsync(context.Flow.Session.SessionId)
-                    ?? throw new DataNotFoundException("Subscription was not created by the payment provider.");
-
-                var totalSubscriptionPayments = subscriptionPaymentInfo.Payments.Sum(x => x.Value.Amount ?? 0);
-
-                if (invoice.FirstSubscriptionPaymentAmount > 0 && invoice.FirstSubscriptionPaymentAmount != totalSubscriptionPayments)
+                if (invoice.FirstSubscriptionPaymentAmount.HasValue && invoice.FirstSubscriptionPaymentAmount > minAllowedValue)
                 {
-                    throw new PaymentValidationException($"The subscriptions payments received '{totalSubscriptionPayments}' did not match the expected amount of '{invoice.FirstSubscriptionPaymentAmount}'.");
+                    var subscriptionPaymentInfo = await _subscriptionPaymentSession.GetSubscriptionPaymentInfoAsync(context.Flow.Session.SessionId);
+
+                    if (subscriptionPaymentInfo == null)
+                    {
+                        throw new DataNotFoundException("Subscription was not created by the payment provider.");
+                    }
+
+                    var totalSubscriptionPayments = subscriptionPaymentInfo.Payments.Sum(x => x.Value.Amount ?? 0);
+
+                    if (invoice.FirstSubscriptionPaymentAmount > 0 && invoice.FirstSubscriptionPaymentAmount != totalSubscriptionPayments)
+                    {
+                        throw new PaymentValidationException($"The subscriptions payments received '{totalSubscriptionPayments}' did not match the expected amount of '{invoice.FirstSubscriptionPaymentAmount}'.");
+                    }
                 }
 
                 // If we got here, we received the confirmation.
@@ -196,6 +212,16 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
                 throw;
             }
         } while (true);
+    }
+
+    private static double GetMinimumAllowed(string currency)
+    {
+        if (StripeLimits.TryGetStripePaymentLimit(currency, out var limits))
+        {
+            return limits?.Minimum ?? 0;
+        }
+
+        return 0;
     }
 
     public override async Task CompletedAsync(SubscriptionFlowCompletedContext context)

@@ -68,6 +68,16 @@ public static class CreatePaymentIntentEndpoint
             });
         }
 
+        if (invoice.InitialPaymentAmount is null ||
+            invoice.InitialPaymentAmount < GetMinimumAllowed(invoice.Currency))
+        {
+            return TypedResults.BadRequest(new
+            {
+                ErrorMessage = "No initial payment is required.",
+                ErrorCode = 3,
+            });
+        }
+
         var request = new CreatePaymentIntentRequest()
         {
             PaymentMethodId = model.PaymentMethodId,
@@ -101,5 +111,15 @@ public static class CreatePaymentIntentEndpoint
             !string.IsNullOrWhiteSpace(model.SessionId) &&
             !string.IsNullOrWhiteSpace(model.PaymentMethodId) &&
             !string.IsNullOrWhiteSpace(model.CustomerId);
+    }
+
+    private static double GetMinimumAllowed(string currency)
+    {
+        if (StripeLimits.TryGetStripePaymentLimit(currency, out var limits))
+        {
+            return limits?.Minimum ?? 0;
+        }
+
+        return 0;
     }
 }
