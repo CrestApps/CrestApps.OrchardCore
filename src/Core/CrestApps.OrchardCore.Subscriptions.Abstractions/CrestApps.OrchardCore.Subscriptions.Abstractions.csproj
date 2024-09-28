@@ -12,10 +12,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Remove="CrestAppsLogo.png" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
   </ItemGroup>

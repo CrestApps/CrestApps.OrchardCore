@@ -11,8 +11,4 @@
     <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Subscriptions Abstractions</PackageTags>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Content Remove="CrestAppsLogo.png" />
-  </ItemGroup>
-
 </Project>
