@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Payments;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 

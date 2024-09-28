@@ -1,4 +1,4 @@
-﻿using YesSql.Indexes;
+using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Indexes;
 
