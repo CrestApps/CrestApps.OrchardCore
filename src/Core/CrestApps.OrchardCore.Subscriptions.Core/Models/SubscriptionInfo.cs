@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 /// <summary>
 /// This class is stored in the session and contains information about a single subscription.
 /// </summary>
-public sealed class SubscriptionMetadata
+public sealed class SubscriptionInfo
 {
     public DateTime StartedAt { get; set; }
 

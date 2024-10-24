@@ -87,8 +87,8 @@ public static class CreateWebhookEndpoint
                         AmountPaid = Math.Round(invoice.AmountPaid / 100d, 2),
                         Currency = invoice.Currency,
                         TransactionId = invoice.Id,
-                        Mode = invoice.Livemode ? GatewayMode.Live : GatewayMode.Testing,
-                        Gateway = StripeConstants.ProcessorKey,
+                        GatewayMode = invoice.Livemode ? GatewayMode.Live : GatewayMode.Testing,
+                        GatewayId = StripeConstants.ProcessorKey,
                     };
 
                     successContext.Data["billing_reason"] = invoice.BillingReason;
@@ -138,12 +138,11 @@ public static class CreateWebhookEndpoint
                         createdContext.Data.Add(data.Key, data.Value);
                     }
 
-
                     if (subscription.Items != null && subscription.Items.Any())
                     {
                         createdContext.SubscriptionId = subscription.Id;
-                        createdContext.Mode = subscription.Livemode ? GatewayMode.Live : GatewayMode.Testing;
-                        createdContext.Gateway = StripeConstants.ProcessorKey;
+                        createdContext.GatewayMode = subscription.Livemode ? GatewayMode.Live : GatewayMode.Testing;
+                        createdContext.GatewayId = StripeConstants.ProcessorKey;
                         createdContext.PlanId = subscription.Items.Data[0].Plan.Id;
                         if (subscription.Items.Data[0].Plan.Amount.HasValue)
                         {
@@ -166,10 +165,11 @@ public static class CreateWebhookEndpoint
 
                     var succeededContext = new PaymentIntentSucceededContext()
                     {
-                        Mode = paymentIntent.Livemode ? GatewayMode.Live : GatewayMode.Testing,
-                        Gateway = StripeConstants.ProcessorKey,
+                        TransactionId = paymentIntent.Id,
+                        GatewayMode = paymentIntent.Livemode ? GatewayMode.Live : GatewayMode.Testing,
+                        GatewayId = StripeConstants.ProcessorKey,
                         Currency = paymentIntent.Currency,
-                        AmountPaid = Math.Round(paymentIntent.Amount / 100d, 2),
+                        Amount = Math.Round(paymentIntent.Amount / 100d, 2),
                     };
 
                     foreach (var data in paymentIntent.Metadata)

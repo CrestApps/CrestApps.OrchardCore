@@ -53,13 +53,13 @@ public static class CreatePayLaterEndpoint
 
         var now = clock.UtcNow;
 
-        var collection = new SubscriptionCollectionMetadata()
+        var collection = new SubscriptionsMetadata()
         {
             Subscriptions = [],
         };
 
         // Here we have to group subscriptions per duration to determine the proper expiration date.
-        collection.Subscriptions.Add(new SubscriptionMetadata
+        collection.Subscriptions.Add(new SubscriptionInfo
         {
             Gateway = SubscriptionConstants.PayLaterProcessorKey,
             GatewayMode = Payments.GatewayMode.Live,
@@ -71,30 +71,34 @@ public static class CreatePayLaterEndpoint
 
         await subscriptionPaymentSession.SetAsync(model.SessionId, new InitialPaymentMetadata()
         {
+            TransactionId = IdGenerator.GenerateId(),
             Amount = invoice.InitialPaymentAmount ?? 0,
             Currency = invoice.Currency,
-            Mode = Payments.GatewayMode.Live,
+            GatewayMode = Payments.GatewayMode.Live,
+            GatewayId = SubscriptionConstants.PayLaterProcessorKey,
         });
 
         var metadata = new SubscriptionPaymentsMetadata()
         {
-            Payments = new Dictionary<string, SubscriptionPaymentMetadata>(),
+            Payments = new Dictionary<string, PaymentInfo>(),
         };
 
         // Group line items by subscription duration, ensuring that each subscription has a single, unified expiration date.
         var subscriptionGroups = invoice.GetSubscriptionGroups();
 
-        var subscriptionPaymentMetadata = new SubscriptionCollectionMetadata()
+        var subscriptionPaymentMetadata = new SubscriptionsMetadata()
         {
             Subscriptions = [],
         };
 
         foreach (var subscription in subscriptionGroups)
         {
+            var transactionId = IdGenerator.GenerateId();
             var subscriptionId = IdGenerator.GenerateId();
 
-            metadata.Payments[subscriptionId] = new SubscriptionPaymentMetadata()
+            metadata.Payments[transactionId] = new PaymentInfo()
             {
+                TransactionId = transactionId,
                 SubscriptionId = subscriptionId,
                 Currency = invoice.Currency,
                 Amount = subscription.Value.Sum(x => x.GetLineTotal()),
@@ -102,7 +106,7 @@ public static class CreatePayLaterEndpoint
                 GatewayId = SubscriptionConstants.PayLaterProcessorKey,
             };
 
-            subscriptionPaymentMetadata.Subscriptions.Add(new SubscriptionMetadata
+            subscriptionPaymentMetadata.Subscriptions.Add(new SubscriptionInfo
             {
                 SubscriptionId = subscriptionId,
                 StartedAt = now,

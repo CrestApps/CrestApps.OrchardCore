@@ -24,18 +24,20 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
         _subscriptionSessionStore = subscriptionSessionStore;
     }
 
-    public override async Task PaymentIntentSucceededAsync(PaymentIntentSucceededContext context)
+    public override Task PaymentIntentSucceededAsync(PaymentIntentSucceededContext context)
     {
         if (!context.Data.TryGetValue("sessionId", out var sessionId))
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        await _paymentSession.SetAsync(sessionId.ToString(), new InitialPaymentMetadata
+        return _paymentSession.SetAsync(sessionId.ToString(), new InitialPaymentMetadata
         {
-            Mode = context.Mode,
-            Amount = context.AmountPaid,
+            TransactionId = context.TransactionId,
+            Amount = context.Amount,
             Currency = context.Currency,
+            GatewayId = context.GatewayId,
+            GatewayMode = context.GatewayMode,
         });
     }
 
@@ -65,32 +67,62 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
             return;
         }
 
-        var stripeMetadata = session.As<StripeMetadata>();
-
         var subscriptionId = context.Subscription?.SubscriptionId ?? string.Empty;
 
+        if (context.Reason == PaymentReason.SubscriptionCreate)
+        {
+            // First payment is saved to the session during the process of creating
+            // a subscription to avoid concurrency issue with the current session.
+            await ProcessFirstPaymentAsync(context, sessionId, session, subscriptionId);
+        }
+        else
+        {
+            // Save additional payments.
+            session.Alter<PaymentsMetadata>(metadata =>
+            {
+                metadata.Payments.Add(context.TransactionId, new PaymentInfo()
+                {
+                    TransactionId = context.TransactionId,
+                    Amount = context.AmountPaid,
+                    Currency = context.Currency,
+                    SubscriptionId = subscriptionId,
+                    GatewayId = context.GatewayId,
+                    GatewayMode = context.GatewayMode,
+                    Status = PaymentStatus.Succeeded,
+                });
+            });
+
+            await _subscriptionSessionStore.SaveAsync(session);
+        }
+    }
+
+    private async Task ProcessFirstPaymentAsync(PaymentSucceededContext context, object sessionId, SubscriptionSession session, string subscriptionId)
+    {
         var newValue = new SubscriptionPaymentsMetadata
         {
             Payments = [],
         };
 
-        newValue.Payments[subscriptionId] = new SubscriptionPaymentMetadata
+        newValue.Payments[subscriptionId] = new PaymentInfo
         {
+            SubscriptionId = subscriptionId,
             Currency = context.Currency,
             Amount = context.AmountPaid,
-            GatewayMode = context.Mode,
-            GatewayId = context.Gateway,
+            GatewayMode = context.GatewayMode,
+            GatewayId = context.GatewayId,
         };
 
         var updatedValue = await _paymentSession.AddOrUpdateAsync(sessionId.ToString(), newValue, (existingValue) =>
         {
             existingValue.Payments.TryGetValue(subscriptionId, out var payment);
 
-            existingValue.Payments[subscriptionId] = new SubscriptionPaymentMetadata
+            existingValue.Payments[subscriptionId] = new PaymentInfo
             {
                 Amount = (payment?.Amount ?? 0) + context.AmountPaid,
             };
         });
+
+        var stripeMetadata = session.As<StripeMetadata>();
 
         if (string.IsNullOrEmpty(stripeMetadata.PaymentIntentId))
         {

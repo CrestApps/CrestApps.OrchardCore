@@ -13,24 +13,24 @@ public sealed class SubscriptionIndexProvider : IndexProvider<SubscriptionSessio
             .When(x => x.Status == SubscriptionSessionStatus.Completed)
             .Map(session =>
             {
-                var subscriptions = session.As<SubscriptionCollectionMetadata>();
+                var subscriptions = session.As<SubscriptionsMetadata>();
 
                 if (subscriptions?.Subscriptions == null || subscriptions.Subscriptions.Count == 0)
                 {
                     return null;
                 }
 
-                return subscriptions.Subscriptions.Select(x => new SubscriptionIndex()
+                return subscriptions.Subscriptions.Select(subscription => new SubscriptionIndex()
                 {
                     SessionId = session.SessionId,
                     OwnerId = session.OwnerId,
                     ContentType = session.ContentType,
                     ContentItemId = session.ContentItemId,
                     ContentItemVersionId = session.ContentItemVersionId,
-                    StartedAt = x.StartedAt,
-                    ExpiresAt = x.ExpiresAt,
-                    Gateway = x.Gateway,
-                    GatewayMode = x.GatewayMode,
+                    StartedAt = subscription.StartedAt,
+                    ExpiresAt = subscription.ExpiresAt,
+                    Gateway = subscription.Gateway,
+                    GatewayMode = subscription.GatewayMode,
                 });
             });
     }

@@ -138,9 +138,9 @@ public static class CreateSubscriptionEndpoint
         }
 
         session.Put(stripeMetadata);
-        session.Put(new SubscriptionCollectionMetadata()
+        session.Put(new SubscriptionsMetadata()
         {
-            Subscriptions = stripeMetadata.Subscriptions.Values.Select(x => new SubscriptionMetadata()
+            Subscriptions = stripeMetadata.Subscriptions.Values.Select(x => new SubscriptionInfo()
             {
                 ExpiresAt = x.ExpiresAt,
                 StartedAt = x.CreatedAt,

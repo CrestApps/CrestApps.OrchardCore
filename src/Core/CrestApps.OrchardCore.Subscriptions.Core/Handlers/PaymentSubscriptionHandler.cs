@@ -155,6 +155,8 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         // If we don't receive confirmation within this time frame, the payment is considered failed.
         var attemptCount = 0;
 
+        var paymentsMetadata = context.Flow.Session.As<PaymentsMetadata>();
+
         do
         {
             try
@@ -170,10 +172,20 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
                         throw new DataNotFoundException("Initial Payment was not collected by the payment provider.");
                     }
 
-                    if (invoice.InitialPaymentAmount > 0 && invoice.InitialPaymentAmount != initialPaymentInfo.Amount)
+                    if (invoice.InitialPaymentAmount.Value != initialPaymentInfo.Amount)
                     {
                         throw new PaymentValidationException("The received initial payment amount did not match the expected initial payment amount.");
                     }
+
+                    paymentsMetadata.Payments.TryAdd(initialPaymentInfo.TransactionId, new PaymentInfo
+                    {
+                        TransactionId = initialPaymentInfo.TransactionId,
+                        Status = PaymentStatus.Succeeded,
+                        Amount = initialPaymentInfo.Amount ?? 0,
+                        Currency = initialPaymentInfo.Currency,
+                        GatewayId = initialPaymentInfo.GatewayId,
+                        GatewayMode = initialPaymentInfo.GatewayMode,
+                    });
                 }
 
                 if (invoice.FirstSubscriptionPaymentAmount.HasValue && invoice.FirstSubscriptionPaymentAmount > minAllowedValue)
@@ -185,13 +197,29 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
                         throw new DataNotFoundException("Subscription was not created by the payment provider.");
                     }
 
-                    var totalSubscriptionPayments = subscriptionPaymentInfo.Payments.Sum(x => x.Value.Amount ?? 0);
+                    var totalSubscriptionPayments = subscriptionPaymentInfo.Payments.Where(x => x.Value.Status == PaymentStatus.Succeeded).Sum(x => x.Value.Amount);
 
                     if (invoice.FirstSubscriptionPaymentAmount > 0 && invoice.FirstSubscriptionPaymentAmount != totalSubscriptionPayments)
                     {
                         throw new PaymentValidationException($"The subscriptions payments received '{totalSubscriptionPayments}' did not match the expected amount of '{invoice.FirstSubscriptionPaymentAmount}'.");
                     }
+
+                    foreach (var payment in subscriptionPaymentInfo.Payments.Values)
+                    {
+                        paymentsMetadata.Payments.TryAdd(payment.TransactionId, new PaymentInfo
+                        {
+                            TransactionId = payment.TransactionId,
+                            SubscriptionId = payment.SubscriptionId,
+                            Amount = payment.Amount,
+                            Currency = payment.Currency,
+                            GatewayId = payment.GatewayId,
+                            GatewayMode = payment.GatewayMode,
+                        });
+                    }
                 }
+
+                // Store the payment info.
+                context.Flow.Session.Put(paymentsMetadata);
 
                 // If we got here, we received the confirmation.
                 break;
