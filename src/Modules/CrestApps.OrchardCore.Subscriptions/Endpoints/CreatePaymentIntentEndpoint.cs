@@ -1,0 +1,125 @@
+using CrestApps.OrchardCore.Stripe.Core;
+using CrestApps.OrchardCore.Stripe.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core;
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Models;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
+using OrchardCore.Entities;
+
+namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
+
+public static class CreatePaymentIntentEndpoint
+{
+    public static IEndpointRouteBuilder AddCreatePaymentIntentEndpoint(this IEndpointRouteBuilder builder)
+    {
+        builder.MapPost("subscriptions/stripe/create-payment-intent", HandleAsync)
+            .AllowAnonymous()
+            .WithName(SubscriptionConstants.RouteName.CreatePaymentIntentEndpoint)
+            .DisableAntiforgery();
+
+        return builder;
+    }
+
+    private static async Task<IResult> HandleAsync(
+        [FromBody] CreateSessionPaymentIntent model,
+        ISubscriptionSessionStore subscriptionSessionStore,
+        IStripePaymentService stripePaymentService,
+        IOptions<StripeOptions> stripeOptions)
+    {
+        if (string.IsNullOrEmpty(stripeOptions.Value.ApiKey))
+        {
+            return TypedResults.Problem("Stripe is not configured.", instance: null, statusCode: 500);
+        }
+
+        if (!IsValid(model))
+        {
+            return TypedResults.BadRequest(new
+            {
+                ErrorMessage = "Invalid request data",
+                ErrorCode = 1,
+            });
+        }
+
+        var session = await subscriptionSessionStore.GetAsync(model.SessionId, SubscriptionSessionStatus.Pending);
+
+        if (session == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        if (!session.TryGet<Invoice>(out var invoice))
+        {
+            return TypedResults.NotFound();
+        }
+
+        var stripeMetadata = session.As<StripeMetadata>();
+
+        if (stripeMetadata.CustomerId != model.CustomerId ||
+            stripeMetadata.PaymentMethodId != model.PaymentMethodId)
+        {
+            return TypedResults.BadRequest(new
+            {
+                ErrorMessage = "Invalid request data",
+                ErrorCode = 2,
+            });
+        }
+
+        if (invoice.InitialPaymentAmount is null ||
+            invoice.InitialPaymentAmount < GetMinimumAllowed(invoice.Currency))
+        {
+            return TypedResults.BadRequest(new
+            {
+                ErrorMessage = "No initial payment is required.",
+                ErrorCode = 3,
+            });
+        }
+
+        var request = new CreatePaymentIntentRequest()
+        {
+            PaymentMethodId = model.PaymentMethodId,
+            CustomerId = model.CustomerId,
+            Metadata = model.Metadata ?? [],
+            Amount = invoice.InitialPaymentAmount ?? 0,
+            Currency = invoice.Currency,
+        };
+
+        request.Metadata["sessionId"] = model.SessionId;
+
+        var result = await stripePaymentService.CreateAsync(request);
+
+        stripeMetadata.PaymentIntentId = result.Id;
+        session.Put(stripeMetadata);
+        await subscriptionSessionStore.SaveAsync(session);
+
+        return TypedResults.Ok(new
+        {
+            result.Id,
+            clientSecret = result.ClientSecret,
+            customerId = result.CustomerId,
+            status = result.Status,
+        });
+    }
+
+    private static bool IsValid(CreateSessionPaymentIntent model)
+    {
+        return
+            !string.IsNullOrWhiteSpace(model.CustomerId) &&
+            !string.IsNullOrWhiteSpace(model.SessionId) &&
+            !string.IsNullOrWhiteSpace(model.PaymentMethodId) &&
+            !string.IsNullOrWhiteSpace(model.CustomerId);
+    }
+
+    private static double GetMinimumAllowed(string currency)
+    {
+        if (StripeLimits.TryGetStripePaymentLimit(currency, out var limits))
+        {
+            return limits?.Minimum ?? 0;
+        }
+
+        return 0;
+    }
+}

@@ -1,0 +1,56 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionFlowNavigation
+
+@{
+    var hasNext = !string.IsNullOrEmpty(Model.NextStep);
+}
+
+<div class="d-flex justify-content-between flex-row-reverse mt-3">
+
+    <button type="submit" class="btn btn-success" id="Subscription_Next_Button">
+
+        @if (hasNext && Model.IsPaymentStep)
+        {
+            <span class="payment-processing d-none">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span role="status">@T["Processing..."]</span>
+            </span>
+
+            <span class="payment-label">
+                @T["Pay & Next"]
+            </span>
+        }
+        else if (Model.IsPaymentStep)
+        {
+            <span class="payment-processing d-none">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span role="status">@T["Processing..."]</span>
+            </span>
+
+            <span class="payment-label">
+                @T["Pay & Finish"]
+            </span>
+        }
+        else if (hasNext)
+        {
+            @T["Next"]
+        }
+        else
+        {
+            @T["Finish"]
+        }
+    </button>
+
+    <div></div>
+
+    @if (!string.IsNullOrEmpty(Model.PreviousStep))
+    {
+        <a class="btn btn-info" asp-route="SubscriptionSignupStep" asp-route-sessionId="@Model.SessionId" asp-route-step="@Model.PreviousStep" id="Subscription_Previous_Button">@T["Previous"]</a>
+    }
+    else
+    {
+        <div></div>
+    }
+
+</div>
