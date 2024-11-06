@@ -2,11 +2,11 @@
 @using CrestApps.OrchardCore.Subscriptions.ViewModels
 @using OrchardCore.ContentManagement.Display
 
-@model ListSubscriptionsViewModel
+@model ListServicePlansViewModel
 
 @inject IContentItemDisplayManager DisplayManager
 
-@if (Model.Subscriptions == null || Model.Subscriptions.Count == 0)
+@if (Model.ServicePlans == null || Model.ServicePlans.Count == 0)
 {
     <div class="alert alert-info text-center" role="alert">
         @T["There are no subscriptions at the moment."]
@@ -16,7 +16,7 @@
 }
 
 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xxl-4 g-3">
-    @foreach (var subscription in Model.Subscriptions)
+    @foreach (var subscription in Model.ServicePlans)
     {
         <div class="col">
             @await DisplayAsync(subscription)

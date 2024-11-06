@@ -13,14 +13,14 @@ public sealed class SubscriptionIndexProvider : IndexProvider<SubscriptionSessio
             .When(x => x.Status == SubscriptionSessionStatus.Completed)
             .Map(session =>
             {
-                var subscriptions = session.As<SubscriptionsMetadata>();
+                var metadata = session.As<SubscriptionsMetadata>();
 
-                if (subscriptions?.Subscriptions == null || subscriptions.Subscriptions.Count == 0)
+                if (metadata?.Subscriptions == null || metadata.Subscriptions.Count == 0)
                 {
                     return null;
                 }
 
-                return subscriptions.Subscriptions.Select(subscription => new SubscriptionIndex()
+                return metadata.Subscriptions.Select(subscription => new SubscriptionIndex()
                 {
                     SessionId = session.SessionId,
                     OwnerId = session.OwnerId,

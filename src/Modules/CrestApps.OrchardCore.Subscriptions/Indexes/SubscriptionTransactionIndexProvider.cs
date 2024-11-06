@@ -25,6 +25,7 @@ public sealed class SubscriptionTransactionIndexProvider : IndexProvider<Subscri
                     GatewayTransactionId = payment.TransactionId,
                     GatewayId = payment.GatewayId,
                     GatewayMode = payment.GatewayMode,
+                    ContentType = session.ContentType,
                     Amount = payment.Amount,
                     Status = payment.Status,
                     SessionId = session.SessionId,

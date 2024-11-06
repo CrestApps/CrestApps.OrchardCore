@@ -104,6 +104,7 @@ public static class CreatePayLaterEndpoint
                 Amount = subscription.Value.Sum(x => x.GetLineTotal()),
                 GatewayMode = Payments.GatewayMode.Live,
                 GatewayId = SubscriptionConstants.PayLaterProcessorKey,
+                Status = PaymentStatus.Succeeded,
             };
 
             subscriptionPaymentMetadata.Subscriptions.Add(new SubscriptionInfo

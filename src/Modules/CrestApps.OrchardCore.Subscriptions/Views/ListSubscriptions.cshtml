@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model ListSubscriptionsViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">
+        @T["Subscriptions"]
+    </div>
+    <div class="card-body">
+        @if (Model.Subscriptions == null || Model.Subscriptions.Count == 0)
+        {
+            <p class="mb-0">@T["No subscriptions at the moment."]</p>
+        }
+        else
+        {
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Started At"]</th>
+                        <th scope="col">@T["Expires At"]</th>
+                        <th scope="col">@T["Plan Title"]</th>
+                        <th scope="col">@T["Active?"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var subscription in Model.Subscriptions)
+                    {
+                        <tr>
+                            <td scope="col">@subscription.StartedAt.ToString("g")</td>
+                            <td scope="col">@subscription.ExpiresAt?.ToString("g")</td>
+                            <td scope="col">@subscription.ServicePlanTitle</td>
+                            <td scope="col">@(subscription.IsActive ? T["Yes"] : T["No"])</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

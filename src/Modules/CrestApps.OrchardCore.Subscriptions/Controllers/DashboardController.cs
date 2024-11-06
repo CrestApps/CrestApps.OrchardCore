@@ -1,17 +1,19 @@
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.AspNetCore.Mvc;
+using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 
 namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
+[Admin("manage-subscriptions/{actions}")]
 public class DashboardController : Controller
 {
-    private readonly DisplayManager<SubscriberDashboard> _displayManager;
+    private readonly IDisplayManager<SubscriberDashboard> _displayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
 
     public DashboardController(
-        DisplayManager<SubscriberDashboard> displayManager,
+        IDisplayManager<SubscriberDashboard> displayManager,
         IUpdateModelAccessor updateModelAccessor)
     {
         _displayManager = displayManager;

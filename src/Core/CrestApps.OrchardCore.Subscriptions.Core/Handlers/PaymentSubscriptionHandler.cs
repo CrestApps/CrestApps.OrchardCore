@@ -214,6 +214,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
                             Currency = payment.Currency,
                             GatewayId = payment.GatewayId,
                             GatewayMode = payment.GatewayMode,
+                            Status = PaymentStatus.Succeeded,
                         });
                     }
                 }

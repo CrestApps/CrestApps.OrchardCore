@@ -22,7 +22,7 @@ public class SubscriberInvoiceViewModel
 {
     public DateTime Date { get; set; }
 
-    public string Type { get; set; }
+    public string ServicePlanTitle { get; set; }
 
     public double Amount { get; set; }
 

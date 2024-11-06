@@ -77,9 +77,16 @@ public sealed class Startup : StartupBase
         services.AddSiteDisplayDriver<SubscriptionSettingsDisplayDriver>();
         services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
         services.AddNavigationProvider<SubscriptionsAdminMenu>();
+
         services.AddDataMigration<SubscriptionIndexMigrations>()
             .AddIndexProvider<SubscriptionIndexProvider>();
+
+        services.AddIndexProvider<SubscriptionTransactionIndexProvider>()
+            .AddDataMigration<SubscriptionTransactionIndexMigrations>();
+
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, SubscriptionResourceManagementOptionsConfiguration>();
+
+        services.AddScoped<IDisplayDriver<SubscriberDashboard>, SubscriberDashboardDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

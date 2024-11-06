@@ -112,17 +112,17 @@ public sealed class SubscriptionsController : Controller
 
         var contentItems = await query.Skip(startIndex).Take(pager.PageSize).ListAsync();
 
-        var model = new ListSubscriptionsViewModel()
+        var model = new ListServicePlansViewModel()
         {
             Pager = pagerShape,
-            Subscriptions = []
+            ServicePlans = []
         };
 
         foreach (var contentItem in contentItems)
         {
             var shape = await _contentItemDisplayManager.BuildDisplayAsync(contentItem, _updateModelAccessor.ModelUpdater, "Summary");
 
-            model.Subscriptions.Add(shape);
+            model.ServicePlans.Add(shape);
         }
 
         return View(model);

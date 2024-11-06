@@ -105,11 +105,13 @@ public sealed class SubscriptionPaymentHandler : PaymentEventBase
 
         newValue.Payments[subscriptionId] = new PaymentInfo
         {
+            TransactionId = context.TransactionId,
             SubscriptionId = subscriptionId,
             Currency = context.Currency,
             Amount = context.AmountPaid,
             GatewayMode = context.GatewayMode,
             GatewayId = context.GatewayId,
+            Status = PaymentStatus.Succeeded,
         };
 
         var updatedValue = await _paymentSession.AddOrUpdateAsync(sessionId.ToString(), newValue, (existingValue) =>
