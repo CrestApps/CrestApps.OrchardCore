@@ -15,6 +15,8 @@ using CrestApps.OrchardCore.Subscriptions.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Migrations;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
+using CrestApps.OrchardCore.Subscriptions.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +34,7 @@ using OrchardCore.Mvc.Core.Utilities;
 using OrchardCore.Navigation;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
+using YesSql.Filters.Query;
 
 namespace CrestApps.OrchardCore.Subscriptions;
 
@@ -74,6 +77,8 @@ public sealed class Startup : StartupBase
             options.Purposes.Add(SubscriptionPaymentSessionExtensions.UserRegistrationPurpose);
         });
 
+        services.AddScoped<IAuthorizationHandler, SubscriptionsPermissionsHandler>();
+
         services.AddSiteDisplayDriver<SubscriptionSettingsDisplayDriver>();
         services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
         services.AddNavigationProvider<SubscriptionsAdminMenu>();
@@ -87,34 +92,54 @@ public sealed class Startup : StartupBase
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, SubscriptionResourceManagementOptionsConfiguration>();
 
         services.AddScoped<IDisplayDriver<SubscriberDashboard>, SubscriberDashboardDisplayDriver>();
+
+        services.AddScoped<IDisplayDriver<ListSubscriptionOptions>, ListSubscriptionOptionsDisplayDriver>();
+        services.AddScoped<IDisplayDriver<SubscriptionSession>, SubscriptionSessionDisplayDriver>();
+
+        services.AddScoped<ISubscriptionsAdminListQueryService, DefaultSubscriptionsAdminListQueryService>();
+
+        services.AddTransient<ISubscriptionAdminListFilterProvider, DefaultSubscriptionAdminListFilterProvider>();
+        services.AddSingleton<ISubscriptionAdminListFilterParser>(sp =>
+        {
+            var filterProviders = sp.GetServices<ISubscriptionAdminListFilterProvider>();
+            var builder = new QueryEngineBuilder<SubscriptionSession>();
+            foreach (var provider in filterProviders)
+            {
+                provider.Build(builder);
+            }
+
+            var parser = builder.Build();
+
+            return new DefaultSubscriptionsAdminListFilterParser(parser);
+        });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.MapAreaControllerRoute(
-            name: "ListSubscriptions",
-            areaName: SubscriptionConstants.Features.ModuleId,
-            pattern: "Subscriptions/{contentType?}",
-            defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Index) }
+            name: "ListServicePlans",
+            areaName: SubscriptionConstants.Features.Area,
+            pattern: "ServicePlans/{contentType?}",
+            defaults: new { controller = typeof(ServicePlansController).ControllerName(), action = nameof(ServicePlansController.Index) }
         );
 
         routes.MapAreaControllerRoute(
             name: "SubscriptionSignup",
-            areaName: SubscriptionConstants.Features.ModuleId,
+            areaName: SubscriptionConstants.Features.Area,
             pattern: "Subscription/Signup/{contentItemId}",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Signup) }
         );
 
         routes.MapAreaControllerRoute(
             name: "SubscriptionConfirmation",
-            areaName: SubscriptionConstants.Features.ModuleId,
+            areaName: SubscriptionConstants.Features.Area,
             pattern: "Subscription/Confirmation/{sessionId}",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Confirmation) }
         );
 
         routes.MapAreaControllerRoute(
             name: "SubscriptionStep",
-            areaName: SubscriptionConstants.Features.ModuleId,
+            areaName: SubscriptionConstants.Features.Area,
             pattern: "Subscription/Step/{sessionId}",
             defaults: new { controller = _subscriptionControllerName, action = nameof(SubscriptionsController.Display) }
         );

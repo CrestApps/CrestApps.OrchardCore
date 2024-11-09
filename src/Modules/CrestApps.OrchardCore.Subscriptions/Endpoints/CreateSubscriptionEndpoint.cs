@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
@@ -32,6 +33,7 @@ public static class CreateSubscriptionEndpoint
         IClock clock,
         ISubscriptionSessionStore subscriptionSessionStore,
         IStripeSubscriptionService stripeSubscriptionService,
+        IStripePaymentMethodService stripePaymentMethodService,
         IStripePriceService stripePriceService,
         IOptions<StripeOptions> stripeOptions)
     {
@@ -76,13 +78,25 @@ public static class CreateSubscriptionEndpoint
         // Group line items by subscription duration, ensuring that each subscription has a single, unified expiration date.
         var subscriptionGroups = invoice.GetSubscriptionGroups();
 
+        var cardInfo = await stripePaymentMethodService.GetInformationAsync(model.PaymentMethodId);
+
+        var subscriptionMetadata = new SubscriptionsMetadata()
+        {
+            Subscriptions = [],
+        };
+
         var now = clock.UtcNow;
         var results = new List<object>();
         stripeMetadata.Subscriptions ??= [];
 
         foreach (var subscription in subscriptionGroups)
         {
-            var request = new CreateSubscriptionRequest
+            var subscriptionInfo = new SubscriptionInfo()
+            {
+                LineItems = [],
+            };
+
+            var stripeCreateRequest = new CreateSubscriptionRequest
             {
                 PaymentMethodId = model.PaymentMethodId,
                 CustomerId = model.CustomerId,
@@ -91,7 +105,9 @@ public static class CreateSubscriptionEndpoint
                 BillingCycles = invoice.BillingCycles,
             };
 
-            request.Metadata["sessionId"] = model.SessionId;
+            var subscriptionLineItems = new List<InvoiceLineItem>();
+
+            stripeCreateRequest.Metadata["sessionId"] = model.SessionId;
 
             foreach (var lineItem in subscription.Value)
             {
@@ -102,7 +118,8 @@ public static class CreateSubscriptionEndpoint
                     continue;
                 }
 
-                request.LineItems.Add(new SubscriptionLineItem()
+                subscriptionInfo.LineItems.Add(lineItem);
+                stripeCreateRequest.LineItems.Add(new CreateSubscriptionLineItem()
                 {
                     Quantity = lineItem.Quantity,
                     PriceId = price.Id,
@@ -112,44 +129,67 @@ public static class CreateSubscriptionEndpoint
                     },
                 });
 
-                var result = await stripeSubscriptionService.CreateAsync(request);
+                subscriptionLineItems.Add(lineItem);
+            }
 
-                results.Add(new
-                {
-                    id = result.Id,
-                    status = result.Status,
-                    clientSecret = result.Status == "requires_action" ? result.ClientSecret : null,
-                });
+            if (stripeCreateRequest.LineItems.Count == 0)
+            {
+                continue;
+            }
 
-                stripeMetadata.Subscriptions[result.Id] = new StripeSubscriptionMetadata()
+            var result = await stripeSubscriptionService.CreateAsync(stripeCreateRequest);
+
+            results.Add(new
+            {
+                id = result.Id,
+                status = result.Status,
+                clientSecret = result.Status == "requires_action" ? result.ClientSecret : null,
+            });
+
+            var stringSubscriptionMetadata = new StripeSubscriptionMetadata()
+            {
+                SubscriptionId = result.Id,
+                CreatedAt = now,
+                ExpiresAt = subscription.Key.Type switch
                 {
-                    SubscriptionId = result.Id,
-                    CreatedAt = now,
-                    ExpiresAt = subscription.Key.Type switch
+                    DurationType.Day => now.AddDays(subscription.Key.Duration),
+                    DurationType.Week => now.AddDays(subscription.Key.Duration * 7),
+                    DurationType.Month => now.AddMonths(subscription.Key.Duration),
+                    DurationType.Year => now.AddYears(subscription.Key.Duration),
+                    _ => null
+                },
+            };
+
+            stripeMetadata.Subscriptions[result.Id] = stringSubscriptionMetadata;
+
+            subscriptionInfo.ExpiresAt = stringSubscriptionMetadata.ExpiresAt;
+            subscriptionInfo.StartedAt = stringSubscriptionMetadata.CreatedAt;
+            subscriptionInfo.SubscriptionId = stringSubscriptionMetadata.SubscriptionId;
+            subscriptionInfo.Gateway = StripeConstants.ProcessorKey;
+            subscriptionInfo.GatewayMode = stripeOptions.Value.IsLive ? GatewayMode.Live : GatewayMode.Testing;
+            subscriptionInfo.GatewayCustomerId = model.CustomerId;
+
+            if (cardInfo?.Card != null)
+            {
+                subscriptionInfo.PaymentMethod = new PaymentMethodInfo
+                {
+                    Card = new PaymentCardInfo
                     {
-                        DurationType.Day => now.AddDays(subscription.Key.Duration),
-                        DurationType.Week => now.AddDays(subscription.Key.Duration * 7),
-                        DurationType.Month => now.AddMonths(subscription.Key.Duration),
-                        DurationType.Year => now.AddYears(subscription.Key.Duration),
-                        _ => null
+                        LastFour = cardInfo.Card.LastFour,
+                        Brand = cardInfo.Card.Brand,
+                        ExpirationMonth = cardInfo.Card.ExpirationMonth,
+                        ExpirationYear = cardInfo.Card.ExpirationYear,
+                        Fingerprint = cardInfo.Card.Fingerprint,
+                        Issuer = cardInfo.Card.Issuer,
                     },
                 };
             }
+
+            subscriptionMetadata.Subscriptions.Add(subscriptionInfo);
         }
 
         session.Put(stripeMetadata);
-        session.Put(new SubscriptionsMetadata()
-        {
-            Subscriptions = stripeMetadata.Subscriptions.Values.Select(x => new SubscriptionInfo()
-            {
-                ExpiresAt = x.ExpiresAt,
-                StartedAt = x.CreatedAt,
-                SubscriptionId = x.SubscriptionId,
-                Gateway = StripeConstants.ProcessorKey,
-                GatewayMode = stripeOptions.Value.IsLive ? Payments.GatewayMode.Live : Payments.GatewayMode.Testing,
-                GatewayCustomerId = model.CustomerId,
-            }).ToArray(),
-        });
+        session.Put(subscriptionMetadata);
 
         await subscriptionSessionStore.SaveAsync(session);
 

@@ -61,7 +61,7 @@ public class SubscriberDashboardDisplayDriver : DisplayDriver<SubscriberDashboar
             vm.DisplayName = await _displayNameProvider.GetAsync(user);
         }).Location("Content:1");
 
-        var subscriptions = Initialize<ListSubscriptionsViewModel>("ListSubscriptions", async vm =>
+        var subscriptions = Initialize<ListSubscriptionSummariesViewModel>("ListSubscriptions", async vm =>
         {
             var userId = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
 

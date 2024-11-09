@@ -21,7 +21,7 @@ public static class SubscriptionConstants
 
     public static class Features
     {
-        public const string ModuleId = "CrestApps.OrchardCore.Subscriptions";
+        public const string Area = "CrestApps.OrchardCore.Subscriptions";
 
         public const string ReCaptcha = "CrestApps.OrchardCore.Subscriptions.ReCaptcha";
 

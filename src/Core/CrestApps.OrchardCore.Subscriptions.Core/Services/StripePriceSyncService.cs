@@ -15,7 +15,7 @@ using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 
-public class StripePriceSyncService
+public sealed class StripePriceSyncService
 {
     private const int _batchSize = 500;
 

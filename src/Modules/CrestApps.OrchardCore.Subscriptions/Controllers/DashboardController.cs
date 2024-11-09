@@ -6,7 +6,7 @@ using OrchardCore.DisplayManagement.ModelBinding;
 
 namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
-[Admin("manage-subscriptions/{actions}")]
+[Admin]
 public class DashboardController : Controller
 {
     private readonly IDisplayManager<SubscriberDashboard> _displayManager;
@@ -20,6 +20,7 @@ public class DashboardController : Controller
         _updateModelAccessor = updateModelAccessor;
     }
 
+    [Admin("subscription-dashboard")]
     public async Task<IActionResult> Index()
     {
         var model = await _displayManager.BuildDisplayAsync(_updateModelAccessor.ModelUpdater);

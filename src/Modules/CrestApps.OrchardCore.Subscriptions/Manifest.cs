@@ -12,7 +12,7 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Name = "Subscriptions",
-    Id = SubscriptionConstants.Features.ModuleId,
+    Id = SubscriptionConstants.Features.Area,
     Description = "Provides a way to process and manage subscriptions.",
     Category = "Subscriptions",
     Dependencies =
@@ -30,7 +30,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Subscriptions",
     Dependencies =
     [
-        SubscriptionConstants.Features.ModuleId,
+        SubscriptionConstants.Features.Area,
         StripeConstants.Feature.ModuleId,
     ]
 )]
@@ -42,7 +42,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Subscriptions",
     Dependencies =
     [
-        SubscriptionConstants.Features.ModuleId,
+        SubscriptionConstants.Features.Area,
     ]
 )]
 
@@ -53,7 +53,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Subscriptions",
     Dependencies =
     [
-        SubscriptionConstants.Features.ModuleId,
+        SubscriptionConstants.Features.Area,
         "OrchardCore.ReCaptcha",
     ]
 )]
@@ -66,7 +66,7 @@ using OrchardCore.Modules.Manifest;
     DefaultTenantOnly = true,
     Dependencies =
     [
-        SubscriptionConstants.Features.ModuleId,
+        SubscriptionConstants.Features.Area,
         StripeConstants.Feature.ModuleId,
         // Tenants adds setup services.
         "OrchardCore.Tenants",

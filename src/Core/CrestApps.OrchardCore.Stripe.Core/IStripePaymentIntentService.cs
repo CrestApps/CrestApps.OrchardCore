@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.Stripe.Core.Models;
 
 namespace CrestApps.OrchardCore.Stripe.Core;
 
-public interface IStripePaymentService
+public interface IStripePaymentIntentService
 {
     Task<CreatePaymentIntentResponse> CreateAsync(CreatePaymentIntentRequest model);
 

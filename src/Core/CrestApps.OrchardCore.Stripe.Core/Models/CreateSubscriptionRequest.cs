@@ -10,7 +10,7 @@ public class CreateSubscriptionRequest
 
     public Dictionary<string, string> Metadata { get; set; }
 
-    public IList<SubscriptionLineItem> LineItems { get; set; }
+    public IList<CreateSubscriptionLineItem> LineItems { get; set; }
 
     public int? TrialDuration { get; set; }
 

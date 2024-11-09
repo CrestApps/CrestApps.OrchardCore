@@ -1,7 +1,9 @@
+using CrestApps.OrchardCore.Subscriptions.Controllers;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Drivers;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Mvc.Core.Utilities;
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Subscriptions.Services;
@@ -11,7 +13,16 @@ public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
     private static readonly RouteValueDictionary _routeValues = new()
     {
         { "area", "OrchardCore.Settings" },
+        { "controller", "Admin" },
+        { "action", "Index" },
         { "groupId", SubscriptionSettingsDisplayDriver.GroupId },
+    };
+
+    private static readonly RouteValueDictionary _subscriptionRouteValues = new()
+    {
+        { "area", SubscriptionConstants.Features.Area },
+        { "controller", typeof(AdminController).ControllerName() },
+        { "action", nameof(AdminController.Index) },
     };
 
     internal readonly IStringLocalizer S;
@@ -29,11 +40,18 @@ public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
                     .Add(S["Subscriptions"], S["Subscriptions"].PrefixPosition(), subscriptions => subscriptions
                         .AddClass("subscriptions")
                         .Id("subscriptions")
-                        .Action("Index", "Admin", _routeValues)
-                        .Permission(SubscriptionPermissions.ManageSubscriptionsSettings)
+                        .Action(_routeValues)
+                        .Permission(SubscriptionPermissions.ManageSubscriptionSettings)
                         .LocalNav()
                     )
                 )
+            )
+            .Add(S["Subscriptions"], S["Subscriptions"].PrefixPosition(), subscriptions => subscriptions
+                .AddClass("subscriptions")
+                .Id("subscriptions")
+                .Action(_subscriptionRouteValues)
+                .Permission(SubscriptionPermissions.ManageOwnSubscriptions)
+                .LocalNav()
             );
 
         return ValueTask.CompletedTask;

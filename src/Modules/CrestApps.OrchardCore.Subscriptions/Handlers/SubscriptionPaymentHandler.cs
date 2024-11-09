@@ -10,12 +10,12 @@ namespace CrestApps.OrchardCore.Subscriptions.Handlers;
 public sealed class SubscriptionPaymentHandler : PaymentEventBase
 {
     private readonly SubscriptionPaymentSession _paymentSession;
-    private readonly IStripePaymentService _stripePaymentService;
+    private readonly IStripePaymentIntentService _stripePaymentService;
     private readonly ISubscriptionSessionStore _subscriptionSessionStore;
 
     public SubscriptionPaymentHandler(
         SubscriptionPaymentSession paymentSession,
-        IStripePaymentService stripePaymentService,
+        IStripePaymentIntentService stripePaymentService,
         ISubscriptionSessionStore subscriptionSessionStore
         )
     {

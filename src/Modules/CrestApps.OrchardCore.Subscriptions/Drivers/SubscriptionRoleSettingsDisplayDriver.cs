@@ -33,7 +33,7 @@ public sealed class SubscriptionRoleSettingsDisplayDriver : SiteDisplayDriver<Su
 
     public override async Task<IDisplayResult> EditAsync(ISite model, SubscriptionRoleSettings settings, BuildEditorContext context)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, SubscriptionPermissions.ManageSubscriptionsSettings))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, SubscriptionPermissions.ManageSubscriptionSettings))
         {
             return null;
         }
@@ -62,7 +62,7 @@ public sealed class SubscriptionRoleSettingsDisplayDriver : SiteDisplayDriver<Su
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, SubscriptionRoleSettings settings, UpdateEditorContext context)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, SubscriptionPermissions.ManageSubscriptionsSettings))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, SubscriptionPermissions.ManageSubscriptionSettings))
         {
             return null;
         }

@@ -1,4 +1,6 @@
 
+using CrestApps.OrchardCore.Stripe.Core.Models;
+
 namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 
 public class StripeMetadata
@@ -21,4 +23,6 @@ public class StripeSubscriptionMetadata
     public DateTime CreatedAt { get; set; }
 
     public DateTime? ExpiresAt { get; set; }
+
+    public IList<CreateSubscriptionLineItem> LineItems { get; set; }
 }

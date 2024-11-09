@@ -12,7 +12,7 @@ public sealed class SubscriptionSessionIndex : MapIndex
 
     public string OwnerId { get; set; }
 
-    public string Status { get; set; }
+    public SubscriptionSessionStatus Status { get; set; }
 
     public DateTime CreatedUtc { get; set; }
 

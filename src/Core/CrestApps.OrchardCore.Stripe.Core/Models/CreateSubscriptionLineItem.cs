@@ -1,7 +1,7 @@
 
 namespace CrestApps.OrchardCore.Stripe.Core.Models;
 
-public class SubscriptionLineItem
+public class CreateSubscriptionLineItem
 {
     public int Quantity { get; set; }
 

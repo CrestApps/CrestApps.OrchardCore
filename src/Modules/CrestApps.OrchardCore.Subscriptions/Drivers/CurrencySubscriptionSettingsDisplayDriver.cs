@@ -55,7 +55,7 @@ public sealed class CurrencySubscriptionSettingsDisplayDriver : SiteDisplayDrive
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, SubscriptionSettings settings, UpdateEditorContext context)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, SubscriptionPermissions.ManageSubscriptionsSettings))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, SubscriptionPermissions.ManageSubscriptionSettings))
         {
             return null;
         }
@@ -73,7 +73,7 @@ public sealed class CurrencySubscriptionSettingsDisplayDriver : SiteDisplayDrive
         {
             var url = _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, "StripeSyncPrices", new
             {
-                area = SubscriptionConstants.Features.ModuleId,
+                area = SubscriptionConstants.Features.Area,
             });
 
             await _notifier.WarningAsync(H["Since the currency has changed, it's important to update all Price items in Stripe. Click <a href=\"{0}\">here</a> to sync all Stripe price items.", url]);

@@ -40,9 +40,7 @@ public sealed class SubscriptionSessionStore : ISubscriptionSessionStore
 
     public async Task<SubscriptionSession> GetAsync(string sessionId, SubscriptionSessionStatus status)
     {
-        var statusValue = status.ToString();
-
-        var query = _session.Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.SessionId == sessionId && x.Status == statusValue);
+        var query = _session.Query<SubscriptionSession, SubscriptionSessionIndex>(x => x.SessionId == sessionId && x.Status == status);
 
         if (_contextAccessor.HttpContext.User.Identity.IsAuthenticated)
         {

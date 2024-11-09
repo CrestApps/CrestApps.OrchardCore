@@ -27,7 +27,8 @@ public class Startup : StartupBase
         services.AddScoped<IPermissionProvider, StripePermissionsProvider>();
 
         services.AddScoped<IStripeSubscriptionService, StripeSubscriptionService>();
-        services.AddScoped<IStripePaymentService, StripePaymentService>();
+        services.AddScoped<IStripePaymentIntentService, StripePaymentIntentService>();
+        services.AddScoped<IStripePaymentMethodService, StripePaymentMethodService>();
         services.AddScoped<IStripeProductService, StripeProductService>();
         services.AddScoped<IStripePriceService, StripePriceService>();
         services.AddScoped<IStripeSetupIntentService, StripeSetupIntentService>();

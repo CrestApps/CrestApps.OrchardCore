@@ -22,7 +22,7 @@ public static class CreatePaymentIntentEndpoint
 
     private static async Task<IResult> HandleAsync(
         [FromBody] CreatePaymentIntentRequest model,
-        IStripePaymentService stripePaymentService,
+        IStripePaymentIntentService stripePaymentService,
         IOptions<StripeOptions> stripeOptions)
     {
         if (string.IsNullOrEmpty(stripeOptions.Value.ApiKey))

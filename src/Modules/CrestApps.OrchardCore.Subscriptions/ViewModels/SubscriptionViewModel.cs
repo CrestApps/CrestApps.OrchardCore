@@ -1,16 +1,17 @@
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using OrchardCore.DisplayManagement;
+﻿using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
 
-public class SubscriptionViewModel
+public class SubscriptionViewModel : ShapeViewModel
 {
-    public string ContentItemId { get; set; }
+    public SubscriptionSession Subscription { get; set; }
 
-    public string SessionId { get; set; }
+    public SubscriptionViewModel()
+    {
+    }
 
-    public string Step { get; set; }
-
-    [BindNever]
-    public IShape Content { get; set; }
+    public SubscriptionViewModel(SubscriptionSession subscription)
+    {
+        Subscription = subscription;
+    }
 }

@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.Payments.Models;
 
-public class PaymentMethodOptions
+public sealed class PaymentMethodOptions
 {
     public string DefaultPaymentMethod { get; set; }
 

@@ -4,11 +4,11 @@ using Stripe;
 
 namespace CrestApps.OrchardCore.Stripe.Services;
 
-public sealed class StripePaymentService : IStripePaymentService
+public sealed class StripePaymentIntentService : IStripePaymentIntentService
 {
     private readonly PaymentIntentService _paymentIntentService;
 
-    public StripePaymentService(StripeClient stripeClient)
+    public StripePaymentIntentService(StripeClient stripeClient)
     {
         _paymentIntentService = new PaymentIntentService(stripeClient);
     }

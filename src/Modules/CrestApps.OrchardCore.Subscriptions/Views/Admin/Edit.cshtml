@@ -1,0 +1,8 @@
+<zone Name="Title"><h1>@RenderTitleSegments(T["Edit subscription"])</h1></zone>
+
+<form asp-action="Edit" asp-route-id="@Context.Request.RouteValues["id"]" asp-route-returnUrl="@Context.Request.Query["returnUrl"]" method="post" enctype="multipart/form-data" class="no-multisubmit">
+
+    @Html.ValidationSummary()
+
+    @await DisplayAsync(Model)
+</form>

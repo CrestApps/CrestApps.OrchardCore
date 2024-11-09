@@ -18,4 +18,8 @@ public sealed class SubscriptionInfo
     public GatewayMode GatewayMode { get; set; }
 
     public string GatewayCustomerId { get; set; }
+
+    public PaymentMethodInfo PaymentMethod { get; set; }
+
+    public IList<InvoiceLineItem> LineItems { get; set; }
 }

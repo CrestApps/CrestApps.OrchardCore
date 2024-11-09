@@ -16,7 +16,7 @@ public sealed class SubscriptionSessionIndexProvider : IndexProvider<Subscriptio
                     CompletedUtc = session.CompletedUtc,
                     ModifiedUtc = session.ModifiedUtc,
                     CreatedUtc = session.CreatedUtc,
-                    Status = session.Status.ToString(),
+                    Status = session.Status,
                     OwnerId = session.OwnerId,
                     ContentItemId = session.ContentItemId,
                     ContentItemVersionId = session.ContentItemVersionId,
