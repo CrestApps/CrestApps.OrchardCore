@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.OpenAI.Abstractions\CrestApps.OrchardCore.OpenAI.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

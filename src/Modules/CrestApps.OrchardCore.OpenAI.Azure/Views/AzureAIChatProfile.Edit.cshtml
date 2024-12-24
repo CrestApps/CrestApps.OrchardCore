@@ -1,0 +1,83 @@
+@using CrestApps.OrchardCore.OpenAI.Azure.Core
+@using OrchardCore
+@using CrestApps.OrchardCore.OpenAI.Azure.ViewModels
+
+@model AzureAIChatProfileViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DeploymentName" class="@Orchard.GetLabelClasses()">@T["Deployment"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DeploymentName" asp-items="Model.Deployments" class="form-select"></select>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("mde-editor")">
+    <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System Description"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="SystemMessage" class="form-control content-preview-text" rows="5"></textarea>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="TokenLength" class="@Orchard.GetLabelClasses()">@T["Token Length"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="TokenLength" step="4" min="4" max="2048">
+        <span class="hint">@T["This parameter is used to control the length of the generated predictions. A higher value will result in longer response. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultTokenLength]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Temperature" class="@Orchard.GetLabelClasses()">@T["Temperature"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="Temperature" step="0.01" min="0" max="1">
+        <span class="hint">@T["This parameter is used to regulate the level of randomness in predictions. A higher value will result in a more unpredictable response. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultTemperature]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="TopP" class="@Orchard.GetLabelClasses()">@T["Top P"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="TopP" step="0.01" min="0" max="1">
+        <span class="hint">@T["Controls the diversity of generated text: lower values produce more focused output, while higher values increase variety. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultTopP]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="FrequencyPenalty" class="@Orchard.GetLabelClasses()">@T["Frequency Penalty"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="FrequencyPenalty " step="0.01" min="0" max="1">
+        <span class="hint">@T["The likelihood of repeating tokens in the generated text. A higher value reduces repetition by penalizing frequent tokens, while a lower value allows more repetition. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultFrequencyPenalty]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="PresencePenalty" class="@Orchard.GetLabelClasses()">@T["Presence Penalty"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="PresencePenalty" step="0.01" min="0" max="1">
+        <span class="hint">@T["Discourages the inclusion of tokens that have already appeared in the text. A higher value reduces the likelihood of repeating previously mentioned concepts, while a lower value allows more repetition. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultPresencePenalty]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="PastMessagesCount" class="@Orchard.GetLabelClasses()">@T["Past messages included"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="PastMessagesCount" step="1" min="2" max="20">
+        <span class="hint">@T["Select the number of past messages to include in each new API request. This helps give the model context for new user queries. Setting this number to 10 will include 5 user queries and 5 system responses. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultPastMessagesCount]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Strictness" class="@Orchard.GetLabelClasses()">@T["Strictness"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="Strictness " step="1" min="1" max="5">
+        <span class="hint">@T["Strictness sets the threshold to categorize documents as relevant to your queries. Raising strictness means a higher threshold for relevance and filtering out more documents that are less relevant for responses. Very high strictness could cause failure to generate responses due to limited available documents. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultStrictness]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="TopNDocuments" class="@Orchard.GetLabelClasses()">@T["Total Retrieved documents"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="TopNDocuments " step="1" min="3" max="20">
+        <span class="hint">@T["This specifies the number of top-scoring documents from your data index used to generate responses. You want to increase the value when you have short documents or want to provide more context. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultTopNDocuments]</span>
+    </div>
+</div>
