@@ -39,7 +39,7 @@ If you're utilizing the Recipes feature, you can create an Azure profile by usin
       "profiles":[
         {
           "Source":"Azure",
-          "Title":"Example Profile",
+          "Name":"Example Profile",
           "DeploymentName":"<!-- Your Azure model deployment name goes here -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",
           "Temperature":null,
@@ -73,7 +73,7 @@ If you're using the Recipes feature, you can create an Azure profile using the f
       "profiles":[
         {
           "Source":"AzureAISearch",
-          "Title":"Example Profile",
+          "Name":"Example Profile",
           "IndexName":"<!-- Your Azure index name goes here -->",
           "DeploymentName":"<!-- Your Azure model deployment name goes here -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",

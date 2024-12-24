@@ -4,12 +4,12 @@
 @model ShapeViewModel<AIChatProfile>
 
 <a asp-action="Edit"
-   asp-controller="Admin"
+   asp-controller="Profiles"
    asp-route-id="@Model.Value.Id"
    class="btn btn-primary btn-sm">@T["Edit"]</a>
 
 <a asp-action="Delete"
-   asp-controller="Admin"
+   asp-controller="Profiles"
    asp-route-id="@Model.Value.Id"
    class="btn btn-danger btn-sm"
    data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

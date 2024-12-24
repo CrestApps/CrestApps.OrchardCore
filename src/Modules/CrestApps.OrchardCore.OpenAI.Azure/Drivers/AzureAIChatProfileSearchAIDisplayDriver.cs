@@ -39,6 +39,11 @@ public sealed class AzureAIChatProfileSearchAIDisplayDriver : DisplayDriver<AICh
 
     public override async Task<IDisplayResult> UpdateAsync(AIChatProfile model, UpdateEditorContext context)
     {
+        if (model.Source is null || model.Source != AzureWithAzureAISearchProfileSource.Key)
+        {
+            return null;
+        }
+
         var viewModel = new AzureAIChatProfileAISearchMetadata();
 
         await context.Updater.TryUpdateModelAsync(viewModel, Prefix);

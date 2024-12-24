@@ -20,6 +20,13 @@ public interface IAIChatProfileManager
     Task<AIChatProfile> FindByIdAsync(string id);
 
     /// <summary>
+    /// Asynchronously retrieves an AI chat profile by its name.
+    /// </summary>
+    /// <param name="name">The name of the AI chat profile.</param>
+    /// <returns>A task that represents the asynchronous operation. The result is the AIChatProfile corresponding to the specified ID, or null if not found.</returns>
+    Task<AIChatProfile> FindByNameAsync(string name);
+
+    /// <summary>
     /// Asynchronously creates a new AI chat profile with the given source and optional additional data.
     /// </summary>
     /// <param name="source">The source from which the profile is created.</param>

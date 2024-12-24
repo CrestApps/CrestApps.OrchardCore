@@ -58,7 +58,7 @@ If you're using the Recipes module, you can add AI chat profiles using the follo
       "profiles":[
         {
           "Source":"Azure",
-          "Title":"Example Profile",
+          "Name":"Example Profile",
           "DeploymentName":"<!-- Your Azure model deployment name goes here -->",
           "SystemMessage":"You are an AI assistant that helps people find information."
         }

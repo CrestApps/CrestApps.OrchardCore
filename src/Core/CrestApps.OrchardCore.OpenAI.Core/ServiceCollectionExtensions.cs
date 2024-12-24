@@ -10,6 +10,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddAIChatProfileServices(this IServiceCollection services)
     {
+        services.AddScoped<IAIChatProfileStore, DefaultAIChatProfileStore>();
         services.AddScoped<IAIChatProfileManager, DefaultAIChatProfileManager>();
         services.AddScoped<IAIChatProfileHandler, AIChatProfileHandler>();
         services.AddPermissionProvider<OpenAIPermissionProvider>();

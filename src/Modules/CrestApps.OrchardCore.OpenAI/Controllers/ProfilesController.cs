@@ -19,7 +19,7 @@ using OrchardCore.Routing;
 namespace CrestApps.OrchardCore.OpenAI.Azure.Controllers;
 
 [Admin("AIChatProfile/{action}/{id?}", "AIChatProfile{action}")]
-public sealed class AdminController : Controller
+public sealed class ProfilesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
@@ -33,15 +33,15 @@ public sealed class AdminController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
-    public AdminController(
+    public ProfilesController(
         IAIChatProfileManager profileManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIChatProfile> profileDisplayManager,
         IServiceProvider serviceProvider,
         INotifier notifier,
-        IHtmlLocalizer<AdminController> htmlLocalizer,
-        IStringLocalizer<AdminController> stringLocalizer)
+        IHtmlLocalizer<ProfilesController> htmlLocalizer,
+        IStringLocalizer<ProfilesController> stringLocalizer)
     {
         _profileManager = profileManager;
         _authorizationService = authorizationService;
@@ -85,7 +85,7 @@ public sealed class AdminController : Controller
             Profiles = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            SourceNames = profileSources.Select(x => x.TechnicalName),
+            SourceNames = profileSources.Select(x => x.TechnicalName).Order(),
         };
 
         foreach (var profile in result.Profiles)
@@ -211,7 +211,7 @@ public sealed class AdminController : Controller
 
         var model = new AIChatProfileViewModel
         {
-            DisplayName = profile.Title,
+            DisplayName = profile.Name,
             Editor = await _profileDisplayManager.BuildEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
@@ -239,7 +239,7 @@ public sealed class AdminController : Controller
 
         var model = new AIChatProfileViewModel
         {
-            DisplayName = mutableProfile.Title,
+            DisplayName = mutableProfile.Name,
             Editor = await _profileDisplayManager.UpdateEditorAsync(mutableProfile, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 

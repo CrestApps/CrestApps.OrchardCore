@@ -9,7 +9,7 @@ public class AIChatProfile : Entity
     /// <summary>
     /// Gets or sets the technical name of the query.
     /// </summary>
-    public string Title { get; set; }
+    public string Name { get; set; }
 
     /// <summary>
     /// Gets the name of the source for this query.
@@ -27,7 +27,7 @@ public class AIChatProfile : Entity
         return new AIChatProfile()
         {
             Id = Id,
-            Title = Title,
+            Name = Name,
             Source = Source,
             CreatedUtc = CreatedUtc,
             OwnerId = OwnerId,

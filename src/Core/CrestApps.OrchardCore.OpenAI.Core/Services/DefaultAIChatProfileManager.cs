@@ -1,29 +1,26 @@
-using System.Data;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
-using OrchardCore.Documents;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
 public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
 {
-    private readonly IDocumentManager<AIChatProfileDocument> _documentManager;
+    private readonly IAIChatProfileStore _profileStore;
     private readonly IServiceProvider _serviceProvider;
     private readonly IEnumerable<IAIChatProfileHandler> _handlers;
     private readonly ILogger _logger;
 
     public DefaultAIChatProfileManager(
-        IDocumentManager<AIChatProfileDocument> documentManager,
+        IAIChatProfileStore profileStore,
         IServiceProvider serviceProvider,
         IEnumerable<IAIChatProfileHandler> handlers,
         ILogger<DefaultAIChatProfileManager> logger)
     {
-        _documentManager = documentManager;
+        _profileStore = profileStore;
         _serviceProvider = serviceProvider;
         _handlers = handlers;
         _logger = logger;
@@ -41,14 +38,7 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
             return false;
         }
 
-        var document = await _documentManager.GetOrCreateMutableAsync();
-
-        var removed = document.Profiles.Remove(profile.Id);
-
-        if (removed)
-        {
-            await _documentManager.UpdateAsync(document);
-        }
+        var removed = await _profileStore.DeleteAsync(profile);
 
         var deletedContext = new DeletedAIChatProfileContext(profile);
         await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, _logger);
@@ -58,11 +48,23 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
 
     public async Task<AIChatProfile> FindByIdAsync(string id)
     {
-        ArgumentException.ThrowIfNullOrEmpty(id);
+        var profile = await _profileStore.FindByIdAsync(id);
 
-        var document = await _documentManager.GetOrCreateImmutableAsync();
+        if (profile is not null)
+        {
+            await LoadAsync(profile);
 
-        if (document.Profiles.TryGetValue(id, out var profile))
+            return profile;
+        }
+
+        return null;
+    }
+
+    public async Task<AIChatProfile> FindByNameAsync(string name)
+    {
+        var profile = await _profileStore.FindByNameAsync(name);
+
+        if (profile is not null)
         {
             await LoadAsync(profile);
 
@@ -112,15 +114,7 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
 
     public async Task<AIProfileResult> PageQueriesAsync(int page, int pageSize, QueryContext context)
     {
-        var records = await LocateQueriesAsync(context);
-
-        var skip = (page - 1) * pageSize;
-
-        var result = new AIProfileResult
-        {
-            Count = records.Count(),
-            Profiles = records.Skip(skip).Take(pageSize).ToArray()
-        };
+        var result = await _profileStore.PageAsync(page, pageSize, context);
 
         foreach (var record in result.Profiles)
         {
@@ -137,16 +131,7 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
         var savingContext = new SavingAIChatProfileContext(profile);
         await _handlers.InvokeAsync((handler, ctx) => handler.SavingAsync(ctx), savingContext, _logger);
 
-        var document = await _documentManager.GetOrCreateMutableAsync();
-
-        if (string.IsNullOrEmpty(profile.Id))
-        {
-            profile.Id = IdGenerator.GenerateId();
-        }
-
-        document.Profiles[profile.Id] = profile;
-
-        await _documentManager.UpdateAsync(document);
+        await _profileStore.SaveAsync(profile);
 
         var savedContext = new SavedAIChatProfileContext(profile);
         await _handlers.InvokeAsync((handler, ctx) => handler.SavedAsync(ctx), savedContext, _logger);
@@ -181,34 +166,5 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
         var loadedContext = new LoadedAIChatProfileContext(profile);
 
         return _handlers.InvokeAsync((handler, context) => handler.LoadedAsync(context), loadedContext, _logger);
-    }
-
-    private async Task<IEnumerable<AIChatProfile>> LocateQueriesAsync(QueryContext context)
-    {
-        var document = await _documentManager.GetOrCreateImmutableAsync();
-
-        if (context == null)
-        {
-            return document.Profiles.Values;
-        }
-
-        var queries = document.Profiles.Values.AsEnumerable();
-
-        if (!string.IsNullOrEmpty(context.Source))
-        {
-            queries = queries.Where(x => x.Source.Equals(context.Source, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (!string.IsNullOrEmpty(context.Name))
-        {
-            queries = queries.Where(x => x.Title.Contains(context.Name, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (context.Sorted)
-        {
-            queries = queries.OrderBy(x => x.Title);
-        }
-
-        return queries;
     }
 }

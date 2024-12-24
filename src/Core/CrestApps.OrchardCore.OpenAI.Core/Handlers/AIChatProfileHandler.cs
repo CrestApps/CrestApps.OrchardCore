@@ -11,16 +11,19 @@ namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 public class AIChatProfileHandler : AIChatProfileHandlerBase
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAIChatProfileStore _profileStore;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
     public AIChatProfileHandler(
         IHttpContextAccessor httpContextAccessor,
+        IAIChatProfileStore profileStore,
         IClock clock,
         IStringLocalizer<AIChatProfileHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
+        _profileStore = profileStore;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -31,19 +34,26 @@ public class AIChatProfileHandler : AIChatProfileHandlerBase
     public override Task UpdatingAsync(UpdatingAIChatProfileContext context)
         => PopulateAsync(context.Profile, context.Data);
 
-    public override Task ValidatingAsync(ValidatingAIChatProfileContext context)
+    public override async Task ValidatingAsync(ValidatingAIChatProfileContext context)
     {
-        if (string.IsNullOrWhiteSpace(context.Profile.Title))
+        if (string.IsNullOrWhiteSpace(context.Profile.Name))
         {
-            context.Result.Fail(new ValidationResult(S["Profile Title is required."], [nameof(AIChatProfile.Title)]));
+            context.Result.Fail(new ValidationResult(S["Profile Name is required."], [nameof(AIChatProfile.Name)]));
+        }
+        else
+        {
+            var profile = await _profileStore.FindByNameAsync(context.Profile.Name);
+
+            if (profile is not null && profile.Id != context.Profile.Id)
+            {
+                context.Result.Fail(new ValidationResult(S["A profile with this name already exists. The name must be unique."], [nameof(AIChatProfile.Name)]));
+            }
         }
 
         if (string.IsNullOrWhiteSpace(context.Profile.Source))
         {
             context.Result.Fail(new ValidationResult(S["Source is required."], [nameof(AIChatProfile.Source)]));
         }
-
-        return Task.CompletedTask;
     }
 
     public override Task InitializedAsync(InitializedAIChatProfileContext context)
@@ -63,11 +73,11 @@ public class AIChatProfileHandler : AIChatProfileHandlerBase
 
     private static Task PopulateAsync(AIChatProfile rule, JsonNode data)
     {
-        var title = data[nameof(AIChatProfile.Title)]?.GetValue<string>();
+        var name = data[nameof(AIChatProfile.Name)]?.GetValue<string>()?.Trim();
 
-        if (!string.IsNullOrEmpty(title))
+        if (!string.IsNullOrEmpty(name))
         {
-            rule.Title = title;
+            rule.Name = name;
         }
 
         return Task.CompletedTask;

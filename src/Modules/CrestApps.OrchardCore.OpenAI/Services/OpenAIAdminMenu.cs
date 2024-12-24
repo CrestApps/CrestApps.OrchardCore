@@ -19,10 +19,10 @@ public sealed class OpenAIAdminMenu : AdminNavigationProvider
             .Add(S["OpenAI"], "90", openAI => openAI
                 .AddClass("openai")
                 .Id("openid")
-                .Add(S["Profiles"], S["Profiles"].PrefixPosition("1"), profiles => profiles
+                .Add(S["Profiles"], "after", profiles => profiles
                     .AddClass("openai-profiles")
                     .Id("openAIProfiles")
-                    .Action("Index", "Admin", "CrestApps.OrchardCore.OpenAI")
+                    .Action("Index", "Profiles", "CrestApps.OrchardCore.OpenAI")
                     .Permission(AIChatProfilePermissions.ManageAIChatProfiles)
                     .LocalNav()
                 )

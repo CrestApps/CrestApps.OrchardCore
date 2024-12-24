@@ -1,9 +1,11 @@
-using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.OpenAI.ViewModels;
 
 public class EditAIChatProfileViewModel
 {
-    [Required(AllowEmptyStrings = false)]
-    public string Title { get; set; }
+    public string Name { get; set; }
+
+    [BindNever]
+    public bool IsNew { get; set; }
 }

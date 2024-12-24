@@ -48,14 +48,23 @@ public sealed class AIChatProfileStep : IRecipeStepHandler
             if (!string.IsNullOrEmpty(id))
             {
                 profile = await _profileManager.FindByIdAsync(id);
+            }
 
-                if (profile != null)
+            if (profile is null)
+            {
+                var name = token[nameof(AIChatProfile.Name)]?.GetValue<string>()?.Trim();
+
+                if (!string.IsNullOrEmpty(name))
                 {
-                    await _profileManager.UpdateAsync(profile, token);
+                    profile = await _profileManager.FindByNameAsync(name);
                 }
             }
 
-            if (profile == null)
+            if (profile is not null)
+            {
+                await _profileManager.UpdateAsync(profile, token);
+            }
+            else
             {
                 var sourceName = token[nameof(AIChatProfile.Source)]?.GetValue<string>();
 

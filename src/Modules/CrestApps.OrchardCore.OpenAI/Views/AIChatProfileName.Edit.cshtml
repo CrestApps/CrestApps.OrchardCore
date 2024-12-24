@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.OpenAI.ViewModels
+@using OrchardCore
+
+@model EditAIChatProfileViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Name" class="@Orchard.GetLabelClasses()">@T["Name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="Name" class="form-control" disabled="@(!Model.IsNew)" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        @if (Model.IsNew)
+        {
+            <span class="hint">@T["Profile name. This name cannot be changed later."]</span>
+        }
+        else
+        {
+            <span class="hint">@T["Profile name."]</span>
+        }
+    </div>
+</div>

@@ -1,12 +1,26 @@
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.OpenAI.Drivers;
 
 public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 {
+    private readonly IAIChatProfileStore _profileStore;
+
+    internal readonly IStringLocalizer S;
+
+    public AIChatProfileDisplayDriver(
+        IAIChatProfileStore profileStore,
+        IStringLocalizer<AIChatProfileDisplayDriver> stringLocalizer)
+    {
+        _profileStore = profileStore;
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(AIChatProfile model, BuildDisplayContext context)
     {
         return CombineAsync(
@@ -19,19 +33,36 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 
     public override IDisplayResult Edit(AIChatProfile model, BuildEditorContext context)
     {
-        return Initialize<EditAIChatProfileViewModel>("AIChatProfileTitle_Edit", m =>
+        return Initialize<EditAIChatProfileViewModel>("AIChatProfileName_Edit", m =>
         {
-            m.Title = model.Title;
+            m.Name = model.Name;
+            m.IsNew = context.IsNew;
         }).Location("Content:1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIChatProfile model, UpdateEditorContext context)
     {
+        if (!context.IsNew)
+        {
+            return Edit(model, context);
+        }
+
         var viewModel = new EditAIChatProfileViewModel();
 
         await context.Updater.TryUpdateModelAsync(viewModel, Prefix);
 
-        model.Title = viewModel.Title;
+        var name = viewModel.Name?.Trim();
+
+        if (string.IsNullOrEmpty(name))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.Name), S["Name is required."]);
+        }
+        else if (await _profileStore.FindByNameAsync(name) is not null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.Name), S["A profile with this name already exists. The name must be unique."]);
+        }
+
+        model.Name = name;
 
         return Edit(model, context);
     }
