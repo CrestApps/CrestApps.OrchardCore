@@ -1,12 +1,12 @@
 using Microsoft.Extensions.Localization;
 
-namespace CrestApps.OrchardCore.OpenAI.Azure.Core;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureOpenAIProfileSource : IAIChatProfileSource
+public sealed class AzureProfileSource : IAIChatProfileSource
 {
-    public const string Key = "AzureOpenAI";
+    public const string Key = "Azure";
 
-    public AzureOpenAIProfileSource(IStringLocalizer<AzureOpenAIProfileSource> S)
+    public AzureProfileSource(IStringLocalizer<AzureProfileSource> S)
     {
         DisplayName = S["Azure OpenAI"];
         Description = S["AI-powered chat using Azure OpenAI models."];

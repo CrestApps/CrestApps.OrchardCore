@@ -17,12 +17,14 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddAIChatProfileSource<T>(this IServiceCollection services, string key)
-         where T : class, IAIChatProfileSource
+    public static IServiceCollection AddAIChatProfileSource<TSource>(this IServiceCollection services, string sourceKey)
+         where TSource : class, IAIChatProfileSource
     {
-        ArgumentNullException.ThrowIfNull(key);
+        ArgumentNullException.ThrowIfNull(sourceKey);
 
-        services.AddKeyedScoped<IAIChatProfileSource, T>(key);
+        services.AddScoped<TSource>();
+        services.AddScoped<IAIChatProfileSource>(sp => sp.GetService<TSource>());
+        services.AddKeyedScoped<IAIChatProfileSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
 
         return services;
     }

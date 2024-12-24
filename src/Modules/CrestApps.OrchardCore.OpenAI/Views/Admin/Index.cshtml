@@ -69,10 +69,6 @@
             {
                 <li class="list-group-item item d-flex justify-content-between" data-filter-value="@entry.Profile.Title.ToLowerInvariant()">
                     <div class="d-flex flex-row">
-                        <div class="ui-sortable-handle d-inline me-2">
-                            <i class="fa-solid fa-arrows-alt" aria-hidden="true"></i>
-                        </div>
-
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input" value="@entry.Profile.Id" name="itemIds" id="itemIds-@entry.Profile.Id">
                             <label class="form-check-label" for="itemIds-@entry.Profile.Id">&nbsp;</label>
@@ -102,7 +98,7 @@
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="available-rule-types-title">@T["Available Rule Types"]</h5>
+                    <h5 class="modal-title" id="available-rule-types-title">@T["Available Sources"]</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -115,9 +111,8 @@
                         <div class="row row-cols-1 row-cols-md-3 g-2">
                             @foreach (var source in Model.SourceNames)
                             {
-                                OrchardCore.DisplayManagement.IShape shape = await New.AIChatProfile_Link(Name: source);
+                                OrchardCore.DisplayManagement.IShape shape = await New.AIChatProfile_Link(Source: source);
                                 shape.Metadata.Alternates.Add("AIChatProfile_Link__" + source);
-                                shape.Properties["Source"] = source;
 
                                 @await DisplayAsync(shape)
                             }
@@ -132,7 +127,7 @@
     </div>
 </form>
 
-<script asp-src="~/CrestApps.OrchardCore.OpenAI.Azure/Scripts/admin-ui.min.js" debug-src="~/CrestApps.OrchardCore.OpenAI.Azure/Scripts/admin-ui.min.js" asp-name="ai-chat-profiles-admin" at="Foot"></script>
+<script asp-src="~/CrestApps.OrchardCore.OpenAI/Scripts/admin-ui.min.js" debug-src="~/CrestApps.OrchardCore.OpenAI/Scripts/admin-ui.min.js" asp-name="ai-chat-profiles-admin" at="Foot"></script>
 
 <script at="Foot" depends-on="ai-chat-profiles-admin">
     document.addEventListener('DOMContentLoaded', () => {

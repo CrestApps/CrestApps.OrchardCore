@@ -20,7 +20,7 @@ public sealed class AzureAIChatProfileDisplayDriver : DisplayDriver<AIChatProfil
 
     public override IDisplayResult Edit(AIChatProfile model, BuildEditorContext context)
     {
-        if (model.Source is null || !model.Source.StartsWith("AzureAI"))
+        if (model.Source is null || !model.Source.StartsWith("Azure"))
         {
             return null;
         }

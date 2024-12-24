@@ -187,7 +187,7 @@ public sealed class AdminController : Controller
         {
             await _profileManager.SaveAsync(profile);
 
-            await _notifier.SuccessAsync(H["Profile created successfully."]);
+            await _notifier.SuccessAsync(H["Profile has been created successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -247,7 +247,7 @@ public sealed class AdminController : Controller
         {
             await _profileManager.SaveAsync(mutableProfile);
 
-            await _notifier.SuccessAsync(H["Profile updated successfully."]);
+            await _notifier.SuccessAsync(H["Profile has been updated successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -272,7 +272,7 @@ public sealed class AdminController : Controller
 
         await _profileManager.DeleteAsync(profile);
 
-        await _notifier.SuccessAsync(H["Profile deleted successfully."]);
+        await _notifier.SuccessAsync(H["Profile has been deleted successfully."]);
 
         return RedirectToAction(nameof(Index));
     }
@@ -280,21 +280,22 @@ public sealed class AdminController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
-    public async Task<ActionResult> IndexPost(AIChatProfileOptions options, IEnumerable<string> profileIds)
+    public async Task<ActionResult> IndexPost(AIChatProfileOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIChatProfilePermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }
 
-        if (profileIds?.Count() > 0)
+        if (itemIds?.Count() > 0)
         {
             switch (options.BulkAction)
             {
                 case AIChatProfileAction.None:
                     break;
                 case AIChatProfileAction.Remove:
-                    foreach (var id in profileIds)
+                    var counter = 0;
+                    foreach (var id in itemIds)
                     {
                         var profile = await _profileManager.FindByIdAsync(id);
 
@@ -303,9 +304,19 @@ public sealed class AdminController : Controller
                             continue;
                         }
 
-                        await _profileManager.DeleteAsync(profile);
+                        if (await _profileManager.DeleteAsync(profile))
+                        {
+                            counter++;
+                        }
                     }
-                    await _notifier.SuccessAsync(H["Profile removed successfully."]);
+                    if (counter == 0)
+                    {
+                        await _notifier.WarningAsync(H["No profiles were removed."]);
+                    }
+                    else
+                    {
+                        await _notifier.SuccessAsync(H.Plural(counter, "1 has been removed successfully.", "{0} profiles have been removed successfully."));
+                    }
                     break;
                 default:
                     return BadRequest();

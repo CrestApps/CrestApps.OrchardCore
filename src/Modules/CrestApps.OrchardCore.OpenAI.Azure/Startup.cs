@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Core;
@@ -13,21 +13,13 @@ namespace CrestApps.OrchardCore.OpenAI.Azure;
 
 public sealed class Startup : StartupBase
 {
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddAIChatProfileSource<AzureOpenAIProfileSource>(AzureOpenAIProfileSource.Key);
-    }
-}
-
-[Feature("CrestApps.OrchardCore.OpenAI.Azure.Core")]
-public sealed class CoreStartup : StartupBase
-{
     private readonly IShellConfiguration _shellConfiguration;
 
-    public CoreStartup(IShellConfiguration shellConfiguration)
+    public Startup(IShellConfiguration shellConfiguration)
     {
         _shellConfiguration = shellConfiguration;
     }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.Configure<AzureCognitiveAccountOptions>(_shellConfiguration.GetSection("CrestApps_OpenAI_Azure"));
@@ -38,12 +30,23 @@ public sealed class CoreStartup : StartupBase
     }
 }
 
-[Feature("CrestApps.OrchardCore.OpenAI.Azure.SearchAI")]
-public sealed class SearchAzureAIStartup : StartupBase
+[Feature("CrestApps.OrchardCore.OpenAI.Azure.Standard")]
+public sealed class StandardStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIChatProfileSource<AzureOpenAIAzureAISearchProfileSource>(AzureOpenAIAzureAISearchProfileSource.Key);
+        services.AddAIChatProfileSource<AzureProfileSource>(AzureProfileSource.Key);
+        services.AddScoped<IAIChatProfileHandler, AzureOpenAIProfileHandler>();
+    }
+}
+
+[Feature("CrestApps.OrchardCore.OpenAI.Azure.AISearch")]
+public sealed class AISearchStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAIChatProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
         services.AddScoped<IDisplayDriver<AIChatProfile>, AzureAIChatProfileSearchAIDisplayDriver>();
+        services.AddScoped<IAIChatProfileHandler, AzureOpenAIProfileWithAISearchHandler>();
     }
 }

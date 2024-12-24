@@ -9,7 +9,6 @@ public class AzureAIChatProfileViewModel
     [Required(AllowEmptyStrings = false)]
     public string DeploymentName { get; set; }
 
-    [Required(AllowEmptyStrings = false)]
     public string SystemMessage { get; set; }
 
     [Range(0f, 1f)]

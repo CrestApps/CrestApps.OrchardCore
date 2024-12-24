@@ -7,19 +7,23 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="DeploymentName" class="@Orchard.GetLabelClasses()">@T["Deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="DeploymentName" asp-items="Model.Deployments" class="form-select"></select>
+        <select asp-for="DeploymentName" asp-items="Model.Deployments" class="form-select">
+            <option value="">@T["Select a deployment"]</option>
+        </select>
+        <span class="hint">@T["The Azure AI deployment model to use."]</span>
     </div>
 </div>
 
 <div class="@Orchard.GetWrapperClasses("mde-editor")">
-    <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System Description"]</label>
+    <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System description"]</label>
     <div class="@Orchard.GetEndClasses()">
         <textarea asp-for="SystemMessage" class="form-control content-preview-text" rows="5"></textarea>
+        <span class="hint">@T["The system message in OpenAI sets the AI's behavior and response style, guiding how it interacts in a conversation."]</span>
     </div>
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="TokenLength" class="@Orchard.GetLabelClasses()">@T["Token Length"]</label>
+    <label asp-for="TokenLength" class="@Orchard.GetLabelClasses()">@T["Token length"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="TokenLength" step="4" min="4" max="2048">
         <span class="hint">@T["This parameter is used to control the length of the generated predictions. A higher value will result in longer response. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultTokenLength]</span>
@@ -43,7 +47,7 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="FrequencyPenalty" class="@Orchard.GetLabelClasses()">@T["Frequency Penalty"]</label>
+    <label asp-for="FrequencyPenalty" class="@Orchard.GetLabelClasses()">@T["Frequency penalty"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="FrequencyPenalty " step="0.01" min="0" max="1">
         <span class="hint">@T["The likelihood of repeating tokens in the generated text. A higher value reduces repetition by penalizing frequent tokens, while a lower value allows more repetition. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultFrequencyPenalty]</span>
@@ -51,7 +55,7 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="PresencePenalty" class="@Orchard.GetLabelClasses()">@T["Presence Penalty"]</label>
+    <label asp-for="PresencePenalty" class="@Orchard.GetLabelClasses()">@T["Presence penalty"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="PresencePenalty" step="0.01" min="0" max="1">
         <span class="hint">@T["Discourages the inclusion of tokens that have already appeared in the text. A higher value reduces the likelihood of repeating previously mentioned concepts, while a lower value allows more repetition. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultPresencePenalty]</span>
@@ -75,7 +79,7 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="TopNDocuments" class="@Orchard.GetLabelClasses()">@T["Total Retrieved documents"]</label>
+    <label asp-for="TopNDocuments" class="@Orchard.GetLabelClasses()">@T["Total retrieved documents"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="TopNDocuments " step="1" min="3" max="20">
         <span class="hint">@T["This specifies the number of top-scoring documents from your data index used to generate responses. You want to increase the value when you have short documents or want to provide more context. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultTopNDocuments]</span>

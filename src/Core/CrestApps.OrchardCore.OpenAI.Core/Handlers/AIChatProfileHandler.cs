@@ -35,12 +35,12 @@ public class AIChatProfileHandler : AIChatProfileHandlerBase
     {
         if (string.IsNullOrWhiteSpace(context.Profile.Title))
         {
-            context.Result.Fail(new ValidationResult(S["Rule name is required"], [nameof(AIChatProfile.Title)]));
+            context.Result.Fail(new ValidationResult(S["Profile Title is required."], [nameof(AIChatProfile.Title)]));
         }
 
         if (string.IsNullOrWhiteSpace(context.Profile.Source))
         {
-            context.Result.Fail(new ValidationResult(S["Source name is required"], [nameof(AIChatProfile.Source)]));
+            context.Result.Fail(new ValidationResult(S["Source is required."], [nameof(AIChatProfile.Source)]));
         }
 
         return Task.CompletedTask;

@@ -26,8 +26,13 @@ public class AIChatProfile : Entity
     {
         return new AIChatProfile()
         {
+            Id = Id,
             Title = Title,
             Source = Source,
+            CreatedUtc = CreatedUtc,
+            OwnerId = OwnerId,
+            Author = Author,
+            Properties = Properties,
         };
     }
 }

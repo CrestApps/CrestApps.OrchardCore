@@ -29,7 +29,7 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
         _logger = logger;
     }
 
-    public async Task DeleteAsync(AIChatProfile profile)
+    public async Task<bool> DeleteAsync(AIChatProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
@@ -38,18 +38,22 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
 
         if (string.IsNullOrEmpty(profile.Id))
         {
-            return;
+            return false;
         }
 
         var document = await _documentManager.GetOrCreateMutableAsync();
 
-        if (document.Profiles.Remove(profile.Id))
+        var removed = document.Profiles.Remove(profile.Id);
+
+        if (removed)
         {
             await _documentManager.UpdateAsync(document);
         }
 
         var deletedContext = new DeletedAIChatProfileContext(profile);
         await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, _logger);
+
+        return removed;
     }
 
     public async Task<AIChatProfile> FindByIdAsync(string id)
@@ -61,6 +65,8 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
         if (document.Profiles.TryGetValue(id, out var profile))
         {
             await LoadAsync(profile);
+
+            return profile;
         }
 
         return null;
@@ -126,6 +132,8 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
 
     public async Task SaveAsync(AIChatProfile profile)
     {
+        ArgumentNullException.ThrowIfNull(profile);
+
         var savingContext = new SavingAIChatProfileContext(profile);
         await _handlers.InvokeAsync((handler, ctx) => handler.SavingAsync(ctx), savingContext, _logger);
 
@@ -136,10 +144,36 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
             profile.Id = IdGenerator.GenerateId();
         }
 
-        document.Profiles.Add(profile.Id, profile);
+        document.Profiles[profile.Id] = profile;
+
+        await _documentManager.UpdateAsync(document);
 
         var savedContext = new SavedAIChatProfileContext(profile);
         await _handlers.InvokeAsync((handler, ctx) => handler.SavedAsync(ctx), savedContext, _logger);
+    }
+
+    public async Task UpdateAsync(AIChatProfile profile, JsonNode data = null)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        var updatingContext = new UpdatingAIChatProfileContext(profile, data);
+        await _handlers.InvokeAsync((handler, ctx) => handler.UpdatingAsync(ctx), updatingContext, _logger);
+
+        var updatedContext = new UpdatedAIChatProfileContext(profile);
+        await _handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, _logger);
+    }
+
+    public async Task<AIChatProfileValidateResult> ValidateAsync(AIChatProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        var validatingContext = new ValidatingAIChatProfileContext(profile);
+        await _handlers.InvokeAsync((handler, ctx) => handler.ValidatingAsync(ctx), validatingContext, _logger);
+
+        var validatedContext = new ValidatedAIChatProfileContext(profile, validatingContext.Result);
+        await _handlers.InvokeAsync((handler, ctx) => handler.ValidatedAsync(ctx), validatedContext, _logger);
+
+        return validatingContext.Result;
     }
 
     private Task LoadAsync(AIChatProfile profile)

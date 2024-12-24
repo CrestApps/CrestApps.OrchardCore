@@ -16,7 +16,7 @@ public sealed class OpenAIAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Open AI"], S["Open AI"].PrefixPosition(), openAI => openAI
+            .Add(S["OpenAI"], "90", openAI => openAI
                 .AddClass("openai")
                 .Id("openid")
                 .Add(S["Profiles"], S["Profiles"].PrefixPosition("1"), profiles => profiles
@@ -26,7 +26,7 @@ public sealed class OpenAIAdminMenu : AdminNavigationProvider
                     .Permission(AIChatProfilePermissions.ManageAIChatProfiles)
                     .LocalNav()
                 )
-            );
+            , priority: 1);
 
         return ValueTask.CompletedTask;
     }
