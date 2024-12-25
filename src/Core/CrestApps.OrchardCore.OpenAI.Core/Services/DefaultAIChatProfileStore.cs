@@ -14,7 +14,6 @@ public sealed class DefaultAIChatProfileStore : IAIChatProfileStore
         _documentManager = documentManager;
     }
 
-
     public async Task<bool> DeleteAsync(AIChatProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
@@ -93,6 +92,13 @@ public sealed class DefaultAIChatProfileStore : IAIChatProfileStore
             Count = records.Count(),
             Profiles = records.Skip(skip).Take(pageSize).ToArray()
         };
+    }
+
+    public async Task<IEnumerable<AIChatProfile>> GetAllAsync()
+    {
+        var document = await _documentManager.GetOrCreateImmutableAsync();
+
+        return document.Profiles.Values;
     }
 
     private async Task<IEnumerable<AIChatProfile>> LocateQueriesAsync(QueryContext context)

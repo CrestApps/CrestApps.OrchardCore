@@ -1,0 +1,14 @@
+using OrchardCore.DisplayManagement;
+
+namespace CrestApps.OrchardCore.OpenAI.ViewModels.Sessions;
+
+public class ChatSessionWithHistoryViewModel
+{
+    public string SessionId { get; set; }
+
+    public string ProfileId { get; set; }
+
+    public IShape Content { get; set; }
+
+    public IList<IShape> History { get; set; }
+}

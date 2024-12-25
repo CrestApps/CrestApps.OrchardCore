@@ -18,7 +18,7 @@ using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Controllers;
 
-[Admin("AIChatProfile/{action}/{id?}", "AIChatProfile{action}")]
+[Admin("OpenId/Profiles/{action}/{id?}", "OpenIdProfiles{action}")]
 public sealed class ProfilesController : Controller
 {
     private const string _optionsSearch = "Options.Search";

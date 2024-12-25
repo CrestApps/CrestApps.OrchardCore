@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="YesSql.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.OpenAI.Abstractions\CrestApps.OrchardCore.OpenAI.Abstractions.csproj" />
   </ItemGroup>
 

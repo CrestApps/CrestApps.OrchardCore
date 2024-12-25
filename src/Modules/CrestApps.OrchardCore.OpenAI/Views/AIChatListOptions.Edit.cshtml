@@ -1,0 +1,4 @@
+@using CrestApps.OrchardCore.OpenAI.Core
+<form method="post" asp-action="History" asp-controller="Admin" asp-route-profileId="@ViewContext.HttpContext.Request.RouteValues["profileId"]" asp-route-area="@OpenAIConstants.Feature.Area">
+    @await DisplayAsync(Model.Content)
+</form>

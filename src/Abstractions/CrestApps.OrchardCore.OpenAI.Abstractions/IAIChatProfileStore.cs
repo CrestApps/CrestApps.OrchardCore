@@ -34,6 +34,8 @@ public interface IAIChatProfileStore
     /// </returns>
     Task<AIChatProfile> FindByNameAsync(string name);
 
+    Task<IEnumerable<AIChatProfile>> GetAllAsync();
+
     /// <summary>
     /// Pages through AI chat profiles based on the given query context and pagination parameters.
     /// </summary>

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.OpenAI;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
@@ -6,14 +7,18 @@ namespace CrestApps.OrchardCore.Users;
 
 public sealed class OpenAIAdminMenu : AdminNavigationProvider
 {
+    private readonly IAIChatProfileStore _chatProfileStore;
     internal readonly IStringLocalizer S;
 
-    public OpenAIAdminMenu(IStringLocalizer<OpenAIAdminMenu> stringLocalizer)
+    public OpenAIAdminMenu(
+        IAIChatProfileStore chatProfileStore,
+        IStringLocalizer<OpenAIAdminMenu> stringLocalizer)
     {
+        _chatProfileStore = chatProfileStore;
         S = stringLocalizer;
     }
 
-    protected override ValueTask BuildAsync(NavigationBuilder builder)
+    protected override async ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
             .Add(S["OpenAI"], "90", openAI => openAI
@@ -28,6 +33,25 @@ public sealed class OpenAIAdminMenu : AdminNavigationProvider
                 )
             , priority: 1);
 
-        return ValueTask.CompletedTask;
+        var profiles = await _chatProfileStore.GetAllAsync();
+
+        foreach (var profile in profiles)
+        {
+            var title = new LocalizedString(profile.Name, profile.Name);
+
+            builder
+               .Add(S["OpenAI"], openAI => openAI
+                   .Add(title, title.PrefixPosition(), chat => chat
+                       .Action("Index", "Admin", new
+                       {
+                           area = "CrestApps.OrchardCore.OpenAI",
+                           profileId = profile.Id,
+                       })
+                       .Permission(AIChatProfilePermissions.QueryAnyAIChatProfiles)
+                       .Resource(profile)
+                       .LocalNav()
+                   )
+               );
+        }
     }
 }

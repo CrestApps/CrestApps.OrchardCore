@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.OpenAI.Core
 @using Microsoft.Extensions.DependencyInjection
 @using CrestApps.OrchardCore.OpenAI
 
@@ -17,7 +18,7 @@
                asp-route-action="Create"
                asp-route-controller="Profiles"
                asp-route-id="@source"
-               asp-area="CrestApps.OrchardCore.OpenAI">@T["Add"]</a>
+               asp-area="@OpenAIConstants.Feature.Area">@T["Add"]</a>
         </div>
     </div>
 </div>

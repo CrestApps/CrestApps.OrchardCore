@@ -1,0 +1,33 @@
+@using CrestApps.OrchardCore.OpenAI.Core.Models
+@using CrestApps.OrchardCore.OpenAI.ViewModels.Sessions
+@using System.Text.Json
+@using OrchardCore.DisplayManagement
+@using OrchardCore.DisplayManagement.ModelBinding
+@using OrchardCore.Entities
+
+@model AIChatSessionViewModel
+@inject IUpdateModelAccessor UpdateModelAccessor
+@inject IDisplayManager<AIChatSessionMessage> DisplayManager
+@{
+    var part = Model.Session.As<AIChatSessionPart>();
+}
+
+<div class="list-group list-group-flush w-100" id="SessionMessagesContainer">
+
+    @if (part.Prompts.Count == 0)
+    {
+        <div id="SessionPlaceHolder" class="text-center p-3">
+            <h1 class="mb-3">@T["How can I help you today?"]</h1>
+        </div>
+    }
+    else
+    {
+        foreach (var prompt in part.Prompts)
+        {
+            var messageSummary = await DisplayManager.BuildDisplayAsync(prompt, UpdateModelAccessor.ModelUpdater, "SummaryAdmin");
+            messageSummary.Properties["Session"] = Model.Session;
+
+            @await DisplayAsync(messageSummary)
+        }
+    }
+</div>

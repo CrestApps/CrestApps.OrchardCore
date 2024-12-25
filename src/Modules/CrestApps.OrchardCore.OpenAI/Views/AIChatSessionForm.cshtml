@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.OpenAI.ViewModels.Sessions
+
+@model AIChatSessionViewModel
+
+<div class="input-group input-group-lg">
+    <input class="form-control" data-session-id="@Model.Session.SessionId" data-request-target="@*Url.RouteUrl(ChatEndpoint.RouteName, new { profileId })*@" type="text" id="UserPrompt" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message ChatGPT"]" aria-describedby="SendButton">
+    <button class="btn btn-outline-secondary" type="button" id="SendButton" disabled>
+        <i class="fa-solid fa-arrow-up"></i>
+    </button>
+    <div class="btn-group ps-3">
+        <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+        </button>
+        <ul class="dropdown-menu">
+            @* Here we may want to create shapes for functions. *@
+            <li>
+                <button type="button" class="dropdown-item" title="@T["Generate conversation summary"]" id="GenerateConversationSummary">
+                    <i class="fa-solid fa-feather"></i> @T["Summarize Conversation"]
+                </button>
+            </li>
+        </ul>
+    </div>
+</div>

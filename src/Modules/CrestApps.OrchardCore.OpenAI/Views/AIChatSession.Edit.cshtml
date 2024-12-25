@@ -1,0 +1,16 @@
+@if (Model.Header is not null)
+{
+    <div class="container-fluid mb-3">
+        @await DisplayAsync(Model.Header)
+    </div>
+}
+
+<div class="mb-3 mx-3 overflow-y-auto h-100 rounded-2 border bg-theme">
+    @await DisplayAsync(Model.Content)
+</div>
+
+<div class="bg-theme border-top">
+    <div class="container py-3">
+        @await DisplayAsync(Model.Footer)
+    </div>
+</div>
