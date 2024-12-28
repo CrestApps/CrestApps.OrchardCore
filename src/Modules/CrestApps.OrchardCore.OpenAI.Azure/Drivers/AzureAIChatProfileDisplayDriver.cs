@@ -12,10 +12,14 @@ namespace CrestApps.OrchardCore.OpenAI.Drivers;
 public sealed class AzureAIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 {
     private readonly AzureOpenAIDeploymentsService _azureOpenAIDeploymentsService;
+    private readonly IModelDeploymentStore _modelDeploymentStore;
 
-    public AzureAIChatProfileDisplayDriver(AzureOpenAIDeploymentsService azureOpenAIDeploymentsService)
+    public AzureAIChatProfileDisplayDriver(
+        AzureOpenAIDeploymentsService azureOpenAIDeploymentsService,
+        IModelDeploymentStore modelDeploymentStore)
     {
         _azureOpenAIDeploymentsService = azureOpenAIDeploymentsService;
+        _modelDeploymentStore = modelDeploymentStore;
     }
 
     public override IDisplayResult Edit(AIChatProfile model, BuildEditorContext context)
@@ -29,19 +33,16 @@ public sealed class AzureAIChatProfileDisplayDriver : DisplayDriver<AIChatProfil
         {
             var metadata = model.As<AzureAIChatProfileMetadata>();
 
-            var azureDeployments = await _azureOpenAIDeploymentsService.GetAsync();
+            var azureDeployments = await _modelDeploymentStore.GetAllAsync();
 
-            m.DeploymentName = metadata.DeploymentName;
             m.SystemMessage = metadata.SystemMessage;
-            m.Strictness = metadata.Strictness;
             m.FrequencyPenalty = metadata.FrequencyPenalty;
             m.PastMessagesCount = metadata.PastMessagesCount;
             m.PresencePenalty = metadata.PresencePenalty;
             m.Temperature = metadata.Temperature;
             m.TokenLength = metadata.TokenLength;
-            m.TopNDocuments = m.TopNDocuments;
             m.TopP = m.TopP;
-            m.Deployments = azureDeployments.Select(x => new SelectListItem(x, x));
+            m.Deployments = azureDeployments.Select(x => new SelectListItem(x.Name, x.Id));
 
         }).Location("Content:5");
     }
@@ -54,15 +55,12 @@ public sealed class AzureAIChatProfileDisplayDriver : DisplayDriver<AIChatProfil
 
         model.Put(new AzureAIChatProfileMetadata
         {
-            DeploymentName = viewModel.DeploymentName,
             SystemMessage = viewModel.SystemMessage,
-            Strictness = viewModel.Strictness,
             FrequencyPenalty = viewModel.FrequencyPenalty,
             PastMessagesCount = viewModel.PastMessagesCount,
             PresencePenalty = viewModel.PresencePenalty,
             Temperature = viewModel.Temperature,
             TokenLength = viewModel.TokenLength,
-            TopNDocuments = viewModel.TopNDocuments,
             TopP = viewModel.TopP,
         });
 

@@ -1,14 +1,14 @@
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
+﻿using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Services;
 
-public sealed class OpenAIPermissionProvider : IPermissionProvider
+public sealed class OpenAIDeploymentProvider : IPermissionProvider
 {
-    private readonly IEnumerable<Permission> _allPermissions =
+    private readonly static IEnumerable<Permission> _allPermissions =
     [
-        AIChatProfilePermissions.ManageAIChatProfiles,
+        AIChatPermissions.ManageModelDeployments,
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()

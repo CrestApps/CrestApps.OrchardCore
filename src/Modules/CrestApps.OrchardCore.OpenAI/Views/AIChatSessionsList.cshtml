@@ -8,12 +8,12 @@
 
 <div class="card text-bg-theme mb-3">
     <div class="card-body">
-        <div class="row gx-3">
+        <div class="row gx-0">
             <div class="col">
                 @await DisplayAsync(Model.Header)
             </div>
-            <div class="col-auto">
-                <a class="btn btn-secondary" href="@Url.Action("Chat", "Admin", new { profileId = Model.ProfileId })">
+            <div class="col-auto ps-1">
+                <a class="btn btn-secondary" asp-action="Chat" asp-controller="Admin" asp-route-profileId="@Model.ProfileId">
                     <i class="fa-solid fa-plus"></i> @T["New Chat"]
                 </a>
             </div>
@@ -31,7 +31,7 @@
                         @session.Title
                     </div>
                     <div>
-                        <a href="@Url.Action("Chat", "Admin", new { area = OpenAIConstants.Feature.Area, sessionId = session.SessionId, profileId = Model.ProfileId })" class="btn btn-sm btn-primary">@T["View"]</a>
+                        <a asp-action="Chat" asp-controller="Admin" asp-route-profileId="@session.ProfileId" asp-route-sessionId="@session.SessionId" class="btn btn-sm btn-primary">@T["View"]</a>
                     </div>
                 </div>
             </li>

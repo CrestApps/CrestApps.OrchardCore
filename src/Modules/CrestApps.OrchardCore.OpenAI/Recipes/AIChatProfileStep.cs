@@ -1,31 +1,22 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.OpenAI;
 using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
-namespace OrchardCore.UrlRewriting.Recipes;
+namespace CrestApps.OrchardCore.OpenAI.Recipes;
 
-/// <summary>
-/// This recipe step creates or updates a set of URL rewrite rule.
-/// </summary>
 public sealed class AIChatProfileStep : IRecipeStepHandler
 {
-    private readonly JsonSerializerOptions _jsonSerializerOptions;
     private readonly IAIChatProfileManager _profileManager;
 
     internal readonly IStringLocalizer S;
 
     public AIChatProfileStep(
         IAIChatProfileManager profileManager,
-        IOptions<JsonSerializerOptions> jsonSerializerOptions,
         IStringLocalizer<AIChatProfileStep> stringLocalizer)
     {
         _profileManager = profileManager;
-        _jsonSerializerOptions = jsonSerializerOptions.Value;
         S = stringLocalizer;
     }
 
@@ -106,3 +97,4 @@ public sealed class OpenAIProfileStepModel
 {
     public JsonArray Profiles { get; set; }
 }
+

@@ -41,7 +41,7 @@ public interface IAIChatProfileManager
     /// <param name="pageSize">The number of results per page.</param>
     /// <param name="context">The context for the query operation, which may include filtering, sorting, etc.</param>
     /// <returns>A task that represents the asynchronous operation. The result is an AIProfileResult containing the paginated query results.</returns>
-    Task<AIProfileResult> PageQueriesAsync(int page, int pageSize, QueryContext context);
+    Task<AIChatProfileResult> PageQueriesAsync(int page, int pageSize, QueryContext context);
 
     /// <summary>
     /// Asynchronously saves (or updates) the specified AI chat profile.

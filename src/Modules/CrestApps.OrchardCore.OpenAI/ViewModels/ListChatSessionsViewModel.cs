@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.OpenAI.Core.Models;
+using CrestApps.OrchardCore.OpenAI.Models;
 using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.OpenAI.ViewModels;

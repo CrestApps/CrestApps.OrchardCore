@@ -18,7 +18,7 @@ using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Controllers;
 
-[Admin("OpenId/Profiles/{action}/{id?}", "OpenIdProfiles{action}")]
+[Admin("OpenAI/Profiles/{action}/{id?}", "OpenAIProfiles{action}")]
 public sealed class ProfilesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
@@ -60,7 +60,7 @@ public sealed class ProfilesController : Controller
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatProfilePermissions.ManageAIChatProfiles))
+        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }
@@ -118,14 +118,14 @@ public sealed class ProfilesController : Controller
 
     public async Task<ActionResult> Create(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatProfilePermissions.ManageAIChatProfiles))
+        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }
 
-        var ruleSource = _serviceProvider.GetKeyedService<IAIChatProfileSource>(id);
+        var source = _serviceProvider.GetKeyedService<IAIChatProfileSource>(id);
 
-        if (ruleSource == null)
+        if (source == null)
         {
             await _notifier.ErrorAsync(H["Unable to find a profile-source that can handle the source '{Source}'.", id]);
 
@@ -143,7 +143,7 @@ public sealed class ProfilesController : Controller
 
         var model = new AIChatProfileViewModel
         {
-            DisplayName = ruleSource.DisplayName,
+            DisplayName = source.DisplayName,
             Editor = await _profileDisplayManager.BuildEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -154,14 +154,14 @@ public sealed class ProfilesController : Controller
     [ActionName(nameof(Create))]
     public async Task<ActionResult> CreatePOST(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatProfilePermissions.ManageAIChatProfiles))
+        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }
 
-        var ruleSource = _serviceProvider.GetKeyedService<IAIChatProfileSource>(id);
+        var source = _serviceProvider.GetKeyedService<IAIChatProfileSource>(id);
 
-        if (ruleSource == null)
+        if (source == null)
         {
             await _notifier.ErrorAsync(H["Unable to find a profile-source that can handle the source '{Source}'.", id]);
 
@@ -179,7 +179,7 @@ public sealed class ProfilesController : Controller
 
         var model = new AIChatProfileViewModel
         {
-            DisplayName = ruleSource.DisplayName,
+            DisplayName = source.DisplayName,
             Editor = await _profileDisplayManager.UpdateEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -197,7 +197,7 @@ public sealed class ProfilesController : Controller
 
     public async Task<ActionResult> Edit(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatProfilePermissions.ManageAIChatProfiles))
+        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }
@@ -222,7 +222,7 @@ public sealed class ProfilesController : Controller
     [ActionName(nameof(Edit))]
     public async Task<ActionResult> EditPOST(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatProfilePermissions.ManageAIChatProfiles))
+        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }
@@ -234,7 +234,7 @@ public sealed class ProfilesController : Controller
             return NotFound();
         }
 
-        // Clone the rule to prevent modifying the original instance in the store.
+        // Clone the profile to prevent modifying the original instance in the store.
         var mutableProfile = profile.Clone();
 
         var model = new AIChatProfileViewModel
@@ -258,7 +258,7 @@ public sealed class ProfilesController : Controller
     [HttpPost]
     public async Task<IActionResult> Delete(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatProfilePermissions.ManageAIChatProfiles))
+        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }
@@ -282,7 +282,7 @@ public sealed class ProfilesController : Controller
     [FormValueRequired("submit.BulkAction")]
     public async Task<ActionResult> IndexPost(AIChatProfileOptions options, IEnumerable<string> itemIds)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatProfilePermissions.ManageAIChatProfiles))
+        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }
@@ -315,7 +315,7 @@ public sealed class ProfilesController : Controller
                     }
                     else
                     {
-                        await _notifier.SuccessAsync(H.Plural(counter, "1 has been removed successfully.", "{0} profiles have been removed successfully."));
+                        await _notifier.SuccessAsync(H.Plural(counter, "1 profile has been removed successfully.", "{0} profiles have been removed successfully."));
                     }
                     break;
                 default:

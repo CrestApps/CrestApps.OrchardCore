@@ -7,3 +7,4 @@ public sealed class SavingAIChatProfileContext : AIChatProfileContextBase
     {
     }
 }
+

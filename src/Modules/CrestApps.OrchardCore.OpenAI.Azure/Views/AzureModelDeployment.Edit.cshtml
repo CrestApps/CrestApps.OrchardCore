@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.OpenAI.Azure.ViewModels
+@using OrchardCore
+
+@model ModelDeploymentViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="AIModel" class="@Orchard.GetLabelClasses()">@T["AI Model"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="AIModel" asp-items="Model.AIModels" class="form-select">
+            <option value="">@T["Select an AI model"]</option>
+        </select>
+        <span class="hint">@T["The AI model to be deployed."]</span>
+    </div>
+</div>

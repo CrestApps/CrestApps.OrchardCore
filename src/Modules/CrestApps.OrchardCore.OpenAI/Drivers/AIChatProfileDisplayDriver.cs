@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -10,14 +11,17 @@ namespace CrestApps.OrchardCore.OpenAI.Drivers;
 public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 {
     private readonly IAIChatProfileStore _profileStore;
+    private readonly IModelDeploymentStore _modelDeploymentStore;
 
     internal readonly IStringLocalizer S;
 
     public AIChatProfileDisplayDriver(
         IAIChatProfileStore profileStore,
+        IModelDeploymentStore modelDeploymentStore,
         IStringLocalizer<AIChatProfileDisplayDriver> stringLocalizer)
     {
         _profileStore = profileStore;
+        _modelDeploymentStore = modelDeploymentStore;
         S = stringLocalizer;
     }
 
@@ -33,36 +37,79 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 
     public override IDisplayResult Edit(AIChatProfile model, BuildEditorContext context)
     {
-        return Initialize<EditAIChatProfileViewModel>("AIChatProfileName_Edit", m =>
+        return Initialize<EditAIChatProfileViewModel>("AIChatProfileName_Edit", async m =>
         {
             m.Name = model.Name;
+            m.WelcomeMessage = model.WelcomeMessage;
+            m.DeploymentId = model.DeploymentId;
             m.IsNew = context.IsNew;
+
+            m.Deployments = [];
+            var deployments = (await _modelDeploymentStore.GetAllAsync())
+            .GroupBy(x => x.ConnectionName)
+            .Select(x => new
+            {
+                GroupName = x.Key,
+                Items = x.OrderBy(x => x.Name),
+            });
+
+            foreach (var deployment in deployments)
+            {
+                var group = new SelectListGroup
+                {
+                    Name = deployment.GroupName,
+                };
+
+                foreach (var item in deployment.Items)
+                {
+                    var option = new SelectListItem
+                    {
+                        Text = item.Name,
+                        Value = item.Id,
+                        Group = group,
+                    };
+
+                    m.Deployments.Add(option);
+                }
+            }
+
         }).Location("Content:1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIChatProfile model, UpdateEditorContext context)
     {
-        if (!context.IsNew)
-        {
-            return Edit(model, context);
-        }
-
         var viewModel = new EditAIChatProfileViewModel();
 
         await context.Updater.TryUpdateModelAsync(viewModel, Prefix);
 
-        var name = viewModel.Name?.Trim();
-
-        if (string.IsNullOrEmpty(name))
+        if (context.IsNew)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.Name), S["Name is required."]);
-        }
-        else if (await _profileStore.FindByNameAsync(name) is not null)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.Name), S["A profile with this name already exists. The name must be unique."]);
+            // Set the name only during profile creation. Editing the name afterward is not allowed.
+            var name = viewModel.Name?.Trim();
+
+            if (string.IsNullOrEmpty(name))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.Name), S["Name is required."]);
+            }
+            else if (await _profileStore.FindByNameAsync(name) is not null)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.Name), S["A profile with this name already exists. The name must be unique."]);
+            }
+
+            model.Name = name;
         }
 
-        model.Name = name;
+        if (string.IsNullOrEmpty(viewModel.DeploymentId))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.DeploymentId), S["Deployment is required."]);
+        }
+        else if (await _modelDeploymentStore.FindByIdAsync(viewModel.DeploymentId) is null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.DeploymentId), S["Invalid deployment provided."]);
+        }
+
+        model.DeploymentId = viewModel.DeploymentId;
+        model.WelcomeMessage = viewModel.WelcomeMessage;
 
         return Edit(model, context);
     }

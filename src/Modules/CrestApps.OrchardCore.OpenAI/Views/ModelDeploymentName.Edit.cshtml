@@ -1,0 +1,60 @@
+@using CrestApps.OrchardCore.OpenAI.ViewModels
+@using OrchardCore
+
+@model EditModelDeploymentViewModel
+
+@if (Model.Connections == null || Model.Connections.Count == 0)
+{
+    <div class="alert alert-danger" role="alert">
+        @T["There are no configured connection."]
+    </div>
+
+    return;
+}
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Name" class="@Orchard.GetLabelClasses()">@T["Name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="Name" class="form-control" disabled="@(!Model.IsNew)" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        @if (Model.IsNew)
+        {
+            <span class="hint">@T["Deployment name. This name cannot be changed later."]</span>
+        }
+        else
+        {
+            <span class="hint">@T["Deployment name."]</span>
+        }
+    </div>
+</div>
+
+@if (Model.Connections.Count == 1 || !Model.IsNew)
+{
+    var prefix = Html.IdFor(x => x.ConnectionName);
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label for="@(prefix)_readonly" class="@Orchard.GetLabelClasses()">@T["Connection Name"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="hidden" asp-for="ConnectionName" />
+            <input type="text" readonly class="form-control-plaintext" id="@(prefix)_readonly" value="@Model.ConnectionName">
+        </div>
+    </div>
+}
+else
+{
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection Name"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input asp-for="ConnectionName" class="form-control" />
+            <span asp-validation-for="ConnectionName" class="text-danger"></span>
+            @if (Model.IsNew)
+            {
+                <span class="hint">@T["Connection name. This name cannot be changed later."]</span>
+            }
+            else
+            {
+                <span class="hint">@T["Connection name."]</span>
+            }
+        </div>
+    </div>
+}

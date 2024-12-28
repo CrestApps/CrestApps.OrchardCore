@@ -16,6 +16,12 @@ public class AIChatProfile : Entity
     /// </summary>
     public string Source { get; set; }
 
+    public string DeploymentId { get; set; }
+
+    public SessionTitleType TitleType { get; set; }
+
+    public string WelcomeMessage { get; set; }
+
     public DateTime CreatedUtc { get; set; }
 
     public string OwnerId { get; set; }
@@ -29,10 +35,17 @@ public class AIChatProfile : Entity
             Id = Id,
             Name = Name,
             Source = Source,
+            DeploymentId = DeploymentId,
             CreatedUtc = CreatedUtc,
             OwnerId = OwnerId,
             Author = Author,
             Properties = Properties,
         };
+    }
+
+    public enum SessionTitleType
+    {
+        InitialPrompt,
+        Generated,
     }
 }

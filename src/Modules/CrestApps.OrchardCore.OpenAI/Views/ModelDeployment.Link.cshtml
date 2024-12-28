@@ -1,0 +1,52 @@
+@using CrestApps.OrchardCore.OpenAI.Core
+@using CrestApps.OrchardCore.OpenAI.Models
+@using Microsoft.Extensions.DependencyInjection
+@using CrestApps.OrchardCore.OpenAI
+@using Microsoft.Extensions.Options
+
+@inject IOptions<OpenAIConnectionOptions> Options
+@{
+    string source = Model.Source;
+    var service = ViewContext.HttpContext.RequestServices.GetKeyedService<IModelDeploymentSource>(source);
+    var hasConnections = Options.Value.Connections.TryGetValue(source, out var connections) && connections.Count > 0;
+}
+
+<div class="col">
+    <div class="card h-100">
+        <div class="card-body">
+            <h4>@(service?.DisplayName ?? source)</h4>
+            <p class="hint">@(service?.Description)</p>
+
+            @if (!hasConnections)
+            {
+                <p class="text-warning text-center">@T["There are no configured connection strings for {0}.", source]</p>
+            }
+        </div>
+
+        @if (hasConnections)
+        {
+            <div class="card-footer text-muted text-sm-end">
+                <form method="get" asp-route-action="Create" asp-route-controller="Deployments" asp-route-id="@source" asp-area="@OpenAIConstants.Feature.Area">
+
+                    @if (connections.Count == 1)
+                    {
+                        <input type="hidden" name="ConnectionName" value="@(connections[0].Name)" />
+                    }
+                    else
+                    {
+                        <label for="@(source)_ConnectionName" class="form-label">@T["Connection"]</label>
+                        <select name="ConnectionName" id="@(source)_ConnectionName" class="form-select" required>
+                            <option value="">@T["Select a connection"]</option>
+                            @foreach (var connection in connections)
+                            {
+                                <option value="@connection.Name">@connection.Name</option>
+                            }
+                        </select>
+                    }
+                    <button type="submit" class="btn btn-primary btn-sm">@T["Add"]</button>
+                </form>
+            </div>
+        }
+
+    </div>
+</div>

@@ -11,5 +11,5 @@ public class ListAIChatProfilesViewModel
 
     public IEnumerable<string> SourceNames { get; set; }
 
-    public IShape Pager { get; internal set; }
+    public IShape Pager { get; set; }
 }

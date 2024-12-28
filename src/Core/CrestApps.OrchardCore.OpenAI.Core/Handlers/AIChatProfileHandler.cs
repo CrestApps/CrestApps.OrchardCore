@@ -12,6 +12,7 @@ public class AIChatProfileHandler : AIChatProfileHandlerBase
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAIChatProfileStore _profileStore;
+    private readonly IModelDeploymentStore _modelDeploymentStore;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -19,20 +20,22 @@ public class AIChatProfileHandler : AIChatProfileHandlerBase
     public AIChatProfileHandler(
         IHttpContextAccessor httpContextAccessor,
         IAIChatProfileStore profileStore,
+        IModelDeploymentStore modelDeploymentStore,
         IClock clock,
         IStringLocalizer<AIChatProfileHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _profileStore = profileStore;
+        _modelDeploymentStore = modelDeploymentStore;
         _clock = clock;
         S = stringLocalizer;
     }
 
     public override Task InitializingAsync(InitializingAIChatProfileContext context)
-        => PopulateAsync(context.Profile, context.Data);
+        => PopulateAsync(context.Profile, context.Data, true);
 
     public override Task UpdatingAsync(UpdatingAIChatProfileContext context)
-        => PopulateAsync(context.Profile, context.Data);
+        => PopulateAsync(context.Profile, context.Data, false);
 
     public override async Task ValidatingAsync(ValidatingAIChatProfileContext context)
     {
@@ -54,6 +57,15 @@ public class AIChatProfileHandler : AIChatProfileHandlerBase
         {
             context.Result.Fail(new ValidationResult(S["Source is required."], [nameof(AIChatProfile.Source)]));
         }
+
+        if (string.IsNullOrWhiteSpace(context.Profile.DeploymentId))
+        {
+            context.Result.Fail(new ValidationResult(S["DeploymentId is required."], [nameof(AIChatProfile.DeploymentId)]));
+        }
+        else if (await _modelDeploymentStore.FindByIdAsync(context.Profile.DeploymentId) is null)
+        {
+            context.Result.Fail(new ValidationResult(S["Invalid DeploymentId provided."], [nameof(AIChatProfile.DeploymentId)]));
+        }
     }
 
     public override Task InitializedAsync(InitializedAIChatProfileContext context)
@@ -71,13 +83,23 @@ public class AIChatProfileHandler : AIChatProfileHandlerBase
         return Task.CompletedTask;
     }
 
-    private static Task PopulateAsync(AIChatProfile rule, JsonNode data)
+    private static Task PopulateAsync(AIChatProfile profile, JsonNode data, bool isNew)
     {
-        var name = data[nameof(AIChatProfile.Name)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(name))
+        if (isNew)
         {
-            rule.Name = name;
+            var name = data[nameof(AIChatProfile.Name)]?.GetValue<string>()?.Trim();
+
+            if (!string.IsNullOrEmpty(name))
+            {
+                profile.Name = name;
+            }
+        }
+
+        var deploymentId = data[nameof(AIChatProfile.DeploymentId)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(deploymentId))
+        {
+            profile.DeploymentId = deploymentId;
         }
 
         return Task.CompletedTask;

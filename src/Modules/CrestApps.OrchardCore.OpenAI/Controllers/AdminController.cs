@@ -3,10 +3,12 @@ using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Indexes;
 using CrestApps.OrchardCore.OpenAI.Core.Models;
+using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
 using CrestApps.OrchardCore.OpenAI.ViewModels.Sessions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Admin;
@@ -18,7 +20,7 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.OpenAI.Controllers;
 
-public class AdminController : Controller
+public sealed class AdminController : Controller
 {
     private readonly IAIChatProfileManager _profileManager;
     private readonly IAuthorizationService _authorizationService;
@@ -27,13 +29,16 @@ public class AdminController : Controller
     private readonly IDisplayManager<AIChatListOptions> _optionsDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
 
+    internal readonly IStringLocalizer S;
+
     public AdminController(
         IAIChatProfileManager profileManager,
         IAuthorizationService authorizationService,
         ISession session,
         IDisplayManager<AIChatSession> sessionDisplayManager,
         IDisplayManager<AIChatListOptions> optionsDisplayManager,
-        IUpdateModelAccessor updateModelAccessor
+        IUpdateModelAccessor updateModelAccessor,
+        IStringLocalizer<AdminController> stringLocalizer
         )
     {
         _profileManager = profileManager;
@@ -42,9 +47,10 @@ public class AdminController : Controller
         _sessionDisplayManager = sessionDisplayManager;
         _optionsDisplayManager = optionsDisplayManager;
         _updateModelAccessor = updateModelAccessor;
+        S = stringLocalizer;
     }
 
-    [Admin("OpenId/Session/{profileId}/{sessionId?}", "OpenIdSessionsIndex")]
+    [Admin("OpenAI/Session/{profileId}/{sessionId?}", "OpenAISessionsIndex")]
     public async Task<IActionResult> Index(
         string profileId,
         string sessionId,
@@ -57,7 +63,7 @@ public class AdminController : Controller
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatProfilePermissions.QueryAnyAIChatProfiles, profile))
+        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.QueryAnyAIChatProfile, profile))
         {
             return Forbid();
         }
@@ -95,6 +101,9 @@ public class AdminController : Controller
                 SessionId = IdGenerator.GenerateId(),
                 ProfileId = profileId,
                 UserId = userId,
+                WelcomeMessage = string.IsNullOrEmpty(profile.WelcomeMessage)
+                ? S["What do you want to know?"]
+                : profile.WelcomeMessage,
             };
 
             model.Content = await _sessionDisplayManager.BuildEditorAsync(chatSession, _updateModelAccessor.ModelUpdater, isNew: true);
@@ -116,7 +125,7 @@ public class AdminController : Controller
         return View(model);
     }
 
-    [Admin("OpenId/Sessions/History/{profileId}", "OpenIdSessionsHistory")]
+    [Admin("OpenAI/Sessions/History/{profileId}", "OpenAISessionsHistory")]
     public async Task<IActionResult> History(
         string profileId,
         PagerParameters pagerParameters,
@@ -132,7 +141,7 @@ public class AdminController : Controller
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatProfilePermissions.QueryAnyAIChatProfiles, profile))
+        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.QueryAnyAIChatProfile, profile))
         {
             return Forbid();
         }
@@ -187,6 +196,7 @@ public class AdminController : Controller
 
         var shapeViewModel = await shapeFactory.CreateAsync<ListChatSessionsViewModel>("AIChatSessionsList", async viewModel =>
         {
+            viewModel.ProfileId = profileId;
             viewModel.ChatSessions = sessions.ToArray();
             viewModel.Pager = pagerShape;
             viewModel.Options = options;
@@ -210,7 +220,7 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Index), options.RouteValues);
     }
 
-    [Admin("OpenId/Sessions/Chat/{profileId}/", "OpenIdSessionsNewChat")]
+    [Admin("OpenAI/Sessions/Chat/{profileId}/", "OpenAISessionsNewChat")]
     public IActionResult Chat(string profileId)
         => RedirectToAction(nameof(Index), new { profileId });
 

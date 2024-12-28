@@ -78,9 +78,9 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
     {
         ArgumentException.ThrowIfNullOrEmpty(source);
 
-        var ruleSource = _serviceProvider.GetKeyedService<IAIChatProfileSource>(source);
+        var profileSource = _serviceProvider.GetKeyedService<IAIChatProfileSource>(source);
 
-        if (ruleSource == null)
+        if (profileSource == null)
         {
             _logger.LogWarning("Unable to find a profile-source that can handle the source '{Source}'.", source);
 
@@ -112,7 +112,7 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
         return profile;
     }
 
-    public async Task<AIProfileResult> PageQueriesAsync(int page, int pageSize, QueryContext context)
+    public async Task<AIChatProfileResult> PageQueriesAsync(int page, int pageSize, QueryContext context)
     {
         var result = await _profileStore.PageAsync(page, pageSize, context);
 

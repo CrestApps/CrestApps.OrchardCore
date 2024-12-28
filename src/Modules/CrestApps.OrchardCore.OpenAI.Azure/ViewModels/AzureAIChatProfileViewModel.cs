@@ -6,9 +6,6 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 
 public class AzureAIChatProfileViewModel
 {
-    [Required(AllowEmptyStrings = false)]
-    public string DeploymentName { get; set; }
-
     public string SystemMessage { get; set; }
 
     [Range(0f, 1f)]
@@ -28,12 +25,6 @@ public class AzureAIChatProfileViewModel
 
     [Range(2, 20)]
     public int? PastMessagesCount { get; set; }
-
-    [Range(1, 5)]
-    public int? Strictness { get; set; }
-
-    [Range(3, 20)]
-    public int? TopNDocuments { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> Deployments { get; set; }

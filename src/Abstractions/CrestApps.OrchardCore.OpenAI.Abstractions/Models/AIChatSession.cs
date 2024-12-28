@@ -1,6 +1,6 @@
 using OrchardCore.Entities;
 
-namespace CrestApps.OrchardCore.OpenAI.Core.Models;
+namespace CrestApps.OrchardCore.OpenAI.Models;
 
 public sealed class AIChatSession : Entity
 {
@@ -9,6 +9,8 @@ public sealed class AIChatSession : Entity
     public string ProfileId { get; set; }
 
     public string Title { get; set; }
+
+    public string WelcomeMessage { get; set; }
 
     /// <summary>
     /// Gets or sets the user id who created this session.

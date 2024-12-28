@@ -20,12 +20,18 @@ public static class AzureOpenAIConstants
 
     public const string ChatSearchProviderName = "ChatAI";
 
-    public static class Roles
+    public const string AzureDeploymentSourceName = "Azure";
+
+    public const string HttpClientName = "AzureOpenAIClient";
+
+    public static class Feature
     {
-        public const string System = "system";
+        public const string Area = "CrestApps.OrchardCore.OpenAI.Azure";
 
-        public const string Assistant = "assistant";
+        public const string Deployments = "CrestApps.OrchardCore.OpenAI.Azure.Deployments";
 
-        public const string User = "user";
+        public const string Standard = "CrestApps.OrchardCore.OpenAI.Azure.Standard";
+
+        public const string AISearch = "CrestApps.OrchardCore.OpenAI.Azure.AISearch";
     }
 }

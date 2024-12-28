@@ -31,7 +31,11 @@ public sealed class AzureAIChatProfileSearchAIDisplayDriver : DisplayDriver<AICh
         {
             var metadata = model.As<AzureAIChatProfileAISearchMetadata>();
 
+
+            m.Strictness = metadata.Strictness;
+            m.TopNDocuments = metadata.TopNDocuments;
             m.IndexName = metadata.IndexName;
+
             m.IndexNames = (await _indexSettingsService.GetSettingsAsync())
             .Select(i => new SelectListItem(i.IndexName, i.IndexName));
         }).Location("Content:3");
@@ -44,13 +48,15 @@ public sealed class AzureAIChatProfileSearchAIDisplayDriver : DisplayDriver<AICh
             return null;
         }
 
-        var viewModel = new AzureAIChatProfileAISearchMetadata();
+        var viewModel = new AzureAIChatProfileSearchAIViewModel();
 
         await context.Updater.TryUpdateModelAsync(viewModel, Prefix);
 
         model.Put(new AzureAIChatProfileAISearchMetadata
         {
             IndexName = viewModel.IndexName,
+            Strictness = viewModel.Strictness,
+            TopNDocuments = viewModel.TopNDocuments,
         });
 
         return Edit(model, context);

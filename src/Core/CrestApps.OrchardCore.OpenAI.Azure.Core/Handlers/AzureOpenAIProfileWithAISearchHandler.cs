@@ -57,6 +57,20 @@ public sealed class AzureOpenAIProfileWithAISearchHandler : AIChatProfileHandler
             metadata.IndexName = indexName;
         }
 
+        var strictness = data[nameof(metadata.Strictness)]?.GetValue<int?>();
+
+        if (strictness.HasValue)
+        {
+            metadata.Strictness = strictness;
+        }
+
+        var topNDocuments = data[nameof(metadata.TopNDocuments)]?.GetValue<int?>();
+
+        if (topNDocuments.HasValue)
+        {
+            metadata.TopNDocuments = topNDocuments;
+        }
+
         profile.Put(metadata);
 
         return Task.CompletedTask;

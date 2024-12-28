@@ -18,3 +18,23 @@
         }
     </div>
 </div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DeploymentId" class="@Orchard.GetLabelClasses()">@T["Deployment"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DeploymentId" asp-items="Model.Deployments" class="form-select">
+            <option value="">@T["Select a deployment"]</option>
+        </select>
+        <span asp-validation-for="DeploymentId" class="text-danger"></span>
+        <span class="hint">@T["The deployment to use for this profile."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="WelcomeMessage" class="@Orchard.GetLabelClasses()">@T["Welcome message"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="WelcomeMessage" class="form-control" />
+        <span asp-validation-for="WelcomeMessage" class="text-danger"></span>
+        <span class="hint">@T["The welcome message to show on the UI when a new session is created."]</span>
+    </div>
+</div>

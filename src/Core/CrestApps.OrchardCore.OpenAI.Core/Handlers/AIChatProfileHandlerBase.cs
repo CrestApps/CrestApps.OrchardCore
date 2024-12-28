@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.OpenAI.Models;
+using CrestApps.OrchardCore.OpenAI.Models;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 

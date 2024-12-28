@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core.Handlers;
@@ -30,13 +29,6 @@ public sealed class AzureOpenAIProfileHandler : AIChatProfileHandlerBase
             return Task.CompletedTask;
         }
 
-        var metadata = context.Profile.As<AzureAIChatProfileMetadata>();
-
-        if (string.IsNullOrWhiteSpace(metadata.DeploymentName))
-        {
-            context.Result.Fail(new ValidationResult(S["The Deployment is required."], [nameof(metadata.DeploymentName)]));
-        }
-
         return Task.CompletedTask;
     }
 
@@ -48,13 +40,6 @@ public sealed class AzureOpenAIProfileHandler : AIChatProfileHandlerBase
         }
 
         var metadata = profile.As<AzureAIChatProfileMetadata>();
-
-        var deploymentName = data[nameof(metadata.DeploymentName)]?.GetValue<string>();
-
-        if (!string.IsNullOrEmpty(deploymentName))
-        {
-            metadata.DeploymentName = deploymentName;
-        }
 
         var systemMessage = data[nameof(metadata.SystemMessage)]?.GetValue<string>();
 
@@ -103,20 +88,6 @@ public sealed class AzureOpenAIProfileHandler : AIChatProfileHandlerBase
         if (pastMessagesCount.HasValue)
         {
             metadata.PastMessagesCount = pastMessagesCount;
-        }
-
-        var strictness = data[nameof(metadata.Strictness)]?.GetValue<int?>();
-
-        if (strictness.HasValue)
-        {
-            metadata.Strictness = strictness;
-        }
-
-        var topNDocuments = data[nameof(metadata.TopNDocuments)]?.GetValue<int?>();
-
-        if (topNDocuments.HasValue)
-        {
-            metadata.TopNDocuments = topNDocuments;
         }
 
         profile.Put(metadata);
