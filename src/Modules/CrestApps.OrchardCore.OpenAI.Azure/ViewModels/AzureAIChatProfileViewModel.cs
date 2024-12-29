@@ -21,7 +21,7 @@ public class AzureAIChatProfileViewModel
     public float? PresencePenalty { get; set; }
 
     [Range(4, 2048)]
-    public int? TokenLength { get; set; }
+    public int? MaxTokens { get; set; }
 
     [Range(2, 20)]
     public int? PastMessagesCount { get; set; }

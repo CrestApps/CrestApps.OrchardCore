@@ -2,15 +2,10 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <OrchardCoreVersion>[2.0.0,3.0.0)</OrchardCoreVersion>
-  </PropertyGroup>
-  <PropertyGroup>
-    <!-- Special case - this property is used by a DotNetCliToolReference -->
-    <DotNetXunitVersion>2.3.0</DotNetXunitVersion>
+    <OrchardCoreVersion>[2.1.0,3.0.0)</OrchardCoreVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- OrchardCore Packages -->
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.0.0" />
     <PackageVersion Include="OrchardCore.DisplayManagement.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.DisplayManagement" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Data.Abstractions" Version="$(OrchardCoreVersion)" />
@@ -40,6 +35,7 @@
     <PackageVersion Include="TheComingSoonTheme" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheBlogTheme" Version="$(OrchardCoreVersion)" />
     <!-- Miscellaneous Packages -->
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.0.0" />
     <PackageVersion Include="Azure.Identity" Version="1.13.1" />
     <PackageVersion Include="Azure.ResourceManager.CognitiveServices" Version="1.4.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.1.1" />

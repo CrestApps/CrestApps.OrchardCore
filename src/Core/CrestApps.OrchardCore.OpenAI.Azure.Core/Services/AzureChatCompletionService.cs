@@ -103,7 +103,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
             systemMessage += "\r\n" + _useMarkdownSyntaxSystemMessage;
         }
 
-        var chatMessages = messages.Where(x => (x.Role == OpenAIConstants.Roles.User || x.Role == OpenAIConstants.Roles.Assistant) && !string.IsNullOrWhiteSpace(x.Prompt)).ToArray();
+        var chatMessages = messages.Where(x => (x.Role == OpenAIConstants.Roles.User || x.Role == OpenAIConstants.Roles.Assistant) && !string.IsNullOrWhiteSpace(x.Content)).ToArray();
 
         var finalMessages = new[]
         {
@@ -143,7 +143,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
 
         var data = await response.Content.ReadFromJsonAsync<AzureCompletionResponse>();
 
-        return GetResponse(data, isContentItemDocument: false, request.Messages.LastOrDefault(x => x.Role == OpenAIConstants.Roles.User)?.Prompt);
+        return GetResponse(data, isContentItemDocument: false, request.Messages.LastOrDefault(x => x.Role == OpenAIConstants.Roles.User)?.Content);
     }
 
     private async Task<AzureCompletionRequest> BuildRequestAsync(ChatCompletionContext context, AzureAIChatProfileMetadata metadata)
@@ -152,9 +152,9 @@ public sealed class AzureChatCompletionService : IChatCompletionService
         {
             Temperature = metadata.Temperature,
             TopP = metadata.TopP,
-            // MaxTokens = metadata.MaxTokens,
             FrequencyPenalty = metadata.FrequencyPenalty,
             PresencePenalty = metadata.PresencePenalty,
+            MaxTokens = metadata.MaxTokens,
         };
 
         if (context.Profile.Source == AzureWithAzureAISearchProfileSource.Key &&
@@ -231,7 +231,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
             {
                 results.Add(new ChatCompletionChoice()
                 {
-                    Message = choice.Message?.Prompt ?? string.Empty,
+                    Message = choice.Message?.Content ?? string.Empty,
                 });
 
                 continue;
@@ -249,7 +249,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
 
             // Sometimes, there are templates like this [doc1][doc2],
             // to avoid concatenation two numbers, we add a comma.
-            var choiceMessage = (choice.Message?.Prompt ?? string.Empty)?.Replace("][doc", "][--reference-separator--][doc");
+            var choiceMessage = (choice.Message?.Content ?? string.Empty)?.Replace("][doc", "][--reference-separator--][doc");
 
             for (var i = 0; i < choice.Message.Context.Citations.Length; i++)
             {
@@ -258,7 +258,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
 
                 var citationTemplate = $"[doc{i + 1}]";
 
-                var needsReference = choice.Message.Prompt.Contains(citationTemplate);
+                var needsReference = choice.Message.Content.Contains(citationTemplate);
 
                 // Use the reference when the id is 26 chars long (content item id).
                 // Some times Azure may have records that not have content item.

@@ -4,7 +4,7 @@ public static class AzureOpenAIConstants
 {
     public const float DefaultTemperature = 0;
 
-    public const int DefaultTokenLength = 800;
+    public const int DefaultMaxTokens = 800;
 
     public const float DefaultTopP = 1;
 

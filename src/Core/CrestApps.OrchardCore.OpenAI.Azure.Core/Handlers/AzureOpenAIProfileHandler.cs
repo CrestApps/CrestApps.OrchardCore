@@ -76,11 +76,11 @@ public sealed class AzureOpenAIProfileHandler : AIChatProfileHandlerBase
             metadata.PresencePenalty = presencePenalty;
         }
 
-        var tokenLength = data[nameof(metadata.TokenLength)]?.GetValue<int?>();
+        var maxTokens = data[nameof(metadata.MaxTokens)]?.GetValue<int?>();
 
         if (frequencyPenalty.HasValue)
         {
-            metadata.TokenLength = tokenLength;
+            metadata.MaxTokens = maxTokens;
         }
 
         var pastMessagesCount = data[nameof(metadata.PastMessagesCount)]?.GetValue<int?>();

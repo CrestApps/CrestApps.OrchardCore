@@ -40,7 +40,7 @@ public sealed class AzureAIChatProfileDisplayDriver : DisplayDriver<AIChatProfil
             m.PastMessagesCount = metadata.PastMessagesCount;
             m.PresencePenalty = metadata.PresencePenalty;
             m.Temperature = metadata.Temperature;
-            m.TokenLength = metadata.TokenLength;
+            m.MaxTokens = metadata.MaxTokens;
             m.TopP = m.TopP;
             m.Deployments = azureDeployments.Select(x => new SelectListItem(x.Name, x.Id));
 
@@ -60,7 +60,7 @@ public sealed class AzureAIChatProfileDisplayDriver : DisplayDriver<AIChatProfil
             PastMessagesCount = viewModel.PastMessagesCount,
             PresencePenalty = viewModel.PresencePenalty,
             Temperature = viewModel.Temperature,
-            TokenLength = viewModel.TokenLength,
+            MaxTokens = viewModel.MaxTokens,
             TopP = viewModel.TopP,
         });
 

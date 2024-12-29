@@ -15,18 +15,12 @@ public class AIChatSessionDisplayDriver : DisplayDriver<AIChatSession>
             m.IsNew = context.IsNew;
         }).Location("Header");
 
-        var contentResult = Initialize<AIChatSessionViewModel>("AIChatSessionBody", m =>
+        var contentResult = Initialize<AIChatSessionViewModel>("AIChatSessionChat", m =>
         {
             m.Session = session;
             m.IsNew = context.IsNew;
         }).Location("Content");
 
-        var formResult = Initialize<AIChatSessionViewModel>("AIChatSessionForm", m =>
-        {
-            m.Session = session;
-            m.IsNew = context.IsNew;
-        }).Location("Footer");
-
-        return Combine(headerResult, contentResult, formResult);
+        return Combine(headerResult, contentResult);
     }
 }
