@@ -15,6 +15,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IModelDeploymentManager, DefaultModelDeploymentManager>();
         services.AddScoped<IModelDeploymentHandler, ModelDeploymentHandler>();
         services.AddPermissionProvider<OpenAIDeploymentProvider>();
+        services.AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>();
 
         return services;
     }

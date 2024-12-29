@@ -4,5 +4,11 @@
       "Assets/js/admin-ui.js"
     ],
     "output": "wwwroot/Scripts/admin-ui.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/openai-chat.js"
+    ],
+    "output": "wwwroot/Scripts/openai-chat.js"
   }
 ]

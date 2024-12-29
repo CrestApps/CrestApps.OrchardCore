@@ -40,16 +40,14 @@ internal static class ChatEndpoint
         YesSql.ISession session,
         IMarkdownService markdownService,
         ILogger<T> logger,
-        string sessionId,
-        string profileId,
-        string prompt)
+        ChatRequest requestData)
     {
-        if (string.IsNullOrWhiteSpace(profileId))
+        if (string.IsNullOrWhiteSpace(requestData.ProfileId))
         {
             return TypedResults.BadRequest();
         }
 
-        var profile = await chatProfileManager.FindByIdAsync(profileId);
+        var profile = await chatProfileManager.FindByIdAsync(requestData.ProfileId);
 
         if (profile is null)
         {
@@ -61,11 +59,11 @@ internal static class ChatEndpoint
             return TypedResults.Forbid();
         }
 
-        if (string.IsNullOrWhiteSpace(prompt))
+        if (string.IsNullOrWhiteSpace(requestData.Prompt))
         {
             return TypedResults.ValidationProblem(new Dictionary<string, string[]>()
             {
-                { nameof(prompt), ["Prompt is required"] },
+                { nameof(requestData.Prompt), ["Prompt is required"] },
             });
         }
 
@@ -80,12 +78,12 @@ internal static class ChatEndpoint
         string userId = null;
         AIChatSession chatSession = null;
 
-        if (!string.IsNullOrWhiteSpace(sessionId))
+        if (!string.IsNullOrWhiteSpace(requestData.SessionId))
         {
-            chatSession = await aIChatSessionManager.FindAsync(sessionId, profile.Id);
+            chatSession = await aIChatSessionManager.FindAsync(requestData.ProfileId, profile.Id);
         }
 
-        var trimmedPrompt = prompt.Trim();
+        var trimmedPrompt = requestData.Prompt.Trim();
         var isNew = false;
 
         if (chatSession == null)
@@ -144,7 +142,7 @@ internal static class ChatEndpoint
         {
             Profile = profile,
             SessionId = chatSession.SessionId,
-            Prompt = prompt,
+            Prompt = requestData.Prompt,
             TotalHits = bestChoice?.ContentItemIds?.Count ?? 0,
             UserId = userId,
             ClientId = clientId,
@@ -177,5 +175,14 @@ internal static class ChatEndpoint
                 : null,
             },
         });
+    }
+
+    internal sealed class ChatRequest
+    {
+        public string SessionId { get; set; }
+
+        public string ProfileId { get; set; }
+
+        public string Prompt { get; set; }
     }
 }

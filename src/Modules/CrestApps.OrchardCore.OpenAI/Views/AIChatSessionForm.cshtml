@@ -1,10 +1,16 @@
+@using CrestApps.OrchardCore.OpenAI.Core
 @using CrestApps.OrchardCore.OpenAI.ViewModels.Sessions
 
 @model AIChatSessionViewModel
+@{
+    var baseId = Html.IdForModel();
+    var buttonHtmlId = $"{baseId}_SendButton";
+    var userPromptHtmlId = $"{baseId}_UserPrompt";
+}
 
 <div class="input-group input-group-lg">
-    <input class="form-control" data-session-id="@Model.Session.SessionId" data-request-target="@*Url.RouteUrl(ChatEndpoint.RouteName, new { profileId })*@" type="text" id="UserPrompt" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message ChatGPT"]" aria-describedby="SendButton">
-    <button class="btn btn-outline-secondary" type="button" id="SendButton" disabled>
+    <input class="form-control" type="text" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId">
+    <button class="btn btn-outline-secondary" type="button" id="@buttonHtmlId" disabled>
         <i class="fa-solid fa-arrow-up"></i>
     </button>
     <div class="btn-group ps-3">
@@ -14,10 +20,63 @@
         <ul class="dropdown-menu">
             @* Here we may want to create shapes for functions. *@
             <li>
+                @*
                 <button type="button" class="dropdown-item" title="@T["Generate conversation summary"]" id="GenerateConversationSummary">
                     <i class="fa-solid fa-feather"></i> @T["Summarize Conversation"]
                 </button>
+                *@
             </li>
         </ul>
     </div>
 </div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+        const sendButton = document.getElementById('@buttonHtmlId');
+        const userPrompt = document.getElementById('@userPromptHtmlId');
+
+        userPrompt.addEventListener('keyup', event => {
+            if (event.key === "Enter") {
+                sendButton.dispatchEvent(new Event('click'));
+            }
+        });
+
+        userPrompt.addEventListener('input', e => {
+            if (e.target.value.length) {
+                sendButton.removeAttribute('disabled')
+            } else {
+                sendButton.setAttribute('disabled', true);
+            }
+        });
+
+        sendButton.addEventListener('click', ()=> {
+
+            if(!userPrompt.value) {
+                return;
+            }
+
+            fetch('@Url.RouteUrl(OpenAIConstants.RouteNames.ChatRouteName)', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    sessionId: userPrompt.getAttribute('data-session-id'),
+                    profileId: userPrompt.getAttribute('data-profile-id'),
+                    prompt: userPrompt.value
+                })
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error("Not Successful!", { cause: response });
+                }
+
+                return response.json();
+            }).then(result => {
+                userPrompt.setAttribute('data-session-id', result.sessionId);
+                console.log(result);
+            }).catch(error => {
+                console.error('Failed to send the message.', error);
+            });
+        });
+    });
+</script>
