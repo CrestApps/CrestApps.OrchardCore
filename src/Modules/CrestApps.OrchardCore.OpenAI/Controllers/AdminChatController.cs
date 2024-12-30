@@ -15,12 +15,15 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Entities;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using YesSql;
 
 namespace CrestApps.OrchardCore.OpenAI.Controllers;
 
-public sealed class AdminController : Controller
+[Admin]
+[Feature(OpenAIConstants.Feature.ChatGPT)]
+public sealed class AdminChatController : Controller
 {
     private readonly IAIChatProfileManager _profileManager;
     private readonly IAuthorizationService _authorizationService;
@@ -31,14 +34,14 @@ public sealed class AdminController : Controller
 
     internal readonly IStringLocalizer S;
 
-    public AdminController(
+    public AdminChatController(
         IAIChatProfileManager profileManager,
         IAuthorizationService authorizationService,
         ISession session,
         IDisplayManager<AIChatSession> sessionDisplayManager,
         IDisplayManager<AIChatListOptions> optionsDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
-        IStringLocalizer<AdminController> stringLocalizer
+        IStringLocalizer<AdminChatController> stringLocalizer
         )
     {
         _profileManager = profileManager;
@@ -50,7 +53,7 @@ public sealed class AdminController : Controller
         S = stringLocalizer;
     }
 
-    [Admin("OpenAI/Session/{profileId}/{sessionId?}", "OpenAISessionsIndex")]
+    [Admin("OpenAI/ChatGPT/Session/{profileId}/{sessionId?}", "OpenAIChatGPTSessionsIndex")]
     public async Task<IActionResult> Index(
         string profileId,
         string sessionId,
@@ -125,7 +128,7 @@ public sealed class AdminController : Controller
         return View(model);
     }
 
-    [Admin("OpenAI/Sessions/History/{profileId}", "OpenAISessionsHistory")]
+    [Admin("OpenAI/ChatGPT/History/{profileId}", "OpenAIChatGPTHistory")]
     public async Task<IActionResult> History(
         string profileId,
         PagerParameters pagerParameters,
@@ -220,7 +223,7 @@ public sealed class AdminController : Controller
         return RedirectToAction(nameof(Index), options.RouteValues);
     }
 
-    [Admin("OpenAI/Sessions/Chat/{profileId}/", "OpenAISessionsNewChat")]
+    [Admin("OpenAI/ChatGPT/Chat/{profileId}/", "OpenAIChatGPTNewChat")]
     public IActionResult Chat(string profileId)
         => RedirectToAction(nameof(Index), new { profileId });
 

@@ -3,4 +3,135 @@
 ** Any changes made directly to this file will be overwritten next time its asset group is processed by Gulp.
 */
 
-{}
+var openAIChatManager = function () {
+  var defaultConfig = {
+    messageTemplate: "\n        <div class=\"list-group\" id=\"@messagesContainerHtmlId\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                    <div class=\"d-flex\">\n                        <div class=\"p-2\">\n                            <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'\"></i>\n                        </div>\n                        <div class=\"p-2 flex-grow-1\" v-html=\"message.promptHTML || message.prompt\"></div>\n                    </div>\n                </div>\n            </div>\n        ",
+    indicatorTemplate: "<div class=\"spinner-grow spinner-grow-sm\" role=\"status\"><span class=\"visually-hidden\">Loading...</span></div>"
+  };
+  var initialize = function initialize(instanceConfig) {
+    var config = Object.assign({}, defaultConfig, instanceConfig);
+    console.log('The used config:', config);
+    if (!config.chatUrl) {
+      console.error('The chatUrl is required.');
+      return;
+    }
+    if (!config.appElementSelector) {
+      console.error('The appElementSelector is required.');
+      return;
+    }
+    if (!config.chatContainerElementSelector) {
+      console.error('The chatContainerElementSelector is required.');
+      return;
+    }
+    if (!config.inputElementSelector) {
+      console.error('The inputElementSelector is required.');
+      return;
+    }
+    if (!config.sendButtonElementSelector) {
+      console.error('The sendButtonElementSelector is required.');
+      return;
+    }
+    Vue.createApp({
+      data: function data() {
+        return {
+          messages: [],
+          prompt: ''
+        };
+      },
+      methods: {
+        addMessage: function addMessage(message) {
+          var _this = this;
+          this.messages.push(message);
+          this.$nextTick(function () {
+            _this.scrollToBottom();
+          });
+        },
+        handleUserInput: function handleUserInput(event) {
+          this.prompt = event.target.value;
+        },
+        sendMessage: function sendMessage() {
+          var _this2 = this;
+          var trimmedPrompt = this.prompt.trim();
+          if (!trimmedPrompt) {
+            return;
+          }
+          var userMessage = {
+            role: 'user',
+            prompt: trimmedPrompt
+          };
+          var inputElement = document.querySelector(config.inputElementSelector);
+          var buttonElement = document.querySelector(config.sendButtonElementSelector);
+          this.addMessage(userMessage);
+          this.showTypingIndicator();
+          inputElement.value = '';
+          this.prompt = '';
+          buttonElement.setAttribute('disabled', true);
+          fetch(config.chatUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              sessionId: inputElement.getAttribute('data-session-id'),
+              profileId: inputElement.getAttribute('data-profile-id'),
+              prompt: userMessage.prompt
+            })
+          }).then(function (response) {
+            return response.json();
+          }).then(function (result) {
+            _this2.addMessage(result.message);
+            inputElement.setAttribute('data-session-id', result.sessionId);
+            _this2.hideTypingIndicator();
+          })["catch"](function (error) {
+            console.error('Failed to send the message.', error);
+            _this2.hideTypingIndicator();
+          });
+        },
+        showTypingIndicator: function showTypingIndicator() {
+          this.addMessage({
+            role: 'indicator',
+            promptHTML: config.indicatorTemplate
+          });
+        },
+        hideTypingIndicator: function hideTypingIndicator() {
+          this.messages = this.messages.filter(function (msg) {
+            return msg.role != 'indicator';
+          });
+        },
+        scrollToBottom: function scrollToBottom() {
+          var chatContainer = document.querySelector(config.chatContainerElementSelector);
+          chatContainer.scrollTop = chatContainer.scrollHeight - chatContainer.clientHeight;
+        }
+      },
+      mounted: function mounted() {
+        var _this3 = this;
+        var sendButton = document.querySelector(config.sendButtonElementSelector);
+        var userPrompt = document.querySelector(config.inputElementSelector);
+        var placeholder = document.querySelector(config.placeholderElementSelector);
+        userPrompt.addEventListener('keyup', function (event) {
+          if (event.key === "Enter") {
+            sendButton.dispatchEvent(new Event('click'));
+          }
+        });
+        userPrompt.addEventListener('input', function (e) {
+          if (e.target.value.trim()) {
+            sendButton.removeAttribute('disabled');
+          } else {
+            sendButton.setAttribute('disabled', true);
+          }
+          _this3.handleUserInput(e);
+        });
+        sendButton.addEventListener('click', function () {
+          if (placeholder) {
+            placeholder.classList.add('d-none');
+          }
+          _this3.sendMessage();
+        });
+      },
+      template: config.messageTemplate
+    }).mount(config.appElementSelector);
+  };
+  return {
+    initialize: initialize
+  };
+}();

@@ -10,14 +10,15 @@
         @await DisplayAsync(Model.Content)
     </div>
 
-    @if (Model.History is not null)
+    @if (Model.History is not null && Model.History.Count > 0)
     {
-        <div class="d-none d-md-block flex-shrink-0 bg-theme" style="max-width: 20rem;">
-
-            @foreach (var record in Model.History)
-            {
-                @await DisplayAsync(record)
-            }
+        <div class="d-none d-md-block flex-shrink-0 bg-theme p-2 border rounded-end rounded-top" style="width: 20rem;">
+            <div class="list-group">
+                @foreach (var record in Model.History)
+                {
+                    @await DisplayAsync(record)
+                }
+            </div>
         </div>
     }
 

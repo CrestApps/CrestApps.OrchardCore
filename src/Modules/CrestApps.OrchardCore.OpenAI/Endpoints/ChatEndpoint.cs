@@ -20,9 +20,9 @@ internal static class ChatEndpoint
 {
     public static IEndpointRouteBuilder AddOpenAIChatEndpoint<T>(this IEndpointRouteBuilder builder)
     {
-        _ = builder.MapPost("OpenAI/chat", HandleAsync<T>)
+        _ = builder.MapPost("OpenAI/ChatGPT/Completion", HandleAsync<T>)
             .AllowAnonymous()
-            .WithName(OpenAIConstants.RouteNames.ChatRouteName)
+            .WithName(OpenAIConstants.RouteNames.ChatCompletionRouteName)
             .DisableAntiforgery()
             .RequireCors(OpenAIConstants.Security.ExternalWidgetsCORSPolicyName);
 

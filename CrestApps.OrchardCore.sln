@@ -50,6 +50,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.OpenA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.OpenAI", "src\Modules\CrestApps.OrchardCore.OpenAI\CrestApps.OrchardCore.OpenAI.csproj", "{737B1434-403D-4FAE-A9BD-0B0022A0BB53}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Resources", "src\Modules\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj", "{799E24E4-B82A-4EA5-958A-87BB8E7E888B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -104,6 +106,10 @@ Global
 		{737B1434-403D-4FAE-A9BD-0B0022A0BB53}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{737B1434-403D-4FAE-A9BD-0B0022A0BB53}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{737B1434-403D-4FAE-A9BD-0B0022A0BB53}.Release|Any CPU.Build.0 = Release|Any CPU
+		{799E24E4-B82A-4EA5-958A-87BB8E7E888B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{799E24E4-B82A-4EA5-958A-87BB8E7E888B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{799E24E4-B82A-4EA5-958A-87BB8E7E888B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{799E24E4-B82A-4EA5-958A-87BB8E7E888B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -121,6 +127,7 @@ Global
 		{8409A274-BB6A-4482-974F-AD33DCFF411F} = {94189A7B-38B7-4331-B711-E5DCCEAFE737}
 		{A273AC38-86C8-4C84-9D2A-EBB11FCB2863} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
 		{737B1434-403D-4FAE-A9BD-0B0022A0BB53} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{799E24E4-B82A-4EA5-958A-87BB8E7E888B} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0E9F9B00-7078-4EA8-87A9-0B2E74375F1E}

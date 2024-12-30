@@ -7,8 +7,8 @@
   },
   {
     "inputs": [
-      "Assets/js/openai-chat.js"
+      "Assets/js/OpenAI-chat.js"
     ],
-    "output": "wwwroot/Scripts/openai-chat.js"
+    "output": "wwwroot/Scripts/OpenAI-chat.js"
   }
 ]

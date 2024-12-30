@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.OpenAI.Core
 @using CrestApps.OrchardCore.OpenAI.ViewModels
 
 @model AIChatProfileViewModel
@@ -15,6 +16,5 @@
     <a class="btn btn-secondary cancel"
        role="button"
        asp-route-action="Index"
-       asp-route-controller="Profiles"
-       asp-route-area="CrestApps.OrchardCore.OpenAI.Azure">@T["Cancel"]</a>
+       asp-route-controller="ChatProfiles">@T["Cancel"]</a>
 </form>

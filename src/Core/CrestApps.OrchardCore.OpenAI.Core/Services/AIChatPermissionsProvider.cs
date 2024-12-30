@@ -8,7 +8,8 @@ public sealed class AIChatPermissionsProvider : IPermissionProvider
 {
     private readonly static IEnumerable<Permission> _allPermissions =
     [
-        AIChatPermissions.ManageAIChatProfiles
+        AIChatPermissions.ManageAIChatProfiles,
+        AIChatPermissions.QueryAnyAIChatProfile,
     ];
 
     private readonly IAIChatProfileStore _aIChatProfileStore;
@@ -23,6 +24,7 @@ public sealed class AIChatPermissionsProvider : IPermissionProvider
         var permissions = new List<Permission>()
         {
             AIChatPermissions.ManageAIChatProfiles,
+            AIChatPermissions.QueryAnyAIChatProfile,
         };
 
         foreach (var profile in await _aIChatProfileStore.GetAllAsync())

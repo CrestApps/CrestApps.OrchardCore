@@ -16,7 +16,7 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 
-namespace CrestApps.OrchardCore.OpenAI.Azure.Controllers;
+namespace CrestApps.OrchardCore.OpenAI.Controllers;
 
 [Admin("OpenAI/Deployments/{action}/{id?}", "OpenAIDeployments{action}")]
 public sealed class DeploymentsController : Controller

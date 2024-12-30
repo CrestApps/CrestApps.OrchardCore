@@ -5,6 +5,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
+using static CrestApps.OrchardCore.OpenAI.Models.AIChatProfile;
 
 namespace CrestApps.OrchardCore.OpenAI.Drivers;
 
@@ -42,8 +43,14 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
             m.Name = model.Name;
             m.WelcomeMessage = model.WelcomeMessage;
             m.DeploymentId = model.DeploymentId;
+            m.TitleType = model.TitleType;
             m.IsNew = context.IsNew;
 
+            m.TitleTypes =
+            [
+                new SelectListItem(S["Set the first prompt as the title"], nameof(SessionTitleType.InitialPrompt)),
+                new SelectListItem(S["Generate a title based on the first prompt"], nameof(SessionTitleType.Generated)),
+            ];
             m.Deployments = [];
             var deployments = (await _modelDeploymentStore.GetAllAsync())
             .GroupBy(x => x.ConnectionName)
@@ -110,6 +117,7 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 
         model.DeploymentId = viewModel.DeploymentId;
         model.WelcomeMessage = viewModel.WelcomeMessage;
+        model.TitleType = viewModel.TitleType;
 
         return Edit(model, context);
     }

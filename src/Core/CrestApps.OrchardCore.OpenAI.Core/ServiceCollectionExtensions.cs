@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.OpenAI.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Data;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.OpenAI.Core;
@@ -15,7 +16,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IModelDeploymentManager, DefaultModelDeploymentManager>();
         services.AddScoped<IModelDeploymentHandler, ModelDeploymentHandler>();
         services.AddPermissionProvider<OpenAIDeploymentProvider>();
-        services.AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>();
 
         return services;
     }
@@ -25,9 +25,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAIChatProfileStore, DefaultAIChatProfileStore>();
         services.AddScoped<IAIChatProfileManager, DefaultAIChatProfileManager>();
         services.AddScoped<IAIChatProfileHandler, AIChatProfileHandler>();
+        services.AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>();
 
         services.AddPermissionProvider<AIChatPermissionsProvider>();
         services.AddScoped<IAuthorizationHandler, AIChatProfileAuthenticationHandler>();
+        services.Configure<StoreCollectionOptions>(o => o.Collections.Add(OpenAIConstants.CollectionName));
 
         return services;
     }

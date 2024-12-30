@@ -13,7 +13,7 @@
                 @await DisplayAsync(Model.Header)
             </div>
             <div class="col-auto ps-1">
-                <a class="btn btn-secondary" asp-action="Chat" asp-controller="Admin" asp-route-profileId="@Model.ProfileId">
+                <a class="btn btn-secondary" asp-action="Chat" asp-controller="AdminChat" asp-route-profileId="@Model.ProfileId">
                     <i class="fa-solid fa-plus"></i> @T["New Chat"]
                 </a>
             </div>
@@ -31,7 +31,7 @@
                         @session.Title
                     </div>
                     <div>
-                        <a asp-action="Chat" asp-controller="Admin" asp-route-profileId="@session.ProfileId" asp-route-sessionId="@session.SessionId" class="btn btn-sm btn-primary">@T["View"]</a>
+                        <a asp-action="Chat" asp-controller="AdminChat" asp-route-profileId="@session.ProfileId" asp-route-sessionId="@session.SessionId" class="btn btn-sm btn-primary">@T["View"]</a>
                     </div>
                 </div>
             </li>
@@ -41,7 +41,7 @@
     {
         <li class="list-group-item">
             <div class="alert alert-info mb-0">
-                @T["No history found."]
+                @T["No chat history found."]
             </div>
         </li>
     }

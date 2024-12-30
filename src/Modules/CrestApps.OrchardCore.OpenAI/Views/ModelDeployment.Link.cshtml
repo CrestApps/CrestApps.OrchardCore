@@ -17,36 +17,14 @@
             <h4>@(service?.DisplayName ?? source)</h4>
             <p class="hint">@(service?.Description)</p>
 
-            @if (!hasConnections)
-            {
-                <p class="text-warning text-center">@T["There are no configured connection strings for {0}.", source]</p>
-            }
         </div>
 
-        @if (hasConnections)
-        {
-            <div class="card-footer text-muted text-sm-end">
-                <form method="get" asp-route-action="Create" asp-route-controller="Deployments" asp-route-id="@source" asp-area="@OpenAIConstants.Feature.Area">
-
-                    @if (connections.Count == 1)
-                    {
-                        <input type="hidden" name="ConnectionName" value="@(connections[0].Name)" />
-                    }
-                    else
-                    {
-                        <label for="@(source)_ConnectionName" class="form-label">@T["Connection"]</label>
-                        <select name="ConnectionName" id="@(source)_ConnectionName" class="form-select" required>
-                            <option value="">@T["Select a connection"]</option>
-                            @foreach (var connection in connections)
-                            {
-                                <option value="@connection.Name">@connection.Name</option>
-                            }
-                        </select>
-                    }
-                    <button type="submit" class="btn btn-primary btn-sm">@T["Add"]</button>
-                </form>
-            </div>
-        }
+        <div class="card-footer text-muted text-sm-end">
+            <a class="btn btn-primary btn-sm"
+               asp-route-action="Create"
+               asp-route-controller="Deployments"
+               asp-route-id="@source">@T["Add"]</a>
+        </div>
 
     </div>
 </div>

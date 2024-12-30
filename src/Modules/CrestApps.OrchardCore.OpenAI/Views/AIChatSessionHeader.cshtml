@@ -5,11 +5,11 @@
 
 <div class="card text-bg-theme">
     <div class="card-body d-flex justify-content-end">
-        <a class="btn btn-secondary me-1" href="@Url.Action("Chat", "Admin", new { area = OpenAIConstants.Feature.Area, profileId = Model.Session.ProfileId })">
+        <a class="btn btn-secondary me-1" asp-action="Chat" asp-controller="AdminChat" asp-route-profileId="@Model.Session.ProfileId">
             <i class="fa-solid fa-plus"></i> @T["New Chat"]
         </a>
 
-        <a class="btn btn-primary" href="@Url.Action("History", "Admin", new { area = OpenAIConstants.Feature.Area, profileId = Model.Session.ProfileId })">
+        <a class="btn btn-primary" asp-action="History" asp-controller="AdminChat" asp-route-profileId="@Model.Session.ProfileId">
             <i class="fa-solid fa-list"></i> @T["Chat History"]
         </a>
     </div>

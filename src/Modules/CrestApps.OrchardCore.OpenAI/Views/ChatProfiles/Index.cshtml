@@ -1,5 +1,6 @@
 @using CrestApps.OrchardCore.OpenAI.ViewModels
 @using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement
 
 @model ListAIChatProfilesViewModel
 
@@ -113,7 +114,7 @@
                     <div class="row row-cols-1 row-cols-md-3 g-2">
                         @foreach (var source in Model.SourceNames)
                         {
-                            OrchardCore.DisplayManagement.IShape shape = await New.AIChatProfile_Link(Source: source);
+                            IShape shape = await New.AIChatProfile_Link(Source: source);
                             shape.Metadata.Alternates.Add("AIChatProfile_Link__" + source);
 
                             @await DisplayAsync(shape)
@@ -128,9 +129,9 @@
     </div>
 </div>
 
-<script asp-src="~/CrestApps.OrchardCore.OpenAI/Scripts/admin-ui.min.js" debug-src="~/CrestApps.OrchardCore.OpenAI/Scripts/admin-ui.min.js" asp-name="openAi-admin-ui" at="Foot"></script>
+<script asp-src="~/CrestApps.OrchardCore.OpenAI/Scripts/admin-ui.min.js" debug-src="~/CrestApps.OrchardCore.OpenAI/Scripts/admin-ui.min.js" asp-name="OpenAI-admin-ui" at="Foot"></script>
 
-<script at="Foot" depends-on="openAi-admin-ui">
+<script at="Foot" depends-on="OpenAI-admin-ui">
     document.addEventListener('DOMContentLoaded', () => {
         aiChatProfileAdmin.initialize('@T["selected"]');
     });

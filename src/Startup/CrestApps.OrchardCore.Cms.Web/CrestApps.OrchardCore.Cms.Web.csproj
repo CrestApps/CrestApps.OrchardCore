@@ -30,6 +30,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.OpenAI.Azure\CrestApps.OrchardCore.OpenAI.Azure.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.OpenAI\CrestApps.OrchardCore.OpenAI.csproj" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Users\CrestApps.OrchardCore.Users.csproj" />
   </ItemGroup>
 

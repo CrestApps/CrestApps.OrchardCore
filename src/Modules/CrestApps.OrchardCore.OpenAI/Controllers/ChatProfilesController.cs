@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
+using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -13,13 +14,15 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 
-namespace CrestApps.OrchardCore.OpenAI.Azure.Controllers;
+namespace CrestApps.OrchardCore.OpenAI.Controllers;
 
-[Admin("OpenAI/Profiles/{action}/{id?}", "OpenAIProfiles{action}")]
-public sealed class ProfilesController : Controller
+[Feature(OpenAIConstants.Feature.ChatGPT)]
+[Admin("OpenAI/ChatProfiles/{action}/{id?}", "OpenAIChatProfiles{action}")]
+public sealed class ChatProfilesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
@@ -33,15 +36,15 @@ public sealed class ProfilesController : Controller
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
-    public ProfilesController(
+    public ChatProfilesController(
         IAIChatProfileManager profileManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIChatProfile> profileDisplayManager,
         IServiceProvider serviceProvider,
         INotifier notifier,
-        IHtmlLocalizer<ProfilesController> htmlLocalizer,
-        IStringLocalizer<ProfilesController> stringLocalizer)
+        IHtmlLocalizer<ChatProfilesController> htmlLocalizer,
+        IStringLocalizer<ChatProfilesController> stringLocalizer)
     {
         _profileManager = profileManager;
         _authorizationService = authorizationService;
