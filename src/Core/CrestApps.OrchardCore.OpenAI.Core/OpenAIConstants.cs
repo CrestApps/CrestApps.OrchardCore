@@ -18,6 +18,8 @@ public static class OpenAIConstants
         public const string Assistant = "assistant";
 
         public const string User = "user";
+
+        public const string Function = "function";
     }
 
     public static class RouteNames

@@ -10,7 +10,6 @@ var openAIChatManager = function () {
   };
   var initialize = function initialize(instanceConfig) {
     var config = Object.assign({}, defaultConfig, instanceConfig);
-    console.log('The used config:', config);
     if (!config.chatUrl) {
       console.error('The chatUrl is required.');
       return;
@@ -127,6 +126,11 @@ var openAIChatManager = function () {
           }
           _this3.sendMessage();
         });
+        if (config.messages.length) {
+          for (var i = 0; i < config.messages.length; i++) {
+            this.addMessage(config.messages[i]);
+          }
+        }
       },
       template: config.messageTemplate
     }).mount(config.appElementSelector);

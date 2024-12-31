@@ -11,6 +11,82 @@ To manage chat profiles, you must enable at least one feature that provides an A
 
 For detailed documentation on Azure OpenAI features, [click here](../CrestApps.OrchardCore.OpenAI.Azure/README.md).
 
+### OpenAI Chat Functions
+
+We offer the flexibility to extend OpenAI's capabilities by adding custom functions, enabling the model to provide more tailored and accurate responses. If you need to implement a custom function, simply implement the `IOpenAIChatFunction` interface, which inherits from the `OpenAIChatFunctionBase` class.
+
+For example, to create a function that allows OpenAI to provide a response based on the user's location, you can implement the following:
+
+```csharp
+public sealed class GetWeatherFunction : OpenAIChatFunctionBase
+{
+    public const string Key = "get_current_weather";
+
+    public override string Name => Key;
+
+    public override string Description => "Fetches the current weather for a specified location.";
+
+    public GetWeatherFunction()
+    {
+        DefineProperty("location", new StringFunctionProperty
+        {
+            Description = "The city and state, e.g., San Francisco, CA.",
+            IsRequired = true,
+        });
+
+        DefineProperty("unit", new EnumFunctionProperty<TempScale>
+        {
+            Description = "The temperature scale (Fahrenheit or Celsius) to use.",
+            IsRequired = false,
+        });
+    }
+
+    public override Task<string> InvokeAsync(JsonObject arguments)
+    {
+        var value = arguments.ToObject<GetWeatherArguments>();
+
+        // In a real implementation, you would call a weather API here.
+        // For simplicity, we're returning a static value.
+
+        return Task.FromResult("Temperature: 80°F, Condition: Sunny");
+    }
+}
+
+public enum TempScale
+{
+    Fahrenheit,
+    Celsius,
+}
+
+public sealed class GetWeatherArguments
+{
+    public string Location { get; set; }
+
+    public TempScale Unit { get; set; }
+}
+```
+
+#### Registering the Function
+
+To register this function, you can use the `AddAIChatFunction` extension method within your `Startup` class:
+
+```csharp
+services.AddAIChatFunction<GetWeatherFunction>(GetWeatherFunction.Key);
+```
+
+When defining the properties of the function, you have the following types to use as function properties:
+
+- `StringFunctionProperty`: Represents a string property.
+- `EnumFunctionProperty<TEnum>`: Represents an enumeration property.
+- `BooleanFunctionProperty`: Represents a boolean property.
+- `NumberFunctionProperty`: Represents a number property.
+- `ObjectFunctionProperty`: Represents an object property.
+- `ArrayFunctionProperty`: Represents an array property.
+
+#### Configuring Chat Profiles
+
+Once the function is registered, you can add it to your chat profiles. When creating or editing a profile, the new function will appear in the list of available functions, allowing you to enable or disable it for specific profiles.
+
 ### Custom Source Implementation
 
 The OpenAI feature provides the necessary infrastructure and an extensible UI to support custom sources. You can add additional OpenAI sources by implementing the `IAIChatProfileSource` interface. For example:

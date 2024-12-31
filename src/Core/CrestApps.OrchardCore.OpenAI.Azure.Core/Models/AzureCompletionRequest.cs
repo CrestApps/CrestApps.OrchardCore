@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.OpenAI.Functions;
 using CrestApps.OrchardCore.OpenAI.Models;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
@@ -19,4 +20,6 @@ public class AzureCompletionRequest
     public float? PresencePenalty { get; set; }
 
     public IList<CompletionDataSource> DataSources { get; set; }
+
+    public IEnumerable<IOpenAIChatFunction> Functions { get; set; }
 }

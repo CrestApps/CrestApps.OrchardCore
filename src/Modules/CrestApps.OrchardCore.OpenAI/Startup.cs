@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.OpenAI.Core;
+using CrestApps.OrchardCore.OpenAI.Core.Functions;
 using CrestApps.OrchardCore.OpenAI.Drivers;
 using CrestApps.OrchardCore.OpenAI.Endpoints;
 using CrestApps.OrchardCore.OpenAI.Indexes;
@@ -38,6 +39,8 @@ public sealed class ChatStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddAIChatFunction<GetWeatherFunction>("get_current_weather");
+
         services
             .AddAIChatProfileServices()
             .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()

@@ -11,6 +11,8 @@ public class AIChatProfile : Entity
     /// </summary>
     public string Name { get; set; }
 
+    public string[] FunctionNames { get; set; }
+
     /// <summary>
     /// Gets the name of the source for this query.
     /// </summary>

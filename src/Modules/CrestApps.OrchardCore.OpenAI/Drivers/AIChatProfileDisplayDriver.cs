@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.OpenAI.Functions;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -13,16 +14,19 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 {
     private readonly IAIChatProfileStore _profileStore;
     private readonly IModelDeploymentStore _modelDeploymentStore;
+    private readonly IEnumerable<IOpenAIChatFunction> _functions;
 
     internal readonly IStringLocalizer S;
 
     public AIChatProfileDisplayDriver(
         IAIChatProfileStore profileStore,
         IModelDeploymentStore modelDeploymentStore,
+        IEnumerable<IOpenAIChatFunction> functions,
         IStringLocalizer<AIChatProfileDisplayDriver> stringLocalizer)
     {
         _profileStore = profileStore;
         _modelDeploymentStore = modelDeploymentStore;
+        _functions = functions;
         S = stringLocalizer;
     }
 
@@ -51,7 +55,16 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
                 new SelectListItem(S["Set the first prompt as the title"], nameof(SessionTitleType.InitialPrompt)),
                 new SelectListItem(S["Generate a title based on the first prompt"], nameof(SessionTitleType.Generated)),
             ];
+
+            m.Functions = _functions.OrderBy(x => x.Name).Select(x => new FunctionEntry
+            {
+                Name = x.Name,
+                Description = x.Description,
+                IsSelected = model.FunctionNames?.Contains(x.Name) ?? false,
+            }).ToArray();
+
             m.Deployments = [];
+
             var deployments = (await _modelDeploymentStore.GetAllAsync())
             .GroupBy(x => x.ConnectionName)
             .Select(x => new
@@ -114,6 +127,10 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.DeploymentId), S["Invalid deployment provided."]);
         }
+
+        var validFunctionNames = _functions.Select(x => x.Name).ToArray();
+
+        model.FunctionNames = viewModel.Functions.Where(x => x.IsSelected && validFunctionNames.Contains(x.Name)).Select(x => x.Name).ToArray();
 
         model.DeploymentId = viewModel.DeploymentId;
         model.WelcomeMessage = viewModel.WelcomeMessage;

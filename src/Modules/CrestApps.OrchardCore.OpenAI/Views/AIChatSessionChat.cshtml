@@ -4,6 +4,7 @@
 @using OrchardCore.DisplayManagement
 @using OrchardCore.DisplayManagement.ModelBinding
 @using OrchardCore.Entities
+@using System.Text.Json
 
 @model AIChatSessionViewModel
 
@@ -62,5 +63,6 @@
         inputElementSelector: '#@userPromptHtmlId',
         sendButtonElementSelector: '#@buttonHtmlId',
         placeholderElementSelector: '#@placeholderHtmlId',
+        messages: @Html.Raw(JsonSerializer.Serialize(part.Prompts ?? [], JOptions.CamelCase))
     });
 </script>

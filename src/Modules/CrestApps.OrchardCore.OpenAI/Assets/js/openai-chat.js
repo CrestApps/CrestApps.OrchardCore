@@ -145,6 +145,12 @@ const openAIChatManager = function () {
 
                     this.sendMessage();
                 });
+
+                if (config.messages.length) {
+                    for (let i = 0; i < config.messages.length; i++) {
+                        this.addMessage(config.messages[i]);
+                    }
+                }
             },
             template: config.messageTemplate
         }).mount(config.appElementSelector)

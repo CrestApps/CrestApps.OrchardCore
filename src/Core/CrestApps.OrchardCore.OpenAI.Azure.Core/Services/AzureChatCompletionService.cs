@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using Azure;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
+using CrestApps.OrchardCore.OpenAI.Functions;
 using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -32,6 +33,11 @@ public sealed class AzureChatCompletionService : IChatCompletionService
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    static AzureChatCompletionService()
+    {
+        _jsonSerializerOptions.Converters.Add(OpenAIChatFunctionPropertyConverter.Instance);
+    }
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IModelDeploymentStore _deploymentStore;
@@ -40,6 +46,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
     private readonly OpenAIConnectionOptions _connectionOptions;
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
     private readonly HtmlEncoder _htmlEncoder;
+    private readonly IEnumerable<IOpenAIChatFunction> _functions;
     private readonly ILogger _logger;
 
     public AzureChatCompletionService(
@@ -51,6 +58,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
         IServiceProvider serviceProvider,
         HtmlEncoder htmlEncoder,
+        IEnumerable<IOpenAIChatFunction> functions,
         ILogger<AzureChatCompletionService> logger)
     {
         _httpClientFactory = httpClientFactory;
@@ -61,6 +69,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
         _connectionOptions = connectionOptions.Value;
         _azureAISearchDefaultOptions = azureAISearchDefaultOptions.Value;
         _htmlEncoder = htmlEncoder;
+        _functions = functions;
         _logger = logger;
     }
 
@@ -110,7 +119,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
             ChatCompletionMessage.CreateMessage(systemMessage, OpenAIConstants.Roles.System),
         };
 
-        var request = await BuildRequestAsync(context, metadata);
+        var request = await BuildRequestAsync(context, metadata, context.Profile.FunctionNames);
 
         if (metadata.PastMessagesCount > 0 && chatMessages.Length > metadata.PastMessagesCount)
         {
@@ -123,7 +132,6 @@ public sealed class AzureChatCompletionService : IChatCompletionService
             request.Messages = finalMessages.Concat(chatMessages);
         }
 
-        var payload = JsonContent.Create(request, options: _jsonSerializerOptions);
 
         var httpClient = _httpClientFactory.CreateClient(AzureOpenAIConstants.HttpClientName);
 
@@ -131,22 +139,65 @@ public sealed class AzureChatCompletionService : IChatCompletionService
         httpClient.DefaultRequestHeaders.TryAddWithoutValidation("api-key", connection.GetApiKey());
         httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json");
 
-        var response = await httpClient.PostAsync($"openai/deployments/{deployment.Name}/chat/completions?api-version=2024-05-01-preview", payload);
+        var data = await GetResponseDataAsync(httpClient, request, deployment.Name);
+
+        if (data is null)
+        {
+            return ChatCompletionResponse.Empty;
+        }
+
+        return GetResponse(
+            data,
+            isContentItemDocument: false,
+            request.Messages.LastOrDefault(x => x.Role == OpenAIConstants.Roles.User)?.Content);
+    }
+
+    private async Task<AzureCompletionResponse> GetResponseDataAsync(HttpClient httpClient, AzureCompletionRequest request, string deploymentName)
+    {
+        var payload = JsonContent.Create(request, options: _jsonSerializerOptions);
+
+        var response = await httpClient.PostAsync($"openai/deployments/{deploymentName}/chat/completions?api-version=2024-05-01-preview", payload);
 
         if (!response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync();
             _logger.LogError("Unable to create chat using Azure REST API. Content: {Content}", content);
 
-            return ChatCompletionResponse.Empty;
+            return null;
         }
 
-        var data = await response.Content.ReadFromJsonAsync<AzureCompletionResponse>();
+        var data = await response.Content.ReadFromJsonAsync<AzureCompletionResponse>(_jsonSerializerOptions);
 
-        return GetResponse(data, isContentItemDocument: false, request.Messages.LastOrDefault(x => x.Role == OpenAIConstants.Roles.User)?.Content);
+        if (data.Choices.Length > 0 && data.Choices[0].FinishReason == "function_call" && data.Choices[0].Message?.FunctionCall != null)
+        {
+            var message = data.Choices[0].Message;
+            var function = _functions.FirstOrDefault(x => x.Name.Equals(message.FunctionCall.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (function is not null)
+            {
+                JsonObject arguments = null;
+
+                try
+                {
+                    arguments = JsonSerializer.Deserialize<JsonObject>(message.FunctionCall.Arguments);
+                }
+                catch
+                {
+                    arguments = [];
+                }
+
+                var result = await function.InvokeAsync(arguments);
+
+                request.Messages = request.Messages.Concat([ChatCompletionMessage.CreateFunctionMessage(result, message.FunctionCall.Name)]);
+
+                data = await GetResponseDataAsync(httpClient, request, deploymentName);
+            }
+        }
+
+        return data;
     }
 
-    private async Task<AzureCompletionRequest> BuildRequestAsync(ChatCompletionContext context, AzureAIChatProfileMetadata metadata)
+    private async Task<AzureCompletionRequest> BuildRequestAsync(ChatCompletionContext context, AzureAIChatProfileMetadata metadata, string[] functionNames)
     {
         var request = new AzureCompletionRequest()
         {
@@ -156,6 +207,11 @@ public sealed class AzureChatCompletionService : IChatCompletionService
             PresencePenalty = metadata.PresencePenalty,
             MaxTokens = metadata.MaxTokens,
         };
+
+        if (functionNames != null && functionNames.Length > 0)
+        {
+            request.Functions = _functions.Where(x => functionNames.Contains(x.Name));
+        }
 
         if (context.Profile.Source == AzureWithAzureAISearchProfileSource.Key &&
             context.Profile.TryGet<AzureAIChatProfileAISearchMetadata>(out var searchAIMetadata))
@@ -204,7 +260,10 @@ public sealed class AzureChatCompletionService : IChatCompletionService
         return request;
     }
 
-    private ChatCompletionResponse GetResponse(AzureCompletionResponse data, bool isContentItemDocument, string userPrompt)
+    private ChatCompletionResponse GetResponse(
+        AzureCompletionResponse data,
+        bool isContentItemDocument,
+        string userPrompt)
     {
         var routeValues = new RouteValueDictionary()
         {

@@ -193,7 +193,10 @@ public sealed class AdminChatController : Controller
 
         var pagerShape = await shapeFactory.PagerAsync(pager, itemsPerPage, options.RouteValues);
 
-        var sessions = await query.Skip(pager.GetStartIndex())
+        var sessions = await query
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .ThenBy(x => x.Id)
+            .Skip(pager.GetStartIndex())
             .Take(pager.PageSize)
             .ListAsync();
 
@@ -210,6 +213,7 @@ public sealed class AdminChatController : Controller
     }
 
     [HttpPost]
+    [ActionName(nameof(History))]
     public async Task<ActionResult> HistoryPost(string profileId)
     {
         var options = new AIChatListOptions();
@@ -220,7 +224,7 @@ public sealed class AdminChatController : Controller
         options.RouteValues.TryAdd("q", options.SearchText);
         options.RouteValues.TryAdd("profileId", profileId);
 
-        return RedirectToAction(nameof(Index), options.RouteValues);
+        return RedirectToAction(nameof(History), options.RouteValues);
     }
 
     [Admin("OpenAI/ChatGPT/Chat/{profileId}/", "OpenAIChatGPTNewChat")]

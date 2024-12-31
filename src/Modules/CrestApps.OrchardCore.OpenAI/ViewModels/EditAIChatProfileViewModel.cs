@@ -14,6 +14,8 @@ public class EditAIChatProfileViewModel
 
     public SessionTitleType TitleType { get; set; }
 
+    public FunctionEntry[] Functions { get; set; }
+
     [BindNever]
     public bool IsNew { get; set; }
 
@@ -22,4 +24,13 @@ public class EditAIChatProfileViewModel
 
     [BindNever]
     public IList<SelectListItem> TitleTypes { get; set; }
+}
+
+public class FunctionEntry
+{
+    public string Name { get; set; }
+
+    public string Description { get; set; }
+
+    public bool IsSelected { get; set; }
 }

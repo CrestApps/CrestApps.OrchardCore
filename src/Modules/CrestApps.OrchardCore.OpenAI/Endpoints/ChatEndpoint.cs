@@ -32,7 +32,7 @@ internal static class ChatEndpoint
     private static async Task<IResult> HandleAsync<T>(
         IAuthorizationService authorizationService,
         IAIChatProfileManager chatProfileManager,
-        IAIChatSessionManager aIChatSessionManager,
+        IAIChatSessionManager sessionManager,
         HttpContext httpContext,
         IServiceProvider serviceProvider,
         IEnumerable<IChatEventHandler> handlers,
@@ -80,7 +80,7 @@ internal static class ChatEndpoint
 
         if (!string.IsNullOrWhiteSpace(requestData.SessionId))
         {
-            chatSession = await aIChatSessionManager.FindAsync(requestData.ProfileId, profile.Id);
+            chatSession = await sessionManager.FindAsync(requestData.SessionId, profile.Id);
         }
 
         var trimmedPrompt = requestData.Prompt.Trim();
@@ -91,7 +91,7 @@ internal static class ChatEndpoint
             // At this point, we need to create a new session.
             isNew = true;
             var now = clock.UtcNow;
-            chatSession = await aIChatSessionManager.NewAsync(profile);
+            chatSession = await sessionManager.NewAsync(profile);
 
             if (profile.TitleType == AIChatProfile.SessionTitleType.Generated)
             {
@@ -124,6 +124,7 @@ internal static class ChatEndpoint
 
         var completion = await completionService.ChatAsync(transcript, new ChatCompletionContext(profile)
         {
+            Session = chatSession,
             UserMarkdownInResponse = true,
         });
 
@@ -156,7 +157,7 @@ internal static class ChatEndpoint
 
         chatSession.Put(part);
 
-        await aIChatSessionManager.SaveAsync(chatSession);
+        await sessionManager.SaveAsync(chatSession);
 
         return TypedResults.Ok(new
         {

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
+using CrestApps.OrchardCore.OpenAI.Functions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data;
@@ -30,6 +31,18 @@ public static class ServiceCollectionExtensions
         services.AddPermissionProvider<AIChatPermissionsProvider>();
         services.AddScoped<IAuthorizationHandler, AIChatProfileAuthenticationHandler>();
         services.Configure<StoreCollectionOptions>(o => o.Collections.Add(OpenAIConstants.CollectionName));
+
+        return services;
+    }
+
+    public static IServiceCollection AddAIChatFunction<TFunction>(this IServiceCollection services, string functionName)
+        where TFunction : class, IOpenAIChatFunction
+    {
+        ArgumentNullException.ThrowIfNull(functionName);
+
+        services.AddScoped<TFunction>();
+        services.AddScoped<IOpenAIChatFunction>(sp => sp.GetService<TFunction>());
+        services.AddKeyedScoped<IOpenAIChatFunction>(functionName, (sp, key) => sp.GetService<TFunction>());
 
         return services;
     }
