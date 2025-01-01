@@ -10,5 +10,5 @@ public class ChatSessionViewModel
 
     public IShape Content { get; set; }
 
-    public IList<IShape> Messages { get; set; }
+    public IList<IShape> History { get; set; }
 }

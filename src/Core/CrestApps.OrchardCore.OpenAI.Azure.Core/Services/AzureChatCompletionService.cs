@@ -23,7 +23,7 @@ using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureChatCompletionService : IChatCompletionService
+public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
 {
     private const string _useMarkdownSyntaxSystemMessage = "- Provide a response using Markdown syntax.";
 
@@ -40,7 +40,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IModelDeploymentStore _deploymentStore;
+    private readonly IOpenAIDeploymentStore _deploymentStore;
     private readonly LinkGenerator _linkGenerator;
     private readonly IServiceProvider _serviceProvider;
     private readonly OpenAIConnectionOptions _connectionOptions;
@@ -52,7 +52,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
     public AzureChatCompletionService(
         IHttpClientFactory httpClientFactory,
         IHttpContextAccessor httpContextAccessor,
-        IModelDeploymentStore deploymentStore,
+        IOpenAIDeploymentStore deploymentStore,
         LinkGenerator linkGenerator,
         IOptions<OpenAIConnectionOptions> connectionOptions,
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
@@ -75,7 +75,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
 
     public string Name { get; } = AzureProfileSource.Key;
 
-    public async Task<ChatCompletionResponse> ChatAsync(IEnumerable<ChatCompletionMessage> messages, ChatCompletionContext context)
+    public async Task<OpenAIChatCompletionResponse> ChatAsync(IEnumerable<OpenAIChatCompletionMessage> messages, OpenAIChatCompletionContext context)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -86,7 +86,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
         {
             _logger.LogWarning("Unable to chat. The profile with id '{ProfileId}' is assigned to DeploymentId '{DeploymentId}' which does not exists.", context.Profile.Id, context.Profile.DeploymentId);
 
-            return ChatCompletionResponse.Empty;
+            return OpenAIChatCompletionResponse.Empty;
         }
 
         OpenAIConnectionEntry connection = null;
@@ -100,10 +100,10 @@ public sealed class AzureChatCompletionService : IChatCompletionService
         {
             _logger.LogWarning("Unable to chat. The DeploymentId '{DeploymentId}' belongs to a connection that does not exists (i.e., '{ConnectionName}').", context.Profile.DeploymentId, deployment.ConnectionName);
 
-            return ChatCompletionResponse.Empty;
+            return OpenAIChatCompletionResponse.Empty;
         }
 
-        var metadata = context.Profile.As<AIChatProfileMetadata>();
+        var metadata = context.Profile.As<OpenAIChatProfileMetadata>();
 
         var systemMessage = GetSystemMessage(context);
 
@@ -113,7 +113,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
 
         var finalMessages = new[]
 {
-            ChatCompletionMessage.CreateMessage(systemMessage, OpenAIConstants.Roles.System),
+            OpenAIChatCompletionMessage.CreateMessage(systemMessage, OpenAIConstants.Roles.System),
         };
 
         if (metadata.PastMessagesCount > 0 && chatMessages.Length > metadata.PastMessagesCount)
@@ -133,7 +133,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
 
         if (data is null)
         {
-            return ChatCompletionResponse.Empty;
+            return OpenAIChatCompletionResponse.Empty;
         }
 
         return GetResponse(
@@ -142,7 +142,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
             request.Messages.LastOrDefault(x => x.Role == OpenAIConstants.Roles.User)?.Content);
     }
 
-    private static string GetSystemMessage(ChatCompletionContext context)
+    private static string GetSystemMessage(OpenAIChatCompletionContext context)
     {
         var systemMessage = context.SystemMessage ?? string.Empty;
 
@@ -206,7 +206,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
 
                 var result = await function.InvokeAsync(arguments);
 
-                request.Messages = request.Messages.Concat([ChatCompletionMessage.CreateFunctionMessage(result, message.FunctionCall.Name)]);
+                request.Messages = request.Messages.Concat([OpenAIChatCompletionMessage.CreateFunctionMessage(result, message.FunctionCall.Name)]);
 
                 data = await GetResponseDataAsync(httpClient, request, deploymentName);
             }
@@ -215,7 +215,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
         return data;
     }
 
-    private async Task<AzureCompletionRequest> BuildRequestAsync(ChatCompletionContext context, AIChatProfileMetadata metadata, string[] functionNames, string systemMessage)
+    private async Task<AzureCompletionRequest> BuildRequestAsync(OpenAIChatCompletionContext context, OpenAIChatProfileMetadata metadata, string[] functionNames, string systemMessage)
     {
         var request = new AzureCompletionRequest()
         {
@@ -278,7 +278,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
         return request;
     }
 
-    private ChatCompletionResponse GetResponse(
+    private OpenAIChatCompletionResponse GetResponse(
         AzureCompletionResponse data,
         bool isContentItemDocument,
         string userPrompt)
@@ -300,13 +300,13 @@ public sealed class AzureChatCompletionService : IChatCompletionService
             }
         }
 
-        var results = new List<ChatCompletionChoice>();
+        var results = new List<OpenAIChatCompletionChoice>();
 
         foreach (var choice in data.Choices)
         {
             if (choice.Message?.Context?.Citations == null || choice.Message.Context.Citations.Length == 0 || !isContentItemDocument)
             {
-                results.Add(new ChatCompletionChoice()
+                results.Add(new OpenAIChatCompletionChoice()
                 {
                     Message = choice.Message?.Content ?? string.Empty,
                 });
@@ -314,7 +314,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
                 continue;
             }
 
-            var responseChoice = new ChatCompletionChoice()
+            var responseChoice = new OpenAIChatCompletionChoice()
             {
                 ContentItemIds = [],
             };
@@ -385,7 +385,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
             results.Add(responseChoice);
         }
 
-        return new ChatCompletionResponse
+        return new OpenAIChatCompletionResponse
         {
             Choices = results,
         };

@@ -7,8 +7,8 @@
     <label asp-for="AIModel" class="@Orchard.GetLabelClasses()">@T["AI Model"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="AIModel" asp-items="Model.AIModels" class="form-select">
-            <option value="">@T["Select an AI model"]</option>
+            <option value="">@T["Select an OpenAI model"]</option>
         </select>
-        <span class="hint">@T["The AI model to be deployed."]</span>
+        <span class="hint">@T["The OpenAI model to be deployed."]</span>
     </div>
 </div>

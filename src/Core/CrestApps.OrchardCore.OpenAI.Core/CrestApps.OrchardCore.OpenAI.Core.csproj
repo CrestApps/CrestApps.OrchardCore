@@ -3,6 +3,7 @@
   <ItemGroup>
     <PackageReference Include="YesSql.Abstractions" />
     <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+    <PackageReference Include="OrchardCore.Liquid.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

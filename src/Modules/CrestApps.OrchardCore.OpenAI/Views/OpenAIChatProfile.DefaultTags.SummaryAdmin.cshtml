@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.OpenAI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OpenAIChatProfile>
+@{
+    var type = Model.Value.Type switch
+    {
+        OpenAIChatProfileType.Tool => T["Tool"],
+        OpenAIChatProfileType.GeneratedPrompt => T["Generated Prompt"],
+        OpenAIChatProfileType.Chat => T["Chat"],
+        _ => T["Unknown type"]
+    };
+
+}
+
+<span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Source"]">
+    <i class="text-secondary me-1" aria-hidden="true"></i>@Model.Value.Source
+</span>
+
+<span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Profile type"]">
+    <i class="text-secondary me-1" aria-hidden="true"></i>@type
+</span>

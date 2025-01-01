@@ -1,8 +1,8 @@
 ﻿namespace CrestApps.OrchardCore.OpenAI.Models;
 
-public sealed class UpdatedModelDeploymentContext : ModelDeploymentContextBase
+public sealed class UpdatedModelDeploymentContext : OpenAIDeploymentContextBase
 {
-    public UpdatedModelDeploymentContext(ModelDeployment deployment)
+    public UpdatedModelDeploymentContext(OpenAIDeployment deployment)
         : base(deployment)
     {
     }

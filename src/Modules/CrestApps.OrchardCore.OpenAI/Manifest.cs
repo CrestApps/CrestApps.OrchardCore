@@ -23,6 +23,7 @@ using OrchardCore.Modules.Manifest;
     Category = "OpenAI",
     Dependencies =
     [
+        "OrchardCore.Liquid",
         "CrestApps.OrchardCore.Resources",
         OpenAIConstants.Feature.Area,
     ]

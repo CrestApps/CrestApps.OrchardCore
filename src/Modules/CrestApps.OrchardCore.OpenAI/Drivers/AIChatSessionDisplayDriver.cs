@@ -5,25 +5,25 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.OpenAI.Drivers;
 
-public class AIChatSessionDisplayDriver : DisplayDriver<AIChatSession>
+public class AIChatSessionDisplayDriver : DisplayDriver<OpenAIChatSession>
 {
-    public override IDisplayResult Display(AIChatSession session, BuildDisplayContext context)
+    public override IDisplayResult Display(OpenAIChatSession session, BuildDisplayContext context)
     {
-        return Initialize<DisplayAIChatSessionViewModel>("AIChatSessionListItem", m =>
+        return Initialize<DisplayAIChatSessionViewModel>("OpenAIChatSessionListItem", m =>
         {
             m.Session = session;
         }).Location("SummaryAdmin", "Content");
     }
 
-    public override IDisplayResult Edit(AIChatSession session, BuildEditorContext context)
+    public override IDisplayResult Edit(OpenAIChatSession session, BuildEditorContext context)
     {
-        var headerResult = Initialize<AIChatSessionViewModel>("AIChatSessionHeader", m =>
+        var headerResult = Initialize<ChatSessionCapsuleViewModel>("OpenAIChatSessionHeader", m =>
         {
             m.Session = session;
             m.IsNew = context.IsNew;
         }).Location("Header");
 
-        var contentResult = Initialize<AIChatSessionViewModel>("AIChatSessionChat", m =>
+        var contentResult = Initialize<ChatSessionCapsuleViewModel>("OpenAIChatSessionChat", m =>
         {
             m.Session = session;
             m.IsNew = context.IsNew;

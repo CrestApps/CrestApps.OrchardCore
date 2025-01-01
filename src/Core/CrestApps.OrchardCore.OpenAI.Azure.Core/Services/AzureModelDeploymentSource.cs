@@ -2,7 +2,7 @@
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureModelDeploymentSource : IModelDeploymentSource
+public sealed class AzureModelDeploymentSource : IOpenAIDeploymentSource
 {
     public AzureModelDeploymentSource(IStringLocalizer<AzureModelDeploymentSource> S)
     {

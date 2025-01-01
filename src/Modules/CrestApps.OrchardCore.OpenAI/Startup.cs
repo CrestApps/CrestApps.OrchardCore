@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.Recipes;
 using CrestApps.OrchardCore.OpenAI.Services;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
+using Fluid;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,9 +27,15 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.Configure<TemplateOptions>(o =>
+        {
+            o.MemberAccessStrategy.Register<OpenAIChatProfile>();
+            o.MemberAccessStrategy.Register<OpenAIChatSession>();
+        });
+
         services
-            .AddModelDeploymentServices()
-            .AddScoped<IDisplayDriver<ModelDeployment>, ModelDeploymentDisplayDriver>()
+            .AddOpenAIDeploymentServices()
+            .AddScoped<IDisplayDriver<OpenAIDeployment>, OpenAIDeploymentDisplayDriver>()
             .AddTransient<IConfigureOptions<OpenAIConnectionOptions>, OpenAIConnectionOptionsConfiguration>()
             .AddNavigationProvider<OpenAIAdminMenu>();
     }
@@ -39,22 +46,22 @@ public sealed class ChatStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIChatFunction<GetWeatherFunction>("get_current_weather");
+        services.AddOpenAIChatFunction<GetWeatherFunction>("get_current_weather");
 
         services
-            .AddAIChatProfileServices()
+            .AddOpenAIChatProfileServices()
             .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<OpenAIAdminChatMenu>()
-            .AddDataMigration<AIChatSessionIndexMigrations>()
-            .AddIndexProvider<AIChatSessionIndexProvider>()
-            .AddDisplayDriver<AIChatProfile, AIChatProfileDisplayDriver>()
-            .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()
-            .AddDisplayDriver<AIChatListOptions, AIChatListOptionsDisplayDriver>();
+            .AddDataMigration<OpenAIChatSessionIndexMigrations>()
+            .AddIndexProvider<OpenAIChatSessionIndexProvider>()
+            .AddDisplayDriver<OpenAIChatProfile, OpenAIChatProfileDisplayDriver>()
+            .AddDisplayDriver<OpenAIChatSession, AIChatSessionDisplayDriver>()
+            .AddDisplayDriver<OpenAIChatListOptions, OpenAIChatListOptionsDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddOpenAIChatEndpoint<ChatStartup>();
+        routes.AddOpenAIChatCompletionEndpoint<ChatStartup>();
     }
 }
 
@@ -64,7 +71,7 @@ public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddRecipeExecutionStep<ModelDeploymentStep>();
+        services.AddRecipeExecutionStep<OpenAIDeploymentStep>();
     }
 }
 
@@ -74,6 +81,6 @@ public sealed class ChatRecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddRecipeExecutionStep<AIChatProfileStep>();
+        services.AddRecipeExecutionStep<OpenAIChatProfileStep>();
     }
 }

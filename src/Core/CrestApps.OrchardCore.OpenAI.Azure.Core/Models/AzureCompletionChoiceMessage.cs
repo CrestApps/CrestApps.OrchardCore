@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.OpenAI.Models;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 
-public class AzureCompletionChoiceMessage : ChatCompletionMessage
+public class AzureCompletionChoiceMessage : OpenAIChatCompletionMessage
 {
     public bool EndTurn { get; set; }
 

@@ -10,12 +10,12 @@ namespace CrestApps.OrchardCore.OpenAI.Services;
 
 public sealed class OpenAIAdminChatMenu : AdminNavigationProvider
 {
-    private readonly IAIChatProfileStore _chatProfileStore;
+    private readonly IOpenAIChatProfileStore _chatProfileStore;
 
     internal readonly IStringLocalizer S;
 
     public OpenAIAdminChatMenu(
-        IAIChatProfileStore chatProfileStore,
+        IOpenAIChatProfileStore chatProfileStore,
         IStringLocalizer<OpenAIAdminChatMenu> stringLocalizer)
     {
         _chatProfileStore = chatProfileStore;
@@ -32,7 +32,7 @@ public sealed class OpenAIAdminChatMenu : AdminNavigationProvider
                var i = 1;
                foreach (var profile in profiles)
                {
-                   if (profile.Type != AIChatProfileType.Chat)
+                   if (profile.Type != OpenAIChatProfileType.Chat)
                    {
                        continue;
                    }
@@ -44,7 +44,7 @@ public sealed class OpenAIAdminChatMenu : AdminNavigationProvider
                        {
                            { "profileId", profile.Id},
                        })
-                       .Permission(AIChatPermissions.QueryAnyAIChatProfile)
+                       .Permission(OpenAIChatPermissions.QueryAnyAIChatProfile)
                        .Resource(profile)
                        .LocalNav()
                    );
@@ -58,7 +58,7 @@ public sealed class OpenAIAdminChatMenu : AdminNavigationProvider
                     .AddClass("openai-profiles")
                     .Id("openAIProfiles")
                     .Action("Index", "ChatProfiles", OpenAIConstants.Feature.Area)
-                    .Permission(AIChatPermissions.ManageAIChatProfiles)
+                    .Permission(OpenAIChatPermissions.ManageAIChatProfiles)
                     .LocalNav()
                 )
             );

@@ -43,7 +43,7 @@ If you're using the Recipes feature, you can import all the deployments from you
 {
   "steps": [
     {
-       "name": "ImportAzureDeployment",
+       "name": "ImportAzureOpenAIDeployment",
        "ConnectionNames": "all"
     }
   ]
@@ -56,7 +56,7 @@ Alternatively, if you have multiple connections configured, you can specify whic
 {
   "steps": [
     {
-       "name": "ImportAzureDeployment",
+       "name": "ImportAzureOpenAIDeployment",
        "ConnectionNames": [
             "us-west-connection",
             "canada-east-connection"
@@ -81,7 +81,7 @@ If you're using the Recipes feature, you can create an Azure profile using the f
 {
   "steps":[
     {
-      "name":"AIChatProfile",
+      "name":"OpenAIChatProfile",
       "profiles":[
         {
           "Source":"Azure",
@@ -121,7 +121,7 @@ If you're using the Recipes feature, you can create an Azure profile with the fo
 {
   "steps":[
     {
-      "name":"AIChatProfile",
+      "name":"OpenAIChatProfile",
       "profiles":[
         {
           "Source":"AzureAISearch",

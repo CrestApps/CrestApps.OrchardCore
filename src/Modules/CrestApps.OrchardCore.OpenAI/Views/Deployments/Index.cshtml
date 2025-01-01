@@ -2,7 +2,7 @@
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
 
-@model ListModelDeploymentsViewModel
+@model ListDeploymentsViewModel
 
 <zone Name="Title">
     <h1>@RenderTitleSegments(T["Model Deployments"])</h1>
@@ -115,8 +115,8 @@
                     <div class="row row-cols-1 row-cols-md-3 g-2">
                         @foreach (var source in Model.SourceNames)
                         {
-                            IShape shape = await New.ModelDeployment_Link(Source: source);
-                            shape.Metadata.Alternates.Add("ModelDeployment_Link__" + source);
+                            IShape shape = await New.OpenAIDeployment_Link(Source: source);
+                            shape.Metadata.Alternates.Add("OpenAIDeployment_Link__" + source);
 
                             @await DisplayAsync(shape)
                         }

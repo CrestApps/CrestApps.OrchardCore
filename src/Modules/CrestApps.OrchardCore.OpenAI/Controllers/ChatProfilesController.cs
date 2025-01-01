@@ -26,10 +26,10 @@ public sealed class ChatProfilesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly IAIChatProfileManager _profileManager;
+    private readonly IOpenAIChatProfileManager _profileManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly IDisplayManager<AIChatProfile> _profileDisplayManager;
+    private readonly IDisplayManager<OpenAIChatProfile> _profileDisplayManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly INotifier _notifier;
 
@@ -37,10 +37,10 @@ public sealed class ChatProfilesController : Controller
     internal readonly IStringLocalizer S;
 
     public ChatProfilesController(
-        IAIChatProfileManager profileManager,
+        IOpenAIChatProfileManager profileManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
-        IDisplayManager<AIChatProfile> profileDisplayManager,
+        IDisplayManager<OpenAIChatProfile> profileDisplayManager,
         IServiceProvider serviceProvider,
         INotifier notifier,
         IHtmlLocalizer<ChatProfilesController> htmlLocalizer,
@@ -59,11 +59,11 @@ public sealed class ChatProfilesController : Controller
     public async Task<IActionResult> Index(
         AIChatProfileOptions options,
         PagerParameters pagerParameters,
-        [FromServices] IEnumerable<IAIChatProfileSource> profileSources,
+        [FromServices] IEnumerable<IOpenAIChatProfileSource> profileSources,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageAIChatProfiles))
+        if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }
@@ -83,7 +83,7 @@ public sealed class ChatProfilesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var model = new ListAIChatProfilesViewModel
+        var model = new ListChatProfilesViewModel
         {
             Profiles = [],
             Options = options,
@@ -111,7 +111,7 @@ public sealed class ChatProfilesController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
-    public ActionResult IndexFilterPOST(ListAIChatProfilesViewModel model)
+    public ActionResult IndexFilterPOST(ListChatProfilesViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -121,12 +121,12 @@ public sealed class ChatProfilesController : Controller
 
     public async Task<ActionResult> Create(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageAIChatProfiles))
+        if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }
 
-        var source = _serviceProvider.GetKeyedService<IAIChatProfileSource>(id);
+        var source = _serviceProvider.GetKeyedService<IOpenAIChatProfileSource>(id);
 
         if (source == null)
         {
@@ -144,7 +144,7 @@ public sealed class ChatProfilesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var model = new AIChatProfileViewModel
+        var model = new ChatProfileViewModel
         {
             DisplayName = source.DisplayName,
             Editor = await _profileDisplayManager.BuildEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -157,12 +157,12 @@ public sealed class ChatProfilesController : Controller
     [ActionName(nameof(Create))]
     public async Task<ActionResult> CreatePOST(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageAIChatProfiles))
+        if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }
 
-        var source = _serviceProvider.GetKeyedService<IAIChatProfileSource>(id);
+        var source = _serviceProvider.GetKeyedService<IOpenAIChatProfileSource>(id);
 
         if (source == null)
         {
@@ -180,7 +180,7 @@ public sealed class ChatProfilesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var model = new AIChatProfileViewModel
+        var model = new ChatProfileViewModel
         {
             DisplayName = source.DisplayName,
             Editor = await _profileDisplayManager.UpdateEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -200,7 +200,7 @@ public sealed class ChatProfilesController : Controller
 
     public async Task<ActionResult> Edit(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageAIChatProfiles))
+        if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }
@@ -212,7 +212,7 @@ public sealed class ChatProfilesController : Controller
             return NotFound();
         }
 
-        var model = new AIChatProfileViewModel
+        var model = new ChatProfileViewModel
         {
             DisplayName = profile.Name,
             Editor = await _profileDisplayManager.BuildEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -225,7 +225,7 @@ public sealed class ChatProfilesController : Controller
     [ActionName(nameof(Edit))]
     public async Task<ActionResult> EditPOST(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageAIChatProfiles))
+        if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }
@@ -240,7 +240,7 @@ public sealed class ChatProfilesController : Controller
         // Clone the profile to prevent modifying the original instance in the store.
         var mutableProfile = profile.Clone();
 
-        var model = new AIChatProfileViewModel
+        var model = new ChatProfileViewModel
         {
             DisplayName = mutableProfile.Name,
             Editor = await _profileDisplayManager.UpdateEditorAsync(mutableProfile, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -261,7 +261,7 @@ public sealed class ChatProfilesController : Controller
     [HttpPost]
     public async Task<IActionResult> Delete(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageAIChatProfiles))
+        if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }
@@ -285,7 +285,7 @@ public sealed class ChatProfilesController : Controller
     [FormValueRequired("submit.BulkAction")]
     public async Task<ActionResult> IndexPost(AIChatProfileOptions options, IEnumerable<string> itemIds)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageAIChatProfiles))
+        if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageAIChatProfiles))
         {
             return Forbid();
         }

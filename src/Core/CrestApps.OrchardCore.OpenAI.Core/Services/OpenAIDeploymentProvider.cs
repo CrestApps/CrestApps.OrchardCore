@@ -8,7 +8,7 @@ public sealed class OpenAIDeploymentProvider : IPermissionProvider
 {
     private readonly static IEnumerable<Permission> _allPermissions =
     [
-        AIChatPermissions.ManageModelDeployments,
+        OpenAIChatPermissions.ManageModelDeployments,
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()

@@ -9,7 +9,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 
-public sealed class AzureOpenAIProfileWithAISearchHandler : AIChatProfileHandlerBase
+public sealed class AzureOpenAIProfileWithAISearchHandler : OpenAIChatProfileHandlerBase
 {
     internal readonly IStringLocalizer S;
 
@@ -18,13 +18,13 @@ public sealed class AzureOpenAIProfileWithAISearchHandler : AIChatProfileHandler
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingAIChatProfileContext context)
+    public override Task InitializingAsync(InitializingOpenAIChatProfileContext context)
         => PopulateAsync(context.Profile, context.Data);
 
-    public override Task UpdatingAsync(UpdatingAIChatProfileContext context)
+    public override Task UpdatingAsync(UpdatingOpenAIChatProfileContext context)
         => PopulateAsync(context.Profile, context.Data);
 
-    public override Task ValidatedAsync(ValidatedAIChatProfileContext context)
+    public override Task ValidatedAsync(ValidatedOpenAIChatProfileContext context)
     {
         if (context.Profile?.Source != AzureWithAzureAISearchProfileSource.Key)
         {
@@ -41,7 +41,7 @@ public sealed class AzureOpenAIProfileWithAISearchHandler : AIChatProfileHandler
         return Task.CompletedTask;
     }
 
-    private static Task PopulateAsync(AIChatProfile profile, JsonNode data)
+    private static Task PopulateAsync(OpenAIChatProfile profile, JsonNode data)
     {
         if (profile.Source != AzureWithAzureAISearchProfileSource.Key)
         {

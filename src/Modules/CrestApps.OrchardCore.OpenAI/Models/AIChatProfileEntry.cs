@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.OpenAI.Models;
 
 public class AIChatProfileEntry
 {
-    public AIChatProfile Profile { get; set; }
+    public OpenAIChatProfile Profile { get; set; }
 
     public IShape Shape { get; set; }
 }

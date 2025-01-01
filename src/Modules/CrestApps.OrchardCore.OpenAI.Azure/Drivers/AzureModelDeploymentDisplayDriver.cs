@@ -5,9 +5,9 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.OpenAI.Drivers;
 
-public sealed class AzureModelDeploymentDisplayDriver : DisplayDriver<ModelDeployment>
+public sealed class AzureModelDeploymentDisplayDriver : DisplayDriver<OpenAIDeployment>
 {
-    public override IDisplayResult Edit(ModelDeployment deployment, BuildEditorContext context)
+    public override IDisplayResult Edit(OpenAIDeployment deployment, BuildEditorContext context)
     {
         if (deployment.Source != AzureOpenAIConstants.AzureDeploymentSourceName)
         {
@@ -19,7 +19,7 @@ public sealed class AzureModelDeploymentDisplayDriver : DisplayDriver<ModelDeplo
         return null;
     }
 
-    public override Task<IDisplayResult> UpdateAsync(ModelDeployment deployment, UpdateEditorContext context)
+    public override Task<IDisplayResult> UpdateAsync(OpenAIDeployment deployment, UpdateEditorContext context)
     {
         if (deployment.Source != AzureOpenAIConstants.AzureDeploymentSourceName)
         {

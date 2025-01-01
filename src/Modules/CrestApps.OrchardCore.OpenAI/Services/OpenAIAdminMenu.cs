@@ -24,7 +24,7 @@ public sealed class OpenAIAdminMenu : AdminNavigationProvider
                     .AddClass("openai-deployments")
                     .Id("openAIDeployments")
                     .Action("Index", "Deployments", OpenAIConstants.Feature.Area)
-                    .Permission(AIChatPermissions.ManageModelDeployments)
+                    .Permission(OpenAIChatPermissions.ManageModelDeployments)
                     .LocalNav()
                 )
             , priority: 1);

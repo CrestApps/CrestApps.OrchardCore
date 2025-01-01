@@ -2,11 +2,11 @@
 
 namespace CrestApps.OrchardCore.OpenAI.Models;
 
-public sealed class UpdatingModelDeploymentContext : ModelDeploymentContextBase
+public sealed class UpdatingModelDeploymentContext : OpenAIDeploymentContextBase
 {
     public JsonNode Data { get; }
 
-    public UpdatingModelDeploymentContext(ModelDeployment deployment, JsonNode data)
+    public UpdatingModelDeploymentContext(OpenAIDeployment deployment, JsonNode data)
         : base(deployment)
     {
         Data = data ?? new JsonObject();

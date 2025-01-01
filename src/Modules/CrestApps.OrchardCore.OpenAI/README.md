@@ -68,20 +68,33 @@ public sealed class GetWeatherArguments
 
 #### Registering the Function
 
-To register this function, you can use the `AddAIChatFunction` extension method within your `Startup` class:
+To register this function, you can use the `AddOpenAIChatFunction` extension method within your `Startup` class:
 
 ```csharp
-services.AddAIChatFunction<GetWeatherFunction>(GetWeatherFunction.Key);
+services.AddOpenAIChatFunction<GetWeatherFunction>(GetWeatherFunction.Key);
 ```
 
 When defining the properties of the function, you have the following types to use as function properties:
 
-- `StringFunctionProperty`: Represents a string property.
-- `EnumFunctionProperty<TEnum>`: Represents an enumeration property.
-- `BooleanFunctionProperty`: Represents a boolean property.
-- `NumberFunctionProperty`: Represents a number property.
+- `StringFunctionProperty`: Represents a string property. You can define formatted strings using common formats such as the following:
+  - `StringFunctionProperty.DateTime`: Represents a date-time property.
+  - `StringFunctionProperty.Uri`: Represents a uri property.
+  - `StringFunctionProperty.Hostname`: Represents a hostname property.
+  - `StringFunctionProperty.Ipv4`: Represents a ipv4 property.
+  - `StringFunctionProperty.Ipv6`: Represents a ipv6 property.
+  - `StringFunctionProperty.UUID`: Represents a uuid property.
+  - `StringFunctionProperty.Phone`: Represents a phone property.
+  - `StringFunctionProperty.CreditCard`: Represents a credit-card property.
+  - `StringFunctionProperty.Password`: Represents a password property.
+- `NumberFunctionProperty`: Represents a number property. You can define formatted numbers using common formats such as the following:
+  - `NumberFunctionProperty.Integer`: Represents an integer property.
+  - `NumberFunctionProperty.Long`: Represents an big-integer property.
+  - `NumberFunctionProperty.Float`: Represents an float property.
+  - `NumberFunctionProperty.Decimal`: Represents an decimal property.
 - `ObjectFunctionProperty`: Represents an object property.
 - `ArrayFunctionProperty`: Represents an array property.
+- `BooleanFunctionProperty`: Represents a boolean property.
+- `EnumFunctionProperty<TEnum>`: Represents an enumeration property.
 
 #### Configuring Chat Profiles
 
@@ -92,7 +105,7 @@ Once the function is registered, you can add it to your chat profiles. When crea
 The OpenAI feature provides the necessary infrastructure and an extensible UI to support custom sources. You can add additional OpenAI sources by implementing the `IAIChatProfileSource` interface. For example:
 
 ```csharp
-public sealed class AzureProfileSource : IAIChatProfileSource
+public sealed class AzureProfileSource : IOpenAIChatProfileSource
 {
     public const string Key = "Azure";
 
@@ -117,7 +130,7 @@ public sealed class StandardStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIChatProfileSource<AzureProfileSource>(AzureProfileSource.Key);
+        services.AddOpenAIChatProfileSource<AzureProfileSource>(AzureProfileSource.Key);
     }
 }
 ```
@@ -130,7 +143,7 @@ If you're using the Recipes module, you can add AI chat profiles using the follo
 {
   "steps":[
     {
-      "name":"AIChatProfile",
+      "name":"OpenAIChatProfile",
       "profiles":[
         {
           "Source":"CustomSource",

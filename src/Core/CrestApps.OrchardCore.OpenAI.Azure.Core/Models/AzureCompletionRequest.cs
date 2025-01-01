@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 
 public class AzureCompletionRequest
 {
-    public IEnumerable<ChatCompletionMessage> Messages { get; set; }
+    public IEnumerable<OpenAIChatCompletionMessage> Messages { get; set; }
 
     public float? Temperature { get; set; }
 

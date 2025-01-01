@@ -11,31 +11,31 @@ namespace CrestApps.OrchardCore.OpenAI.Core;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddModelDeploymentServices(this IServiceCollection services)
+    public static IServiceCollection AddOpenAIDeploymentServices(this IServiceCollection services)
     {
-        services.AddScoped<IModelDeploymentStore, DefaultModelDeploymentStore>();
-        services.AddScoped<IModelDeploymentManager, DefaultModelDeploymentManager>();
-        services.AddScoped<IModelDeploymentHandler, ModelDeploymentHandler>();
+        services.AddScoped<IOpenAIDeploymentStore, DefaultOpenAIDeploymentStore>();
+        services.AddScoped<IOpenAIDeploymentManager, DefaultOpenAIDeploymentManager>();
+        services.AddScoped<IOpenAIDeploymentHandler, OpenAIDeploymentHandler>();
         services.AddPermissionProvider<OpenAIDeploymentProvider>();
 
         return services;
     }
 
-    public static IServiceCollection AddAIChatProfileServices(this IServiceCollection services)
+    public static IServiceCollection AddOpenAIChatProfileServices(this IServiceCollection services)
     {
-        services.AddScoped<IAIChatProfileStore, DefaultAIChatProfileStore>();
-        services.AddScoped<IAIChatProfileManager, DefaultAIChatProfileManager>();
-        services.AddScoped<IAIChatProfileHandler, AIChatProfileHandler>();
-        services.AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>();
+        services.AddScoped<IOpenAIChatProfileStore, DefaultOpenAIChatProfileStore>();
+        services.AddScoped<IOpenAIChatProfileManager, DefaultOpenAIChatProfileManager>();
+        services.AddScoped<IOpenAIChatProfileHandler, OpenAIChatProfileHandler>();
+        services.AddScoped<IOpenAIChatSessionManager, DefaultOpenAIChatSessionManager>();
 
-        services.AddPermissionProvider<AIChatPermissionsProvider>();
-        services.AddScoped<IAuthorizationHandler, AIChatProfileAuthenticationHandler>();
+        services.AddPermissionProvider<OpenAIChatPermissionsProvider>();
+        services.AddScoped<IAuthorizationHandler, OpenAIChatProfileAuthenticationHandler>();
         services.Configure<StoreCollectionOptions>(o => o.Collections.Add(OpenAIConstants.CollectionName));
 
         return services;
     }
 
-    public static IServiceCollection AddAIChatFunction<TFunction>(this IServiceCollection services, string functionName)
+    public static IServiceCollection AddOpenAIChatFunction<TFunction>(this IServiceCollection services, string functionName)
         where TFunction : class, IOpenAIChatFunction
     {
         ArgumentNullException.ThrowIfNull(functionName);
@@ -47,38 +47,38 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddAIChatProfileSource<TSource>(this IServiceCollection services, string sourceKey)
-         where TSource : class, IAIChatProfileSource
+    public static IServiceCollection AddOpenAIChatProfileSource<TSource>(this IServiceCollection services, string sourceKey)
+         where TSource : class, IOpenAIChatProfileSource
     {
         ArgumentNullException.ThrowIfNull(sourceKey);
 
         services.AddScoped<TSource>();
-        services.AddScoped<IAIChatProfileSource>(sp => sp.GetService<TSource>());
-        services.AddKeyedScoped<IAIChatProfileSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
+        services.AddScoped<IOpenAIChatProfileSource>(sp => sp.GetService<TSource>());
+        services.AddKeyedScoped<IOpenAIChatProfileSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
 
         return services;
     }
 
-    public static IServiceCollection AddModelDeploymentSource<TSource>(this IServiceCollection services, string sourceKey)
-        where TSource : class, IModelDeploymentSource
+    public static IServiceCollection AddOpenAIDeploymentSource<TSource>(this IServiceCollection services, string sourceKey)
+        where TSource : class, IOpenAIDeploymentSource
     {
         ArgumentNullException.ThrowIfNull(sourceKey);
 
         services.AddScoped<TSource>();
-        services.AddScoped<IModelDeploymentSource>(sp => sp.GetService<TSource>());
-        services.AddKeyedScoped<IModelDeploymentSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
+        services.AddScoped<IOpenAIDeploymentSource>(sp => sp.GetService<TSource>());
+        services.AddKeyedScoped<IOpenAIDeploymentSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
 
         return services;
     }
 
-    public static IServiceCollection AddChatCompletionService<TService>(this IServiceCollection services, string sourceKey)
-        where TService : class, IChatCompletionService
+    public static IServiceCollection AddOpenAIChatCompletionService<TService>(this IServiceCollection services, string sourceKey)
+        where TService : class, IOpenAIChatCompletionService
     {
         ArgumentNullException.ThrowIfNull(sourceKey);
 
         services.AddScoped<TService>();
-        services.AddScoped<IChatCompletionService>(sp => sp.GetService<TService>());
-        services.AddKeyedScoped<IChatCompletionService>(sourceKey, (sp, key) => sp.GetService<TService>());
+        services.AddScoped<IOpenAIChatCompletionService>(sp => sp.GetService<TService>());
+        services.AddKeyedScoped<IOpenAIChatCompletionService>(sourceKey, (sp, key) => sp.GetService<TService>());
 
         return services;
     }

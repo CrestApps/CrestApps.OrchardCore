@@ -17,7 +17,7 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddChatCompletionService<AzureChatCompletionService>(AzureProfileSource.Key);
+        services.AddOpenAIChatCompletionService<AzureChatCompletionService>(AzureProfileSource.Key);
 
         services
             .AddHttpClient(AzureOpenAIConstants.HttpClientName)
@@ -53,8 +53,8 @@ public sealed class DeploymentsStartup : StartupBase
         services.AddScoped<AzureOpenAIDeploymentsService>();
 
         services
-            .AddModelDeploymentSource<AzureModelDeploymentSource>(AzureOpenAIConstants.AzureDeploymentSourceName)
-            .AddScoped<IDisplayDriver<ModelDeployment>, AzureModelDeploymentDisplayDriver>()
+            .AddOpenAIDeploymentSource<AzureModelDeploymentSource>(AzureOpenAIConstants.AzureDeploymentSourceName)
+            .AddScoped<IDisplayDriver<OpenAIDeployment>, AzureModelDeploymentDisplayDriver>()
             .AddScoped<AzureCognitiveServicesAccountServices>();
     }
 }
@@ -65,7 +65,7 @@ public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddRecipeExecutionStep<ImportDeploymentsStep>();
+        services.AddRecipeExecutionStep<ImportAzureOpenAIDeploymentStep>();
     }
 }
 
@@ -74,7 +74,7 @@ public sealed class StandardStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIChatProfileSource<AzureProfileSource>(AzureProfileSource.Key);
+        services.AddOpenAIChatProfileSource<AzureProfileSource>(AzureProfileSource.Key);
     }
 }
 
@@ -83,8 +83,8 @@ public sealed class AISearchStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIChatProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
-        services.AddScoped<IDisplayDriver<AIChatProfile>, AzureAIChatProfileSearchAIDisplayDriver>();
-        services.AddScoped<IAIChatProfileHandler, AzureOpenAIProfileWithAISearchHandler>();
+        services.AddOpenAIChatProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
+        services.AddScoped<IDisplayDriver<OpenAIChatProfile>, AzureAIChatProfileSearchAIDisplayDriver>();
+        services.AddScoped<IOpenAIChatProfileHandler, AzureOpenAIProfileWithAISearchHandler>();
     }
 }

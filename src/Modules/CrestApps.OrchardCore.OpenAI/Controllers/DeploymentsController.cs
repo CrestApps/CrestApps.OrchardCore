@@ -23,10 +23,10 @@ public sealed class DeploymentsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly IModelDeploymentManager _deploymentManager;
+    private readonly IOpenAIDeploymentManager _deploymentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly IDisplayManager<ModelDeployment> _deploymentDisplayManager;
+    private readonly IDisplayManager<OpenAIDeployment> _deploymentDisplayManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly OpenAIConnectionOptions _connectionOptions;
     private readonly INotifier _notifier;
@@ -35,10 +35,10 @@ public sealed class DeploymentsController : Controller
     internal readonly IStringLocalizer S;
 
     public DeploymentsController(
-        IModelDeploymentManager deploymentManager,
+        IOpenAIDeploymentManager deploymentManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
-        IDisplayManager<ModelDeployment> deploymentDisplayManager,
+        IDisplayManager<OpenAIDeployment> deploymentDisplayManager,
         IServiceProvider serviceProvider,
         IOptions<OpenAIConnectionOptions> connectionOptions,
         INotifier notifier,
@@ -59,11 +59,11 @@ public sealed class DeploymentsController : Controller
     public async Task<IActionResult> Index(
         ModelDeploymentOptions options,
         PagerParameters pagerParameters,
-        [FromServices] IEnumerable<IModelDeploymentSource> deploymentSources,
+        [FromServices] IEnumerable<IOpenAIDeploymentSource> deploymentSources,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageModelDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageModelDeployments))
         {
             return Forbid();
         }
@@ -83,7 +83,7 @@ public sealed class DeploymentsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var model = new ListModelDeploymentsViewModel
+        var model = new ListDeploymentsViewModel
         {
             Deployments = [],
             Options = options,
@@ -93,7 +93,7 @@ public sealed class DeploymentsController : Controller
 
         foreach (var deployment in result.Deployments)
         {
-            model.Deployments.Add(new ModelDeploymentEntry
+            model.Deployments.Add(new OpenAIDeploymentEntry
             {
                 Deployment = deployment,
                 Shape = await _deploymentDisplayManager.BuildDisplayAsync(deployment, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
@@ -111,7 +111,7 @@ public sealed class DeploymentsController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
-    public ActionResult IndexFilterPOST(ListModelDeploymentsViewModel model)
+    public ActionResult IndexFilterPOST(ListDeploymentsViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -121,12 +121,12 @@ public sealed class DeploymentsController : Controller
 
     public async Task<ActionResult> Create(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageModelDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageModelDeployments))
         {
             return Forbid();
         }
 
-        var source = _serviceProvider.GetKeyedService<IModelDeploymentSource>(id);
+        var source = _serviceProvider.GetKeyedService<IOpenAIDeploymentSource>(id);
 
         if (source == null)
         {
@@ -144,7 +144,7 @@ public sealed class DeploymentsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var model = new ModelDeploymentViewModel
+        var model = new OpenAIDeploymentViewModel
         {
             DisplayName = source.DisplayName,
             Editor = await _deploymentDisplayManager.BuildEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -157,12 +157,12 @@ public sealed class DeploymentsController : Controller
     [ActionName(nameof(Create))]
     public async Task<ActionResult> CreatePOST(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageModelDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageModelDeployments))
         {
             return Forbid();
         }
 
-        var source = _serviceProvider.GetKeyedService<IModelDeploymentSource>(id);
+        var source = _serviceProvider.GetKeyedService<IOpenAIDeploymentSource>(id);
 
         if (source == null)
         {
@@ -180,7 +180,7 @@ public sealed class DeploymentsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var model = new ModelDeploymentViewModel
+        var model = new OpenAIDeploymentViewModel
         {
             DisplayName = source.DisplayName,
             Editor = await _deploymentDisplayManager.UpdateEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -200,7 +200,7 @@ public sealed class DeploymentsController : Controller
 
     public async Task<ActionResult> Edit(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageModelDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageModelDeployments))
         {
             return Forbid();
         }
@@ -212,7 +212,7 @@ public sealed class DeploymentsController : Controller
             return NotFound();
         }
 
-        var model = new AIChatProfileViewModel
+        var model = new ChatProfileViewModel
         {
             DisplayName = deployment.Name,
             Editor = await _deploymentDisplayManager.BuildEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -225,7 +225,7 @@ public sealed class DeploymentsController : Controller
     [ActionName(nameof(Edit))]
     public async Task<ActionResult> EditPOST(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageModelDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageModelDeployments))
         {
             return Forbid();
         }
@@ -240,7 +240,7 @@ public sealed class DeploymentsController : Controller
         // Clone the deployment to prevent modifying the original instance in the store.
         var mutableProfile = deployment.Clone();
 
-        var model = new ModelDeploymentViewModel
+        var model = new OpenAIDeploymentViewModel
         {
             DisplayName = mutableProfile.Name,
             Editor = await _deploymentDisplayManager.UpdateEditorAsync(mutableProfile, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -261,7 +261,7 @@ public sealed class DeploymentsController : Controller
     [HttpPost]
     public async Task<IActionResult> Delete(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageModelDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageModelDeployments))
         {
             return Forbid();
         }
@@ -285,7 +285,7 @@ public sealed class DeploymentsController : Controller
     [FormValueRequired("submit.BulkAction")]
     public async Task<ActionResult> IndexPost(ModelDeploymentOptions options, IEnumerable<string> itemIds)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageModelDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageModelDeployments))
         {
             return Forbid();
         }

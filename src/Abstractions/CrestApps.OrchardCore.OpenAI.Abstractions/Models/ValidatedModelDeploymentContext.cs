@@ -1,10 +1,10 @@
 ﻿namespace CrestApps.OrchardCore.OpenAI.Models;
 
-public sealed class ValidatedModelDeploymentContext : ModelDeploymentContextBase
+public sealed class ValidatedModelDeploymentContext : OpenAIDeploymentContextBase
 {
-    public readonly ModelDeploymentValidateResult Result;
+    public readonly OpenAIDeploymentValidateResult Result;
 
-    public ValidatedModelDeploymentContext(ModelDeployment deployment, ModelDeploymentValidateResult result)
+    public ValidatedModelDeploymentContext(OpenAIDeployment deployment, OpenAIDeploymentValidateResult result)
         : base(deployment)
     {
         Result = result ?? new();

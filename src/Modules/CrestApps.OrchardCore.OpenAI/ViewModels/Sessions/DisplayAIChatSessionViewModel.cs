@@ -4,5 +4,5 @@ namespace CrestApps.OrchardCore.OpenAI.ViewModels.Sessions;
 
 public class DisplayAIChatSessionViewModel
 {
-    public AIChatSession Session { get; set; }
+    public OpenAIChatSession Session { get; set; }
 }

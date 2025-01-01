@@ -2,7 +2,7 @@ const openAIChatManager = function () {
 
     var defaultConfig = {
         messageTemplate: `
-        <div class="list-group" id="@messagesContainerHtmlId">
+            <div class="list-group">
                 <div v-for="(message, index) in messages" :key="index" class="list-group-item">
                     <div class="d-flex">
                         <div class="p-2">
@@ -48,7 +48,7 @@ const openAIChatManager = function () {
         Vue.createApp({
             data() {
                 return {
-                    sessionStarted: false,
+                    isSessionStarted: false,
                     messages: [],
                     prompt: ''
                 };
@@ -84,28 +84,38 @@ const openAIChatManager = function () {
                     this.prompt = '';
                     buttonElement.setAttribute('disabled', true);
 
+                    this.completeChat(inputElement.getAttribute('data-profile-id'), userMessage.prompt, inputElement.getAttribute('data-session-id'));
+                },
+                generatePrompt(element) {
+                    if (!element) {
+                        console.error('The element paramter is required.');
+
+                        return;
+                    }
+
+                    let profileId = element.getAttribute('data-profile-id');
+                    let sessionId = element.getAttribute('data-session-id');
+
+                    if (!profileId || !sessionId) {
+
+                        console.error('The given element is missing data-profile-id and/or data-session-id');
+                        return;
+                    }
+
+                    this.completeChat(profileId, null, sessionId);
+                },
+                completeChat(profileId, prompt, sessionId) {
                     fetch(config.chatUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            sessionId: inputElement.getAttribute('data-session-id'),
-                            profileId: inputElement.getAttribute('data-profile-id'),
-                            prompt: userMessage.prompt
+                            profileId: profileId,
+                            sessionId: sessionId,
+                            prompt: prompt
                         })
                     }).then(response => response.json())
                         .then(result => {
-                            if (!this.sessionStarted) {
-                                inputElement.setAttribute('data-session-id', result.sessionId);
-
-                                var elements = document.getElementsByClassName('profile-generated-prompt');
-
-                                for (var i = 0; i < elements.length; i++) {
-                                    elements[i].setAttribute('data-session-id', result.sessionId);
-                                }
-
-                                this.sessionStarted = true;
-                            }
-
+                            this.setSession(result.sessionId);
                             this.addMessage(result.message);
                             this.hideTypingIndicator();
                             this.scrollToBottom();
@@ -114,6 +124,23 @@ const openAIChatManager = function () {
                             console.error('Failed to send the message.', error);
                             this.hideTypingIndicator();
                         });
+                },
+                setSession(sessionId) {
+                    if (this.isSessionStarted) {
+                        return
+                    }
+
+                    const inputElement = document.querySelector(config.inputElementSelector);
+
+                    inputElement.setAttribute('data-session-id', sessionId);
+
+                    var elements = document.getElementsByClassName('profile-generated-prompt');
+
+                    for (var i = 0; i < elements.length; i++) {
+                        elements[i].setAttribute('data-session-id', sessionId);
+                    }
+
+                    this.isSessionStarted = true;
                 },
                 showTypingIndicator() {
                     this.addMessage({
@@ -158,6 +185,15 @@ const openAIChatManager = function () {
 
                     this.sendMessage();
                 });
+
+                const promptGenerators = document.getElementsByClassName('profile-generated-prompt');
+
+                for (var i = 0; i < promptGenerators.length; i++) {
+                    promptGenerators[i].addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.generatePrompt(e);
+                    });
+                }
 
                 if (config.messages.length) {
                     for (let i = 0; i < config.messages.length; i++) {

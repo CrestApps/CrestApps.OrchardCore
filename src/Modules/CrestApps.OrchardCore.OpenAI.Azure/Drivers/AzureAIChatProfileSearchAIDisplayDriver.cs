@@ -10,7 +10,7 @@ using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Drivers;
 
-public sealed class AzureAIChatProfileSearchAIDisplayDriver : DisplayDriver<AIChatProfile>
+public sealed class AzureAIChatProfileSearchAIDisplayDriver : DisplayDriver<OpenAIChatProfile>
 {
     private readonly AzureAISearchIndexSettingsService _indexSettingsService;
 
@@ -20,7 +20,7 @@ public sealed class AzureAIChatProfileSearchAIDisplayDriver : DisplayDriver<AICh
         _indexSettingsService = indexSettingsService;
     }
 
-    public override IDisplayResult Edit(AIChatProfile model, BuildEditorContext context)
+    public override IDisplayResult Edit(OpenAIChatProfile model, BuildEditorContext context)
     {
         if (model.Source is null || model.Source != AzureWithAzureAISearchProfileSource.Key)
         {
@@ -41,7 +41,7 @@ public sealed class AzureAIChatProfileSearchAIDisplayDriver : DisplayDriver<AICh
         }).Location("Content:3");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(AIChatProfile model, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(OpenAIChatProfile model, UpdateEditorContext context)
     {
         if (model.Source is null || model.Source != AzureWithAzureAISearchProfileSource.Key)
         {
