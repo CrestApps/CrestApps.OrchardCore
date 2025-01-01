@@ -87,6 +87,10 @@ If you're using the Recipes feature, you can create an Azure profile using the f
           "Source":"Azure",
           "Name":"Example Profile",
           "WelcomeMessage": "What do you want to know?",
+          "FunctionNames": [],
+          "Type": "Chat",
+          "TitleType": "InitialPrompt",
+          "PromptTemplate": null,
           "DeploymentId":"<!-- The deployment id for the deployment. -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",
           "Temperature":null,
@@ -123,7 +127,10 @@ If you're using the Recipes feature, you can create an Azure profile with the fo
           "Source":"AzureAISearch",
           "Name":"Example Profile",
           "WelcomeMessage": "What do you want to know?",
-          "IndexName":"<!-- Your Azure index name -->",
+          "FunctionNames": [],
+          "Type": "Chat",
+          "TitleType": "InitialPrompt",
+          "PromptTemplate": null,
           "DeploymentId":"<!-- The deployment id for the deployment. -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",
           "Temperature":null,
@@ -131,7 +138,7 @@ If you're using the Recipes feature, you can create an Azure profile with the fo
           "FrequencyPenalty":null,
           "PresencePenalty":null,
           "TokenLength":null,
-          "PastMessagesCount":null,
+          "PastMessagesCount":null
           "Strictness":null,
           "TopNDocuments":null
         }

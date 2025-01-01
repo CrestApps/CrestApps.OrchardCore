@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
-using static CrestApps.OrchardCore.OpenAI.Models.AIChatProfile;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 
@@ -131,6 +130,13 @@ public class AIChatProfileHandler : AIChatProfileHandlerBase
         if (!string.IsNullOrEmpty(welcomeMessage))
         {
             profile.WelcomeMessage = welcomeMessage;
+        }
+
+        var functionNames = data[nameof(AIChatProfile.FunctionNames)]?.AsArray();
+
+        if (functionNames != null)
+        {
+            profile.FunctionNames = functionNames.Select(x => x.GetValue<string>()).ToArray();
         }
 
         var promptTemplate = data[nameof(AIChatProfile.PromptTemplate)]?.GetValue<string>()?.Trim();
