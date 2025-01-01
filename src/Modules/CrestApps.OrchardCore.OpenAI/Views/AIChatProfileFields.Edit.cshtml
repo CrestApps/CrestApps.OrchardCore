@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.OpenAI.Models
 @using CrestApps.OrchardCore.OpenAI.ViewModels
 @using OrchardCore
 
@@ -31,6 +32,31 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="ProfileType" class="@Orchard.GetLabelClasses()">@T["Profile type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="ProfileType" asp-items="Model.ProfileTypes" class="form-select"></select>
+        <span asp-validation-for="ProfileType" class="text-danger"></span>
+        <span class="hint">@T["Choose how the type of the profile."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System description"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="SystemMessage" class="form-control content-preview-text" rows="5"></textarea>
+        <span class="hint">@T["The system message in OpenAI sets the AI's behavior and response style, guiding how it interacts in a conversation."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-generated-prompt")@(Model.ProfileType == AIChatProfileType.GeneratedPrompt ? string.Empty : " d-none")">
+    <label asp-for="PromptTemplate" class="@Orchard.GetLabelClasses()">@T["Prompt template"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="PromptTemplate" class="form-control content-preview-text" rows="5"></textarea>
+        <span class="hint">@T["When using the session tool, the prompt is dynamically generated based on a prompt template. You can structure the prompt using Liquid syntax and incorporate the {0} variable.", "<code>Session</code>"]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
     <label asp-for="TitleType" class="@Orchard.GetLabelClasses()">@T["Title type"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="TitleType" asp-items="Model.TitleTypes" class="form-select"></select>
@@ -39,7 +65,7 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
     <label asp-for="WelcomeMessage" class="@Orchard.GetLabelClasses()">@T["Welcome message"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input asp-for="WelcomeMessage" class="form-control" />
@@ -63,3 +89,33 @@
         }
     </div>
 }
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const convertToKebabCase = (str) => {
+            return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+        }
+
+        var profileType = document.getElementById('@Html.IdFor(x => x.ProfileType)');
+
+        profileType.addEventListener('change', function (e) {
+
+            let value = e.target.value;
+            let className = 'profile-type-' + convertToKebabCase(value);
+            let elements = document.querySelectorAll('.profile-type');
+
+            for (let i = 0; i < elements.length; i++) {
+                var element = elements[i];
+
+                if (element.classList.contains(className)) {
+                    element.classList.remove('d-none');
+                } else {
+                    element.classList.add('d-none');
+                }
+            }
+        });
+
+        profileType.dispatchEvent(new Event('change'));
+    });
+</script>

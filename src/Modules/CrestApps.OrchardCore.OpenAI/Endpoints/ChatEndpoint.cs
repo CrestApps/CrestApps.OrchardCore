@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.Support;
+using Fluid;
+using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -10,14 +12,19 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
+using OrchardCore.Liquid;
 using OrchardCore.Markdown.Services;
 using OrchardCore.Modules;
+using static CrestApps.OrchardCore.OpenAI.Models.AIChatProfile;
 
 namespace CrestApps.OrchardCore.OpenAI.Endpoints;
 
 internal static class ChatEndpoint
 {
+    private const string _blankMessage = "AI drew blank and no message was generated!";
+
     public static IEndpointRouteBuilder AddOpenAIChatEndpoint<T>(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapPost("OpenAI/ChatGPT/Completion", HandleAsync<T>)
@@ -33,6 +40,7 @@ internal static class ChatEndpoint
         IAuthorizationService authorizationService,
         IAIChatProfileManager chatProfileManager,
         IAIChatSessionManager sessionManager,
+        ILiquidTemplateManager liquidTemplateManager,
         HttpContext httpContext,
         IServiceProvider serviceProvider,
         IEnumerable<IChatEventHandler> handlers,
@@ -74,6 +82,11 @@ internal static class ChatEndpoint
             return TypedResults.Problem($"Unable to find a chat completion service for the source: '{profile.Source}'.");
         }
 
+        if (profile.Type == AIChatProfileType.Tool)
+        {
+            return await GetToolMessageAsync(completionService, profile, markdownService, requestData.Prompt);
+        }
+
         string clientId = null;
         string userId = null;
         AIChatSession chatSession = null;
@@ -93,7 +106,7 @@ internal static class ChatEndpoint
             var now = clock.UtcNow;
             chatSession = await sessionManager.NewAsync(profile);
 
-            if (profile.TitleType == AIChatProfile.SessionTitleType.Generated)
+            if (profile.TitleType == SessionTitleType.Generated)
             {
                 var titleResponse = await completionService.GetTitleAsync(trimmedPrompt, profile);
 
@@ -110,34 +123,67 @@ internal static class ChatEndpoint
 
         var part = chatSession.As<AIChatSessionPart>();
 
-        var userPrompt = new AIChatSessionMessage
+        ChatCompletionResponse completion = null;
+        AIChatSessionMessage message = null;
+        ChatCompletionChoice bestChoice = null;
+
+        if (profile.Type == AIChatProfileType.GeneratedPrompt)
         {
-            Id = IdGenerator.GenerateId(),
-            Role = OpenAIConstants.Roles.User,
-            Prompt = trimmedPrompt,
-        };
+            var prompt = await liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
+                new Dictionary<string, FluidValue>()
+                {
+                    ["Session"] = new ObjectValue(chatSession),
+                });
 
-        part.Prompts.Add(userPrompt);
+            completion = await completionService.ChatAsync([ChatCompletionMessage.CreateMessage(prompt, OpenAIConstants.Roles.User)], new ChatCompletionContext(profile)
+            {
+                SystemMessage = profile.SystemMessage,
+                UserMarkdownInResponse = true,
+            });
 
-        var transcript = part.Prompts.Where(x => !x.FunctionalGenerated)
-            .Select(x => ChatCompletionMessage.CreateMessage(x.Prompt, x.Role));
+            bestChoice = completion.Choices.FirstOrDefault();
 
-        var completion = await completionService.ChatAsync(transcript, new ChatCompletionContext(profile)
+            message = new AIChatSessionMessage
+            {
+                Id = IdGenerator.GenerateId(),
+                Role = OpenAIConstants.Roles.Assistant,
+                FunctionalGenerated = true,
+                Prompt = !string.IsNullOrEmpty(bestChoice?.Message)
+                ? bestChoice.Message
+                : _blankMessage,
+            };
+        }
+        else
         {
-            Session = chatSession,
-            UserMarkdownInResponse = true,
-        });
+            // At this point, we complete as standard chat.
+            part.Prompts.Add(new AIChatSessionMessage
+            {
+                Id = IdGenerator.GenerateId(),
+                Role = OpenAIConstants.Roles.User,
+                Prompt = trimmedPrompt,
+            });
 
-        var bestChoice = completion.Choices.FirstOrDefault();
+            var transcript = part.Prompts.Where(x => !x.FunctionalGenerated)
+                .Select(x => ChatCompletionMessage.CreateMessage(x.Prompt, x.Role));
 
-        var message = new AIChatSessionMessage
-        {
-            Id = IdGenerator.GenerateId(),
-            Role = OpenAIConstants.Roles.Assistant,
-            Prompt = !string.IsNullOrEmpty(bestChoice?.Message)
-            ? bestChoice.Message
-            : "AI drew blank and no message was generated!",
-        };
+            completion = await completionService.ChatAsync(transcript, new ChatCompletionContext(profile)
+            {
+                SystemMessage = profile.SystemMessage,
+                Session = chatSession,
+                UserMarkdownInResponse = true,
+            });
+
+            bestChoice = completion.Choices.FirstOrDefault();
+
+            message = new AIChatSessionMessage
+            {
+                Id = IdGenerator.GenerateId(),
+                Role = OpenAIConstants.Roles.Assistant,
+                Prompt = !string.IsNullOrEmpty(bestChoice?.Message)
+                ? bestChoice.Message
+                : "AI drew blank and no message was generated!",
+            };
+        }
 
         var completedChatContext = new CompletedChatContext
         {
@@ -162,7 +208,7 @@ internal static class ChatEndpoint
         return TypedResults.Ok(new
         {
             Success = completion.Choices.Any(),
-            LastMessageId = userPrompt.Id,
+            Type = profile.Type.ToString(),
             chatSession.SessionId,
             IsNew = isNew,
             Message = new
@@ -174,6 +220,30 @@ internal static class ChatEndpoint
                 PromptHTML = !string.IsNullOrEmpty(message.Prompt)
                 ? markdownService.ToHtml(message.Prompt)
                 : null,
+            },
+        });
+    }
+
+    private static async Task<IResult> GetToolMessageAsync(IChatCompletionService completionService, AIChatProfile profile, IMarkdownService markdownService, string prompt)
+    {
+        var completion = await completionService.ChatAsync([ChatCompletionMessage.CreateMessage(prompt, OpenAIConstants.Roles.User)], new ChatCompletionContext(profile)
+        {
+            SystemMessage = profile.SystemMessage,
+            UserMarkdownInResponse = true,
+        });
+
+        var bestChoice = completion.Choices.FirstOrDefault();
+
+        return TypedResults.Ok(new
+        {
+            Success = completion.Choices.Any(),
+            Type = "Tool",
+            Message = new
+            {
+                Prompt = bestChoice?.Message ?? _blankMessage,
+                PromptHTML = !string.IsNullOrEmpty(bestChoice?.Message)
+                ? markdownService.ToHtml(bestChoice.Message)
+                : _blankMessage,
             },
         });
     }

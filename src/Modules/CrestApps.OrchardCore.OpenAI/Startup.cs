@@ -47,9 +47,9 @@ public sealed class ChatStartup : StartupBase
             .AddNavigationProvider<OpenAIAdminChatMenu>()
             .AddDataMigration<AIChatSessionIndexMigrations>()
             .AddIndexProvider<AIChatSessionIndexProvider>()
-            .AddScoped<IDisplayDriver<AIChatProfile>, AIChatProfileDisplayDriver>()
-            .AddScoped<IDisplayDriver<AIChatSession>, AIChatSessionDisplayDriver>()
-            .AddScoped<IDisplayDriver<AIChatListOptions>, AIChatListOptionsDisplayDriver>();
+            .AddDisplayDriver<AIChatProfile, AIChatProfileDisplayDriver>()
+            .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()
+            .AddDisplayDriver<AIChatListOptions, AIChatListOptionsDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Core;
+using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Mvc.Utilities;
@@ -31,6 +32,11 @@ public sealed class OpenAIAdminChatMenu : AdminNavigationProvider
                var i = 1;
                foreach (var profile in profiles)
                {
+                   if (profile.Type != AIChatProfileType.Chat)
+                   {
+                       continue;
+                   }
+
                    openAI
                    .Add(new LocalizedString(profile.Name, profile.Name), $"chat{i++}", chat => chat
                        .AddClass(profile.Name.HtmlClassify())

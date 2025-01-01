@@ -1,10 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Entities;
 using OrchardCore.Modules;
+using static CrestApps.OrchardCore.OpenAI.Models.AIChatProfile;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 
@@ -95,12 +98,93 @@ public class AIChatProfileHandler : AIChatProfileHandlerBase
             }
         }
 
+        var type = data[nameof(AIChatProfile.Type)]?.GetEnumValue<AIChatProfileType>();
+
+        if (type.HasValue)
+        {
+            profile.Type = type.Value;
+        }
+
+        var titleType = data[nameof(AIChatProfile.TitleType)]?.GetEnumValue<SessionTitleType>();
+
+        if (titleType.HasValue)
+        {
+            profile.TitleType = titleType.Value;
+        }
+
         var deploymentId = data[nameof(AIChatProfile.DeploymentId)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(deploymentId))
         {
             profile.DeploymentId = deploymentId;
         }
+
+        var systemMessage = data[nameof(AIChatProfile.SystemMessage)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(systemMessage))
+        {
+            profile.SystemMessage = systemMessage;
+        }
+
+        var welcomeMessage = data[nameof(AIChatProfile.WelcomeMessage)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(welcomeMessage))
+        {
+            profile.WelcomeMessage = welcomeMessage;
+        }
+
+        var promptTemplate = data[nameof(AIChatProfile.PromptTemplate)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(promptTemplate))
+        {
+            profile.PromptTemplate = promptTemplate;
+        }
+
+        var metadata = profile.As<AIChatProfileMetadata>();
+
+        var temperature = data[nameof(metadata.Temperature)]?.GetValue<float?>();
+
+        if (temperature.HasValue)
+        {
+            metadata.Temperature = temperature;
+        }
+
+        var topP = data[nameof(metadata.TopP)]?.GetValue<float?>();
+
+        if (topP.HasValue)
+        {
+            metadata.TopP = topP;
+        }
+
+        var frequencyPenalty = data[nameof(metadata.FrequencyPenalty)]?.GetValue<float?>();
+
+        if (frequencyPenalty.HasValue)
+        {
+            metadata.FrequencyPenalty = frequencyPenalty;
+        }
+
+        var presencePenalty = data[nameof(metadata.PresencePenalty)]?.GetValue<float?>();
+
+        if (frequencyPenalty.HasValue)
+        {
+            metadata.PresencePenalty = presencePenalty;
+        }
+
+        var maxTokens = data[nameof(metadata.MaxTokens)]?.GetValue<int?>();
+
+        if (frequencyPenalty.HasValue)
+        {
+            metadata.MaxTokens = maxTokens;
+        }
+
+        var pastMessagesCount = data[nameof(metadata.PastMessagesCount)]?.GetValue<int?>();
+
+        if (pastMessagesCount.HasValue)
+        {
+            metadata.PastMessagesCount = pastMessagesCount;
+        }
+
+        profile.Put(metadata);
 
         return Task.CompletedTask;
     }

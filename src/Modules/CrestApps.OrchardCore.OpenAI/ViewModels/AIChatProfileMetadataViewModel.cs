@@ -2,12 +2,10 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
+namespace CrestApps.OrchardCore.OpenAI.ViewModels;
 
-public class AzureAIChatProfileViewModel
+public class AIChatProfileMetadataViewModel
 {
-    public string SystemMessage { get; set; }
-
     [Range(0f, 1f)]
     public float? Temperature { get; set; }
 

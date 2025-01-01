@@ -1,5 +1,7 @@
+@using CrestApps.OrchardCore.OpenAI
 @using CrestApps.OrchardCore.OpenAI.Core
 @using CrestApps.OrchardCore.OpenAI.Core.Models
+@using CrestApps.OrchardCore.OpenAI.Models
 @using CrestApps.OrchardCore.OpenAI.ViewModels.Sessions
 @using OrchardCore.DisplayManagement
 @using OrchardCore.DisplayManagement.ModelBinding
@@ -10,6 +12,7 @@
 
 @inject IUpdateModelAccessor UpdateModelAccessor
 @inject IDisplayManager<AIChatSessionMessage> DisplayManager
+@inject IAIChatProfileStore ChatProfileStore
 @{
     var part = Model.Session.As<AIChatSessionPart>();
     var baseId = Html.IdForModel();
@@ -18,6 +21,8 @@
     var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
     var messagesContainerHtmlId = $"{baseId}_MessagesContainer";
+
+    var promptGeneratedProfiles = (await ChatProfileStore.GetAllAsync()).Where(x => x.Type == AIChatProfileType.GeneratedPrompt);
 }
 
 <div class="mb-3 mx-3 p-3 overflow-y-auto h-100 rounded-2 border bg-theme" id="@chatContainerHtmlId">
@@ -42,14 +47,22 @@
             <button class="btn btn-outline-secondary" type="button" id="@buttonHtmlId" disabled="">
                 <i class="fa-solid fa-arrow-up"></i>
             </button>
-            <div class="btn-group ps-3">
-                <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fa-solid fa-screwdriver-wrench"></i>
-                </button>
-                <ul class="dropdown-menu">
-                    <!-- Add your dropdown items here -->
-                </ul>
-            </div>
+            @if (promptGeneratedProfiles.Any())
+            {
+                <div class="btn-group ps-3">
+                    <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fa-solid fa-screwdriver-wrench"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        @foreach (var profile in promptGeneratedProfiles)
+                        {
+                            <li>
+                                <button type="button" class="dropdown-item profile-generated-prompt" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Session.ProfileId)">@profile.Name</button>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
         </div>
     </div>
 </div>

@@ -103,23 +103,18 @@ public sealed class AzureChatCompletionService : IChatCompletionService
             return ChatCompletionResponse.Empty;
         }
 
-        var metadata = context.Profile.As<AzureAIChatProfileMetadata>();
+        var metadata = context.Profile.As<AIChatProfileMetadata>();
 
-        var systemMessage = metadata.SystemMessage ?? string.Empty;
+        var systemMessage = GetSystemMessage(context);
 
-        if (context.UserMarkdownInResponse)
-        {
-            systemMessage += "\r\n" + _useMarkdownSyntaxSystemMessage;
-        }
+        var request = await BuildRequestAsync(context, metadata, context.Profile.FunctionNames, systemMessage);
 
         var chatMessages = messages.Where(x => (x.Role == OpenAIConstants.Roles.User || x.Role == OpenAIConstants.Roles.Assistant) && !string.IsNullOrWhiteSpace(x.Content)).ToArray();
 
         var finalMessages = new[]
-        {
+{
             ChatCompletionMessage.CreateMessage(systemMessage, OpenAIConstants.Roles.System),
         };
-
-        var request = await BuildRequestAsync(context, metadata, context.Profile.FunctionNames);
 
         if (metadata.PastMessagesCount > 0 && chatMessages.Length > metadata.PastMessagesCount)
         {
@@ -132,12 +127,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
             request.Messages = finalMessages.Concat(chatMessages);
         }
 
-
-        var httpClient = _httpClientFactory.CreateClient(AzureOpenAIConstants.HttpClientName);
-
-        httpClient.BaseAddress = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
-        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("api-key", connection.GetApiKey());
-        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json");
+        var httpClient = GetHttpClient(connection);
 
         var data = await GetResponseDataAsync(httpClient, request, deployment.Name);
 
@@ -150,6 +140,34 @@ public sealed class AzureChatCompletionService : IChatCompletionService
             data,
             isContentItemDocument: false,
             request.Messages.LastOrDefault(x => x.Role == OpenAIConstants.Roles.User)?.Content);
+    }
+
+    private static string GetSystemMessage(ChatCompletionContext context)
+    {
+        var systemMessage = context.SystemMessage ?? string.Empty;
+
+        if (string.IsNullOrEmpty(systemMessage) && !string.IsNullOrEmpty(context.Profile.SystemMessage))
+        {
+            systemMessage = context.Profile.SystemMessage;
+        }
+
+        if (context.UserMarkdownInResponse)
+        {
+            systemMessage += "\r\n" + _useMarkdownSyntaxSystemMessage;
+        }
+
+        return systemMessage;
+    }
+
+    private HttpClient GetHttpClient(OpenAIConnectionEntry connection)
+    {
+        var httpClient = _httpClientFactory.CreateClient(AzureOpenAIConstants.HttpClientName);
+
+        httpClient.BaseAddress = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("api-key", connection.GetApiKey());
+        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json");
+
+        return httpClient;
     }
 
     private async Task<AzureCompletionResponse> GetResponseDataAsync(HttpClient httpClient, AzureCompletionRequest request, string deploymentName)
@@ -197,7 +215,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
         return data;
     }
 
-    private async Task<AzureCompletionRequest> BuildRequestAsync(ChatCompletionContext context, AzureAIChatProfileMetadata metadata, string[] functionNames)
+    private async Task<AzureCompletionRequest> BuildRequestAsync(ChatCompletionContext context, AIChatProfileMetadata metadata, string[] functionNames, string systemMessage)
     {
         var request = new AzureCompletionRequest()
         {
@@ -237,7 +255,7 @@ public sealed class AzureChatCompletionService : IChatCompletionService
             dataSource.Parameters["query_type"] = "simple";
             dataSource.Parameters["fields_mapping"] = GetFieldMapping(keyField);
             dataSource.Parameters["in_scope"] = true;
-            dataSource.Parameters["role_information"] = metadata.SystemMessage;
+            dataSource.Parameters["role_information"] = systemMessage;
             dataSource.Parameters["filter"] = null;
             dataSource.Parameters["strictness"] = searchAIMetadata.Strictness;
             dataSource.Parameters["top_n_documents"] = searchAIMetadata.TopNDocuments;

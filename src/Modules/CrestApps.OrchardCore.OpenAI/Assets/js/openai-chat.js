@@ -48,6 +48,7 @@ const openAIChatManager = function () {
         Vue.createApp({
             data() {
                 return {
+                    sessionStarted: false,
                     messages: [],
                     prompt: ''
                 };
@@ -93,9 +94,21 @@ const openAIChatManager = function () {
                         })
                     }).then(response => response.json())
                         .then(result => {
+                            if (!this.sessionStarted) {
+                                inputElement.setAttribute('data-session-id', result.sessionId);
+
+                                var elements = document.getElementsByClassName('profile-generated-prompt');
+
+                                for (var i = 0; i < elements.length; i++) {
+                                    elements[i].setAttribute('data-session-id', result.sessionId);
+                                }
+
+                                this.sessionStarted = true;
+                            }
+
                             this.addMessage(result.message);
-                            inputElement.setAttribute('data-session-id', result.sessionId);
                             this.hideTypingIndicator();
+                            this.scrollToBottom();
                         })
                         .catch(error => {
                             console.error('Failed to send the message.', error);
@@ -150,6 +163,8 @@ const openAIChatManager = function () {
                     for (let i = 0; i < config.messages.length; i++) {
                         this.addMessage(config.messages[i]);
                     }
+
+                    this.scrollToBottom();
                 }
             },
             template: config.messageTemplate

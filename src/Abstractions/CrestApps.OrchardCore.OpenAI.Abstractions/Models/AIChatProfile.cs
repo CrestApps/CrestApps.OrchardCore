@@ -13,6 +13,8 @@ public class AIChatProfile : Entity
 
     public string[] FunctionNames { get; set; }
 
+    public AIChatProfileType Type { get; set; }
+
     /// <summary>
     /// Gets the name of the source for this query.
     /// </summary>
@@ -20,9 +22,13 @@ public class AIChatProfile : Entity
 
     public string DeploymentId { get; set; }
 
-    public SessionTitleType TitleType { get; set; }
+    public SessionTitleType? TitleType { get; set; }
 
     public string WelcomeMessage { get; set; }
+
+    public string SystemMessage { get; set; }
+
+    public string PromptTemplate { get; set; }
 
     public DateTime CreatedUtc { get; set; }
 
@@ -37,17 +43,16 @@ public class AIChatProfile : Entity
             Id = Id,
             Name = Name,
             Source = Source,
+            FunctionNames = FunctionNames,
+            Type = Type,
             DeploymentId = DeploymentId,
+            TitleType = TitleType,
+            WelcomeMessage = WelcomeMessage,
+            PromptTemplate = PromptTemplate,
             CreatedUtc = CreatedUtc,
             OwnerId = OwnerId,
             Author = Author,
             Properties = Properties,
         };
-    }
-
-    public enum SessionTitleType
-    {
-        InitialPrompt,
-        Generated,
     }
 }

@@ -1,6 +1,6 @@
+using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using static CrestApps.OrchardCore.OpenAI.Models.AIChatProfile;
 
 namespace CrestApps.OrchardCore.OpenAI.ViewModels;
 
@@ -8,11 +8,17 @@ public class EditAIChatProfileViewModel
 {
     public string Name { get; set; }
 
+    public string SystemMessage { get; set; }
+
     public string WelcomeMessage { get; set; }
+
+    public string PromptTemplate { get; set; }
 
     public string DeploymentId { get; set; }
 
-    public SessionTitleType TitleType { get; set; }
+    public AIChatProfileType ProfileType { get; set; }
+
+    public SessionTitleType? TitleType { get; set; }
 
     public FunctionEntry[] Functions { get; set; }
 
@@ -24,6 +30,9 @@ public class EditAIChatProfileViewModel
 
     [BindNever]
     public IList<SelectListItem> TitleTypes { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> ProfileTypes { get; set; }
 }
 
 public class FunctionEntry

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Functions;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
@@ -5,6 +6,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
+using OrchardCore.Liquid;
 using OrchardCore.Mvc.ModelBinding;
 using static CrestApps.OrchardCore.OpenAI.Models.AIChatProfile;
 
@@ -14,6 +17,7 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 {
     private readonly IAIChatProfileStore _profileStore;
     private readonly IModelDeploymentStore _modelDeploymentStore;
+    private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IEnumerable<IOpenAIChatFunction> _functions;
 
     internal readonly IStringLocalizer S;
@@ -21,11 +25,13 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
     public AIChatProfileDisplayDriver(
         IAIChatProfileStore profileStore,
         IModelDeploymentStore modelDeploymentStore,
+        ILiquidTemplateManager liquidTemplateManager,
         IEnumerable<IOpenAIChatFunction> functions,
         IStringLocalizer<AIChatProfileDisplayDriver> stringLocalizer)
     {
         _profileStore = profileStore;
         _modelDeploymentStore = modelDeploymentStore;
+        _liquidTemplateManager = liquidTemplateManager;
         _functions = functions;
         S = stringLocalizer;
     }
@@ -42,18 +48,28 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 
     public override IDisplayResult Edit(AIChatProfile model, BuildEditorContext context)
     {
-        return Initialize<EditAIChatProfileViewModel>("AIChatProfileName_Edit", async m =>
+        var fields = Initialize<EditAIChatProfileViewModel>("AIChatProfileFields_Edit", async m =>
         {
             m.Name = model.Name;
+            m.SystemMessage = model.SystemMessage;
+            m.PromptTemplate = model.PromptTemplate;
             m.WelcomeMessage = model.WelcomeMessage;
             m.DeploymentId = model.DeploymentId;
             m.TitleType = model.TitleType;
             m.IsNew = context.IsNew;
 
+            m.ProfileType = model.Type;
             m.TitleTypes =
             [
                 new SelectListItem(S["Set the first prompt as the title"], nameof(SessionTitleType.InitialPrompt)),
                 new SelectListItem(S["Generate a title based on the first prompt"], nameof(SessionTitleType.Generated)),
+            ];
+
+            m.ProfileTypes =
+            [
+                new SelectListItem(S["Chat"], nameof(AIChatProfileType.Chat)),
+                new SelectListItem(S["Tool"], nameof(AIChatProfileType.Tool)),
+                new SelectListItem(S["Generated Prompt"], nameof(AIChatProfileType.GeneratedPrompt)),
             ];
 
             m.Functions = _functions.OrderBy(x => x.Name).Select(x => new FunctionEntry
@@ -94,9 +110,39 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
             }
 
         }).Location("Content:1");
+
+
+        var metadata = Initialize<AIChatProfileMetadataViewModel>("AIChatProfileMetadata_Edit", async m =>
+        {
+            var metadata = model.As<AIChatProfileMetadata>();
+
+            m.FrequencyPenalty = metadata.FrequencyPenalty;
+            m.PastMessagesCount = metadata.PastMessagesCount;
+            m.PresencePenalty = metadata.PresencePenalty;
+            m.Temperature = metadata.Temperature;
+            m.MaxTokens = metadata.MaxTokens;
+            m.TopP = m.TopP;
+
+            var azureDeployments = await _modelDeploymentStore.GetAllAsync();
+
+            m.Deployments = azureDeployments.Select(x => new SelectListItem(x.Name, x.Id));
+
+        }).Location("Content:5");
+
+
+        return Combine(fields, metadata);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIChatProfile model, UpdateEditorContext context)
+    {
+        await UpdateFieldsAsync(model, context);
+
+        await UpdateMetadataAsync(model, context);
+
+        return Edit(model, context);
+    }
+
+    private async Task UpdateFieldsAsync(AIChatProfile model, UpdateEditorContext context)
     {
         var viewModel = new EditAIChatProfileViewModel();
 
@@ -128,14 +174,44 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
             context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.DeploymentId), S["Invalid deployment provided."]);
         }
 
-        var validFunctionNames = _functions.Select(x => x.Name).ToArray();
+        if (viewModel.ProfileType == AIChatProfileType.GeneratedPrompt)
+        {
+            if (string.IsNullOrEmpty(viewModel.PromptTemplate))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.PromptTemplate), S["Prompt template is required."]);
+            }
+            else if (!_liquidTemplateManager.Validate(viewModel.PromptTemplate, out var errors))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.PromptTemplate), S["Invalid liquid template used for Prompt template."]);
+            }
+        }
 
-        model.FunctionNames = viewModel.Functions.Where(x => x.IsSelected && validFunctionNames.Contains(x.Name)).Select(x => x.Name).ToArray();
-
+        model.SystemMessage = viewModel.SystemMessage;
+        model.PromptTemplate = viewModel.PromptTemplate;
         model.DeploymentId = viewModel.DeploymentId;
         model.WelcomeMessage = viewModel.WelcomeMessage;
         model.TitleType = viewModel.TitleType;
+        model.Type = viewModel.ProfileType;
 
-        return Edit(model, context);
+        var validFunctionNames = _functions.Select(x => x.Name).ToArray();
+
+        model.FunctionNames = viewModel.Functions.Where(x => x.IsSelected && validFunctionNames.Contains(x.Name)).Select(x => x.Name).ToArray();
+    }
+
+    private async Task UpdateMetadataAsync(AIChatProfile model, UpdateEditorContext context)
+    {
+        var metadataViewModel = new AIChatProfileMetadataViewModel();
+
+        await context.Updater.TryUpdateModelAsync(metadataViewModel, Prefix);
+
+        model.Put(new AIChatProfileMetadata
+        {
+            FrequencyPenalty = metadataViewModel.FrequencyPenalty,
+            PastMessagesCount = metadataViewModel.PastMessagesCount,
+            PresencePenalty = metadataViewModel.PresencePenalty,
+            Temperature = metadataViewModel.Temperature,
+            MaxTokens = metadataViewModel.MaxTokens,
+            TopP = metadataViewModel.TopP,
+        });
     }
 }

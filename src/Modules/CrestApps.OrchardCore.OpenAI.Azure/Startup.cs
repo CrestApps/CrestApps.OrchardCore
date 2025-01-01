@@ -17,8 +17,6 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IDisplayDriver<AIChatProfile>, AzureAIChatProfileDisplayDriver>();
-
         services.AddChatCompletionService<AzureChatCompletionService>(AzureProfileSource.Key);
 
         services
@@ -71,14 +69,12 @@ public sealed class RecipesStartup : StartupBase
     }
 }
 
-
 [Feature(AzureOpenAIConstants.Feature.Standard)]
 public sealed class StandardStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAIChatProfileSource<AzureProfileSource>(AzureProfileSource.Key);
-        services.AddScoped<IAIChatProfileHandler, AzureOpenAIProfileHandler>();
     }
 }
 
