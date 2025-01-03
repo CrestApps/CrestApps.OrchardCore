@@ -9,8 +9,9 @@ using System.Text.RegularExpressions;
 using Azure;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Functions;
+using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Models;
+using CrestApps.OrchardCore.OpenAI.Tools.Functions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,7 +47,7 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
     private readonly OpenAIConnectionOptions _connectionOptions;
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
     private readonly HtmlEncoder _htmlEncoder;
-    private readonly IEnumerable<IOpenAIChatFunction> _functions;
+    private readonly IOpenAIFunctionService _openAIFunctionService;
     private readonly ILogger _logger;
 
     public AzureChatCompletionService(
@@ -58,7 +59,7 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
         IServiceProvider serviceProvider,
         HtmlEncoder htmlEncoder,
-        IEnumerable<IOpenAIChatFunction> functions,
+        IOpenAIFunctionService openAIFunctionService,
         ILogger<AzureChatCompletionService> logger)
     {
         _httpClientFactory = httpClientFactory;
@@ -69,7 +70,7 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
         _connectionOptions = connectionOptions.Value;
         _azureAISearchDefaultOptions = azureAISearchDefaultOptions.Value;
         _htmlEncoder = htmlEncoder;
-        _functions = functions;
+        _openAIFunctionService = openAIFunctionService;
         _logger = logger;
     }
 
@@ -189,11 +190,11 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
         if (data.Choices.Length > 0 && data.Choices[0].FinishReason == "function_call" && data.Choices[0].Message?.FunctionCall != null)
         {
             var message = data.Choices[0].Message;
-            var function = _functions.FirstOrDefault(x => x.Name.Equals(message.FunctionCall.Name, StringComparison.OrdinalIgnoreCase));
+            var function = _openAIFunctionService.FindByName(message.FunctionCall.Name);
 
             if (function is not null)
             {
-                JsonObject arguments = null;
+                JsonObject arguments;
 
                 try
                 {
@@ -228,14 +229,14 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
 
         if (functionNames != null && functionNames.Length > 0)
         {
-            request.Functions = _functions.Where(x => functionNames.Contains(x.Name));
+            request.Functions = _openAIFunctionService.FindByNames(functionNames);
         }
 
         if (context.Profile.Source == AzureWithAzureAISearchProfileSource.Key &&
             context.Profile.TryGet<AzureAIChatProfileAISearchMetadata>(out var searchAIMetadata))
         {
             // Search against AISearch instance.
-            var dataSource = new CompletionDataSource()
+            var dataSource = new AzureCompletionDataSource()
             {
                 Type = "azure_search",
                 Parameters = [],

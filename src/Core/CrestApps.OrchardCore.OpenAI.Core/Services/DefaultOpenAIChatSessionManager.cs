@@ -34,7 +34,6 @@ public sealed class DefaultOpenAIChatSessionManager : IOpenAIChatSessionManager
         var chatSession = new OpenAIChatSession
         {
             SessionId = IdGenerator.GenerateId(),
-            WelcomeMessage = profile.WelcomeMessage,
             ProfileId = profile.Id,
             CreatedUtc = _clock.UtcNow,
         };

@@ -7,6 +7,8 @@ public class ChatSessionCapsuleViewModel
 {
     public OpenAIChatSession Session { get; set; }
 
+    public OpenAIChatProfile Profile { get; set; }
+
     [BindNever]
     public bool IsNew { get; set; }
 }

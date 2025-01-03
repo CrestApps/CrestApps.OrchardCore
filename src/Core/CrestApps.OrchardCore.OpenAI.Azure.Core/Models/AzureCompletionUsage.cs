@@ -1,6 +1,6 @@
-﻿namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 
-public class AzureCompletionUsage
+public sealed class AzureCompletionUsage
 {
     public int PromptTokens { get; set; }
 

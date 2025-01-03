@@ -1,6 +1,6 @@
-﻿namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 
-public class AzureCompletionResponse
+public sealed class AzureCompletionResponse
 {
     public string Id { get; set; }
 

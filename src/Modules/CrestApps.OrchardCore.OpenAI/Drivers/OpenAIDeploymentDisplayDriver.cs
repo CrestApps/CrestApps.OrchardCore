@@ -23,76 +23,76 @@ public sealed class OpenAIDeploymentDisplayDriver : DisplayDriver<OpenAIDeployme
         S = stringLocalizer;
     }
 
-    public override Task<IDisplayResult> DisplayAsync(OpenAIDeployment model, BuildDisplayContext context)
+    public override Task<IDisplayResult> DisplayAsync(OpenAIDeployment deployment, BuildDisplayContext context)
     {
         return CombineAsync(
-            View("OpenAIDeployment_Fields_SummaryAdmin", model).Location("Content:1"),
-            View("OpenAIDeployment_Buttons_SummaryAdmin", model).Location("Actions:5"),
-            View("OpenAIDeployment_DefaultTags_SummaryAdmin", model).Location("Tags:5"),
-            View("OpenAIDeployment_DefaultMeta_SummaryAdmin", model).Location("Meta:5")
+            View("OpenAIDeployment_Fields_SummaryAdmin", deployment).Location("Content:1"),
+            View("OpenAIDeployment_Buttons_SummaryAdmin", deployment).Location("Actions:5"),
+            View("OpenAIDeployment_DefaultTags_SummaryAdmin", deployment).Location("Tags:5"),
+            View("OpenAIDeployment_DefaultMeta_SummaryAdmin", deployment).Location("Meta:5")
         );
     }
 
-    public override IDisplayResult Edit(OpenAIDeployment model, BuildEditorContext context)
+    public override IDisplayResult Edit(OpenAIDeployment deployment, BuildEditorContext context)
     {
-        return Initialize<EditDeploymentViewModel>("OpenAIDeploymentFields_Edit", m =>
+        return Initialize<EditDeploymentViewModel>("OpenAIDeploymentFields_Edit", model =>
         {
-            m.Name = model.Name;
-            m.ConnectionName = model.ConnectionName;
-            m.IsNew = context.IsNew;
+            model.Name = deployment.Name;
+            model.ConnectionName = deployment.ConnectionName;
+            model.IsNew = context.IsNew;
 
-            if (_connectionOptions.Connections.TryGetValue(model.Source, out var connections))
+            if (_connectionOptions.Connections.TryGetValue(deployment.Source, out var connections))
             {
-                m.Connections = connections.Select(x => new SelectListItem(x.Name, x.Name)).ToArray();
+                model.Connections = connections.Select(x => new SelectListItem(x.Name, x.Name)).ToArray();
             }
         }).Location("Content:1");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(OpenAIDeployment model, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(OpenAIDeployment deployment, UpdateEditorContext context)
     {
         if (!context.IsNew)
         {
-            return Edit(model, context);
+            return Edit(deployment, context);
         }
 
-        var viewModel = new EditDeploymentViewModel();
+        var model = new EditDeploymentViewModel();
 
-        await context.Updater.TryUpdateModelAsync(viewModel, Prefix);
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var name = viewModel.Name?.Trim();
+        var name = model.Name?.Trim();
 
         if (string.IsNullOrEmpty(name))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.Name), S["Name is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is required."]);
         }
 
-        if (!_connectionOptions.Connections.TryGetValue(model.Source, out var connections))
+        if (!_connectionOptions.Connections.TryGetValue(deployment.Source, out var connections))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.ConnectionName), S["There are no configured connection for the source: {0}.", model.Source]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["There are no configured connection for the source: {0}.", deployment.Source]);
         }
         else
         {
-            if (string.IsNullOrEmpty(viewModel.ConnectionName))
+            if (string.IsNullOrEmpty(model.ConnectionName))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.ConnectionName), S["Connection name is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["Connection name is required."]);
             }
             else
             {
-                var connection = connections.FirstOrDefault(x => x.Name != null && x.Name.Equals(viewModel.ConnectionName, StringComparison.OrdinalIgnoreCase));
+                var connection = connections.FirstOrDefault(x => x.Name != null && x.Name.Equals(model.ConnectionName, StringComparison.OrdinalIgnoreCase));
 
                 if (connection == null)
                 {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.ConnectionName), S["Invalid connection name provided."]);
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["Invalid connection name provided."]);
                 }
                 else
                 {
-                    model.ConnectionName = connection.Name;
+                    deployment.ConnectionName = connection.Name;
                 }
             }
         }
 
-        model.Name = name;
+        deployment.Name = name;
 
-        return Edit(model, context);
+        return Edit(deployment, context);
     }
 }

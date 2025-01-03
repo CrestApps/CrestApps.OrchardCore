@@ -37,12 +37,10 @@ public static class OpenAIConstants
     public static class RouteNames
     {
         public const string ChatCompletionRouteName = "OpenAIChatCompletion";
-
-        public const string ExternalChatWidget = "ExternalChatWidget";
     }
 
     public static class Security
     {
-        public const string ExternalWidgetsCORSPolicyName = "EnableExternalWidgetsPolicy";
+        public const string ExternalChatCORSPolicyName = "EnableChatWidgetsPolicy";
     }
 }

@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 
-public class AzureAIChatProfileAISearchMetadata
+public sealed class AzureAIChatProfileAISearchMetadata
 {
     public string IndexName { get; set; }
 

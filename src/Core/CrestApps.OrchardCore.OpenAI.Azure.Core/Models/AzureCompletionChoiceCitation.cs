@@ -1,8 +1,8 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 
-public class AzureCompletionChoiceCitation
+public sealed class AzureCompletionChoiceCitation
 {
     public string Content { get; set; }
 

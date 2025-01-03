@@ -1,9 +1,9 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
+using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 using CrestApps.OrchardCore.OpenAI.Azure.Recipes;
 using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Drivers;
 using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
@@ -54,7 +54,7 @@ public sealed class DeploymentsStartup : StartupBase
 
         services
             .AddOpenAIDeploymentSource<AzureModelDeploymentSource>(AzureOpenAIConstants.AzureDeploymentSourceName)
-            .AddScoped<IDisplayDriver<OpenAIDeployment>, AzureModelDeploymentDisplayDriver>()
+            .AddScoped<IDisplayDriver<OpenAIDeployment>, AzureOpenAIDeploymentDisplayDriver>()
             .AddScoped<AzureCognitiveServicesAccountServices>();
     }
 }
@@ -84,7 +84,7 @@ public sealed class AISearchStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddOpenAIChatProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
-        services.AddScoped<IDisplayDriver<OpenAIChatProfile>, AzureAIChatProfileSearchAIDisplayDriver>();
+        services.AddScoped<IDisplayDriver<OpenAIChatProfile>, AzureOpenAIChatProfileSearchAIDisplayDriver>();
         services.AddScoped<IOpenAIChatProfileHandler, AzureOpenAIProfileWithAISearchHandler>();
     }
 }

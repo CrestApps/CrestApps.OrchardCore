@@ -74,6 +74,47 @@ To register this function, you can use the `AddOpenAIChatFunction` extension met
 services.AddOpenAIChatFunction<GetWeatherFunction>(GetWeatherFunction.Key);
 ```
 
+### Tools
+
+When working with OpenAI Services that support the tool functionality, you can create custom tools by mapping functions to the tool interface. Here's an example of how to define and register a tool:
+
+#### Define a custom Tool
+
+To define a custom tool, subclass `OpenAIChatFunctionTool` and implement the `IOpenAIChatTool` interface. For example, if you're building a weather-fetching tool, you can create a class like this:
+
+```csharp
+public sealed class GetWeatherOpenAITool : OpenAIChatFunctionTool, IOpenAIChatTool
+{
+    // Constructor takes an instance of the function you're integrating with the tool
+    public GetWeatherOpenAITool(GetWeatherOpenAIFunction function)
+        : base(function)
+    {
+    }
+}
+```
+
+In this code:
+- `GetWeatherOpenAITool` is a tool that wraps around a weather-related function (`GetWeatherOpenAIFunction`).
+- The constructor accepts a function and passes it to the base class to ensure proper integration.
+
+#### Register the Tool
+
+Once the tool class is defined, you can register it with your service container so that it can be used in your application. Use dependency injection to register the tool like this:
+
+```csharp
+services.AddOpenAIChatTool<GetWeatherOpenAITool, GetWeatherOpenAIFunction>();
+```
+
+In this step:
+- `AddOpenAIChatTool` registers the `GetWeatherOpenAITool` and its associated function (`GetWeatherOpenAIFunction`) with the services collection.
+- This enables your application to recognize and utilize the tool seamlessly.
+
+### Summary
+1. **Define the Tool**: Create a class that wraps around the function you want to expose as a tool, inheriting from `OpenAIChatFunctionTool` and implementing `IOpenAIChatTool`.
+2. **Register the Tool**: Use the `AddOpenAIChatTool` method to register the tool with your dependency injection container.
+
+This process allows you to extend the functionality of OpenAI services by integrating your custom logic into a tool that can be utilized within the OpenAI ecosystem.
+
 When defining the properties of the function, you have the following types to use as function properties:
 
 - `StringFunctionProperty`: Represents a string property. You can define formatted strings using common formats such as the following:

@@ -50,7 +50,18 @@ public interface IOpenAIChatProfileManager
     /// <returns>A task that represents the asynchronous operation. No result is returned.</returns>
     Task SaveAsync(OpenAIChatProfile profile);
 
+    /// <summary>
+    /// Asynchronously updates the specified AI chat profile with optional additional data.
+    /// </summary>
+    /// <param name="profile">The profile to be updated.</param>
+    /// <param name="data">Optional additional data to update the profile with. Defaults to null.</param>
+    /// <returns>A task that represents the asynchronous operation. No result is returned.</returns>
     Task UpdateAsync(OpenAIChatProfile profile, JsonNode data = null);
 
+    /// <summary>
+    /// Asynchronously validates the specified AI chat profile.
+    /// </summary>
+    /// <param name="profile">The profile to be validated.</param>
+    /// <returns>A task that represents the asynchronous operation. The result is an OpenAIChatProfileValidateResult, which indicates whether the profile is valid or not.</returns>
     Task<OpenAIChatProfileValidateResult> ValidateAsync(OpenAIChatProfile profile);
 }

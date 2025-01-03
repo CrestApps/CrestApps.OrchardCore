@@ -1,6 +1,6 @@
-﻿namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 
-public class AzureCompletionChoice
+public sealed class AzureCompletionChoice
 {
     public int Index { get; set; }
 

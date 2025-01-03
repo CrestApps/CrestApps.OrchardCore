@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Functions;
+using CrestApps.OrchardCore.OpenAI.Core;
+using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -17,7 +18,7 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
     private readonly IOpenAIChatProfileStore _profileStore;
     private readonly IOpenAIDeploymentStore _modelDeploymentStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
-    private readonly IEnumerable<IOpenAIChatFunction> _functions;
+    private readonly IOpenAIFunctionService _openAIFunctionService;
 
     internal readonly IStringLocalizer S;
 
@@ -25,60 +26,62 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
         IOpenAIChatProfileStore profileStore,
         IOpenAIDeploymentStore modelDeploymentStore,
         ILiquidTemplateManager liquidTemplateManager,
-        IEnumerable<IOpenAIChatFunction> functions,
+        IOpenAIFunctionService openAIFunctionService,
         IStringLocalizer<OpenAIChatProfileDisplayDriver> stringLocalizer)
     {
         _profileStore = profileStore;
         _modelDeploymentStore = modelDeploymentStore;
         _liquidTemplateManager = liquidTemplateManager;
-        _functions = functions;
+        _openAIFunctionService = openAIFunctionService;
         S = stringLocalizer;
     }
 
-    public override Task<IDisplayResult> DisplayAsync(OpenAIChatProfile model, BuildDisplayContext context)
+    public override Task<IDisplayResult> DisplayAsync(OpenAIChatProfile profile, BuildDisplayContext context)
     {
         return CombineAsync(
-            View("OpenAIChatProfile_Fields_SummaryAdmin", model).Location("Content:1"),
-            View("OpenAIChatProfile_Buttons_SummaryAdmin", model).Location("Actions:5"),
-            View("OpenAIChatProfile_DefaultTags_SummaryAdmin", model).Location("Tags:5"),
-            View("OpenAIChatProfile_DefaultMeta_SummaryAdmin", model).Location("Meta:5")
+            View("OpenAIChatProfile_Fields_SummaryAdmin", profile).Location("Content:1"),
+            View("OpenAIChatProfile_Buttons_SummaryAdmin", profile).Location("Actions:5"),
+            View("OpenAIChatProfile_DefaultTags_SummaryAdmin", profile).Location("Tags:5"),
+            View("OpenAIChatProfile_DefaultMeta_SummaryAdmin", profile).Location("Meta:5")
         );
     }
 
-    public override IDisplayResult Edit(OpenAIChatProfile model, BuildEditorContext context)
+    public override IDisplayResult Edit(OpenAIChatProfile profile, BuildEditorContext context)
     {
-        var fields = Initialize<EditChatProfileViewModel>("OpenAIChatProfileFields_Edit", async m =>
+        var fields = Initialize<EditChatProfileViewModel>("OpenAIChatProfileFields_Edit", async model =>
         {
-            m.Name = model.Name;
-            m.SystemMessage = model.SystemMessage;
-            m.PromptTemplate = model.PromptTemplate;
-            m.WelcomeMessage = model.WelcomeMessage;
-            m.DeploymentId = model.DeploymentId;
-            m.TitleType = model.TitleType;
-            m.IsNew = context.IsNew;
+            model.Name = profile.Name;
+            model.SystemMessage = profile.SystemMessage;
+            model.PromptTemplate = profile.PromptTemplate;
+            model.WelcomeMessage = profile.WelcomeMessage;
+            model.DeploymentId = profile.DeploymentId;
+            model.TitleType = profile.TitleType;
+            model.IsNew = context.IsNew;
 
-            m.ProfileType = model.Type;
-            m.TitleTypes =
+            model.ProfileType = profile.Type;
+            model.TitleTypes =
             [
                 new SelectListItem(S["Set the first prompt as the title"], nameof(OpenAISessionTitleType.InitialPrompt)),
                 new SelectListItem(S["Generate a title based on the first prompt"], nameof(OpenAISessionTitleType.Generated)),
             ];
 
-            m.ProfileTypes =
+            model.ProfileTypes =
             [
                 new SelectListItem(S["Chat"], nameof(OpenAIChatProfileType.Chat)),
                 new SelectListItem(S["Tool"], nameof(OpenAIChatProfileType.Tool)),
                 new SelectListItem(S["Generated Prompt"], nameof(OpenAIChatProfileType.GeneratedPrompt)),
             ];
 
-            m.Functions = _functions.OrderBy(x => x.Name).Select(x => new FunctionEntry
+            model.Functions = _openAIFunctionService.GetFunctions()
+            .OrderBy(f => f.Name)
+            .Select(f => new FunctionEntry
             {
-                Name = x.Name,
-                Description = x.Description,
-                IsSelected = model.FunctionNames?.Contains(x.Name) ?? false,
+                Name = f.Name,
+                Description = f.Description,
+                IsSelected = profile.FunctionNames?.Contains(f.Name) ?? false,
             }).ToArray();
 
-            m.Deployments = [];
+            model.Deployments = [];
 
             var deployments = (await _modelDeploymentStore.GetAllAsync())
             .GroupBy(x => x.ConnectionName)
@@ -104,27 +107,27 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
                         Group = group,
                     };
 
-                    m.Deployments.Add(option);
+                    model.Deployments.Add(option);
                 }
             }
 
         }).Location("Content:1");
 
 
-        var metadata = Initialize<ChatProfileMetadataViewModel>("OpenAIChatProfileMetadata_Edit", async m =>
+        var metadata = Initialize<ChatProfileMetadataViewModel>("OpenAIChatProfileMetadata_Edit", async model =>
         {
-            var metadata = model.As<OpenAIChatProfileMetadata>();
+            var metadata = profile.As<OpenAIChatProfileMetadata>();
 
-            m.FrequencyPenalty = metadata.FrequencyPenalty;
-            m.PastMessagesCount = metadata.PastMessagesCount;
-            m.PresencePenalty = metadata.PresencePenalty;
-            m.Temperature = metadata.Temperature;
-            m.MaxTokens = metadata.MaxTokens;
-            m.TopP = m.TopP;
+            model.FrequencyPenalty = metadata.FrequencyPenalty;
+            model.PastMessagesCount = metadata.PastMessagesCount;
+            model.PresencePenalty = metadata.PresencePenalty;
+            model.Temperature = metadata.Temperature;
+            model.MaxTokens = metadata.MaxTokens;
+            model.TopP = model.TopP;
 
             var azureDeployments = await _modelDeploymentStore.GetAllAsync();
 
-            m.Deployments = azureDeployments.Select(x => new SelectListItem(x.Name, x.Id));
+            model.Deployments = azureDeployments.Select(x => new SelectListItem(x.Name, x.Id));
 
         }).Location("Content:5");
 
@@ -132,85 +135,85 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
         return Combine(fields, metadata);
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(OpenAIChatProfile model, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(OpenAIChatProfile profile, UpdateEditorContext context)
     {
-        await UpdateFieldsAsync(model, context);
+        await UpdateFieldsAsync(profile, context);
 
-        await UpdateMetadataAsync(model, context);
+        await UpdateMetadataAsync(profile, context);
 
-        return Edit(model, context);
+        return Edit(profile, context);
     }
 
-    private async Task UpdateFieldsAsync(OpenAIChatProfile model, UpdateEditorContext context)
+    private async Task UpdateFieldsAsync(OpenAIChatProfile profile, UpdateEditorContext context)
     {
-        var viewModel = new EditChatProfileViewModel();
+        var model = new EditChatProfileViewModel();
 
-        await context.Updater.TryUpdateModelAsync(viewModel, Prefix);
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (context.IsNew)
         {
             // Set the name only during profile creation. Editing the name afterward is not allowed.
-            var name = viewModel.Name?.Trim();
+            var name = model.Name?.Trim();
 
             if (string.IsNullOrEmpty(name))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.Name), S["Name is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is required."]);
             }
             else if (await _profileStore.FindByNameAsync(name) is not null)
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.Name), S["A profile with this name already exists. The name must be unique."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["A profile with this name already exists. The name must be unique."]);
             }
 
-            model.Name = name;
+            profile.Name = name;
         }
 
-        if (string.IsNullOrEmpty(viewModel.DeploymentId))
+        if (string.IsNullOrEmpty(model.DeploymentId))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.DeploymentId), S["Deployment is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DeploymentId), S["Deployment is required."]);
         }
-        else if (await _modelDeploymentStore.FindByIdAsync(viewModel.DeploymentId) is null)
+        else if (await _modelDeploymentStore.FindByIdAsync(model.DeploymentId) is null)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.DeploymentId), S["Invalid deployment provided."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DeploymentId), S["Invalid deployment provided."]);
         }
 
-        if (viewModel.ProfileType == OpenAIChatProfileType.GeneratedPrompt)
+        if (model.ProfileType == OpenAIChatProfileType.GeneratedPrompt)
         {
-            if (string.IsNullOrEmpty(viewModel.PromptTemplate))
+            if (string.IsNullOrEmpty(model.PromptTemplate))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.PromptTemplate), S["Prompt template is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.PromptTemplate), S["Prompt template is required."]);
             }
-            else if (!_liquidTemplateManager.Validate(viewModel.PromptTemplate, out var errors))
+            else if (!_liquidTemplateManager.Validate(model.PromptTemplate, out var errors))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.PromptTemplate), S["Invalid liquid template used for Prompt template."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.PromptTemplate), S["Invalid liquid template used for Prompt template."]);
             }
         }
 
-        model.SystemMessage = viewModel.SystemMessage;
-        model.PromptTemplate = viewModel.PromptTemplate;
-        model.DeploymentId = viewModel.DeploymentId;
-        model.WelcomeMessage = viewModel.WelcomeMessage;
-        model.TitleType = viewModel.TitleType;
-        model.Type = viewModel.ProfileType;
+        profile.SystemMessage = model.SystemMessage;
+        profile.PromptTemplate = model.PromptTemplate;
+        profile.DeploymentId = model.DeploymentId;
+        profile.WelcomeMessage = model.WelcomeMessage;
+        profile.TitleType = model.TitleType;
+        profile.Type = model.ProfileType;
 
-        var validFunctionNames = _functions.Select(x => x.Name).ToArray();
+        var selectedFunctionNames = model.Functions.Where(x => x.IsSelected).Select(x => x.Name);
 
-        model.FunctionNames = viewModel.Functions.Where(x => x.IsSelected && validFunctionNames.Contains(x.Name)).Select(x => x.Name).ToArray();
+        profile.FunctionNames = _openAIFunctionService.FindByNames(selectedFunctionNames).Select(x => x.Name).ToArray();
     }
 
-    private async Task UpdateMetadataAsync(OpenAIChatProfile model, UpdateEditorContext context)
+    private async Task UpdateMetadataAsync(OpenAIChatProfile profile, UpdateEditorContext context)
     {
-        var metadataViewModel = new ChatProfileMetadataViewModel();
+        var model = new ChatProfileMetadataViewModel();
 
-        await context.Updater.TryUpdateModelAsync(metadataViewModel, Prefix);
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        model.Put(new OpenAIChatProfileMetadata
+        profile.Put(new OpenAIChatProfileMetadata
         {
-            FrequencyPenalty = metadataViewModel.FrequencyPenalty,
-            PastMessagesCount = metadataViewModel.PastMessagesCount,
-            PresencePenalty = metadataViewModel.PresencePenalty,
-            Temperature = metadataViewModel.Temperature,
-            MaxTokens = metadataViewModel.MaxTokens,
-            TopP = metadataViewModel.TopP,
+            FrequencyPenalty = model.FrequencyPenalty,
+            PastMessagesCount = model.PastMessagesCount,
+            PresencePenalty = model.PresencePenalty,
+            Temperature = model.Temperature,
+            MaxTokens = model.MaxTokens,
+            TopP = model.TopP,
         });
     }
 }

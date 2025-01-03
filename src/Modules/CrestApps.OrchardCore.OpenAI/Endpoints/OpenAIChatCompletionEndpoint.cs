@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.Support;
 using Fluid;
@@ -12,8 +11,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
-using OrchardCore.ContentManagement;
-using OrchardCore.Entities;
 using OrchardCore.Liquid;
 using OrchardCore.Markdown.Services;
 using OrchardCore.Modules;
@@ -30,7 +27,7 @@ internal static class OpenAIChatCompletionEndpoint
             .AllowAnonymous()
             .WithName(OpenAIConstants.RouteNames.ChatCompletionRouteName)
             .DisableAntiforgery()
-            .RequireCors(OpenAIConstants.Security.ExternalWidgetsCORSPolicyName);
+            .RequireCors(OpenAIConstants.Security.ExternalChatCORSPolicyName);
 
         return builder;
     }
@@ -117,8 +114,6 @@ internal static class OpenAIChatCompletionEndpoint
             }
         }
 
-        var part = chatSession.As<OpenAIChatSessionPart>();
-
         OpenAIChatCompletionResponse completion = null;
         OpenAIChatSessionMessage message = null;
         OpenAIChatCompletionChoice bestChoice = null;
@@ -152,14 +147,14 @@ internal static class OpenAIChatCompletionEndpoint
         else
         {
             // At this point, we complete as standard chat.
-            part.Prompts.Add(new OpenAIChatSessionMessage
+            chatSession.Prompts.Add(new OpenAIChatSessionMessage
             {
                 Id = IdGenerator.GenerateId(),
                 Role = OpenAIConstants.Roles.User,
                 Prompt = trimmedPrompt,
             });
 
-            var transcript = part.Prompts.Where(x => !x.IsGeneratedPrompt)
+            var transcript = chatSession.Prompts.Where(x => !x.IsGeneratedPrompt)
                 .Select(x => OpenAIChatCompletionMessage.CreateMessage(x.Prompt, x.Role));
 
             completion = await completionService.ChatAsync(transcript, new OpenAIChatCompletionContext(profile)
@@ -195,9 +190,7 @@ internal static class OpenAIChatCompletionEndpoint
 
         await handlers.InvokeAsync((handler, ctx) => handler.CompletedAsync(ctx), completedChatContext, logger);
 
-        part.Prompts.Add(message);
-
-        chatSession.Put(part);
+        chatSession.Prompts.Add(message);
 
         await sessionManager.SaveAsync(chatSession);
 

@@ -1,6 +1,5 @@
 @using CrestApps.OrchardCore.OpenAI
 @using CrestApps.OrchardCore.OpenAI.Core
-@using CrestApps.OrchardCore.OpenAI.Core.Models
 @using CrestApps.OrchardCore.OpenAI.Models
 @using CrestApps.OrchardCore.OpenAI.ViewModels.Sessions
 @using OrchardCore.DisplayManagement
@@ -14,8 +13,8 @@
 @inject IDisplayManager<OpenAIChatSessionMessage> DisplayManager
 @inject IOpenAIChatProfileStore ChatProfileStore
 @{
-    var part = Model.Session.As<OpenAIChatSessionPart>();
     var baseId = Html.IdForModel();
+    var chatAppHtmlId = $"{baseId}_ChatApp";
     var buttonHtmlId = $"{baseId}_SendButton";
     var userPromptHtmlId = $"{baseId}_UserPrompt";
     var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
@@ -27,16 +26,16 @@
 
 <div class="mb-3 mx-3 p-3 overflow-y-auto h-100 rounded-2 border bg-theme" id="@chatContainerHtmlId">
     <div class="list-group list-group-flush w-100">
-        @if (part.Prompts.Count == 0)
+        @if (Model.Session.Prompts.Count == 0)
         {
             <div id="@placeholderHtmlId" class="text-center p-3">
                 <h1 class="mb-3">
-                    @(string.IsNullOrEmpty(Model.Session.WelcomeMessage) ? T["What do you want to know?"] : Model.Session.WelcomeMessage)
+                    @(string.IsNullOrEmpty(Model.Profile?.WelcomeMessage) ? T["What do you want to know?"] : Model.Profile?.WelcomeMessage)
                 </h1>
             </div>
         }
 
-        <div id="@(baseId)_ChatApp"></div>
+        <div id="@chatAppHtmlId"></div>
     </div>
 </div>
 
@@ -71,11 +70,11 @@
 <script at="Foot" depends-on="OpenAIChatApp">
     openAIChatManager.initialize({
         chatUrl: '@(Url.RouteUrl(OpenAIConstants.RouteNames.ChatCompletionRouteName))',
-        appElementSelector: '#@(baseId)_ChatApp',
+        appElementSelector: '#@chatAppHtmlId',
         chatContainerElementSelector: '#@chatContainerHtmlId',
         inputElementSelector: '#@userPromptHtmlId',
         sendButtonElementSelector: '#@buttonHtmlId',
         placeholderElementSelector: '#@placeholderHtmlId',
-        messages: @Html.Raw(JsonSerializer.Serialize(part.Prompts ?? [], JOptions.CamelCase))
+        messages: @Html.Raw(JsonSerializer.Serialize(Model.Session.Prompts ?? [], JOptions.CamelCase))
     });
 </script>

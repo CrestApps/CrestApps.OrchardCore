@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Functions;
+using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Drivers;
 using CrestApps.OrchardCore.OpenAI.Endpoints;
 using CrestApps.OrchardCore.OpenAI.Indexes;
@@ -35,6 +36,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddOpenAIDeploymentServices()
+            .AddScoped<IOpenAIFunctionService, DefaultOpenAIFunctionService>()
             .AddScoped<IDisplayDriver<OpenAIDeployment>, OpenAIDeploymentDisplayDriver>()
             .AddTransient<IConfigureOptions<OpenAIConnectionOptions>, OpenAIConnectionOptionsConfiguration>()
             .AddNavigationProvider<OpenAIAdminMenu>();
@@ -46,7 +48,7 @@ public sealed class ChatStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddOpenAIChatFunction<GetWeatherFunction>("get_current_weather");
+        services.AddOpenAIChatTool<GetWeatherOpenAITool, GetWeatherOpenAIFunction>();
 
         services
             .AddOpenAIChatProfileServices()
@@ -55,7 +57,7 @@ public sealed class ChatStartup : StartupBase
             .AddDataMigration<OpenAIChatSessionIndexMigrations>()
             .AddIndexProvider<OpenAIChatSessionIndexProvider>()
             .AddDisplayDriver<OpenAIChatProfile, OpenAIChatProfileDisplayDriver>()
-            .AddDisplayDriver<OpenAIChatSession, AIChatSessionDisplayDriver>()
+            .AddDisplayDriver<OpenAIChatSession, OpenAIChatSessionDisplayDriver>()
             .AddDisplayDriver<OpenAIChatListOptions, OpenAIChatListOptionsDisplayDriver>();
     }
 

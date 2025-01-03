@@ -52,7 +52,7 @@
     <label asp-for="PromptTemplate" class="@Orchard.GetLabelClasses()">@T["Prompt template"]</label>
     <div class="@Orchard.GetEndClasses()">
         <textarea asp-for="PromptTemplate" class="form-control content-preview-text" rows="5"></textarea>
-        <span class="hint">@T["When using the session tool, the prompt is dynamically generated based on a prompt template. You can structure the prompt using Liquid syntax and incorporate the <code>{0}</code> variable.", "session"]</span>
+        <span class="hint">@T["When using the session tool, the prompt is dynamically generated based on a prompt template. You can structure the prompt using Liquid syntax and incorporate the <code>{0}</code> and <code>{1}</code> variables.", "session", "profile"]</span>
     </div>
 </div>
 

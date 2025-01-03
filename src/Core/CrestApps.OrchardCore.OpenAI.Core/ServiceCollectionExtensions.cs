@@ -1,7 +1,8 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
-using CrestApps.OrchardCore.OpenAI.Functions;
+using CrestApps.OrchardCore.OpenAI.Tools;
+using CrestApps.OrchardCore.OpenAI.Tools.Functions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data;
@@ -13,36 +14,60 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddOpenAIDeploymentServices(this IServiceCollection services)
     {
-        services.AddScoped<IOpenAIDeploymentStore, DefaultOpenAIDeploymentStore>();
-        services.AddScoped<IOpenAIDeploymentManager, DefaultOpenAIDeploymentManager>();
-        services.AddScoped<IOpenAIDeploymentHandler, OpenAIDeploymentHandler>();
-        services.AddPermissionProvider<OpenAIDeploymentProvider>();
+        services
+            .AddScoped<IOpenAIDeploymentStore, DefaultOpenAIDeploymentStore>()
+            .AddScoped<IOpenAIDeploymentManager, DefaultOpenAIDeploymentManager>()
+            .AddScoped<IOpenAIDeploymentHandler, OpenAIDeploymentHandler>()
+            .AddPermissionProvider<OpenAIDeploymentProvider>();
 
         return services;
     }
 
     public static IServiceCollection AddOpenAIChatProfileServices(this IServiceCollection services)
     {
-        services.AddScoped<IOpenAIChatProfileStore, DefaultOpenAIChatProfileStore>();
-        services.AddScoped<IOpenAIChatProfileManager, DefaultOpenAIChatProfileManager>();
-        services.AddScoped<IOpenAIChatProfileHandler, OpenAIChatProfileHandler>();
-        services.AddScoped<IOpenAIChatSessionManager, DefaultOpenAIChatSessionManager>();
+        services
+            .AddScoped<IOpenAIChatProfileStore, DefaultOpenAIChatProfileStore>()
+            .AddScoped<IOpenAIChatProfileManager, DefaultOpenAIChatProfileManager>()
+            .AddScoped<IOpenAIChatProfileManagerSession, DefaultOpenAIChatProfileManagerSession>()
+            .AddScoped<IOpenAIChatProfileHandler, OpenAIChatProfileHandler>()
+            .AddScoped<IOpenAIChatSessionManager, DefaultOpenAIChatSessionManager>();
 
-        services.AddPermissionProvider<OpenAIChatPermissionsProvider>();
-        services.AddScoped<IAuthorizationHandler, OpenAIChatProfileAuthenticationHandler>();
-        services.Configure<StoreCollectionOptions>(o => o.Collections.Add(OpenAIConstants.CollectionName));
+        services
+            .AddPermissionProvider<OpenAIChatPermissionsProvider>()
+            .AddScoped<IAuthorizationHandler, OpenAIChatProfileAuthenticationHandler>()
+            .Configure<StoreCollectionOptions>(o => o.Collections.Add(OpenAIConstants.CollectionName));
 
         return services;
     }
 
-    public static IServiceCollection AddOpenAIChatFunction<TFunction>(this IServiceCollection services, string functionName)
+    public static IServiceCollection AddOpenAIChatTool<TTool>(this IServiceCollection services)
+        where TTool : class, IOpenAIChatTool
+    {
+        services
+            .AddScoped<TTool>()
+            .AddScoped<IOpenAIChatTool>(sp => sp.GetService<TTool>());
+
+        return services;
+    }
+
+    public static IServiceCollection AddOpenAIChatTool<TTool, TFunction>(this IServiceCollection services)
+        where TTool : class, IOpenAIChatTool
         where TFunction : class, IOpenAIChatFunction
     {
-        ArgumentNullException.ThrowIfNull(functionName);
+        services
+            .AddOpenAIChatFunction<TFunction>()
+            .AddScoped<TTool>()
+            .AddScoped<IOpenAIChatTool>(sp => sp.GetService<TTool>());
 
-        services.AddScoped<TFunction>();
-        services.AddScoped<IOpenAIChatFunction>(sp => sp.GetService<TFunction>());
-        services.AddKeyedScoped<IOpenAIChatFunction>(functionName, (sp, key) => sp.GetService<TFunction>());
+        return services;
+    }
+
+    public static IServiceCollection AddOpenAIChatFunction<TFunction>(this IServiceCollection services)
+        where TFunction : class, IOpenAIChatFunction
+    {
+        services
+            .AddScoped<TFunction>()
+            .AddScoped<IOpenAIChatFunction>(sp => sp.GetService<TFunction>());
 
         return services;
     }
@@ -52,9 +77,10 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(sourceKey);
 
-        services.AddScoped<TSource>();
-        services.AddScoped<IOpenAIChatProfileSource>(sp => sp.GetService<TSource>());
-        services.AddKeyedScoped<IOpenAIChatProfileSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
+        services
+            .AddScoped<TSource>()
+            .AddScoped<IOpenAIChatProfileSource>(sp => sp.GetService<TSource>())
+            .AddKeyedScoped<IOpenAIChatProfileSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
 
         return services;
     }
@@ -64,9 +90,10 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(sourceKey);
 
-        services.AddScoped<TSource>();
-        services.AddScoped<IOpenAIDeploymentSource>(sp => sp.GetService<TSource>());
-        services.AddKeyedScoped<IOpenAIDeploymentSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
+        services
+            .AddScoped<TSource>()
+            .AddScoped<IOpenAIDeploymentSource>(sp => sp.GetService<TSource>())
+            .AddKeyedScoped<IOpenAIDeploymentSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
 
         return services;
     }
@@ -76,9 +103,10 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(sourceKey);
 
-        services.AddScoped<TService>();
-        services.AddScoped<IOpenAIChatCompletionService>(sp => sp.GetService<TService>());
-        services.AddKeyedScoped<IOpenAIChatCompletionService>(sourceKey, (sp, key) => sp.GetService<TService>());
+        services
+            .AddScoped<TService>()
+            .AddScoped<IOpenAIChatCompletionService>(sp => sp.GetService<TService>())
+            .AddKeyedScoped<IOpenAIChatCompletionService>(sourceKey, (sp, key) => sp.GetService<TService>());
 
         return services;
     }

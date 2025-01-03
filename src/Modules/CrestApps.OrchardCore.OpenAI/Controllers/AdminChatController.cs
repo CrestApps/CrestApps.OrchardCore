@@ -2,7 +2,6 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Indexes;
-using CrestApps.OrchardCore.OpenAI.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
 using CrestApps.OrchardCore.OpenAI.ViewModels.Sessions;
@@ -14,7 +13,6 @@ using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
-using OrchardCore.Entities;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using YesSql;
@@ -92,8 +90,6 @@ public sealed class AdminChatController : Controller
                 return Forbid();
             }
 
-            var part = chatSession.As<OpenAIChatSessionPart>();
-
             model.SessionId = sessionId;
             model.Content = await _sessionDisplayManager.BuildEditorAsync(chatSession, _updateModelAccessor.ModelUpdater, isNew: false);
         }
@@ -103,9 +99,6 @@ public sealed class AdminChatController : Controller
             {
                 ProfileId = profileId,
                 UserId = userId,
-                WelcomeMessage = string.IsNullOrEmpty(profile.WelcomeMessage)
-                ? S["What do you want to know?"]
-                : profile.WelcomeMessage,
             };
 
             model.Content = await _sessionDisplayManager.BuildEditorAsync(chatSession, _updateModelAccessor.ModelUpdater, isNew: true);

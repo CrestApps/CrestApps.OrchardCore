@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -10,17 +11,20 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 public sealed class DefaultOpenAIChatProfileManager : IOpenAIChatProfileManager
 {
     private readonly IOpenAIChatProfileStore _profileStore;
+    private readonly IOpenAIChatProfileManagerSession _profileManagerSession;
     private readonly IServiceProvider _serviceProvider;
     private readonly IEnumerable<IOpenAIChatProfileHandler> _handlers;
     private readonly ILogger _logger;
 
     public DefaultOpenAIChatProfileManager(
         IOpenAIChatProfileStore profileStore,
+        IOpenAIChatProfileManagerSession profileManagerSession,
         IServiceProvider serviceProvider,
         IEnumerable<IOpenAIChatProfileHandler> handlers,
         ILogger<DefaultOpenAIChatProfileManager> logger)
     {
         _profileStore = profileStore;
+        _profileManagerSession = profileManagerSession;
         _serviceProvider = serviceProvider;
         _handlers = handlers;
         _logger = logger;
@@ -39,6 +43,8 @@ public sealed class DefaultOpenAIChatProfileManager : IOpenAIChatProfileManager
         }
 
         var removed = await _profileStore.DeleteAsync(profile);
+
+        _profileManagerSession.Forget(profile.Id);
 
         var deletedContext = new DeletedOpenAIChatProfileContext(profile);
         await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, _logger);
@@ -164,6 +170,8 @@ public sealed class DefaultOpenAIChatProfileManager : IOpenAIChatProfileManager
     private Task LoadAsync(OpenAIChatProfile profile)
     {
         var loadedContext = new LoadedOpenAIChatProfileContext(profile);
+
+        _profileManagerSession.Store(profile);
 
         return _handlers.InvokeAsync((handler, context) => handler.LoadedAsync(context), loadedContext, _logger);
     }
