@@ -8,7 +8,15 @@ const openAIChatManager = function () {
                         <div class="p-2">
                             <i :class="message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'"></i>
                         </div>
-                        <div class="p-2 flex-grow-1" v-html="message.promptHTML || message.prompt"></div>
+                        <div class="p-2 flex-grow-1">
+                            <h4 v-if="message.title">{{ message.title }}</h4>
+                            <div v-html="message.contentHTML || message.content"></div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-center message-buttons-container">
+                        <button class="ms-2 btn btn-sm btn-outline-secondary" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
+                            <i class="fa-solid fa-copy fa-lg"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -48,7 +56,12 @@ const openAIChatManager = function () {
         Vue.createApp({
             data() {
                 return {
+                    inputElement: null,
+                    buttonElement: null,
+                    chatContainer: null,
+                    placeholder: null,
                     isSessionStarted: false,
+                    isPlaceholderVisible: true,
                     messages: [],
                     prompt: ''
                 };
@@ -56,12 +69,60 @@ const openAIChatManager = function () {
             methods: {
                 addMessage(message) {
                     this.messages.push(message);
+
+                    if (message.role != 'indicator') {
+                        this.$emit('addingOpenAIPromotMessage', message);
+                    }
+
+                    if (this.isPlaceholderVisible) {
+                        if (this.placeholder) {
+                            this.placeholder.classList.add('d-none');
+                        }
+                        this.isPlaceholderVisible = false;
+                    }
+
                     this.$nextTick(() => {
+                        this.$emit('addedOpenAIPromotMessage', message);
                         this.scrollToBottom();
                     });
                 },
                 handleUserInput(event) {
                     this.prompt = event.target.value;
+                },
+                getProfileId() {
+                    return this.inputElement.getAttribute('data-profile-id');
+                },
+                initializeElements() {
+                    this.inputElement = document.querySelector(config.inputElementSelector);
+                    this.buttonElement = document.querySelector(config.sendButtonElementSelector);
+                    this.chatContainer = document.querySelector(config.chatContainerElementSelector);
+                    this.placeholder = document.querySelector(config.placeholderElementSelector);
+
+                    this.inputElement.addEventListener('keyup', event => {
+                        if (event.key === "Enter") {
+                            this.buttonElement.dispatchEvent(new Event('click'));
+                        }
+                    });
+
+                    this.inputElement.addEventListener('input', (e) => {
+                        if (e.target.value.trim()) {
+                            this.buttonElement.removeAttribute('disabled');
+                        } else {
+                            this.buttonElement.setAttribute('disabled', true);
+                        }
+
+                        this.handleUserInput(e);
+                    });
+
+                    this.buttonElement.addEventListener('click', () => {
+                        this.sendMessage();
+                    });
+                },
+                getSessionId() {
+                    return this.inputElement.getAttribute('data-session-id');
+                },
+                copyResponse(message) {
+                    navigator.clipboard.writeText(message);
                 },
                 sendMessage() {
                     let trimmedPrompt = this.prompt.trim();
@@ -70,21 +131,16 @@ const openAIChatManager = function () {
                         return;
                     }
 
-                    const userMessage = {
+                    this.addMessage({
                         role: 'user',
-                        prompt: trimmedPrompt
-                    };
-
-                    const inputElement = document.querySelector(config.inputElementSelector);
-                    const buttonElement = document.querySelector(config.sendButtonElementSelector);
-
-                    this.addMessage(userMessage);
+                        content: trimmedPrompt
+                    });
                     this.showTypingIndicator();
-                    inputElement.value = '';
+                    this.inputElement.value = '';
                     this.prompt = '';
-                    buttonElement.setAttribute('disabled', true);
+                    this.buttonElement.setAttribute('disabled', true);
 
-                    this.completeChat(inputElement.getAttribute('data-profile-id'), userMessage.prompt, inputElement.getAttribute('data-session-id'));
+                    this.completeChat(this.getProfileId(), trimmedPrompt, this.getSessionId());
                 },
                 generatePrompt(element) {
                     if (!element) {
@@ -94,24 +150,28 @@ const openAIChatManager = function () {
                     }
 
                     let profileId = element.getAttribute('data-profile-id');
-                    let sessionId = element.getAttribute('data-session-id');
+                    let sessionId = this.getSessionId();
 
                     if (!profileId || !sessionId) {
 
-                        console.error('The given element is missing data-profile-id and/or data-session-id');
+                        console.error('The given element is missing data-profile-id or the session has not yet started.');
                         return;
                     }
 
                     this.completeChat(profileId, null, sessionId);
                 },
                 completeChat(profileId, prompt, sessionId) {
+
+                    var sessionProfileId = this.getProfileId();
+
                     fetch(config.chatUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             profileId: profileId,
                             sessionId: sessionId,
-                            prompt: prompt
+                            prompt: prompt,
+                            sessionProfileId: sessionProfileId == profileId ? null : sessionProfileId
                         })
                     }).then(response => response.json())
                         .then(result => {
@@ -130,77 +190,37 @@ const openAIChatManager = function () {
                         return
                     }
 
-                    const inputElement = document.querySelector(config.inputElementSelector);
-
-                    inputElement.setAttribute('data-session-id', sessionId);
-
-                    var elements = document.getElementsByClassName('profile-generated-prompt');
-
-                    for (var i = 0; i < elements.length; i++) {
-                        elements[i].setAttribute('data-session-id', sessionId);
-                    }
-
+                    this.inputElement.setAttribute('data-session-id', sessionId);
                     this.isSessionStarted = true;
                 },
                 showTypingIndicator() {
                     this.addMessage({
                         role: 'indicator',
-                        promptHTML: config.indicatorTemplate
+                        contentHTML: config.indicatorTemplate
                     });
                 },
                 hideTypingIndicator() {
                     this.messages = this.messages.filter(msg => msg.role != 'indicator');
                 },
                 scrollToBottom() {
-                    const chatContainer = document.querySelector(config.chatContainerElementSelector);
-                    chatContainer.scrollTop = chatContainer.scrollHeight - chatContainer.clientHeight;
+                    this.chatContainer.scrollTop = this.chatContainer.scrollHeight - this.chatContainer.clientHeight;
                 }
             },
             mounted() {
-                const sendButton = document.querySelector(config.sendButtonElementSelector);
-                const userPrompt = document.querySelector(config.inputElementSelector);
-                const placeholder = document.querySelector(config.placeholderElementSelector);
-
-                userPrompt.addEventListener('keyup', event => {
-                    if (event.key === "Enter") {
-                        sendButton.dispatchEvent(new Event('click'));
-                    }
-                });
-
-                userPrompt.addEventListener('input', (e) => {
-                    if (e.target.value.trim()) {
-                        sendButton.removeAttribute('disabled');
-                    } else {
-                        sendButton.setAttribute('disabled', true);
-                    }
-
-                    this.handleUserInput(e);
-                });
-
-                sendButton.addEventListener('click', () => {
-
-                    if (placeholder) {
-                        placeholder.classList.add('d-none');
-                    }
-
-                    this.sendMessage();
-                });
+                // First initialize elements.
+                this.initializeElements();
 
                 const promptGenerators = document.getElementsByClassName('profile-generated-prompt');
 
                 for (var i = 0; i < promptGenerators.length; i++) {
                     promptGenerators[i].addEventListener('click', (e) => {
                         e.preventDefault();
-                        this.generatePrompt(e);
+                        this.generatePrompt(e.target);
                     });
                 }
 
-                if (config.messages.length) {
-                    for (let i = 0; i < config.messages.length; i++) {
-                        this.addMessage(config.messages[i]);
-                    }
-
-                    this.scrollToBottom();
+                for (let i = 0; i < config.messages.length; i++) {
+                    this.addMessage(config.messages[i]);
                 }
             },
             template: config.messageTemplate

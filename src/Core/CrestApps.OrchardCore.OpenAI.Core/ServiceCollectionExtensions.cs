@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.OpenAI.Tools;
 using CrestApps.OrchardCore.OpenAI.Tools.Functions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
 using OrchardCore.Security.Permissions;
 
@@ -103,10 +104,9 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(sourceKey);
 
-        services
-            .AddScoped<TService>()
-            .AddScoped<IOpenAIChatCompletionService>(sp => sp.GetService<TService>())
-            .AddKeyedScoped<IOpenAIChatCompletionService>(sourceKey, (sp, key) => sp.GetService<TService>());
+        services.TryAddScoped<TService>();
+        services.TryAddScoped<IOpenAIChatCompletionService>(sp => sp.GetService<TService>());
+        services.AddKeyedScoped<IOpenAIChatCompletionService>(sourceKey, (sp, key) => sp.GetService<TService>());
 
         return services;
     }

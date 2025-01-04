@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using Azure;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
@@ -108,20 +107,22 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
 
         var systemMessage = GetSystemMessage(context);
 
-        var request = await BuildRequestAsync(context, metadata, context.Profile.FunctionNames, systemMessage);
+        var (request, includeContentItemCitations) = await BuildRequestAsync(context, metadata, context.Profile.FunctionNames, systemMessage);
 
         var chatMessages = messages.Where(x => (x.Role == OpenAIConstants.Roles.User || x.Role == OpenAIConstants.Roles.Assistant) && !string.IsNullOrWhiteSpace(x.Content)).ToArray();
 
         var finalMessages = new[]
-{
+        {
             OpenAIChatCompletionMessage.CreateMessage(systemMessage, OpenAIConstants.Roles.System),
         };
 
-        if (metadata.PastMessagesCount > 0 && chatMessages.Length > metadata.PastMessagesCount)
-        {
-            var skip = chatMessages.Length - metadata.PastMessagesCount;
+        var pastMessage = metadata.PastMessagesCount ?? OpenAIConstants.DefaultPastMessagesCount;
 
-            request.Messages = finalMessages.Concat(chatMessages.Skip(skip ?? 0).Take(metadata.PastMessagesCount.Value));
+        if (pastMessage > 0 && chatMessages.Length > pastMessage)
+        {
+            var skip = chatMessages.Length - pastMessage;
+
+            request.Messages = finalMessages.Concat(chatMessages.Skip(skip).Take(pastMessage));
         }
         else
         {
@@ -139,7 +140,7 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
 
         return GetResponse(
             data,
-            isContentItemDocument: false,
+            includeContentItemCitations,
             request.Messages.LastOrDefault(x => x.Role == OpenAIConstants.Roles.User)?.Content);
     }
 
@@ -216,16 +217,18 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
         return data;
     }
 
-    private async Task<AzureCompletionRequest> BuildRequestAsync(OpenAIChatCompletionContext context, OpenAIChatProfileMetadata metadata, string[] functionNames, string systemMessage)
+    private async Task<(AzureCompletionRequest, bool)> BuildRequestAsync(OpenAIChatCompletionContext context, OpenAIChatProfileMetadata metadata, string[] functionNames, string systemMessage)
     {
         var request = new AzureCompletionRequest()
         {
-            Temperature = metadata.Temperature,
-            TopP = metadata.TopP,
-            FrequencyPenalty = metadata.FrequencyPenalty,
-            PresencePenalty = metadata.PresencePenalty,
-            MaxTokens = metadata.MaxTokens,
+            Temperature = metadata.Temperature ?? OpenAIConstants.DefaultTemperature,
+            TopP = metadata.TopP ?? OpenAIConstants.DefaultTopP,
+            FrequencyPenalty = metadata.FrequencyPenalty ?? OpenAIConstants.DefaultFrequencyPenalty,
+            PresencePenalty = metadata.PresencePenalty ?? OpenAIConstants.DefaultPresencePenalty,
+            MaxTokens = metadata.MaxTokens ?? OpenAIConstants.DefaultMaxTokens,
         };
+
+        var includeContentItemCitations = false;
 
         if (functionNames != null && functionNames.Length > 0)
         {
@@ -242,31 +245,38 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
                 Parameters = [],
             };
 
-            var azureAISearchIndexManager = _serviceProvider.GetRequiredService<AzureAISearchIndexManager>();
             var azureAISearchIndexSettingsService = _serviceProvider.GetRequiredService<AzureAISearchIndexSettingsService>();
 
             var indexSettings = await azureAISearchIndexSettingsService.GetAsync(searchAIMetadata.IndexName);
-            var fullIndexName = azureAISearchIndexManager.GetFullIndexName(searchAIMetadata.IndexName);
+
+            if (indexSettings == null || string.IsNullOrEmpty(indexSettings.IndexFullName) || !_azureAISearchDefaultOptions.ConfigurationExists())
+            {
+                return (request, includeContentItemCitations);
+            }
+
+            includeContentItemCitations = indexSettings.IndexedContentTypes is not null
+                && indexSettings.IndexedContentTypes.Length > 0
+                && searchAIMetadata.IncludeContentItemCitations;
 
             var keyField = indexSettings.IndexMappings?.FirstOrDefault(x => x.IsKey);
 
             dataSource.Parameters["endpoint"] = _azureAISearchDefaultOptions.Endpoint;
-            dataSource.Parameters["index_name"] = fullIndexName;
+            dataSource.Parameters["index_name"] = indexSettings.IndexFullName;
             dataSource.Parameters["semantic_configuration"] = "default";
             dataSource.Parameters["query_type"] = "simple";
             dataSource.Parameters["fields_mapping"] = GetFieldMapping(keyField);
             dataSource.Parameters["in_scope"] = true;
             dataSource.Parameters["role_information"] = systemMessage;
             dataSource.Parameters["filter"] = null;
-            dataSource.Parameters["strictness"] = searchAIMetadata.Strictness;
-            dataSource.Parameters["top_n_documents"] = searchAIMetadata.TopNDocuments;
+            dataSource.Parameters["strictness"] = searchAIMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
+            dataSource.Parameters["top_n_documents"] = searchAIMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
 
-            if (_azureAISearchDefaultOptions.Credential is AzureKeyCredential keyCredential)
+            if (_azureAISearchDefaultOptions.Credential is not null)
             {
                 dataSource.Parameters["authentication"] = new JsonObject()
                 {
                     {"type","api_key"},
-                    {"key", keyCredential.Key},
+                    {"key", _azureAISearchDefaultOptions.Credential.Key},
                 };
             }
 
@@ -276,12 +286,12 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
             ];
         }
 
-        return request;
+        return (request, includeContentItemCitations);
     }
 
     private OpenAIChatCompletionResponse GetResponse(
         AzureCompletionResponse data,
-        bool isContentItemDocument,
+        bool includeContentItemCitations,
         string userPrompt)
     {
         var routeValues = new RouteValueDictionary()
@@ -305,11 +315,11 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
 
         foreach (var choice in data.Choices)
         {
-            if (choice.Message?.Context?.Citations == null || choice.Message.Context.Citations.Length == 0 || !isContentItemDocument)
+            if (choice.Message?.Context?.Citations == null || choice.Message.Context.Citations.Length == 0 || !includeContentItemCitations)
             {
                 results.Add(new OpenAIChatCompletionChoice()
                 {
-                    Message = choice.Message?.Content ?? string.Empty,
+                    Content = Regex.Replace(choice.Message?.Content ?? string.Empty, @"\[doc\d+\]", string.Empty),
                 });
 
                 continue;
@@ -369,7 +379,6 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
 
                         if (!string.IsNullOrEmpty(link))
                         {
-                            // TODO, convert the links to Markdown list.
                             referenceBuilder.Append(CultureInfo.InvariantCulture, $" {referenceIndex}. <a href=\"{link}\" target=\"_blank\">{_htmlEncoder.Encode(referenceTitle)}</a> \r\n");
                         }
                     }
@@ -380,7 +389,7 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
 
             // During replacements, we could end up with multiple [--reference-separator--]
             // back to back. We can replace them with a single comma.
-            responseChoice.Message = Regex.Replace(choiceMessage, @"(\[--reference-separator--\])+", "<sup>,</sup>")
+            responseChoice.Content = Regex.Replace(choiceMessage, @"(\[--reference-separator--\])+", "<sup>,</sup>")
                 + "\r\n" + referenceBuilder.ToString();
 
             results.Add(responseChoice);

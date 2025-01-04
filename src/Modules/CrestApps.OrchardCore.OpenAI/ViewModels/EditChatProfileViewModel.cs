@@ -14,6 +14,8 @@ public class EditChatProfileViewModel
 
     public string PromptTemplate { get; set; }
 
+    public string PromptSubject { get; set; }
+
     public string DeploymentId { get; set; }
 
     public OpenAIChatProfileType ProfileType { get; set; }

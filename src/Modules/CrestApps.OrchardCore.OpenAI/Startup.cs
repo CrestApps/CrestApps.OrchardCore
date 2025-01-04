@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Functions;
+using CrestApps.OrchardCore.OpenAI.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Drivers;
 using CrestApps.OrchardCore.OpenAI.Endpoints;
@@ -10,6 +11,7 @@ using CrestApps.OrchardCore.OpenAI.Recipes;
 using CrestApps.OrchardCore.OpenAI.Services;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
 using Fluid;
+using Markdig;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,10 +34,16 @@ public sealed class Startup : StartupBase
         {
             o.MemberAccessStrategy.Register<OpenAIChatProfile>();
             o.MemberAccessStrategy.Register<OpenAIChatSession>();
+            o.MemberAccessStrategy.Register<OpenAIChatSessionPrompt>();
         });
 
         services
             .AddOpenAIDeploymentServices()
+            .Configure<OpenAIMarkdownPipelineOptions>(o =>
+            {
+                o.MarkdownPipelineBuilder.Configure("advanced");
+            })
+            .AddScoped<IOpenAIMarkdownService, OpenAIMarkdownService>()
             .AddScoped<IOpenAIFunctionService, DefaultOpenAIFunctionService>()
             .AddScoped<IDisplayDriver<OpenAIDeployment>, OpenAIDeploymentDisplayDriver>()
             .AddTransient<IConfigureOptions<OpenAIConnectionOptions>, OpenAIConnectionOptionsConfiguration>()

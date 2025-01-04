@@ -44,6 +44,11 @@ public sealed class OpenAIDeploymentDisplayDriver : DisplayDriver<OpenAIDeployme
             if (_connectionOptions.Connections.TryGetValue(deployment.Source, out var connections))
             {
                 model.Connections = connections.Select(x => new SelectListItem(x.Name, x.Name)).ToArray();
+
+                if (string.IsNullOrEmpty(model.ConnectionName) && connections.Count == 1)
+                {
+                    model.ConnectionName = connections.First().Name;
+                }
             }
         }).Location("Content:1");
     }

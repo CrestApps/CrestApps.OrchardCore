@@ -1,5 +1,6 @@
 @using CrestApps.OrchardCore.OpenAI
 @using CrestApps.OrchardCore.OpenAI.Core
+@using CrestApps.OrchardCore.OpenAI.Core.Services
 @using CrestApps.OrchardCore.OpenAI.Models
 @using CrestApps.OrchardCore.OpenAI.ViewModels.Sessions
 @using OrchardCore.DisplayManagement
@@ -10,8 +11,9 @@
 @model ChatSessionCapsuleViewModel
 
 @inject IUpdateModelAccessor UpdateModelAccessor
-@inject IDisplayManager<OpenAIChatSessionMessage> DisplayManager
+@inject IDisplayManager<OpenAIChatSessionPrompt> DisplayManager
 @inject IOpenAIChatProfileStore ChatProfileStore
+@inject IOpenAIMarkdownService MarkdownService
 @{
     var baseId = Html.IdForModel();
     var chatAppHtmlId = $"{baseId}_ChatApp";
@@ -56,7 +58,7 @@
                         @foreach (var profile in promptGeneratedProfiles)
                         {
                             <li>
-                                <button type="button" class="dropdown-item profile-generated-prompt" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Session.ProfileId)">@profile.Name</button>
+                                <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@profile.Id">@profile.Name</button>
                             </li>
                         }
                     </ul>
@@ -65,6 +67,25 @@
         </div>
     </div>
 </div>
+@{
+    var prompts = new List<object>();
+
+    if (Model.Session.Prompts != null)
+    {
+        foreach (var prompt in Model.Session.Prompts)
+        {
+            prompts.Add(new
+            {
+                prompt.Id,
+                prompt.Role,
+                prompt.Content,
+                prompt.Title,
+                prompt.IsGeneratedPrompt,
+                ContentHTML = !string.IsNullOrEmpty(prompt.Content) ? MarkdownService.ToHtml(prompt.Content) : null,
+            });
+        }
+    }
+}
 
 <script asp-name="OpenAIChatApp" at="Foot"></script>
 <script at="Foot" depends-on="OpenAIChatApp">
@@ -75,6 +96,6 @@
         inputElementSelector: '#@userPromptHtmlId',
         sendButtonElementSelector: '#@buttonHtmlId',
         placeholderElementSelector: '#@placeholderHtmlId',
-        messages: @Html.Raw(JsonSerializer.Serialize(Model.Session.Prompts ?? [], JOptions.CamelCase))
+        messages: @Html.Raw(JsonSerializer.Serialize(prompts, JOptions.CamelCase))
     });
 </script>

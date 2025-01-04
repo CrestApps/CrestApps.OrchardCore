@@ -52,6 +52,7 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
         {
             model.Name = profile.Name;
             model.SystemMessage = profile.SystemMessage;
+            model.PromptSubject = profile.PromptSubject;
             model.PromptTemplate = profile.PromptTemplate;
             model.WelcomeMessage = profile.WelcomeMessage;
             model.DeploymentId = profile.DeploymentId;
@@ -189,6 +190,7 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
         }
 
         profile.SystemMessage = model.SystemMessage;
+        profile.PromptSubject = model.PromptSubject?.Trim();
         profile.PromptTemplate = model.PromptTemplate;
         profile.DeploymentId = model.DeploymentId;
         profile.WelcomeMessage = model.WelcomeMessage;

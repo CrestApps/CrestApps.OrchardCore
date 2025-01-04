@@ -28,6 +28,8 @@ public class OpenAIChatProfile : Entity
 
     public string SystemMessage { get; set; }
 
+    public string PromptSubject { get; set; }
+
     public string PromptTemplate { get; set; }
 
     public DateTime CreatedUtc { get; set; }

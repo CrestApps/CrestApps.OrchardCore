@@ -17,8 +17,6 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddOpenAIChatCompletionService<AzureChatCompletionService>(AzureProfileSource.Key);
-
         services
             .AddHttpClient(AzureOpenAIConstants.HttpClientName)
             .AddStandardResilienceHandler(options =>
@@ -74,6 +72,7 @@ public sealed class StandardStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddOpenAIChatCompletionService<AzureChatCompletionService>(AzureProfileSource.Key);
         services.AddOpenAIChatProfileSource<AzureProfileSource>(AzureProfileSource.Key);
     }
 }
@@ -83,8 +82,9 @@ public sealed class AISearchStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddOpenAIChatCompletionService<AzureChatCompletionService>(AzureWithAzureAISearchProfileSource.Key);
         services.AddOpenAIChatProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
         services.AddScoped<IDisplayDriver<OpenAIChatProfile>, AzureOpenAIChatProfileSearchAIDisplayDriver>();
-        services.AddScoped<IOpenAIChatProfileHandler, AzureOpenAIProfileWithAISearchHandler>();
+        services.AddScoped<IOpenAIChatProfileHandler, AzureOpenAIChatProfileWithAISearchHandler>();
     }
 }

@@ -74,6 +74,15 @@
     </div>
 </div>
 
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="PromptSubject" class="@Orchard.GetLabelClasses()">@T["Prompt subject"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="PromptSubject" class="form-control" />
+        <span asp-validation-for="PromptSubject" class="text-danger"></span>
+        <span class="hint">@T["When set, this title will be displayed as the response header for each message from the model."]</span>
+    </div>
+</div>
+
 @if (Model.Functions != null && Model.Functions.Length > 0)
 {
     <h6>@T["Available Functions"]</h6>

@@ -1,12 +1,12 @@
 namespace CrestApps.OrchardCore.OpenAI.Models;
 
-public sealed class OpenAIChatSessionMessage
+public sealed class OpenAIChatSessionPrompt
 {
     public string Id { get; set; }
 
     public string Role { get; set; }
 
-    public string Prompt { get; set; }
+    public string Content { get; set; }
 
     public string Title { get; set; }
 

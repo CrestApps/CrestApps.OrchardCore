@@ -4,6 +4,7 @@
     <PackageReference Include="YesSql.Abstractions" />
     <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
     <PackageReference Include="OrchardCore.Liquid.Abstractions" />
+    <PackageReference Include="Markdig" />
   </ItemGroup>
 
   <ItemGroup>

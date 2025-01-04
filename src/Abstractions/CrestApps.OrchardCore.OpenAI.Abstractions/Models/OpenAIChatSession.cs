@@ -24,10 +24,10 @@ public sealed class OpenAIChatSession : Entity
 
     /// <summary>
     /// Gets or sets the collection of prompts sent during the session.
-    /// Each prompt is stored as an instance of the <see cref="OpenAIChatSessionMessage"/> class.
+    /// Each prompt is stored as an instance of the <see cref="OpenAIChatSessionPrompt"/> class.
     /// The list is initialized as an empty list by default.
     /// </summary>
-    public IList<OpenAIChatSessionMessage> Prompts { get; set; } = [];
+    public IList<OpenAIChatSessionPrompt> Prompts { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the user identifier who created this session.

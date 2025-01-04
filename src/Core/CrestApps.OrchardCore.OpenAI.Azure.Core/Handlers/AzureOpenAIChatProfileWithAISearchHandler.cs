@@ -9,11 +9,11 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 
-public sealed class AzureOpenAIProfileWithAISearchHandler : OpenAIChatProfileHandlerBase
+public sealed class AzureOpenAIChatProfileWithAISearchHandler : OpenAIChatProfileHandlerBase
 {
     internal readonly IStringLocalizer S;
 
-    public AzureOpenAIProfileWithAISearchHandler(IStringLocalizer<AzureOpenAIProfileWithAISearchHandler> stringLocalizer)
+    public AzureOpenAIChatProfileWithAISearchHandler(IStringLocalizer<AzureOpenAIChatProfileWithAISearchHandler> stringLocalizer)
     {
         S = stringLocalizer;
     }

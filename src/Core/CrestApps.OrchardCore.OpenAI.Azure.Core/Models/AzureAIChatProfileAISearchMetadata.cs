@@ -7,4 +7,6 @@ public sealed class AzureAIChatProfileAISearchMetadata
     public int? Strictness { get; set; }
 
     public int? TopNDocuments { get; set; }
+
+    public bool IncludeContentItemCitations { get; set; }
 }
