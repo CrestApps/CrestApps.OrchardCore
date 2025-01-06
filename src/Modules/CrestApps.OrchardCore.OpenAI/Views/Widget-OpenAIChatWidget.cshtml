@@ -95,10 +95,10 @@
 
         <div id="@chatAppHtmlId"></div>
     </div>
-    <div class="chat-input d-flex p-2 ">
+    <div class="chat-input p-2 ">
 
-        <div class="text-bg-light rounded-5 w-100">
-            <textarea class="form-control bg-transparent border-0" id="@userPromptHtmlId" data-session-id="" data-profile-id="@(profile.Id)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
+        <div class="text-bg-light rounded-5 w-100 border">
+            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input" id="@userPromptHtmlId" data-session-id="" data-profile-id="@(profile.Id)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
 
             <div class="d-flex justify-content-between px-3 my-2">
                 <div>
@@ -213,6 +213,11 @@
 </script>
 
 <style at="Head">
+
+    .chat-user-prompt-input:focus {
+        border: none;
+        box-shadow: none;
+    }
 
     .widget-launch-button {
         font-size: 1.5rem;

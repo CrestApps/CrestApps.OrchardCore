@@ -63,7 +63,20 @@ public sealed class DefaultOpenAIChatSessionManager : IOpenAIChatSessionManager
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var query = _session.Query<OpenAIChatSession, OpenAIChatSessionIndex>(i => i.Title != null, collection: OpenAIConstants.CollectionName);
+        var user = _httpContextAccessor.HttpContext?.User;
+
+        if (user?.Identity?.IsAuthenticated is null || user.Identity.IsAuthenticated == false)
+        {
+            return new OpenAIChatSessionResult
+            {
+                Count = 0,
+                Sessions = [],
+            };
+        }
+
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var query = _session.Query<OpenAIChatSession, OpenAIChatSessionIndex>(i => i.UserId == userId && i.Title != null, collection: OpenAIConstants.CollectionName);
 
         if (!string.IsNullOrEmpty(context.ProfileId))
         {
@@ -73,26 +86,6 @@ public sealed class DefaultOpenAIChatSessionManager : IOpenAIChatSessionManager
         if (!string.IsNullOrEmpty(context.Name))
         {
             query = query.Where(i => i.Title.Contains(context.Name));
-        }
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user.Identity?.IsAuthenticated == true)
-        {
-            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            query = query.Where(i => i.UserId == userId);
-        }
-        else
-        {
-            var clientId = await _clientIPAddressAccessor.GetClientIdAsync(_httpContextAccessor.HttpContext);
-
-            if (string.IsNullOrEmpty(clientId))
-            {
-                throw new InvalidOperationException("Unable to find the clientId. Possible Robot.");
-            }
-
-            query = query.Where(i => i.ClientId == clientId);
         }
 
         return new OpenAIChatSessionResult

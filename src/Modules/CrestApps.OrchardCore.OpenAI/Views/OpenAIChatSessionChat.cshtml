@@ -40,29 +40,38 @@
     </div>
 </div>
 
-<div class="bg-theme border-top">
-    <div class="container py-3">
-        <div class="input-group input-group-lg">
-            <input class="form-control" type="text" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId">
-            <button class="btn btn-outline-secondary" type="button" id="@buttonHtmlId" disabled>
-                <i class="fa-solid fa-arrow-up"></i>
-            </button>
-            @if (promptGeneratedProfiles.Any())
-            {
-                <div class="btn-group ps-3">
-                    <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fa-solid fa-screwdriver-wrench"></i>
-                    </button>
-                    <ul class="dropdown-menu">
-                        @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
-                        {
-                            <li>
-                                <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.Id">@promptGeneratedProfile.Name</button>
-                            </li>
-                        }
-                    </ul>
-                </div>
-            }
+<div class="container-fluid mb-3">
+
+    <div class="text-bg-light rounded-5 border w-100">
+        <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
+
+        <div class="d-flex justify-content-between px-3 my-2">
+            <div>
+                @if (promptGeneratedProfiles.Any())
+                {
+                    <div class="d-flex justify-content-center">
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fa-solid fa-screwdriver-wrench"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
+                                {
+                                    <li>
+                                        <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.Id">@promptGeneratedProfile.Name</button>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div>
+                <button class="btn btn-dark rounded-circle" type="button" id="@buttonHtmlId" disabled>
+                    <i class="fa-solid fa-arrow-up"></i>
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -98,3 +107,10 @@
         messages: @Html.Raw(JsonSerializer.Serialize(prompts, JOptions.CamelCase))
     });
 </script>
+
+<style at="Head">
+    .chat-user-prompt-input:focus {
+        border: none;
+        box-shadow: none;
+    }
+</style>
