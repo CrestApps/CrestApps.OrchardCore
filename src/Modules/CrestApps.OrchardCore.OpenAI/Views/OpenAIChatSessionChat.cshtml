@@ -21,9 +21,8 @@
     var userPromptHtmlId = $"{baseId}_UserPrompt";
     var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
-    var messagesContainerHtmlId = $"{baseId}_MessagesContainer";
 
-    var promptGeneratedProfiles = (await ChatProfileStore.GetAllAsync()).Where(x => x.Type == OpenAIChatProfileType.GeneratedPrompt);
+    var promptGeneratedProfiles = (await ChatProfileStore.GetAllAsync()).Where(x => x.Type == OpenAIChatProfileType.TemplatePrompt);
 }
 
 <div class="mb-3 mx-3 p-3 overflow-y-auto h-100 rounded-2 border bg-theme" id="@chatContainerHtmlId">
@@ -45,7 +44,7 @@
     <div class="container py-3">
         <div class="input-group input-group-lg">
             <input class="form-control" type="text" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId">
-            <button class="btn btn-outline-secondary" type="button" id="@buttonHtmlId" disabled="">
+            <button class="btn btn-outline-secondary" type="button" id="@buttonHtmlId" disabled>
                 <i class="fa-solid fa-arrow-up"></i>
             </button>
             @if (promptGeneratedProfiles.Any())
@@ -55,10 +54,10 @@
                         <i class="fa-solid fa-screwdriver-wrench"></i>
                     </button>
                     <ul class="dropdown-menu">
-                        @foreach (var profile in promptGeneratedProfiles)
+                        @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
                         {
                             <li>
-                                <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@profile.Id">@profile.Name</button>
+                                <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.Id">@promptGeneratedProfile.Name</button>
                             </li>
                         }
                     </ul>

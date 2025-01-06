@@ -70,7 +70,7 @@ public sealed class ChatProfilesController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var result = await _profileManager.PageQueriesAsync(pager.Page, pager.PageSize, new QueryContext()
+        var result = await _profileManager.PageAsync(pager.Page, pager.PageSize, new QueryContext()
         {
             Name = options.Search,
         });

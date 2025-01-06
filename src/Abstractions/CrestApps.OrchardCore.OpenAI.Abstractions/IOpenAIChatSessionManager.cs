@@ -5,15 +5,26 @@ namespace CrestApps.OrchardCore.OpenAI;
 public interface IOpenAIChatSessionManager
 {
     /// <summary>
-    /// Asynchronously retrieves an existing AI chat session by its session ID and associated profile ID.
+    /// Asynchronously retrieves an existing AI chat session by its session ID.
     /// </summary>
     /// <param name="sessionId">The unique identifier of the chat session. Must not be null or empty.</param>
-    /// <param name="profileId">The unique identifier of the AI chat profile. Must not be null or empty.</param>
     /// <returns>
     /// A task representing the asynchronous operation. The task result is the <see cref="OpenAIChatSession"/> if found,
-    /// or <c>null</c> if no session with the specified session ID and profile ID exists.
+    /// or <c>null</c> if no session with the specified session ID exists.
     /// </returns>
-    Task<OpenAIChatSession> FindAsync(string sessionId, string profileId);
+    Task<OpenAIChatSession> FindAsync(string sessionId);
+
+    /// <summary>
+    /// Asynchronously retrieves a list of top AI chat sessions based on the provided pagination parameters and query context.
+    /// </summary>
+    /// <param name="page">The page number to retrieve (1-based index). Must be greater than 0.</param>
+    /// <param name="pageSize">The number of sessions to retrieve per page. Must be greater than 0.</param>
+    /// <param name="context">The context used to filter and order the chat sessions. Must not be null.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result is a list of <see cref="OpenAIChatSessionResult"/> objects,
+    /// which represent the top sessions based on the query context and pagination parameters.
+    /// </returns>
+    Task<OpenAIChatSessionResult> PageAsync(int page, int pageSize, ChatSessionQueryContext context);
 
     /// <summary>
     /// Asynchronously creates a new AI chat session for the specified AI chat profile.

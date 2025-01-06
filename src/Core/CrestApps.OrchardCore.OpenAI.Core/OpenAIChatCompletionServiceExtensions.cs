@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.OpenAI;
 public static class OpenAIChatCompletionServiceExtensions
 {
     private static readonly OpenAIChatCompletionMessage _titleSystemMessage
-        = OpenAIChatCompletionMessage.CreateMessage("- Generate a short topic title about the user prompt.\r\n - Response using title case.\r\n - Response must be under 255 characters in length.", "system");
+        = OpenAIChatCompletionMessage.CreateMessage("- Generate a short topic title about the user prompt.\r\n - Response using title case.\r\n - Response must be under 255 characters in length.", OpenAIConstants.Roles.System);
 
     public static Task<OpenAIChatCompletionResponse> GetTitleAsync(this IOpenAIChatCompletionService chatCompletionService, string prompt, OpenAIChatProfile profile)
     {

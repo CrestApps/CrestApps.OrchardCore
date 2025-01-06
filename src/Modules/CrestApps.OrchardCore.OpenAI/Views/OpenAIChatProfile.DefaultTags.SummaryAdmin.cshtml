@@ -5,8 +5,8 @@
 @{
     var type = Model.Value.Type switch
     {
-        OpenAIChatProfileType.Tool => T["Tool"],
-        OpenAIChatProfileType.GeneratedPrompt => T["Generated Prompt"],
+        OpenAIChatProfileType.Utility => T["Utility"],
+        OpenAIChatProfileType.TemplatePrompt => T["Template generated prompt"],
         OpenAIChatProfileType.Chat => T["Chat"],
         _ => T["Unknown type"]
     };

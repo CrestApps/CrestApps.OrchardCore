@@ -59,10 +59,21 @@ public sealed class DefaultOpenAIChatSessionManager : IOpenAIChatSessionManager
         return chatSession;
     }
 
-    public async Task<OpenAIChatSession> FindAsync(string sessionId, string profileId)
+    public async Task<OpenAIChatSessionResult> PageAsync(int page, int pageSize, ChatSessionQueryContext context)
     {
-        ArgumentException.ThrowIfNullOrEmpty(sessionId);
-        ArgumentException.ThrowIfNullOrEmpty(profileId);
+        ArgumentNullException.ThrowIfNull(context);
+
+        var query = _session.Query<OpenAIChatSession, OpenAIChatSessionIndex>(i => i.Title != null, collection: OpenAIConstants.CollectionName);
+
+        if (!string.IsNullOrEmpty(context.ProfileId))
+        {
+            query = query.Where(i => i.ProfileId == context.ProfileId);
+        }
+
+        if (!string.IsNullOrEmpty(context.Name))
+        {
+            query = query.Where(i => i.Title.Contains(context.Name));
+        }
 
         var user = _httpContextAccessor.HttpContext?.User;
 
@@ -70,7 +81,42 @@ public sealed class DefaultOpenAIChatSessionManager : IOpenAIChatSessionManager
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            return await _session.Query<OpenAIChatSession, OpenAIChatSessionIndex>(i => i.SessionId == sessionId && i.UserId == userId && i.ProfileId == profileId, collection: OpenAIConstants.CollectionName)
+            query = query.Where(i => i.UserId == userId);
+        }
+        else
+        {
+            var clientId = await _clientIPAddressAccessor.GetClientIdAsync(_httpContextAccessor.HttpContext);
+
+            if (string.IsNullOrEmpty(clientId))
+            {
+                throw new InvalidOperationException("Unable to find the clientId. Possible Robot.");
+            }
+
+            query = query.Where(i => i.ClientId == clientId);
+        }
+
+        return new OpenAIChatSessionResult
+        {
+            Count = await query.CountAsync(),
+            Sessions = await query.OrderByDescending(i => i.CreatedUtc)
+            .ThenBy(x => x.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ListAsync()
+        };
+    }
+
+    public async Task<OpenAIChatSession> FindAsync(string sessionId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(sessionId);
+
+        var user = _httpContextAccessor.HttpContext?.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            return await _session.Query<OpenAIChatSession, OpenAIChatSessionIndex>(i => i.SessionId == sessionId && i.UserId == userId, collection: OpenAIConstants.CollectionName)
                 .FirstOrDefaultAsync();
         }
         else
@@ -83,7 +129,7 @@ public sealed class DefaultOpenAIChatSessionManager : IOpenAIChatSessionManager
             }
 
             // It's important to make sure that the userId is null when querying using clientId.
-            return await _session.Query<OpenAIChatSession, OpenAIChatSessionIndex>(i => i.SessionId == sessionId && i.UserId == null && i.ClientId == clientId && i.ProfileId == profileId, collection: OpenAIConstants.CollectionName)
+            return await _session.Query<OpenAIChatSession, OpenAIChatSessionIndex>(i => i.SessionId == sessionId && i.UserId == null && i.ClientId == clientId, collection: OpenAIConstants.CollectionName)
                 .FirstOrDefaultAsync();
         }
     }

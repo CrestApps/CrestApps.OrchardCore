@@ -37,6 +37,8 @@ public static class OpenAIConstants
     public static class RouteNames
     {
         public const string ChatCompletionRouteName = "OpenAIChatCompletion";
+
+        public const string ChatSessionRouteName = "OpenAIChatSession";
     }
 
     public static class Security

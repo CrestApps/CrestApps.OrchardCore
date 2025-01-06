@@ -21,7 +21,7 @@
     </div>
 </div>
 <ul class="list-group">
-    @if (Model.ChatSessions.Count > 0)
+    @if (Model.ChatSessions.Any())
     {
         @foreach (var session in Model.ChatSessions)
         {

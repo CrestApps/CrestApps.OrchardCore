@@ -73,7 +73,7 @@ public class OpenAIChatProfileHandler : OpenAIChatProfileHandlerBase
             context.Result.Fail(new ValidationResult(S["Invalid DeploymentId provided."], [nameof(OpenAIChatProfile.DeploymentId)]));
         }
 
-        if (context.Profile.Type == OpenAIChatProfileType.GeneratedPrompt)
+        if (context.Profile.Type == OpenAIChatProfileType.TemplatePrompt)
         {
             if (string.IsNullOrWhiteSpace(context.Profile.PromptTemplate))
             {

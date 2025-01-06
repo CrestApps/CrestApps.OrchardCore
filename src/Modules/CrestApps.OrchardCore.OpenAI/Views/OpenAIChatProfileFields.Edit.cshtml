@@ -48,7 +48,7 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses("profile-type profile-type-generated-prompt")@(Model.ProfileType == OpenAIChatProfileType.GeneratedPrompt ? string.Empty : " d-none")">
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-template-prompt")@(Model.ProfileType == OpenAIChatProfileType.TemplatePrompt ? string.Empty : " d-none")">
     <label asp-for="PromptTemplate" class="@Orchard.GetLabelClasses()">@T["Prompt template"]</label>
     <div class="@Orchard.GetEndClasses()">
         <textarea asp-for="PromptTemplate" class="form-control content-preview-text" rows="5"></textarea>

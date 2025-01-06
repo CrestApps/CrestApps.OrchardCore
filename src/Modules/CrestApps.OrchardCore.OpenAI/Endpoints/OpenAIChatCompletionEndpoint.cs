@@ -70,7 +70,7 @@ internal static class OpenAIChatCompletionEndpoint
         bool isNew;
         OpenAIChatSession chatSession;
 
-        if (profile.Type == OpenAIChatProfileType.GeneratedPrompt)
+        if (profile.Type == OpenAIChatProfileType.TemplatePrompt)
         {
             if (string.IsNullOrWhiteSpace(requestData.SessionProfileId))
             {
@@ -108,7 +108,7 @@ internal static class OpenAIChatCompletionEndpoint
 
             userPrompt = requestData.Prompt.Trim();
 
-            if (profile.Type == OpenAIChatProfileType.Tool)
+            if (profile.Type == OpenAIChatProfileType.Utility)
             {
                 return await GetToolMessageAsync(completionService, profile, markdownService, userPrompt);
             }
@@ -120,7 +120,7 @@ internal static class OpenAIChatCompletionEndpoint
         OpenAIChatSessionPrompt message = null;
         OpenAIChatCompletionChoice bestChoice = null;
 
-        if (profile.Type == OpenAIChatProfileType.GeneratedPrompt)
+        if (profile.Type == OpenAIChatProfileType.TemplatePrompt)
         {
             completion = await completionService.ChatAsync([OpenAIChatCompletionMessage.CreateMessage(userPrompt, OpenAIConstants.Roles.User)], new OpenAIChatCompletionContext(profile)
             {
@@ -202,9 +202,9 @@ internal static class OpenAIChatCompletionEndpoint
     {
         if (!string.IsNullOrWhiteSpace(sessionId))
         {
-            var existingChatSession = await sessionManager.FindAsync(sessionId, profile.Id);
+            var existingChatSession = await sessionManager.FindAsync(sessionId);
 
-            if (existingChatSession != null)
+            if (existingChatSession != null && existingChatSession.ProfileId == profile.Id)
             {
                 return (existingChatSession, false);
             }
@@ -254,7 +254,7 @@ internal static class OpenAIChatCompletionEndpoint
         });
     }
 
-    internal sealed class ChatRequest
+    private sealed class ChatRequest
     {
         public string SessionId { get; set; }
 

@@ -35,13 +35,13 @@ public interface IOpenAIChatProfileManager
     Task<OpenAIChatProfile> NewAsync(string source, JsonNode data = null);
 
     /// <summary>
-    /// Asynchronously retrieves a paginated list of queries associated with AI chat profiles.
+    /// Asynchronously retrieves a paginated list of profiles associated with AI chat profiles.
     /// </summary>
     /// <param name="page">The page number of the results to retrieve.</param>
     /// <param name="pageSize">The number of results per page.</param>
     /// <param name="context">The context for the query operation, which may include filtering, sorting, etc.</param>
     /// <returns>A task that represents the asynchronous operation. The result is an AIProfileResult containing the paginated query results.</returns>
-    Task<OpenAIChatProfileResult> PageQueriesAsync(int page, int pageSize, QueryContext context);
+    Task<OpenAIChatProfileResult> PageAsync(int page, int pageSize, QueryContext context);
 
     /// <summary>
     /// Asynchronously saves (or updates) the specified AI chat profile.

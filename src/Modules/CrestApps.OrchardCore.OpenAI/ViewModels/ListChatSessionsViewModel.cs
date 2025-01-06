@@ -7,7 +7,7 @@ public class ListChatSessionsViewModel
 {
     public string ProfileId { get; set; }
 
-    public IList<OpenAIChatSession> ChatSessions { get; set; }
+    public IEnumerable<OpenAIChatSession> ChatSessions { get; set; }
 
     public IShape Pager { get; set; }
 

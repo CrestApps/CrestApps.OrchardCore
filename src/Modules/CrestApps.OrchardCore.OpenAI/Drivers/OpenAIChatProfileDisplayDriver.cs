@@ -69,8 +69,8 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
             model.ProfileTypes =
             [
                 new SelectListItem(S["Chat"], nameof(OpenAIChatProfileType.Chat)),
-                new SelectListItem(S["Tool"], nameof(OpenAIChatProfileType.Tool)),
-                new SelectListItem(S["Generated Prompt"], nameof(OpenAIChatProfileType.GeneratedPrompt)),
+                new SelectListItem(S["Utility"], nameof(OpenAIChatProfileType.Utility)),
+                new SelectListItem(S["Template generated prompt"], nameof(OpenAIChatProfileType.TemplatePrompt)),
             ];
 
             model.Functions = _openAIFunctionService.GetFunctions()
@@ -177,7 +177,7 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DeploymentId), S["Invalid deployment provided."]);
         }
 
-        if (model.ProfileType == OpenAIChatProfileType.GeneratedPrompt)
+        if (model.ProfileType == OpenAIChatProfileType.TemplatePrompt)
         {
             if (string.IsNullOrEmpty(model.PromptTemplate))
             {

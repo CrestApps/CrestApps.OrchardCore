@@ -16,6 +16,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -71,7 +73,9 @@ public sealed class ChatStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddOpenAIChatCompletionEndpoint<ChatStartup>();
+        routes
+            .AddOpenAIChatCompletionEndpoint<ChatStartup>()
+            .AddOpenAIChatSessionEndpoint();
     }
 }
 
@@ -92,5 +96,19 @@ public sealed class ChatRecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<OpenAIChatProfileStep>();
+    }
+}
+
+[Feature(OpenAIConstants.Feature.ChatGPT)]
+[RequireFeatures("OrchardCore.Widgets")]
+public sealed class WidgetsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddContentPart<OpenAIChatWidgetPart>()
+            .UseDisplayDriver<OpenAIChatWidgetPartDisplayDriver>();
+
+        services.AddDataMigration<WidgetsMigrations>();
     }
 }

@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Core.Indexes;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
 using CrestApps.OrchardCore.OpenAI.ViewModels.Sessions;
@@ -9,7 +8,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
-using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
@@ -24,6 +22,7 @@ namespace CrestApps.OrchardCore.OpenAI.Controllers;
 public sealed class AdminChatController : Controller
 {
     private readonly IOpenAIChatProfileManager _profileManager;
+    private readonly IOpenAIChatSessionManager _sessionManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly ISession _session;
     private readonly IDisplayManager<OpenAIChatSession> _sessionDisplayManager;
@@ -34,6 +33,7 @@ public sealed class AdminChatController : Controller
 
     public AdminChatController(
         IOpenAIChatProfileManager profileManager,
+        IOpenAIChatSessionManager sessionManager,
         IAuthorizationService authorizationService,
         ISession session,
         IDisplayManager<OpenAIChatSession> sessionDisplayManager,
@@ -43,6 +43,7 @@ public sealed class AdminChatController : Controller
         )
     {
         _profileManager = profileManager;
+        _sessionManager = sessionManager;
         _authorizationService = authorizationService;
         _session = session;
         _sessionDisplayManager = sessionDisplayManager;
@@ -78,9 +79,9 @@ public sealed class AdminChatController : Controller
         var userId = CurrentUserId();
         if (!string.IsNullOrEmpty(sessionId))
         {
-            var chatSession = await _session.Query<OpenAIChatSession, OpenAIChatSessionIndex>(i => i.SessionId == sessionId && i.ProfileId == profile.Id, collection: OpenAIConstants.CollectionName).FirstOrDefaultAsync();
+            var chatSession = await _sessionManager.FindAsync(sessionId);
 
-            if (chatSession == null)
+            if (chatSession == null || chatSession.ProfileId != profile.Id)
             {
                 return NotFound();
             }
@@ -104,12 +105,12 @@ public sealed class AdminChatController : Controller
             model.Content = await _sessionDisplayManager.BuildEditorAsync(chatSession, _updateModelAccessor.ModelUpdater, isNew: true);
         }
 
-        var sessions = await _session.Query<OpenAIChatSession, OpenAIChatSessionIndex>(i => i.UserId == userId && i.ProfileId == profile.Id && i.Title != null, collection: OpenAIConstants.CollectionName)
-            .OrderByDescending(i => i.CreatedUtc)
-            .Take(pagerOptions.Value.GetPageSize())
-            .ListAsync();
+        var sessionResult = await _sessionManager.PageAsync(1, pagerOptions.Value.GetPageSize(), new ChatSessionQueryContext
+        {
+            ProfileId = profileId,
+        });
 
-        foreach (var session in sessions)
+        foreach (var session in sessionResult.Sessions)
         {
             var summary = await _sessionDisplayManager.BuildDisplayAsync(session, _updateModelAccessor.ModelUpdater, "SummaryAdmin");
             summary.Properties["Session"] = session;
@@ -125,7 +126,6 @@ public sealed class AdminChatController : Controller
         string profileId,
         PagerParameters pagerParameters,
         OpenAIChatListOptions options,
-        [FromServices] IClientIPAddressAccessor clientIpAddressAccessor,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
     {
@@ -141,61 +141,37 @@ public sealed class AdminChatController : Controller
             return Forbid();
         }
 
-        var hasSearchText = !string.IsNullOrWhiteSpace(options.SearchText);
-
-        IQuery<OpenAIChatSession, OpenAIChatSessionIndex> query = null;
-
-        if (User.Identity.IsAuthenticated)
+        if (!string.IsNullOrWhiteSpace(options.SearchText))
         {
-            var userId = CurrentUserId();
-
-            query = _session.Query<OpenAIChatSession, OpenAIChatSessionIndex>(i => i.UserId == userId && i.ProfileId == profileId, collection: OpenAIConstants.CollectionName);
-        }
-        else
-        {
-            var clientId = await clientIpAddressAccessor.GetClientIdAsync(HttpContext);
-
-            if (clientId != null)
-            {
-                query = _session.Query<OpenAIChatSession, OpenAIChatSessionIndex>(i => i.ProfileId == profileId && i.ClientId == clientId, collection: OpenAIConstants.CollectionName);
-            }
-        }
-
-        if (query == null)
-        {
-            return RedirectToAction(nameof(Index), new
-            {
-                profileId
-            });
-        }
-
-        if (hasSearchText)
-        {
-            query = query.Where(i => i.Title != null && i.Title.Contains(options.SearchText));
-
             // Populate route values to maintain previous route data when generating page links.
             options.RouteValues.TryAdd("q", options.SearchText);
         }
 
+        var page = 1;
+
+        if (pagerParameters.Page.HasValue && pagerParameters.Page.Value > 0)
+        {
+            page = pagerParameters.Page.Value;
+        }
+
+        var sessionResult = await _sessionManager.PageAsync(page, pagerOptions.Value.GetPageSize(), new ChatSessionQueryContext
+        {
+            ProfileId = profileId,
+            Name = options.SearchText
+        });
+
         var itemsPerPage = pagerOptions.Value.MaxPagedCount > 0
             ? pagerOptions.Value.MaxPagedCount
-            : await query.CountAsync();
+            : sessionResult.Count;
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
         var pagerShape = await shapeFactory.PagerAsync(pager, itemsPerPage, options.RouteValues);
 
-        var sessions = await query
-            .OrderByDescending(x => x.CreatedUtc)
-            .ThenBy(x => x.Id)
-            .Skip(pager.GetStartIndex())
-            .Take(pager.PageSize)
-            .ListAsync();
-
         var shapeViewModel = await shapeFactory.CreateAsync<ListChatSessionsViewModel>("OpenAIChatSessionsList", async viewModel =>
         {
             viewModel.ProfileId = profileId;
-            viewModel.ChatSessions = sessions.ToArray();
+            viewModel.ChatSessions = sessionResult.Sessions;
             viewModel.Pager = pagerShape;
             viewModel.Options = options;
             viewModel.Header = await _optionsDisplayManager.BuildEditorAsync(options, _updateModelAccessor.ModelUpdater, false);
