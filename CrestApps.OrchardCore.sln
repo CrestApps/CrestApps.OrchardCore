@@ -11,9 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{03CAC8
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ProjectItems", "ProjectItems", "{E94D7009-1D71-46B8-A78F-88DA48F4FCB6}"
 	ProjectSection(SolutionItems) = preProject
-		.dockerignore = .dockerignore
-		src\Directory.Build.props = src\Directory.Build.props
-		src\Directory.Packages.props = src\Directory.Packages.props
+		Directory.Build.props = Directory.Build.props
+		Directory.Packages.props = Directory.Packages.props
 		gulpfile.js = gulpfile.js
 		NuGet.Config = NuGet.Config
 		package.json = package.json
