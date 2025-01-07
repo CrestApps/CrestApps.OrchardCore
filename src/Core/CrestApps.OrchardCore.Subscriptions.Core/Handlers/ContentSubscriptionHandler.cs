@@ -1,0 +1,149 @@
+using System.Text.Json;
+using CrestApps.OrchardCore.Payments.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.Json;
+
+namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
+
+public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
+{
+    public const string ContentPrefix = "Content-";
+
+    private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IContentItemDisplayManager _contentItemDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
+    private readonly IContentManager _contentManager;
+
+    internal readonly IStringLocalizer S;
+
+    public ContentSubscriptionHandler(
+        IContentDefinitionManager contentDefinitionManager,
+        IContentItemDisplayManager contentItemDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
+        IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions,
+        IContentManager contentManager,
+        IStringLocalizer<ContentSubscriptionHandler> stringLocalizer)
+    {
+        _contentDefinitionManager = contentDefinitionManager;
+        _contentItemDisplayManager = contentItemDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
+        _documentJsonSerializerOptions = documentJsonSerializerOptions.Value;
+        _contentManager = contentManager;
+        S = stringLocalizer;
+    }
+
+    public override async Task ActivatingAsync(SubscriptionFlowActivatingContext context)
+    {
+        if (!context.SubscriptionContentItem.TryGet<SubscriptionPart>(out var subscriptionPart) ||
+            !context.SubscriptionContentItem.TryGet<ProductPart>(out var productPart))
+        {
+            return;
+        }
+
+        var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(context.SubscriptionContentItem.ContentType);
+
+        var partDefinition = typeDefinition?.Parts?.FirstOrDefault(x => x.Name == nameof(SubscriptionPart));
+
+        if (partDefinition == null)
+        {
+            return;
+        }
+
+        var settings = partDefinition.GetSettings<SubscriptionPartSettings>();
+
+        if (settings.ContentTypes == null || settings.ContentTypes.Length == 0)
+        {
+            return;
+        }
+
+        for (var i = 0; i < settings.ContentTypes.Length; i++)
+        {
+            var contentType = settings.ContentTypes[i];
+
+            var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentType);
+
+            if (definition == null)
+            {
+                continue;
+            }
+
+            var step = new SubscriptionFlowStep()
+            {
+                Title = definition.DisplayName,
+                Description = S["Create a new {0}.", definition.DisplayName],
+                Key = $"{ContentPrefix}{contentType}",
+                CollectData = true,
+
+                // Insert the steps using an increment of 10 for each step,
+                // to allow other handler to inject steps in between if needed.
+                Order = (i + 1) * 10,
+            };
+
+            var billingItems = new List<BillingItem>()
+            {
+                new()
+                {
+                    Id = context.Session.ContentItemVersionId,
+                    Description = context.SubscriptionContentItem.DisplayText,
+                    BillingAmount = productPart.Price,
+                    Subscription = new()
+                    {
+                        SubscriptionDayDelay = subscriptionPart.SubscriptionDayDelay,
+                        BillingDuration = subscriptionPart.BillingDuration,
+                        DurationType = subscriptionPart.DurationType,
+                        BillingCycleLimit = subscriptionPart.BillingCycleLimit,
+                    },
+                },
+            };
+
+            if (subscriptionPart.InitialAmount.HasValue && subscriptionPart.InitialAmount.Value > 0)
+            {
+                var initialSetupItem = new BillingItem()
+                {
+                    Id = context.Session.ContentItemVersionId + SubscriptionConstants.InitialFeeIdPrefix,
+                    BillingAmount = subscriptionPart.InitialAmount.Value,
+                    Description = subscriptionPart.InitialAmountDescription,
+                };
+
+                billingItems.Add(initialSetupItem);
+            }
+
+            step.BillingItems = billingItems.ToArray();
+
+            step.Data.TryAdd("ContentType", contentType);
+
+            context.Session.Steps.Add(step);
+        }
+    }
+
+    public override async Task CompletingAsync(SubscriptionFlowCompletingContext context)
+    {
+        foreach (var item in context.Flow.Session.SavedSteps)
+        {
+            if (!item.Key.StartsWith(ContentPrefix))
+            {
+                continue;
+            }
+
+            var contentStep = item.Value.Deserialize<ContentStep>(_documentJsonSerializerOptions.SerializerOptions);
+
+            if (contentStep?.ContentItems == null)
+            {
+                continue;
+            }
+
+            foreach (var contentItem in contentStep.ContentItems)
+            {
+                await _contentManager.CreateAsync(contentItem, VersionOptions.Draft);
+                await _contentManager.PublishAsync(contentItem);
+            }
+        }
+    }
+}

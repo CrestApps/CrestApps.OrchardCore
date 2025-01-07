@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace("Abstractions", ""))</RootNamespace>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace(".Abstractions", ""))</RootNamespace>
     <Title>CrestApps OrchardCore Users Abstractions</Title>
     <Description>
       $(OCCMSDescription)

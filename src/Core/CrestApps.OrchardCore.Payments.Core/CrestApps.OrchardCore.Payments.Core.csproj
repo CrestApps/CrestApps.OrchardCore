@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Payments Core</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Core project for payments services.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Payments Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Payments.Abstractions\CrestApps.OrchardCore.Payments.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+  </ItemGroup>
+
+</Project>
