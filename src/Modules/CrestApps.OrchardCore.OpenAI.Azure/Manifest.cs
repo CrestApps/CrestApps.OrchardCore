@@ -35,7 +35,7 @@ using OrchardCore.Modules.Manifest;
     Category = "OpenAI",
     Dependencies =
     [
-        OpenAIConstants.Feature.Area,
+        OpenAIConstants.Feature.ChatGPT,
         AzureOpenAIConstants.Feature.Area,
         AzureOpenAIConstants.Feature.Deployments,
     ]
@@ -49,7 +49,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         "OrchardCore.Search.AzureAI",
-        OpenAIConstants.Feature.Area,
+        OpenAIConstants.Feature.ChatGPT,
         AzureOpenAIConstants.Feature.Area,
         AzureOpenAIConstants.Feature.Deployments,
     ]
