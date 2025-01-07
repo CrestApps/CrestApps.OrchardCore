@@ -11,31 +11,45 @@ public sealed class GetWeatherOpenAIFunction : OpenAIChatFunctionBase
 
     public GetWeatherOpenAIFunction()
     {
-        DefineProperty("location", new StringFunctionProperty
+        DefineInputProperty(nameof(GetWeatherArguments.Location), new StringFunctionProperty
         {
             Description = "The city and state, e.g. San Francisco, CA.",
             IsRequired = true,
         });
 
-        DefineProperty("unit", new EnumToolProperty<TempScale>
+        DefineInputProperty(nameof(GetWeatherArguments.Unit), new EnumToolProperty<TempScale>
         {
             Description = "The temperature scale used by the location",
             IsRequired = false,
         });
 
-        DefineProperty("date", StringFunctionProperty.DateTime("Current Date"));
+        var returnType = new OpenAIChatFunctionType()
+        {
+            Type = OpenAIChatFunctionPropertyType.Object,
+        };
 
-        DefineProperty("amount", NumberFunctionProperty.Float("Price amount"));
+        returnType.Properties[nameof(WeatherResult.Temperature)] = new StringFunctionProperty()
+        {
+            Description = "The current temperature in the location.",
+        };
+
+        returnType.Properties[nameof(WeatherResult.Condition)] = new StringFunctionProperty()
+        {
+            Description = "The current weather condition in the location.",
+        };
+
+        ReturnType = returnType;
     }
 
-    public override Task<string> InvokeAsync(JsonObject arguments)
+    public override Task<object> InvokeAsync(JsonObject arguments)
     {
-        var value = arguments.ToObject<GetWeatherArguments>();
+        var data = arguments.ToObject<GetWeatherArguments>();
 
-        // Typically you would call another service here to get the actual temperature.
-        // For simplicity, we we will return a static value.
-
-        return Task.FromResult("Temperature: 80F, Condition: Sunny");
+        return Task.FromResult<object>(new WeatherResult
+        {
+            Temperature = 72.5,
+            Condition = "Sunny",
+        });
     }
 }
 
@@ -50,4 +64,11 @@ public class GetWeatherArguments
     public string Location { get; set; }
 
     public TempScale Unit { get; set; }
+}
+
+public class WeatherResult
+{
+    public double Temperature { get; set; }
+
+    public string Condition { get; set; }
 }

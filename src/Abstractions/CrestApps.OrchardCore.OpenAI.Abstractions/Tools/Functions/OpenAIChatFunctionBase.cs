@@ -8,12 +8,18 @@ public abstract class OpenAIChatFunctionBase : IOpenAIChatFunction
 
     public abstract string Description { get; }
 
-    public OpenAIChatFunctionParameters Parameters { get; } = new();
+    public OpenAIChatFunctionType Parameters { get; } = new();
 
-    public abstract Task<string> InvokeAsync(JsonObject arguments);
+    public OpenAIChatFunctionType ReturnType { get; set; }
 
-    public void DefineProperty(string name, IOpenAIChatFunctionProperty property)
+    public abstract Task<object> InvokeAsync(JsonObject arguments);
+
+    public void DefineInputProperty(string name, IOpenAIChatFunctionProperty property)
     {
         Parameters.Properties[name] = property;
+        ReturnType = new OpenAIChatFunctionType()
+        {
+            Type = OpenAIChatFunctionPropertyType.String,
+        };
     }
 }

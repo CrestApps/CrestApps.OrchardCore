@@ -8,7 +8,9 @@ public interface IOpenAIChatFunction
 
     string Description { get; }
 
-    OpenAIChatFunctionParameters Parameters { get; }
+    OpenAIChatFunctionType Parameters { get; }
 
-    Task<string> InvokeAsync(JsonObject arguments);
+    Task<object> InvokeAsync(JsonObject arguments);
+
+    OpenAIChatFunctionType ReturnType { get; }
 }

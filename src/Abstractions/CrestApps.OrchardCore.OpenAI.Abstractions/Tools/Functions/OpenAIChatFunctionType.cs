@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.OpenAI.Tools.Functions;
 
-public class OpenAIChatFunctionParameters
+public class OpenAIChatFunctionType
 {
     public OpenAIChatFunctionPropertyType Type { get; set; } = OpenAIChatFunctionPropertyType.Object;
 

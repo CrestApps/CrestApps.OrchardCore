@@ -208,7 +208,18 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
 
                 var result = await function.InvokeAsync(arguments);
 
-                request.Messages = request.Messages.Concat([OpenAIChatCompletionMessage.CreateFunctionMessage(result, message.FunctionCall.Name)]);
+                string functionMessage;
+
+                if (result is string str)
+                {
+                    functionMessage = str;
+                }
+                else
+                {
+                    functionMessage = JsonSerializer.Serialize(result, _jsonSerializerOptions);
+                }
+
+                request.Messages = request.Messages.Concat([OpenAIChatCompletionMessage.CreateFunctionMessage(functionMessage, message.FunctionCall.Name)]);
 
                 data = await GetResponseDataAsync(httpClient, request, deploymentName);
             }

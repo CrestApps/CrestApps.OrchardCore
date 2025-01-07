@@ -28,27 +28,29 @@ public sealed class GetWeatherFunction : OpenAIChatFunctionBase
 
     public GetWeatherFunction()
     {
-        DefineProperty("location", new StringFunctionProperty
+        DefineInputProperty(nameof(GetWeatherArguments.Location), new StringFunctionProperty
         {
             Description = "The city and state, e.g., San Francisco, CA.",
             IsRequired = true,
         });
 
-        DefineProperty("unit", new EnumFunctionProperty<TempScale>
+        DefineInputProperty(nameof(GetWeatherArguments.Unit), new EnumFunctionProperty<TempScale>
         {
             Description = "The temperature scale (Fahrenheit or Celsius) to use.",
             IsRequired = false,
         });
     }
 
-    public override Task<string> InvokeAsync(JsonObject arguments)
+    public override Task<object> InvokeAsync(JsonObject arguments)
     {
         var value = arguments.ToObject<GetWeatherArguments>();
 
         // In a real implementation, you would call a weather API here.
         // For simplicity, we're returning a static value.
+        // Here we return a string. But you may provide a complex type.
+        // If you are returning a complex type, you should define the return type by setting the ReturnType.
 
-        return Task.FromResult("Temperature: 80°F, Condition: Sunny");
+        return Task.FromResult<object>("Temperature: 80°F, Condition: Sunny");
     }
 }
 
