@@ -65,4 +65,3 @@ public interface IOpenAIDeploymentStore
     /// </returns>
     Task SaveAsync(OpenAIDeployment deployment);
 }
-

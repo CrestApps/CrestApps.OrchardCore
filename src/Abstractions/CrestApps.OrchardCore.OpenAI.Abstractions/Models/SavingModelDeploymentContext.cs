@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.OpenAI.Models;
+namespace CrestApps.OrchardCore.OpenAI.Models;
 
 public sealed class SavingModelDeploymentContext : OpenAIDeploymentContextBase
 {
@@ -7,4 +7,3 @@ public sealed class SavingModelDeploymentContext : OpenAIDeploymentContextBase
     {
     }
 }
-

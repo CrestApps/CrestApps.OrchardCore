@@ -7,5 +7,3 @@ public sealed class DeletedOpenAIChatProfileContext : OpenAIChatProfileContextBa
     {
     }
 }
-
-

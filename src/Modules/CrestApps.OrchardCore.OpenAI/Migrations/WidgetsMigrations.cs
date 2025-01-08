@@ -15,21 +15,21 @@ public sealed class WidgetsMigrations : DataMigration
 
     public async Task<int> CreateAsync()
     {
-        await _contentDefinitionManager.AlterPartDefinitionAsync("OpenAIChatWidgetPart", part => part
+        await _contentDefinitionManager.AlterPartDefinitionAsync("OpenAIChatPart", part => part
             .Attachable()
-            .WithDisplayName("OpenAI Chat Widget")
-            .WithDescription("Provides a way to add an OpenAI chat widget to a content item.")
+            .WithDisplayName("OpenAI Chat")
+            .WithDescription("Provides a way to add an OpenAI chat to a content item.")
         );
 
-        await _contentDefinitionManager.AlterTypeDefinitionAsync("OpenAIChatWidget", type => type
+        await _contentDefinitionManager.AlterTypeDefinitionAsync("OpenAIChat", type => type
             .Draftable(false)
             .Listable(false)
             .Securable(false)
             .Creatable(false)
             .Versionable(false)
-            .DisplayedAs("OpenAI Chat Widget")
-            .WithDescription("Provides a way to add an OpenAI chat widget to a content item.")
-            .WithPart("OpenAIChatWidgetPart")
+            .DisplayedAs("OpenAI Chat")
+            .WithDescription("Provides a way to add an OpenAI chat to a content item.")
+            .WithPart("OpenAIChatPart")
             .Stereotype("Widget")
         );
 

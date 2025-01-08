@@ -5,7 +5,7 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.OpenAI.Drivers;
 
-public class OpenAIChatSessionDisplayDriver : DisplayDriver<OpenAIChatSession>
+public sealed class OpenAIChatSessionDisplayDriver : DisplayDriver<OpenAIChatSession>
 {
     private readonly IOpenAIChatProfileManager _openAIChatProfileManager;
 

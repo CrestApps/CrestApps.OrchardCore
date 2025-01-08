@@ -9,7 +9,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 
-public class OpenAIDeploymentHandler : OpenAIDeploymentHandlerBase
+public sealed class OpenAIDeploymentHandler : OpenAIDeploymentHandlerBase
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly OpenAIConnectionOptions _connectionOptions;

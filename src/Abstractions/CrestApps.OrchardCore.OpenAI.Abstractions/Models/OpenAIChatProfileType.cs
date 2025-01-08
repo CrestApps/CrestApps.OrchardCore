@@ -6,4 +6,3 @@ public enum OpenAIChatProfileType
     Utility,
     TemplatePrompt,
 }
-

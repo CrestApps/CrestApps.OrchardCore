@@ -11,7 +11,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 
-public class OpenAIChatProfileHandler : OpenAIChatProfileHandlerBase
+public sealed class OpenAIChatProfileHandler : OpenAIChatProfileHandlerBase
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IOpenAIChatProfileStore _profileStore;
@@ -79,7 +79,7 @@ public class OpenAIChatProfileHandler : OpenAIChatProfileHandlerBase
             {
                 context.Result.Fail(new ValidationResult(S["Prompt template is required."], [nameof(OpenAIChatProfile.PromptTemplate)]));
             }
-            else if (!_liquidTemplateManager.Validate(context.Profile.PromptTemplate, out var errors))
+            else if (!_liquidTemplateManager.Validate(context.Profile.PromptTemplate, out var _))
             {
                 context.Result.Fail(new ValidationResult(S["Invalid liquid template used for Prompt template."], [nameof(OpenAIChatProfile.PromptTemplate)]));
             }

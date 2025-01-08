@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.OpenAI.Models;
+using CrestApps.OrchardCore.OpenAI.Models;
 
 namespace CrestApps.OrchardCore.OpenAI;
 
@@ -92,4 +92,3 @@ public interface IOpenAIDeploymentHandler
     /// <returns>A task representing the asynchronous operation.</returns>
     Task SavedAsync(SavedOpenAIDeploymentContext context);
 }
-

@@ -65,4 +65,3 @@ public interface IOpenAIChatProfileStore
     /// </returns>
     Task SaveAsync(OpenAIChatProfile profile);
 }
-

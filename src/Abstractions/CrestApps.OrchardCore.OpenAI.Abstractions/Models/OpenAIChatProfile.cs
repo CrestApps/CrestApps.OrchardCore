@@ -50,6 +50,8 @@ public class OpenAIChatProfile : Entity
             DeploymentId = DeploymentId,
             TitleType = TitleType,
             WelcomeMessage = WelcomeMessage,
+            SystemMessage = SystemMessage,
+            PromptSubject = PromptSubject,
             PromptTemplate = PromptTemplate,
             CreatedUtc = CreatedUtc,
             OwnerId = OwnerId,

@@ -5,7 +5,7 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.OpenAI.Drivers;
 
-public class OpenAIChatListOptionsDisplayDriver : DisplayDriver<OpenAIChatListOptions>
+public sealed class OpenAIChatListOptionsDisplayDriver : DisplayDriver<OpenAIChatListOptions>
 {
     public override IDisplayResult Edit(OpenAIChatListOptions options, BuildEditorContext context)
     {

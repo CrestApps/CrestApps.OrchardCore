@@ -16,10 +16,10 @@ Before using this feature, ensure that the necessary services are configured. Yo
       "Azure": [
         {
           "Name": "<!-- A unique name for your connection. It’s recommended to match your Azure account's AccountName -->",
+          "TenantId": "<!-- Your Azure TenantId -->",
           "ClientId": "<!-- Your Azure ClientId -->",
           "ClientSecret": "<!-- Your Azure ClientSecret -->",
           "SubscriptionId": "<!-- Your Azure SubscriptionId -->",
-          "TenantId": "<!-- Your Azure TenantId -->",
           "AccountName": "<!-- Your Azure Cognitive Account Name -->",
           "ResourceGroupName": "<!-- Your Azure Cognitive Resource Group Name -->",
           "ApiKey": "<!-- API Key to connect to your Azure AI instance -->"
@@ -29,11 +29,27 @@ Before using this feature, ensure that the necessary services are configured. Yo
 }
 ```
 
-You can retrieve the required information from the **Microsoft Azure Portal**.
+#### How to Retrieve Required Information from the Azure Portal
 
-To find the `ApiKey`, navigate to your Azure OpenAI instance in the portal:  
-`Microsoft Azure portal` > `Resource Management` > `Keys and Endpoint`.  
-Click the **Show Keys** button and copy one of the available keys.
+##### 1. Retrieve the Tenant ID
+1. Open the **Azure Portal** and search for **Microsoft Entra ID** (formerly Azure Active Directory).
+2. In the **Overview** section, locate and copy the **Tenant ID**.
+
+##### 2. Obtain the Client ID and Client Secret
+1. In the **Microsoft Entra ID** service within the **Azure Portal**, navigate to **Manage** > **App registrations**.
+2. Create a new application or select an existing one.
+3. In the application details:
+   - Copy the **Application (client) ID**.
+   - Copy the **Directory (tenant) ID**.
+4. Go to the **Certificates & secrets** section.
+   - Click **New client secret**.
+   - Provide a description and expiration date, then save.
+   - Copy the **Client Secret value** (make sure to save it securely, as it won’t be visible again after this step).
+
+##### 3. Retrieve the API Key for Azure OpenAI
+1. Navigate to your **Azure OpenAI** instance in the **Azure Portal**.
+2. Go to **Resource Management** > **Keys and Endpoint**.
+3. Click **Show Keys** and copy one of the available keys.
 
 ### Recipes
 
