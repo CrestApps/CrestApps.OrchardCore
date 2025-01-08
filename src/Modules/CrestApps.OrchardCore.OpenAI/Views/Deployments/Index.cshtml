@@ -8,7 +8,7 @@
     <h1>@RenderTitleSegments(T["OpenAI Deployments"])</h1>
 </zone>
 
-@* the form is necessary to generate an antiforgery token for the delete and toggle actions *@
+@* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
 <form asp-action="Index" method="post" class="no-multisubmit">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
     <input asp-for="Options.BulkAction" type="hidden" />

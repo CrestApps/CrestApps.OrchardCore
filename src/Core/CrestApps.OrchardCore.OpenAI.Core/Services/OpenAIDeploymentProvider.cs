@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.OpenAI.Azure.Core;
+using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -26,4 +26,3 @@ public sealed class OpenAIDeploymentProvider : IPermissionProvider
         ];
     }
 }
-

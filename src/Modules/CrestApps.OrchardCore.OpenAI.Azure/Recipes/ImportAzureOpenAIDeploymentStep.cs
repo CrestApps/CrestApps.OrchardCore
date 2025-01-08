@@ -10,7 +10,7 @@ using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Recipes;
 
-public sealed class ImportAzureOpenAIDeploymentStep : IRecipeStepHandler
+public sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
 {
     private readonly IOpenAIDeploymentManager _deploymentManager;
     private readonly AzureOpenAIDeploymentsService _azureOpenAIDeploymentsService;
@@ -23,6 +23,7 @@ public sealed class ImportAzureOpenAIDeploymentStep : IRecipeStepHandler
         AzureOpenAIDeploymentsService azureOpenAIDeploymentsService,
         IOptions<OpenAIConnectionOptions> connectionOptions,
         IStringLocalizer<ImportAzureOpenAIDeploymentStep> stringLocalizer)
+        : base("ImportAzureOpenAIDeployment")
     {
         _deploymentManager = deploymentManager;
         _azureOpenAIDeploymentsService = azureOpenAIDeploymentsService;
@@ -30,13 +31,8 @@ public sealed class ImportAzureOpenAIDeploymentStep : IRecipeStepHandler
         S = stringLocalizer;
     }
 
-    public async Task ExecuteAsync(RecipeExecutionContext context)
+    protected override async Task HandleAsync(RecipeExecutionContext context)
     {
-        if (!string.Equals(context.Name, "ImportAzureOpenAIDeployment", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
         if (!_connectionOptions.Connections.TryGetValue(AzureOpenAIConstants.AzureDeploymentSourceName, out var connections))
         {
             context.Errors.Add(S["There are no connections for {0}.", AzureOpenAIConstants.AzureDeploymentSourceName]);

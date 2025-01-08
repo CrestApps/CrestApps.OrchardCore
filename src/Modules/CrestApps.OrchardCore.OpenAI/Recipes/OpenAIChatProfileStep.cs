@@ -6,7 +6,7 @@ using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Recipes;
 
-public sealed class OpenAIChatProfileStep : IRecipeStepHandler
+public sealed class OpenAIChatProfileStep : NamedRecipeStepHandler
 {
     private readonly IOpenAIChatProfileManager _profileManager;
 
@@ -15,18 +15,14 @@ public sealed class OpenAIChatProfileStep : IRecipeStepHandler
     public OpenAIChatProfileStep(
         IOpenAIChatProfileManager profileManager,
         IStringLocalizer<OpenAIChatProfileStep> stringLocalizer)
+        : base("OpenAIChatProfile")
     {
         _profileManager = profileManager;
         S = stringLocalizer;
     }
 
-    public async Task ExecuteAsync(RecipeExecutionContext context)
+    protected override async Task HandleAsync(RecipeExecutionContext context)
     {
-        if (!string.Equals(context.Name, "OpenAIChatProfile", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
         var model = context.Step.ToObject<OpenAIProfileStepModel>();
         var tokens = model.Profiles.Cast<JsonObject>() ?? [];
 
@@ -91,10 +87,10 @@ public sealed class OpenAIChatProfileStep : IRecipeStepHandler
             await _profileManager.SaveAsync(profile);
         }
     }
-}
 
-public sealed class OpenAIProfileStepModel
-{
-    public JsonArray Profiles { get; set; }
+    private sealed class OpenAIProfileStepModel
+    {
+        public JsonArray Profiles { get; set; }
+    }
 }
 

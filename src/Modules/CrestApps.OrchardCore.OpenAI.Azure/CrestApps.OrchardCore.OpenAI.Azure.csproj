@@ -1,8 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore OpenAI Azure Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Facilitates seamless management of OpenAI models and profiles through Microsoft Azure Services, providing advanced tools for configuring, deploying, and optimizing OpenAI's powerful capabilities.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS Azure OpenAI</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

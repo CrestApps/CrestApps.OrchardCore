@@ -21,5 +21,4 @@ public sealed class ObjectFunctionProperty : IOpenAIChatFunctionObjectProperty
     {
         Required = Properties.Where(x => x.Value.IsRequired).Select(x => x.Key);
     }
-
 }

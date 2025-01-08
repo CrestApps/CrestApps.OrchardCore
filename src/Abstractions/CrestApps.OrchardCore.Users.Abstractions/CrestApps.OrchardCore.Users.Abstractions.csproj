@@ -5,11 +5,11 @@
     <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace("Abstractions", ""))</RootNamespace>
     <Title>CrestApps OrchardCore Users Abstractions</Title>
     <Description>
-      $(OCCMSDescription)
+      $(CrestAppsDescription)
 
-      Abstractions Users module.
+      Abstractions for the Users module.
     </Description>
-    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Users Abstractions</PackageTags>
+    <PackageTags>$(PackageTags) OrchardCoreCMS Users Abstractions</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

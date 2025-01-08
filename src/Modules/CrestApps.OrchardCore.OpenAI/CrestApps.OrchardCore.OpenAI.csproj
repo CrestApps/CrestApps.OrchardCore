@@ -3,6 +3,13 @@
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore OpenAI Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Enables seamless management of OpenAI models and profiles, offering advanced features for configuring, deploying, and optimizing OpenAI's capabilities.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS OpenAI</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

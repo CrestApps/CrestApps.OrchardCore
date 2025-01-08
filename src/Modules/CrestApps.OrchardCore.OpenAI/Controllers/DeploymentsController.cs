@@ -57,7 +57,7 @@ public sealed class DeploymentsController : Controller
     }
 
     public async Task<IActionResult> Index(
-        ModelDeploymentOptions options,
+        OpenAIDeploymentOptions options,
         PagerParameters pagerParameters,
         [FromServices] IEnumerable<IOpenAIDeploymentSource> deploymentSources,
         [FromServices] IOptions<PagerOptions> pagerOptions,
@@ -102,7 +102,7 @@ public sealed class DeploymentsController : Controller
 
         model.Options.BulkActions =
         [
-            new SelectListItem(S["Delete"], nameof(ModelDeploymentAction.Remove)),
+            new SelectListItem(S["Delete"], nameof(OpenAIDeploymentAction.Remove)),
         ];
 
         return View(model);
@@ -283,7 +283,7 @@ public sealed class DeploymentsController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
-    public async Task<ActionResult> IndexPost(ModelDeploymentOptions options, IEnumerable<string> itemIds)
+    public async Task<ActionResult> IndexPost(OpenAIDeploymentOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageModelDeployments))
         {
@@ -294,9 +294,9 @@ public sealed class DeploymentsController : Controller
         {
             switch (options.BulkAction)
             {
-                case ModelDeploymentAction.None:
+                case OpenAIDeploymentAction.None:
                     break;
-                case ModelDeploymentAction.Remove:
+                case OpenAIDeploymentAction.Remove:
                     var counter = 0;
                     foreach (var id in itemIds)
                     {

@@ -3,7 +3,7 @@ using OrchardCore.ResourceManagement;
 
 namespace CrestApps.OrchardCore.Resources;
 
-public sealed class ResourceManagementOptionsConfiguration : IConfigureOptions<ResourceManagementOptions>
+internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions<ResourceManagementOptions>
 {
     private static readonly ResourceManifest _manifest;
 

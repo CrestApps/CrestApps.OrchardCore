@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <Title>CrestApps OrchardCore Users</Title>
     <Description>
-      $(OCCMSDescription)
+      $(CrestAppsDescription)
 
-      Users module.
+      Enhances user management with customizable display names and user avatars.
     </Description>
-    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Users</PackageTags>
+    <PackageTags>$(PackageTags) OrchardCoreCMS Users</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

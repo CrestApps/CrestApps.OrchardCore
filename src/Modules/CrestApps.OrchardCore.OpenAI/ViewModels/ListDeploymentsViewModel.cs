@@ -7,7 +7,7 @@ public class ListDeploymentsViewModel
 {
     public IList<OpenAIDeploymentEntry> Deployments { get; set; }
 
-    public ModelDeploymentOptions Options { get; set; }
+    public OpenAIDeploymentOptions Options { get; set; }
 
     public IEnumerable<string> SourceNames { get; set; }
 

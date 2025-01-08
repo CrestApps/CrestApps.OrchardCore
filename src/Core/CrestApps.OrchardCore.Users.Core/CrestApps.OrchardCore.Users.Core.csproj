@@ -4,11 +4,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Title>CrestApps OrchardCore Users Core</Title>
     <Description>
-      $(OCCMSDescription)
+      $(CrestAppsDescription)
 
-      Core Users module.
+      Core services project for the Users module.
     </Description>
-    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Users Core</PackageTags>
+    <PackageTags>$(PackageTags) OrchardCoreCMS Users Core</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

@@ -6,7 +6,7 @@ using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Recipes;
 
-public sealed class OpenAIDeploymentStep : IRecipeStepHandler
+public sealed class OpenAIDeploymentStep : NamedRecipeStepHandler
 {
     private readonly IOpenAIDeploymentManager _deploymentManager;
 
@@ -15,18 +15,14 @@ public sealed class OpenAIDeploymentStep : IRecipeStepHandler
     public OpenAIDeploymentStep(
         IOpenAIDeploymentManager deploymentManager,
         IStringLocalizer<OpenAIDeploymentStep> stringLocalizer)
+         : base("OpenAIDeployment")
     {
         _deploymentManager = deploymentManager;
         S = stringLocalizer;
     }
 
-    public async Task ExecuteAsync(RecipeExecutionContext context)
+    protected override async Task HandleAsync(RecipeExecutionContext context)
     {
-        if (!string.Equals(context.Name, "OpenAIDeployment", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
         var model = context.Step.ToObject<OpenAIModelDeploymentStepModel>();
         var tokens = model.Deployments.Cast<JsonObject>() ?? [];
 
@@ -81,9 +77,9 @@ public sealed class OpenAIDeploymentStep : IRecipeStepHandler
             await _deploymentManager.SaveAsync(deployment);
         }
     }
-}
 
-public sealed class OpenAIModelDeploymentStepModel
-{
-    public JsonArray Deployments { get; set; }
+    private sealed class OpenAIModelDeploymentStepModel
+    {
+        public JsonArray Deployments { get; set; }
+    }
 }

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Indexes;
 using CrestApps.OrchardCore.OpenAI.Models;
+using CrestApps.Support;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.OpenAI.Indexes;
@@ -25,7 +26,7 @@ public sealed class OpenAIChatSessionIndexProvider : IndexProvider<OpenAIChatSes
                     UserId = session.UserId,
                     ClientId = session.ClientId,
                     CreatedUtc = session.CreatedUtc,
-                    Title = session.Title,
+                    Title = Str.Truncate(session.Title, 255),
                 };
             });
     }
