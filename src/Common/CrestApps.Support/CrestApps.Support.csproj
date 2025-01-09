@@ -4,11 +4,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Title>CrestApps Support</Title>
     <Description>
-      $(OCCMSDescription)
+      $(CrestAppsDescription)
 
-      Provide common c# helpers for things like string, numbers, types, enums, datetimes and others.
+      Offer a comprehensive set of C# utility methods for common tasks involving strings, numbers, types, enums, date-time operations, and more
     </Description>
-    <PackageTags>$(PackageTags) CrestApps Support</PackageTags>
+    <PackageTags>$(PackageTags) Support</PackageTags>
   </PropertyGroup>
 
 </Project>

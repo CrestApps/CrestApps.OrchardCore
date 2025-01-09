@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.OpenAI.ViewModels.Sessions
+
+@model ChatListOptionsViewModel
+
+<div class="input-group">
+    <input asp-for="SearchText" type="text" class="form-control" placeholder="@T["History search"]" autofocus />
+    <button type="submit" class="btn btn-primary">@T["Search"]</button>
+</div>

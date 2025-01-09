@@ -1,0 +1,8 @@
+[
+  {
+    "inputs": [
+      "node_modules/vue/dist/vue.global.js"
+    ],
+    "output": "wwwroot/Scripts/vue.global.js"
+  }
+]

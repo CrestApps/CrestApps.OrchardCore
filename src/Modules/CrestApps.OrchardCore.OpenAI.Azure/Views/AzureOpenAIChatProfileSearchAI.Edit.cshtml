@@ -1,0 +1,41 @@
+@using CrestApps.OrchardCore.OpenAI.Azure.Core
+@using CrestApps.OrchardCore.OpenAI.Azure.ViewModels
+@using OrchardCore
+
+@model AzureChatProfileSearchAIViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="IndexName" class="@Orchard.GetLabelClasses()">@T["Index name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="IndexName" asp-items="Model.IndexNames" class="form-select">
+            <option value="">@T["Select an index"]</option>
+        </select>
+        <span class="hint">@T["The Azure AI search index to use as a data source."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IncludeContentItemCitations">
+            <label class="form-check-label" asp-for="IncludeContentItemCitations">@T["Include citations for relevant content items"]</label>
+            <span class="hint dashed">@T["When enabled, the model will include citations to relevant content items whenever applicable."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Strictness" class="@Orchard.GetLabelClasses()">@T["Strictness"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="Strictness " step="1" min="1" max="5">
+        <span class="hint">@T["Strictness sets the threshold to categorize documents as relevant to your queries. Raising strictness means a higher threshold for relevance and filtering out more documents that are less relevant for responses. Very high strictness could cause failure to generate responses due to limited available documents. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultStrictness]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="TopNDocuments" class="@Orchard.GetLabelClasses()">@T["Total retrieved documents"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="TopNDocuments " step="1" min="3" max="20">
+        <span class="hint">@T["This specifies the number of top-scoring documents from your data index used to generate responses. You want to increase the value when you have short documents or want to provide more context. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultTopNDocuments]</span>
+    </div>
+</div>

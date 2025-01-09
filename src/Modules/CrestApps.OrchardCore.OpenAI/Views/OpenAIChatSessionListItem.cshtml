@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.OpenAI.ViewModels.Sessions
+
+@model DisplayAIChatSessionViewModel
+
+@{
+    var isCurrent = false;
+
+    if (ViewContext.HttpContext.Request.RouteValues.TryGetValue("sessionId", out var sessionId))
+    {
+        isCurrent = Model.Session.SessionId == sessionId.ToString();
+    }
+}
+
+<a class="list-group-item list-group-item-action@(isCurrent ? " active" : string.Empty)" aria-current="@(isCurrent ? "true" : "false")" asp-action="Index" asp-controller="AdminChat" asp-route-profileId="@Model.Session.ProfileId" asp-route-sessionId="@Model.Session.SessionId">@Model.Session.Title</a>

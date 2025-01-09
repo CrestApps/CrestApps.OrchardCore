@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.OpenAI.ViewModels
+@using OrchardCore
+
+@model OpenAIChatWidgetViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="ProfileId" class="@Orchard.GetLabelClasses()">@T["Profile"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select">
+            <option value="">@T["Select a profile"]</option>
+        </select>
+        <span class="hint">@T["The OpenAI chat profile to use with this widget."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="TotalHistory" class="@Orchard.GetLabelClasses()">@T["Total history chat to show"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="TotalHistory " step="1" min="0" max="@Model.MaxHistoryAllowed">
+        <span class="hint">@T["Specify the number of previous chat sessions to display in the widget. Set to 0 or leave blank to hide all past sessions."]</span>
+    </div>
+</div>
+

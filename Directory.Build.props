@@ -2,7 +2,24 @@
 
   <!-- Default TFMs to use when building and packaging -->
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+
+    <!-- TFM used when coding in Visual Studio and when creating templates -->
+    <!-- All 'template.json' should provide a 'choice' for the default TFM -->
+    <DefaultTargetFramework Condition="'$(DefaultTargetFramework)' == ''">net9.0</DefaultTargetFramework>
+
+    <!-- TFMs used to build the abstractions and modules, by convention the default TFM is at the first position -->
+    <!-- In a cross-targeting build, some assets are only copied on the first TFM, by convention the default TFM -->
+    <CommonTargetFrameworks Condition="'$(CommonTargetFrameworks)' == ''">net8.0;net9.0</CommonTargetFrameworks>
+  </PropertyGroup>
+
+  <!-- Detect if the solution is opened in VS to limit the TFMs that are analyzed by Roslyn for performance reasons -->
+  <PropertyGroup Condition="'$(BuildingInsideVisualStudio)' == 'true' or '$(BuildingByReSharper)' == 'true'">
+    <CommonTargetFrameworks>$(DefaultTargetFramework)</CommonTargetFrameworks>
+  </PropertyGroup>
+
+  <!-- Default TFMs to use when building and packaging -->
+  <PropertyGroup>
+    <TargetFrameworks>$(CommonTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Authors>Mike Alhayek</Authors>
     <Company>CrestApps</Company>
@@ -10,6 +27,8 @@
     <IsPackable>true</IsPackable>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/CrestApps/CrestApps.OrchardCore</RepositoryUrl>
+    <CrestAppsDescription>CrestApps enhances the capabilities of Orchard Core, a modular and multi-tenant application framework built on ASP.NET Core. By leveraging Orchard Core’s powerful foundation for creating dynamic, data-driven websites and applications, CrestApps introduces additional features and tools that empower developers to build more flexible, scalable, and feature-rich solutions.</CrestAppsDescription>
+    <PackageTags>CrestApps OrchardCore</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
