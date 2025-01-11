@@ -3,8 +3,10 @@
 @model ChatUtilityCompletionTaskViewModel
 
 <div class="mb-3" asp-validation-class-for="ProfileId">
-    <label asp-for="ProfileId" class="form-label">@T["Profile"]</label>
-    <select asp-for="ProfileId" class="form-select" asp-items="Model.Profiles"></select>
+    <label asp-for="ProfileId" class="form-label">@T["Utility profile"]</label>
+    <select asp-for="ProfileId" class="form-select" asp-items="Model.Profiles">
+        <option value="">@T["Select a utility"]</option>
+    </select>
     <span asp-validation-for="ProfileId"></span>
     <span class="hint">@T["The utility profile to use when generating the message."]</span>
 </div>

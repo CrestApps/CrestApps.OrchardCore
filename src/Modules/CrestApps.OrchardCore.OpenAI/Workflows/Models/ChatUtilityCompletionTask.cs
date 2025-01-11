@@ -63,7 +63,7 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
 
     public bool RespondWithHtml
     {
-        get => GetProperty(() => true);
+        get => GetProperty(() => false);
         set => SetProperty(value);
     }
 
