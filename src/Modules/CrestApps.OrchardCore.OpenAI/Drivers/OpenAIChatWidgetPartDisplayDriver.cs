@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.OpenAI.Core.Models;
+using CrestApps.OrchardCore.OpenAI.Extensions;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
 using Microsoft.AspNetCore.Http;
@@ -84,9 +85,8 @@ public sealed class OpenAIChatWidgetPartDisplayDriver : ContentPartDisplayDriver
 
             model.MaxHistoryAllowed = _pagerOptions.MaxPageSize;
 
-            var profiles = await _openAIChatProfileStore.GetAllAsync();
-            model.Profiles = profiles.Where(x => x.Type == OpenAIChatProfileType.Chat)
-            .Select(profile => new SelectListItem(profile.Name, profile.Id));
+            var profiles = await _openAIChatProfileStore.GetProfilesAsync(OpenAIChatProfileType.Chat);
+            model.Profiles = profiles.Select(profile => new SelectListItem(profile.Name, profile.Id));
 
         }).Location("Content:5");
     }

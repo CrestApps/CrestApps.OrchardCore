@@ -210,3 +210,10 @@ If you're using the Recipes module, you can add AI chat profiles using the follo
   ]
 }
 ```
+
+### Workflows
+
+When the OpenAI Chat feature is enabled along with the Workflows, the following workflow activities are available:
+
+- **Chat Utility Completion Task**: This activity allows you to interact with the OpenAI chat service. You can use this activity to send a message to the chat service and receive a response into a workflow property.
+

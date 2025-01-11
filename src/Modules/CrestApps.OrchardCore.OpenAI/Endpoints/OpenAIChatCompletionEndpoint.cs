@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
+using CrestApps.OrchardCore.OpenAI.Endpoints.Models;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.Support;
 using Fluid;
@@ -18,8 +19,6 @@ namespace CrestApps.OrchardCore.OpenAI.Endpoints;
 
 internal static class OpenAIChatCompletionEndpoint
 {
-    private const string _blankMessage = "AI drew blank and no message was generated!";
-
     public static IEndpointRouteBuilder AddOpenAIChatCompletionEndpoint<T>(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapPost("OpenAI/ChatGPT/Completion", HandleAsync<T>)
@@ -40,7 +39,7 @@ internal static class OpenAIChatCompletionEndpoint
         IServiceProvider serviceProvider,
         IOpenAIMarkdownService markdownService,
         ILogger<T> logger,
-        ChatRequest requestData)
+        OpenAIChatCompletionRequest requestData)
     {
         if (string.IsNullOrWhiteSpace(requestData.ProfileId))
         {
@@ -110,7 +109,7 @@ internal static class OpenAIChatCompletionEndpoint
 
             if (profile.Type == OpenAIChatProfileType.Utility)
             {
-                return await GetToolMessageAsync(completionService, profile, markdownService, userPrompt);
+                return await GetToolMessageAsync(completionService, profile, markdownService, userPrompt, requestData.RespondWithHtml);
             }
 
             (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, profile, completionService, userPrompt);
@@ -138,7 +137,7 @@ internal static class OpenAIChatCompletionEndpoint
                 Title = profile.PromptSubject,
                 Content = !string.IsNullOrEmpty(bestChoice?.Content)
                 ? bestChoice.Content
-                : _blankMessage,
+                : OpenAIConstants.DefaultBlankMessage,
             };
         }
         else
@@ -158,7 +157,7 @@ internal static class OpenAIChatCompletionEndpoint
             {
                 SystemMessage = profile.SystemMessage,
                 Session = chatSession,
-                UserMarkdownInResponse = true,
+                UserMarkdownInResponse = requestData.RespondWithHtml,
             });
 
             bestChoice = completion.Choices.FirstOrDefault();
@@ -170,7 +169,7 @@ internal static class OpenAIChatCompletionEndpoint
                 Title = profile.PromptSubject,
                 Content = !string.IsNullOrEmpty(bestChoice?.Content)
                 ? bestChoice.Content
-                : _blankMessage,
+                : OpenAIConstants.DefaultBlankMessage,
             };
         }
 
@@ -178,20 +177,20 @@ internal static class OpenAIChatCompletionEndpoint
 
         await sessionManager.SaveAsync(chatSession);
 
-        return TypedResults.Ok(new
+        return TypedResults.Ok(new OpenAIChatResponse
         {
             Success = completion.Choices.Any(),
             Type = profile.Type.ToString(),
-            chatSession.SessionId,
+            SessionId = chatSession.SessionId,
             IsNew = isNew,
-            Message = new
+            Message = new OpenAIChatResponseMessage
             {
-                message.Id,
-                message.Role,
-                message.IsGeneratedPrompt,
-                message.Title,
-                message.Content,
-                ContentHTML = !string.IsNullOrEmpty(message.Content)
+                Id = message.Id,
+                Role = message.Role,
+                IsGeneratedPrompt = message.IsGeneratedPrompt,
+                Title = message.Title,
+                Content = message.Content,
+                ContentHTML = requestData.RespondWithHtml && !string.IsNullOrEmpty(message.Content)
                 ? markdownService.ToHtml(message.Content)
                 : null,
             },
@@ -230,7 +229,7 @@ internal static class OpenAIChatCompletionEndpoint
         return (chatSession, true);
     }
 
-    private static async Task<IResult> GetToolMessageAsync(IOpenAIChatCompletionService completionService, OpenAIChatProfile profile, IOpenAIMarkdownService markdownService, string prompt)
+    private static async Task<IResult> GetToolMessageAsync(IOpenAIChatCompletionService completionService, OpenAIChatProfile profile, IOpenAIMarkdownService markdownService, string prompt, bool respondWithHtml)
     {
         var completion = await completionService.ChatAsync([OpenAIChatCompletionMessage.CreateMessage(prompt, OpenAIConstants.Roles.User)], new OpenAIChatCompletionContext(profile)
         {
@@ -240,21 +239,21 @@ internal static class OpenAIChatCompletionEndpoint
 
         var bestChoice = completion.Choices.FirstOrDefault();
 
-        return TypedResults.Ok(new
+        return TypedResults.Ok(new OpenAIChatResponse
         {
             Success = completion.Choices.Any(),
-            Type = "Tool",
-            Message = new
+            Type = nameof(OpenAIChatProfileType.Utility),
+            Message = new OpenAIChatResponseMessage
             {
-                Content = bestChoice?.Content ?? _blankMessage,
-                ContentHTML = !string.IsNullOrEmpty(bestChoice?.Content)
+                Content = bestChoice?.Content ?? OpenAIConstants.DefaultBlankMessage,
+                ContentHTML = respondWithHtml && !string.IsNullOrEmpty(bestChoice?.Content)
                 ? markdownService.ToHtml(bestChoice.Content)
-                : _blankMessage,
+                : OpenAIConstants.DefaultBlankMessage,
             },
         });
     }
 
-    private sealed class ChatRequest
+    private sealed class OpenAIChatCompletionRequest
     {
         public string SessionId { get; set; }
 
@@ -263,5 +262,7 @@ internal static class OpenAIChatCompletionEndpoint
         public string Prompt { get; set; }
 
         public string SessionProfileId { get; set; }
+
+        public bool RespondWithHtml { get; set; } = true;
     }
 }

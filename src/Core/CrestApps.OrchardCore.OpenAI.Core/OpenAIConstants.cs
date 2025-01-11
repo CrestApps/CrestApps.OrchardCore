@@ -16,6 +16,8 @@ public static class OpenAIConstants
 
     public const int DefaultPastMessagesCount = 10;
 
+    public const string DefaultBlankMessage = "AI drew blank and no message was generated!";
+
     public static class Feature
     {
         public const string Area = "CrestApps.OrchardCore.OpenAI";
@@ -38,11 +40,13 @@ public static class OpenAIConstants
     {
         public const string ChatCompletionRouteName = "OpenAIChatCompletion";
 
+        public const string ChatUtilityCompletionRouteName = "OpenAIChatUtilityCompletion";
+
         public const string ChatSessionRouteName = "OpenAIChatSession";
     }
 
     public static class Security
     {
-        public const string ExternalChatCORSPolicyName = "EnableChatWidgetsPolicy";
+        public const string ExternalChatCORSPolicyName = "EnableExternalChatPolicy";
     }
 }

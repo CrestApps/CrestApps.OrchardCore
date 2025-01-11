@@ -9,6 +9,8 @@ using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.Recipes;
 using CrestApps.OrchardCore.OpenAI.Services;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
+using CrestApps.OrchardCore.OpenAI.Workflows.Drivers;
+using CrestApps.OrchardCore.OpenAI.Workflows.Models;
 using Fluid;
 using Markdig;
 using Microsoft.AspNetCore.Builder;
@@ -24,6 +26,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.ResourceManagement;
+using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.OpenAI;
 
@@ -72,6 +75,7 @@ public sealed class ChatStartup : StartupBase
     {
         routes
             .AddOpenAIChatCompletionEndpoint<ChatStartup>()
+            .AddOpenAIChatUtilityCompletionEndpoint<ChatStartup>()
             .AddOpenAIChatSessionEndpoint();
     }
 }
@@ -107,5 +111,15 @@ public sealed class WidgetsStartup : StartupBase
             .UseDisplayDriver<OpenAIChatWidgetPartDisplayDriver>();
 
         services.AddDataMigration<WidgetsMigrations>();
+    }
+}
+
+[Feature(OpenAIConstants.Feature.ChatGPT)]
+[RequireFeatures("OrchardCore.Workflows")]
+public sealed class ChatWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<ChatUtilityCompletionTask, ChatUtilityCompletionTaskDisplayDriver>();
     }
 }
