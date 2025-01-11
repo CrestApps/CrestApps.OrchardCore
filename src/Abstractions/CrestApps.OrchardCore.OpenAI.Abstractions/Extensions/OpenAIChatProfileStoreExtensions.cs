@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.OpenAI.Models;
 
-namespace CrestApps.OrchardCore.OpenAI.Extensions;
+namespace CrestApps.OrchardCore.OpenAI;
 
 public static class OpenAIChatProfileStoreExtensions
 {

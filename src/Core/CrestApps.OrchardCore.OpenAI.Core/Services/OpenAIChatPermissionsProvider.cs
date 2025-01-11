@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.OpenAI.Extensions;
 using CrestApps.OrchardCore.OpenAI.Models;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
@@ -14,11 +13,11 @@ public sealed class OpenAIChatPermissionsProvider : IPermissionProvider
         OpenAIChatPermissions.QueryAnyAIChatProfile,
     ];
 
-    private readonly IOpenAIChatProfileStore _aIChatProfileStore;
+    private readonly IOpenAIChatProfileStore _chatProfileStore;
 
-    public OpenAIChatPermissionsProvider(IOpenAIChatProfileStore aIChatProfileStore)
+    public OpenAIChatPermissionsProvider(IOpenAIChatProfileStore chatProfileStore)
     {
-        _aIChatProfileStore = aIChatProfileStore;
+        _chatProfileStore = chatProfileStore;
     }
 
     public async Task<IEnumerable<Permission>> GetPermissionsAsync()
@@ -29,7 +28,7 @@ public sealed class OpenAIChatPermissionsProvider : IPermissionProvider
             OpenAIChatPermissions.QueryAnyAIChatProfile,
         };
 
-        foreach (var profile in await _aIChatProfileStore.GetProfilesAsync(OpenAIChatProfileType.Chat))
+        foreach (var profile in await _chatProfileStore.GetProfilesAsync(OpenAIChatProfileType.Chat))
         {
             permissions.Add(OpenAIChatPermissions.CreateDynamicPermission(profile.Name));
         }

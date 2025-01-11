@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Extensions;
 using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;

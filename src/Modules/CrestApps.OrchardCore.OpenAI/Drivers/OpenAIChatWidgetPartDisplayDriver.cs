@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.OpenAI.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Extensions;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
 using Microsoft.AspNetCore.Http;

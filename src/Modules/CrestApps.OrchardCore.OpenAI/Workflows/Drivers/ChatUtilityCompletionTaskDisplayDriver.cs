@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.OpenAI.Extensions;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.Workflows.Models;
 using CrestApps.OrchardCore.OpenAI.Workflows.ViewModels;
