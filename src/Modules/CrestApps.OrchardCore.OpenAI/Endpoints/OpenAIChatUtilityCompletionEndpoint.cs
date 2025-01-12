@@ -73,7 +73,7 @@ internal static class OpenAIChatUtilityCompletionEndpoint
         var completion = await completionService.ChatAsync([OpenAIChatCompletionMessage.CreateMessage(requestData.Prompt.Trim(), OpenAIConstants.Roles.User)], new OpenAIChatCompletionContext(profile)
         {
             SystemMessage = profile.SystemMessage,
-            UserMarkdownInResponse = requestData.RespondWithHtml,
+            UserMarkdownInResponse = requestData.IncludeHtmlResponse,
         });
 
         var bestChoice = completion.Choices.FirstOrDefault();
@@ -82,12 +82,12 @@ internal static class OpenAIChatUtilityCompletionEndpoint
         {
             Success = completion.Choices.Any(),
             Type = nameof(OpenAIChatProfileType.Utility),
-            Message = new OpenAIChatResponseMessage
+            Message = new OpenAIChatResponseMessageDetailed
             {
                 Content = bestChoice?.Content ?? OpenAIConstants.DefaultBlankMessage,
-                ContentHTML = requestData.RespondWithHtml && !string.IsNullOrEmpty(bestChoice?.Content)
+                HtmlContent = requestData.IncludeHtmlResponse && !string.IsNullOrEmpty(bestChoice?.Content)
                 ? markdownService.ToHtml(bestChoice.Content)
-                : OpenAIConstants.DefaultBlankMessage,
+                : null,
             },
         });
     }
@@ -98,6 +98,6 @@ internal static class OpenAIChatUtilityCompletionEndpoint
 
         public string Prompt { get; set; }
 
-        public bool RespondWithHtml { get; set; }
+        public bool IncludeHtmlResponse { get; set; }
     }
 }

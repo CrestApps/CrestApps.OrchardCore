@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
+using CrestApps.OrchardCore.OpenAI.Endpoints.Models;
 using CrestApps.OrchardCore.OpenAI.Models;
 using Fluid;
 using Fluid.Values;
@@ -39,7 +40,7 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
         S = stringLocalizer;
     }
 
-    public override LocalizedString DisplayText => S["Chat Utility Completion Task"];
+    public override LocalizedString DisplayText => S["Chat Utility Completion"];
 
     public override LocalizedString Category => S["OpenAI"];
 
@@ -61,7 +62,7 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
         set => SetProperty(value);
     }
 
-    public bool RespondWithHtml
+    public bool IncludeHtmlResponse
     {
         get => GetProperty(() => false);
         set => SetProperty(value);
@@ -113,7 +114,7 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
         var completion = await completionService.ChatAsync([OpenAIChatCompletionMessage.CreateMessage(userPrompt.Trim(), OpenAIConstants.Roles.User)], new OpenAIChatCompletionContext(profile)
         {
             SystemMessage = profile.SystemMessage,
-            UserMarkdownInResponse = RespondWithHtml,
+            UserMarkdownInResponse = IncludeHtmlResponse,
         });
 
         var bestChoice = completion.Choices.FirstOrDefault();
@@ -123,9 +124,17 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
             return Outcomes("Drew Blank");
         }
 
-        workflowContext.Properties[ResultPropertyName] = RespondWithHtml
-            ? _markdownService.ToHtml(bestChoice.Content)
-            : bestChoice.Content;
+        var value = new OpenAIChatResponseMessage
+        {
+            Content = bestChoice.Content,
+        };
+
+        if (IncludeHtmlResponse)
+        {
+            value.HtmlContent = _markdownService.ToHtml(bestChoice.Content);
+        }
+
+        workflowContext.Output[ResultPropertyName] = value;
 
         return Outcomes("Done");
     }

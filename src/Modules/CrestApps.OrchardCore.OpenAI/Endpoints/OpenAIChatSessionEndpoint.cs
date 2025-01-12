@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
+using CrestApps.OrchardCore.OpenAI.Endpoints.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -31,7 +32,8 @@ internal static class OpenAIChatSessionEndpoint
         IHttpContextAccessor httpContextAccessor,
         IServiceProvider serviceProvider,
         IOpenAIMarkdownService markdownService,
-        string sessionId)
+        string sessionId,
+        bool includeHtmlResponse = true)
     {
         if (string.IsNullOrWhiteSpace(sessionId))
         {
@@ -67,14 +69,14 @@ internal static class OpenAIChatSessionEndpoint
                 Id = chatSession.ProfileId,
                 Type = profile.Type.ToString()
             },
-            Messages = chatSession.Prompts.Select(message => new
+            Messages = chatSession.Prompts.Select(message => new OpenAIChatResponseMessageDetailed
             {
-                message.Id,
-                message.Role,
-                message.IsGeneratedPrompt,
-                message.Title,
-                message.Content,
-                ContentHTML = !string.IsNullOrEmpty(message.Content)
+                Id = message.Id,
+                Role = message.Role,
+                IsGeneratedPrompt = message.IsGeneratedPrompt,
+                Title = message.Title,
+                Content = message.Content,
+                HtmlContent = includeHtmlResponse && !string.IsNullOrEmpty(message.Content)
                 ? markdownService.ToHtml(message.Content)
                 : null,
             })

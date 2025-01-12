@@ -10,5 +10,5 @@ internal sealed class OpenAIChatResponse
 
     public bool IsNew { get; set; }
 
-    public OpenAIChatResponseMessage Message { get; set; }
+    public OpenAIChatResponseMessageDetailed Message { get; set; }
 }

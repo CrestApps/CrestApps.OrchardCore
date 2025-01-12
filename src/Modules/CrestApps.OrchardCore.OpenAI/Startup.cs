@@ -120,6 +120,10 @@ public sealed class ChatWorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.Configure<TemplateOptions>(o =>
+        {
+            o.MemberAccessStrategy.Register<OpenAIChatResponseMessage>();
+        });
         services.AddActivity<ChatUtilityCompletionTask, ChatUtilityCompletionTaskDisplayDriver>();
     }
 }

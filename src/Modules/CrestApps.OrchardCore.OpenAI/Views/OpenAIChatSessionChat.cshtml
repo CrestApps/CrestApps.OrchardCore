@@ -89,7 +89,7 @@
                 prompt.Content,
                 prompt.Title,
                 prompt.IsGeneratedPrompt,
-                ContentHTML = !string.IsNullOrEmpty(prompt.Content) ? MarkdownService.ToHtml(prompt.Content) : null,
+                htmlContent = !string.IsNullOrEmpty(prompt.Content) ? MarkdownService.ToHtml(prompt.Content) : null,
             });
         }
     }

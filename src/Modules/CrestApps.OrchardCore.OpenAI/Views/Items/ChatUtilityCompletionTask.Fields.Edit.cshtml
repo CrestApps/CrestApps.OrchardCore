@@ -22,7 +22,7 @@
     <label asp-for="ResultPropertyName" class="form-label">@T["Result property name"]</label>
     <input asp-for="ResultPropertyName" class="form-control" autofocus="autofocus" />
     <span asp-validation-for="ResultPropertyName"></span>
-    <span class="hint">@T["Specifies the property where the result will be stored. If the property does not already exist, it will be created. This allows access to the OpenAI Chat Response in any of the following workflow tasks."]</span>
+    <span class="hint">@T["Specifies where the result will be stored. Prefix the Result Property Name with OpenAI- to avoid conflicts. This allows access to the OpenAI Chat Response in subsequent workflow tasks."]</span>
 </div>
 
 <div class="mb-3" asp-validation-class-for="RespondWithHtml">

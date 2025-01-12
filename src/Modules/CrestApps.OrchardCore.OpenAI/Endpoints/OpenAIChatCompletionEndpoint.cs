@@ -109,7 +109,7 @@ internal static class OpenAIChatCompletionEndpoint
 
             if (profile.Type == OpenAIChatProfileType.Utility)
             {
-                return await GetToolMessageAsync(completionService, profile, markdownService, userPrompt, requestData.RespondWithHtml);
+                return await GetToolMessageAsync(completionService, profile, markdownService, userPrompt, requestData.IncludeHtmlResponse);
             }
 
             (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, profile, completionService, userPrompt);
@@ -157,7 +157,7 @@ internal static class OpenAIChatCompletionEndpoint
             {
                 SystemMessage = profile.SystemMessage,
                 Session = chatSession,
-                UserMarkdownInResponse = requestData.RespondWithHtml,
+                UserMarkdownInResponse = requestData.IncludeHtmlResponse,
             });
 
             bestChoice = completion.Choices.FirstOrDefault();
@@ -183,14 +183,14 @@ internal static class OpenAIChatCompletionEndpoint
             Type = profile.Type.ToString(),
             SessionId = chatSession.SessionId,
             IsNew = isNew,
-            Message = new OpenAIChatResponseMessage
+            Message = new OpenAIChatResponseMessageDetailed
             {
                 Id = message.Id,
                 Role = message.Role,
                 IsGeneratedPrompt = message.IsGeneratedPrompt,
                 Title = message.Title,
                 Content = message.Content,
-                ContentHTML = requestData.RespondWithHtml && !string.IsNullOrEmpty(message.Content)
+                HtmlContent = requestData.IncludeHtmlResponse && !string.IsNullOrEmpty(message.Content)
                 ? markdownService.ToHtml(message.Content)
                 : null,
             },
@@ -243,12 +243,12 @@ internal static class OpenAIChatCompletionEndpoint
         {
             Success = completion.Choices.Any(),
             Type = nameof(OpenAIChatProfileType.Utility),
-            Message = new OpenAIChatResponseMessage
+            Message = new OpenAIChatResponseMessageDetailed
             {
                 Content = bestChoice?.Content ?? OpenAIConstants.DefaultBlankMessage,
-                ContentHTML = respondWithHtml && !string.IsNullOrEmpty(bestChoice?.Content)
+                HtmlContent = respondWithHtml && !string.IsNullOrEmpty(bestChoice?.Content)
                 ? markdownService.ToHtml(bestChoice.Content)
-                : OpenAIConstants.DefaultBlankMessage,
+                : null,
             },
         });
     }
@@ -263,6 +263,6 @@ internal static class OpenAIChatCompletionEndpoint
 
         public string SessionProfileId { get; set; }
 
-        public bool RespondWithHtml { get; set; } = true;
+        public bool IncludeHtmlResponse { get; set; } = true;
     }
 }

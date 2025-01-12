@@ -1,6 +1,8 @@
+using CrestApps.OrchardCore.OpenAI.Models;
+
 namespace CrestApps.OrchardCore.OpenAI.Endpoints.Models;
 
-internal sealed class OpenAIChatResponseMessage
+internal sealed class OpenAIChatResponseMessageDetailed : OpenAIChatResponseMessage
 {
     public string Id { get; set; }
 
@@ -9,8 +11,4 @@ internal sealed class OpenAIChatResponseMessage
     public bool IsGeneratedPrompt { get; set; }
 
     public string Title { get; set; }
-
-    public string Content { get; set; }
-
-    public string ContentHTML { get; set; }
 }
