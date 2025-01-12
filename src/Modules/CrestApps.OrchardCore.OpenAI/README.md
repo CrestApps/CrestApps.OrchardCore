@@ -210,3 +210,26 @@ If you're using the Recipes module, you can add AI chat profiles using the follo
   ]
 }
 ```
+
+### Workflows
+
+When the OpenAI Chat feature is enabled alongside Workflows, the following workflow activities become available:
+
+#### Chat Utility Completion Task
+
+This activity enables interaction with the OpenAI chat service. You can use it to send a message to the chat service and store the generated response in a workflow property.
+
+To include this activity in your workflow, search for the **Chat Utility Completion** task and add it. One of the required fields is the **Result Property Name**, which must be a unique identifier for this task. This identifier allows you to retrieve the generated response later using the `Workflow.Output` instance. Each **Chat Utility Completion** task must have a distinct name to differentiate the responses generated at each step. 
+
+For example, if you set the **Result Property Name** to `OpenAI-Step1`, you can access the response in subsequent workflow steps using the following syntax:
+
+```liquid
+{{ Workflow.Output["OpenAI-Step1"].Content }}
+```
+
+If you need the response to be in HTML format, enable the `Include HTML Content` option. Then you can access the HTML content using the following syntax:
+```liquid
+{{ Workflow.Output["OpenAI-Step1"].HtmlContent }}
+```
+
+To avoid conflicts with other tasks that utilize the `Workflow.Output` accessor, it is recommended to prefix each **Result Property Name** in **Chat Utility Completion** task with `OpenAI-`.

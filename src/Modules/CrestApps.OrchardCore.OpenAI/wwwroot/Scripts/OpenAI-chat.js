@@ -5,7 +5,7 @@
 
 var openAIChatManager = function () {
   var defaultConfig = {
-    messageTemplate: "\n            <div class=\"list-group\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                    <div class=\"d-flex\">\n                        <div class=\"p-2\">\n                            <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'\"></i>\n                        </div>\n                        <div class=\"p-2 lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.contentHTML || message.content\"></div>\n                        </div>\n                    </div>\n                    <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"message.role !== 'indicator'\">\n                        <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                            <i class=\"fa-solid fa-copy fa-lg\"></i>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
+    messageTemplate: "\n            <div class=\"list-group\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                    <div class=\"d-flex\">\n                        <div class=\"p-2\">\n                            <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'\"></i>\n                        </div>\n                        <div class=\"p-2 lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent || message.content\"></div>\n                        </div>\n                    </div>\n                    <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"message.role !== 'indicator'\">\n                        <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                            <i class=\"fa-solid fa-copy fa-lg\"></i>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
     indicatorTemplate: "<div class=\"spinner-grow spinner-grow-sm\" role=\"status\"><span class=\"visually-hidden\">Loading...</span></div>"
   };
   var initialize = function initialize(instanceConfig) {
@@ -371,7 +371,7 @@ var openAIChatManager = function () {
         showTypingIndicator: function showTypingIndicator() {
           this.addMessage({
             role: 'indicator',
-            contentHTML: config.indicatorTemplate
+            htmlContent: config.indicatorTemplate
           });
         },
         hideTypingIndicator: function hideTypingIndicator() {

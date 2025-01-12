@@ -13,7 +13,7 @@ public interface IOpenAIChatProfileStore
     /// whether the profile was successfully deleted. Returns <c>true</c> if the deletion succeeded,
     /// and <c>false</c> if the profile could not be deleted (e.g., if it does not exist).
     /// </returns>
-    Task<bool> DeleteAsync(OpenAIChatProfile profile);
+    ValueTask<bool> DeleteAsync(OpenAIChatProfile profile);
 
     /// <summary>
     /// Asynchronously finds an AI chat profile by its unique identifier.
@@ -23,7 +23,7 @@ public interface IOpenAIChatProfileStore
     /// A task representing the asynchronous operation. The task result is the AI chat profile if found,
     /// or <c>null</c> if no profile with the specified identifier exists in the store.
     /// </returns>
-    Task<OpenAIChatProfile> FindByIdAsync(string id);
+    ValueTask<OpenAIChatProfile> FindByIdAsync(string id);
 
     /// <summary>
     /// Asynchronously finds an AI chat profile by its name.
@@ -33,7 +33,7 @@ public interface IOpenAIChatProfileStore
     /// A task representing the asynchronous operation. The task result is the AI chat profile if found,
     /// or <c>null</c> if no profile with the specified name exists in the store.
     /// </returns>
-    Task<OpenAIChatProfile> FindByNameAsync(string name);
+    ValueTask<OpenAIChatProfile> FindByNameAsync(string name);
 
     /// <summary>
     /// Asynchronously retrieves all AI chat profiles in the store.
@@ -42,7 +42,7 @@ public interface IOpenAIChatProfileStore
     /// A task representing the asynchronous operation. The task result is an <see cref="IEnumerable{AIChatProfile}"/>
     /// containing all AI chat profiles available in the store.
     /// </returns>
-    Task<IEnumerable<OpenAIChatProfile>> GetAllAsync();
+    ValueTask<IEnumerable<OpenAIChatProfile>> GetAllAsync();
 
     /// <summary>
     /// Asynchronously retrieves a paged list of AI chat profiles based on the specified pagination and filtering parameters.
@@ -54,7 +54,7 @@ public interface IOpenAIChatProfileStore
     /// A task representing the asynchronous operation. The task result is an <see cref="OpenAIChatProfileResult"/> object,
     /// which contains the list of AI chat profiles for the requested page, along with metadata for pagination (such as total count, etc.).
     /// </returns>
-    Task<OpenAIChatProfileResult> PageAsync(int page, int pageSize, QueryContext context);
+    ValueTask<OpenAIChatProfileResult> PageAsync(int page, int pageSize, QueryContext context);
 
     /// <summary>
     /// Asynchronously saves or updates the specified AI chat profile in the store.
@@ -63,5 +63,5 @@ public interface IOpenAIChatProfileStore
     /// <returns>
     /// A task representing the asynchronous operation. This method does not return any value.
     /// </returns>
-    Task SaveAsync(OpenAIChatProfile profile);
+    ValueTask SaveAsync(OpenAIChatProfile profile);
 }
