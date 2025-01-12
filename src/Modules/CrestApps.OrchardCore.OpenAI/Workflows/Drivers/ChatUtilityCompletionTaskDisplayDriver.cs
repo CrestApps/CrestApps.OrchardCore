@@ -33,7 +33,7 @@ public sealed class ChatUtilityCompletionTaskDisplayDriver : ActivityDisplayDriv
         model.ProfileId = activity.ProfileId;
         model.PromptTemplate = activity.PromptTemplate;
         model.ResultPropertyName = activity.ResultPropertyName;
-        model.RespondWithHtml = activity.IncludeHtmlResponse;
+        model.IncludeHtmlResponse = activity.IncludeHtmlResponse;
 
         model.Profiles = (await _chatProfileStore.GetProfilesAsync(OpenAIChatProfileType.Utility))
             .Select(profile => new SelectListItem(profile.Name, profile.Id));
@@ -76,7 +76,7 @@ public sealed class ChatUtilityCompletionTaskDisplayDriver : ActivityDisplayDriv
         activity.ProfileId = model.ProfileId;
         activity.PromptTemplate = model.PromptTemplate;
         activity.ResultPropertyName = model.ResultPropertyName?.Trim();
-        activity.IncludeHtmlResponse = model.RespondWithHtml;
+        activity.IncludeHtmlResponse = model.IncludeHtmlResponse;
 
         return Edit(activity, context);
     }

@@ -11,7 +11,7 @@ public class ChatUtilityCompletionTaskViewModel
 
     public string ResultPropertyName { get; set; }
 
-    public bool RespondWithHtml { get; set; }
+    public bool IncludeHtmlResponse { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> Profiles { get; set; }

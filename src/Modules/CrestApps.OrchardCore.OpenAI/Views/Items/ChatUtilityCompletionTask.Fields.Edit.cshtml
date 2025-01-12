@@ -1,4 +1,5 @@
 @using CrestApps.OrchardCore.OpenAI.Workflows.ViewModels
+@using CrestApps.OrchardCore.OpenAI.Models
 
 @model ChatUtilityCompletionTaskViewModel
 
@@ -25,10 +26,10 @@
     <span class="hint">@T["Specifies where the result will be stored. Prefix the Result Property Name with OpenAI- to avoid conflicts. This allows access to the OpenAI Chat Response in subsequent workflow tasks."]</span>
 </div>
 
-<div class="mb-3" asp-validation-class-for="RespondWithHtml">
+<div class="mb-3" asp-validation-class-for="IncludeHtmlResponse">
     <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="RespondWithHtml">
-        <label class="form-check-label" asp-for="RespondWithHtml">@T["Respond with HTML format"]</label>
-        <span class="hint dashed">@T["When enabled, the model would return HTML formatted respond instead of plain text."]</span>
+        <input type="checkbox" class="form-check-input" asp-for="IncludeHtmlResponse">
+        <label class="form-check-label" asp-for="IncludeHtmlResponse">@T["include content formatted using HTML"]</label>
+        <span class="hint dashed">@T["When enabled, the model will populate the {0} property of the response.", nameof(OpenAIChatResponseMessage.HtmlContent)]</span>
     </div>
 </div>
