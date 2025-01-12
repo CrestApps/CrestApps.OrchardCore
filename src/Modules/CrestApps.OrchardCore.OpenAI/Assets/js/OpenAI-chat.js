@@ -10,7 +10,7 @@ const openAIChatManager = function () {
                         </div>
                         <div class="p-2 lh-base">
                             <h4 v-if="message.title">{{ message.title }}</h4>
-                            <div v-html="message.contentHTML || message.content"></div>
+                            <div v-html="message.htmlContent || message.content"></div>
                         </div>
                     </div>
                     <div class="d-flex justify-content-center message-buttons-container" v-if="message.role !== 'indicator'">
@@ -437,7 +437,7 @@ const openAIChatManager = function () {
                 showTypingIndicator() {
                     this.addMessage({
                         role: 'indicator',
-                        contentHTML: config.indicatorTemplate
+                        htmlContent: config.indicatorTemplate
                     });
                 },
                 hideTypingIndicator() {

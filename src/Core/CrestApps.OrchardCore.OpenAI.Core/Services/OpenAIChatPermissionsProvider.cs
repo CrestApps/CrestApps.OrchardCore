@@ -13,11 +13,11 @@ public sealed class OpenAIChatPermissionsProvider : IPermissionProvider
         OpenAIChatPermissions.QueryAnyAIChatProfile,
     ];
 
-    private readonly IOpenAIChatProfileStore _aIChatProfileStore;
+    private readonly IOpenAIChatProfileStore _chatProfileStore;
 
-    public OpenAIChatPermissionsProvider(IOpenAIChatProfileStore aIChatProfileStore)
+    public OpenAIChatPermissionsProvider(IOpenAIChatProfileStore chatProfileStore)
     {
-        _aIChatProfileStore = aIChatProfileStore;
+        _chatProfileStore = chatProfileStore;
     }
 
     public async Task<IEnumerable<Permission>> GetPermissionsAsync()
@@ -28,13 +28,8 @@ public sealed class OpenAIChatPermissionsProvider : IPermissionProvider
             OpenAIChatPermissions.QueryAnyAIChatProfile,
         };
 
-        foreach (var profile in await _aIChatProfileStore.GetAllAsync())
+        foreach (var profile in await _chatProfileStore.GetProfilesAsync(OpenAIChatProfileType.Chat))
         {
-            if (profile.Type != OpenAIChatProfileType.Chat)
-            {
-                continue;
-            }
-
             permissions.Add(OpenAIChatPermissions.CreateDynamicPermission(profile.Name));
         }
 

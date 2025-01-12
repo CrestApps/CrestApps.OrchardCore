@@ -24,19 +24,14 @@ public sealed class OpenAIAdminChatMenu : AdminNavigationProvider
 
     protected override async ValueTask BuildAsync(NavigationBuilder builder)
     {
-        var profiles = await _chatProfileStore.GetAllAsync();
+        var profiles = await _chatProfileStore.GetProfilesAsync(OpenAIChatProfileType.Chat);
 
         builder
            .Add(S["OpenAI"], openAI =>
            {
                var i = 1;
-               foreach (var profile in profiles)
+               foreach (var profile in profiles.OrderBy(p => p.Name))
                {
-                   if (profile.Type != OpenAIChatProfileType.Chat)
-                   {
-                       continue;
-                   }
-
                    openAI
                    .Add(new LocalizedString(profile.Name, profile.Name), $"chat{i++}", chat => chat
                        .AddClass(profile.Name.HtmlClassify())

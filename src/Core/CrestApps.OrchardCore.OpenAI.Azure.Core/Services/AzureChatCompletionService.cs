@@ -243,7 +243,12 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
 
         if (functionNames != null && functionNames.Length > 0)
         {
-            request.Functions = _openAIFunctionService.FindByNames(functionNames);
+            var activeNames = _openAIFunctionService.FindByNames(functionNames);
+
+            if (activeNames.Any())
+            {
+                request.Functions = activeNames;
+            }
         }
 
         if (context.Profile.Source == AzureWithAzureAISearchProfileSource.Key &&

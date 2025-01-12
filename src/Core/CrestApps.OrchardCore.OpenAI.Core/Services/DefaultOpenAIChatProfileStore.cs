@@ -14,7 +14,7 @@ public sealed class DefaultOpenAIChatProfileStore : IOpenAIChatProfileStore
         _documentManager = documentManager;
     }
 
-    public async Task<bool> DeleteAsync(OpenAIChatProfile profile)
+    public async ValueTask<bool> DeleteAsync(OpenAIChatProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
@@ -30,7 +30,7 @@ public sealed class DefaultOpenAIChatProfileStore : IOpenAIChatProfileStore
         return removed;
     }
 
-    public async Task<OpenAIChatProfile> FindByIdAsync(string id)
+    public async ValueTask<OpenAIChatProfile> FindByIdAsync(string id)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
 
@@ -44,7 +44,7 @@ public sealed class DefaultOpenAIChatProfileStore : IOpenAIChatProfileStore
         return null;
     }
 
-    public async Task<OpenAIChatProfile> FindByNameAsync(string name)
+    public async ValueTask<OpenAIChatProfile> FindByNameAsync(string name)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
@@ -60,7 +60,7 @@ public sealed class DefaultOpenAIChatProfileStore : IOpenAIChatProfileStore
         return null;
     }
 
-    public async Task SaveAsync(OpenAIChatProfile profile)
+    public async ValueTask SaveAsync(OpenAIChatProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
@@ -81,7 +81,7 @@ public sealed class DefaultOpenAIChatProfileStore : IOpenAIChatProfileStore
         await _documentManager.UpdateAsync(document);
     }
 
-    public async Task<OpenAIChatProfileResult> PageAsync(int page, int pageSize, QueryContext context)
+    public async ValueTask<OpenAIChatProfileResult> PageAsync(int page, int pageSize, QueryContext context)
     {
         var records = await LocateQueriesAsync(context);
 
@@ -94,14 +94,14 @@ public sealed class DefaultOpenAIChatProfileStore : IOpenAIChatProfileStore
         };
     }
 
-    public async Task<IEnumerable<OpenAIChatProfile>> GetAllAsync()
+    public async ValueTask<IEnumerable<OpenAIChatProfile>> GetAllAsync()
     {
         var document = await _documentManager.GetOrCreateImmutableAsync();
 
         return document.Profiles.Values;
     }
 
-    private async Task<IEnumerable<OpenAIChatProfile>> LocateQueriesAsync(QueryContext context)
+    private async ValueTask<IEnumerable<OpenAIChatProfile>> LocateQueriesAsync(QueryContext context)
     {
         var document = await _documentManager.GetOrCreateImmutableAsync();
 
