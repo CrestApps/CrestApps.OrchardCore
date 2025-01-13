@@ -1,6 +1,9 @@
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
+using CrestApps.OrchardCore.OpenAI.Deployments.Drivers;
+using CrestApps.OrchardCore.OpenAI.Deployments.Sources;
+using CrestApps.OrchardCore.OpenAI.Deployments.Steps;
 using CrestApps.OrchardCore.OpenAI.Drivers;
 using CrestApps.OrchardCore.OpenAI.Endpoints;
 using CrestApps.OrchardCore.OpenAI.Indexes;
@@ -21,6 +24,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -63,7 +67,7 @@ public sealed class ChatStartup : StartupBase
         services
             .AddOpenAIChatProfileServices()
             .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()
-            .AddNavigationProvider<OpenAIAdminChatMenu>()
+            .AddNavigationProvider<OpenAIChatAdminMenu>()
             .AddDataMigration<OpenAIChatSessionIndexMigrations>()
             .AddIndexProvider<OpenAIChatSessionIndexProvider>()
             .AddDisplayDriver<OpenAIChatProfile, OpenAIChatProfileDisplayDriver>()
@@ -125,5 +129,15 @@ public sealed class ChatWorkflowsStartup : StartupBase
             o.MemberAccessStrategy.Register<OpenAIChatResponseMessage>();
         });
         services.AddActivity<ChatUtilityCompletionTask, ChatUtilityCompletionTaskDisplayDriver>();
+    }
+}
+
+[Feature(OpenAIConstants.Feature.ChatGPT)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class DeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<OpenAIChatProfileDeploymentSource, OpenAIChatProfileDeploymentStep, OpenAIChatProfileDeploymentStepDisplayDriver>();
     }
 }

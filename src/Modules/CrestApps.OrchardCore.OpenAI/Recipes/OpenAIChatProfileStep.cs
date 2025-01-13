@@ -8,6 +8,8 @@ namespace CrestApps.OrchardCore.OpenAI.Recipes;
 
 public sealed class OpenAIChatProfileStep : NamedRecipeStepHandler
 {
+    public const string StepKey = "OpenAIChatProfile";
+
     private readonly IOpenAIChatProfileManager _profileManager;
 
     internal readonly IStringLocalizer S;
@@ -15,7 +17,7 @@ public sealed class OpenAIChatProfileStep : NamedRecipeStepHandler
     public OpenAIChatProfileStep(
         IOpenAIChatProfileManager profileManager,
         IStringLocalizer<OpenAIChatProfileStep> stringLocalizer)
-        : base("OpenAIChatProfile")
+        : base(StepKey)
     {
         _profileManager = profileManager;
         S = stringLocalizer;

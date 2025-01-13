@@ -8,15 +8,15 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.OpenAI.Services;
 
-public sealed class OpenAIAdminChatMenu : AdminNavigationProvider
+public sealed class OpenAIChatAdminMenu : AdminNavigationProvider
 {
     private readonly IOpenAIChatProfileStore _chatProfileStore;
 
     internal readonly IStringLocalizer S;
 
-    public OpenAIAdminChatMenu(
+    public OpenAIChatAdminMenu(
         IOpenAIChatProfileStore chatProfileStore,
-        IStringLocalizer<OpenAIAdminChatMenu> stringLocalizer)
+        IStringLocalizer<OpenAIChatAdminMenu> stringLocalizer)
     {
         _chatProfileStore = chatProfileStore;
         S = stringLocalizer;

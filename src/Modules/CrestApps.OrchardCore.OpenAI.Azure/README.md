@@ -109,12 +109,18 @@ If you're using the Recipes feature, you can create an Azure profile using the f
           "PromptTemplate": null,
           "DeploymentId":"<!-- The deployment id for the deployment. -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",
-          "Temperature":null,
-          "TopP":null,
-          "FrequencyPenalty":null,
-          "PresencePenalty":null,
-          "TokenLength":null,
-          "PastMessagesCount":null
+          "Properties": 
+          {
+              "OpenAIChatProfileMetadata": 
+              {
+                  "Temperature":null,
+                  "TopP":null,
+                  "FrequencyPenalty":null,
+                  "PresencePenalty":null,
+                  "MaxTokens":null,
+                  "PastMessagesCount":null
+              }
+          }
         }
       ]
     }
@@ -149,14 +155,25 @@ If you're using the Recipes feature, you can create an Azure profile with the fo
           "PromptTemplate": null,
           "DeploymentId":"<!-- The deployment id for the deployment. -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",
-          "Temperature":null,
-          "TopP":null,
-          "FrequencyPenalty":null,
-          "PresencePenalty":null,
-          "TokenLength":null,
-          "PastMessagesCount":null
-          "Strictness":null,
-          "TopNDocuments":null
+          "Properties": 
+          {
+              "OpenAIChatProfileMetadata": 
+              {
+                  "Temperature":null,
+                  "TopP":null,
+                  "FrequencyPenalty":null,
+                  "PresencePenalty":null,
+                  "MaxTokens":null,
+                  "PastMessagesCount":null
+              },
+              "AzureAIChatProfileAISearchMetadata":
+              {
+                  "IndexName": "<!-- The index name to search -->",
+                  "IncludeContentItemCitations": true,
+                  "Strictness":null,
+                  "TopNDocuments":null
+              }
+          }
         }
       ]
     }

@@ -198,12 +198,18 @@ If you're using the Recipes module, you can add AI chat profiles using the follo
           "PromptTemplate": null,
           "DeploymentId":"<!-- The deployment id for the deployment. -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",
-          "Temperature":null,
-          "TopP":null,
-          "FrequencyPenalty":null,
-          "PresencePenalty":null,
-          "TokenLength":null,
-          "PastMessagesCount":null
+          "Properties": 
+          {
+              "OpenAIChatProfileMetadata": 
+              {
+                  "Temperature":null,
+                  "TopP":null,
+                  "FrequencyPenalty":null,
+                  "PresencePenalty":null,
+                  "MaxTokens":null,
+                  "PastMessagesCount":null
+              }
+          }
         }
       ]
     }

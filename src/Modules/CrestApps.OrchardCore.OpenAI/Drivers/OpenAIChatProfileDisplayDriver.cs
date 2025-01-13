@@ -124,7 +124,7 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
             model.PresencePenalty = metadata.PresencePenalty;
             model.Temperature = metadata.Temperature;
             model.MaxTokens = metadata.MaxTokens;
-            model.TopP = model.TopP;
+            model.TopP = metadata.TopP;
 
             var azureDeployments = await _modelDeploymentStore.GetAllAsync();
 
