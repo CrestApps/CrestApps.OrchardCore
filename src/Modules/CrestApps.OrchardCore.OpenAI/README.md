@@ -239,3 +239,7 @@ If you need the response to be in HTML format, enable the `Include HTML Content`
 ```
 
 To avoid conflicts with other tasks that utilize the `Workflow.Output` accessor, it is recommended to prefix each **Result Property Name** in **Chat Utility Completion** task with `OpenAI-`.
+
+### Deployments
+
+When using the OpenAI Chat feature with the Deployments module, you can deploy chat profiles to different environments through Orchard Core's Deployment UI.
