@@ -1,4 +1,4 @@
-# CrestApps - Orchard Core Modules
+# CrestApps - Orchard Core
 
 CrestApps offers a collection of open-source modules designed to extend and enrich the functionality of Orchard Core, a versatile application framework built on ASP.NET Core.
 
@@ -48,9 +48,9 @@ This feature enabled you to use UI to interact with OpenAI modules like ChatGTP 
 
 This feature enabled you to use UI to interact with Azure OpenAI modules. For detailed information, refer to the [Users Module README](src/Modules/CrestApps.OrchardCore.OpenAI.Azure/README.md).
 
-### Resurces Module
+### Resources Module
 
-This feature provides you with additial resources that you can utilize to speed up development. For detailed information, refer to the [Users Module README](src/Modules/CrestApps.OrchardCore.Resources/README.md).
+This feature provides you with additional resources that you can utilize to speed up development. For detailed information, refer to the [Users Module README](src/Modules/CrestApps.OrchardCore.Resources/README.md).
 
 ## Getting Started
 
