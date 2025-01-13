@@ -29,6 +29,7 @@
     <PackageVersion Include="OrchardCore.Search.AzureAI.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Users.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Users.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Deployment.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheAdmin" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheAgencyTheme" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheBlogTheme" Version="$(OrchardCoreVersion)" />

@@ -48,27 +48,41 @@ public sealed class AzureOpenAIChatProfileWithAISearchHandler : OpenAIChatProfil
             return Task.CompletedTask;
         }
 
+        var metadataNode = data["Properties"]?[nameof(AzureAIChatProfileAISearchMetadata)]?.AsObject();
+
+        if (metadataNode == null || metadataNode.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
         var metadata = profile.As<AzureAIChatProfileAISearchMetadata>();
 
-        var indexName = data[nameof(metadata.IndexName)]?.GetValue<string>();
+        var indexName = metadataNode[nameof(metadata.IndexName)]?.GetValue<string>();
 
         if (!string.IsNullOrEmpty(indexName))
         {
             metadata.IndexName = indexName;
         }
 
-        var strictness = data[nameof(metadata.Strictness)]?.GetValue<int?>();
+        var strictness = metadataNode[nameof(metadata.Strictness)]?.GetValue<int?>();
 
         if (strictness.HasValue)
         {
             metadata.Strictness = strictness;
         }
 
-        var topNDocuments = data[nameof(metadata.TopNDocuments)]?.GetValue<int?>();
+        var topNDocuments = metadataNode[nameof(metadata.TopNDocuments)]?.GetValue<int?>();
 
         if (topNDocuments.HasValue)
         {
             metadata.TopNDocuments = topNDocuments;
+        }
+
+        var includeContentItemCitations = metadataNode[nameof(metadata.IncludeContentItemCitations)]?.GetValue<bool?>();
+
+        if (includeContentItemCitations.HasValue)
+        {
+            metadata.IncludeContentItemCitations = includeContentItemCitations.Value;
         }
 
         profile.Put(metadata);

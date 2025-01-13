@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using OrchardCore.ResourceManagement;
 
-namespace CrestApps.OrchardCore.OpenAI;
+namespace CrestApps.OrchardCore.OpenAI.Services;
 
 internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions<ResourceManagementOptions>
 {

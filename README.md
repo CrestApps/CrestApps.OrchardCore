@@ -1,28 +1,62 @@
-# CrestApps - Orchard Core 
+# CrestApps - Orchard Core
 
-An open-source module for the Orchard Core framework.
-
-CrestApps is a collection of modules designed to extend and enhance the functionality of the Orchard Core framework. Our modules are developed with a focus on usability, security, and performance.
+CrestApps offers a collection of open-source modules designed to extend and enrich the functionality of Orchard Core, a versatile application framework built on ASP.NET Core.
 
 ## Overview
 
-Orchard Core is a modular and multi-tenant application framework built on ASP.NET Core. It provides a powerful foundation for creating dynamic, data-driven websites and applications. CrestApps leverages this robust platform to deliver additional features and capabilities that help developers create even more powerful and flexible solutions.
+Orchard Core provides a robust foundation for developing dynamic, data-driven websites and applications. CrestApps modules are crafted to enhance this framework with a focus on usability, security, and performance.
 
-## Features
+## Key Features
 
-- **Modularity**: Each module is designed to be independent, allowing you to pick and choose the functionality you need.
-- **Security**: Built with best practices in mind, our modules help ensure your applications are secure.
-- **Performance**: Optimized for speed and efficiency, CrestApps modules enhance the performance of your Orchard Core applications.
+- **Modularity**: Each module operates independently, allowing selective integration based on project requirements.
+- **Security**: Designed following best practices to fortify application security.
+- **Performance**: Optimized for speed and efficiency to enhance Orchard Core application performance.
+
+## Project Structure
+
+The CrestApps repository is organized for clarity and ease of use. Modules can be found in the `src/Modules` folder, with each module structured for independent usage and configuration. 
+
+- **Modules Folder**:  
+  Contains all CrestApps modules. Each module includes a `README.md` file that explains how to configure and integrate it into your project.
+
+Example structure:
+```
+src/
+└── Modules/
+    ├── CrestApps.OrchardCore.Users/
+    │   ├── README.md
+    │   ├── Manifest.cs
+    │   ├── ...
+    └── OtherModules/
+        ├── README.md
+        ├── ...
+```
+
+To get started with any module, refer to its dedicated README file for detailed instructions.
 
 ## Available Modules
 
 ### Users Module
 
-The **Users** module enhances user management with customizable display names and user avatars. For more details, see the [Users Module README](src/Modules/CrestApps.OrchardCore.Users/README.md).
+Enhances user management with customizable display names and avatars. For detailed information, refer to the [Users Module README](src/Modules/CrestApps.OrchardCore.Users/README.md).
+
+### OpenAI Module
+
+This feature enabled you to use UI to interact with OpenAI modules like ChatGTP modules. For detailed information, refer to the [Users Module README](src/Modules/CrestApps.OrchardCore.OpenAI/README.md).
+
+### Azure OpenAI Module
+
+This feature enabled you to use UI to interact with Azure OpenAI modules. For detailed information, refer to the [Users Module README](src/Modules/CrestApps.OrchardCore.OpenAI.Azure/README.md).
+
+### Resources Module
+
+This feature provides you with additional resources that you can utilize to speed up development. For detailed information, refer to the [Users Module README](src/Modules/CrestApps.OrchardCore.Resources/README.md).
 
 ## Getting Started
 
-To get started with CrestApps, follow these steps:
+### Running Locally
+
+To begin with CrestApps:
 
 1. **Clone the Repository**:
     ```sh
@@ -35,29 +69,61 @@ To get started with CrestApps, follow these steps:
     ```
 
 3. **Build the Solution**:
-    Ensure you have the necessary .NET SDK installed and run:
+    Ensure you have the necessary .NET SDK installed, then run:
     ```sh
     dotnet build
     ```
 
-4. **Run the Application**:
+4. **Launch the Application**:
     ```sh
     dotnet run
     ```
 
-5. **Enable the Modules**:
-    In the Orchard Core admin dashboard, navigate to the modules section and enable the CrestApps modules you need.
+5. **Enable Modules**:
+    Access the Orchard Core admin dashboard to enable desired CrestApps modules.
+
+### Package Manager
+
+#### Production Packages
+
+Stable releases are available on [NuGet.org](https://www.nuget.org/). For the latest updates and previews:
+
+#### Preview Package Feed
+
+[![Hosted By: Cloudsmith](https://img.shields.io/badge/OSS%20hosting%20by-cloudsmith-blue?logo=cloudsmith&style=for-the-badge)](https://cloudsmith.com)
+
+Explore our preview packages and updates on the [Cloudsmith CrestApps OrchardCore repository](https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore). For usage guidelines, visit the [preview package feed documentation](https://docs.orchardcore.net/en/latest/getting-started/preview-package-source/).
+
+##### Adding the Preview Feed to Visual Studio
+
+Navigate to NuGet Package Manager Settings in Visual Studio under Tools. Add a new source with the name `CrestAppsPreview` and URL `https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json`.
+
+##### Adding the Preview Feed via NuGet.config
+
+Alternatively, update your NuGet.config file:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="NuGet" value="https://api.nuget.org/v3/index.json" />
+    <add key="CrestAppsPreview" value="https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json" />
+  </packageSources>
+  <disabledPackageSources />
+</configuration>
+```
 
 ## Contributing
 
-We welcome contributions from the community! If you would like to contribute to CrestApps, please follow these steps:
+We welcome community contributions! To contribute to CrestApps:
 
 1. Fork the repository.
-2. Create a new branch for your feature or bugfix.
-3. Make your changes and commit them with descriptive messages.
+2. Create a new branch for your feature or bug fix.
+3. Make your changes and commit them with clear messages.
 4. Push your changes to your fork.
 5. Submit a pull request to the main repository.
 
 ## License
 
-CrestApps is released under the MIT License. See the [LICENSE](https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt) file for more details.
+CrestApps is licensed under the MIT License. See the [LICENSE](https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt) file for more details.

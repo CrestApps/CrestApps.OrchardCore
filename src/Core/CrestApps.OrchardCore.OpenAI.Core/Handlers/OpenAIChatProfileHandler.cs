@@ -162,44 +162,51 @@ public sealed class OpenAIChatProfileHandler : OpenAIChatProfileHandlerBase
             profile.PromptTemplate = promptTemplate;
         }
 
+        var metadataNode = data["Properties"]?[nameof(OpenAIChatProfileMetadata)]?.AsObject();
+
+        if (metadataNode == null || metadataNode.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
         var metadata = profile.As<OpenAIChatProfileMetadata>();
 
-        var temperature = data[nameof(metadata.Temperature)]?.GetValue<float?>();
+        var temperature = metadataNode[nameof(metadata.Temperature)]?.GetValue<float?>();
 
         if (temperature.HasValue)
         {
             metadata.Temperature = temperature;
         }
 
-        var topP = data[nameof(metadata.TopP)]?.GetValue<float?>();
+        var topP = metadataNode[nameof(metadata.TopP)]?.GetValue<float?>();
 
         if (topP.HasValue)
         {
             metadata.TopP = topP;
         }
 
-        var frequencyPenalty = data[nameof(metadata.FrequencyPenalty)]?.GetValue<float?>();
+        var frequencyPenalty = metadataNode[nameof(metadata.FrequencyPenalty)]?.GetValue<float?>();
 
         if (frequencyPenalty.HasValue)
         {
             metadata.FrequencyPenalty = frequencyPenalty;
         }
 
-        var presencePenalty = data[nameof(metadata.PresencePenalty)]?.GetValue<float?>();
+        var presencePenalty = metadataNode[nameof(metadata.PresencePenalty)]?.GetValue<float?>();
 
         if (frequencyPenalty.HasValue)
         {
             metadata.PresencePenalty = presencePenalty;
         }
 
-        var maxTokens = data[nameof(metadata.MaxTokens)]?.GetValue<int?>();
+        var maxTokens = metadataNode[nameof(metadata.MaxTokens)]?.GetValue<int?>();
 
         if (frequencyPenalty.HasValue)
         {
             metadata.MaxTokens = maxTokens;
         }
 
-        var pastMessagesCount = data[nameof(metadata.PastMessagesCount)]?.GetValue<int?>();
+        var pastMessagesCount = metadataNode[nameof(metadata.PastMessagesCount)]?.GetValue<int?>();
 
         if (pastMessagesCount.HasValue)
         {
