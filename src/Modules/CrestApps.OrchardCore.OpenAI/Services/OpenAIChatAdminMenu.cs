@@ -37,7 +37,7 @@ public sealed class OpenAIChatAdminMenu : AdminNavigationProvider
                        .AddClass(profile.Name.HtmlClassify())
                        .Action("Index", "AdminChat", OpenAIConstants.Feature.Area, new RouteValueDictionary
                        {
-                           { "profileId", profile.Id},
+                           { "profileId", profile.Id },
                        })
                        .Permission(OpenAIChatPermissions.QueryAnyAIChatProfile)
                        .Resource(profile)
