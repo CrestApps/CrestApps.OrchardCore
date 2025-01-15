@@ -19,7 +19,7 @@ public sealed class OpenAIAdminMenu : AdminNavigationProvider
         builder
             .Add(S["OpenAI"], "90", openAI => openAI
                 .AddClass("openai")
-                .Id("openid")
+                .Id("openai")
                 .Add(S["Deployments"], "after.10", deployments => deployments
                     .AddClass("openai-deployments")
                     .Id("openAIDeployments")
