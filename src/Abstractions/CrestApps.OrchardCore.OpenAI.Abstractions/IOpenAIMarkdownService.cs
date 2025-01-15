@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.OpenAI.Core.Services;
+namespace CrestApps.OrchardCore.OpenAI;
 
 public interface IOpenAIMarkdownService
 {

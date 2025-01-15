@@ -37,7 +37,7 @@ internal static class OpenAIChatCompletionEndpoint
         ILiquidTemplateManager liquidTemplateManager,
         IHttpContextAccessor httpContextAccessor,
         IServiceProvider serviceProvider,
-        IOpenAIMarkdownService markdownService,
+        [FromKeyedServices("chat")] IOpenAIMarkdownService markdownService,
         ILogger<T> logger,
         OpenAIChatCompletionRequest requestData)
     {

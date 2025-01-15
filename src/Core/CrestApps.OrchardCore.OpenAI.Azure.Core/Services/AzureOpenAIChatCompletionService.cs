@@ -1,18 +1,14 @@
-using System.Globalization;
 using System.Net.Http.Json;
 using System.Text;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.Tools.Functions;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -23,7 +19,7 @@ using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
+public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionService
 {
     private const string _useMarkdownSyntaxSystemMessage = "- Provide a response using Markdown syntax.";
 
@@ -33,42 +29,36 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    static AzureChatCompletionService()
+    static AzureOpenAIChatCompletionService()
     {
         _jsonSerializerOptions.Converters.Add(OpenAIChatFunctionPropertyConverter.Instance);
     }
 
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IOpenAIDeploymentStore _deploymentStore;
-    private readonly LinkGenerator _linkGenerator;
+    private readonly IOpenAILinkGenerator _linkGenerator;
     private readonly IServiceProvider _serviceProvider;
     private readonly OpenAIConnectionOptions _connectionOptions;
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
-    private readonly HtmlEncoder _htmlEncoder;
     private readonly IOpenAIFunctionService _openAIFunctionService;
     private readonly ILogger _logger;
 
-    public AzureChatCompletionService(
+    public AzureOpenAIChatCompletionService(
         IHttpClientFactory httpClientFactory,
-        IHttpContextAccessor httpContextAccessor,
         IOpenAIDeploymentStore deploymentStore,
-        LinkGenerator linkGenerator,
+        IOpenAILinkGenerator linkGenerator,
         IOptions<OpenAIConnectionOptions> connectionOptions,
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
         IServiceProvider serviceProvider,
-        HtmlEncoder htmlEncoder,
         IOpenAIFunctionService openAIFunctionService,
-        ILogger<AzureChatCompletionService> logger)
+        ILogger<AzureOpenAIChatCompletionService> logger)
     {
         _httpClientFactory = httpClientFactory;
-        _httpContextAccessor = httpContextAccessor;
         _deploymentStore = deploymentStore;
         _linkGenerator = linkGenerator;
         _serviceProvider = serviceProvider;
         _connectionOptions = connectionOptions.Value;
         _azureAISearchDefaultOptions = azureAISearchDefaultOptions.Value;
-        _htmlEncoder = htmlEncoder;
         _openAIFunctionService = openAIFunctionService;
         _logger = logger;
     }
@@ -155,7 +145,7 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
 
         if (context.UserMarkdownInResponse)
         {
-            systemMessage += "\r\n" + _useMarkdownSyntaxSystemMessage;
+            systemMessage += Environment.NewLine + _useMarkdownSyntaxSystemMessage;
         }
 
         return systemMessage;
@@ -310,21 +300,14 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
         bool includeContentItemCitations,
         string userPrompt)
     {
-        var routeValues = new RouteValueDictionary()
-        {
-            { "Area", "OrchardCore.Contents" },
-            { "Controller", "Item" },
-            { "Action", "Display" },
-            { "tm_utility", "OpenAIChat" },
-            { "tm_query", userPrompt },
-        };
+        Dictionary<string, object> routeValues = null;
 
-        if (Uri.TryCreate(_httpContextAccessor.HttpContext.Request.Headers.Referer, UriKind.Absolute, out var refererUri))
+        if (includeContentItemCitations)
         {
-            if (!string.Equals(refererUri.Host.TrimEnd('/'), _httpContextAccessor.HttpContext.Request.Host.ToString().TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
+            routeValues = new Dictionary<string, object>()
             {
-                routeValues["tm_source"] = refererUri.Host;
-            }
+                { "prompt", userPrompt },
+            };
         }
 
         var results = new List<OpenAIChatCompletionChoice>();
@@ -366,7 +349,7 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
 
                 // Use the reference when the id is 26 chars long (content item id).
                 // Some times Azure may have records that not have content item.
-                if (citation.FilePath != null && needsReference)
+                if (needsReference && !string.IsNullOrEmpty(citation.FilePath))
                 {
                     var referenceTitle = citation.Title;
 
@@ -389,13 +372,15 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
                         // Create new citation reference.
                         map[citation.FilePath] = referenceIndex;
 
-                        routeValues["contentItemId"] = citation.FilePath;
-
-                        var link = _linkGenerator.GetPathByRouteValues(_httpContextAccessor.HttpContext, routeName: null, values: routeValues);
+                        var link = _linkGenerator.GetContentItemPath(citation.FilePath, routeValues);
 
                         if (!string.IsNullOrEmpty(link))
                         {
-                            referenceBuilder.Append(CultureInfo.InvariantCulture, $" {referenceIndex}. <a href=\"{link}\" target=\"_blank\">{_htmlEncoder.Encode(referenceTitle)}</a> \r\n");
+                            referenceBuilder.AppendLine($"{referenceIndex}. [{referenceTitle}]({link})");
+                        }
+                        else
+                        {
+                            referenceBuilder.AppendLine($"{referenceIndex}. {referenceTitle}");
                         }
                     }
                 }
@@ -406,7 +391,7 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
             // During replacements, we could end up with multiple [--reference-separator--]
             // back to back. We can replace them with a single comma.
             responseChoice.Content = Regex.Replace(choiceMessage, @"(\[--reference-separator--\])+", "<sup>,</sup>")
-                + "\r\n" + referenceBuilder.ToString();
+                + Environment.NewLine + referenceBuilder.ToString();
 
             results.Add(responseChoice);
         }
@@ -421,7 +406,7 @@ public sealed class AzureChatCompletionService : IOpenAIChatCompletionService
     {
         var mapping = new JsonObject()
         {
-            { "content_fields_separator", "\n" },
+            { "content_fields_separator", Environment.NewLine },
             { "title_field", GetBestTitleField(keyField) },
             { "filepath_field", keyField?.AzureFieldKey },
             { "url_field", null },

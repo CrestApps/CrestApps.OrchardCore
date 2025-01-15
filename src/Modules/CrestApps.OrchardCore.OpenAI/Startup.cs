@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.OpenAI.Core;
+using CrestApps.OrchardCore.OpenAI.Core.Markdig;
 using CrestApps.OrchardCore.OpenAI.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Deployments.Drivers;
@@ -47,9 +48,9 @@ public sealed class Startup : StartupBase
 
         services
             .AddOpenAIDeploymentServices()
-            .Configure<OpenAIMarkdownPipelineOptions>(o =>
+            .Configure<OpenAIMarkdownPipelineOptions>(options =>
             {
-                o.MarkdownPipelineBuilder.Configure("advanced");
+                options.MarkdownPipelineBuilder.Configure("advanced");
             })
             .AddScoped<IOpenAIMarkdownService, OpenAIMarkdownService>()
             .AddScoped<IOpenAIFunctionService, DefaultOpenAIFunctionService>()
@@ -66,13 +67,21 @@ public sealed class ChatStartup : StartupBase
     {
         services
             .AddOpenAIChatProfileServices()
+            .AddScoped<IOpenAILinkGenerator, DefaultOpenAILinkGenerator>()
+            .AddKeyedScoped<IOpenAIMarkdownService, OpenAIChatMarkdownService>("chat")
             .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<OpenAIChatAdminMenu>()
             .AddDataMigration<OpenAIChatSessionIndexMigrations>()
             .AddIndexProvider<OpenAIChatSessionIndexProvider>()
             .AddDisplayDriver<OpenAIChatProfile, OpenAIChatProfileDisplayDriver>()
             .AddDisplayDriver<OpenAIChatSession, OpenAIChatSessionDisplayDriver>()
-            .AddDisplayDriver<OpenAIChatListOptions, OpenAIChatListOptionsDisplayDriver>();
+            .AddDisplayDriver<OpenAIChatListOptions, OpenAIChatListOptionsDisplayDriver>()
+            .Configure<OpenAIChatMarkdownPipelineOptions>(options =>
+            {
+                options.MarkdownPipelineBuilder
+                .Configure("advanced")
+                .Use<NewTabLinkExtension>();
+            });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
