@@ -12,9 +12,11 @@ public sealed class NewTabLinkExtension : IMarkdownExtension
 
     public void Setup(MarkdownPipeline pipeline, IMarkdownRenderer renderer)
     {
-        if (renderer is HtmlRenderer htmlRenderer)
+        if (renderer is not HtmlRenderer htmlRenderer)
         {
-            htmlRenderer.ObjectRenderers.Replace<LinkInlineRenderer>(new CustomLinkRenderer());
+            return;
         }
+
+        htmlRenderer.ObjectRenderers.Replace<LinkInlineRenderer>(new CustomLinkRenderer());
     }
 }

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Routing;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Services;
 
-public class DefaultOpenAILinkGenerator : IOpenAILinkGenerator
+public sealed class DefaultOpenAILinkGenerator : IOpenAILinkGenerator
 {
     private readonly LinkGenerator _linkGenerator;
     private readonly IHttpContextAccessor _httpContextAccessor;

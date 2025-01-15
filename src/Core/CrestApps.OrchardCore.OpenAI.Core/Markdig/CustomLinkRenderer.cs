@@ -11,22 +11,21 @@ public sealed class CustomLinkRenderer : HtmlObjectRenderer<LinkInline>
         if (link.IsImage)
         {
             renderer.Write("<img src=\"").Write(link.Url).Write("\" alt=\"").Write(link.Title).Write("\" />");
+
+            return;
         }
-        else
+
+        renderer.Write("<a href=\"").Write(link.Url).Write("\"");
+
+        if (!string.IsNullOrEmpty(link.Title))
         {
-            renderer.Write("<a href=\"").Write(link.Url).Write("\"");
-
-            if (!string.IsNullOrEmpty(link.Title))
-            {
-                renderer.Write(" title=\"").Write(link.Title).Write("\"");
-            }
-
-            // Add target="_new" to links
-            renderer.Write(" target=\"_new\"");
-
-            renderer.Write(">");
-            renderer.WriteChildren(link);
-            renderer.Write("</a>");
+            renderer.Write(" title=\"").Write(link.Title).Write("\"");
         }
+
+        renderer.Write(" target=\"_new\"");
+
+        renderer.Write(">");
+        renderer.WriteChildren(link);
+        renderer.Write("</a>");
     }
 }
