@@ -4,11 +4,11 @@ using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Services;
 
-public sealed class OpenAIMarkdownService : IOpenAIMarkdownService
+public sealed class OpenAIChatMarkdownService : IOpenAIMarkdownService
 {
     private readonly MarkdownPipeline _markdownPipeline;
 
-    public OpenAIMarkdownService(IOptions<OpenAIMarkdownPipelineOptions> options)
+    public OpenAIChatMarkdownService(IOptions<OpenAIChatMarkdownPipelineOptions> options)
     {
         _markdownPipeline = options.Value.MarkdownPipelineBuilder.Build();
     }

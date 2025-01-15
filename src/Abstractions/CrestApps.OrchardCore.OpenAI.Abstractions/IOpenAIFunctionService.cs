@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.OpenAI.Tools.Functions;
 
-namespace CrestApps.OrchardCore.OpenAI.Core.Services;
+namespace CrestApps.OrchardCore.OpenAI;
 
 public interface IOpenAIFunctionService
 {
