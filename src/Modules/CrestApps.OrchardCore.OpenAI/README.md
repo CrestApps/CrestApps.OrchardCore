@@ -20,18 +20,20 @@ For example, to create a function that allows OpenAI to provide a response based
 ```csharp
 public sealed class GetWeatherFunction : AIFunction
 {
+    private const string LocationProperty = "Location";
+
     public override AIFunctionMetadata Metadata { get; }
 
     public GetWeatherFunction()
     {
         Metadata = new AIFunctionMetadata("get_weather")
         {
-            Description = "Gets the weather",
+            Description = "Retrieves weather information for a specified location.",
             Parameters =
             [
-                new AIFunctionParameterMetadata("location")
+                new AIFunctionParameterMetadata(LocationProperty)
                 {
-                    Description = "The location to get the weather for",
+                    Description = "The geographic location for which the weather information is requested.",
                     IsRequired = true,
                     ParameterType = typeof(string),
                 },
@@ -43,10 +45,14 @@ public sealed class GetWeatherFunction : AIFunction
             },
         };
     }
+
     protected override Task<object> InvokeCoreAsync(IEnumerable<KeyValuePair<string, object>> arguments, CancellationToken cancellationToken)
     {
         // Here you can access the arguments that were defined in Metadata.Parameters above.
-        return Task.FromResult<object>(Random.Shared.NextDouble() > 0.5 ? "It's sunny" : "It's raining");
+
+        var location = arguments.First(x => x.Key == LocationProperty).Value as string;
+
+        return Task.FromResult<object>(Random.Shared.NextDouble() > 0.5 ? $"It's sunny in {location}" : $"It's raining in {location}");
     }
 }
 ```
