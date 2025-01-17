@@ -98,12 +98,12 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
                 continue;
             }
 
-            if (message.Role.Value == Microsoft.Extensions.AI.ChatRole.User.Value)
+            if (message.Role == Microsoft.Extensions.AI.ChatRole.User)
             {
                 azureMessages.Add(new UserChatMessage(message.Text));
                 currentPrompt = message.Text;
             }
-            else if (message.Role.Value == Microsoft.Extensions.AI.ChatRole.Assistant.Value)
+            else if (message.Role == Microsoft.Extensions.AI.ChatRole.Assistant)
             {
                 azureMessages.Add(new AssistantChatMessage(message.Text));
             }

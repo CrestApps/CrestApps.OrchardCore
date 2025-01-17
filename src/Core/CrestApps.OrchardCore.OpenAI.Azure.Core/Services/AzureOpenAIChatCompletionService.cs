@@ -91,7 +91,7 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
 
         var pastMessageCount = metadata.PastMessagesCount ?? OpenAIConstants.DefaultPastMessagesCount;
 
-        var chatMessages = messages.Where(x => (x.Role.Value == ChatRole.User.Value || x.Role.Value == ChatRole.Assistant.Value) && !string.IsNullOrWhiteSpace(x.Text)).ToArray();
+        var chatMessages = messages.Where(x => (x.Role == ChatRole.User || x.Role == ChatRole.Assistant) && !string.IsNullOrWhiteSpace(x.Text)).ToArray();
 
         var skip = GetTotalMessagesToSkip(chatMessages.Length, pastMessageCount);
 
