@@ -57,8 +57,6 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<OpenAIDeployment, OpenAIDeploymentDisplayDriver>()
             .AddTransient<IConfigureOptions<OpenAIConnectionOptions>, OpenAIConnectionOptionsConfiguration>()
             .AddNavigationProvider<OpenAIAdminMenu>();
-
-        services.AddAITool<GetWeatherFunction>();
     }
 }
 
