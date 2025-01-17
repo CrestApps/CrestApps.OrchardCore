@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.OpenAI.Models;
+using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.OpenAI;
 
@@ -18,5 +19,5 @@ public interface IOpenAIChatCompletionService
     /// <param name="messages">A collection of messages that are part of the chat conversation.</param>
     /// <param name="context">The context that may provide additional parameters or configurations for the chat request.</param>
     /// <returns>A task representing the asynchronous operation, with the completion response as the result.</returns>
-    Task<OpenAIChatCompletionResponse> ChatAsync(IEnumerable<OpenAIChatCompletionMessage> messages, OpenAIChatCompletionContext context);
+    Task<OpenAIChatCompletionResponse> ChatAsync(IEnumerable<ChatMessage> messages, OpenAIChatCompletionContext context);
 }

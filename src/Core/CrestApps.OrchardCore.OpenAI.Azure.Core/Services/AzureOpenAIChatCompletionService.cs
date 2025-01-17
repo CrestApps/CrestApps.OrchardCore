@@ -1,21 +1,14 @@
-using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
+using System.ClientModel;
+using Azure.AI.OpenAI;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Models;
-using CrestApps.OrchardCore.OpenAI.Tools.Functions;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
+using CrestApps.OrchardCore.OpenAI.Tools;
+using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore.Contents.Indexing;
 using OrchardCore.Entities;
-using OrchardCore.Search.AzureAI.Models;
-using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
@@ -23,49 +16,26 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
 {
     private const string _useMarkdownSyntaxSystemMessage = "- Provide a response using Markdown syntax.";
 
-    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
-
-    static AzureOpenAIChatCompletionService()
-    {
-        _jsonSerializerOptions.Converters.Add(OpenAIChatFunctionPropertyConverter.Instance);
-    }
-
-    private readonly IHttpClientFactory _httpClientFactory;
     private readonly IOpenAIDeploymentStore _deploymentStore;
-    private readonly IOpenAILinkGenerator _linkGenerator;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IEnumerable<IOpenAIChatToolDescriptor> _toolDescriptors;
     private readonly OpenAIConnectionOptions _connectionOptions;
-    private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
-    private readonly IOpenAIFunctionService _openAIFunctionService;
     private readonly ILogger _logger;
 
     public AzureOpenAIChatCompletionService(
-        IHttpClientFactory httpClientFactory,
         IOpenAIDeploymentStore deploymentStore,
-        IOpenAILinkGenerator linkGenerator,
         IOptions<OpenAIConnectionOptions> connectionOptions,
-        IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
-        IServiceProvider serviceProvider,
-        IOpenAIFunctionService openAIFunctionService,
+        IEnumerable<IOpenAIChatToolDescriptor> toolDescriptors,
         ILogger<AzureOpenAIChatCompletionService> logger)
     {
-        _httpClientFactory = httpClientFactory;
         _deploymentStore = deploymentStore;
-        _linkGenerator = linkGenerator;
-        _serviceProvider = serviceProvider;
+        _toolDescriptors = toolDescriptors;
         _connectionOptions = connectionOptions.Value;
-        _azureAISearchDefaultOptions = azureAISearchDefaultOptions.Value;
-        _openAIFunctionService = openAIFunctionService;
         _logger = logger;
     }
 
     public string Name { get; } = AzureProfileSource.Key;
 
-    public async Task<OpenAIChatCompletionResponse> ChatAsync(IEnumerable<OpenAIChatCompletionMessage> messages, OpenAIChatCompletionContext context)
+    public async Task<OpenAIChatCompletionResponse> ChatAsync(IEnumerable<ChatMessage> messages, OpenAIChatCompletionContext context)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -95,43 +65,70 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
 
         var metadata = context.Profile.As<OpenAIChatProfileMetadata>();
 
-        var systemMessage = GetSystemMessage(context);
+        var chatClient = GetChatClient(connection, deployment.Name);
 
-        var (request, includeContentItemCitations) = await BuildRequestAsync(context, metadata, context.Profile.FunctionNames, systemMessage);
-
-        var chatMessages = messages.Where(x => (x.Role == OpenAIConstants.Roles.User || x.Role == OpenAIConstants.Roles.Assistant) && !string.IsNullOrWhiteSpace(x.Content)).ToArray();
-
-        var finalMessages = new[]
+        var chatOptions = new ChatOptions()
         {
-            OpenAIChatCompletionMessage.CreateMessage(systemMessage, OpenAIConstants.Roles.System),
+            Temperature = metadata.Temperature ?? OpenAIConstants.DefaultTemperature,
+            TopP = metadata.TopP ?? OpenAIConstants.DefaultTopP,
+            FrequencyPenalty = metadata.FrequencyPenalty ?? OpenAIConstants.DefaultFrequencyPenalty,
+            PresencePenalty = metadata.PresencePenalty ?? OpenAIConstants.DefaultPresencePenalty,
+            MaxOutputTokens = metadata.MaxTokens ?? OpenAIConstants.DefaultMaxOutputTokens,
         };
 
-        var pastMessage = metadata.PastMessagesCount ?? OpenAIConstants.DefaultPastMessagesCount;
-
-        if (pastMessage > 0 && chatMessages.Length > pastMessage)
+        if (!context.DisableTools)
         {
-            var skip = chatMessages.Length - pastMessage;
-
-            request.Messages = finalMessages.Concat(chatMessages.Skip(skip).Take(pastMessage));
-        }
-        else
-        {
-            request.Messages = finalMessages.Concat(chatMessages);
+            chatOptions.ToolMode = ChatToolMode.Auto;
+            chatOptions.Tools = _toolDescriptors
+            .Where(x => (context.Profile.FunctionNames ?? []).Contains(x.Name))
+            .Select(x => x.Tool)
+            .ToArray();
         }
 
-        var httpClient = GetHttpClient(connection);
-
-        var data = await GetResponseDataAsync(httpClient, request, deployment.Name);
-
-        if (data is null)
+        var prompts = new List<ChatMessage>
         {
-            return OpenAIChatCompletionResponse.Empty;
+            new(ChatRole.System, GetSystemMessage(context)),
+        };
+
+        var pastMessageCount = metadata.PastMessagesCount ?? OpenAIConstants.DefaultPastMessagesCount;
+
+        var chatMessages = messages.Where(x => (x.Role.Value == ChatRole.User.Value || x.Role.Value == ChatRole.Assistant.Value) && !string.IsNullOrWhiteSpace(x.Text)).ToArray();
+
+        var skip = GetTotalMessagesToSkip(chatMessages.Length, pastMessageCount);
+
+        prompts.AddRange(chatMessages.Skip(skip).Take(pastMessageCount));
+
+        try
+        {
+            var data = await chatClient.CompleteAsync(prompts, chatOptions);
+
+            if (data?.Choices is not null)
+            {
+                return new OpenAIChatCompletionResponse
+                {
+                    Choices = data.Choices.Select(x => new OpenAIChatCompletionChoice()
+                    {
+                        Content = x.Text,
+                    }),
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while chatting with the OpenAI service.");
         }
 
-        return GetResponse(
-            data,
-            includeContentItemCitations,
-            request.Messages.LastOrDefault(x => x.Role == OpenAIConstants.Roles.User)?.Content);
+        return OpenAIChatCompletionResponse.Empty;
+    }
+
+    private static int GetTotalMessagesToSkip(int totalMessages, int pastMessageCount)
+    {
+        if (pastMessageCount > 0 && totalMessages > pastMessageCount)
+        {
+            return totalMessages - pastMessageCount;
+        }
+
+        return 0;
     }
 
     private static string GetSystemMessage(OpenAIChatCompletionContext context)
@@ -151,277 +148,16 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
         return systemMessage;
     }
 
-    private HttpClient GetHttpClient(OpenAIConnectionEntry connection)
+    private static IChatClient GetChatClient(OpenAIConnectionEntry connection, string deploymentName)
     {
-        var httpClient = _httpClientFactory.CreateClient(AzureOpenAIConstants.HttpClientName);
+        var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
 
-        httpClient.BaseAddress = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
-        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("api-key", connection.GetApiKey());
-        httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json");
+        var azureClient = new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey()));
 
-        return httpClient;
-    }
-
-    private async Task<AzureCompletionResponse> GetResponseDataAsync(HttpClient httpClient, AzureCompletionRequest request, string deploymentName)
-    {
-        var payload = JsonContent.Create(request, options: _jsonSerializerOptions);
-
-        var response = await httpClient.PostAsync($"openai/deployments/{deploymentName}/chat/completions?api-version=2024-05-01-preview", payload);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var content = await response.Content.ReadAsStringAsync();
-            _logger.LogError("Unable to create chat using Azure REST API. Content: {Content}", content);
-
-            return null;
-        }
-
-        var data = await response.Content.ReadFromJsonAsync<AzureCompletionResponse>(_jsonSerializerOptions);
-
-        if (data.Choices.Length > 0 && data.Choices[0].FinishReason == "function_call" && data.Choices[0].Message?.FunctionCall != null)
-        {
-            var message = data.Choices[0].Message;
-            var function = _openAIFunctionService.FindByName(message.FunctionCall.Name);
-
-            if (function is not null)
-            {
-                JsonObject arguments;
-
-                try
-                {
-                    arguments = JsonSerializer.Deserialize<JsonObject>(message.FunctionCall.Arguments);
-                }
-                catch
-                {
-                    arguments = [];
-                }
-
-                var result = await function.InvokeAsync(arguments);
-
-                string functionMessage;
-
-                if (result is string str)
-                {
-                    functionMessage = str;
-                }
-                else
-                {
-                    functionMessage = JsonSerializer.Serialize(result, _jsonSerializerOptions);
-                }
-
-                request.Messages = request.Messages.Concat([OpenAIChatCompletionMessage.CreateFunctionMessage(functionMessage, message.FunctionCall.Name)]);
-
-                data = await GetResponseDataAsync(httpClient, request, deploymentName);
-            }
-        }
-
-        return data;
-    }
-
-    private async Task<(AzureCompletionRequest, bool)> BuildRequestAsync(OpenAIChatCompletionContext context, OpenAIChatProfileMetadata metadata, string[] functionNames, string systemMessage)
-    {
-        var request = new AzureCompletionRequest()
-        {
-            Temperature = metadata.Temperature ?? OpenAIConstants.DefaultTemperature,
-            TopP = metadata.TopP ?? OpenAIConstants.DefaultTopP,
-            FrequencyPenalty = metadata.FrequencyPenalty ?? OpenAIConstants.DefaultFrequencyPenalty,
-            PresencePenalty = metadata.PresencePenalty ?? OpenAIConstants.DefaultPresencePenalty,
-            MaxTokens = metadata.MaxTokens ?? OpenAIConstants.DefaultMaxTokens,
-        };
-
-        var includeContentItemCitations = false;
-
-        if (functionNames != null && functionNames.Length > 0)
-        {
-            var activeNames = _openAIFunctionService.FindByNames(functionNames);
-
-            if (activeNames.Any())
-            {
-                request.Functions = activeNames;
-            }
-        }
-
-        if (context.Profile.Source == AzureWithAzureAISearchProfileSource.Key &&
-            context.Profile.TryGet<AzureAIChatProfileAISearchMetadata>(out var searchAIMetadata))
-        {
-            // Search against AISearch instance.
-            var dataSource = new AzureCompletionDataSource()
-            {
-                Type = "azure_search",
-                Parameters = [],
-            };
-
-            var azureAISearchIndexSettingsService = _serviceProvider.GetRequiredService<AzureAISearchIndexSettingsService>();
-
-            var indexSettings = await azureAISearchIndexSettingsService.GetAsync(searchAIMetadata.IndexName);
-
-            if (indexSettings == null || string.IsNullOrEmpty(indexSettings.IndexFullName) || !_azureAISearchDefaultOptions.ConfigurationExists())
-            {
-                return (request, includeContentItemCitations);
-            }
-
-            includeContentItemCitations = indexSettings.IndexedContentTypes is not null
-                && indexSettings.IndexedContentTypes.Length > 0
-                && searchAIMetadata.IncludeContentItemCitations;
-
-            var keyField = indexSettings.IndexMappings?.FirstOrDefault(x => x.IsKey);
-
-            dataSource.Parameters["endpoint"] = _azureAISearchDefaultOptions.Endpoint;
-            dataSource.Parameters["index_name"] = indexSettings.IndexFullName;
-            dataSource.Parameters["semantic_configuration"] = "default";
-            dataSource.Parameters["query_type"] = "simple";
-            dataSource.Parameters["fields_mapping"] = GetFieldMapping(keyField);
-            dataSource.Parameters["in_scope"] = true;
-            dataSource.Parameters["role_information"] = systemMessage;
-            dataSource.Parameters["filter"] = null;
-            dataSource.Parameters["strictness"] = searchAIMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
-            dataSource.Parameters["top_n_documents"] = searchAIMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
-
-            if (_azureAISearchDefaultOptions.Credential is not null)
-            {
-                dataSource.Parameters["authentication"] = new JsonObject()
-                {
-                    {"type","api_key"},
-                    {"key", _azureAISearchDefaultOptions.Credential.Key},
-                };
-            }
-
-            request.DataSources =
-            [
-                dataSource,
-            ];
-        }
-
-        return (request, includeContentItemCitations);
-    }
-
-    private OpenAIChatCompletionResponse GetResponse(
-        AzureCompletionResponse data,
-        bool includeContentItemCitations,
-        string userPrompt)
-    {
-        Dictionary<string, object> routeValues = null;
-
-        if (includeContentItemCitations)
-        {
-            routeValues = new Dictionary<string, object>()
-            {
-                { "prompt", userPrompt },
-            };
-        }
-
-        var results = new List<OpenAIChatCompletionChoice>();
-
-        foreach (var choice in data.Choices)
-        {
-            if (choice.Message?.Context?.Citations == null || choice.Message.Context.Citations.Length == 0 || !includeContentItemCitations)
-            {
-                results.Add(new OpenAIChatCompletionChoice()
-                {
-                    Content = Regex.Replace(choice.Message?.Content ?? string.Empty, @"\[doc\d+\]", string.Empty),
-                });
-
-                continue;
-            }
-
-            var responseChoice = new OpenAIChatCompletionChoice()
-            {
-                ContentItemIds = [],
-            };
-
-            var referenceBuilder = new StringBuilder();
-
-            // Key is contentItemId and the index to use as template.
-            var map = new Dictionary<string, int>();
-
-            // Sometimes, there are templates like this [doc1][doc2],
-            // to avoid concatenation two numbers, we add a comma.
-            var choiceMessage = (choice.Message?.Content ?? string.Empty)?.Replace("][doc", "][--reference-separator--][doc");
-
-            for (var i = 0; i < choice.Message.Context.Citations.Length; i++)
-            {
-                var citation = choice.Message.Context.Citations[i];
-                var referenceIndex = i + 1;
-
-                var citationTemplate = $"[doc{i + 1}]";
-
-                var needsReference = choice.Message.Content.Contains(citationTemplate);
-
-                // Use the reference when the id is 26 chars long (content item id).
-                // Some times Azure may have records that not have content item.
-                if (needsReference && !string.IsNullOrEmpty(citation.FilePath))
-                {
-                    var referenceTitle = citation.Title;
-
-                    if (string.IsNullOrWhiteSpace(referenceTitle))
-                    {
-                        referenceTitle = citationTemplate;
-                    }
-
-                    if (map.TryGetValue(citation.FilePath, out var index))
-                    {
-                        // Reuse existing citation reference.
-                        referenceIndex = index;
-                    }
-                    else
-                    {
-                        referenceIndex = map.LastOrDefault().Value + 1;
-
-                        responseChoice.ContentItemIds.Add(citation.FilePath);
-
-                        // Create new citation reference.
-                        map[citation.FilePath] = referenceIndex;
-
-                        var link = _linkGenerator.GetContentItemPath(citation.FilePath, routeValues);
-
-                        if (!string.IsNullOrEmpty(link))
-                        {
-                            referenceBuilder.AppendLine($"{referenceIndex}. [{referenceTitle}]({link})");
-                        }
-                        else
-                        {
-                            referenceBuilder.AppendLine($"{referenceIndex}. {referenceTitle}");
-                        }
-                    }
-                }
-
-                choiceMessage = choiceMessage.Replace(citationTemplate, needsReference ? $"<sup>{referenceIndex}</sup>" : string.Empty);
-            }
-
-            // During replacements, we could end up with multiple [--reference-separator--]
-            // back to back. We can replace them with a single comma.
-            responseChoice.Content = Regex.Replace(choiceMessage, @"(\[--reference-separator--\])+", "<sup>,</sup>")
-                + Environment.NewLine + referenceBuilder.ToString();
-
-            results.Add(responseChoice);
-        }
-
-        return new OpenAIChatCompletionResponse
-        {
-            Choices = results,
-        };
-    }
-
-    private static JsonObject GetFieldMapping(AzureAISearchIndexMap keyField)
-    {
-        var mapping = new JsonObject()
-        {
-            { "content_fields_separator", Environment.NewLine },
-            { "title_field", GetBestTitleField(keyField) },
-            { "filepath_field", keyField?.AzureFieldKey },
-            { "url_field", null },
-        };
-
-        return mapping;
-    }
-
-    private static string GetBestTitleField(AzureAISearchIndexMap keyField)
-    {
-        if (keyField == null || keyField.AzureFieldKey == IndexingConstants.ContentItemIdKey)
-        {
-            return AzureAISearchIndexManager.DisplayTextAnalyzedKey;
-        }
-
-        return null;
+        return azureClient
+            .AsChatClient(deploymentName)
+            .AsBuilder()
+            .UseFunctionInvocation()
+            .Build();
     }
 }

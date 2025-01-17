@@ -6,7 +6,7 @@ public static class OpenAIConstants
 
     public const float DefaultTemperature = 0;
 
-    public const int DefaultMaxTokens = 800;
+    public const int DefaultMaxOutputTokens = 800;
 
     public const float DefaultTopP = 1;
 
@@ -43,10 +43,5 @@ public static class OpenAIConstants
         public const string ChatUtilityCompletionRouteName = "OpenAIChatUtilityCompletion";
 
         public const string ChatSessionRouteName = "OpenAIChatSession";
-    }
-
-    public static class Security
-    {
-        public const string ExternalChatCORSPolicyName = "EnableExternalChatPolicy";
     }
 }

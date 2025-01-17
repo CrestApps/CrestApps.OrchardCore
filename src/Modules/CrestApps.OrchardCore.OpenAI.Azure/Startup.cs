@@ -82,7 +82,7 @@ public sealed class AISearchStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddOpenAIChatCompletionService<AzureOpenAIChatCompletionService>(AzureWithAzureAISearchProfileSource.Key);
+        services.AddOpenAIChatCompletionService<AzureOpenAIWithSearchAIChatCompletionService>(AzureWithAzureAISearchProfileSource.Key);
         services.AddOpenAIChatProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
         services.AddScoped<IDisplayDriver<OpenAIChatProfile>, AzureOpenAIChatProfileSearchAIDisplayDriver>();
         services.AddScoped<IOpenAIChatProfileHandler, AzureOpenAIChatProfileWithAISearchHandler>();

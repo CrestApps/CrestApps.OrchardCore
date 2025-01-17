@@ -22,11 +22,7 @@ public sealed class OpenAIChatPermissionsProvider : IPermissionProvider
 
     public async Task<IEnumerable<Permission>> GetPermissionsAsync()
     {
-        var permissions = new List<Permission>()
-        {
-            OpenAIChatPermissions.ManageAIChatProfiles,
-            OpenAIChatPermissions.QueryAnyAIChatProfile,
-        };
+        var permissions = new List<Permission>(_allPermissions);
 
         foreach (var profile in await _chatProfileStore.GetProfilesAsync(OpenAIChatProfileType.Chat))
         {

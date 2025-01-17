@@ -8,7 +8,7 @@
     <label asp-for="MaxTokens" class="@Orchard.GetLabelClasses()">@T["Max response"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="MaxTokens" step="4" min="4" max="2048">
-        <span class="hint">@T["Set a limit on the number of tokens per model response. The supported number of tokens are shared between the prompt (including system message, examples, message history, and user query) and the model's response. One token is roughly 4 characters for typical English text. Leave it blank to use the current default of {0}.", OpenAIConstants.DefaultMaxTokens]</span>
+        <span class="hint">@T["Set a limit on the number of tokens per model response. The supported number of tokens are shared between the prompt (including system message, examples, message history, and user query) and the model's response. One token is roughly 4 characters for typical English text. Leave it blank to use the current default of {0}.", OpenAIConstants.DefaultMaxOutputTokens]</span>
     </div>
 </div>
 
