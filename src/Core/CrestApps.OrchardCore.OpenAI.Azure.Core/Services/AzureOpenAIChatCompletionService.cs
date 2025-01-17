@@ -2,7 +2,6 @@ using Azure.AI.OpenAI;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Models;
-using CrestApps.OrchardCore.OpenAI.Tools;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -14,18 +13,18 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionService
 {
     private readonly IOpenAIDeploymentStore _deploymentStore;
-    private readonly IEnumerable<IOpenAIChatToolDescriptor> _toolDescriptors;
+    private readonly IAIToolsService _toolsService;
     private readonly OpenAIConnectionOptions _connectionOptions;
     private readonly ILogger _logger;
 
     public AzureOpenAIChatCompletionService(
         IOpenAIDeploymentStore deploymentStore,
         IOptions<OpenAIConnectionOptions> connectionOptions,
-        IEnumerable<IOpenAIChatToolDescriptor> toolDescriptors,
+        IAIToolsService toolsService,
         ILogger<AzureOpenAIChatCompletionService> logger)
     {
         _deploymentStore = deploymentStore;
-        _toolDescriptors = toolDescriptors;
+        _toolsService = toolsService;
         _connectionOptions = connectionOptions.Value;
         _logger = logger;
     }
@@ -73,13 +72,22 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
             MaxOutputTokens = metadata.MaxTokens ?? OpenAIConstants.DefaultMaxOutputTokens,
         };
 
-        if (!context.DisableTools)
+        if (!context.DisableTools && context.Profile.FunctionNames is not null)
         {
             chatOptions.ToolMode = ChatToolMode.Auto;
-            chatOptions.Tools = _toolDescriptors
-            .Where(x => (context.Profile.FunctionNames ?? []).Contains(x.Name))
-            .Select(x => x.Tool)
-            .ToArray();
+            chatOptions.Tools = [];
+
+            foreach (var functionName in context.Profile.FunctionNames)
+            {
+                var function = _toolsService.GetFunction(functionName);
+
+                if (function is null)
+                {
+                    continue;
+                }
+
+                chatOptions.Tools.Add(function);
+            }
         }
 
         var prompts = new List<ChatMessage>

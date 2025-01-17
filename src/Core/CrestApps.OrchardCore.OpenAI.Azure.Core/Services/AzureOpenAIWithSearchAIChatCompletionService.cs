@@ -8,7 +8,6 @@ using Azure.AI.OpenAI.Chat;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Models;
-using CrestApps.OrchardCore.OpenAI.Tools;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -32,7 +31,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
     private readonly IOpenAIDeploymentStore _deploymentStore;
     private readonly IOpenAILinkGenerator _openAILinkGenerator;
     private readonly IServiceProvider _serviceProvider;
-    private readonly IEnumerable<IOpenAIChatToolDescriptor> _toolDescriptors;
+    private readonly IAIToolsService _toolsService;
     private readonly OpenAIConnectionOptions _connectionOptions;
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
     private readonly ILogger _logger;
@@ -43,13 +42,13 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
         IOpenAILinkGenerator openAILinkGenerator,
         IServiceProvider serviceProvider,
-        IEnumerable<IOpenAIChatToolDescriptor> toolDescriptors,
+        IAIToolsService toolService,
         ILogger<AzureOpenAIChatCompletionService> logger)
     {
         _deploymentStore = deploymentStore;
         _openAILinkGenerator = openAILinkGenerator;
         _serviceProvider = serviceProvider;
-        _toolDescriptors = toolDescriptors;
+        _toolsService = toolService;
         _connectionOptions = connectionOptions.Value;
         _azureAISearchDefaultOptions = azureAISearchDefaultOptions.Value;
         _logger = logger;
@@ -161,9 +160,9 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
 
         foreach (var toolCall in tollCalls)
         {
-            var tool = _toolDescriptors.FirstOrDefault(x => x.Name == toolCall.FunctionName);
+            var function = _toolsService.GetFunction(toolCall.FunctionName);
 
-            if (tool is null || tool.Tool is not Microsoft.Extensions.AI.AIFunction function)
+            if (function is null)
             {
                 continue;
             }
@@ -241,10 +240,11 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
 
         if (!context.DisableTools)
         {
-            foreach (var toolDescriptor in _toolDescriptors)
+            foreach (var functionName in context.Profile.FunctionNames)
             {
-                if (!context.Profile.FunctionNames.Contains(toolDescriptor.Name) ||
-                    toolDescriptor.Tool is not Microsoft.Extensions.AI.AIFunction function)
+                var function = _toolsService.GetFunction(functionName);
+
+                if (function is null)
                 {
                     continue;
                 }
@@ -253,14 +253,14 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
                 {
                     BinaryData parameters = null;
 
-                    if (function.Metadata?.Parameters != null)
+                    if (function.Metadata.Parameters != null)
                     {
                         var arguments = new AzureChatFunctionParameters()
                         {
                             Properties = [],
                         };
 
-                        foreach (var data in function.Metadata?.Parameters)
+                        foreach (var data in function.Metadata.Parameters)
                         {
                             arguments.Properties.Add(data.Name, new AzureChatFunctionParameterArgument
                             {
@@ -275,11 +275,11 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
                         parameters = BinaryData.FromObjectAsJson(arguments, _jsonSerializerOptions);
                     }
 
-                    chatOptions.Tools.Add(ChatTool.CreateFunctionTool(toolDescriptor.Name, toolDescriptor.Description, parameters));
+                    chatOptions.Tools.Add(ChatTool.CreateFunctionTool(function.Metadata.Name, function.Metadata.Description, parameters));
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Unable to add the tool '{ToolName}' to the chat options.", toolDescriptor.Name);
+                    _logger.LogError(ex, "Unable to add the tool '{ToolName}' to the chat options.", function.Metadata.Name);
                 }
             }
         }

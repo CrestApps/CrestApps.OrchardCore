@@ -1,23 +1,16 @@
-using System.ComponentModel;
-using CrestApps.OrchardCore.OpenAI.Tools;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.OpenAI.Core;
 
-public sealed class WeatherTool : AIFunction, IOpenAIChatToolDescriptor
+public sealed class GetWeatherFunction : AIFunction
 {
-    public string Name => "get_weather";
-
-    public string Description => "Gets the weather!";
-
-    public AITool Tool => this;
-
     public override AIFunctionMetadata Metadata { get; }
 
-    public WeatherTool()
+    public GetWeatherFunction()
     {
-        Metadata = new AIFunctionMetadata(Name)
+        Metadata = new AIFunctionMetadata("get_weather")
         {
+            Description = "Gets the weather",
             Parameters =
             [
                 new AIFunctionParameterMetadata("location")
@@ -34,15 +27,9 @@ public sealed class WeatherTool : AIFunction, IOpenAIChatToolDescriptor
             },
         };
     }
-
     protected override Task<object> InvokeCoreAsync(IEnumerable<KeyValuePair<string, object>> arguments, CancellationToken cancellationToken)
     {
-        return Task.FromResult<object>(GetWeather());
+        // Here you can access the arguments that were defined in Metadata.Parameters above.
+        return Task.FromResult<object>(Random.Shared.NextDouble() > 0.5 ? "It's sunny" : "It's raining");
     }
-
-    //AIFunctionFactory.Create(GetWeather);
-
-
-    [Description("Gets the weather")]
-    static string GetWeather() => Random.Shared.NextDouble() > 0.5 ? "It's sunny" : "It's raining";
 }

@@ -12,7 +12,6 @@ using CrestApps.OrchardCore.OpenAI.Migrations;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.Recipes;
 using CrestApps.OrchardCore.OpenAI.Services;
-using CrestApps.OrchardCore.OpenAI.Tools;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
 using CrestApps.OrchardCore.OpenAI.Workflows.Drivers;
 using CrestApps.OrchardCore.OpenAI.Workflows.Models;
@@ -49,6 +48,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddOpenAIDeploymentServices()
+            .AddSingleton<IAIToolsService, DefaultAIToolsService>()
             .Configure<OpenAIMarkdownPipelineOptions>(options =>
             {
                 options.MarkdownPipelineBuilder.Configure("advanced");
@@ -58,7 +58,7 @@ public sealed class Startup : StartupBase
             .AddTransient<IConfigureOptions<OpenAIConnectionOptions>, OpenAIConnectionOptionsConfiguration>()
             .AddNavigationProvider<OpenAIAdminMenu>();
 
-        services.AddScoped<IOpenAIChatToolDescriptor, WeatherTool>();
+        services.AddAITool<GetWeatherFunction>();
     }
 }
 

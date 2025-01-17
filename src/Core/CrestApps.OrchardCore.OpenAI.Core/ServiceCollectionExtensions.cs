@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
@@ -73,6 +74,14 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<TService>();
         services.TryAddScoped<IOpenAIChatCompletionService>(sp => sp.GetService<TService>());
         services.AddKeyedScoped<IOpenAIChatCompletionService>(sourceKey, (sp, key) => sp.GetService<TService>());
+
+        return services;
+    }
+
+    public static IServiceCollection AddAITool<TTool>(this IServiceCollection services)
+        where TTool : AITool
+    {
+        services.AddTransient<AITool, TTool>();
 
         return services;
     }
