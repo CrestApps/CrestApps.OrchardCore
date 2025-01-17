@@ -18,7 +18,6 @@ using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.OpenAI.Controllers;
 
-[Admin("OpenAI/Deployments/{action}/{id?}", "OpenAIDeployments{action}")]
 public sealed class DeploymentsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
@@ -56,6 +55,7 @@ public sealed class DeploymentsController : Controller
         S = stringLocalizer;
     }
 
+    [Admin("OpenAI/Deployments", "OpenAIDeploymentsIndex")]
     public async Task<IActionResult> Index(
         OpenAIDeploymentOptions options,
         PagerParameters pagerParameters,
@@ -70,7 +70,7 @@ public sealed class DeploymentsController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var result = await _deploymentManager.PageQueriesAsync(pager.Page, pager.PageSize, new QueryContext()
+        var result = await _deploymentManager.PageQueriesAsync(pager.Page, pager.PageSize, new QueryContext
         {
             Name = options.Search,
         });
@@ -111,6 +111,7 @@ public sealed class DeploymentsController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
+    [Admin("OpenAI/Deployments", "OpenAIDeploymentsIndex")]
     public ActionResult IndexFilterPOST(ListDeploymentsViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
@@ -119,23 +120,29 @@ public sealed class DeploymentsController : Controller
         });
     }
 
-    public async Task<ActionResult> Create(string id)
+    [Admin("OpenAI/Deployments/Create/{source}", "OpenAIDeploymentsCreate")]
+    public async Task<ActionResult> Create(string source)
     {
+        if (string.IsNullOrEmpty(source))
+        {
+            return NotFound();
+        }
+
         if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageModelDeployments))
         {
             return Forbid();
         }
 
-        var source = _serviceProvider.GetKeyedService<IOpenAIDeploymentSource>(id);
+        var provider = _serviceProvider.GetKeyedService<IOpenAIDeploymentSource>(source);
 
-        if (source == null)
+        if (provider == null)
         {
-            await _notifier.ErrorAsync(H["Unable to find a deployment-source that can handle the source '{Source}'.", id]);
+            await _notifier.ErrorAsync(H["Unable to find a deployment-source that can handle the source '{Source}'.", source]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        var deployment = await _deploymentManager.NewAsync(source: id);
+        var deployment = await _deploymentManager.NewAsync(source);
 
         if (deployment == null)
         {
@@ -146,7 +153,7 @@ public sealed class DeploymentsController : Controller
 
         var model = new OpenAIDeploymentViewModel
         {
-            DisplayName = source.DisplayName,
+            DisplayName = provider.DisplayName,
             Editor = await _deploymentDisplayManager.BuildEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -155,23 +162,24 @@ public sealed class DeploymentsController : Controller
 
     [HttpPost]
     [ActionName(nameof(Create))]
-    public async Task<ActionResult> CreatePOST(string id)
+    [Admin("OpenAI/Deployments/Create/{source}", "OpenAIDeploymentsCreate")]
+    public async Task<ActionResult> CreatePOST(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageModelDeployments))
         {
             return Forbid();
         }
 
-        var source = _serviceProvider.GetKeyedService<IOpenAIDeploymentSource>(id);
+        var provider = _serviceProvider.GetKeyedService<IOpenAIDeploymentSource>(source);
 
-        if (source == null)
+        if (provider == null)
         {
-            await _notifier.ErrorAsync(H["Unable to find a deployment-source that can handle the source '{Source}'.", id]);
+            await _notifier.ErrorAsync(H["Unable to find a deployment-source that can handle the source '{Source}'.", source]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        var deployment = await _deploymentManager.NewAsync(source: id);
+        var deployment = await _deploymentManager.NewAsync(source);
 
         if (deployment == null)
         {
@@ -182,7 +190,7 @@ public sealed class DeploymentsController : Controller
 
         var model = new OpenAIDeploymentViewModel
         {
-            DisplayName = source.DisplayName,
+            DisplayName = provider.DisplayName,
             Editor = await _deploymentDisplayManager.UpdateEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -198,6 +206,7 @@ public sealed class DeploymentsController : Controller
         return View(model);
     }
 
+    [Admin("OpenAI/Deployments/Edit/{id}", "OpenAIDeploymentsEdit")]
     public async Task<ActionResult> Edit(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageModelDeployments))
@@ -223,6 +232,7 @@ public sealed class DeploymentsController : Controller
 
     [HttpPost]
     [ActionName(nameof(Edit))]
+    [Admin("OpenAI/Deployments/Edit/{id}", "OpenAIDeploymentsEdit")]
     public async Task<ActionResult> EditPOST(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageModelDeployments))
@@ -259,6 +269,7 @@ public sealed class DeploymentsController : Controller
     }
 
     [HttpPost]
+    [Admin("OpenAI/Deployments/Delete/{id}", "OpenAIDeploymentsDelete")]
     public async Task<IActionResult> Delete(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageModelDeployments))
@@ -283,6 +294,7 @@ public sealed class DeploymentsController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
+    [Admin("OpenAI/Deployments", "OpenAIDeploymentsIndex")]
     public async Task<ActionResult> IndexPost(OpenAIDeploymentOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OpenAIChatPermissions.ManageModelDeployments))

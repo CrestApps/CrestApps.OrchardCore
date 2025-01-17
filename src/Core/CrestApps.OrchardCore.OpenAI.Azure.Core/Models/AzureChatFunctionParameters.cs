@@ -19,6 +19,8 @@ internal sealed class AzureChatFunctionParameterArgument
 
     public bool IsRequired { get; set; }
 
+    public object DefaultValue { get; set; }
+
     [JsonPropertyName("enum")]
     public string[] Values { get; set; }
 }
