@@ -1,4 +1,3 @@
-using System.ClientModel;
 using Azure.AI.OpenAI;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
@@ -152,7 +151,7 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
     {
         var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
 
-        var azureClient = new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey()));
+        var azureClient = new AzureOpenAIClient(endpoint, connection.GetApiKeyCredential());
 
         return azureClient
             .AsChatClient(deploymentName)

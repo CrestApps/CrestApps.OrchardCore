@@ -1,3 +1,4 @@
+using System.ClientModel;
 using Azure.Core;
 using Azure.Identity;
 using CrestApps.OrchardCore.OpenAI.Models;
@@ -42,6 +43,9 @@ public static class OpenAIConnectionEntryExtensions
 
         return new DefaultAzureCredential();
     }
+
+    public static ApiKeyCredential GetApiKeyCredential(this OpenAIConnectionEntry entry)
+        => new ApiKeyCredential(entry.GetApiKey());
 
     private static string GetValueInternal(this OpenAIConnectionEntry entry, string key, bool throwException)
     {

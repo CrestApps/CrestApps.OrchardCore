@@ -21,6 +21,7 @@ using OrchardCore.Contents.Drivers;
 using OrchardCore.Contents.Models;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Descriptors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Liquid;
@@ -42,9 +43,9 @@ public sealed class Startup : StartupBase
     {
         services.AddUserCacheService();
         services.TryAddBasicDisplayNameProvider();
-        services.AddScoped<IDisplayDriver<UserMenu>, DisplayNameUserMenuDisplayDriver>();
-        services.AddScoped<IDisplayDriver<UserBadgeContext>, UserBadgeNameDisplayDriver>();
-        services.AddScoped<IShapeTableProvider, DisplayUserShapeTableProvider>();
+        services.AddDisplayDriver<UserMenu, DisplayNameUserMenuDisplayDriver>();
+        services.AddDisplayDriver<UserBadgeContext, UserBadgeNameDisplayDriver>();
+        services.AddShapeTableProvider<DisplayUserShapeTableProvider>();
     }
 }
 
@@ -62,7 +63,7 @@ public sealed class CoreContentUserStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IShapeTableProvider, ContentShapeTableProvider>();
+        services.AddShapeTableProvider<ContentShapeTableProvider>();
         services.AddScoped<IContentDisplayDriver, UserContentsDriver>();
     }
 }
@@ -97,7 +98,7 @@ public sealed class DisplayNameStartup : StartupBase
 
         services.AddDisplayNameProvider();
         services.AddContentPart<UserFullNamePart>();
-        services.AddScoped<IDisplayDriver<User>, UserFullNamePartDisplayDriver>();
+        services.AddDisplayDriver<User, UserFullNamePartDisplayDriver>();
 
         services.AddDataMigration<UserFullNameMigrations>();
         services.AddIndexProvider<UserFullNameIndexProvider>();

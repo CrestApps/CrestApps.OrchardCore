@@ -10,8 +10,6 @@ public static class AzureOpenAIConstants
 
     public const string AzureDeploymentSourceName = "Azure";
 
-    public const string HttpClientName = "AzureOpenAIClient";
-
     public static class Feature
     {
         public const string Area = "CrestApps.OrchardCore.OpenAI.Azure";

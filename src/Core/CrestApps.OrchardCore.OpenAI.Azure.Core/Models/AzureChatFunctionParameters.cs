@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 
-internal class AzureChatFunctionParameters
+internal sealed class AzureChatFunctionParameters
 {
     public string Type { get; set; } = "object";
 
@@ -11,7 +11,7 @@ internal class AzureChatFunctionParameters
     public IEnumerable<string> Required { get; set; }
 }
 
-internal class AzureChatFunctionParameterArgument
+internal sealed class AzureChatFunctionParameterArgument
 {
     public string Type { get; set; }
 

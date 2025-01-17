@@ -54,7 +54,7 @@ public sealed class Startup : StartupBase
                 options.MarkdownPipelineBuilder.Configure("advanced");
             })
             .AddScoped<IOpenAIMarkdownService, OpenAIMarkdownService>()
-            .AddScoped<IDisplayDriver<OpenAIDeployment>, OpenAIDeploymentDisplayDriver>()
+            .AddDisplayDriver<OpenAIDeployment, OpenAIDeploymentDisplayDriver>()
             .AddTransient<IConfigureOptions<OpenAIConnectionOptions>, OpenAIConnectionOptionsConfiguration>()
             .AddNavigationProvider<OpenAIAdminMenu>();
 

@@ -131,7 +131,7 @@ internal static class OpenAIChatCompletionEndpoint
             message = new OpenAIChatSessionPrompt
             {
                 Id = IdGenerator.GenerateId(),
-                Role = OpenAIConstants.Roles.Assistant,
+                Role = ChatRole.Assistant.Value,
                 IsGeneratedPrompt = true,
                 Title = profile.PromptSubject,
                 Content = !string.IsNullOrEmpty(bestChoice?.Content)
@@ -145,7 +145,7 @@ internal static class OpenAIChatCompletionEndpoint
             chatSession.Prompts.Add(new OpenAIChatSessionPrompt
             {
                 Id = IdGenerator.GenerateId(),
-                Role = OpenAIConstants.Roles.User,
+                Role = ChatRole.User.Value,
                 Content = userPrompt,
             });
 
@@ -164,7 +164,7 @@ internal static class OpenAIChatCompletionEndpoint
             message = new OpenAIChatSessionPrompt
             {
                 Id = IdGenerator.GenerateId(),
-                Role = OpenAIConstants.Roles.Assistant,
+                Role = ChatRole.Assistant.Value,
                 Title = profile.PromptSubject,
                 Content = !string.IsNullOrEmpty(bestChoice?.Content)
                 ? bestChoice.Content

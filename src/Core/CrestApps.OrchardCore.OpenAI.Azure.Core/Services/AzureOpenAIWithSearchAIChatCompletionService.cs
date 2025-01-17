@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Azure.AI.OpenAI;
 using Azure.AI.OpenAI.Chat;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Json;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Models;
@@ -57,11 +56,6 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
-
-    static AzureOpenAIWithSearchAIChatCompletionService()
-    {
-        _jsonSerializerOptions.Converters.Add(TypeJsonConverter.Instance);
-    }
 
     public string Name { get; } = AzureWithAzureAISearchProfileSource.Key;
 
@@ -145,7 +139,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
                 {
                     if (++functionCallCounter > 3)
                     {
-                        _logger.LogWarning("Unable to get chat completion result from Azure OpenAI after {totalCalls} tried to process the AITool.", functionCallCounter);
+                        _logger.LogWarning("Unable to get chat completion result from Azure OpenAI after {TotalCalls} tried to process the AITool.", functionCallCounter);
 
                         break;
                     }
@@ -225,7 +219,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
     {
         var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
 
-        var azureClient = new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey()));
+        var azureClient = new AzureOpenAIClient(endpoint, connection.GetApiKeyCredential());
 
         return azureClient;
     }
@@ -250,8 +244,6 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
 
         if (!context.DisableTools)
         {
-            // chatOptions.ToolChoice = ChatToolChoice.CreateAutoChoice();
-
             foreach (var toolDescriptor in _toolDescriptors)
             {
                 if (!context.Profile.FunctionNames.Contains(toolDescriptor.Name) || toolDescriptor.Tool is not Microsoft.Extensions.AI.AIFunction function)
