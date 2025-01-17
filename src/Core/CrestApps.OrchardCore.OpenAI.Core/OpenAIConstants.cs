@@ -18,6 +18,11 @@ public static class OpenAIConstants
 
     public const string DefaultBlankMessage = "AI drew blank and no message was generated!";
 
+    public static class SystemMessages
+    {
+        public const string UseMarkdownSyntax = "- Provide a response using Markdown syntax.";
+    }
+
     public static class Feature
     {
         public const string Area = "CrestApps.OrchardCore.OpenAI";

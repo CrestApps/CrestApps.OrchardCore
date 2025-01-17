@@ -23,7 +23,11 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
 public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCompletionService
 {
-    private const string _useMarkdownSyntaxSystemMessage = "- Provide a response using Markdown syntax.";
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
 
     private readonly IOpenAIDeploymentStore _deploymentStore;
     private readonly IOpenAILinkGenerator _openAILinkGenerator;
@@ -50,12 +54,6 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         _azureAISearchDefaultOptions = azureAISearchDefaultOptions.Value;
         _logger = logger;
     }
-
-    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
 
     public string Name { get; } = AzureWithAzureAISearchProfileSource.Key;
 
@@ -131,53 +129,22 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         {
             var data = await chatClient.CompleteChatAsync(prompts, chatOptions);
 
-            if (data is not null)
+            if (data is null)
             {
-                var functionCallCounter = 0;
+                return OpenAIChatCompletionResponse.Empty;
+            }
 
-                while (data.Value.FinishReason == ChatFinishReason.ToolCalls)
-                {
-                    if (++functionCallCounter > 3)
-                    {
-                        _logger.LogWarning("Unable to get chat completion result from Azure OpenAI after {TotalCalls} tried to process the AITool.", functionCallCounter);
+            if (data.Value.FinishReason == ChatFinishReason.ToolCalls)
+            {
+                await ProcessToolCallsAsync(prompts, data.Value.ToolCalls);
 
-                        break;
-                    }
+                // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
+                data = await chatClient.CompleteChatAsync(prompts, await GetOptionsAsync(context, false));
+            }
 
-                    prompts.Add(ChatMessage.CreateAssistantMessage(data.Value.ToolCalls));
-
-                    foreach (var toolCall in data.Value.ToolCalls)
-                    {
-                        var tool = _toolDescriptors.FirstOrDefault(x => x.Name == toolCall.FunctionName);
-
-                        if (tool is null || tool.Tool is not Microsoft.Extensions.AI.AIFunction function)
-                        {
-                            continue;
-                        }
-
-                        var arguments = toolCall.FunctionArguments.ToObjectFromJson<Dictionary<string, object>>();
-
-                        var result = await function.InvokeAsync(arguments);
-
-                        if (result is string str)
-                        {
-                            prompts.Add(new ToolChatMessage(toolCall.Id, str));
-                        }
-                        else
-                        {
-                            var resultJson = JsonSerializer.Serialize(result);
-
-                            prompts.Add(new ToolChatMessage(toolCall.Id, resultJson));
-                        }
-                    }
-
-                    data = await chatClient.CompleteChatAsync(prompts, await GetOptionsAsync(context, false));
-                }
-
-                if (data.Value.FinishReason == ChatFinishReason.Stop)
-                {
-                    return GetResponse(data, currentPrompt);
-                }
+            if (data.Value.FinishReason == ChatFinishReason.Stop)
+            {
+                return GetResponse(data, currentPrompt);
             }
         }
         catch (Exception ex)
@@ -186,6 +153,36 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         }
 
         return OpenAIChatCompletionResponse.Empty;
+    }
+
+    private async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<ChatToolCall> tollCalls)
+    {
+        prompts.Add(ChatMessage.CreateAssistantMessage(tollCalls));
+
+        foreach (var toolCall in tollCalls)
+        {
+            var tool = _toolDescriptors.FirstOrDefault(x => x.Name == toolCall.FunctionName);
+
+            if (tool is null || tool.Tool is not Microsoft.Extensions.AI.AIFunction function)
+            {
+                continue;
+            }
+
+            var arguments = toolCall.FunctionArguments.ToObjectFromJson<Dictionary<string, object>>();
+
+            var result = await function.InvokeAsync(arguments);
+
+            if (result is string str)
+            {
+                prompts.Add(new ToolChatMessage(toolCall.Id, str));
+            }
+            else
+            {
+                var resultJson = JsonSerializer.Serialize(result);
+
+                prompts.Add(new ToolChatMessage(toolCall.Id, resultJson));
+            }
+        }
     }
 
     private static int GetTotalMessagesToSkip(int totalMessages, int pastMessageCount)
@@ -209,7 +206,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
 
         if (context.UserMarkdownInResponse)
         {
-            systemMessage += Environment.NewLine + _useMarkdownSyntaxSystemMessage;
+            systemMessage += Environment.NewLine + OpenAIConstants.SystemMessages.UseMarkdownSyntax;
         }
 
         return systemMessage;
@@ -226,6 +223,11 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
 
     private async Task<ChatCompletionOptions> GetOptionsAsync(OpenAIChatCompletionContext context, bool includeDataSource)
     {
+        if (!context.Profile.TryGet<AzureAIChatProfileAISearchMetadata>(out var searchAIMetadata))
+        {
+            throw new InvalidOperationException();
+        }
+
         var metadata = context.Profile.As<OpenAIChatProfileMetadata>();
 
         var chatOptions = new ChatCompletionOptions()
@@ -237,16 +239,12 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
             MaxOutputTokenCount = metadata.MaxTokens ?? OpenAIConstants.DefaultMaxOutputTokens,
         };
 
-        if (!context.Profile.TryGet<AzureAIChatProfileAISearchMetadata>(out var searchAIMetadata))
-        {
-            throw new InvalidOperationException();
-        }
-
         if (!context.DisableTools)
         {
             foreach (var toolDescriptor in _toolDescriptors)
             {
-                if (!context.Profile.FunctionNames.Contains(toolDescriptor.Name) || toolDescriptor.Tool is not Microsoft.Extensions.AI.AIFunction function)
+                if (!context.Profile.FunctionNames.Contains(toolDescriptor.Name) ||
+                    toolDescriptor.Tool is not Microsoft.Extensions.AI.AIFunction function)
                 {
                     continue;
                 }
@@ -262,13 +260,13 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
                             Properties = [],
                         };
 
-                        foreach (var par in function.Metadata?.Parameters)
+                        foreach (var data in function.Metadata?.Parameters)
                         {
-                            arguments.Properties.Add(par.Name, new AzureChatFunctionParameterArgument
+                            arguments.Properties.Add(data.Name, new AzureChatFunctionParameterArgument
                             {
-                                Type = par.ParameterType.Name.ToLowerInvariant(),
-                                Description = par.Description,
-                                IsRequired = par.IsRequired,
+                                Type = data.ParameterType.Name.ToLowerInvariant(),
+                                Description = data.Description,
+                                IsRequired = data.IsRequired,
                             });
                         }
 
@@ -290,7 +288,10 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
 
         var indexSettings = await azureAISearchIndexSettingsService.GetAsync(searchAIMetadata.IndexName);
 
-        if (!includeDataSource || indexSettings == null || string.IsNullOrEmpty(indexSettings.IndexFullName) || !_azureAISearchDefaultOptions.ConfigurationExists())
+        if (!includeDataSource
+            || indexSettings == null
+            || string.IsNullOrEmpty(indexSettings.IndexFullName)
+            || !_azureAISearchDefaultOptions.ConfigurationExists())
         {
             return chatOptions;
         }
@@ -413,7 +414,6 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
                 }
 
                 choiceMessage = choiceMessage.Replace(citationTemplate, needsReference ? $"<sup>{referenceIndex}</sup>" : string.Empty);
-
             }
 
             // During replacements, we could end up with multiple [--reference-separator--]

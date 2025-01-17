@@ -13,8 +13,6 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
 public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionService
 {
-    private const string _useMarkdownSyntaxSystemMessage = "- Provide a response using Markdown syntax.";
-
     private readonly IOpenAIDeploymentStore _deploymentStore;
     private readonly IEnumerable<IOpenAIChatToolDescriptor> _toolDescriptors;
     private readonly OpenAIConnectionOptions _connectionOptions;
@@ -141,7 +139,7 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
 
         if (context.UserMarkdownInResponse)
         {
-            systemMessage += Environment.NewLine + _useMarkdownSyntaxSystemMessage;
+            systemMessage += Environment.NewLine + OpenAIConstants.SystemMessages.UseMarkdownSyntax;
         }
 
         return systemMessage;
