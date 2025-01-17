@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -18,7 +17,7 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
     private readonly IOpenAIChatProfileStore _profileStore;
     private readonly IOpenAIDeploymentStore _modelDeploymentStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
-    private readonly IOpenAIFunctionService _openAIFunctionService;
+    private readonly IAIToolsService _toolsService;
 
     internal readonly IStringLocalizer S;
 
@@ -26,13 +25,13 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
         IOpenAIChatProfileStore profileStore,
         IOpenAIDeploymentStore modelDeploymentStore,
         ILiquidTemplateManager liquidTemplateManager,
-        IOpenAIFunctionService openAIFunctionService,
+        IAIToolsService toolsService,
         IStringLocalizer<OpenAIChatProfileDisplayDriver> stringLocalizer)
     {
         _profileStore = profileStore;
         _modelDeploymentStore = modelDeploymentStore;
         _liquidTemplateManager = liquidTemplateManager;
-        _openAIFunctionService = openAIFunctionService;
+        _toolsService = toolsService;
         S = stringLocalizer;
     }
 
@@ -73,13 +72,13 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
                 new SelectListItem(S["Template generated prompt"], nameof(OpenAIChatProfileType.TemplatePrompt)),
             ];
 
-            model.Functions = _openAIFunctionService.GetFunctions()
-            .OrderBy(f => f.Name)
-            .Select(f => new FunctionEntry
+            model.Functions = _toolsService.GetFunctions()
+            .OrderBy(function => function.Metadata.Name)
+            .Select(function => new FunctionEntry
             {
-                Name = f.Name,
-                Description = f.Description,
-                IsSelected = profile.FunctionNames?.Contains(f.Name) ?? false,
+                Name = function.Metadata.Name,
+                Description = function.Metadata.Description,
+                IsSelected = profile.FunctionNames?.Contains(function.Metadata.Name) ?? false,
             }).ToArray();
 
             model.Deployments = [];
@@ -197,9 +196,12 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
         profile.TitleType = model.TitleType;
         profile.Type = model.ProfileType;
 
-        var selectedFunctionNames = model.Functions.Where(x => x.IsSelected).Select(x => x.Name);
+        var selectedFunctionNames = model.Functions.Where(x => x.IsSelected).Select(x => x.Name).ToArray();
 
-        profile.FunctionNames = _openAIFunctionService.FindByNames(selectedFunctionNames).Select(x => x.Name).ToArray();
+        profile.FunctionNames = _toolsService.GetFunctions()
+            .Select(x => x.Metadata.Name)
+            .Intersect(selectedFunctionNames)
+            .ToArray();
     }
 
     private async Task UpdateMetadataAsync(OpenAIChatProfile profile, UpdateEditorContext context)

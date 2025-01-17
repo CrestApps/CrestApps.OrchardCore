@@ -6,7 +6,6 @@ using CrestApps.OrchardCore.OpenAI.Azure.Recipes;
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Http.Resilience;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Recipes;
@@ -17,28 +16,6 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services
-            .AddHttpClient(AzureOpenAIConstants.HttpClientName)
-            .AddStandardResilienceHandler(options =>
-            {
-                options.Retry = new HttpRetryStrategyOptions
-                {
-                    MaxRetryAttempts = 3,
-                    Delay = TimeSpan.FromSeconds(1),
-                };
-
-                options.AttemptTimeout = new HttpTimeoutStrategyOptions()
-                {
-                    Timeout = TimeSpan.FromSeconds(30),
-                };
-
-                options.CircuitBreaker = new HttpCircuitBreakerStrategyOptions
-                {
-                    // The sampling duration of circuit breaker strategy needs to be at
-                    // least double of an attempt timeout strategy’s timeout interval, in order to be effective.
-                    SamplingDuration = TimeSpan.FromSeconds(60),
-                };
-            });
     }
 }
 
@@ -52,7 +29,7 @@ public sealed class DeploymentsStartup : StartupBase
 
         services
             .AddOpenAIDeploymentSource<AzureModelDeploymentSource>(AzureOpenAIConstants.AzureDeploymentSourceName)
-            .AddScoped<IDisplayDriver<OpenAIDeployment>, AzureOpenAIDeploymentDisplayDriver>()
+            .AddDisplayDriver<OpenAIDeployment, AzureOpenAIDeploymentDisplayDriver>()
             .AddScoped<AzureCognitiveServicesAccountServices>();
     }
 }
@@ -82,9 +59,9 @@ public sealed class AISearchStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddOpenAIChatCompletionService<AzureOpenAIChatCompletionService>(AzureWithAzureAISearchProfileSource.Key);
+        services.AddOpenAIChatCompletionService<AzureOpenAIWithSearchAIChatCompletionService>(AzureWithAzureAISearchProfileSource.Key);
         services.AddOpenAIChatProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
-        services.AddScoped<IDisplayDriver<OpenAIChatProfile>, AzureOpenAIChatProfileSearchAIDisplayDriver>();
+        services.AddDisplayDriver<OpenAIChatProfile, AzureOpenAIChatProfileSearchAIDisplayDriver>();
         services.AddScoped<IOpenAIChatProfileHandler, AzureOpenAIChatProfileWithAISearchHandler>();
     }
 }

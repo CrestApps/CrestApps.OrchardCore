@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Endpoints.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -18,8 +17,7 @@ internal static class OpenAIChatSessionEndpoint
         _ = builder.MapGet("OpenAI/ChatGPT/Session", HandleAsync)
             .AllowAnonymous()
             .WithName(OpenAIConstants.RouteNames.ChatSessionRouteName)
-            .DisableAntiforgery()
-            .RequireCors(OpenAIConstants.Security.ExternalChatCORSPolicyName);
+            .DisableAntiforgery();
 
         return builder;
     }
@@ -72,7 +70,7 @@ internal static class OpenAIChatSessionEndpoint
             Messages = chatSession.Prompts.Select(message => new OpenAIChatResponseMessageDetailed
             {
                 Id = message.Id,
-                Role = message.Role,
+                Role = message.Role.Value,
                 IsGeneratedPrompt = message.IsGeneratedPrompt,
                 Title = message.Title,
                 Content = message.Content,

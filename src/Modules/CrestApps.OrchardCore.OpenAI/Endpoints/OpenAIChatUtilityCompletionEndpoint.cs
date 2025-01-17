@@ -1,12 +1,12 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Endpoints.Models;
 using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -19,8 +19,7 @@ internal static class OpenAIChatUtilityCompletionEndpoint
         _ = builder.MapPost("OpenAI/ChatGPT/UtilityCompletion", HandleAsync<T>)
             .AllowAnonymous()
             .WithName(OpenAIConstants.RouteNames.ChatUtilityCompletionRouteName)
-            .DisableAntiforgery()
-            .RequireCors(OpenAIConstants.Security.ExternalChatCORSPolicyName);
+            .DisableAntiforgery();
 
         return builder;
     }
@@ -70,7 +69,7 @@ internal static class OpenAIChatUtilityCompletionEndpoint
             return TypedResults.Problem($"Unable to find a chat completion service for the source: '{profile.Source}'.");
         }
 
-        var completion = await completionService.ChatAsync([OpenAIChatCompletionMessage.CreateMessage(requestData.Prompt.Trim(), OpenAIConstants.Roles.User)], new OpenAIChatCompletionContext(profile)
+        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], new OpenAIChatCompletionContext(profile)
         {
             SystemMessage = profile.SystemMessage,
             UserMarkdownInResponse = requestData.IncludeHtmlResponse,

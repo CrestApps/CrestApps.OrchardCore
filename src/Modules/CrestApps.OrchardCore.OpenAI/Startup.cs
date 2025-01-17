@@ -48,13 +48,13 @@ public sealed class Startup : StartupBase
 
         services
             .AddOpenAIDeploymentServices()
+            .AddSingleton<IAIToolsService, DefaultAIToolsService>()
             .Configure<OpenAIMarkdownPipelineOptions>(options =>
             {
                 options.MarkdownPipelineBuilder.Configure("advanced");
             })
             .AddScoped<IOpenAIMarkdownService, OpenAIMarkdownService>()
-            .AddScoped<IOpenAIFunctionService, DefaultOpenAIFunctionService>()
-            .AddScoped<IDisplayDriver<OpenAIDeployment>, OpenAIDeploymentDisplayDriver>()
+            .AddDisplayDriver<OpenAIDeployment, OpenAIDeploymentDisplayDriver>()
             .AddTransient<IConfigureOptions<OpenAIConnectionOptions>, OpenAIConnectionOptionsConfiguration>()
             .AddNavigationProvider<OpenAIAdminMenu>();
     }

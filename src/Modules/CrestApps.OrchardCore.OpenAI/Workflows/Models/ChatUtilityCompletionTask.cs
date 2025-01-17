@@ -1,9 +1,7 @@
-using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Core.Services;
-using CrestApps.OrchardCore.OpenAI.Endpoints.Models;
 using CrestApps.OrchardCore.OpenAI.Models;
 using Fluid;
 using Fluid.Values;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -111,7 +109,7 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
             return Outcomes("Failed");
         }
 
-        var completion = await completionService.ChatAsync([OpenAIChatCompletionMessage.CreateMessage(userPrompt.Trim(), OpenAIConstants.Roles.User)], new OpenAIChatCompletionContext(profile)
+        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, userPrompt.Trim())], new OpenAIChatCompletionContext(profile)
         {
             SystemMessage = profile.SystemMessage,
             UserMarkdownInResponse = IncludeHtmlResponse,

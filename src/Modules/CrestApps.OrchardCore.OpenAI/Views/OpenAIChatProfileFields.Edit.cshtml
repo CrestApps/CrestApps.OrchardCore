@@ -90,10 +90,10 @@
         @for (var i = 0; i < Model.Functions.Length; i++)
         {
             <div class="form-check">
-                <input asp-for="Functions[i].IsSelected" type="checkbox" class="form-check-input">
                 <input type="hidden" asp-for="Functions[i].Name" />
+                <input asp-for="Functions[i].IsSelected" type="checkbox" class="form-check-input">
                 <label class="form-check-label" asp-for="Functions[i].IsSelected">@Model.Functions[i].Name</label>
-                <small class="form-text text-muted">@Model.Functions[i].Description</small>
+                <span class="hint dashed">@Model.Functions[i].Description</span>
             </div>
         }
     </div>

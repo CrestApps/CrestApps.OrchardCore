@@ -11,133 +11,63 @@ To manage chat profiles, you must enable at least one feature that provides an A
 
 For detailed documentation on Azure OpenAI features, [click here](../CrestApps.OrchardCore.OpenAI.Azure/README.md).
 
-### OpenAI Chat Functions
+### OpenAI Chat Tools
 
-We offer the flexibility to extend OpenAI's capabilities by adding custom functions, enabling the model to provide more tailored and accurate responses. If you need to implement a custom function, simply implement the `IOpenAIChatFunction` interface, which inherits from the `OpenAIChatFunctionBase` class.
+The module offers the flexibility to extend OpenAI's capabilities by adding custom functions, enabling the model to provide more tailored and accurate responses. If you need to implement a custom function, simply implement the `AIFunction` abstract class and register it as a service.
 
 For example, to create a function that allows OpenAI to provide a response based on the user's location, you can implement the following:
 
 ```csharp
-public sealed class GetWeatherFunction : OpenAIChatFunctionBase
+public sealed class GetWeatherFunction : AIFunction
 {
-    public const string Key = "get_current_weather";
+    private const string LocationProperty = "Location";
 
-    public override string Name => Key;
-
-    public override string Description => "Fetches the current weather for a specified location.";
+    public override AIFunctionMetadata Metadata { get; }
 
     public GetWeatherFunction()
     {
-        DefineInputProperty(nameof(GetWeatherArguments.Location), new StringFunctionProperty
+        Metadata = new AIFunctionMetadata("get_weather")
         {
-            Description = "The city and state, e.g., San Francisco, CA.",
-            IsRequired = true,
-        });
-
-        DefineInputProperty(nameof(GetWeatherArguments.Unit), new EnumFunctionProperty<TempScale>
-        {
-            Description = "The temperature scale (Fahrenheit or Celsius) to use.",
-            IsRequired = false,
-        });
+            Description = "Retrieves weather information for a specified location.",
+            Parameters =
+            [
+                new AIFunctionParameterMetadata(LocationProperty)
+                {
+                    Description = "The geographic location for which the weather information is requested.",
+                    IsRequired = true,
+                    ParameterType = typeof(string),
+                },
+            ],
+            ReturnParameter = new AIFunctionReturnParameterMetadata
+            {
+                Description = "The weather",
+                ParameterType = typeof(string),
+            },
+        };
     }
 
-    public override Task<object> InvokeAsync(JsonObject arguments)
+    protected override Task<object> InvokeCoreAsync(IEnumerable<KeyValuePair<string, object>> arguments, CancellationToken cancellationToken)
     {
-        var value = arguments.ToObject<GetWeatherArguments>();
+        // Here you can access the arguments that were defined in Metadata.Parameters above.
 
-        // In a real implementation, you would call a weather API here.
-        // For simplicity, we're returning a static value.
-        // Here we return a string. But you may provide a complex type.
-        // If you are returning a complex type, you should define the return type by setting the ReturnType.
+        var location = arguments.First(x => x.Key == LocationProperty).Value as string;
 
-        return Task.FromResult<object>("Temperature: 80°F, Condition: Sunny");
+        return Task.FromResult<object>(Random.Shared.NextDouble() > 0.5 ? $"It's sunny in {location}" : $"It's raining in {location}");
     }
-}
-
-public enum TempScale
-{
-    Fahrenheit,
-    Celsius,
-}
-
-public sealed class GetWeatherArguments
-{
-    public string Location { get; set; }
-
-    public TempScale Unit { get; set; }
 }
 ```
 
 #### Registering the Function
 
-To register this function, you can use the `AddOpenAIChatFunction` extension method within your `Startup` class:
+To register this function, you can use the `AddAITool` extension method within your `Startup` class:
 
 ```csharp
-services.AddOpenAIChatFunction<GetWeatherFunction>(GetWeatherFunction.Key);
+services.AddAITool<GetWeatherFunction>();
 ```
 
-### Tools
-
-When working with OpenAI Services that support the tool functionality, you can create custom tools by mapping functions to the tool interface. Here's an example of how to define and register a tool:
-
-#### Define a custom Tool
-
-To define a custom tool, subclass `OpenAIChatFunctionTool` and implement the `IOpenAIChatTool` interface. For example, if you're building a weather-fetching tool, you can create a class like this:
-
-```csharp
-public sealed class GetWeatherOpenAITool : OpenAIChatFunctionTool, IOpenAIChatTool
-{
-    // Constructor takes an instance of the function you're integrating with the tool
-    public GetWeatherOpenAITool(GetWeatherOpenAIFunction function)
-        : base(function)
-    {
-    }
-}
-```
-
-In this code:
-- `GetWeatherOpenAITool` is a tool that wraps around a weather-related function (`GetWeatherOpenAIFunction`).
-- The constructor accepts a function and passes it to the base class to ensure proper integration.
-
-#### Register the Tool
-
-Once the tool class is defined, you can register it with your service container so that it can be used in your application. Use dependency injection to register the tool like this:
-
-```csharp
-services.AddOpenAIChatTool<GetWeatherOpenAITool, GetWeatherOpenAIFunction>();
-```
-
-In this step:
-- `AddOpenAIChatTool` registers the `GetWeatherOpenAITool` and its associated function (`GetWeatherOpenAIFunction`) with the services collection.
-- This enables your application to recognize and utilize the tool seamlessly.
-
-### Summary
-1. **Define the Tool**: Create a class that wraps around the function you want to expose as a tool, inheriting from `OpenAIChatFunctionTool` and implementing `IOpenAIChatTool`.
-2. **Register the Tool**: Use the `AddOpenAIChatTool` method to register the tool with your dependency injection container.
+If you need to access the tools in your module, you can use the `IAIToolsService` interface to access the registered functions.
 
 This process allows you to extend the functionality of OpenAI services by integrating your custom logic into a tool that can be utilized within the OpenAI ecosystem.
-
-When defining the properties of the function, you have the following types to use as function properties:
-
-- `StringFunctionProperty`: Represents a string property. You can define formatted strings using common formats such as the following:
-  - `StringFunctionProperty.DateTime`: Represents a date-time property.
-  - `StringFunctionProperty.Uri`: Represents a uri property.
-  - `StringFunctionProperty.Hostname`: Represents a hostname property.
-  - `StringFunctionProperty.Ipv4`: Represents a ipv4 property.
-  - `StringFunctionProperty.Ipv6`: Represents a ipv6 property.
-  - `StringFunctionProperty.UUID`: Represents a uuid property.
-  - `StringFunctionProperty.Phone`: Represents a phone property.
-  - `StringFunctionProperty.CreditCard`: Represents a credit-card property.
-  - `StringFunctionProperty.Password`: Represents a password property.
-- `NumberFunctionProperty`: Represents a number property. You can define formatted numbers using common formats such as the following:
-  - `NumberFunctionProperty.Integer`: Represents an integer property.
-  - `NumberFunctionProperty.Long`: Represents an big-integer property.
-  - `NumberFunctionProperty.Float`: Represents an float property.
-  - `NumberFunctionProperty.Decimal`: Represents an decimal property.
-- `ObjectFunctionProperty`: Represents an object property.
-- `ArrayFunctionProperty`: Represents an array property.
-- `BooleanFunctionProperty`: Represents a boolean property.
-- `EnumFunctionProperty<TEnum>`: Represents an enumeration property.
 
 #### Configuring Chat Profiles
 

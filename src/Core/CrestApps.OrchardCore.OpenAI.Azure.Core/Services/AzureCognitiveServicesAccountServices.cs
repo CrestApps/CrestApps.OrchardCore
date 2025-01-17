@@ -28,10 +28,8 @@ public sealed class AzureCognitiveServicesAccountServices
             var client = new ArmClient(entry.GetCredential());
             var resourceGroupResource = client.GetResourceGroupResource(resourceGroupResourceId);
 
-            // get the collection of this CognitiveServicesAccountResource
             var collection = resourceGroupResource.GetCognitiveServicesAccounts();
 
-            // invoke the operation
             var response = await collection.GetIfExistsAsync(accountName);
 
             var result = response.HasValue ? response.Value.Data : null;

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
+namespace CrestApps.OrchardCore.OpenAI.Core.Services;
 
 public sealed class DefaultOpenAIDeploymentManager : IOpenAIDeploymentManager
 {

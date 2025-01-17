@@ -10,6 +10,8 @@ public class OpenAIChatCompletionContext
 
     public bool UserMarkdownInResponse { get; set; }
 
+    public bool DisableTools { get; set; }
+
     public OpenAIChatCompletionContext(OpenAIChatProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);

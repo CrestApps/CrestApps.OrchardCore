@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Endpoints.Models;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.Support;
@@ -10,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -24,8 +24,7 @@ internal static class OpenAIChatCompletionEndpoint
         _ = builder.MapPost("OpenAI/ChatGPT/Completion", HandleAsync<T>)
             .AllowAnonymous()
             .WithName(OpenAIConstants.RouteNames.ChatCompletionRouteName)
-            .DisableAntiforgery()
-            .RequireCors(OpenAIConstants.Security.ExternalChatCORSPolicyName);
+            .DisableAntiforgery();
 
         return builder;
     }
@@ -121,7 +120,7 @@ internal static class OpenAIChatCompletionEndpoint
 
         if (profile.Type == OpenAIChatProfileType.TemplatePrompt)
         {
-            completion = await completionService.ChatAsync([OpenAIChatCompletionMessage.CreateMessage(userPrompt, OpenAIConstants.Roles.User)], new OpenAIChatCompletionContext(profile)
+            completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, userPrompt)], new OpenAIChatCompletionContext(profile)
             {
                 SystemMessage = profile.SystemMessage,
                 UserMarkdownInResponse = true,
@@ -132,7 +131,7 @@ internal static class OpenAIChatCompletionEndpoint
             message = new OpenAIChatSessionPrompt
             {
                 Id = IdGenerator.GenerateId(),
-                Role = OpenAIConstants.Roles.Assistant,
+                Role = ChatRole.Assistant,
                 IsGeneratedPrompt = true,
                 Title = profile.PromptSubject,
                 Content = !string.IsNullOrEmpty(bestChoice?.Content)
@@ -146,12 +145,12 @@ internal static class OpenAIChatCompletionEndpoint
             chatSession.Prompts.Add(new OpenAIChatSessionPrompt
             {
                 Id = IdGenerator.GenerateId(),
-                Role = OpenAIConstants.Roles.User,
+                Role = ChatRole.User,
                 Content = userPrompt,
             });
 
             var transcript = chatSession.Prompts.Where(x => !x.IsGeneratedPrompt)
-                .Select(x => OpenAIChatCompletionMessage.CreateMessage(x.Content, x.Role));
+                .Select(prompt => new ChatMessage(prompt.Role, prompt.Content));
 
             completion = await completionService.ChatAsync(transcript, new OpenAIChatCompletionContext(profile)
             {
@@ -165,7 +164,7 @@ internal static class OpenAIChatCompletionEndpoint
             message = new OpenAIChatSessionPrompt
             {
                 Id = IdGenerator.GenerateId(),
-                Role = OpenAIConstants.Roles.Assistant,
+                Role = ChatRole.Assistant,
                 Title = profile.PromptSubject,
                 Content = !string.IsNullOrEmpty(bestChoice?.Content)
                 ? bestChoice.Content
@@ -186,7 +185,7 @@ internal static class OpenAIChatCompletionEndpoint
             Message = new OpenAIChatResponseMessageDetailed
             {
                 Id = message.Id,
-                Role = message.Role,
+                Role = message.Role.Value,
                 IsGeneratedPrompt = message.IsGeneratedPrompt,
                 Title = message.Title,
                 Content = message.Content,
@@ -231,7 +230,7 @@ internal static class OpenAIChatCompletionEndpoint
 
     private static async Task<IResult> GetToolMessageAsync(IOpenAIChatCompletionService completionService, OpenAIChatProfile profile, IOpenAIMarkdownService markdownService, string prompt, bool respondWithHtml)
     {
-        var completion = await completionService.ChatAsync([OpenAIChatCompletionMessage.CreateMessage(prompt, OpenAIConstants.Roles.User)], new OpenAIChatCompletionContext(profile)
+        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, prompt)], new OpenAIChatCompletionContext(profile)
         {
             SystemMessage = profile.SystemMessage,
             UserMarkdownInResponse = true,

@@ -1,9 +1,8 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
-using CrestApps.OrchardCore.OpenAI.Tools;
-using CrestApps.OrchardCore.OpenAI.Tools.Functions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
@@ -37,38 +36,6 @@ public static class ServiceCollectionExtensions
             .AddPermissionProvider<OpenAIChatPermissionsProvider>()
             .AddScoped<IAuthorizationHandler, OpenAIChatProfileAuthenticationHandler>()
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(OpenAIConstants.CollectionName));
-
-        return services;
-    }
-
-    public static IServiceCollection AddOpenAIChatTool<TTool>(this IServiceCollection services)
-        where TTool : class, IOpenAIChatTool
-    {
-        services
-            .AddScoped<TTool>()
-            .AddScoped<IOpenAIChatTool>(sp => sp.GetService<TTool>());
-
-        return services;
-    }
-
-    public static IServiceCollection AddOpenAIChatTool<TTool, TFunction>(this IServiceCollection services)
-        where TTool : class, IOpenAIChatTool
-        where TFunction : class, IOpenAIChatFunction
-    {
-        services
-            .AddOpenAIChatFunction<TFunction>()
-            .AddScoped<TTool>()
-            .AddScoped<IOpenAIChatTool>(sp => sp.GetService<TTool>());
-
-        return services;
-    }
-
-    public static IServiceCollection AddOpenAIChatFunction<TFunction>(this IServiceCollection services)
-        where TFunction : class, IOpenAIChatFunction
-    {
-        services
-            .AddScoped<TFunction>()
-            .AddScoped<IOpenAIChatFunction>(sp => sp.GetService<TFunction>());
 
         return services;
     }
@@ -107,6 +74,14 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<TService>();
         services.TryAddScoped<IOpenAIChatCompletionService>(sp => sp.GetService<TService>());
         services.AddKeyedScoped<IOpenAIChatCompletionService>(sourceKey, (sp, key) => sp.GetService<TService>());
+
+        return services;
+    }
+
+    public static IServiceCollection AddAITool<TTool>(this IServiceCollection services)
+        where TTool : AITool
+    {
+        services.AddTransient<AITool, TTool>();
 
         return services;
     }
