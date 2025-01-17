@@ -70,7 +70,7 @@ internal static class OpenAIChatSessionEndpoint
             Messages = chatSession.Prompts.Select(message => new OpenAIChatResponseMessageDetailed
             {
                 Id = message.Id,
-                Role = message.Role,
+                Role = message.Role.Value,
                 IsGeneratedPrompt = message.IsGeneratedPrompt,
                 Title = message.Title,
                 Content = message.Content,

@@ -101,7 +101,7 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
         {
             var data = await chatClient.CompleteAsync(prompts, chatOptions);
 
-            if (data?.Choices is not null)
+            if (data?.Choices is not null && data.FinishReason == ChatFinishReason.Stop)
             {
                 return new OpenAIChatCompletionResponse
                 {

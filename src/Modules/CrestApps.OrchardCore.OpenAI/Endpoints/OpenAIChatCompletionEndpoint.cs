@@ -131,7 +131,7 @@ internal static class OpenAIChatCompletionEndpoint
             message = new OpenAIChatSessionPrompt
             {
                 Id = IdGenerator.GenerateId(),
-                Role = ChatRole.Assistant.Value,
+                Role = ChatRole.Assistant,
                 IsGeneratedPrompt = true,
                 Title = profile.PromptSubject,
                 Content = !string.IsNullOrEmpty(bestChoice?.Content)
@@ -145,12 +145,12 @@ internal static class OpenAIChatCompletionEndpoint
             chatSession.Prompts.Add(new OpenAIChatSessionPrompt
             {
                 Id = IdGenerator.GenerateId(),
-                Role = ChatRole.User.Value,
+                Role = ChatRole.User,
                 Content = userPrompt,
             });
 
             var transcript = chatSession.Prompts.Where(x => !x.IsGeneratedPrompt)
-                .Select(prompt => new ChatMessage(new ChatRole(prompt.Role), prompt.Content));
+                .Select(prompt => new ChatMessage(prompt.Role, prompt.Content));
 
             completion = await completionService.ChatAsync(transcript, new OpenAIChatCompletionContext(profile)
             {
@@ -164,7 +164,7 @@ internal static class OpenAIChatCompletionEndpoint
             message = new OpenAIChatSessionPrompt
             {
                 Id = IdGenerator.GenerateId(),
-                Role = ChatRole.Assistant.Value,
+                Role = ChatRole.Assistant,
                 Title = profile.PromptSubject,
                 Content = !string.IsNullOrEmpty(bestChoice?.Content)
                 ? bestChoice.Content
@@ -185,7 +185,7 @@ internal static class OpenAIChatCompletionEndpoint
             Message = new OpenAIChatResponseMessageDetailed
             {
                 Id = message.Id,
-                Role = message.Role,
+                Role = message.Role.Value,
                 IsGeneratedPrompt = message.IsGeneratedPrompt,
                 Title = message.Title,
                 Content = message.Content,
