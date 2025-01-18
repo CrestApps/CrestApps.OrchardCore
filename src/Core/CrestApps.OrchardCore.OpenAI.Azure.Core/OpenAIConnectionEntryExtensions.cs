@@ -45,7 +45,7 @@ public static class OpenAIConnectionEntryExtensions
     }
 
     public static ApiKeyCredential GetApiKeyCredential(this OpenAIConnectionEntry entry)
-        => new ApiKeyCredential(entry.GetApiKey());
+        => new(entry.GetApiKey());
 
     private static string GetValueInternal(this OpenAIConnectionEntry entry, string key, bool throwException)
     {

@@ -233,7 +233,6 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
 
         var keyField = indexSettings.IndexMappings?.FirstOrDefault(x => x.IsKey);
 
-        // Search against AISearch instance.
 #pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         chatOptions.AddDataSource(new AzureSearchChatDataSource()
         {
@@ -303,15 +302,20 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         var context = data.Value.GetMessageContext();
 #pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
-        for (var y = 0; y < data.Value.Content.Count; y++)
+        for (var i = 0; i < data.Value.Content.Count; i++)
         {
-            var choice = data.Value.Content[y];
+            var choice = data.Value.Content[i];
+
+            if (string.IsNullOrEmpty(choice.Text))
+            {
+                continue;
+            }
 
             if (context?.Citations is null || context.Citations.Count == 0)
             {
                 results.Add(new OpenAIChatCompletionChoice()
                 {
-                    Content = Regex.Replace(choice.Text ?? string.Empty, @"\[doc\d+\]", string.Empty),
+                    Content = Regex.Replace(choice.Text, @"\[doc\d+\]", string.Empty),
                 });
 
                 continue;
@@ -327,23 +331,22 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
             // Key is contentItemId and the index to use as template.
             var map = new Dictionary<string, int>();
 
-            // Sometimes, there are templates like this [doc1][doc2],
-            // to avoid concatenation two numbers, we add a comma.
+            // Occasionally, templates like this [doc1][doc2] are used.
+            // To prevent concatenating two numbers, a comma is added.
+            var message = choice.Text.Replace("][doc", "][--reference-separator--][doc");
 
-            var choiceMessage = (choice.Text ?? string.Empty)?.Replace("][doc", "][--reference-separator--][doc");
-
-            for (var i = 0; i < context.Citations.Count; i++)
+            for (var c = 0; c < context.Citations.Count; c++)
             {
-                var citation = context.Citations[i];
-                var referenceIndex = i + 1;
+                var citation = context.Citations[c];
+                var referenceIndex = c + 1;
 
-                var citationTemplate = $"[doc{i + 1}]";
+                var citationTemplate = $"[doc{c + 1}]";
 
-                var needsReference = choice.Text.Contains(citationTemplate);
+                var hasFilePath = !string.IsNullOrEmpty(citation.FilePath);
 
-                // Use the reference when the id is 26 chars long (content item id).
-                // Some times Azure may have records that not have content item.
-                if (needsReference && !string.IsNullOrEmpty(citation.FilePath))
+                var needsReference = hasFilePath && choice.Text.Contains(citationTemplate);
+
+                if (needsReference && hasFilePath)
                 {
                     var referenceTitle = citation.Title;
 
@@ -379,12 +382,12 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
                     }
                 }
 
-                choiceMessage = choiceMessage.Replace(citationTemplate, needsReference ? $"<sup>{referenceIndex}</sup>" : string.Empty);
+                message = message.Replace(citationTemplate, needsReference ? $"<sup>{referenceIndex}</sup>" : string.Empty);
             }
 
             // During replacements, we could end up with multiple [--reference-separator--]
             // back to back. We can replace them with a single comma.
-            responseChoice.Content = Regex.Replace(choiceMessage, @"(\[--reference-separator--\])+", "<sup>,</sup>")
+            responseChoice.Content = Regex.Replace(message, @"(\[--reference-separator--\])+", "<sup>,</sup>")
                 + Environment.NewLine + referenceBuilder.ToString();
 
             results.Add(responseChoice);
