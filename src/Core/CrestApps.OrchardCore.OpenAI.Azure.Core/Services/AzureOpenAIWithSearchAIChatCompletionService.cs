@@ -1,15 +1,14 @@
 using System.ClientModel;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Azure.AI.OpenAI;
 using Azure.AI.OpenAI.Chat;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Models;
+using CrestApps.OrchardCore.OpenAI.Services;
 using Microsoft.CodeAnalysis;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
@@ -22,15 +21,9 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
 public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCompletionService
 {
-    private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
-
     private readonly IOpenAIDeploymentStore _deploymentStore;
     private readonly IOpenAILinkGenerator _openAILinkGenerator;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly AzureAISearchIndexSettingsService _azureAISearchIndexSettingsService;
     private readonly IAIToolsService _toolsService;
     private readonly OpenAIConnectionOptions _connectionOptions;
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
@@ -41,13 +34,13 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         IOptions<OpenAIConnectionOptions> connectionOptions,
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
         IOpenAILinkGenerator openAILinkGenerator,
-        IServiceProvider serviceProvider,
+        AzureAISearchIndexSettingsService azureAISearchIndexSettingsService,
         IAIToolsService toolService,
         ILogger<AzureOpenAIChatCompletionService> logger)
     {
         _deploymentStore = deploymentStore;
         _openAILinkGenerator = openAILinkGenerator;
-        _serviceProvider = serviceProvider;
+        _azureAISearchIndexSettingsService = azureAISearchIndexSettingsService;
         _toolsService = toolService;
         _connectionOptions = connectionOptions.Value;
         _azureAISearchDefaultOptions = azureAISearchDefaultOptions.Value;
@@ -122,7 +115,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
 
         var chatClient = azureClient.GetChatClient(deployment.Name);
 
-        var chatOptions = await GetOptionsAsync(context, true);
+        var chatOptions = await GetOptionsWithDataSourceAsync(context);
 
         try
         {
@@ -138,7 +131,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
                 await ProcessToolCallsAsync(prompts, data.Value.ToolCalls);
 
                 // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
-                data = await chatClient.CompleteChatAsync(prompts, await GetOptionsAsync(context, false));
+                data = await chatClient.CompleteChatAsync(prompts, GetOptions(context));
             }
 
             if (data.Value.FinishReason == ChatFinishReason.Stop)
@@ -220,13 +213,53 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         return azureClient;
     }
 
-    private async Task<ChatCompletionOptions> GetOptionsAsync(OpenAIChatCompletionContext context, bool includeDataSource)
+    private async Task<ChatCompletionOptions> GetOptionsWithDataSourceAsync(OpenAIChatCompletionContext context)
     {
-        if (!context.Profile.TryGet<AzureAIChatProfileAISearchMetadata>(out var searchAIMetadata))
+        if (!context.Profile.TryGet<AzureAIChatProfileAISearchMetadata>(out var metadata))
         {
             throw new InvalidOperationException();
         }
 
+        var chatOptions = GetOptions(context);
+
+        var indexSettings = await _azureAISearchIndexSettingsService.GetAsync(metadata.IndexName);
+
+        if (indexSettings == null
+            || string.IsNullOrEmpty(indexSettings.IndexFullName)
+            || !_azureAISearchDefaultOptions.ConfigurationExists())
+        {
+            return chatOptions;
+        }
+
+        var keyField = indexSettings.IndexMappings?.FirstOrDefault(x => x.IsKey);
+
+#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        chatOptions.AddDataSource(new AzureSearchChatDataSource()
+        {
+            Endpoint = new Uri(_azureAISearchDefaultOptions.Endpoint),
+            IndexName = indexSettings.IndexFullName,
+
+            Authentication = DataSourceAuthentication.FromApiKey(_azureAISearchDefaultOptions.Credential.Key),
+            Strictness = metadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = metadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            QueryType = "simple",
+            InScope = true,
+            SemanticConfiguration = "default",
+            OutputContexts = DataSourceOutputContexts.Citations,
+            FieldMappings = new DataSourceFieldMappings()
+            {
+                TitleFieldName = GetBestTitleField(keyField),
+                FilePathFieldName = keyField?.AzureFieldKey,
+                ContentFieldSeparator = Environment.NewLine,
+            }
+        });
+#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
+        return chatOptions;
+    }
+
+    private ChatCompletionOptions GetOptions(OpenAIChatCompletionContext context)
+    {
         var metadata = context.Profile.As<OpenAIChatProfileMetadata>();
 
         var chatOptions = new ChatCompletionOptions()
@@ -249,77 +282,9 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
                     continue;
                 }
 
-                try
-                {
-                    BinaryData parameters = null;
-
-                    if (function.Metadata.Parameters != null)
-                    {
-                        var arguments = new AzureChatFunctionParameters()
-                        {
-                            Properties = [],
-                        };
-
-                        foreach (var data in function.Metadata.Parameters)
-                        {
-                            arguments.Properties.Add(data.Name, new AzureChatFunctionParameterArgument
-                            {
-                                Type = data.ParameterType.Name.ToLowerInvariant(),
-                                Description = data.Description,
-                                IsRequired = data.IsRequired,
-                            });
-                        }
-
-                        arguments.Required = arguments.Properties.Where(x => x.Value.IsRequired).Select(x => x.Key);
-
-                        parameters = BinaryData.FromObjectAsJson(arguments, _jsonSerializerOptions);
-                    }
-
-                    chatOptions.Tools.Add(ChatTool.CreateFunctionTool(function.Metadata.Name, function.Metadata.Description, parameters));
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Unable to add the tool '{ToolName}' to the chat options.", function.Metadata.Name);
-                }
+                chatOptions.Tools.Add(function.ToChatTool());
             }
         }
-
-        var azureAISearchIndexSettingsService = _serviceProvider.GetRequiredService<AzureAISearchIndexSettingsService>();
-
-        var indexSettings = await azureAISearchIndexSettingsService.GetAsync(searchAIMetadata.IndexName);
-
-        if (!includeDataSource
-            || indexSettings == null
-            || string.IsNullOrEmpty(indexSettings.IndexFullName)
-            || !_azureAISearchDefaultOptions.ConfigurationExists())
-        {
-            return chatOptions;
-        }
-
-        var keyField = indexSettings.IndexMappings?.FirstOrDefault(x => x.IsKey);
-
-        // Search against AISearch instance.
-#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        chatOptions.AddDataSource(new AzureSearchChatDataSource()
-        {
-            Endpoint = new Uri(_azureAISearchDefaultOptions.Endpoint),
-            IndexName = indexSettings.IndexFullName,
-
-            Authentication = DataSourceAuthentication.FromApiKey(_azureAISearchDefaultOptions.Credential.Key),
-            Strictness = searchAIMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = searchAIMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
-            QueryType = "simple",
-            InScope = true,
-            SemanticConfiguration = "default",
-            OutputContexts = DataSourceOutputContexts.Citations,
-            FieldMappings = new DataSourceFieldMappings()
-            {
-                TitleFieldName = GetBestTitleField(keyField),
-                FilePathFieldName = keyField?.AzureFieldKey,
-                ContentFieldSeparator = Environment.NewLine,
-            }
-        });
-#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
         return chatOptions;
     }
@@ -337,15 +302,20 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         var context = data.Value.GetMessageContext();
 #pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
-        for (var y = 0; y < data.Value.Content.Count; y++)
+        for (var i = 0; i < data.Value.Content.Count; i++)
         {
-            var choice = data.Value.Content[y];
+            var choice = data.Value.Content[i];
+
+            if (string.IsNullOrEmpty(choice.Text))
+            {
+                continue;
+            }
 
             if (context?.Citations is null || context.Citations.Count == 0)
             {
                 results.Add(new OpenAIChatCompletionChoice()
                 {
-                    Content = Regex.Replace(choice.Text ?? string.Empty, @"\[doc\d+\]", string.Empty),
+                    Content = Regex.Replace(choice.Text, @"\[doc\d+\]", string.Empty),
                 });
 
                 continue;
@@ -361,23 +331,22 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
             // Key is contentItemId and the index to use as template.
             var map = new Dictionary<string, int>();
 
-            // Sometimes, there are templates like this [doc1][doc2],
-            // to avoid concatenation two numbers, we add a comma.
+            // Occasionally, templates like this [doc1][doc2] are used.
+            // To prevent concatenating two numbers, a comma is added.
+            var message = choice.Text.Replace("][doc", "][--reference-separator--][doc");
 
-            var choiceMessage = (choice.Text ?? string.Empty)?.Replace("][doc", "][--reference-separator--][doc");
-
-            for (var i = 0; i < context.Citations.Count; i++)
+            for (var c = 0; c < context.Citations.Count; c++)
             {
-                var citation = context.Citations[i];
-                var referenceIndex = i + 1;
+                var citation = context.Citations[c];
+                var referenceIndex = c + 1;
 
-                var citationTemplate = $"[doc{i + 1}]";
+                var citationTemplate = $"[doc{c + 1}]";
 
-                var needsReference = choice.Text.Contains(citationTemplate);
+                var hasFilePath = !string.IsNullOrEmpty(citation.FilePath);
 
-                // Use the reference when the id is 26 chars long (content item id).
-                // Some times Azure may have records that not have content item.
-                if (needsReference && !string.IsNullOrEmpty(citation.FilePath))
+                var needsReference = hasFilePath && choice.Text.Contains(citationTemplate);
+
+                if (needsReference && hasFilePath)
                 {
                     var referenceTitle = citation.Title;
 
@@ -413,12 +382,12 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
                     }
                 }
 
-                choiceMessage = choiceMessage.Replace(citationTemplate, needsReference ? $"<sup>{referenceIndex}</sup>" : string.Empty);
+                message = message.Replace(citationTemplate, needsReference ? $"<sup>{referenceIndex}</sup>" : string.Empty);
             }
 
             // During replacements, we could end up with multiple [--reference-separator--]
             // back to back. We can replace them with a single comma.
-            responseChoice.Content = Regex.Replace(choiceMessage, @"(\[--reference-separator--\])+", "<sup>,</sup>")
+            responseChoice.Content = Regex.Replace(message, @"(\[--reference-separator--\])+", "<sup>,</sup>")
                 + Environment.NewLine + referenceBuilder.ToString();
 
             results.Add(responseChoice);
