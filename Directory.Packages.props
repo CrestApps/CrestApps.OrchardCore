@@ -41,14 +41,14 @@
     <PackageVersion Include="TheTheme" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="SafeMode" Version="$(OrchardCoreVersion)" />
     <!-- Miscellaneous Packages -->
-    <PackageVersion Include="Azure.Identity" Version="1.13.1" />
+    <PackageVersion Include="Azure.Identity" Version="1.13.2" />
     <PackageVersion Include="Azure.ResourceManager.CognitiveServices" Version="1.4.0" />
-    <PackageVersion Include="YesSql.Abstractions" Version="5.1.1" />
-    <PackageVersion Include="Markdig" Version="0.39.1" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.3" />
+    <PackageVersion Include="YesSql.Abstractions" Version="5.2.0" />
+    <PackageVersion Include="Markdig" Version="0.40.0" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-    <PackageVersion Include="xunit" Version="2.9.2" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.1" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.0.0" />
