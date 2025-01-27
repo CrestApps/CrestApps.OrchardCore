@@ -13,7 +13,11 @@ using OrchardCore.Modules.Manifest;
     Name = "OpenAI",
     Description = "Provides OpenAI services.",
     Category = "OpenAI",
-    EnabledByDependencyOnly = true
+    EnabledByDependencyOnly = true,
+    Dependencies =
+    [
+        "OrchardCore.Markdown",
+    ]
 )]
 
 [assembly: Feature(
