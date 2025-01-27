@@ -196,12 +196,19 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
         profile.TitleType = model.TitleType;
         profile.Type = model.ProfileType;
 
-        var selectedFunctionNames = model.Functions.Where(x => x.IsSelected).Select(x => x.Name).ToArray();
+        var selectedFunctionNames = model.Functions?.Where(x => x.IsSelected).Select(x => x.Name).ToArray();
 
-        profile.FunctionNames = _toolsService.GetFunctions()
-            .Select(x => x.Metadata.Name)
-            .Intersect(selectedFunctionNames)
-            .ToArray();
+        if (selectedFunctionNames is null || selectedFunctionNames.Length == 0)
+        {
+            profile.FunctionNames = [];
+        }
+        else
+        {
+            profile.FunctionNames = _toolsService.GetFunctions()
+                .Select(x => x.Metadata.Name)
+                .Intersect(selectedFunctionNames)
+                .ToArray();
+        }
     }
 
     private async Task UpdateMetadataAsync(OpenAIChatProfile profile, UpdateEditorContext context)
