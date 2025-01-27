@@ -172,7 +172,7 @@
         initializeMdeShortcodeWrapper(mde);
 
         mde.codemirror.on('change', function () {
-            $(document).trigger('contentpreview:render');
+            document.dispatchEvent(new Event('contentpreview:render'));
         });
 
         if (isRtl)
