@@ -57,7 +57,7 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
             model.DeploymentId = profile.DeploymentId;
             model.TitleType = profile.TitleType;
             model.IsNew = context.IsNew;
-
+            model.IsSystemMessageLocked = profile.GetSettings<OpenAIChatProfileSettings>().LockSystemMessage;
             model.ProfileType = profile.Type;
             model.TitleTypes =
             [

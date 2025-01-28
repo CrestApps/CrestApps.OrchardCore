@@ -43,7 +43,7 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System description"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <textarea asp-for="SystemMessage" class="form-control content-preview-text" rows="5"></textarea>
+        <textarea asp-for="SystemMessage" class="form-control content-preview-text" rows="5" disabled="@Model.IsSystemMessageLocked"></textarea>
         <span class="hint">@T["The system message in OpenAI sets the AI's behavior and response style, guiding how it interacts in a conversation."]</span>
     </div>
 </div>
@@ -70,7 +70,7 @@
     <div class="@Orchard.GetEndClasses()">
         <input asp-for="WelcomeMessage" class="form-control" />
         <span asp-validation-for="WelcomeMessage" class="text-danger"></span>
-        <span class="hint">@T["The welcome message to show on the UI when a new session is created."]</span>
+        <span class="hint">@T["The welcome message to show on the user-interface when a new session is created."]</span>
     </div>
 </div>
 
@@ -161,19 +161,24 @@
         initializeLiquidEditor(document.getElementById('@Html.IdFor(x => x.PromptTemplate)'));
 
         const isRtl = @(Orchard.IsRightToLeft() ? "true" : "false");
+        const isDisabled = @(Model.IsSystemMessageLocked ? "true" : "false");
+
         const systemMessageElement = document.getElementById("@Html.IdFor(m => m.SystemMessage)");
         var mde = new EasyMDE({
             element: systemMessageElement,
             forceSync: true,
+            readOnly: isDisabled ? 'nocursor' : false,
             toolbar: mdeToolbar,
             autoDownloadFontAwesome: false
         });
 
-        initializeMdeShortcodeWrapper(mde);
-
         mde.codemirror.on('change', function () {
             document.dispatchEvent(new Event('contentpreview:render'));
         });
+
+        if(isDisabled){
+            systemMessageElement.parentNode.querySelector(".CodeMirror").classList.add('cm-editor-readonly');
+        }
 
         if (isRtl)
         {
@@ -194,3 +199,9 @@
         }
     });
 </script>
+
+<style at="Foot">
+    .cm-editor-readonly {
+        background-color: var(--bs-secondary-bg, '#e9ecef') !important;
+    }
+</style>

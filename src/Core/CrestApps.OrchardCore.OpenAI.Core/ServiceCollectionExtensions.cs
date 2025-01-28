@@ -1,10 +1,12 @@
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Core.Handlers;
+using CrestApps.OrchardCore.OpenAI.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Security.Permissions;
 
@@ -36,6 +38,8 @@ public static class ServiceCollectionExtensions
             .AddPermissionProvider<OpenAIChatPermissionsProvider>()
             .AddScoped<IAuthorizationHandler, OpenAIChatProfileAuthenticationHandler>()
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(OpenAIConstants.CollectionName));
+
+        services.AddTransient<IConfigureOptions<DefaultOpenAIOptions>, DefaultOpenAIOptionsConfiguration>();
 
         return services;
     }
@@ -78,7 +82,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddAITool<TTool>(this IServiceCollection services)
+    public static IServiceCollection AddOpenAITool<TTool>(this IServiceCollection services)
         where TTool : AITool
     {
         services.AddTransient<AITool, TTool>();

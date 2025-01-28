@@ -11,6 +11,27 @@ To manage chat profiles, you must enable at least one feature that provides an A
 
 For detailed documentation on Azure OpenAI features, [click here](../CrestApps.OrchardCore.OpenAI.Azure/README.md).
 
+### Default Parameters
+
+By default, a set of parameters is available for configuration in each chat profile. These parameters can be adjusted using any supported settings provider. For example, here's how you can modify the parameters using the `appsettings.json` file:
+
+```json
+{
+  "OrchardCore":{
+    "CrestApps_OpenAI":{
+      "DefaultParameters":{
+        "Temperature":0,
+        "TopP":1,
+        "FrequencyPenalty":0,
+        "PresencePenalty":0,
+        "MaxOutputTokens":800,
+        "PastMessagesCount":10
+      }
+    }
+  }
+}
+```
+
 ### OpenAI Chat Tools
 
 The module offers the flexibility to extend OpenAI's capabilities by adding custom functions, enabling the model to provide more tailored and accurate responses. If you need to implement a custom function, simply implement the `AIFunction` abstract class and register it as a service.
@@ -59,10 +80,10 @@ public sealed class GetWeatherFunction : AIFunction
 
 #### Registering the Function
 
-To register this function, you can use the `AddAITool` extension method within your `Startup` class:
+To register this function, you can use the `AddOpenAITool` extension method within your `Startup` class:
 
 ```csharp
-services.AddAITool<GetWeatherFunction>();
+services.AddOpenAITool<GetWeatherFunction>();
 ```
 
 If you need to access the tools in your module, you can use the `IAIToolsService` interface to access the registered functions.

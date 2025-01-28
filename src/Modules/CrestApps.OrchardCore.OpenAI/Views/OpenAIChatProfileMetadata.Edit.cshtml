@@ -1,14 +1,17 @@
 @using CrestApps.OrchardCore.OpenAI.Core
+@using CrestApps.OrchardCore.OpenAI.Core.Models
+@using Microsoft.Extensions.Options
 @using OrchardCore
 @using CrestApps.OrchardCore.OpenAI.ViewModels
 
 @model ChatProfileMetadataViewModel
+@inject IOptions<DefaultOpenAIOptions> OpenAIOptions
 
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="MaxTokens" class="@Orchard.GetLabelClasses()">@T["Max response"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <input type="number" class="form-control" asp-for="MaxTokens" step="4" min="4" max="2048">
-        <span class="hint">@T["Set a limit on the number of tokens per model response. The supported number of tokens are shared between the prompt (including system message, examples, message history, and user query) and the model's response. One token is roughly 4 characters for typical English text. Leave it blank to use the current default of {0}.", OpenAIConstants.DefaultMaxOutputTokens]</span>
+        <input type="number" class="form-control" asp-for="MaxTokens" step="4" min="4">
+        <span class="hint">@T["Set a limit on the number of tokens per model response. The supported number of tokens are shared between the prompt (including system message, examples, message history, and user query) and the model's response. One token is roughly 4 characters for typical English text. Leave it blank to use the app default of {0}.", OpenAIOptions.Value.MaxOutputTokens]</span>
     </div>
 </div>
 
@@ -16,7 +19,7 @@
     <label asp-for="Temperature" class="@Orchard.GetLabelClasses()">@T["Temperature"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="Temperature" step="0.01" min="0" max="1">
-        <span class="hint">@T["Controls randomness. Lowering the temperature means that the model will produce more repetitive and deterministic responses. Increasing the temperature will result in more unexpected or creative responses. Try adjusting temperature or Top P but not both. Leave it blank to use the current default of {0}.", OpenAIConstants.DefaultTemperature]</span>
+        <span class="hint">@T["Controls randomness. Lowering the temperature means that the model will produce more repetitive and deterministic responses. Increasing the temperature will result in more unexpected or creative responses. Try adjusting temperature or Top P but not both. Leave it blank to use the app default of {0}.", OpenAIOptions.Value.Temperature]</span>
     </div>
 </div>
 
@@ -24,7 +27,7 @@
     <label asp-for="TopP" class="@Orchard.GetLabelClasses()">@T["Top P"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="TopP" step="0.01" min="0" max="1">
-        <span class="hint">@T["Similar to temperature, this controls randomness but uses a different method. Lowering Top P will narrow the model’s token selection to likelier tokens. Increasing Top P will let the model choose from tokens with both high and low likelihood. Try adjusting temperature or Top P but not both. Leave it blank to use the current default of {0}.", OpenAIConstants.DefaultTopP]</span>
+        <span class="hint">@T["Similar to temperature, this controls randomness but uses a different method. Lowering Top P will narrow the model’s token selection to likelier tokens. Increasing Top P will let the model choose from tokens with both high and low likelihood. Try adjusting temperature or Top P but not both. Leave it blank to use the app default of {0}.", OpenAIOptions.Value.TopP]</span>
     </div>
 </div>
 
@@ -32,7 +35,7 @@
     <label asp-for="FrequencyPenalty" class="@Orchard.GetLabelClasses()">@T["Frequency penalty"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="FrequencyPenalty " step="0.01" min="0" max="1">
-        <span class="hint">@T["Reduce the chance of repeating a token proportionally based on how often it has appeared in the text so far. This decreases the likelihood of repeating the exact same text in a response. Leave it blank to use the current default of {0}.", OpenAIConstants.DefaultFrequencyPenalty]</span>
+        <span class="hint">@T["Reduce the chance of repeating a token proportionally based on how often it has appeared in the text so far. This decreases the likelihood of repeating the exact same text in a response. Leave it blank to use the app default of {0}.", OpenAIOptions.Value.FrequencyPenalty]</span>
     </div>
 </div>
 
@@ -40,14 +43,14 @@
     <label asp-for="PresencePenalty" class="@Orchard.GetLabelClasses()">@T["Presence penalty"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="PresencePenalty" step="0.01" min="0" max="1">
-        <span class="hint">@T["Reduce the chance of repeating any token that has appeared in the text at all so far. This increases the likelihood of introducing new topics in a response. Leave it blank to use the current default of {0}.", OpenAIConstants.DefaultPresencePenalty]</span>
+        <span class="hint">@T["Reduce the chance of repeating any token that has appeared in the text at all so far. This increases the likelihood of introducing new topics in a response. Leave it blank to use the app default of {0}.", OpenAIOptions.Value.PresencePenalty]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
     <label asp-for="PastMessagesCount" class="@Orchard.GetLabelClasses()">@T["Past messages included"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="PastMessagesCount" step="1" min="2" max="20">
-        <span class="hint">@T["Select the number of past messages to include in each new API request. This helps give the model context for new user queries. Setting this number to 10 will include 5 user queries and 5 system responses. Leave it blank to use the current default of {0}.", OpenAIConstants.DefaultPastMessagesCount]</span>
+        <span class="hint">@T["Select the number of past messages to include in each new API request. This helps give the model context for new user queries. Setting this number to 10 will include 5 user queries and 5 system responses. Leave it blank to use the app default of {0}.", OpenAIOptions.Value.PastMessagesCount]</span>
     </div>
 </div>

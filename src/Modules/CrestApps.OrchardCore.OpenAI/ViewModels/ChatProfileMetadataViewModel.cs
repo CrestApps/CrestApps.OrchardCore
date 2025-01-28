@@ -18,7 +18,7 @@ public class ChatProfileMetadataViewModel
     [Range(0f, 1f)]
     public float? PresencePenalty { get; set; }
 
-    [Range(4, 2048)]
+    [Range(4, int.MaxValue)]
     public int? MaxTokens { get; set; }
 
     [Range(2, 20)]

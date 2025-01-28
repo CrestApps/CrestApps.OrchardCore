@@ -12,20 +12,22 @@ Before using this feature, ensure that the necessary services are configured. Yo
 
 ```json
 {
-  "CrestApps_OpenAI_Connections": {
-      "Azure": [
+  "CrestApps_OpenAI":{
+    "Connections":{
+      "Azure":[
         {
-          "Name": "<!-- A unique name for your connection. It’s recommended to match your Azure account's AccountName -->",
-          "TenantId": "<!-- Your Azure TenantId -->",
-          "ClientId": "<!-- Your Azure ClientId -->",
-          "ClientSecret": "<!-- Your Azure ClientSecret -->",
-          "SubscriptionId": "<!-- Your Azure SubscriptionId -->",
-          "AccountName": "<!-- Your Azure Cognitive Account Name -->",
-          "ResourceGroupName": "<!-- Your Azure Cognitive Resource Group Name -->",
-          "ApiKey": "<!-- API Key to connect to your Azure AI instance -->"
+          "Name":"<!-- A unique name for your connection. It’s recommended to match your Azure account's AccountName -->",
+          "TenantId":"<!-- Your Azure TenantId -->",
+          "ClientId":"<!-- Your Azure ClientId -->",
+          "ClientSecret":"<!-- Your Azure ClientSecret -->",
+          "SubscriptionId":"<!-- Your Azure SubscriptionId -->",
+          "AccountName":"<!-- Your Azure Cognitive Account Name -->",
+          "ResourceGroupName":"<!-- Your Azure Cognitive Resource Group Name -->",
+          "ApiKey":"<!-- API Key to connect to your Azure AI instance -->"
         }
       ]
     }
+  }
 }
 ```
 

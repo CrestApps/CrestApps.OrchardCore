@@ -28,6 +28,9 @@ public class EditChatProfileViewModel
     public bool IsNew { get; set; }
 
     [BindNever]
+    public bool IsSystemMessageLocked { get; set; }
+
+    [BindNever]
     public IList<SelectListItem> Deployments { get; set; }
 
     [BindNever]

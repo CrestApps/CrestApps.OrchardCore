@@ -1,6 +1,7 @@
 using Azure.AI.OpenAI;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
+using CrestApps.OrchardCore.OpenAI.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.AI;
@@ -14,6 +15,7 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
 {
     private readonly IOpenAIDeploymentStore _deploymentStore;
     private readonly IAIToolsService _toolsService;
+    private readonly DefaultOpenAIOptions _defaultOptions;
     private readonly OpenAIConnectionOptions _connectionOptions;
     private readonly ILogger _logger;
 
@@ -21,10 +23,12 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
         IOpenAIDeploymentStore deploymentStore,
         IOptions<OpenAIConnectionOptions> connectionOptions,
         IAIToolsService toolsService,
+        IOptions<DefaultOpenAIOptions> defaultOptions,
         ILogger<AzureOpenAIChatCompletionService> logger)
     {
         _deploymentStore = deploymentStore;
         _toolsService = toolsService;
+        _defaultOptions = defaultOptions.Value;
         _connectionOptions = connectionOptions.Value;
         _logger = logger;
     }
@@ -65,11 +69,11 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
 
         var chatOptions = new ChatOptions()
         {
-            Temperature = metadata.Temperature ?? OpenAIConstants.DefaultTemperature,
-            TopP = metadata.TopP ?? OpenAIConstants.DefaultTopP,
-            FrequencyPenalty = metadata.FrequencyPenalty ?? OpenAIConstants.DefaultFrequencyPenalty,
-            PresencePenalty = metadata.PresencePenalty ?? OpenAIConstants.DefaultPresencePenalty,
-            MaxOutputTokens = metadata.MaxTokens ?? OpenAIConstants.DefaultMaxOutputTokens,
+            Temperature = metadata.Temperature ?? _defaultOptions.Temperature,
+            TopP = metadata.TopP ?? _defaultOptions.TopP,
+            FrequencyPenalty = metadata.FrequencyPenalty ?? _defaultOptions.FrequencyPenalty,
+            PresencePenalty = metadata.PresencePenalty ?? _defaultOptions.PresencePenalty,
+            MaxOutputTokens = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
         };
 
         if (!context.DisableTools && context.Profile.FunctionNames is not null)
@@ -95,7 +99,7 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
             new(ChatRole.System, GetSystemMessage(context)),
         };
 
-        var pastMessageCount = metadata.PastMessagesCount ?? OpenAIConstants.DefaultPastMessagesCount;
+        var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
 
         var chatMessages = messages.Where(x => (x.Role == ChatRole.User || x.Role == ChatRole.Assistant) && !string.IsNullOrWhiteSpace(x.Text)).ToArray();
 

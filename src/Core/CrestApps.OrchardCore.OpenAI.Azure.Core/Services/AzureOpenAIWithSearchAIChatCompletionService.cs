@@ -6,6 +6,7 @@ using Azure.AI.OpenAI;
 using Azure.AI.OpenAI.Chat;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
+using CrestApps.OrchardCore.OpenAI.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.Services;
 using Microsoft.CodeAnalysis;
@@ -25,6 +26,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
     private readonly IOpenAILinkGenerator _openAILinkGenerator;
     private readonly AzureAISearchIndexSettingsService _azureAISearchIndexSettingsService;
     private readonly IAIToolsService _toolsService;
+    private readonly DefaultOpenAIOptions _defaultOptions;
     private readonly OpenAIConnectionOptions _connectionOptions;
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
     private readonly ILogger _logger;
@@ -36,12 +38,14 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         IOpenAILinkGenerator openAILinkGenerator,
         AzureAISearchIndexSettingsService azureAISearchIndexSettingsService,
         IAIToolsService toolService,
+        IOptions<DefaultOpenAIOptions> defaultOptions,
         ILogger<AzureOpenAIChatCompletionService> logger)
     {
         _deploymentStore = deploymentStore;
         _openAILinkGenerator = openAILinkGenerator;
         _azureAISearchIndexSettingsService = azureAISearchIndexSettingsService;
         _toolsService = toolService;
+        _defaultOptions = defaultOptions.Value;
         _connectionOptions = connectionOptions.Value;
         _azureAISearchDefaultOptions = azureAISearchDefaultOptions.Value;
         _logger = logger;
@@ -101,7 +105,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
 
         var metadata = context.Profile.As<OpenAIChatProfileMetadata>();
 
-        var pastMessageCount = metadata.PastMessagesCount ?? OpenAIConstants.DefaultPastMessagesCount;
+        var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
         var skip = GetTotalMessagesToSkip(azureMessages.Count, pastMessageCount);
 
         var prompts = new List<ChatMessage>
@@ -264,11 +268,11 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
 
         var chatOptions = new ChatCompletionOptions()
         {
-            Temperature = metadata.Temperature ?? OpenAIConstants.DefaultTemperature,
-            TopP = metadata.TopP ?? OpenAIConstants.DefaultTopP,
-            FrequencyPenalty = metadata.FrequencyPenalty ?? OpenAIConstants.DefaultFrequencyPenalty,
-            PresencePenalty = metadata.PresencePenalty ?? OpenAIConstants.DefaultPresencePenalty,
-            MaxOutputTokenCount = metadata.MaxTokens ?? OpenAIConstants.DefaultMaxOutputTokens,
+            Temperature = metadata.Temperature ?? _defaultOptions.Temperature,
+            TopP = metadata.TopP ?? _defaultOptions.TopP,
+            FrequencyPenalty = metadata.FrequencyPenalty ?? _defaultOptions.FrequencyPenalty,
+            PresencePenalty = metadata.PresencePenalty ?? _defaultOptions.PresencePenalty,
+            MaxOutputTokenCount = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
         };
 
         if (!context.DisableTools)
