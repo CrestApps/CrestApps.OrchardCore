@@ -11,6 +11,55 @@ To manage chat profiles, you must enable at least one feature that provides an A
 
 For detailed documentation on Azure OpenAI features, [click here](../CrestApps.OrchardCore.OpenAI.Azure/README.md).
 
+### Defining Chat Profiles Using Code
+
+Sometimes you may need to define chat profiles using code. You can do this using a migration class. Here's an example of how to create a chat profile using a migration class:
+
+```csharp
+public sealed class TestMigMigrations : DataMigration
+{
+    private readonly IOpenAIChatProfileManager _openAIChatProfileManager;
+    private readonly IOpenAIDeploymentManager _openAIDeploymentManager;
+
+    public TestMigMigrations(
+        IOpenAIChatProfileManager openAIChatProfileManager,
+        IOpenAIDeploymentManager openAIDeploymentManager)
+    {
+        _openAIChatProfileManager = openAIChatProfileManager;
+        _openAIDeploymentManager = openAIDeploymentManager;
+    }
+
+    public async Task<int> CreateAsync()
+    {
+        var deployments = await _openAIDeploymentManager.GetAllAsync();
+
+        if (deployments.Any())
+        {
+            var profile = await _openAIChatProfileManager.NewAsync("Azure");
+
+            profile.Name = "AUniqueTechnicalName";
+            profile.Type = OpenAIChatProfileType.Chat;
+            profile.DeploymentId = deployments.First().Id;
+            profile.SystemMessage = "some system message";
+
+            profile.WithSettings(new OpenAIChatProfileSettings
+            {
+                LockSystemMessage = true, // prevent the user from changing the system message.
+                IsRemovable = false, // prevent the user from removing the profile.
+                IsListable = false, // prevent the user from listing the profile on the UI.
+                IsOnAdminMenu = true, // show the profile on the admin menu. This option only when the profile of type chat.
+            });
+
+            await _openAIChatProfileManager.SaveAsync(profile);
+        }
+
+        return 1;
+    }
+}
+```
+
+> **Note**: If a profile with the same name already exists, creating a profile through a migration class will update the existing profile instead of creating a new one. To avoid conflicts, always use a unique name when defining a new profile.
+
 ### Default Parameters
 
 By default, a set of parameters is available for configuration in each chat profile. These parameters can be adjusted using any supported settings provider. For example, here's how you can modify the parameters using the `appsettings.json` file:

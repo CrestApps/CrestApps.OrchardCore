@@ -18,6 +18,8 @@ public class EditChatProfileViewModel
 
     public string DeploymentId { get; set; }
 
+    public bool IsOnAdminMenu { get; set; }
+
     public OpenAIChatProfileType ProfileType { get; set; }
 
     public OpenAISessionTitleType? TitleType { get; set; }

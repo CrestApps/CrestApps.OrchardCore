@@ -82,7 +82,8 @@ public sealed class ChatStartup : StartupBase
                 .Configure("advanced")
                 .Use<NewTabLinkExtension>();
             });
-        services.AddDataMigration<TestMigMigrations>();
+
+        services.AddDataMigration<OpenAIChatSettingsMigrations>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

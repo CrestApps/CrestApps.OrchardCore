@@ -88,17 +88,6 @@ public sealed class DefaultOpenAIChatProfileStore : IOpenAIChatProfileStore
             throw new InvalidOperationException("There is already another profile with the same name.");
         }
 
-        if (document.Profiles.TryGetValue(profile.Id, out var existingProfile))
-        {
-            var settings = existingProfile.GetSettings<OpenAIChatProfileSettings>();
-
-            if (settings.LockSystemMessage)
-            {
-                // Preserve the existing system message if it is locked.
-                profile.SystemMessage = existingProfile.SystemMessage;
-            }
-        }
-
         document.Profiles[profile.Id] = profile;
 
         await _documentManager.UpdateAsync(document);

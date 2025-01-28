@@ -13,7 +13,8 @@ public static class OpenAIChatProfileExtensions
         PropertyNameCaseInsensitive = true,
     };
 
-    public static T GetSettings<T>(this OpenAIChatProfile profile) where T : new()
+    public static T GetSettings<T>(this OpenAIChatProfile profile)
+        where T : new()
     {
         if (profile.Settings == null)
         {
@@ -30,7 +31,39 @@ public static class OpenAIChatProfileExtensions
         return node.ToObject<T>() ?? new T();
     }
 
-    public static OpenAIChatProfile MergeSettings<T>(this OpenAIChatProfile profile, Action<T> setting) where T : class, new()
+    public static bool TryGetSettings<T>(this OpenAIChatProfile profile, out T settings)
+        where T : class
+    {
+        if (profile.Settings == null)
+        {
+            settings = null;
+
+            return false;
+        }
+
+        var node = profile.Settings[typeof(T).Name];
+
+        if (node == null)
+        {
+            settings = null;
+
+            return false;
+        }
+
+        settings = node.ToObject<T>();
+
+        return true;
+    }
+
+    /// <summary>
+    /// Alter existing settings or add new settings.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="profile"></param>
+    /// <param name="setting"></param>
+    /// <returns></returns>
+    public static OpenAIChatProfile AlterSettings<T>(this OpenAIChatProfile profile, Action<T> setting)
+        where T : class, new()
     {
         var existingJObject = profile.Settings[typeof(T).Name] as JsonObject;
 
