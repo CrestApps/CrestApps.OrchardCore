@@ -109,6 +109,7 @@ public static class OrchardCoreHelpers
         {
             return semVerCurrent < semCompareTo;
         }
+
         return false;
     }
 
