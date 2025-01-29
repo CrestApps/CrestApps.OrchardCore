@@ -22,16 +22,32 @@ public sealed class AvatarAdminMenu : AdminNavigationProvider
 
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        builder
-            .Add(S["Configuration"], configuration => configuration
-                .Add(S["Settings"], settings => settings
-                    .Add(S["User Avatars"], S["User Avatars"].PrefixPosition(), userAvatars => userAvatars
-                        .AddClass("user-avatars")
-                        .Id("userAvatars")
-                        .Action("Index", "Admin", _routeValues)
-                        .Permission(UserPermissions.ManageAvatarSettings)
-                        .LocalNav()
+        if (OrchardCoreHelpers.UseLegacyAdminMenuFormat())
+        {
+            builder
+                .Add(S["Configuration"], configuration => configuration
+                    .Add(S["Settings"], settings => settings
+                        .Add(S["User Avatars"], S["User Avatars"].PrefixPosition(), userAvatars => userAvatars
+                            .AddClass("user-avatars")
+                            .Id("userAvatars")
+                            .Action("Index", "Admin", _routeValues)
+                            .Permission(UserPermissions.ManageAvatarSettings)
+                            .LocalNav()
+                        )
                     )
+                );
+
+            return ValueTask.CompletedTask;
+        }
+
+        builder
+            .Add(S["Settings"], settings => settings
+                .Add(S["User Avatars"], S["User Avatars"].PrefixPosition(), userAvatars => userAvatars
+                    .AddClass("user-avatars")
+                    .Id("userAvatars")
+                    .Action("Index", "Admin", _routeValues)
+                    .Permission(UserPermissions.ManageAvatarSettings)
+                    .LocalNav()
                 )
             );
 

@@ -11,4 +11,9 @@
     <PackageTags>$(PackageTags) OrchardCoreCMS Abstractions</PackageTags>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="NuGet.Versioning" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+  </ItemGroup>
+
 </Project>

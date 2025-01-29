@@ -10,6 +10,8 @@
     <PackageVersion Include="Microsoft.Extensions.AI" Version="9.1.0-preview.1.25064.3" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.1.0-preview.1.25064.3" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.1.0-preview.1.25064.3" />
+    <PackageVersion Include="NuGet.Versioning" Version="6.12.1" />
+    <PackageVersion Include="OrchardCore.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Application.Cms.Core.Targets" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentFields" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentManagement" Version="$(OrchardCoreVersion)" />
