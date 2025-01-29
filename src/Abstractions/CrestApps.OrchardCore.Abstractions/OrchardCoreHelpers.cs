@@ -61,7 +61,7 @@ public static class OrchardCoreHelpers
             }
         }
 
-        return _currentVersion.Split('+', 2)[0];
+        return _currentVersion;
     }
 
     /// <summary>
