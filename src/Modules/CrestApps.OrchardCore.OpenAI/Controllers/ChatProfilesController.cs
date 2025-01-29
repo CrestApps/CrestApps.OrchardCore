@@ -70,9 +70,10 @@ public sealed class ChatProfilesController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var result = await _profileManager.PageAsync(pager.Page, pager.PageSize, new QueryContext
+        var result = await _profileManager.PageAsync(pager.Page, pager.PageSize, new OpenAIChatProfileQueryContext
         {
             Name = options.Search,
+            IsListableOnly = true,
         });
 
         // Maintain previous route data when generating page links.

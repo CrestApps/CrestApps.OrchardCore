@@ -49,6 +49,15 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
     {
         var fields = Initialize<EditChatProfileViewModel>("OpenAIChatProfileFields_Edit", async model =>
         {
+            if (profile.TryGetSettings<OpenAIChatProfileSettings>(out var settings))
+            {
+                model.IsOnAdminMenu = settings.IsOnAdminMenu;
+            }
+            else
+            {
+                model.IsOnAdminMenu = profile.Type == OpenAIChatProfileType.Chat && context.IsNew;
+            }
+
             model.Name = profile.Name;
             model.SystemMessage = profile.SystemMessage;
             model.PromptSubject = profile.PromptSubject;
@@ -57,7 +66,7 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
             model.DeploymentId = profile.DeploymentId;
             model.TitleType = profile.TitleType;
             model.IsNew = context.IsNew;
-
+            model.IsSystemMessageLocked = profile.GetSettings<OpenAIChatProfileSettings>().LockSystemMessage;
             model.ProfileType = profile.Type;
             model.TitleTypes =
             [
@@ -188,13 +197,24 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<OpenAIChatPro
             }
         }
 
-        profile.SystemMessage = model.SystemMessage;
+        var settings = profile.GetSettings<OpenAIChatProfileSettings>();
+
+        if (!settings.LockSystemMessage)
+        {
+            profile.SystemMessage = model.SystemMessage;
+        }
+
         profile.PromptSubject = model.PromptSubject?.Trim();
         profile.PromptTemplate = model.PromptTemplate;
         profile.DeploymentId = model.DeploymentId;
         profile.WelcomeMessage = model.WelcomeMessage;
         profile.TitleType = model.TitleType;
         profile.Type = model.ProfileType;
+
+        profile.AlterSettings<OpenAIChatProfileSettings>(settings =>
+        {
+            settings.IsOnAdminMenu = profile.Type == OpenAIChatProfileType.Chat && model.IsOnAdminMenu;
+        });
 
         var selectedFunctionNames = model.Functions?.Where(x => x.IsSelected).Select(x => x.Name).ToArray();
 

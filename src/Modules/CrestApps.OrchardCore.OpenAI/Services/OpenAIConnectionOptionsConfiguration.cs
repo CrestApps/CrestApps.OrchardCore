@@ -17,7 +17,7 @@ internal sealed class OpenAIConnectionOptionsConfiguration : IConfigureOptions<O
 
     public void Configure(OpenAIConnectionOptions options)
     {
-        var jsonNode = _shellConfiguration.GetSection("CrestApps_OpenAI_Connections").AsJsonNode();
+        var jsonNode = _shellConfiguration.GetSection("CrestApps_OpenAI:Connections").AsJsonNode();
 
         var jsonElement = JsonSerializer.Deserialize<JsonElement>(jsonNode);
 

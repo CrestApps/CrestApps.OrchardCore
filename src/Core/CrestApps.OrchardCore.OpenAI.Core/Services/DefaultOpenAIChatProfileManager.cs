@@ -117,7 +117,7 @@ public sealed class DefaultOpenAIChatProfileManager : IOpenAIChatProfileManager
         return profile;
     }
 
-    public async Task<OpenAIChatProfileResult> PageAsync(int page, int pageSize, QueryContext context)
+    public async Task<OpenAIChatProfileResult> PageAsync(int page, int pageSize, OpenAIChatProfileQueryContext context)
     {
         var result = await _profileStore.PageAsync(page, pageSize, context);
 

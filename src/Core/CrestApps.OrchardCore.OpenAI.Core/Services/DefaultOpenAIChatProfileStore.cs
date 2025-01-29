@@ -20,6 +20,18 @@ public sealed class DefaultOpenAIChatProfileStore : IOpenAIChatProfileStore
 
         var document = await _documentManager.GetOrCreateMutableAsync();
 
+        if (!document.Profiles.TryGetValue(profile.Id, out var existingProfile))
+        {
+            return false;
+        }
+
+        var settings = existingProfile.GetSettings<OpenAIChatProfileSettings>();
+
+        if (!settings.IsRemovable)
+        {
+            throw new InvalidOperationException("The profile cannot be removed.");
+        }
+
         var removed = document.Profiles.Remove(profile.Id);
 
         if (removed)
@@ -73,7 +85,7 @@ public sealed class DefaultOpenAIChatProfileStore : IOpenAIChatProfileStore
 
         if (document.Profiles.Values.Any(x => x.Name.Equals(profile.Name, StringComparison.OrdinalIgnoreCase) && x.Id != profile.Id))
         {
-            throw new InvalidOperationException("The is already another profile with the same name.");
+            throw new InvalidOperationException("There is already another profile with the same name.");
         }
 
         document.Profiles[profile.Id] = profile;
@@ -81,7 +93,7 @@ public sealed class DefaultOpenAIChatProfileStore : IOpenAIChatProfileStore
         await _documentManager.UpdateAsync(document);
     }
 
-    public async ValueTask<OpenAIChatProfileResult> PageAsync(int page, int pageSize, QueryContext context)
+    public async ValueTask<OpenAIChatProfileResult> PageAsync(int page, int pageSize, OpenAIChatProfileQueryContext context)
     {
         var records = await LocateQueriesAsync(context);
 
@@ -101,7 +113,7 @@ public sealed class DefaultOpenAIChatProfileStore : IOpenAIChatProfileStore
         return document.Profiles.Values;
     }
 
-    private async ValueTask<IEnumerable<OpenAIChatProfile>> LocateQueriesAsync(QueryContext context)
+    private async ValueTask<IEnumerable<OpenAIChatProfile>> LocateQueriesAsync(OpenAIChatProfileQueryContext context)
     {
         var document = await _documentManager.GetOrCreateImmutableAsync();
 
@@ -115,6 +127,11 @@ public sealed class DefaultOpenAIChatProfileStore : IOpenAIChatProfileStore
         if (!string.IsNullOrEmpty(context.Source))
         {
             queries = queries.Where(x => x.Source.Equals(context.Source, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (context.IsListableOnly)
+        {
+            queries = queries.Where(x => x.GetSettings<OpenAIChatProfileSettings>().IsListable);
         }
 
         if (!string.IsNullOrEmpty(context.Name))

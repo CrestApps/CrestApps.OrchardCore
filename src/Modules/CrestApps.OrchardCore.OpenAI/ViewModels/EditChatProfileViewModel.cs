@@ -18,6 +18,8 @@ public class EditChatProfileViewModel
 
     public string DeploymentId { get; set; }
 
+    public bool IsOnAdminMenu { get; set; }
+
     public OpenAIChatProfileType ProfileType { get; set; }
 
     public OpenAISessionTitleType? TitleType { get; set; }
@@ -26,6 +28,9 @@ public class EditChatProfileViewModel
 
     [BindNever]
     public bool IsNew { get; set; }
+
+    [BindNever]
+    public bool IsSystemMessageLocked { get; set; }
 
     [BindNever]
     public IList<SelectListItem> Deployments { get; set; }

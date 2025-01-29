@@ -54,7 +54,7 @@ public interface IOpenAIChatProfileStore
     /// A task representing the asynchronous operation. The task result is an <see cref="OpenAIChatProfileResult"/> object,
     /// which contains the list of AI chat profiles for the requested page, along with metadata for pagination (such as total count, etc.).
     /// </returns>
-    ValueTask<OpenAIChatProfileResult> PageAsync(int page, int pageSize, QueryContext context);
+    ValueTask<OpenAIChatProfileResult> PageAsync(int page, int pageSize, OpenAIChatProfileQueryContext context);
 
     /// <summary>
     /// Asynchronously saves or updates the specified AI chat profile in the store.

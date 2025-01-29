@@ -134,11 +134,16 @@ public sealed class OpenAIChatProfileHandler : OpenAIChatProfileHandlerBase
             profile.DeploymentId = deploymentId;
         }
 
-        var systemMessage = data[nameof(OpenAIChatProfile.SystemMessage)]?.GetValue<string>()?.Trim();
+        var settings = profile.GetSettings<OpenAIChatProfileSettings>();
 
-        if (!string.IsNullOrEmpty(systemMessage))
+        if (!settings.LockSystemMessage)
         {
-            profile.SystemMessage = systemMessage;
+            var systemMessage = data[nameof(OpenAIChatProfile.SystemMessage)]?.GetValue<string>()?.Trim();
+
+            if (!string.IsNullOrEmpty(systemMessage))
+            {
+                profile.SystemMessage = systemMessage;
+            }
         }
 
         var welcomeMessage = data[nameof(OpenAIChatProfile.WelcomeMessage)]?.GetValue<string>()?.Trim();

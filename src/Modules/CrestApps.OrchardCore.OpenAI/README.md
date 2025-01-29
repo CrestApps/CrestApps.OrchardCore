@@ -11,6 +11,77 @@ To manage chat profiles, you must enable at least one feature that provides an A
 
 For detailed documentation on Azure OpenAI features, [click here](../CrestApps.OrchardCore.OpenAI.Azure/README.md).
 
+### Defining Chat Profiles Using Code
+
+Sometimes you may need to define chat profiles using code. You can do this using a migration class. Here's an example of how to create a chat profile using a migration class:
+
+```csharp
+public sealed class SystemDefinedOpenAIProfileMigrations : DataMigration
+{
+    private readonly IOpenAIChatProfileManager _openAIChatProfileManager;
+    private readonly IOpenAIDeploymentManager _openAIDeploymentManager;
+
+    public SystemDefinedOpenAIProfileMigrations(
+        IOpenAIChatProfileManager openAIChatProfileManager,
+        IOpenAIDeploymentManager openAIDeploymentManager)
+    {
+        _openAIChatProfileManager = openAIChatProfileManager;
+        _openAIDeploymentManager = openAIDeploymentManager;
+    }
+
+    public async Task<int> CreateAsync()
+    {
+        var deployments = await _openAIDeploymentManager.GetAllAsync();
+
+        if (deployments.Any())
+        {
+            var profile = await _openAIChatProfileManager.NewAsync("Azure");
+
+            profile.Name = "UniqueTechnicalName";
+            profile.Type = OpenAIChatProfileType.Chat;
+            profile.DeploymentId = deployments.First().Id;
+            profile.SystemMessage = "some system message";
+            // Set other properties as needed.
+
+            profile.WithSettings(new OpenAIChatProfileSettings
+            {
+                LockSystemMessage = true, // prevent the user from changing the system message.
+                IsRemovable = false, // prevent the user from removing the profile.
+                IsListable = false, // prevent the user from listing the profile on the UI.
+                IsOnAdminMenu = true, // show the profile on the admin menu. This option only when the profile of type chat.
+            });
+
+            await _openAIChatProfileManager.SaveAsync(profile);
+        }
+
+        return 1;
+    }
+}
+```
+
+> **Note**: If a profile with the same name already exists, creating a profile through a migration class will update the existing profile instead of creating a new one. To avoid conflicts, always use a unique name when defining a new profile.
+
+### Default Parameters
+
+By default, a set of parameters is available for configuration in each chat profile. These parameters can be adjusted using any supported settings provider. For example, here's how you can modify the parameters using the `appsettings.json` file:
+
+```json
+{
+  "OrchardCore":{
+    "CrestApps_OpenAI":{
+      "DefaultParameters":{
+        "Temperature":0,
+        "TopP":1,
+        "FrequencyPenalty":0,
+        "PresencePenalty":0,
+        "MaxOutputTokens":800,
+        "PastMessagesCount":10
+      }
+    }
+  }
+}
+```
+
 ### OpenAI Chat Tools
 
 The module offers the flexibility to extend OpenAI's capabilities by adding custom functions, enabling the model to provide more tailored and accurate responses. If you need to implement a custom function, simply implement the `AIFunction` abstract class and register it as a service.
@@ -59,10 +130,10 @@ public sealed class GetWeatherFunction : AIFunction
 
 #### Registering the Function
 
-To register this function, you can use the `AddAITool` extension method within your `Startup` class:
+To register this function, you can use the `AddOpenAITool` extension method within your `Startup` class:
 
 ```csharp
-services.AddAITool<GetWeatherFunction>();
+services.AddOpenAITool<GetWeatherFunction>();
 ```
 
 If you need to access the tools in your module, you can use the `IAIToolsService` interface to access the registered functions.

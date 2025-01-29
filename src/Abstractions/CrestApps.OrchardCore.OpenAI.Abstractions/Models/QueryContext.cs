@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.OpenAI.Models;
 
-public sealed class QueryContext
+public class QueryContext
 {
     public string Source { get; set; }
 

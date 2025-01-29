@@ -32,6 +32,13 @@ public sealed class OpenAIChatAdminMenu : AdminNavigationProvider
                var i = 1;
                foreach (var profile in profiles.OrderBy(p => p.Name))
                {
+                   var settings = profile.GetSettings<OpenAIChatProfileSettings>();
+
+                   if (!settings.IsOnAdminMenu)
+                   {
+                       continue;
+                   }
+
                    openAI
                    .Add(new LocalizedString(profile.Name, profile.Name), $"chat{i++}", chat => chat
                        .AddClass(profile.Name.HtmlClassify())
