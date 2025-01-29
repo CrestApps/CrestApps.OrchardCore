@@ -23,16 +23,32 @@ public sealed class UserDisplayNameAdminMenu : AdminNavigationProvider
 
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        builder
-            .Add(S["Configuration"], configuration => configuration
-                .Add(S["Settings"], settings => settings
-                    .Add(S["User Display Name"], S["User Display Name"].PrefixPosition(), userDisplayName => userDisplayName
-                        .AddClass("user-display-name")
-                        .Id("userDisplayName")
-                        .Action("Index", "Admin", _routeValues)
-                        .Permission(UserPermissions.ManageDisplaySettings)
-                        .LocalNav()
+        if (OrchardCoreHelpers.UseLegacyAdminMenuFormat())
+        {
+            builder
+                .Add(S["Configuration"], configuration => configuration
+                    .Add(S["Settings"], settings => settings
+                        .Add(S["User Display Name"], S["User Display Name"].PrefixPosition(), userDisplayName => userDisplayName
+                            .AddClass("user-display-name")
+                            .Id("userDisplayName")
+                            .Action("Index", "Admin", _routeValues)
+                            .Permission(UserPermissions.ManageDisplaySettings)
+                            .LocalNav()
+                        )
                     )
+                );
+
+            return ValueTask.CompletedTask;
+        }
+
+        builder
+            .Add(S["Settings"], settings => settings
+                .Add(S["User Display Name"], S["User Display Name"].PrefixPosition(), userDisplayName => userDisplayName
+                    .AddClass("user-display-name")
+                    .Id("userDisplayName")
+                    .Action("Index", "Admin", _routeValues)
+                    .Permission(UserPermissions.ManageDisplaySettings)
+                    .LocalNav()
                 )
             );
 
