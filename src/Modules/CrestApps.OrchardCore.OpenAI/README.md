@@ -16,12 +16,12 @@ For detailed documentation on Azure OpenAI features, [click here](../CrestApps.O
 Sometimes you may need to define chat profiles using code. You can do this using a migration class. Here's an example of how to create a chat profile using a migration class:
 
 ```csharp
-public sealed class TestMigMigrations : DataMigration
+public sealed class SystemDefinedOpenAIProfileMigrations : DataMigration
 {
     private readonly IOpenAIChatProfileManager _openAIChatProfileManager;
     private readonly IOpenAIDeploymentManager _openAIDeploymentManager;
 
-    public TestMigMigrations(
+    public SystemDefinedOpenAIProfileMigrations(
         IOpenAIChatProfileManager openAIChatProfileManager,
         IOpenAIDeploymentManager openAIDeploymentManager)
     {
@@ -37,10 +37,11 @@ public sealed class TestMigMigrations : DataMigration
         {
             var profile = await _openAIChatProfileManager.NewAsync("Azure");
 
-            profile.Name = "AUniqueTechnicalName";
+            profile.Name = "UniqueTechnicalName";
             profile.Type = OpenAIChatProfileType.Chat;
             profile.DeploymentId = deployments.First().Id;
             profile.SystemMessage = "some system message";
+            // Set other properties as needed.
 
             profile.WithSettings(new OpenAIChatProfileSettings
             {

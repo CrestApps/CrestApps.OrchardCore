@@ -16,6 +16,6 @@ internal sealed class DefaultOpenAIOptionsConfiguration : IConfigureOptions<Defa
 
     public void Configure(DefaultOpenAIOptions options)
     {
-        _shellConfiguration.GetSection("CrestApps_OpenAI__DefaultParameters").Bind(options);
+        _shellConfiguration.GetSection("CrestApps_OpenAI:DefaultParameters").Bind(options);
     }
 }

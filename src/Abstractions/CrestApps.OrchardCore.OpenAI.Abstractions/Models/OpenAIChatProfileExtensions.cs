@@ -114,4 +114,3 @@ public static class OpenAIChatProfileExtensions
         return profile;
     }
 }
-
