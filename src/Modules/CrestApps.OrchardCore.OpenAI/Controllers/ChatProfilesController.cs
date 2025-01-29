@@ -285,9 +285,23 @@ public sealed class ChatProfilesController : Controller
             return NotFound();
         }
 
-        await _profileManager.DeleteAsync(profile);
+        var settings = profile.GetSettings<OpenAIChatProfileSettings>();
 
-        await _notifier.SuccessAsync(H["Profile has been deleted successfully."]);
+        if (!settings.IsRemovable)
+        {
+            await _notifier.ErrorAsync(H["The profile cannot be removed."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (await _profileManager.DeleteAsync(profile))
+        {
+            await _notifier.SuccessAsync(H["Profile has been deleted successfully."]);
+        }
+        else
+        {
+            await _notifier.ErrorAsync(H["Unable to remove the profile."]);
+        }
 
         return RedirectToAction(nameof(Index));
     }
@@ -317,6 +331,13 @@ public sealed class ChatProfilesController : Controller
                         var profile = await _profileManager.FindByIdAsync(id);
 
                         if (profile == null)
+                        {
+                            continue;
+                        }
+
+                        var settings = profile.GetSettings<OpenAIChatProfileSettings>();
+
+                        if (!settings.IsRemovable)
                         {
                             continue;
                         }

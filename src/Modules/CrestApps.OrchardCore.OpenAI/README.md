@@ -51,6 +51,13 @@ public sealed class SystemDefinedOpenAIProfileMigrations : DataMigration
                 IsOnAdminMenu = true, // show the profile on the admin menu. This option only when the profile of type chat.
             });
 
+            // Set other properties as needed.
+            profile.Put(new OpenAIChatProfileMetadata
+            {
+                Temperature = 0.3f,
+                MaxTokens = 4096,
+            });
+
             await _openAIChatProfileManager.SaveAsync(profile);
         }
 
