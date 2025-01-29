@@ -95,7 +95,7 @@
 
 @if (Model.Functions != null && Model.Functions.Length > 0)
 {
-    <h6>@T["Available Functions"]</h6>
+    <h6>@T["Available functions"]</h6>
     <div class="mb-3">
         @for (var i = 0; i < Model.Functions.Length; i++)
         {
@@ -186,12 +186,11 @@
             document.dispatchEvent(new Event('contentpreview:render'));
         });
 
-        if(isDisabled){
+        if (isDisabled) {
             systemMessageElement.parentNode.querySelector(".CodeMirror").classList.add('cm-editor-readonly');
         }
 
-        if (isRtl)
-        {
+        if (isRtl) {
             var toolbarEditors = document.querySelectorAll('.editor-toolbar');
 
             for (var i = 0; i < toolbarEditors.length; i++)
