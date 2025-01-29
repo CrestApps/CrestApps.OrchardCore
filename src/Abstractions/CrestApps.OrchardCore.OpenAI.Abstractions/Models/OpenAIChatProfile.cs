@@ -107,4 +107,3 @@ public class OpenAIChatProfile : Entity
         };
     }
 }
-
