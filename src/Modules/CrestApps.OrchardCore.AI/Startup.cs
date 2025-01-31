@@ -120,8 +120,8 @@ public sealed class WidgetsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddContentPart<AIChatWidgetPart>()
-            .UseDisplayDriver<AIChatWidgetPartDisplayDriver>();
+            .AddContentPart<AIChatProfilePart>()
+            .UseDisplayDriver<AIChatProfilePartDisplayDriver>();
 
         services.AddDataMigration<AIChatMigrations>();
     }

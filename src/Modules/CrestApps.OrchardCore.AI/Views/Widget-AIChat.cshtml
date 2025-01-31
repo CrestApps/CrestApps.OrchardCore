@@ -13,7 +13,7 @@
 @{
     ContentItem contentItem = Model.ContentItem;
 
-    var part = contentItem.As<AIChatWidgetPart>();
+    var part = contentItem.As<AIChatProfilePart>();
 
     if (string.IsNullOrEmpty(part?.ProfileId))
     {

@@ -2,7 +2,7 @@ using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.AI.Core.Models;
 
-public sealed class AIChatWidgetPart : ContentPart
+public sealed class AIChatProfilePart : ContentPart
 {
     public string ProfileId { get; set; }
 

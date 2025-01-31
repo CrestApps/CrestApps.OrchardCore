@@ -13,7 +13,7 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
-public sealed class AIChatWidgetPartDisplayDriver : ContentPartDisplayDriver<AIChatWidgetPart>
+public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AIChatProfilePart>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAIChatProfileStore _openAIChatProfileStore;
@@ -22,12 +22,12 @@ public sealed class AIChatWidgetPartDisplayDriver : ContentPartDisplayDriver<AIC
 
     internal readonly IStringLocalizer S;
 
-    public AIChatWidgetPartDisplayDriver(
+    public AIChatProfilePartDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAIChatProfileStore openAIChatProfileStore,
         IAIChatSessionManager chatSessionManager,
         IOptions<PagerOptions> pagerOptions,
-        IStringLocalizer<AIChatWidgetPartDisplayDriver> stringLocalizer)
+        IStringLocalizer<AIChatProfilePartDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _openAIChatProfileStore = openAIChatProfileStore;
@@ -36,7 +36,7 @@ public sealed class AIChatWidgetPartDisplayDriver : ContentPartDisplayDriver<AIC
         S = stringLocalizer;
     }
 
-    public override async Task<IDisplayResult> DisplayAsync(AIChatWidgetPart part, BuildPartDisplayContext context)
+    public override async Task<IDisplayResult> DisplayAsync(AIChatProfilePart part, BuildPartDisplayContext context)
     {
         if (!part.TotalHistory.HasValue || part.TotalHistory.Value < 1)
         {
@@ -74,7 +74,7 @@ public sealed class AIChatWidgetPartDisplayDriver : ContentPartDisplayDriver<AIC
         }).Location("Detail", "History:5");
     }
 
-    public override IDisplayResult Edit(AIChatWidgetPart part, BuildPartEditorContext context)
+    public override IDisplayResult Edit(AIChatProfilePart part, BuildPartEditorContext context)
     {
         return Initialize<AIChatWidgetViewModel>("AIChatWidgetPart_Edit", async model =>
         {
@@ -91,7 +91,7 @@ public sealed class AIChatWidgetPartDisplayDriver : ContentPartDisplayDriver<AIC
         }).Location("Content:5");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(AIChatWidgetPart part, UpdatePartEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(AIChatProfilePart part, UpdatePartEditorContext context)
     {
         var model = new AIChatWidgetViewModel();
 
