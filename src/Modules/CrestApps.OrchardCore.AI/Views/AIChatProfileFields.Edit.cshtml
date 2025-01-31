@@ -1,0 +1,216 @@
+@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
+
+@model EditChatProfileViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Name" class="@Orchard.GetLabelClasses()">@T["Name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="Name" class="form-control" disabled="@(!Model.IsNew)" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        @if (Model.IsNew)
+        {
+            <span class="hint">@T["Profile name. This name cannot be changed later."]</span>
+        }
+        else
+        {
+            <span class="hint">@T["Profile name."]</span>
+        }
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DeploymentId" class="@Orchard.GetLabelClasses()">@T["Deployment"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DeploymentId" asp-items="Model.Deployments" class="form-select">
+            <option value="">@T["Select a deployment"]</option>
+        </select>
+        <span asp-validation-for="DeploymentId" class="text-danger"></span>
+        <span class="hint">@T["The deployment to use for this profile."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="ProfileType" class="@Orchard.GetLabelClasses()">@T["Profile type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="ProfileType" asp-items="Model.ProfileTypes" class="form-select"></select>
+        <span asp-validation-for="ProfileType" class="text-danger"></span>
+        <span class="hint">@T["Choose how the type of the profile."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System description"]</label>
+    <span class="hint">@T["The system message in OpenAI sets the AI's behavior and response style, guiding how it interacts in a conversation."]</span>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="SystemMessage" class="form-control content-preview-text" rows="5" disabled="@Model.IsSystemMessageLocked"></textarea>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IsOnAdminMenu">
+            <label class="form-check-label" asp-for="IsOnAdminMenu">@T["Show on admin menu"]</label>
+            <span class="hint dashed">@T["When enabled, the profile will be added to the admin menu."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-template-prompt")@(Model.ProfileType == AIChatProfileType.TemplatePrompt ? string.Empty : " d-none")">
+    <label asp-for="PromptTemplate" class="@Orchard.GetLabelClasses()">@T["Prompt template"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="PromptTemplate" class="form-control content-preview-text" rows="5"></textarea>
+        <span class="hint">@T["When using the session tool, the prompt is dynamically generated based on a prompt template. You can structure the prompt using Liquid syntax and incorporate the <code>{0}</code> and <code>{1}</code> variables.", "session", "profile"]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
+    <label asp-for="TitleType" class="@Orchard.GetLabelClasses()">@T["Title type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="TitleType" asp-items="Model.TitleTypes" class="form-select"></select>
+        <span asp-validation-for="TitleType" class="text-danger"></span>
+        <span class="hint">@T["Choose how the session title should be set when a new session is created."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
+    <label asp-for="WelcomeMessage" class="@Orchard.GetLabelClasses()">@T["Welcome message"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="WelcomeMessage" class="form-control" />
+        <span asp-validation-for="WelcomeMessage" class="text-danger"></span>
+        <span class="hint">@T["The welcome message to show on the user-interface when a new session is created."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="PromptSubject" class="@Orchard.GetLabelClasses()">@T["Prompt subject"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="PromptSubject" class="form-control" />
+        <span asp-validation-for="PromptSubject" class="text-danger"></span>
+        <span class="hint">@T["When set, this title will be displayed as the response header for each message from the model."]</span>
+    </div>
+</div>
+
+@if (Model.Functions != null && Model.Functions.Length > 0)
+{
+    <h6>@T["Available functions"]</h6>
+    <div class="mb-3">
+        @for (var i = 0; i < Model.Functions.Length; i++)
+        {
+            <div class="form-check">
+                <input type="hidden" asp-for="Functions[i].Name" />
+                <input asp-for="Functions[i].IsSelected" type="checkbox" class="form-check-input">
+                <label class="form-check-label" asp-for="Functions[i].IsSelected">@Model.Functions[i].Name</label>
+                <span class="hint dashed">@Model.Functions[i].Description</span>
+            </div>
+        }
+    </div>
+}
+
+<style asp-name="codemirror"></style>
+<style asp-name="mdecss" asp-src="~/OrchardCore.Markdown/Styles/mde.min.css" debug-src="~/OrchardCore.Markdown/Styles/mde.css"></style>
+
+<script asp-name="codemirror" at="Foot"></script>
+<script asp-src="~/OrchardCore.Markdown/Scripts/mde.mediatoolbar.min.js" debug-src="~/OrchardCore.Markdown/Scripts/mde.mediatoolbar.js" depends-on="jQuery" at="Foot"></script>
+<script asp-name="codemirror-mode-javascript" at="Foot"></script>
+<script asp-name="codemirror-addon-display-autorefresh" at="Foot"></script>
+<script asp-name="codemirror-addon-mode-simple" at="Foot"></script>
+<script asp-name="codemirror-addon-mode-multiplex" at="Foot"></script>
+<script asp-name="codemirror-mode-xml" at="Foot"></script>
+<script asp-src="~/OrchardCore.Liquid/codemirror/liquid.js" at="Foot"></script>
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const convertToKebabCase = (str) => {
+            return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+        }
+
+        const initializeLiquidEditor = (textArea) => {
+
+            if (!textArea) {
+                return;
+            }
+
+            var editor = CodeMirror.fromTextArea(textArea, {
+                autoRefresh: true,
+                lineNumbers: true,
+                styleActiveLine: true,
+                matchBrackets: true,
+                mode: { name: "liquid" },
+            });
+
+            editor.on('change', function (cmEditor) {
+                cmEditor.save();
+                document.dispatchEvent(new Event('contentpreview:render'));
+            });
+        }
+
+        const profileType = document.getElementById('@Html.IdFor(x => x.ProfileType)');
+
+        profileType.addEventListener('change', function (e) {
+
+            let value = e.target.value;
+            let className = 'profile-type-' + convertToKebabCase(value);
+            let elements = document.querySelectorAll('.profile-type');
+
+            for (let i = 0; i < elements.length; i++) {
+                var element = elements[i];
+
+                if (element.classList.contains(className)) {
+                    element.classList.remove('d-none');
+                } else {
+                    element.classList.add('d-none');
+                }
+            }
+        });
+
+        profileType.dispatchEvent(new Event('change'));
+
+        initializeLiquidEditor(document.getElementById('@Html.IdFor(x => x.PromptTemplate)'));
+
+        const isRtl = @(Orchard.IsRightToLeft() ? "true" : "false");
+        const isDisabled = @(Model.IsSystemMessageLocked ? "true" : "false");
+
+        const systemMessageElement = document.getElementById("@Html.IdFor(m => m.SystemMessage)");
+        var mde = new EasyMDE({
+            element: systemMessageElement,
+            forceSync: true,
+            readOnly: isDisabled ? 'nocursor' : false,
+            toolbar: mdeToolbar,
+            autoDownloadFontAwesome: false
+        });
+
+        mde.codemirror.on('change', function () {
+            document.dispatchEvent(new Event('contentpreview:render'));
+        });
+
+        if (isDisabled) {
+            systemMessageElement.parentNode.querySelector(".CodeMirror").classList.add('cm-editor-readonly');
+        }
+
+        if (isRtl) {
+            var toolbarEditors = document.querySelectorAll('.editor-toolbar');
+
+            for (var i = 0; i < toolbarEditors.length; i++)
+            {
+                toolbarEditors[i].style.direction = 'rtl';
+                toolbarEditors[i].style.textAlign = 'right';
+            }
+
+            var mirrorContainers = document.querySelectorAll('.CodeMirror');
+
+            for (var i = 0; i < mirrorContainers.length; i++)
+            {
+                mirrorContainers[i].style.textAlign = 'right';
+            }
+        }
+    });
+</script>
+
+<style at="Foot">
+    .cm-editor-readonly {
+        background-color: var(--bs-secondary-bg, '#e9ecef') !important;
+    }
+</style>

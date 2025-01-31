@@ -1,7 +1,8 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
-using CrestApps.OrchardCore.OpenAI.Models;
 using Json.Path;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -12,16 +13,16 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Recipes;
 
 public sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
 {
-    private readonly IOpenAIDeploymentManager _deploymentManager;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly AzureOpenAIDeploymentsService _azureOpenAIDeploymentsService;
-    private readonly OpenAIConnectionOptions _connectionOptions;
+    private readonly AIConnectionOptions _connectionOptions;
 
     internal readonly IStringLocalizer S;
 
     public ImportAzureOpenAIDeploymentStep(
-        IOpenAIDeploymentManager deploymentManager,
+        IAIDeploymentManager deploymentManager,
         AzureOpenAIDeploymentsService azureOpenAIDeploymentsService,
-        IOptions<OpenAIConnectionOptions> connectionOptions,
+        IOptions<AIConnectionOptions> connectionOptions,
         IStringLocalizer<ImportAzureOpenAIDeploymentStep> stringLocalizer)
         : base("ImportAzureOpenAIDeployment")
     {
@@ -40,7 +41,7 @@ public sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
             return;
         }
 
-        var importableConnections = new Dictionary<string, OpenAIConnectionEntry>(StringComparer.OrdinalIgnoreCase);
+        var importableConnections = new Dictionary<string, AIConnectionEntry>(StringComparer.OrdinalIgnoreCase);
 
         if (context.Step.TryGetPropertyValue("ConnectionNames", out var connectionName))
         {
@@ -100,8 +101,8 @@ public sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
 
                 existingDeployment = await _deploymentManager.NewAsync(AzureOpenAIConstants.AzureDeploymentSourceName, new JsonObject
                 {
-                    { nameof(OpenAIDeployment.Name), deployment.Data.Name },
-                    { nameof(OpenAIDeployment.ConnectionName), importableConnection.Name },
+                    { nameof(AIDeployment.Name), deployment.Data.Name },
+                    { nameof(AIDeployment.ConnectionName), importableConnection.Name },
                 });
 
                 await _deploymentManager.SaveAsync(existingDeployment);

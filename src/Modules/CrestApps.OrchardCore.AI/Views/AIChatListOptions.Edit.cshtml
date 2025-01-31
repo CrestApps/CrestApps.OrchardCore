@@ -1,0 +1,5 @@
+@using CrestApps.OrchardCore.AI.Core
+
+<form method="post" asp-action="History" asp-controller="AdminChat" asp-route-profileId="@ViewContext.HttpContext.Request.RouteValues["profileId"]" asp-route-area="@AIConstants.Feature.Chat">
+    @await DisplayAsync(Model.Content)
+</form>

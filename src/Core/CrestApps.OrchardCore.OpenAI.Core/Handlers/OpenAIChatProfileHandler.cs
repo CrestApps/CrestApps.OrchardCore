@@ -1,8 +1,8 @@
-using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Models;
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Core.Handlers;
+using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.OpenAI.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
@@ -11,11 +11,11 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 
-public sealed class OpenAIChatProfileHandler : OpenAIChatProfileHandlerBase
+public sealed class OpenAIChatProfileHandler : AIChatProfileHandlerBase
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IOpenAIChatProfileStore _profileStore;
-    private readonly IOpenAIDeploymentStore _modelDeploymentStore;
+    private readonly IAIChatProfileStore _profileStore;
+    private readonly IAIDeploymentStore _modelDeploymentStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IClock _clock;
 
@@ -23,8 +23,8 @@ public sealed class OpenAIChatProfileHandler : OpenAIChatProfileHandlerBase
 
     public OpenAIChatProfileHandler(
         IHttpContextAccessor httpContextAccessor,
-        IOpenAIChatProfileStore profileStore,
-        IOpenAIDeploymentStore modelDeploymentStore,
+        IAIChatProfileStore profileStore,
+        IAIDeploymentStore modelDeploymentStore,
         ILiquidTemplateManager liquidTemplateManager,
         IClock clock,
         IStringLocalizer<OpenAIChatProfileHandler> stringLocalizer)
@@ -37,136 +37,14 @@ public sealed class OpenAIChatProfileHandler : OpenAIChatProfileHandlerBase
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingOpenAIChatProfileContext context)
-        => PopulateAsync(context.Profile, context.Data, true);
+    public override Task InitializingAsync(InitializingAIChatProfileContext context)
+        => PopulateAsync(context.Profile, context.Data);
 
-    public override Task UpdatingAsync(UpdatingOpenAIChatProfileContext context)
-        => PopulateAsync(context.Profile, context.Data, false);
+    public override Task UpdatingAsync(UpdatingAIChatProfileContext context)
+        => PopulateAsync(context.Profile, context.Data);
 
-    public override async Task ValidatingAsync(ValidatingOpenAIChatProfileContext context)
+    private static Task PopulateAsync(AIChatProfile profile, JsonNode data)
     {
-        if (string.IsNullOrWhiteSpace(context.Profile.Name))
-        {
-            context.Result.Fail(new ValidationResult(S["Profile Name is required."], [nameof(OpenAIChatProfile.Name)]));
-        }
-        else
-        {
-            var profile = await _profileStore.FindByNameAsync(context.Profile.Name);
-
-            if (profile is not null && profile.Id != context.Profile.Id)
-            {
-                context.Result.Fail(new ValidationResult(S["A profile with this name already exists. The name must be unique."], [nameof(OpenAIChatProfile.Name)]));
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(context.Profile.Source))
-        {
-            context.Result.Fail(new ValidationResult(S["Source is required."], [nameof(OpenAIChatProfile.Source)]));
-        }
-
-        if (string.IsNullOrWhiteSpace(context.Profile.DeploymentId))
-        {
-            context.Result.Fail(new ValidationResult(S["DeploymentId is required."], [nameof(OpenAIChatProfile.DeploymentId)]));
-        }
-        else if (await _modelDeploymentStore.FindByIdAsync(context.Profile.DeploymentId) is null)
-        {
-            context.Result.Fail(new ValidationResult(S["Invalid DeploymentId provided."], [nameof(OpenAIChatProfile.DeploymentId)]));
-        }
-
-        if (context.Profile.Type == OpenAIChatProfileType.TemplatePrompt)
-        {
-            if (string.IsNullOrWhiteSpace(context.Profile.PromptTemplate))
-            {
-                context.Result.Fail(new ValidationResult(S["Prompt template is required."], [nameof(OpenAIChatProfile.PromptTemplate)]));
-            }
-            else if (!_liquidTemplateManager.Validate(context.Profile.PromptTemplate, out var _))
-            {
-                context.Result.Fail(new ValidationResult(S["Invalid liquid template used for Prompt template."], [nameof(OpenAIChatProfile.PromptTemplate)]));
-            }
-        }
-    }
-
-    public override Task InitializedAsync(InitializedOpenAIChatProfileContext context)
-    {
-        context.Profile.CreatedUtc = _clock.UtcNow;
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user != null)
-        {
-            context.Profile.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Profile.Author = user.Identity.Name;
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private static Task PopulateAsync(OpenAIChatProfile profile, JsonNode data, bool isNew)
-    {
-        if (isNew)
-        {
-            var name = data[nameof(OpenAIChatProfile.Name)]?.GetValue<string>()?.Trim();
-
-            if (!string.IsNullOrEmpty(name))
-            {
-                profile.Name = name;
-            }
-        }
-
-        var type = data[nameof(OpenAIChatProfile.Type)]?.GetEnumValue<OpenAIChatProfileType>();
-
-        if (type.HasValue)
-        {
-            profile.Type = type.Value;
-        }
-
-        var titleType = data[nameof(OpenAIChatProfile.TitleType)]?.GetEnumValue<OpenAISessionTitleType>();
-
-        if (titleType.HasValue)
-        {
-            profile.TitleType = titleType.Value;
-        }
-
-        var deploymentId = data[nameof(OpenAIChatProfile.DeploymentId)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(deploymentId))
-        {
-            profile.DeploymentId = deploymentId;
-        }
-
-        var settings = profile.GetSettings<OpenAIChatProfileSettings>();
-
-        if (!settings.LockSystemMessage)
-        {
-            var systemMessage = data[nameof(OpenAIChatProfile.SystemMessage)]?.GetValue<string>()?.Trim();
-
-            if (!string.IsNullOrEmpty(systemMessage))
-            {
-                profile.SystemMessage = systemMessage;
-            }
-        }
-
-        var welcomeMessage = data[nameof(OpenAIChatProfile.WelcomeMessage)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(welcomeMessage))
-        {
-            profile.WelcomeMessage = welcomeMessage;
-        }
-
-        var functionNames = data[nameof(OpenAIChatProfile.FunctionNames)]?.AsArray();
-
-        if (functionNames != null)
-        {
-            profile.FunctionNames = functionNames.Select(x => x.GetValue<string>()).ToArray();
-        }
-
-        var promptTemplate = data[nameof(OpenAIChatProfile.PromptTemplate)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(promptTemplate))
-        {
-            profile.PromptTemplate = promptTemplate;
-        }
-
         var metadataNode = data["Properties"]?[nameof(OpenAIChatProfileMetadata)]?.AsObject();
 
         if (metadataNode == null || metadataNode.Count == 0)

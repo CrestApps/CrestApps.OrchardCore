@@ -1,8 +1,8 @@
 using Azure.AI.OpenAI;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Core;
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -11,17 +11,17 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionService
+public sealed class AzureOpenAIChatCompletionService : IAIChatCompletionService
 {
-    private readonly IOpenAIDeploymentStore _deploymentStore;
+    private readonly IAIDeploymentStore _deploymentStore;
     private readonly IAIToolsService _toolsService;
     private readonly DefaultOpenAIOptions _defaultOptions;
-    private readonly OpenAIConnectionOptions _connectionOptions;
+    private readonly AIConnectionOptions _connectionOptions;
     private readonly ILogger _logger;
 
     public AzureOpenAIChatCompletionService(
-        IOpenAIDeploymentStore deploymentStore,
-        IOptions<OpenAIConnectionOptions> connectionOptions,
+        IAIDeploymentStore deploymentStore,
+        IOptions<AIConnectionOptions> connectionOptions,
         IAIToolsService toolsService,
         IOptions<DefaultOpenAIOptions> defaultOptions,
         ILogger<AzureOpenAIChatCompletionService> logger)
@@ -35,7 +35,7 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
 
     public string Name { get; } = AzureProfileSource.Key;
 
-    public async Task<OpenAIChatCompletionResponse> ChatAsync(IEnumerable<ChatMessage> messages, OpenAIChatCompletionContext context)
+    public async Task<AIChatCompletionResponse> ChatAsync(IEnumerable<ChatMessage> messages, AIChatCompletionContext context)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -46,10 +46,10 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
         {
             _logger.LogWarning("Unable to chat. The profile with id '{ProfileId}' is assigned to DeploymentId '{DeploymentId}' which does not exists.", context.Profile.Id, context.Profile.DeploymentId);
 
-            return OpenAIChatCompletionResponse.Empty;
+            return AIChatCompletionResponse.Empty;
         }
 
-        OpenAIConnectionEntry connection = null;
+        AIConnectionEntry connection = null;
 
         if (_connectionOptions.Connections.TryGetValue(AzureOpenAIConstants.AzureDeploymentSourceName, out var connections))
         {
@@ -60,7 +60,7 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
         {
             _logger.LogWarning("Unable to chat. The DeploymentId '{DeploymentId}' belongs to a connection that does not exists (i.e., '{ConnectionName}').", context.Profile.DeploymentId, deployment.ConnectionName);
 
-            return OpenAIChatCompletionResponse.Empty;
+            return AIChatCompletionResponse.Empty;
         }
 
         var metadata = context.Profile.As<OpenAIChatProfileMetadata>();
@@ -113,9 +113,9 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
 
             if (data?.Choices is not null && data.FinishReason == ChatFinishReason.Stop)
             {
-                return new OpenAIChatCompletionResponse
+                return new AIChatCompletionResponse
                 {
-                    Choices = data.Choices.Select(x => new OpenAIChatCompletionChoice()
+                    Choices = data.Choices.Select(x => new AIChatCompletionChoice()
                     {
                         Content = x.Text,
                     }),
@@ -127,7 +127,7 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
             _logger.LogError(ex, "An error occurred while chatting with the OpenAI service.");
         }
 
-        return OpenAIChatCompletionResponse.Empty;
+        return AIChatCompletionResponse.Empty;
     }
 
     private static int GetTotalMessagesToSkip(int totalMessages, int pastMessageCount)
@@ -140,7 +140,7 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
         return 0;
     }
 
-    private static string GetSystemMessage(OpenAIChatCompletionContext context)
+    private static string GetSystemMessage(AIChatCompletionContext context)
     {
         var systemMessage = context.SystemMessage ?? string.Empty;
 
@@ -151,13 +151,13 @@ public sealed class AzureOpenAIChatCompletionService : IOpenAIChatCompletionServ
 
         if (context.UserMarkdownInResponse)
         {
-            systemMessage += Environment.NewLine + OpenAIConstants.SystemMessages.UseMarkdownSyntax;
+            systemMessage += Environment.NewLine + AIConstants.SystemMessages.UseMarkdownSyntax;
         }
 
         return systemMessage;
     }
 
-    private static IChatClient GetChatClient(OpenAIConnectionEntry connection, string deploymentName)
+    private static IChatClient GetChatClient(AIConnectionEntry connection, string deploymentName)
     {
         var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
 

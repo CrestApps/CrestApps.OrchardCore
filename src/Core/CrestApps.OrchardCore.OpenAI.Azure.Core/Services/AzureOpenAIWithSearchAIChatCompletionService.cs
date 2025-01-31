@@ -4,10 +4,11 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.AI.OpenAI;
 using Azure.AI.OpenAI.Chat;
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Models;
 using CrestApps.OrchardCore.OpenAI.Services;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;
@@ -20,22 +21,22 @@ using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCompletionService
+public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatCompletionService
 {
-    private readonly IOpenAIDeploymentStore _deploymentStore;
-    private readonly IOpenAILinkGenerator _openAILinkGenerator;
+    private readonly IAIDeploymentStore _deploymentStore;
+    private readonly IAILinkGenerator _openAILinkGenerator;
     private readonly AzureAISearchIndexSettingsService _azureAISearchIndexSettingsService;
     private readonly IAIToolsService _toolsService;
     private readonly DefaultOpenAIOptions _defaultOptions;
-    private readonly OpenAIConnectionOptions _connectionOptions;
+    private readonly AIConnectionOptions _connectionOptions;
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
     private readonly ILogger _logger;
 
     public AzureOpenAIWithSearchAIChatCompletionService(
-        IOpenAIDeploymentStore deploymentStore,
-        IOptions<OpenAIConnectionOptions> connectionOptions,
+        IAIDeploymentStore deploymentStore,
+        IOptions<AIConnectionOptions> connectionOptions,
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
-        IOpenAILinkGenerator openAILinkGenerator,
+        IAILinkGenerator openAILinkGenerator,
         AzureAISearchIndexSettingsService azureAISearchIndexSettingsService,
         IAIToolsService toolService,
         IOptions<DefaultOpenAIOptions> defaultOptions,
@@ -53,7 +54,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
 
     public string Name { get; } = AzureWithAzureAISearchProfileSource.Key;
 
-    public async Task<OpenAIChatCompletionResponse> ChatAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, OpenAIChatCompletionContext context)
+    public async Task<AIChatCompletionResponse> ChatAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AIChatCompletionContext context)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -64,10 +65,10 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         {
             _logger.LogWarning("Unable to chat. The profile with id '{ProfileId}' is assigned to DeploymentId '{DeploymentId}' which does not exists.", context.Profile.Id, context.Profile.DeploymentId);
 
-            return OpenAIChatCompletionResponse.Empty;
+            return AIChatCompletionResponse.Empty;
         }
 
-        OpenAIConnectionEntry connection = null;
+        AIConnectionEntry connection = null;
 
         if (_connectionOptions.Connections.TryGetValue(AzureOpenAIConstants.AzureDeploymentSourceName, out var connections))
         {
@@ -78,7 +79,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         {
             _logger.LogWarning("Unable to chat. The DeploymentId '{DeploymentId}' belongs to a connection that does not exists (i.e., '{ConnectionName}').", context.Profile.DeploymentId, deployment.ConnectionName);
 
-            return OpenAIChatCompletionResponse.Empty;
+            return AIChatCompletionResponse.Empty;
         }
 
         var azureMessages = new List<ChatMessage>();
@@ -127,7 +128,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
 
             if (data is null)
             {
-                return OpenAIChatCompletionResponse.Empty;
+                return AIChatCompletionResponse.Empty;
             }
 
             if (data.Value.FinishReason == ChatFinishReason.ToolCalls)
@@ -148,7 +149,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
             _logger.LogError(ex, "Unable to get chat completion result from Azure OpenAI.");
         }
 
-        return OpenAIChatCompletionResponse.Empty;
+        return AIChatCompletionResponse.Empty;
     }
 
     private async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<ChatToolCall> tollCalls)
@@ -191,7 +192,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         return 0;
     }
 
-    private static string GetSystemMessage(OpenAIChatCompletionContext context)
+    private static string GetSystemMessage(AIChatCompletionContext context)
     {
         var systemMessage = context.SystemMessage ?? string.Empty;
 
@@ -202,13 +203,13 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
 
         if (context.UserMarkdownInResponse)
         {
-            systemMessage += Environment.NewLine + OpenAIConstants.SystemMessages.UseMarkdownSyntax;
+            systemMessage += Environment.NewLine + AIConstants.SystemMessages.UseMarkdownSyntax;
         }
 
         return systemMessage;
     }
 
-    private static AzureOpenAIClient GetChatClient(OpenAIConnectionEntry connection)
+    private static AzureOpenAIClient GetChatClient(AIConnectionEntry connection)
     {
         var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
 
@@ -217,7 +218,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         return azureClient;
     }
 
-    private async Task<ChatCompletionOptions> GetOptionsWithDataSourceAsync(OpenAIChatCompletionContext context)
+    private async Task<ChatCompletionOptions> GetOptionsWithDataSourceAsync(AIChatCompletionContext context)
     {
         if (!context.Profile.TryGet<AzureAIChatProfileAISearchMetadata>(out var metadata))
         {
@@ -262,7 +263,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         return chatOptions;
     }
 
-    private ChatCompletionOptions GetOptions(OpenAIChatCompletionContext context)
+    private ChatCompletionOptions GetOptions(AIChatCompletionContext context)
     {
         var metadata = context.Profile.As<OpenAIChatProfileMetadata>();
 
@@ -293,14 +294,14 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
         return chatOptions;
     }
 
-    private OpenAIChatCompletionResponse GetResponse(ClientResult<ChatCompletion> data, string userPrompt)
+    private AIChatCompletionResponse GetResponse(ClientResult<ChatCompletion> data, string userPrompt)
     {
         var routeValues = new Dictionary<string, object>()
         {
             { "prompt", userPrompt },
         };
 
-        var results = new List<OpenAIChatCompletionChoice>();
+        var results = new List<AIChatCompletionChoice>();
 
 #pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         var context = data.Value.GetMessageContext();
@@ -317,7 +318,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
 
             if (context?.Citations is null || context.Citations.Count == 0)
             {
-                results.Add(new OpenAIChatCompletionChoice()
+                results.Add(new AIChatCompletionChoice()
                 {
                     Content = Regex.Replace(choice.Text, @"\[doc\d+\]", string.Empty),
                 });
@@ -325,7 +326,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
                 continue;
             }
 
-            var responseChoice = new OpenAIChatCompletionChoice()
+            var responseChoice = new AIChatCompletionChoice()
             {
                 ContentItemIds = [],
             };
@@ -397,7 +398,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IOpenAIChatCo
             results.Add(responseChoice);
         }
 
-        return new OpenAIChatCompletionResponse
+        return new AIChatCompletionResponse
         {
             Choices = results,
         };

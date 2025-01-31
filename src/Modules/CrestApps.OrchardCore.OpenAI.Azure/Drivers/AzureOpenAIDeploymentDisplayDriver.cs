@@ -1,13 +1,13 @@
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.OpenAI.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 
-public sealed class AzureOpenAIDeploymentDisplayDriver : DisplayDriver<OpenAIDeployment>
+public sealed class AzureOpenAIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 {
-    public override IDisplayResult Edit(OpenAIDeployment deployment, BuildEditorContext context)
+    public override IDisplayResult Edit(AIDeployment deployment, BuildEditorContext context)
     {
         if (deployment.Source != AzureOpenAIConstants.AzureDeploymentSourceName)
         {
@@ -19,7 +19,7 @@ public sealed class AzureOpenAIDeploymentDisplayDriver : DisplayDriver<OpenAIDep
         return null;
     }
 
-    public override Task<IDisplayResult> UpdateAsync(OpenAIDeployment deployment, UpdateEditorContext context)
+    public override Task<IDisplayResult> UpdateAsync(AIDeployment deployment, UpdateEditorContext context)
     {
         if (deployment.Source != AzureOpenAIConstants.AzureDeploymentSourceName)
         {

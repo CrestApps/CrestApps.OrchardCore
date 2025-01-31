@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore AI Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services project for the AI module.
+    </Description>
+    <PackageTags>$(PackageTags) AI</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="YesSql.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+    <PackageReference Include="OrchardCore.Liquid.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
+    <PackageReference Include="Markdig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.AI.Abstractions\CrestApps.OrchardCore.AI.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

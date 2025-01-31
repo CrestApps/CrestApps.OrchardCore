@@ -1,0 +1,273 @@
+@using CrestApps.OrchardCore.AI
+@using CrestApps.OrchardCore.AI.Azure.Core
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.Models
+@using CrestApps.OrchardCore.AI.Models
+@using Microsoft.AspNetCore.Authorization
+@using OrchardCore.ContentManagement
+@using OrchardCore.Environment.Shell
+
+@inject IAIChatProfileStore ChatProfileStore
+@inject IAuthorizationService AuthorizationService
+@inject ShellSettings shellSettings;
+@{
+    ContentItem contentItem = Model.ContentItem;
+
+    var part = contentItem.As<AIChatWidgetPart>();
+
+    if (string.IsNullOrEmpty(part?.ProfileId))
+    {
+        return;
+    }
+
+    var profile = await ChatProfileStore.FindByIdAsync(part.ProfileId);
+
+    if (profile == null)
+    {
+        return;
+    }
+
+    if (!await AuthorizationService.AuthorizeAsync(User, AIChatPermissions.QueryAnyAIChatProfile, profile))
+    {
+        return;
+    }
+
+    var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
+    var promptGeneratedProfiles = (await ChatProfileStore.GetAllAsync()).Where(x => x.Type == AIChatProfileType.TemplatePrompt);
+
+    var baseId = $"Widget_{contentItem.ContentItemId}";
+    var chatAppHtmlId = $"{baseId}_ChatApp";
+    var buttonHtmlId = $"{baseId}_SendButton";
+    var userPromptHtmlId = $"{baseId}_UserPrompt";
+    var chatContainerHtmlId = $"{baseId}_ChatContainer";
+    var messagesContainerHtmlId = $"{baseId}_MessagesContainer";
+    var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
+
+    var chatWidgetContainer = $"{baseId}_ChatWidget";
+    var chatWidgetStateName = $"{shellSettings.Name}-{baseId}WidgetState";
+    var chatWidgetStateSession = $"{shellSettings.Name}-{baseId}WidgetSession";
+    var chatWidgetButton = $"{baseId}_ChatButton";
+    var closeChatButton = $"{baseId}_CloseChatButton";
+
+    var chatWidgetHistoryList = $"{baseId}_ChatHistoryList";
+    var closeChatHistoryButton = $"{baseId}_CloseChatHistory";
+    var newChatButton = $"{baseId}_NewChatButton";
+    var showHistoryButton = $"{baseId}_ShowHistoryButton";
+}
+
+<!-- Chat Button -->
+<button id="@chatWidgetButton" class="btn btn-primary rounded-circle shadow widget-fixed-bottom-right widget-launch-button">
+    <i class="fas fa-comments"></i>
+</button>
+
+<!-- Chat Widget -->
+<div id="@chatWidgetContainer" class="position-fixed bottom-1 end-1 d-none bg-white shadow-lg rounded-3 d-flex flex-column widget-fixed-bottom-right" style="width: 25rem; height: 35rem;">
+    <div class="navbar navbar-expand-lg navbar-light bg-primary text-white py-0" style="height:2.5rem;">
+        <span class="navbar-brand mb-0 h1">
+            @if (Model.Header != null)
+            {
+                @await DisplayAsync(Model.Header)
+            }
+        </span>
+        <div class="button-group d-flex">
+            <!-- New Chat and History Buttons -->
+            <button class="btn btn-link text-white" id="@newChatButton">
+                <i class="fas fa-plus"></i>
+            </button>
+            @if (showHistory)
+            {
+                <button class="btn btn-link text-white" id="@showHistoryButton">
+                    <i class="fas fa-bars"></i>
+                </button>
+            }
+            <button class="close-btn btn btn-link text-white" id="@closeChatButton">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    <div class="chat-body flex-grow-1 overflow-auto p-2" id="@chatContainerHtmlId">
+
+        <div id="@placeholderHtmlId" class="text-center p-3">
+            <h4 class="my-3 h2">
+                @(string.IsNullOrEmpty(profile.WelcomeMessage) ? T["What do you want to know?"] : profile.WelcomeMessage)
+            </h4>
+        </div>
+
+        <div id="@chatAppHtmlId"></div>
+    </div>
+    <div class="chat-input p-2 ">
+
+        <div class="text-bg-light rounded-5 w-100 border">
+            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input p-3" id="@userPromptHtmlId" data-session-id="" data-profile-id="@(profile.Id)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
+
+            <div class="d-flex justify-content-between px-3 my-2">
+                <div>
+                    @if (promptGeneratedProfiles.Any())
+                    {
+                        <div class="d-flex justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
+                                    {
+                                        <li>
+                                            <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.Id">@promptGeneratedProfile.Name</button>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div>
+                    <button class="btn btn-dark rounded-circle" type="button" id="@buttonHtmlId" disabled>
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    @if (showHistory)
+    {
+        <!-- Custom Chat History Section inside the widget -->
+        <div id="@chatWidgetHistoryList" class="chat-history-section">
+            <div class="d-flex justify-content-between mb-3">
+                <h5>@T["Chat History"]</h5>
+                <button id="@closeChatHistoryButton" class="btn btn-sm btn-link text-secondary">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            @await DisplayAsync(Model.History)
+        </div>
+    }
+</div>
+
+<script asp-name="OpenAIChatApp" at="Foot"></script>
+<script at="Foot" depends-on="OpenAIChatApp">
+
+    document.addEventListener('DOMContentLoaded', () => {
+
+        openAIChatManager.initialize({
+            chatUrl: '@(Url.RouteUrl(AIConstants.RouteNames.ChatCompletionRouteName))',
+            appElementSelector: '#@chatAppHtmlId',
+            chatContainerElementSelector: '#@chatContainerHtmlId',
+            inputElementSelector: '#@userPromptHtmlId',
+            sendButtonElementSelector: '#@buttonHtmlId',
+            placeholderElementSelector: '#@placeholderHtmlId',
+            messages: [],
+            messageTemplate: `
+                <div class="list-group">
+                    <div v-for="(message, index) in messages" :key="index" class="list-group-item p-1">
+                        <div class="d-flex justify-content-between">
+                            <div></div>
+                            <div>
+                                <i :class="message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'"></i>
+                            </div>
+                            <div class="text-end">
+                                <div class="message-buttons-container pe-2" v-if="message.role !== 'indicator'">
+                                    <div class="ms-2 button-message-toolbox" @@click="copyResponse(message.content)" title="@T["Click here to copy response to clipboard."]">
+                                        <i class="fa-solid fa-copy fa-lg text-secondary"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="py-2 px-1 lh-base">
+                            <h4 v-if="message.title">{{ message.title }}</h4>
+                            <div v-html="message.htmlContent || message.content"></div>
+                        </div>
+                    </div>
+
+                </div>
+            `,
+            indicatorTemplate: `
+                <div class="spinner-grow spinner-grow-sm text-center text-dark" role="status">
+                    <span class="visually-hidden">@T["Loading..."]</span>
+                </div>
+                <div class="spinner-grow spinner-grow-sm text-center text-secondary" role="status">
+                    <span class="visually-hidden">@T["Loading..."]</span>
+                </div>
+                <div class="spinner-grow spinner-grow-sm text-center text-light" role="status">
+                    <span class="visually-hidden">@T["Loading..."]</span>
+                </div>
+            `,
+            widget: {
+                sessionUrl: '@(Url.RouteUrl(AIConstants.RouteNames.ChatSessionRouteName))',
+                showChatButton: '#@chatWidgetButton',
+                newChatButton: '#@newChatButton',
+                chatWidgetContainer: '#@chatWidgetContainer',
+                chatHistorySection: '#@chatWidgetHistoryList',
+                closeHistoryButton: '#@closeChatHistoryButton',
+                closeChatButton: '#@closeChatButton',
+                showHistoryButton: '#@showHistoryButton',
+                chatWidgetStateName: '@chatWidgetStateName'
+            }
+        });
+    });
+
+</script>
+
+<style at="Head">
+
+    .chat-user-prompt-input:focus {
+        border: none;
+        box-shadow: none;
+    }
+
+    .widget-launch-button {
+        font-size: 1.5rem;
+    }
+
+    .widget-fixed-bottom-right {
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+    }
+
+    .button-message-toolbox {
+        cursor: pointer;
+    }
+
+    .chat-body {
+        max-height: calc(100% - 4rem - 3rem); /* Adjust to fit navbar + input box */
+        overflow-y: auto;
+    }
+
+    .chat-history-section {
+        position: absolute;
+        top: 2.5rem; /* Align below the navbar */
+        left: 0;
+        right: 0;
+        bottom: 0; /* Cover the input section */
+        background-color: white; /* Solid white background */
+        padding: 1rem;
+        z-index: 10; /* Overlay on top of chat content */
+        display: none; /* Initially hidden */
+        overflow-y: auto;
+    }
+
+        .chat-history-section.show {
+            display: block;
+        }
+
+    .navbar {
+        padding: 0.5rem 1rem; /* Thinner navbar */
+    }
+
+        .navbar .close-btn {
+            margin-left: auto; /* Align close button to the right */
+        }
+
+        .navbar .button-group {
+            margin-left: auto; /* Justify buttons to the right */
+        }
+
+            .navbar .button-group button {
+                margin-left: 0.5rem; /* Add space between buttons */
+            }
+</style>

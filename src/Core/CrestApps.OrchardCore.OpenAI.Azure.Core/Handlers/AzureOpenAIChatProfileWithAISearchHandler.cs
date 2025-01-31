@@ -1,15 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Core.Handlers;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
-using CrestApps.OrchardCore.OpenAI.Core.Handlers;
-using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 
-public sealed class AzureOpenAIChatProfileWithAISearchHandler : OpenAIChatProfileHandlerBase
+public sealed class AzureOpenAIChatProfileWithAISearchHandler : AIChatProfileHandlerBase
 {
     internal readonly IStringLocalizer S;
 
@@ -18,13 +18,13 @@ public sealed class AzureOpenAIChatProfileWithAISearchHandler : OpenAIChatProfil
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingOpenAIChatProfileContext context)
+    public override Task InitializingAsync(InitializingAIChatProfileContext context)
         => PopulateAsync(context.Profile, context.Data);
 
-    public override Task UpdatingAsync(UpdatingOpenAIChatProfileContext context)
+    public override Task UpdatingAsync(UpdatingAIChatProfileContext context)
         => PopulateAsync(context.Profile, context.Data);
 
-    public override Task ValidatedAsync(ValidatedOpenAIChatProfileContext context)
+    public override Task ValidatedAsync(ValidatedAIChatProfileContext context)
     {
         if (context.Profile?.Source != AzureWithAzureAISearchProfileSource.Key)
         {
@@ -41,7 +41,7 @@ public sealed class AzureOpenAIChatProfileWithAISearchHandler : OpenAIChatProfil
         return Task.CompletedTask;
     }
 
-    private static Task PopulateAsync(OpenAIChatProfile profile, JsonNode data)
+    private static Task PopulateAsync(AIChatProfile profile, JsonNode data)
     {
         if (profile.Source != AzureWithAzureAISearchProfileSource.Key)
         {

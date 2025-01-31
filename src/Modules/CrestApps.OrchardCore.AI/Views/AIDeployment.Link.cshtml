@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Models
+@using Microsoft.Extensions.DependencyInjection
+@using CrestApps.OrchardCore.AI
+@using Microsoft.Extensions.Options
+
+@inject IOptions<AIConnectionOptions> Options
+@{
+    string source = Model.Source;
+    var service = ViewContext.HttpContext.RequestServices.GetKeyedService<IAIDeploymentSource>(source);
+    var hasConnections = Options.Value.Connections.TryGetValue(source, out var connections) && connections.Count > 0;
+}
+
+<div class="col">
+    <div class="card h-100">
+        <div class="card-body">
+            <h4>@(service?.DisplayName ?? source)</h4>
+            <p class="hint">@(service?.Description)</p>
+
+        </div>
+
+        <div class="card-footer text-muted text-sm-end">
+            <a class="btn btn-primary btn-sm"
+               asp-route-action="Create"
+               asp-route-controller="Deployments"
+               asp-route-source="@source">@T["Add"]</a>
+        </div>
+
+    </div>
+</div>
