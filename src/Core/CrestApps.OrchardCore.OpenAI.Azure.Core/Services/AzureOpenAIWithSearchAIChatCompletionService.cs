@@ -59,11 +59,11 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
 
-        var deployment = await _deploymentStore.FindByIdAsync(context.Profile.DeploymentId);
+        var deployment = await GetDeploymentAsync(context);
 
         if (deployment is null)
         {
-            _logger.LogWarning("Unable to chat. The profile with id '{ProfileId}' is assigned to DeploymentId '{DeploymentId}' which does not exists.", context.Profile.Id, context.Profile.DeploymentId);
+            _logger.LogWarning("Unable to initiate chat. The profile with ID '{ProfileId}' lacks a DeploymentId, and the fallback DeploymentId in the context is also not configured.", context.Profile.Id);
 
             return AIChatCompletionResponse.Empty;
         }
@@ -111,7 +111,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
 
         var prompts = new List<ChatMessage>
         {
-            new SystemChatMessage(GetSystemMessage(context))
+            new SystemChatMessage(GetSystemMessage(context, metadata))
         };
 
         prompts.AddRange(azureMessages.Skip(skip).Take(pastMessageCount));
@@ -192,14 +192,9 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         return 0;
     }
 
-    private static string GetSystemMessage(AIChatCompletionContext context)
+    private static string GetSystemMessage(AIChatCompletionContext context, OpenAIChatProfileMetadata metadata)
     {
-        var systemMessage = context.SystemMessage ?? string.Empty;
-
-        if (string.IsNullOrEmpty(systemMessage) && !string.IsNullOrEmpty(context.Profile.SystemMessage))
-        {
-            systemMessage = context.Profile.SystemMessage;
-        }
+        var systemMessage = metadata.SystemMessage ?? string.Empty;
 
         if (context.UserMarkdownInResponse)
         {
@@ -402,6 +397,26 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         {
             Choices = results,
         };
+    }
+
+    private async Task<AIDeployment> GetDeploymentAsync(AIChatCompletionContext content)
+    {
+        if (!string.IsNullOrEmpty(content.Profile.DeploymentId))
+        {
+            var deployment = await _deploymentStore.FindByIdAsync(content.Profile.DeploymentId);
+
+            if (deployment is not null)
+            {
+                return deployment;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(content.DeploymentId))
+        {
+            return await _deploymentStore.FindByIdAsync(content.DeploymentId);
+        }
+
+        return null;
     }
 
     private static string GetBestTitleField(AzureAISearchIndexMap keyField)

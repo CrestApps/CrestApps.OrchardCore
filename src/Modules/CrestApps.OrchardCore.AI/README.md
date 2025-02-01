@@ -27,7 +27,9 @@ public sealed class SystemDefinedAIProfileMigrations : DataMigration
     private readonly IAIChatProfileManager _chatProfileManager;
     private readonly IAIDeploymentManager _deploymentManager;
 
-    public SystemDefinedAIProfileMigrations(IAIChatProfileManager chatProfileManager, IAIDeploymentManager deploymentManager)
+    public SystemDefinedAIProfileMigrations(
+        IAIChatProfileManager chatProfileManager, 
+        IAIDeploymentManager deploymentManager)
     {
         _chatProfileManager = chatProfileManager;
         _deploymentManager = deploymentManager;
@@ -41,23 +43,28 @@ public sealed class SystemDefinedAIProfileMigrations : DataMigration
         profile.Name = "UniqueTechnicalName";
         profile.Type = AIChatProfileType.Chat;
         profile.DeploymentId = deployments.FirstOrDefault()?.Id;
-        profile.SystemMessage = "some system message";
 
         profile.WithSettings(new AIChatProfileSettings
         {
-            LockSystemMessage = true, 
             IsRemovable = false, 
             IsListable = false, 
             IsOnAdminMenu = true,
         });
 
+        profile.WithSettings(new OpenAIChatProfileSettings
+        {
+            LockSystemMessage = true, 
+        });
+
         profile.Put(new OpenAIChatProfileMetadata
         {
+            SystemMessage = "some system message",
             Temperature = 0.3f,
             MaxTokens = 4096,
         });
 
         await _chatProfileManager.SaveAsync(profile);
+
         return 1;
     }
 }

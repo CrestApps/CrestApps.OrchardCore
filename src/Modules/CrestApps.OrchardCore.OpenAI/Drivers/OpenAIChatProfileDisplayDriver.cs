@@ -30,12 +30,15 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<AIChatProfile
         {
             var metadata = profile.As<OpenAIChatProfileMetadata>();
 
+            model.SystemMessage = metadata.SystemMessage;
             model.FrequencyPenalty = metadata.FrequencyPenalty;
             model.PastMessagesCount = metadata.PastMessagesCount;
             model.PresencePenalty = metadata.PresencePenalty;
             model.Temperature = metadata.Temperature;
             model.MaxTokens = metadata.MaxTokens;
             model.TopP = metadata.TopP;
+
+            model.IsSystemMessageLocked = profile.GetSettings<OpenAIChatProfileSettings>().LockSystemMessage;
 
             var azureDeployments = await _modelDeploymentStore.GetAllAsync();
 
@@ -50,15 +53,23 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<AIChatProfile
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        profile.Put(new OpenAIChatProfileMetadata
+        var metadata = profile.As<OpenAIChatProfileMetadata>();
+
+        metadata.FrequencyPenalty = model.FrequencyPenalty;
+        metadata.PastMessagesCount = model.PastMessagesCount;
+        metadata.PresencePenalty = model.PresencePenalty;
+        metadata.Temperature = model.Temperature;
+        metadata.MaxTokens = model.MaxTokens;
+        metadata.TopP = model.TopP;
+
+        var settings = profile.GetSettings<OpenAIChatProfileSettings>();
+
+        if (!settings.LockSystemMessage)
         {
-            FrequencyPenalty = model.FrequencyPenalty,
-            PastMessagesCount = model.PastMessagesCount,
-            PresencePenalty = model.PresencePenalty,
-            Temperature = model.Temperature,
-            MaxTokens = model.MaxTokens,
-            TopP = model.TopP,
-        });
+            metadata.SystemMessage = model.SystemMessage;
+        }
+
+        profile.Put(metadata);
 
         return Edit(profile, context);
     }

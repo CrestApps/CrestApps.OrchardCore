@@ -8,8 +8,6 @@ public class EditChatProfileViewModel
 {
     public string Name { get; set; }
 
-    public string SystemMessage { get; set; }
-
     public string WelcomeMessage { get; set; }
 
     public string PromptTemplate { get; set; }
@@ -28,9 +26,6 @@ public class EditChatProfileViewModel
 
     [BindNever]
     public bool IsNew { get; set; }
-
-    [BindNever]
-    public bool IsSystemMessageLocked { get; set; }
 
     [BindNever]
     public IList<SelectListItem> Deployments { get; set; }

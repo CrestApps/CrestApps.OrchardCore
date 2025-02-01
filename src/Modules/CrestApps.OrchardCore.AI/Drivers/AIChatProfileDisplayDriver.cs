@@ -57,14 +57,12 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
             }
 
             model.Name = profile.Name;
-            model.SystemMessage = profile.SystemMessage;
             model.PromptSubject = profile.PromptSubject;
             model.PromptTemplate = profile.PromptTemplate;
             model.WelcomeMessage = profile.WelcomeMessage;
             model.DeploymentId = profile.DeploymentId;
             model.TitleType = profile.TitleType;
             model.IsNew = context.IsNew;
-            model.IsSystemMessageLocked = profile.GetSettings<AIChatProfileSettings>().LockSystemMessage;
             model.ProfileType = profile.Type;
             model.TitleTypes =
             [
@@ -163,13 +161,6 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.PromptTemplate), S["Invalid liquid template used for Prompt template."]);
             }
-        }
-
-        var settings = profile.GetSettings<AIChatProfileSettings>();
-
-        if (!settings.LockSystemMessage)
-        {
-            profile.SystemMessage = model.SystemMessage;
         }
 
         profile.PromptSubject = model.PromptSubject?.Trim();

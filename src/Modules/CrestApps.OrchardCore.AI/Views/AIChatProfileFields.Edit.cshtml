@@ -40,14 +40,6 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System description"]</label>
-    <span class="hint">@T["The system message in OpenAI sets the AI's behavior and response style, guiding how it interacts in a conversation."]</span>
-    <div class="@Orchard.GetEndClasses()">
-        <textarea asp-for="SystemMessage" class="form-control content-preview-text" rows="5" disabled="@Model.IsSystemMessageLocked"></textarea>
-    </div>
-</div>
-
 <div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
     <div class="@Orchard.GetEndClasses(true)">
         <div class="form-check">
@@ -110,8 +102,6 @@
 }
 
 <style asp-name="codemirror"></style>
-<style asp-name="mdecss" asp-src="~/OrchardCore.Markdown/Styles/mde.min.css" debug-src="~/OrchardCore.Markdown/Styles/mde.css"></style>
-
 <script asp-name="codemirror" at="Foot"></script>
 <script asp-src="~/OrchardCore.Markdown/Scripts/mde.mediatoolbar.min.js" debug-src="~/OrchardCore.Markdown/Scripts/mde.mediatoolbar.js" depends-on="jQuery" at="Foot"></script>
 <script asp-name="codemirror-mode-javascript" at="Foot"></script>
@@ -169,48 +159,5 @@
         profileType.dispatchEvent(new Event('change'));
 
         initializeLiquidEditor(document.getElementById('@Html.IdFor(x => x.PromptTemplate)'));
-
-        const isRtl = @(Orchard.IsRightToLeft() ? "true" : "false");
-        const isDisabled = @(Model.IsSystemMessageLocked ? "true" : "false");
-
-        const systemMessageElement = document.getElementById("@Html.IdFor(m => m.SystemMessage)");
-        var mde = new EasyMDE({
-            element: systemMessageElement,
-            forceSync: true,
-            readOnly: isDisabled ? 'nocursor' : false,
-            toolbar: mdeToolbar,
-            autoDownloadFontAwesome: false
-        });
-
-        mde.codemirror.on('change', function () {
-            document.dispatchEvent(new Event('contentpreview:render'));
-        });
-
-        if (isDisabled) {
-            systemMessageElement.parentNode.querySelector(".CodeMirror").classList.add('cm-editor-readonly');
-        }
-
-        if (isRtl) {
-            var toolbarEditors = document.querySelectorAll('.editor-toolbar');
-
-            for (var i = 0; i < toolbarEditors.length; i++)
-            {
-                toolbarEditors[i].style.direction = 'rtl';
-                toolbarEditors[i].style.textAlign = 'right';
-            }
-
-            var mirrorContainers = document.querySelectorAll('.CodeMirror');
-
-            for (var i = 0; i < mirrorContainers.length; i++)
-            {
-                mirrorContainers[i].style.textAlign = 'right';
-            }
-        }
     });
 </script>
-
-<style at="Foot">
-    .cm-editor-readonly {
-        background-color: var(--bs-secondary-bg, '#e9ecef') !important;
-    }
-</style>

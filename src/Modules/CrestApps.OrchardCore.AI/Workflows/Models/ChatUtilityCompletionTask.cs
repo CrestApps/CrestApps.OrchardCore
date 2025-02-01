@@ -111,7 +111,6 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
 
         var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, userPrompt.Trim())], new AIChatCompletionContext(profile)
         {
-            SystemMessage = profile.SystemMessage,
             UserMarkdownInResponse = IncludeHtmlResponse,
         });
 

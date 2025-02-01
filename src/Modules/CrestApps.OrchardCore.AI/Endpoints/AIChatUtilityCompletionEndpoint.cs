@@ -71,7 +71,6 @@ internal static class AIChatUtilityCompletionEndpoint
 
         var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], new AIChatCompletionContext(profile)
         {
-            SystemMessage = profile.SystemMessage,
             UserMarkdownInResponse = requestData.IncludeHtmlResponse,
         });
 

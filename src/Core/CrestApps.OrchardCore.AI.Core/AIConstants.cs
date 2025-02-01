@@ -26,4 +26,9 @@ public static class AIConstants
 
         public const string ChatSessionRouteName = "AIChatSession";
     }
+
+    public static string GetTitleGeneratorProfileName(string source)
+    {
+        return $"{source}-ChatTitleGenerator";
+    }
 }

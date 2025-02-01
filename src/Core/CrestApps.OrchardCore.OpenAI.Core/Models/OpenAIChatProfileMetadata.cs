@@ -2,6 +2,8 @@ namespace CrestApps.OrchardCore.OpenAI.Core.Models;
 
 public class OpenAIChatProfileMetadata
 {
+    public string SystemMessage { get; set; }
+
     public float? Temperature { get; set; }
 
     public float? TopP { get; set; }

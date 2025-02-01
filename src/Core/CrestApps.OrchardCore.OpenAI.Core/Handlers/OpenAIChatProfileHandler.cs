@@ -54,6 +54,18 @@ public sealed class OpenAIChatProfileHandler : AIChatProfileHandlerBase
 
         var metadata = profile.As<OpenAIChatProfileMetadata>();
 
+        var settings = profile.GetSettings<OpenAIChatProfileSettings>();
+
+        if (!settings.LockSystemMessage)
+        {
+            var systemMessage = data[nameof(OpenAIChatProfileMetadata.SystemMessage)]?.GetValue<string>()?.Trim();
+
+            if (!string.IsNullOrEmpty(systemMessage))
+            {
+                metadata.SystemMessage = systemMessage;
+            }
+        }
+
         var temperature = metadataNode[nameof(metadata.Temperature)]?.GetValue<float?>();
 
         if (temperature.HasValue)

@@ -46,11 +46,6 @@ public class AIChatProfile : Entity
     public string WelcomeMessage { get; set; }
 
     /// <summary>
-    /// Gets or sets the system message used in the chat.
-    /// </summary>
-    public string SystemMessage { get; set; }
-
-    /// <summary>
     /// Gets or sets the subject of the prompt.
     /// </summary>
     public string PromptSubject { get; set; }
@@ -96,7 +91,6 @@ public class AIChatProfile : Entity
             DeploymentId = DeploymentId,
             TitleType = TitleType,
             WelcomeMessage = WelcomeMessage,
-            SystemMessage = SystemMessage,
             PromptSubject = PromptSubject,
             PromptTemplate = PromptTemplate,
             CreatedUtc = CreatedUtc,

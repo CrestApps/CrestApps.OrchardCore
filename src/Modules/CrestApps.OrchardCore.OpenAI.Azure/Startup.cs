@@ -5,8 +5,10 @@ using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
+using CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 using CrestApps.OrchardCore.OpenAI.Azure.Recipes;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Recipes;
@@ -52,6 +54,7 @@ public sealed class StandardStartup : StartupBase
     {
         services.AddAIChatCompletionService<AzureOpenAIChatCompletionService>(AzureProfileSource.Key);
         services.AddAIChatProfileSource<AzureProfileSource>(AzureProfileSource.Key);
+        services.AddDataMigration<AzureTitleGeneratorProfileMigrations>();
     }
 }
 
@@ -64,5 +67,6 @@ public sealed class AISearchStartup : StartupBase
         services.AddAIChatProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
         services.AddDisplayDriver<AIChatProfile, AzureOpenAIChatProfileSearchAIDisplayDriver>();
         services.AddScoped<IAIChatProfileHandler, AzureOpenAIChatProfileWithAISearchHandler>();
+        services.AddDataMigration<AzureAISearchTitleGeneratorProfileMigrations>();
     }
 }

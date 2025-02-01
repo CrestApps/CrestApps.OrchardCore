@@ -132,18 +132,6 @@ public sealed class AIChatProfileHandler : AIChatProfileHandlerBase
             profile.DeploymentId = deploymentId;
         }
 
-        var settings = profile.GetSettings<AIChatProfileSettings>();
-
-        if (!settings.LockSystemMessage)
-        {
-            var systemMessage = data[nameof(AIChatProfile.SystemMessage)]?.GetValue<string>()?.Trim();
-
-            if (!string.IsNullOrEmpty(systemMessage))
-            {
-                profile.SystemMessage = systemMessage;
-            }
-        }
-
         var welcomeMessage = data[nameof(AIChatProfile.WelcomeMessage)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(welcomeMessage))
