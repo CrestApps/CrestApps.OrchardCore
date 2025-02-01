@@ -1,34 +1,34 @@
 using System.ClientModel;
 using Azure.Core;
 using Azure.Identity;
-using CrestApps.OrchardCore.OpenAI.Models;
+using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core;
 
 public static class OpenAIConnectionEntryExtensions
 {
-    public static string GetSubscriptionId(this OpenAIConnectionEntry entry, bool throwException = true)
+    public static string GetSubscriptionId(this AIConnectionEntry entry, bool throwException = true)
         => entry.GetValueInternal("SubscriptionId", throwException);
 
-    public static string GetClientId(this OpenAIConnectionEntry entry, bool throwException = true)
+    public static string GetClientId(this AIConnectionEntry entry, bool throwException = true)
         => entry.GetValueInternal("ClientId", throwException);
 
-    public static string GetClientSecret(this OpenAIConnectionEntry entry, bool throwException = true)
+    public static string GetClientSecret(this AIConnectionEntry entry, bool throwException = true)
         => entry.GetValueInternal("ClientSecret", throwException);
 
-    public static string GetTenantId(this OpenAIConnectionEntry entry, bool throwException = true)
+    public static string GetTenantId(this AIConnectionEntry entry, bool throwException = true)
         => entry.GetValueInternal("TenantId", throwException);
 
-    public static string GetAccountName(this OpenAIConnectionEntry entry, bool throwException = true)
+    public static string GetAccountName(this AIConnectionEntry entry, bool throwException = true)
         => entry.GetValueInternal("AccountName", throwException);
 
-    public static string GetResourceGroupName(this OpenAIConnectionEntry entry, bool throwException = true)
+    public static string GetResourceGroupName(this AIConnectionEntry entry, bool throwException = true)
         => entry.GetValueInternal("ResourceGroupName", throwException);
 
-    public static string GetApiKey(this OpenAIConnectionEntry entry, bool throwException = true)
+    public static string GetApiKey(this AIConnectionEntry entry, bool throwException = true)
         => entry.GetValueInternal("ApiKey", throwException);
 
-    public static TokenCredential GetCredential(this OpenAIConnectionEntry entry)
+    public static TokenCredential GetCredential(this AIConnectionEntry entry)
     {
         var tenantId = entry.GetTenantId(false);
         var clientId = entry.GetClientId(false);
@@ -44,10 +44,10 @@ public static class OpenAIConnectionEntryExtensions
         return new DefaultAzureCredential();
     }
 
-    public static ApiKeyCredential GetApiKeyCredential(this OpenAIConnectionEntry entry)
+    public static ApiKeyCredential GetApiKeyCredential(this AIConnectionEntry entry)
         => new(entry.GetApiKey());
 
-    private static string GetValueInternal(this OpenAIConnectionEntry entry, string key, bool throwException)
+    private static string GetValueInternal(this AIConnectionEntry entry, string key, bool throwException)
     {
         if (entry.Data.TryGetPropertyValue(key, out var value))
         {

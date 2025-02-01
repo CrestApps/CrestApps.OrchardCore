@@ -1,7 +1,7 @@
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
-using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -10,7 +10,7 @@ using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 
-public sealed class AzureOpenAIChatProfileSearchAIDisplayDriver : DisplayDriver<OpenAIChatProfile>
+public sealed class AzureOpenAIChatProfileSearchAIDisplayDriver : DisplayDriver<AIChatProfile>
 {
     private readonly AzureAISearchIndexSettingsService _indexSettingsService;
 
@@ -20,7 +20,7 @@ public sealed class AzureOpenAIChatProfileSearchAIDisplayDriver : DisplayDriver<
         _indexSettingsService = indexSettingsService;
     }
 
-    public override IDisplayResult Edit(OpenAIChatProfile profile, BuildEditorContext context)
+    public override IDisplayResult Edit(AIChatProfile profile, BuildEditorContext context)
     {
         if (profile.Source is null || profile.Source != AzureWithAzureAISearchProfileSource.Key)
         {
@@ -41,7 +41,7 @@ public sealed class AzureOpenAIChatProfileSearchAIDisplayDriver : DisplayDriver<
         }).Location("Content:3");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(OpenAIChatProfile profile, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(AIChatProfile profile, UpdateEditorContext context)
     {
         if (profile.Source is null || profile.Source != AzureWithAzureAISearchProfileSource.Key)
         {

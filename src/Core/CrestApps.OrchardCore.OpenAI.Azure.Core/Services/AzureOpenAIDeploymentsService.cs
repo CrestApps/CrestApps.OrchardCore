@@ -1,6 +1,6 @@
 using Azure.ResourceManager;
 using Azure.ResourceManager.CognitiveServices;
-using CrestApps.OrchardCore.OpenAI.Models;
+using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
@@ -14,7 +14,7 @@ public sealed class AzureOpenAIDeploymentsService
         _logger = logger;
     }
 
-    public async Task<IEnumerable<CognitiveServicesAccountDeploymentResource>> GetAllAsync(OpenAIConnectionEntry entry)
+    public async Task<IEnumerable<CognitiveServicesAccountDeploymentResource>> GetAllAsync(AIConnectionEntry entry)
     {
         var client = new ArmClient(entry.GetCredential());
 

@@ -6,6 +6,8 @@ namespace CrestApps.OrchardCore.OpenAI.ViewModels;
 
 public class ChatProfileMetadataViewModel
 {
+    public string SystemMessage { get; set; }
+
     [Range(0f, 1f)]
     public float? Temperature { get; set; }
 
@@ -23,6 +25,9 @@ public class ChatProfileMetadataViewModel
 
     [Range(2, 20)]
     public int? PastMessagesCount { get; set; }
+
+    [BindNever]
+    public bool IsSystemMessageLocked { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> Deployments { get; set; }

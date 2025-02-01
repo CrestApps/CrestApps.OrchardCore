@@ -1,0 +1,19 @@
+namespace CrestApps.OrchardCore.AI.Models;
+
+public class AIChatProfileSettings
+{
+    /// <summary>
+    /// Gets or sets a value indicating whether the profile is listable on the UI.
+    /// </summary>
+    public bool IsListable { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the profile is removable.
+    /// </summary>
+    public bool IsRemovable { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the profile is visible on the admin menu. This is only applicable to profiles with Chat type.
+    /// </summary>
+    public bool IsOnAdminMenu { get; set; }
+}

@@ -1,7 +1,7 @@
 using Azure.ResourceManager;
 using Azure.ResourceManager.CognitiveServices;
 using Azure.ResourceManager.Resources;
-using CrestApps.OrchardCore.OpenAI.Models;
+using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
@@ -15,7 +15,7 @@ public sealed class AzureCognitiveServicesAccountServices
         _logger = logger;
     }
 
-    public async Task<CognitiveServicesAccountData> GetAsync(OpenAIConnectionEntry entry)
+    public async Task<CognitiveServicesAccountData> GetAsync(AIConnectionEntry entry)
     {
         try
         {

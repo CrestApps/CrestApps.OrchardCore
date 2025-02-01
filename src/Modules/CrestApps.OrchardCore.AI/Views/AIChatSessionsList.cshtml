@@ -1,0 +1,50 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model ListChatSessionsViewModel
+
+<!-- Hidden submit button do not remove -->
+<input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-body">
+        <div class="row gx-0">
+            <div class="col">
+                @await DisplayAsync(Model.Header)
+            </div>
+            <div class="col-auto ps-1">
+                <a class="btn btn-secondary" asp-action="Chat" asp-controller="AdminChat" asp-route-profileId="@Model.ProfileId">
+                    <i class="fa-solid fa-plus"></i> @T["New Chat"]
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+<ul class="list-group">
+    @if (Model.ChatSessions.Any())
+    {
+        @foreach (var session in Model.ChatSessions)
+        {
+            <li class="list-group-item list-group-item-action">
+                <div class="d-flex justify-content-between">
+                    <div class="d-flex align-items-center">
+                        @session.Title
+                    </div>
+                    <div>
+                        <a asp-action="Index" asp-controller="AdminChat" asp-route-profileId="@session.ProfileId" asp-route-sessionId="@session.SessionId" class="btn btn-sm btn-success">@T["View"]</a>
+                    </div>
+                </div>
+            </li>
+        }
+    }
+    else
+    {
+        <li class="list-group-item">
+            <div class="alert alert-info mb-0">
+                @T["No chat history found."]
+            </div>
+        </li>
+    }
+</ul>
+
+@await DisplayAsync(Model.Pager)

@@ -1,8 +1,9 @@
+using CrestApps.OrchardCore.AI;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureProfileSource : IOpenAIChatProfileSource
+public sealed class AzureProfileSource : IAIChatProfileSource
 {
     public const string Key = "Azure";
 
