@@ -16,12 +16,12 @@ public sealed class AzureOpenAIChatCompletionService : IAIChatCompletionService
     private readonly IAIDeploymentStore _deploymentStore;
     private readonly IAIToolsService _toolsService;
     private readonly DefaultOpenAIOptions _defaultOptions;
-    private readonly AIConnectionOptions _connectionOptions;
+    private readonly AIProviderOptions _providerOptions;
     private readonly ILogger _logger;
 
     public AzureOpenAIChatCompletionService(
         IAIDeploymentStore deploymentStore,
-        IOptions<AIConnectionOptions> connectionOptions,
+        IOptions<AIProviderOptions> providerOptions,
         IAIToolsService toolsService,
         IOptions<DefaultOpenAIOptions> defaultOptions,
         ILogger<AzureOpenAIChatCompletionService> logger)
@@ -29,7 +29,7 @@ public sealed class AzureOpenAIChatCompletionService : IAIChatCompletionService
         _deploymentStore = deploymentStore;
         _toolsService = toolsService;
         _defaultOptions = defaultOptions.Value;
-        _connectionOptions = connectionOptions.Value;
+        _providerOptions = providerOptions.Value;
         _logger = logger;
     }
 
@@ -40,32 +40,39 @@ public sealed class AzureOpenAIChatCompletionService : IAIChatCompletionService
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
 
-        var deployment = await GetDeploymentAsync(context);
+        AIProviderConnection connection = null;
 
-        if (deployment is null)
+        string deploymentName = null;
+
+        if (_providerOptions.Providers.TryGetValue(AzureOpenAIConstants.AzureDeploymentSourceName, out var entry))
         {
-            _logger.LogWarning("Unable to initiate chat. The profile with ID '{ProfileId}' lacks a DeploymentId, and the fallback DeploymentId in the context is also not configured.", context.Profile.Id);
+            var connectionName = entry.DefaultConnectionName;
+            deploymentName = entry.DefaultDeploymentName;
 
-            return AIChatCompletionResponse.Empty;
-        }
+            var deployment = await GetDeploymentAsync(context);
 
-        AIConnectionEntry connection = null;
+            if (deployment is not null)
+            {
+                connectionName = deployment.ConnectionName;
+                deploymentName = deployment.Name;
+            }
 
-        if (_connectionOptions.Connections.TryGetValue(AzureOpenAIConstants.AzureDeploymentSourceName, out var connections))
-        {
-            connection = connections.FirstOrDefault(x => x.Name != null && x.Name.Equals(deployment.ConnectionName, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(deploymentName) && entry.Connections.TryGetValue(connectionName, out var connectionProperties))
+            {
+                connection = connectionProperties;
+            }
         }
 
         if (connection is null)
         {
-            _logger.LogWarning("Unable to chat. The DeploymentId '{DeploymentId}' belongs to a connection that does not exists (i.e., '{ConnectionName}').", context.Profile.DeploymentId, deployment.ConnectionName);
+            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile.Id);
 
             return AIChatCompletionResponse.Empty;
         }
 
         var metadata = context.Profile.As<OpenAIChatProfileMetadata>();
 
-        var chatClient = GetChatClient(connection, deployment.Name);
+        var chatClient = GetChatClient(connection, deploymentName);
 
         var chatOptions = new ChatOptions()
         {
@@ -166,13 +173,18 @@ public sealed class AzureOpenAIChatCompletionService : IAIChatCompletionService
 
         if (!string.IsNullOrEmpty(content.DeploymentId))
         {
-            return await _deploymentStore.FindByIdAsync(content.DeploymentId);
+            var deployment = await _deploymentStore.FindByIdAsync(content.DeploymentId);
+
+            if (deployment is not null)
+            {
+                return deployment;
+            }
         }
 
         return null;
     }
 
-    private static IChatClient GetChatClient(AIConnectionEntry connection, string deploymentName)
+    private static IChatClient GetChatClient(AIProviderConnection connection, string deploymentName)
     {
         var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
 

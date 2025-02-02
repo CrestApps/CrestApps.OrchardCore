@@ -15,14 +15,14 @@ public sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
 {
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly AzureOpenAIDeploymentsService _azureOpenAIDeploymentsService;
-    private readonly AIConnectionOptions _connectionOptions;
+    private readonly AIProviderOptions _connectionOptions;
 
     internal readonly IStringLocalizer S;
 
     public ImportAzureOpenAIDeploymentStep(
         IAIDeploymentManager deploymentManager,
         AzureOpenAIDeploymentsService azureOpenAIDeploymentsService,
-        IOptions<AIConnectionOptions> connectionOptions,
+        IOptions<AIProviderOptions> connectionOptions,
         IStringLocalizer<ImportAzureOpenAIDeploymentStep> stringLocalizer)
         : base("ImportAzureOpenAIDeployment")
     {
@@ -34,14 +34,14 @@ public sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
 
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
-        if (!_connectionOptions.Connections.TryGetValue(AzureOpenAIConstants.AzureDeploymentSourceName, out var connections))
+        if (!_connectionOptions.Providers.TryGetValue(AzureOpenAIConstants.AzureDeploymentSourceName, out var provider))
         {
             context.Errors.Add(S["There are no connections for {0}.", AzureOpenAIConstants.AzureDeploymentSourceName]);
 
             return;
         }
 
-        var importableConnections = new Dictionary<string, AIConnectionEntry>(StringComparer.OrdinalIgnoreCase);
+        var importableConnections = new Dictionary<string, AIProviderConnection>(StringComparer.OrdinalIgnoreCase);
 
         if (context.Step.TryGetPropertyValue("ConnectionNames", out var connectionName))
         {
@@ -49,30 +49,25 @@ public sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
             {
                 foreach (var name in names)
                 {
-                    var connection = connections.FirstOrDefault(x => name.GetValue<string>().Equals(x.Name, StringComparison.OrdinalIgnoreCase));
+                    var stringName = name.GetValue<string>();
 
-                    if (connection == null)
+                    if (!provider.Connections.TryGetValue(stringName, out var connectionProperty))
                     {
                         continue;
                     }
 
-                    importableConnections[connection.Name] = connection;
+                    importableConnections[stringName] = connectionProperty;
                 }
             }
             else if (connectionName.TryGetValue<string>(out var name))
             {
                 if (name.Equals("all", StringComparison.OrdinalIgnoreCase))
                 {
-                    importableConnections = connections.ToDictionary(x => x.Name);
+                    importableConnections = new(provider.Connections);
                 }
-                else
+                else if (provider.Connections.TryGetValue(name, out var connection))
                 {
-                    var connection = connections.FirstOrDefault(x => name.Equals(x.Name, StringComparison.OrdinalIgnoreCase));
-
-                    if (connection != null)
-                    {
-                        importableConnections[connection.Name] = connection;
-                    }
+                    importableConnections[name] = connection;
                 }
             }
         }
@@ -84,15 +79,17 @@ public sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
             return;
         }
 
-        var existingDeployments = await _deploymentManager.GetAllAsync();
+        var existingDeployments = await _deploymentManager.GetAsync(AzureOpenAIConstants.AzureDeploymentSourceName);
 
-        foreach (var importableConnection in importableConnections.Values)
+        foreach (var importableConnection in importableConnections)
         {
-            var deployments = await _azureOpenAIDeploymentsService.GetAllAsync(importableConnection);
+            var deployments = await _azureOpenAIDeploymentsService.GetAllAsync(importableConnection.Value);
 
             foreach (var deployment in deployments)
             {
-                var existingDeployment = existingDeployments.FirstOrDefault(x => x.Name.Equals(deployment.Data.Name, StringComparison.OrdinalIgnoreCase));
+                var deploymentName = deployment.Data.Name;
+
+                var existingDeployment = existingDeployments.FirstOrDefault(x => x.ConnectionName.Equals(importableConnection.Key, StringComparison.OrdinalIgnoreCase) && x.Name.Equals(deploymentName, StringComparison.OrdinalIgnoreCase));
 
                 if (existingDeployment != null)
                 {
@@ -101,8 +98,8 @@ public sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
 
                 existingDeployment = await _deploymentManager.NewAsync(AzureOpenAIConstants.AzureDeploymentSourceName, new JsonObject
                 {
-                    { nameof(AIDeployment.Name), deployment.Data.Name },
-                    { nameof(AIDeployment.ConnectionName), importableConnection.Name },
+                    { nameof(AIDeployment.Name), deploymentName },
+                    { nameof(AIDeployment.ConnectionName), importableConnection.Key },
                 });
 
                 await _deploymentManager.SaveAsync(existingDeployment);

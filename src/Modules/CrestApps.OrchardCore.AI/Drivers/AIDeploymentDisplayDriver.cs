@@ -11,15 +11,15 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 
 public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 {
-    private readonly AIConnectionOptions _connectionOptions;
+    private readonly AIProviderOptions _providerOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIDeploymentDisplayDriver(
-        IOptions<AIConnectionOptions> connectionOptions,
+        IOptions<AIProviderOptions> providerOptions,
         IStringLocalizer<AIDeploymentDisplayDriver> stringLocalizer)
     {
-        _connectionOptions = connectionOptions.Value;
+        _providerOptions = providerOptions.Value;
         S = stringLocalizer;
     }
 
@@ -41,13 +41,13 @@ public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             model.ConnectionName = deployment.ConnectionName;
             model.IsNew = context.IsNew;
 
-            if (_connectionOptions.Connections.TryGetValue(deployment.Source, out var connections))
+            if (_providerOptions.Providers.TryGetValue(deployment.Source, out var providerOptions))
             {
-                model.Connections = connections.Select(x => new SelectListItem(x.Name, x.Name)).ToArray();
+                model.Connections = providerOptions.Connections.Select(x => new SelectListItem(x.Key, x.Key)).ToArray();
 
-                if (string.IsNullOrEmpty(model.ConnectionName) && connections.Count == 1)
+                if (string.IsNullOrEmpty(model.ConnectionName) && providerOptions.Connections.Count == 1)
                 {
-                    model.ConnectionName = connections.First().Name;
+                    model.ConnectionName = providerOptions.Connections.First().Key;
                 }
             }
         }).Location("Content:1");
@@ -71,7 +71,7 @@ public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is required."]);
         }
 
-        if (!_connectionOptions.Connections.TryGetValue(deployment.Source, out var connections))
+        if (!_providerOptions.Providers.TryGetValue(deployment.Source, out var providerOptions))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["There are no configured connection for the source: {0}.", deployment.Source]);
         }
@@ -83,15 +83,15 @@ public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             }
             else
             {
-                var connection = connections.FirstOrDefault(x => x.Name != null && x.Name.Equals(model.ConnectionName, StringComparison.OrdinalIgnoreCase));
+                var connection = providerOptions.Connections.FirstOrDefault(x => x.Key != null && x.Key.Equals(model.ConnectionName, StringComparison.OrdinalIgnoreCase));
 
-                if (connection == null)
+                if (connection.Value == null)
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["Invalid connection name provided."]);
                 }
                 else
                 {
-                    deployment.ConnectionName = connection.Name;
+                    deployment.ConnectionName = connection.Key;
                 }
             }
         }

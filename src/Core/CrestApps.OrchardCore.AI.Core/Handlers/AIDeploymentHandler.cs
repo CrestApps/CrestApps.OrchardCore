@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 public sealed class AIDeploymentHandler : AIDeploymentHandlerBase
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly AIConnectionOptions _connectionOptions;
+    private readonly AIProviderOptions _connectionOptions;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -20,7 +20,7 @@ public sealed class AIDeploymentHandler : AIDeploymentHandlerBase
     public AIDeploymentHandler(
         IHttpContextAccessor httpContextAccessor,
         IAIDeploymentStore deploymentStore,
-        IOptions<AIConnectionOptions> connectionOptions,
+        IOptions<AIProviderOptions> connectionOptions,
         IClock clock,
         IStringLocalizer<AIDeploymentHandler> stringLocalizer)
     {
@@ -59,11 +59,11 @@ public sealed class AIDeploymentHandler : AIDeploymentHandlerBase
         {
             if (hasConnectionName)
             {
-                if (!_connectionOptions.Connections.TryGetValue(context.Deployment.Source, out var connections))
+                if (!_connectionOptions.Providers.TryGetValue(context.Deployment.Source, out var entry))
                 {
                     context.Result.Fail(new ValidationResult(S["There are no configured connection for the source: {0}", context.Deployment.Source], [nameof(AIDeployment.Source)]));
                 }
-                else if (!connections.Any(x => x.Name != null && x.Name.Equals(context.Deployment.ConnectionName, StringComparison.OrdinalIgnoreCase)))
+                else if (!entry.Connections.Any(x => x.Key != null && x.Key.Equals(context.Deployment.ConnectionName, StringComparison.OrdinalIgnoreCase)))
                 {
                     context.Result.Fail(new ValidationResult(S["Invalid connection name provided."], [nameof(AIDeployment.ConnectionName)]));
                 }

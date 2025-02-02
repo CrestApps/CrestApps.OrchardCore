@@ -15,17 +15,17 @@ public sealed class AzureCognitiveServicesAccountServices
         _logger = logger;
     }
 
-    public async Task<CognitiveServicesAccountData> GetAsync(AIConnectionEntry entry)
+    public async Task<CognitiveServicesAccountData> GetAsync(AIProviderConnection connection)
     {
         try
         {
-            var subscriptionId = entry.GetSubscriptionId();
-            var resourceGroupName = entry.GetResourceGroupName();
-            var accountName = entry.GetAccountName();
+            var subscriptionId = connection.GetSubscriptionId();
+            var resourceGroupName = connection.GetResourceGroupName();
+            var accountName = connection.GetAccountName();
 
             var resourceGroupResourceId = ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName);
 
-            var client = new ArmClient(entry.GetCredential());
+            var client = new ArmClient(connection.GetCredential());
             var resourceGroupResource = client.GetResourceGroupResource(resourceGroupResourceId);
 
             var collection = resourceGroupResource.GetCognitiveServicesAccounts();

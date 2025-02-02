@@ -4,11 +4,11 @@
 @using CrestApps.OrchardCore.AI
 @using Microsoft.Extensions.Options
 
-@inject IOptions<AIConnectionOptions> Options
+@inject IOptions<AIProviderOptions> Options
 @{
     string source = Model.Source;
     var service = ViewContext.HttpContext.RequestServices.GetKeyedService<IAIDeploymentSource>(source);
-    var hasConnections = Options.Value.Connections.TryGetValue(source, out var connections) && connections.Count > 0;
+    var hasConnections = Options.Value.Providers.TryGetValue(source, out var entry) && entry.Connections.Count > 0;
 }
 
 <div class="col">

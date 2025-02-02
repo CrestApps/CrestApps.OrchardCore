@@ -25,6 +25,9 @@ public static class AIConstants
         public const string ChatUtilityCompletionRouteName = "AIChatUtilityCompletion";
 
         public const string ChatSessionRouteName = "AIChatSession";
+
+        public const string GetDeploymentsByConnectionRouteName = "GetDeploymentsByConnection";
+
     }
 
     public static string GetTitleGeneratorProfileName(string source)

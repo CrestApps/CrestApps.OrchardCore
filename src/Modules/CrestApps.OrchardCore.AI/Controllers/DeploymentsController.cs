@@ -27,7 +27,7 @@ public sealed class DeploymentsController : Controller
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIDeployment> _deploymentDisplayManager;
     private readonly IServiceProvider _serviceProvider;
-    private readonly AIConnectionOptions _connectionOptions;
+    private readonly AIProviderOptions _connectionOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -39,7 +39,7 @@ public sealed class DeploymentsController : Controller
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIDeployment> deploymentDisplayManager,
         IServiceProvider serviceProvider,
-        IOptions<AIConnectionOptions> connectionOptions,
+        IOptions<AIProviderOptions> connectionOptions,
         INotifier notifier,
         IHtmlLocalizer<DeploymentsController> htmlLocalizer,
         IStringLocalizer<DeploymentsController> stringLocalizer)

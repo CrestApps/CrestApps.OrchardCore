@@ -55,8 +55,14 @@ public sealed class Startup : StartupBase
             })
             .AddScoped<IAIMarkdownService, AIMarkdownService>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
-            .AddTransient<IConfigureOptions<AIConnectionOptions>, AIConnectionOptionsConfiguration>()
+            .AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderOptionsConfiguration>()
             .AddNavigationProvider<AIAdminMenu>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes
+            .AddGetDeploymentsEndpoint();
     }
 }
 

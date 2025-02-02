@@ -122,6 +122,35 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         return deployments;
     }
 
+    public async ValueTask<IEnumerable<AIDeployment>> GetAsync(string source)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(source);
+
+        var deployments = (await _deploymentStore.GetAllAsync()).Where(deployment => deployment.Source == source);
+
+        foreach (var deployment in deployments)
+        {
+            await LoadAsync(deployment);
+        }
+
+        return deployments;
+    }
+
+    public async ValueTask<IEnumerable<AIDeployment>> GetAsync(string source, string connectionName)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(source);
+        ArgumentException.ThrowIfNullOrEmpty(connectionName);
+
+        var deployments = (await _deploymentStore.GetAllAsync()).Where(deployment => deployment.Source == source && deployment.ConnectionName == connectionName);
+
+        foreach (var deployment in deployments)
+        {
+            await LoadAsync(deployment);
+        }
+
+        return deployments;
+    }
+
     public async Task SaveAsync(AIDeployment deployment)
     {
         ArgumentNullException.ThrowIfNull(deployment);

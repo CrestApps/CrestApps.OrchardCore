@@ -14,13 +14,13 @@ public sealed class AzureOpenAIDeploymentsService
         _logger = logger;
     }
 
-    public async Task<IEnumerable<CognitiveServicesAccountDeploymentResource>> GetAllAsync(AIConnectionEntry entry)
+    public async Task<IEnumerable<CognitiveServicesAccountDeploymentResource>> GetAllAsync(AIProviderConnection connection)
     {
-        var client = new ArmClient(entry.GetCredential());
+        var client = new ArmClient(connection.GetCredential());
 
-        var subscriptionId = entry.GetSubscriptionId();
-        var resourceGroupName = entry.GetResourceGroupName();
-        var accountName = entry.GetAccountName();
+        var subscriptionId = connection.GetSubscriptionId();
+        var resourceGroupName = connection.GetResourceGroupName();
+        var accountName = connection.GetAccountName();
 
         // Get the Cognitive Services resource group.
         var cognitiveServicesAccountResourceId = CognitiveServicesAccountResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, accountName);

@@ -84,4 +84,6 @@ public interface IAIDeploymentManager
     /// containing the validation results (e.g., success or failure and any associated errors).
     /// </returns>
     Task<AIDeploymentValidateResult> ValidateAsync(AIDeployment profile);
+    ValueTask<IEnumerable<AIDeployment>> GetAsync(string source);
+    ValueTask<IEnumerable<AIDeployment>> GetAsync(string source, string connectionName);
 }

@@ -12,25 +12,18 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 internal sealed class AzureTitleGeneratorProfileMigrations : DataMigration
 {
     private readonly IAIChatProfileManager _chatProfileManager;
-    private readonly IAIDeploymentStore _deploymentStore;
 
-    public AzureTitleGeneratorProfileMigrations(
-        IAIChatProfileManager chatProfileManager,
-        IAIDeploymentStore deploymentStore)
+    public AzureTitleGeneratorProfileMigrations(IAIChatProfileManager chatProfileManager)
     {
         _chatProfileManager = chatProfileManager;
-        _deploymentStore = deploymentStore;
     }
 
     public async Task<int> CreateAsync()
     {
-        var deployment = (await _deploymentStore.GetDeploymentsAsync(AzureProfileSource.Key)).FirstOrDefault();
-
         var profile = await _chatProfileManager.NewAsync(AzureProfileSource.Key);
 
         profile.Name = AIConstants.GetTitleGeneratorProfileName(AzureProfileSource.Key);
         profile.Type = AIChatProfileType.Chat;
-        profile.DeploymentId = deployment?.Id;
 
         profile.WithSettings(new AIChatProfileSettings
         {

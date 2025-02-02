@@ -14,6 +14,8 @@ public class EditChatProfileViewModel
 
     public string PromptSubject { get; set; }
 
+    public string ConnectionName { get; set; }
+
     public string DeploymentId { get; set; }
 
     public bool IsOnAdminMenu { get; set; }
@@ -28,13 +30,19 @@ public class EditChatProfileViewModel
     public bool IsNew { get; set; }
 
     [BindNever]
-    public IList<SelectListItem> Deployments { get; set; }
+    public IList<SelectListItem> ConnectionNames { get; set; }
+
+    [BindNever]
+    public IEnumerable<SelectListItem> Deployments { get; set; }
 
     [BindNever]
     public IList<SelectListItem> TitleTypes { get; set; }
 
     [BindNever]
     public IList<SelectListItem> ProfileTypes { get; set; }
+
+    [BindNever]
+    public string Source { get; set; }
 }
 
 public class FunctionEntry

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Liquid;
@@ -13,23 +14,26 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 {
     private readonly IAIChatProfileStore _profileStore;
-    private readonly IAIDeploymentStore _modelDeploymentStore;
+    private readonly IAIDeploymentManager _modelDeploymentManager;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IAIToolsService _toolsService;
+    private readonly AIProviderOptions _connectionOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIChatProfileDisplayDriver(
         IAIChatProfileStore profileStore,
-        IAIDeploymentStore modelDeploymentStore,
+        IAIDeploymentManager modelDeploymentManager,
         ILiquidTemplateManager liquidTemplateManager,
         IAIToolsService toolsService,
+        IOptions<AIProviderOptions> connectionOptions,
         IStringLocalizer<AIChatProfileDisplayDriver> stringLocalizer)
     {
         _profileStore = profileStore;
-        _modelDeploymentStore = modelDeploymentStore;
+        _modelDeploymentManager = modelDeploymentManager;
         _liquidTemplateManager = liquidTemplateManager;
         _toolsService = toolsService;
+        _connectionOptions = connectionOptions.Value;
         S = stringLocalizer;
     }
 
@@ -56,6 +60,21 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
                 model.IsOnAdminMenu = profile.Type == AIChatProfileType.Chat && context.IsNew;
             }
 
+            var hasDeployment = false;
+
+            if (!string.IsNullOrEmpty(profile.DeploymentId))
+            {
+                var deployment = await _modelDeploymentManager.FindByIdAsync(profile.DeploymentId);
+
+                if (deployment is not null)
+                {
+                    hasDeployment = true;
+                    model.ConnectionName = deployment.ConnectionName;
+                    model.Deployments = (await _modelDeploymentManager.GetAsync(profile.Source, deployment.ConnectionName)).Select(x => new SelectListItem(x.Name, x.Id));
+                }
+            }
+
+            model.Source = profile.Source;
             model.Name = profile.Name;
             model.PromptSubject = profile.PromptSubject;
             model.PromptTemplate = profile.PromptTemplate;
@@ -86,34 +105,18 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
                 IsSelected = profile.FunctionNames?.Contains(function.Metadata.Name) ?? false,
             }).ToArray();
 
-            model.Deployments = [];
-
-            var deployments = (await _modelDeploymentStore.GetAllAsync())
-            .GroupBy(x => x.ConnectionName)
-            .Select(x => new
+            if (_connectionOptions.Providers.TryGetValue(profile.Source, out var entry))
             {
-                GroupName = x.Key,
-                Items = x.OrderBy(x => x.Name),
-            });
-
-            foreach (var deployment in deployments)
-            {
-                var group = new SelectListGroup
+                if (!hasDeployment && entry.Connections.Count == 1)
                 {
-                    Name = deployment.GroupName,
-                };
+                    // At this point, there is no deployment associated with the profile. Check the connections to obtain available deployments.
 
-                foreach (var item in deployment.Items)
-                {
-                    var option = new SelectListItem
-                    {
-                        Text = item.Name,
-                        Value = item.Id,
-                        Group = group,
-                    };
-
-                    model.Deployments.Add(option);
+                    var connection = entry.Connections.First();
+                    model.ConnectionName = connection.Key;
+                    model.Deployments = (await _modelDeploymentManager.GetAsync(profile.Source, connection.Key)).Select(x => new SelectListItem(x.Name, x.Id));
                 }
+
+                model.ConnectionNames = entry.Connections.Select(x => new SelectListItem(x.Key, x.Key)).ToArray();
             }
 
         }).Location("Content:1");
@@ -142,13 +145,18 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
             profile.Name = name;
         }
 
-        if (string.IsNullOrEmpty(model.DeploymentId))
+        if (string.IsNullOrEmpty(model.ConnectionName))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DeploymentId), S["Deployment is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["Connection is required."]);
         }
-        else if (await _modelDeploymentStore.FindByIdAsync(model.DeploymentId) is null)
+        else if (!string.IsNullOrEmpty(model.DeploymentId))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DeploymentId), S["Invalid deployment provided."]);
+            var deployment = await _modelDeploymentManager.FindByIdAsync(model.DeploymentId);
+
+            if (deployment is null || !deployment.ConnectionName.Equals(model.ConnectionName, StringComparison.OrdinalIgnoreCase))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.DeploymentId), S["Invalid deployment provided."]);
+            }
         }
 
         if (model.ProfileType == AIChatProfileType.TemplatePrompt)

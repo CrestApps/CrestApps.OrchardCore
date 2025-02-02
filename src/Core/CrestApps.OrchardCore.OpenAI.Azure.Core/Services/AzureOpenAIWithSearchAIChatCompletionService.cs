@@ -28,13 +28,13 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
     private readonly AzureAISearchIndexSettingsService _azureAISearchIndexSettingsService;
     private readonly IAIToolsService _toolsService;
     private readonly DefaultOpenAIOptions _defaultOptions;
-    private readonly AIConnectionOptions _connectionOptions;
+    private readonly AIProviderOptions _providerOptions;
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
     private readonly ILogger _logger;
 
     public AzureOpenAIWithSearchAIChatCompletionService(
         IAIDeploymentStore deploymentStore,
-        IOptions<AIConnectionOptions> connectionOptions,
+        IOptions<AIProviderOptions> providerOptions,
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
         IAILinkGenerator openAILinkGenerator,
         AzureAISearchIndexSettingsService azureAISearchIndexSettingsService,
@@ -47,7 +47,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         _azureAISearchIndexSettingsService = azureAISearchIndexSettingsService;
         _toolsService = toolService;
         _defaultOptions = defaultOptions.Value;
-        _connectionOptions = connectionOptions.Value;
+        _providerOptions = providerOptions.Value;
         _azureAISearchDefaultOptions = azureAISearchDefaultOptions.Value;
         _logger = logger;
     }
@@ -59,25 +59,32 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
 
-        var deployment = await GetDeploymentAsync(context);
+        AIProviderConnection connection = null;
 
-        if (deployment is null)
+        string deploymentName = null;
+
+        if (_providerOptions.Providers.TryGetValue(AzureOpenAIConstants.AzureDeploymentSourceName, out var entry))
         {
-            _logger.LogWarning("Unable to initiate chat. The profile with ID '{ProfileId}' lacks a DeploymentId, and the fallback DeploymentId in the context is also not configured.", context.Profile.Id);
+            var connectionName = entry.DefaultConnectionName;
+            deploymentName = entry.DefaultDeploymentName;
 
-            return AIChatCompletionResponse.Empty;
-        }
+            var deployment = await GetDeploymentAsync(context);
 
-        AIConnectionEntry connection = null;
+            if (deployment is not null)
+            {
+                connectionName = deployment.ConnectionName;
+                deploymentName = deployment.Name;
+            }
 
-        if (_connectionOptions.Connections.TryGetValue(AzureOpenAIConstants.AzureDeploymentSourceName, out var connections))
-        {
-            connection = connections.FirstOrDefault(x => x.Name != null && x.Name.Equals(deployment.ConnectionName, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(deploymentName) && entry.Connections.TryGetValue(connectionName, out var connectionProperties))
+            {
+                connection = connectionProperties;
+            }
         }
 
         if (connection is null)
         {
-            _logger.LogWarning("Unable to chat. The DeploymentId '{DeploymentId}' belongs to a connection that does not exists (i.e., '{ConnectionName}').", context.Profile.DeploymentId, deployment.ConnectionName);
+            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile.Id);
 
             return AIChatCompletionResponse.Empty;
         }
@@ -118,7 +125,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
 
         var azureClient = GetChatClient(connection);
 
-        var chatClient = azureClient.GetChatClient(deployment.Name);
+        var chatClient = azureClient.GetChatClient(deploymentName);
 
         var chatOptions = await GetOptionsWithDataSourceAsync(context);
 
@@ -204,7 +211,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         return systemMessage;
     }
 
-    private static AzureOpenAIClient GetChatClient(AIConnectionEntry connection)
+    private static AzureOpenAIClient GetChatClient(AIProviderConnection connection)
     {
         var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
 
