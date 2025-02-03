@@ -23,7 +23,8 @@ internal sealed class AzureTitleGeneratorProfileMigrations : DataMigration
         var profile = await _chatProfileManager.NewAsync(AzureProfileSource.Key);
 
         profile.Name = AIConstants.GetTitleGeneratorProfileName(AzureProfileSource.Key);
-        profile.Type = AIChatProfileType.Chat;
+        profile.DisplayText = "Chat Title Generator";
+        profile.Type = AIChatProfileType.Utility;
 
         profile.WithSettings(new AIChatProfileSettings
         {

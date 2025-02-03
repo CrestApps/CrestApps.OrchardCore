@@ -28,33 +28,11 @@
     </div>
 </div>
 
-@if (Model.Connections.Count == 1 || !Model.IsNew)
-{
-    var prefix = Html.IdFor(x => x.ConnectionName);
-
-    <div class="@Orchard.GetWrapperClasses()">
-        <label for="@(prefix)_readonly" class="@Orchard.GetLabelClasses()">@T["Connection Name"]</label>
-        <div class="@Orchard.GetEndClasses()">
-            <input type="hidden" asp-for="ConnectionName" />
-            <input type="text" readonly class="form-control-plaintext" id="@(prefix)_readonly" value="@Model.ConnectionName">
-        </div>
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection Name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="ConnectionName" asp-items="Model.Connections" class="form-select"></select>
+        <span asp-validation-for="ConnectionName" class="text-danger"></span>
+        <span class="hint">@T["Connection name to use for this deployment."]</span>
     </div>
-}
-else
-{
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection Name"]</label>
-        <div class="@Orchard.GetEndClasses()">
-            <input asp-for="ConnectionName" class="form-control" />
-            <span asp-validation-for="ConnectionName" class="text-danger"></span>
-            @if (Model.IsNew)
-            {
-                <span class="hint">@T["Connection name. This name cannot be changed later."]</span>
-            }
-            else
-            {
-                <span class="hint">@T["Connection name."]</span>
-            }
-        </div>
-    </div>
-}
+</div>

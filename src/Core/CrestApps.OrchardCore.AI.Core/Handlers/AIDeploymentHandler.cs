@@ -40,7 +40,7 @@ public sealed class AIDeploymentHandler : AIDeploymentHandlerBase
     {
         if (string.IsNullOrWhiteSpace(context.Deployment.Name))
         {
-            context.Result.Fail(new ValidationResult(S["Profile Name is required."], [nameof(AIDeployment.Name)]));
+            context.Result.Fail(new ValidationResult(S["Deployment Name is required."], [nameof(AIDeployment.Name)]));
         }
 
         var hasConnectionName = true;
@@ -51,19 +51,19 @@ public sealed class AIDeploymentHandler : AIDeploymentHandlerBase
             context.Result.Fail(new ValidationResult(S["Connection name is required."], [nameof(AIDeployment.ConnectionName)]));
         }
 
-        if (string.IsNullOrWhiteSpace(context.Deployment.Source))
+        if (string.IsNullOrWhiteSpace(context.Deployment.ProviderName))
         {
-            context.Result.Fail(new ValidationResult(S["Source is required."], [nameof(AIDeployment.Source)]));
+            context.Result.Fail(new ValidationResult(S["Provider is required."], [nameof(AIDeployment.ProviderName)]));
         }
         else
         {
             if (hasConnectionName)
             {
-                if (!_connectionOptions.Providers.TryGetValue(context.Deployment.Source, out var entry))
+                if (!_connectionOptions.Providers.TryGetValue(context.Deployment.ProviderName, out var provider))
                 {
-                    context.Result.Fail(new ValidationResult(S["There are no configured connection for the source: {0}", context.Deployment.Source], [nameof(AIDeployment.Source)]));
+                    context.Result.Fail(new ValidationResult(S["There are no configured connection for the provider: {0}", context.Deployment.ProviderName], [nameof(AIDeployment.ProviderName)]));
                 }
-                else if (!entry.Connections.Any(x => x.Key != null && x.Key.Equals(context.Deployment.ConnectionName, StringComparison.OrdinalIgnoreCase)))
+                else if (!provider.Connections.TryGetValue(context.Deployment.ConnectionName, out var _))
                 {
                     context.Result.Fail(new ValidationResult(S["Invalid connection name provided."], [nameof(AIDeployment.ConnectionName)]));
                 }
@@ -95,6 +95,13 @@ public sealed class AIDeploymentHandler : AIDeploymentHandlerBase
         if (!string.IsNullOrEmpty(name))
         {
             deployment.Name = name;
+        }
+
+        var providerName = data[nameof(AIDeployment.ProviderName)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(providerName))
+        {
+            deployment.ProviderName = providerName;
         }
 
         var connectionName = data[nameof(AIDeployment.ConnectionName)]?.GetValue<string>()?.Trim();

@@ -36,7 +36,7 @@ public sealed class ChatUtilityCompletionTaskDisplayDriver : ActivityDisplayDriv
         model.IncludeHtmlResponse = activity.IncludeHtmlResponse;
 
         model.Profiles = (await _chatProfileStore.GetProfilesAsync(AIChatProfileType.Utility))
-            .Select(profile => new SelectListItem(profile.Name, profile.Id));
+            .Select(profile => new SelectListItem(profile.DisplayText, profile.Id));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatUtilityCompletionTask activity, UpdateEditorContext context)

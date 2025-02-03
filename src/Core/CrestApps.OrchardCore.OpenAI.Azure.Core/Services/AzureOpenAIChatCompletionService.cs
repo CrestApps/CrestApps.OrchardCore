@@ -44,7 +44,7 @@ public sealed class AzureOpenAIChatCompletionService : IAIChatCompletionService
 
         string deploymentName = null;
 
-        if (_providerOptions.Providers.TryGetValue(AzureOpenAIConstants.AzureDeploymentSourceName, out var entry))
+        if (_providerOptions.Providers.TryGetValue(AzureOpenAIConstants.AzureProviderName, out var entry))
         {
             var connectionName = entry.DefaultConnectionName;
             deploymentName = entry.DefaultDeploymentName;
@@ -57,7 +57,7 @@ public sealed class AzureOpenAIChatCompletionService : IAIChatCompletionService
                 deploymentName = deployment.Name;
             }
 
-            if (!string.IsNullOrEmpty(deploymentName) && entry.Connections.TryGetValue(connectionName, out var connectionProperties))
+            if (!string.IsNullOrEmpty(connectionName) && entry.Connections.TryGetValue(connectionName, out var connectionProperties))
             {
                 connection = connectionProperties;
             }
@@ -163,22 +163,7 @@ public sealed class AzureOpenAIChatCompletionService : IAIChatCompletionService
     {
         if (!string.IsNullOrEmpty(content.Profile.DeploymentId))
         {
-            var deployment = await _deploymentStore.FindByIdAsync(content.Profile.DeploymentId);
-
-            if (deployment is not null)
-            {
-                return deployment;
-            }
-        }
-
-        if (!string.IsNullOrEmpty(content.DeploymentId))
-        {
-            var deployment = await _deploymentStore.FindByIdAsync(content.DeploymentId);
-
-            if (deployment is not null)
-            {
-                return deployment;
-            }
+            return await _deploymentStore.FindByIdAsync(content.Profile.DeploymentId);
         }
 
         return null;

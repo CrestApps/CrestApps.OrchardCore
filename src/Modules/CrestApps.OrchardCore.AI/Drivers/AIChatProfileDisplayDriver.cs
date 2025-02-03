@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
@@ -17,6 +18,7 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
     private readonly IAIDeploymentManager _modelDeploymentManager;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IAIToolsService _toolsService;
+    private readonly IServiceProvider _serviceProvider;
     private readonly AIProviderOptions _connectionOptions;
 
     internal readonly IStringLocalizer S;
@@ -26,6 +28,7 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
         IAIDeploymentManager modelDeploymentManager,
         ILiquidTemplateManager liquidTemplateManager,
         IAIToolsService toolsService,
+        IServiceProvider serviceProvider,
         IOptions<AIProviderOptions> connectionOptions,
         IStringLocalizer<AIChatProfileDisplayDriver> stringLocalizer)
     {
@@ -33,6 +36,7 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
         _modelDeploymentManager = modelDeploymentManager;
         _liquidTemplateManager = liquidTemplateManager;
         _toolsService = toolsService;
+        _serviceProvider = serviceProvider;
         _connectionOptions = connectionOptions.Value;
         S = stringLocalizer;
     }
@@ -76,6 +80,7 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 
             model.Source = profile.Source;
             model.Name = profile.Name;
+            model.DisplayText = profile.DisplayText;
             model.PromptSubject = profile.PromptSubject;
             model.PromptTemplate = profile.PromptTemplate;
             model.WelcomeMessage = profile.WelcomeMessage;
@@ -105,18 +110,24 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
                 IsSelected = profile.FunctionNames?.Contains(function.Metadata.Name) ?? false,
             }).ToArray();
 
-            if (_connectionOptions.Providers.TryGetValue(profile.Source, out var entry))
+            var profileSource = _serviceProvider.GetKeyedService<IAIChatProfileSource>(profile.Source);
+
+            if (profileSource is not null && _connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
             {
-                if (!hasDeployment && entry.Connections.Count == 1)
+                if (!hasDeployment && provider.Connections.Count == 1)
                 {
                     // At this point, there is no deployment associated with the profile. Check the connections to obtain available deployments.
 
-                    var connection = entry.Connections.First();
+                    var connection = provider.Connections.First();
                     model.ConnectionName = connection.Key;
                     model.Deployments = (await _modelDeploymentManager.GetAsync(profile.Source, connection.Key)).Select(x => new SelectListItem(x.Name, x.Id));
                 }
 
-                model.ConnectionNames = entry.Connections.Select(x => new SelectListItem(x.Key, x.Key)).ToArray();
+                model.ConnectionNames = provider.Connections.Select(x => new SelectListItem(x.Key, x.Key)).ToArray();
+            }
+            else
+            {
+                model.ConnectionNames = [];
             }
 
         }).Location("Content:1");
@@ -145,17 +156,34 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
             profile.Name = name;
         }
 
-        if (string.IsNullOrEmpty(model.ConnectionName))
+        if (string.IsNullOrEmpty(model.DisplayText))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["Connection is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["Display Text is required."]);
         }
-        else if (!string.IsNullOrEmpty(model.DeploymentId))
+
+        var hasConnection = !string.IsNullOrEmpty(model.ConnectionName);
+
+        if (!string.IsNullOrEmpty(model.DeploymentId))
         {
             var deployment = await _modelDeploymentManager.FindByIdAsync(model.DeploymentId);
 
-            if (deployment is null || !deployment.ConnectionName.Equals(model.ConnectionName, StringComparison.OrdinalIgnoreCase))
+            if (deployment is null ||
+                !hasConnection ||
+                !deployment.ConnectionName.Equals(model.ConnectionName, StringComparison.OrdinalIgnoreCase))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.DeploymentId), S["Invalid deployment provided."]);
+            }
+        }
+
+        if (hasConnection)
+        {
+            var profileSource = _serviceProvider.GetKeyedService<IAIChatProfileSource>(profile.Source);
+
+            if (profileSource is not null &&
+                _connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider) &&
+                !provider.Connections.TryGetValue(model.ConnectionName, out _))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["Invalid connection provided."]);
             }
         }
 
@@ -171,6 +199,7 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
             }
         }
 
+        profile.DisplayText = model.DisplayText;
         profile.PromptSubject = model.PromptSubject?.Trim();
         profile.PromptTemplate = model.PromptTemplate;
         profile.DeploymentId = model.DeploymentId;

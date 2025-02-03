@@ -34,9 +34,9 @@ public sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
 
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
-        if (!_connectionOptions.Providers.TryGetValue(AzureOpenAIConstants.AzureDeploymentSourceName, out var provider))
+        if (!_connectionOptions.Providers.TryGetValue(AzureOpenAIConstants.AzureProviderName, out var provider))
         {
-            context.Errors.Add(S["There are no connections for {0}.", AzureOpenAIConstants.AzureDeploymentSourceName]);
+            context.Errors.Add(S["There are no connections for {0}.", AzureOpenAIConstants.AzureProviderName]);
 
             return;
         }
@@ -79,7 +79,7 @@ public sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
             return;
         }
 
-        var existingDeployments = await _deploymentManager.GetAsync(AzureOpenAIConstants.AzureDeploymentSourceName);
+        var existingDeployments = await _deploymentManager.GetAsync(AzureOpenAIConstants.AzureProviderName);
 
         foreach (var importableConnection in importableConnections)
         {
@@ -96,9 +96,10 @@ public sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
                     continue;
                 }
 
-                existingDeployment = await _deploymentManager.NewAsync(AzureOpenAIConstants.AzureDeploymentSourceName, new JsonObject
+                existingDeployment = await _deploymentManager.NewAsync(AzureOpenAIConstants.AzureProviderName, new JsonObject
                 {
                     { nameof(AIDeployment.Name), deploymentName },
+                    { nameof(AIDeployment.ProviderName), AzureOpenAIConstants.AzureProviderName },
                     { nameof(AIDeployment.ConnectionName), importableConnection.Key },
                 });
 

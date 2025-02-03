@@ -86,7 +86,7 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
 
             var profiles = await _openAIChatProfileStore.GetProfilesAsync(AIChatProfileType.Chat);
 
-            model.Profiles = profiles.Select(profile => new SelectListItem(profile.Name, profile.Id));
+            model.Profiles = profiles.Select(profile => new SelectListItem(profile.DisplayText, profile.Id));
 
         }).Location("Content:5");
     }

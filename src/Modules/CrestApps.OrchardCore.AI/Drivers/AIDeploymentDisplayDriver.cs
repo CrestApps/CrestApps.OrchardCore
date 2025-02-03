@@ -12,14 +12,17 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 {
     private readonly AIProviderOptions _providerOptions;
+    private readonly IAIDeploymentStore _modelDeploymentStore;
 
     internal readonly IStringLocalizer S;
 
     public AIDeploymentDisplayDriver(
+        IAIDeploymentStore modelDeploymentStore,
         IOptions<AIProviderOptions> providerOptions,
         IStringLocalizer<AIDeploymentDisplayDriver> stringLocalizer)
     {
         _providerOptions = providerOptions.Value;
+        _modelDeploymentStore = modelDeploymentStore;
         S = stringLocalizer;
     }
 
@@ -41,7 +44,7 @@ public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             model.ConnectionName = deployment.ConnectionName;
             model.IsNew = context.IsNew;
 
-            if (_providerOptions.Providers.TryGetValue(deployment.Source, out var providerOptions))
+            if (_providerOptions.Providers.TryGetValue(deployment.ProviderName, out var providerOptions))
             {
                 model.Connections = providerOptions.Connections.Select(x => new SelectListItem(x.Key, x.Key)).ToArray();
 
@@ -55,25 +58,27 @@ public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 
     public override async Task<IDisplayResult> UpdateAsync(AIDeployment deployment, UpdateEditorContext context)
     {
-        if (!context.IsNew)
-        {
-            return Edit(deployment, context);
-        }
-
         var model = new EditDeploymentViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var name = model.Name?.Trim();
-
-        if (string.IsNullOrEmpty(name))
+        if (context.IsNew)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is required."]);
+            var name = model.Name?.Trim();
+
+            if (string.IsNullOrEmpty(name))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is required."]);
+            }
+
+            deployment.Name = name;
+
+            return Edit(deployment, context);
         }
 
-        if (!_providerOptions.Providers.TryGetValue(deployment.Source, out var providerOptions))
+        if (!_providerOptions.Providers.TryGetValue(deployment.ProviderName, out var provider))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["There are no configured connection for the source: {0}.", deployment.Source]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["There are no configured connection for the provider: {0}.", deployment.ProviderName]);
         }
         else
         {
@@ -83,20 +88,27 @@ public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             }
             else
             {
-                var connection = providerOptions.Connections.FirstOrDefault(x => x.Key != null && x.Key.Equals(model.ConnectionName, StringComparison.OrdinalIgnoreCase));
-
-                if (connection.Value == null)
+                if (!provider.Connections.TryGetValue(model.ConnectionName, out _))
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["Invalid connection name provided."]);
                 }
                 else
                 {
-                    deployment.ConnectionName = connection.Key;
+                    deployment.ConnectionName = model.ConnectionName;
                 }
             }
         }
 
-        deployment.Name = name;
+        var anotherExists = (await _modelDeploymentStore.GetAllAsync())
+            .Any(d => d.ProviderName.Equals(deployment.ProviderName, StringComparison.OrdinalIgnoreCase) &&
+            d.ConnectionName.Equals(deployment.ConnectionName, StringComparison.OrdinalIgnoreCase) &&
+            d.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase)
+            && d.Id != deployment.Id);
+
+        if (anotherExists)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["The selected connection already has an existing deployment with the specified name."]);
+        }
 
         return Edit(deployment, context);
     }

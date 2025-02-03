@@ -14,6 +14,11 @@ public interface IAIChatProfileSource
     string TechnicalName { get; }
 
     /// <summary>
+    /// Get the unique technical name for the provider.
+    /// </summary>
+    string ProviderName { get; }
+
+    /// <summary>
     /// Gets a localized display name for the profile.
     /// </summary>
     LocalizedString DisplayName { get; }

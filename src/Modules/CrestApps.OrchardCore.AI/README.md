@@ -2,6 +2,31 @@
 
 The **Artificial Intelligence** feature provides the necessary services to interact with AI models. Once enabled, a new **Artificial Intelligence** menu item appears in the admin menu, offering options to manage AI model deployments.
 
+### Configuration
+
+Before using any AI features, ensure that the appropriate settings are configured. You can do this using various setting providers. Below is an example of how to configure the services within the `appsettings.json` file:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Providers": {
+        "<!-- Provider name goes here -->": {
+          "DefaultConnectionName": "<!-- The default connection name -->",
+          "DefaultDeploymentName": "<!-- The default deployment name -->",
+          "Connections": {
+            "<!-- Connection name goes here -->": {
+              "DefaultDeploymentName": "<!-- The default deployment name for this connection -->"
+              // Provider-specific settings go here
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
 ### Artificial Intelligence Chat Feature
 
 The **Artificial Intelligence Chat** feature builds on the **Artificial Intelligence** feature by adding AI chat capabilities. After enabling this feature, a new **Profiles** menu item will appear under the **Artificial Intelligence** section in the admin menu, allowing you to manage chat profiles.
@@ -25,24 +50,19 @@ To define chat profiles programmatically, you can create a migration class. Here
 public sealed class SystemDefinedAIProfileMigrations : DataMigration
 {
     private readonly IAIChatProfileManager _chatProfileManager;
-    private readonly IAIDeploymentManager _deploymentManager;
 
-    public SystemDefinedAIProfileMigrations(
-        IAIChatProfileManager chatProfileManager, 
-        IAIDeploymentManager deploymentManager)
+    public SystemDefinedAIProfileMigrations(IAIChatProfileManager chatProfileManager)
     {
         _chatProfileManager = chatProfileManager;
-        _deploymentManager = deploymentManager;
     }
 
     public async Task<int> CreateAsync()
     {
-        var deployments = await _deploymentManager.GetAllAsync();
         var profile = await _chatProfileManager.NewAsync("Azure");
 
         profile.Name = "UniqueTechnicalName";
+        profile.DisplayText = "A Display name for the profile";
         profile.Type = AIChatProfileType.Chat;
-        profile.DeploymentId = deployments.FirstOrDefault()?.Id;
 
         profile.WithSettings(new AIChatProfileSettings
         {
@@ -71,31 +91,6 @@ public sealed class SystemDefinedAIProfileMigrations : DataMigration
 ```
 
 > **Note**: If a profile with the same name already exists, creating a new profile through a migration class will update the existing one. Always use a unique name for new profiles to avoid conflicts.
-
----
-
-### Default Parameters
-
-Each chat profile comes with a set of default parameters that can be adjusted using a supported settings provider (e.g., `appsettings.json`). Here's an example of how to modify these parameters:
-
-```json
-{
-  "OrchardCore": {
-    "CrestApps_AI": {
-      "OpenAI": {
-        "DefaultParameters": {
-          "Temperature": 0,
-          "TopP": 1,
-          "FrequencyPenalty": 0,
-          "PresencePenalty": 0,
-          "MaxOutputTokens": 800,
-          "PastMessagesCount": 10
-        }
-      }
-    }
-  }
-}
-```
 
 ---
 
@@ -174,7 +169,11 @@ public sealed class AzureProfileSource : IAIChatProfileSource
     }
 
     public string TechnicalName => Key;
+
+    public string ProviderName => "Azure";
+
     public LocalizedString DisplayName { get; }
+
     public LocalizedString Description { get; }
 }
 ```
@@ -205,7 +204,8 @@ If you’re using the Recipes module, you can create AI chat profiles programmat
       "profiles": [
         {
           "Source": "CustomSource",
-          "Name": "Example Profile",
+          "Name": "ExampleProfile",
+          "DisplayText": "Example Profile","
           "WelcomeMessage": "What do you want to know?",
           "FunctionNames": [],
           "Type": "Chat",

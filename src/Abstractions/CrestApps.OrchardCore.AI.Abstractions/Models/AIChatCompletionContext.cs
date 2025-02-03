@@ -6,11 +6,6 @@ public class AIChatCompletionContext
 
     public AIChatProfile Profile { get; }
 
-    /// <summary>
-    /// If the profile contains no valid deployment Id, we can use this property to set a fallback deployment Id.
-    /// </summary>
-    public string DeploymentId { get; set; }
-
     public bool UserMarkdownInResponse { get; set; }
 
     public bool DisableTools { get; set; }

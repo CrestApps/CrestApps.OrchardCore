@@ -1,4 +1,5 @@
 using System.ClientModel;
+using System.Text.Json;
 using Azure.Core;
 using Azure.Identity;
 using CrestApps.OrchardCore.AI.Models;
@@ -51,7 +52,16 @@ public static class OpenAIAIProviderConnectionExtensions
     {
         if (entry.TryGetValue(key, out var value))
         {
-            var stringValue = value as string;
+            string stringValue = null;
+
+            if (value is JsonElement jsonElement)
+            {
+                stringValue = jsonElement.GetString();
+            }
+            else if (value is string)
+            {
+                stringValue = value as string;
+            }
 
             if (throwException && string.IsNullOrWhiteSpace(stringValue))
             {

@@ -95,7 +95,7 @@ public sealed class DefaultAIChatProfileStore : IAIChatProfileStore
 
     public async ValueTask<AIChatProfileResult> PageAsync(int page, int pageSize, AIChatProfileQueryContext context)
     {
-        var records = await LocateQueriesAsync(context);
+        var records = await LocateProfilesAsync(context);
 
         var skip = (page - 1) * pageSize;
 
@@ -113,7 +113,7 @@ public sealed class DefaultAIChatProfileStore : IAIChatProfileStore
         return document.Profiles.Values;
     }
 
-    private async ValueTask<IEnumerable<AIChatProfile>> LocateQueriesAsync(AIChatProfileQueryContext context)
+    private async ValueTask<IEnumerable<AIChatProfile>> LocateProfilesAsync(AIChatProfileQueryContext context)
     {
         var document = await _documentManager.GetOrCreateImmutableAsync();
 
@@ -122,28 +122,28 @@ public sealed class DefaultAIChatProfileStore : IAIChatProfileStore
             return document.Profiles.Values;
         }
 
-        var queries = document.Profiles.Values.AsEnumerable();
+        var profiles = document.Profiles.Values.AsEnumerable();
 
         if (!string.IsNullOrEmpty(context.Source))
         {
-            queries = queries.Where(x => x.Source.Equals(context.Source, StringComparison.OrdinalIgnoreCase));
+            profiles = profiles.Where(x => x.Source.Equals(context.Source, StringComparison.OrdinalIgnoreCase));
         }
 
         if (context.IsListableOnly)
         {
-            queries = queries.Where(x => x.GetSettings<AIChatProfileSettings>().IsListable);
+            profiles = profiles.Where(x => x.GetSettings<AIChatProfileSettings>().IsListable);
         }
 
         if (!string.IsNullOrEmpty(context.Name))
         {
-            queries = queries.Where(x => x.Name.Contains(context.Name, StringComparison.OrdinalIgnoreCase));
+            profiles = profiles.Where(x => x.Name.Contains(context.Name, StringComparison.OrdinalIgnoreCase));
         }
 
         if (context.Sorted)
         {
-            queries = queries.OrderBy(x => x.Name);
+            profiles = profiles.OrderBy(x => x.DisplayText);
         }
 
-        return queries;
+        return profiles;
     }
 }

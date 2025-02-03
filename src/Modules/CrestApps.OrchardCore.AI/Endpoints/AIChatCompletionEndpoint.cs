@@ -222,11 +222,6 @@ internal static class AIChatCompletionEndpoint
 
                 var context = new AIChatCompletionContext(titleProfile);
 
-                if (string.IsNullOrEmpty(titleProfile.DeploymentId))
-                {
-                    context.DeploymentId = profile.DeploymentId;
-                }
-
                 var titleResponse = await completionService.ChatAsync(transcription, context);
 
                 // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.

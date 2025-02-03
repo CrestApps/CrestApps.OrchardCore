@@ -168,7 +168,7 @@ public sealed class AdminChatController : Controller
 
         var pagerShape = await shapeFactory.PagerAsync(pager, itemsPerPage, options.RouteValues);
 
-        var shapeViewModel = await shapeFactory.CreateAsync<ListChatSessionsViewModel>("OpenAIChatSessionsList", async viewModel =>
+        var shapeViewModel = await shapeFactory.CreateAsync<ListChatSessionsViewModel>("AIChatSessionsList", async viewModel =>
         {
             viewModel.ProfileId = profileId;
             viewModel.ChatSessions = sessionResult.Sessions;

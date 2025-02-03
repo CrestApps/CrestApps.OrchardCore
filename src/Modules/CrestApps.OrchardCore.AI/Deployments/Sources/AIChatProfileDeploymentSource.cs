@@ -34,6 +34,7 @@ public sealed class AIChatProfileDeploymentSource : DeploymentSourceBase<AIChatP
             {
                 { "Source", profile.Source },
                 { "Name", profile.Name },
+                { "DisplayText", profile.DisplayText },
                 { "WelcomeMessage", profile.WelcomeMessage },
                 { "Type", profile.Type.ToString() },
                 { "PromptTemplate", profile.PromptTemplate },

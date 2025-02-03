@@ -9,7 +9,7 @@ public class ListDeploymentsViewModel
 
     public AIDeploymentOptions Options { get; set; }
 
-    public IEnumerable<string> SourceNames { get; set; }
+    public IEnumerable<string> ProviderNames { get; set; }
 
     public IShape Pager { get; set; }
 }

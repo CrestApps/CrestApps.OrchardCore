@@ -71,7 +71,7 @@ public sealed class DefaultAIDeploymentStore : IAIDeploymentStore
             deployment.Id = IdGenerator.GenerateId();
         }
 
-        if (document.Deployments.Values.Any(x => x.Source.Equals(deployment.Source, StringComparison.OrdinalIgnoreCase) && x.ConnectionName.Equals(deployment.Source, StringComparison.OrdinalIgnoreCase) && x.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase) && x.Id != deployment.Id))
+        if (document.Deployments.Values.Any(x => x.ProviderName.Equals(deployment.ProviderName, StringComparison.OrdinalIgnoreCase) && x.ConnectionName.Equals(deployment.ConnectionName, StringComparison.OrdinalIgnoreCase) && x.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase) && x.Id != deployment.Id))
         {
             throw new InvalidOperationException("The is already another deployment with the same name.");
         }
@@ -114,7 +114,7 @@ public sealed class DefaultAIDeploymentStore : IAIDeploymentStore
 
         if (!string.IsNullOrEmpty(context.Source))
         {
-            queries = queries.Where(x => x.Source.Equals(context.Source, StringComparison.OrdinalIgnoreCase));
+            queries = queries.Where(x => x.ProviderName.Equals(context.Source, StringComparison.OrdinalIgnoreCase));
         }
 
         if (!string.IsNullOrEmpty(context.Name))

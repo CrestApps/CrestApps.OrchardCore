@@ -9,7 +9,7 @@ public sealed class AzureOpenAIDeploymentDisplayDriver : DisplayDriver<AIDeploym
 {
     public override IDisplayResult Edit(AIDeployment deployment, BuildEditorContext context)
     {
-        if (deployment.Source != AzureOpenAIConstants.AzureDeploymentSourceName)
+        if (deployment.ProviderName != AzureOpenAIConstants.AzureProviderName)
         {
             return null;
         }
@@ -21,7 +21,7 @@ public sealed class AzureOpenAIDeploymentDisplayDriver : DisplayDriver<AIDeploym
 
     public override Task<IDisplayResult> UpdateAsync(AIDeployment deployment, UpdateEditorContext context)
     {
-        if (deployment.Source != AzureOpenAIConstants.AzureDeploymentSourceName)
+        if (deployment.ProviderName != AzureOpenAIConstants.AzureProviderName)
         {
             return null;
         }

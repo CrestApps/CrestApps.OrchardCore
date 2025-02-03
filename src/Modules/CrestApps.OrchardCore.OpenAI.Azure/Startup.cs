@@ -31,7 +31,7 @@ public sealed class DeploymentsStartup : StartupBase
         services.AddScoped<AzureOpenAIDeploymentsService>();
 
         services
-            .AddAIDeploymentSource<AzureModelDeploymentSource>(AzureOpenAIConstants.AzureDeploymentSourceName)
+            .AddAIDeploymentProvider<AzureAIDeploymentProvider>(AzureOpenAIConstants.AzureProviderName)
             .AddDisplayDriver<AIDeployment, AzureOpenAIDeploymentDisplayDriver>()
             .AddScoped<AzureCognitiveServicesAccountServices>();
     }

@@ -11,12 +11,17 @@ public class AIChatProfile : Entity
     public string Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the technical name of the query.
+    /// Gets or sets the technical name of the profile.
     /// </summary>
     public string Name { get; set; }
 
     /// <summary>
-    /// Gets the name of the source for this query.
+    /// Gets or sets the display text of the profile.
+    /// </summary>
+    public string DisplayText { get; set; }
+
+    /// <summary>
+    /// Gets the name of the source for this profile.
     /// </summary>
     public string Source { get; set; }
 
@@ -85,6 +90,7 @@ public class AIChatProfile : Entity
         {
             Id = Id,
             Name = Name,
+            DisplayText = DisplayText,
             Source = Source,
             FunctionNames = FunctionNames,
             Type = Type,

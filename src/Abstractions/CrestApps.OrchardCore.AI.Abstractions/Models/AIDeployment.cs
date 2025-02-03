@@ -9,7 +9,7 @@ public class AIDeployment : Entity
 
     public string Name { get; set; }
 
-    public string Source { get; set; }
+    public string ProviderName { get; set; }
 
     public string ConnectionName { get; set; }
 
@@ -25,7 +25,7 @@ public class AIDeployment : Entity
         {
             Id = Id,
             Name = Name,
-            Source = Source,
+            ProviderName = ProviderName,
             ConnectionName = ConnectionName,
             CreatedUtc = CreatedUtc,
             Author = Author,

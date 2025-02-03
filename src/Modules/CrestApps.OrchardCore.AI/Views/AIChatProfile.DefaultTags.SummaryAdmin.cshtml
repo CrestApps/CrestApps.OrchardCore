@@ -22,7 +22,7 @@
 
 @if (!Model.Value.GetSettings<AIChatProfileSettings>().IsRemovable)
 {
-    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["The '{0}' profile cannot be deleted.", Model.Value.Name])">
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["The '{0}' profile cannot be deleted.", Model.Value.DisplayText])">
         <i class="fa-solid fa-shield text-secondary me-1" aria-hidden="true"></i>@T["System"]
     </span>
 }

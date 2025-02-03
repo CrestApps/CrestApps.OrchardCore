@@ -53,15 +53,15 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddAIDeploymentSource<TSource>(this IServiceCollection services, string sourceKey)
-        where TSource : class, IAIDeploymentSource
+    public static IServiceCollection AddAIDeploymentProvider<TProvider>(this IServiceCollection services, string providerKey)
+        where TProvider : class, IAIDeploymentProvider
     {
-        ArgumentNullException.ThrowIfNull(sourceKey);
+        ArgumentNullException.ThrowIfNull(providerKey);
 
         services
-            .AddScoped<TSource>()
-            .AddScoped<IAIDeploymentSource>(sp => sp.GetService<TSource>())
-            .AddKeyedScoped<IAIDeploymentSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
+            .AddScoped<TProvider>()
+            .AddScoped<IAIDeploymentProvider>(sp => sp.GetService<TProvider>())
+            .AddKeyedScoped<IAIDeploymentProvider>(providerKey, (sp, key) => sp.GetService<TProvider>());
 
         return services;
     }

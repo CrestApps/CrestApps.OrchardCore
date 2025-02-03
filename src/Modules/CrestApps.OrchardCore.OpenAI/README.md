@@ -8,19 +8,21 @@ The **OpenAI-Powered AI Chat** feature builds upon the core **OpenAI-Powered Art
 
 ### Configuration
 
-Before using any OpenAI features, ensure that the appropriate settings are configured. You can do this using various setting providers. Below is an example of how to configure the services within the `appsettings.json` file:
+In addition to setting up the AI services [as explained here](../CrestApps.OrchardCore.AI/README.md), you can customize the OpenAI parameters to fine-tune its default behavior. Below is an example of how to configure the default parameters in the `appsettings.json` file:
 
 ```json
 {
-  "CrestApps_AI": {
-    "OpenAI": {
-      "Connections": {
-        "<!-- Provider name goes here -->": [
-          {
-            "Name": "<!-- Provide a unique name for your connection, ideally matching your Azure account's AccountName -->",
-            // Additional configuration settings
-          }
-        ]
+  "OrchardCore":{
+    "CrestApps_AI":{
+      "OpenAI":{
+        "DefaultParameters":{
+          "Temperature":0,
+          "MaxOutputTokens":800,
+          "TopP":1,
+          "FrequencyPenalty":0,
+          "PresencePenalty":0,
+          "PastMessagesCount":10
+        }
       }
     }
   }

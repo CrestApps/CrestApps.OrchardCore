@@ -59,7 +59,7 @@ public sealed class DeploymentsController : Controller
     public async Task<IActionResult> Index(
         AIDeploymentOptions options,
         PagerParameters pagerParameters,
-        [FromServices] IEnumerable<IAIDeploymentSource> deploymentSources,
+        [FromServices] IEnumerable<IAIDeploymentProvider> deploymentSources,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
     {
@@ -88,7 +88,7 @@ public sealed class DeploymentsController : Controller
             Deployments = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            SourceNames = deploymentSources.Select(x => x.TechnicalName).Order(),
+            ProviderNames = deploymentSources.Select(x => x.TechnicalName).Order(),
         };
 
         foreach (var deployment in result.Deployments)
@@ -120,10 +120,10 @@ public sealed class DeploymentsController : Controller
         });
     }
 
-    [Admin("AI/Deployments/Create/{source}", "AIDeploymentsCreate")]
-    public async Task<ActionResult> Create(string source)
+    [Admin("AI/Deployments/Create/{providerName}", "AIDeploymentsCreate")]
+    public async Task<ActionResult> Create(string providerName)
     {
-        if (string.IsNullOrEmpty(source))
+        if (string.IsNullOrEmpty(providerName))
         {
             return NotFound();
         }
@@ -133,20 +133,20 @@ public sealed class DeploymentsController : Controller
             return Forbid();
         }
 
-        var provider = _serviceProvider.GetKeyedService<IAIDeploymentSource>(source);
+        var provider = _serviceProvider.GetKeyedService<IAIDeploymentProvider>(providerName);
 
         if (provider == null)
         {
-            await _notifier.ErrorAsync(H["Unable to find a deployment-source that can handle the source '{Source}'.", source]);
+            await _notifier.ErrorAsync(H["Unable to find a provider with the name '{ProviderName}'.", providerName]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        var deployment = await _deploymentManager.NewAsync(source);
+        var deployment = await _deploymentManager.NewAsync(providerName);
 
         if (deployment == null)
         {
-            await _notifier.ErrorAsync(H["Invalid deployment source."]);
+            await _notifier.ErrorAsync(H["Invalid provider."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -162,28 +162,28 @@ public sealed class DeploymentsController : Controller
 
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("AI/Deployments/Create/{source}", "AIDeploymentsCreate")]
-    public async Task<ActionResult> CreatePOST(string source)
+    [Admin("AI/Deployments/Create/{providerName}", "AIDeploymentsCreate")]
+    public async Task<ActionResult> CreatePOST(string providerName)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.ManageModelDeployments))
         {
             return Forbid();
         }
 
-        var provider = _serviceProvider.GetKeyedService<IAIDeploymentSource>(source);
+        var provider = _serviceProvider.GetKeyedService<IAIDeploymentProvider>(providerName);
 
         if (provider == null)
         {
-            await _notifier.ErrorAsync(H["Unable to find a deployment-source that can handle the source '{Source}'.", source]);
+            await _notifier.ErrorAsync(H["Unable to find a deployment-source that can handle the source '{ProviderName}'.", providerName]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        var deployment = await _deploymentManager.NewAsync(source);
+        var deployment = await _deploymentManager.NewAsync(providerName);
 
         if (deployment == null)
         {
-            await _notifier.ErrorAsync(H["Invalid deployment source."]);
+            await _notifier.ErrorAsync(H["Invalid provider."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -221,7 +221,7 @@ public sealed class DeploymentsController : Controller
             return NotFound();
         }
 
-        var model = new ChatProfileViewModel
+        var model = new AIDeploymentViewModel
         {
             DisplayName = deployment.Name,
             Editor = await _deploymentDisplayManager.BuildEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: false),

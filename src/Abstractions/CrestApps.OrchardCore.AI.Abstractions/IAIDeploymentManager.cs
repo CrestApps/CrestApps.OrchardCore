@@ -28,12 +28,12 @@ public interface IAIDeploymentManager
     /// <summary>
     /// Asynchronously creates a new model deployment with the given source and optional additional data.
     /// </summary>
-    /// <param name="source">The source from which the model deployment is created. Must not be null or empty.</param>
+    /// <param name="providerName">The source from which the model deployment is created. Must not be null or empty.</param>
     /// <param name="data">Optional additional data associated with the deployment. Defaults to <c>null</c>.</param>
     /// <returns>
     /// A task that represents the asynchronous operation. The result is the newly created <see cref="AIDeployment"/>.
     /// </returns>
-    Task<AIDeployment> NewAsync(string source, JsonNode data = null);
+    Task<AIDeployment> NewAsync(string providerName, JsonNode data = null);
 
     /// <summary>
     /// Asynchronously retrieves a paginated list of model deployments based on the specified pagination and filtering parameters.
@@ -84,6 +84,8 @@ public interface IAIDeploymentManager
     /// containing the validation results (e.g., success or failure and any associated errors).
     /// </returns>
     Task<AIDeploymentValidateResult> ValidateAsync(AIDeployment profile);
-    ValueTask<IEnumerable<AIDeployment>> GetAsync(string source);
-    ValueTask<IEnumerable<AIDeployment>> GetAsync(string source, string connectionName);
+
+    ValueTask<IEnumerable<AIDeployment>> GetAsync(string providerName);
+
+    ValueTask<IEnumerable<AIDeployment>> GetAsync(string providerName, string connectionName);
 }

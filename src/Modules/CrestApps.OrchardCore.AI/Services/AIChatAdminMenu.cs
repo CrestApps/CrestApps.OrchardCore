@@ -30,7 +30,7 @@ public sealed class AIChatAdminMenu : AdminNavigationProvider
            .Add(S["Artificial Intelligence"], ai =>
            {
                var i = 1;
-               foreach (var profile in profiles.OrderBy(p => p.Name))
+               foreach (var profile in profiles.OrderBy(p => p.DisplayText))
                {
                    var settings = profile.GetSettings<AIChatProfileSettings>();
 
@@ -39,8 +39,9 @@ public sealed class AIChatAdminMenu : AdminNavigationProvider
                        continue;
                    }
 
+                   var name = profile.DisplayText ?? profile.Name;
                    ai
-                   .Add(new LocalizedString(profile.Name, profile.Name), $"chat{i++}", chat => chat
+                   .Add(new LocalizedString(name, name), $"chat{i++}", chat => chat
                        .AddClass(profile.Name.HtmlClassify())
                        .Action("Index", "AdminChat", AIConstants.Feature.Area, new RouteValueDictionary
                        {

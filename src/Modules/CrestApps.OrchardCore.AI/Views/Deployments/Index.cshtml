@@ -102,21 +102,21 @@
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="available-rule-types-title">@T["Available Sources"]</h5>
+                <h5 class="modal-title" id="available-rule-types-title">@T["Available Providers"]</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                @if (!Model.SourceNames.Any())
+                @if (!Model.ProviderNames.Any())
                 {
                     <p class="p-3 mb-2 bg-warning text-white">@T["You need to enable a feature which provides an AI source."]</p>
                 }
                 else
                 {
                     <div class="row row-cols-1 row-cols-md-3 g-2">
-                        @foreach (var source in Model.SourceNames)
+                        @foreach (var providerName in Model.ProviderNames)
                         {
-                            IShape shape = await New.AIDeployment_Link(Source: source);
-                            shape.Metadata.Alternates.Add("AIDeployment_Link__" + source);
+                            IShape shape = await New.AIDeployment_Link(ProviderName: providerName);
+                            shape.Metadata.Alternates.Add("AIDeployment_Link__" + providerName);
 
                             @await DisplayAsync(shape)
                         }

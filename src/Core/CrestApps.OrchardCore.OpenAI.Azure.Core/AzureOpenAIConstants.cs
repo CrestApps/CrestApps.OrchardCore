@@ -8,7 +8,7 @@ public static class AzureOpenAIConstants
 
     public const string ChatSearchProviderName = "ChatAI";
 
-    public const string AzureDeploymentSourceName = "Azure";
+    public const string AzureProviderName = "Azure";
 
     public static class Feature
     {

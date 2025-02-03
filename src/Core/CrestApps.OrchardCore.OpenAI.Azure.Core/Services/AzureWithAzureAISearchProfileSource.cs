@@ -13,7 +13,11 @@ public sealed class AzureWithAzureAISearchProfileSource : IAIChatProfileSource
         Description = S["AI-powered chat using Azure OpenAI models with data from Azure AI Search."];
     }
 
-    public string TechnicalName => Key;
+    public string TechnicalName
+        => Key;
+
+    public string ProviderName
+        => AzureOpenAIConstants.AzureProviderName;
 
     public LocalizedString DisplayName { get; }
 

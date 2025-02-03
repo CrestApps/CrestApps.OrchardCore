@@ -6,15 +6,15 @@
 
 @inject IOptions<AIProviderOptions> Options
 @{
-    string source = Model.Source;
-    var service = ViewContext.HttpContext.RequestServices.GetKeyedService<IAIDeploymentSource>(source);
-    var hasConnections = Options.Value.Providers.TryGetValue(source, out var entry) && entry.Connections.Count > 0;
+    string providerName = Model.ProviderName;
+    var service = ViewContext.HttpContext.RequestServices.GetKeyedService<IAIDeploymentProvider>(providerName);
+    var hasConnections = Options.Value.Providers.TryGetValue(providerName, out var provider) && provider.Connections.Count > 0;
 }
 
 <div class="col">
     <div class="card h-100">
         <div class="card-body">
-            <h4>@(service?.DisplayName ?? source)</h4>
+            <h4>@(service?.DisplayName ?? providerName)</h4>
             <p class="hint">@(service?.Description)</p>
 
         </div>
@@ -23,7 +23,7 @@
             <a class="btn btn-primary btn-sm"
                asp-route-action="Create"
                asp-route-controller="Deployments"
-               asp-route-source="@source">@T["Add"]</a>
+               asp-route-providerName="@providerName">@T["Add"]</a>
         </div>
 
     </div>

@@ -3,15 +3,15 @@ using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureModelDeploymentSource : IAIDeploymentSource
+public sealed class AzureAIDeploymentProvider : IAIDeploymentProvider
 {
-    public AzureModelDeploymentSource(IStringLocalizer<AzureModelDeploymentSource> S)
+    public AzureAIDeploymentProvider(IStringLocalizer<AzureAIDeploymentProvider> S)
     {
         DisplayName = S["Azure"];
         Description = S["Azure OpenAI model deployments."];
     }
 
-    public string TechnicalName => AzureOpenAIConstants.AzureDeploymentSourceName;
+    public string TechnicalName => AzureOpenAIConstants.AzureProviderName;
 
     public LocalizedString DisplayName { get; }
 

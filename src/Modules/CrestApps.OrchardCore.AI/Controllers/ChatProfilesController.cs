@@ -219,7 +219,7 @@ public sealed class ChatProfilesController : Controller
 
         var model = new ChatProfileViewModel
         {
-            DisplayName = profile.Name,
+            DisplayName = profile.DisplayText,
             Editor = await _profileDisplayManager.BuildEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
@@ -248,7 +248,7 @@ public sealed class ChatProfilesController : Controller
 
         var model = new ChatProfileViewModel
         {
-            DisplayName = mutableProfile.Name,
+            DisplayName = mutableProfile.DisplayText,
             Editor = await _profileDisplayManager.UpdateEditorAsync(mutableProfile, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 

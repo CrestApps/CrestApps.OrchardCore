@@ -37,7 +37,7 @@ internal sealed class AIChatProfileDeploymentStepDisplayDriver : DisplayDriver<D
         {
             model.IncludeAll = step.IncludeAll;
             model.ProfileNames = step.ProfileNames;
-            model.AllProfileNames = (await _openAIChatProfileStore.GetAllAsync()).Select(x => x.Name).ToArray();
+            model.AllProfileNames = (await _openAIChatProfileStore.GetAllAsync()).Select(x => x.DisplayText).ToArray();
         }).Location("Content");
     }
 

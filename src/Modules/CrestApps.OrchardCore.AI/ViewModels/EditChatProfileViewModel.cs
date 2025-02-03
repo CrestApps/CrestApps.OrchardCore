@@ -8,6 +8,8 @@ public class EditChatProfileViewModel
 {
     public string Name { get; set; }
 
+    public string DisplayText { get; set; }
+
     public string WelcomeMessage { get; set; }
 
     public string PromptTemplate { get; set; }

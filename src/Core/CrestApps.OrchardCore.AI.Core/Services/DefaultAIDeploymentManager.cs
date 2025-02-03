@@ -64,7 +64,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
     {
         ArgumentException.ThrowIfNullOrEmpty(source);
 
-        var deploymentSource = _serviceProvider.GetKeyedService<IAIDeploymentSource>(source);
+        var deploymentSource = _serviceProvider.GetKeyedService<IAIDeploymentProvider>(source);
 
         if (deploymentSource == null)
         {
@@ -78,7 +78,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         var deployment = new AIDeployment()
         {
             Id = id,
-            Source = source,
+            ProviderName = source,
         };
 
         var initializingContext = new InitializingAIDeploymentContext(deployment, data);
@@ -88,7 +88,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         await _handlers.InvokeAsync((handler, ctx) => handler.InitializedAsync(ctx), initializedContext, _logger);
 
         // Set the source and the connectionName again after calling handlers to prevent handlers from updating the source during initialization.
-        deployment.Source = source;
+        deployment.ProviderName = source;
 
         if (string.IsNullOrEmpty(deployment.Id))
         {
@@ -122,11 +122,11 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         return deployments;
     }
 
-    public async ValueTask<IEnumerable<AIDeployment>> GetAsync(string source)
+    public async ValueTask<IEnumerable<AIDeployment>> GetAsync(string providerName)
     {
-        ArgumentException.ThrowIfNullOrEmpty(source);
+        ArgumentException.ThrowIfNullOrEmpty(providerName);
 
-        var deployments = (await _deploymentStore.GetAllAsync()).Where(deployment => deployment.Source == source);
+        var deployments = (await _deploymentStore.GetAllAsync()).Where(deployment => deployment.ProviderName == providerName);
 
         foreach (var deployment in deployments)
         {
@@ -136,12 +136,12 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         return deployments;
     }
 
-    public async ValueTask<IEnumerable<AIDeployment>> GetAsync(string source, string connectionName)
+    public async ValueTask<IEnumerable<AIDeployment>> GetAsync(string providerName, string connectionName)
     {
-        ArgumentException.ThrowIfNullOrEmpty(source);
+        ArgumentException.ThrowIfNullOrEmpty(providerName);
         ArgumentException.ThrowIfNullOrEmpty(connectionName);
 
-        var deployments = (await _deploymentStore.GetAllAsync()).Where(deployment => deployment.Source == source && deployment.ConnectionName == connectionName);
+        var deployments = (await _deploymentStore.GetAllAsync()).Where(deployment => deployment.ProviderName == providerName && deployment.ConnectionName == connectionName);
 
         foreach (var deployment in deployments)
         {

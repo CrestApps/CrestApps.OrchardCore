@@ -99,6 +99,16 @@ public sealed class AIChatProfileHandler : AIChatProfileHandlerBase
         return Task.CompletedTask;
     }
 
+    public override Task SavingAsync(SavingAIChatProfileContext context)
+    {
+        if (string.IsNullOrWhiteSpace(context.Profile.DisplayText))
+        {
+            context.Profile.DisplayText = context.Profile.Name;
+        }
+
+        return Task.CompletedTask;
+    }
+
     private static Task PopulateAsync(AIChatProfile profile, JsonNode data, bool isNew)
     {
         if (isNew)
@@ -109,6 +119,13 @@ public sealed class AIChatProfileHandler : AIChatProfileHandlerBase
             {
                 profile.Name = name;
             }
+        }
+
+        var displayText = data[nameof(AIChatProfile.DisplayText)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(displayText))
+        {
+            profile.DisplayText = displayText;
         }
 
         var type = data[nameof(AIChatProfile.Type)]?.GetEnumValue<AIChatProfileType>();

@@ -12,20 +12,26 @@ Before utilizing this feature, ensure that the required services are configured.
 
 ```json
 {
-  "CrestApps_AI": {
-    "Connections": {
-      "Azure": [
-        {
-          "Name": "<!-- A unique name for your connection. It's recommended to match your Azure account's AccountName -->",
-          "TenantId": "<!-- Your Azure TenantId -->",
-          "ClientId": "<!-- Your Azure ClientId -->",
-          "ClientSecret": "<!-- Your Azure ClientSecret -->",
-          "SubscriptionId": "<!-- Your Azure SubscriptionId -->",
-          "AccountName": "<!-- Your Azure Cognitive Account Name -->",
-          "ResourceGroupName": "<!-- Your Azure Cognitive Resource Group Name -->",
-          "ApiKey": "<!-- API Key to connect to your Azure AI instance -->"
+  "OrchardCore":{
+    "CrestApps_AI":{
+      "Providers":{
+        "Azure":{
+          "DefaultConnectionName":"<!-- The default connection name -->",
+          "DefaultDeploymentName":"<!-- The default deployment name -->",
+          "Connections":{
+            "<!-- A unique name for your connection. It's recommended to match your Azure account's AccountName -->":{
+              "TenantId":"<!-- Your Azure TenantId -->",
+              "ClientId":"<!-- Your Azure ClientId -->",
+              "ClientSecret":"<!-- Your Azure ClientSecret -->",
+              "SubscriptionId":"<!-- Your Azure SubscriptionId -->",
+              "AccountName":"<!-- Your Azure Cognitive Account Name -->",
+              "ResourceGroupName":"<!-- Your Azure Cognitive Resource Group Name -->",
+              "ApiKey":"<!-- API Key to connect to your Azure AI instance -->",
+              "DefaultDeploymentName":"<!-- The default deployment name -->"
+            }
+          }
         }
-      ]
+      }
     }
   }
 }
@@ -103,13 +109,14 @@ When using the Recipes feature, you can create an Azure profile with the followi
       "profiles":[
         {
           "Source":"Azure",
-          "Name":"Example Profile",
+          "Name":"ExampleProfile",
+          "DisplayText": "Example Profile",
           "WelcomeMessage": "What do you want to know?",
           "FunctionNames": [],
           "Type": "Chat",
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
-          "DeploymentId":"<!-- The deployment id for the deployment. -->",
+          "DeploymentId":"<!-- A deployment ID for the deployment; if left blank, the default deployment will be used. -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",
           "Properties": 
           {
@@ -149,13 +156,14 @@ When using the Recipes feature, you can create an Azure profile with the followi
       "profiles":[
         {
           "Source":"AzureAISearch",
-          "Name":"Example Profile",
+          "Name":"ExampleProfile",
+          "DisplayText": "Example Profile",
           "WelcomeMessage": "What do you want to know?",
           "FunctionNames": [],
           "Type": "Chat",
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
-          "DeploymentId":"<!-- The deployment id for the deployment. -->",
+          "DeploymentId":"<!-- A deployment ID for the deployment; if left blank, the default deployment will be used. -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",
           "Properties": 
           {
