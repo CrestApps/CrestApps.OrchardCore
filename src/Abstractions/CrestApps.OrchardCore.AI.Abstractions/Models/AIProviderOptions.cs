@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.AI.Models;
 
 public class AIProviderOptions
 {
-    public IReadOnlyDictionary<string, AIProvider> Providers { get; set; }
+    public Dictionary<string, AIProvider> Providers { get; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 public sealed class AIProvider

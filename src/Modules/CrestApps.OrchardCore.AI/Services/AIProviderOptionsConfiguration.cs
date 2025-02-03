@@ -22,43 +22,49 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
 
     public void Configure(AIProviderOptions options)
     {
-        var jsonNode = _shellConfiguration.GetSection("CrestApps_AI:Providers").AsJsonNode();
+        var providerSettings = _shellConfiguration.GetSection("CrestApps_AI:Providers");
 
-        var jsonElement = JsonSerializer.Deserialize<JsonElement>(jsonNode);
-
-        var jsonProviders = JsonObject.Create(jsonElement, new JsonNodeOptions()
+        if (providerSettings is null)
         {
-            PropertyNameCaseInsensitive = true,
-        });
+            _logger.LogWarning("The 'providers' in 'CrestApps_AI:Providers' is not defined in the settings.");
 
-        var providers = new Dictionary<string, AIProvider>();
+            return;
+        }
 
-        foreach (var jsonProvider in jsonProviders)
+        var providerSettingsElements = JsonSerializer.Deserialize<JsonElement>(providerSettings.AsJsonNode());
+
+        var providerSettingsObject = JsonObject.Create(providerSettingsElements);
+
+        foreach (var providerPair in providerSettingsObject)
         {
-            var providerName = jsonProvider.Key;
-            var providerValue = jsonProvider.Value;
+            var providerName = providerPair.Key;
+            var providerNode = providerPair.Value;
 
-            var connectionsNode = providerValue["Connections"];
+            var connectionsNode = providerNode["Connections"];
+
+            if (connectionsNode is null)
+            {
+                _logger.LogWarning("The provider with the name '{Name}' has no connections. This provider will be ignore and not used.", providerName);
+
+                continue;
+            }
 
             var collectionsElement = JsonSerializer.Deserialize<JsonElement>(connectionsNode);
 
-            var jsonConnections = JsonObject.Create(collectionsElement, new JsonNodeOptions()
-            {
-                PropertyNameCaseInsensitive = true,
-            });
+            var connectionsObject = JsonObject.Create(collectionsElement);
 
-            if (jsonConnections is null || jsonConnections.Count == 0)
+            if (connectionsObject is null || connectionsObject.Count == 0)
             {
                 _logger.LogWarning("The provider with the name '{Name}' has no connection. This provider will be ignore and not used.", providerName);
 
                 continue;
             }
 
-            var connections = new Dictionary<string, AIProviderConnection>();
+            var connections = new Dictionary<string, AIProviderConnection>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var jsonConnection in jsonConnections)
+            foreach (var connectionPair in connectionsObject)
             {
-                connections.Add(jsonConnection.Key, jsonConnection.Value.Deserialize<AIProviderConnection>());
+                connections.Add(connectionPair.Key, connectionPair.Value.Deserialize<AIProviderConnection>());
             }
 
             if (connections.Count == 0)
@@ -73,7 +79,7 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
                 Connections = connections,
             };
 
-            var defaultConnectionName = providerValue["DefaultConnectionName"]?.GetValue<string>();
+            var defaultConnectionName = providerNode["DefaultConnectionName"]?.GetValue<string>();
 
             if (!string.IsNullOrEmpty(defaultConnectionName))
             {
@@ -84,7 +90,7 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
                 provider.DefaultConnectionName = connections.FirstOrDefault().Key;
             }
 
-            var defaultDeploymentName = providerValue["DefaultDeploymentName"]?.GetValue<string>();
+            var defaultDeploymentName = providerNode["DefaultDeploymentName"]?.GetValue<string>();
 
             if (!string.IsNullOrEmpty(defaultDeploymentName))
             {
@@ -95,9 +101,7 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
                 provider.DefaultDeploymentName = connections.FirstOrDefault().Value["DefaultDeploymentName"] as string;
             }
 
-            providers.Add(providerName, provider);
+            options.Providers.Add(providerName, provider);
         }
-
-        options.Providers = providers;
     }
 }
