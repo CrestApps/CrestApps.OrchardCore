@@ -1,11 +1,14 @@
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
+using CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 using CrestApps.OrchardCore.OpenAI.Azure.Recipes;
-using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Models;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Recipes;
@@ -28,8 +31,8 @@ public sealed class DeploymentsStartup : StartupBase
         services.AddScoped<AzureOpenAIDeploymentsService>();
 
         services
-            .AddOpenAIDeploymentSource<AzureModelDeploymentSource>(AzureOpenAIConstants.AzureDeploymentSourceName)
-            .AddDisplayDriver<OpenAIDeployment, AzureOpenAIDeploymentDisplayDriver>()
+            .AddAIDeploymentProvider<AzureAIDeploymentProvider>(AzureOpenAIConstants.AzureProviderName)
+            .AddDisplayDriver<AIDeployment, AzureOpenAIDeploymentDisplayDriver>()
             .AddScoped<AzureCognitiveServicesAccountServices>();
     }
 }
@@ -49,8 +52,9 @@ public sealed class StandardStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddOpenAIChatCompletionService<AzureOpenAIChatCompletionService>(AzureProfileSource.Key);
-        services.AddOpenAIChatProfileSource<AzureProfileSource>(AzureProfileSource.Key);
+        services.AddAIChatCompletionService<AzureOpenAIChatCompletionService>(AzureProfileSource.Key);
+        services.AddAIChatProfileSource<AzureProfileSource>(AzureProfileSource.Key);
+        services.AddDataMigration<AzureTitleGeneratorProfileMigrations>();
     }
 }
 
@@ -59,9 +63,10 @@ public sealed class AISearchStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddOpenAIChatCompletionService<AzureOpenAIWithSearchAIChatCompletionService>(AzureWithAzureAISearchProfileSource.Key);
-        services.AddOpenAIChatProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
-        services.AddDisplayDriver<OpenAIChatProfile, AzureOpenAIChatProfileSearchAIDisplayDriver>();
-        services.AddScoped<IOpenAIChatProfileHandler, AzureOpenAIChatProfileWithAISearchHandler>();
+        services.AddAIChatCompletionService<AzureOpenAIWithSearchAIChatCompletionService>(AzureWithAzureAISearchProfileSource.Key);
+        services.AddAIChatProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
+        services.AddDisplayDriver<AIChatProfile, AzureOpenAIChatProfileSearchAIDisplayDriver>();
+        services.AddScoped<IAIChatProfileHandler, AzureOpenAIChatProfileWithAISearchHandler>();
+        services.AddDataMigration<AzureAISearchTitleGeneratorProfileMigrations>();
     }
 }

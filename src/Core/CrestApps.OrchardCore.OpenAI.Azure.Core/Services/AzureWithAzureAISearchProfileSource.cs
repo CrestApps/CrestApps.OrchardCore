@@ -1,8 +1,9 @@
+using CrestApps.OrchardCore.AI;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureWithAzureAISearchProfileSource : IOpenAIChatProfileSource
+public sealed class AzureWithAzureAISearchProfileSource : IAIChatProfileSource
 {
     public const string Key = "AzureAISearch";
 
@@ -12,7 +13,11 @@ public sealed class AzureWithAzureAISearchProfileSource : IOpenAIChatProfileSour
         Description = S["AI-powered chat using Azure OpenAI models with data from Azure AI Search."];
     }
 
-    public string TechnicalName => Key;
+    public string TechnicalName
+        => Key;
+
+    public string ProviderName
+        => AzureOpenAIConstants.AzureProviderName;
 
     public LocalizedString DisplayName { get; }
 

@@ -1,52 +1,58 @@
 # Features
 
-## Azure OpenAI Services
+## Azure OpenAI Services Feature
 
-The **Azure OpenAI Services** feature (`CrestApps.OrchardCore.OpenAI.Azure`) provides the core functionality to integrate with Azure OpenAI. This module is dependency-managed, meaning it will automatically be enabled or disabled based on demand, and manual activation or deactivation is not supported.
+The **Azure OpenAI-Powered Artificial Intelligence** feature (`CrestApps.OrchardCore.OpenAI.Azure`) provides the primary functionality for integrating with Azure OpenAI. This module is dependency-managed, meaning it is automatically enabled or disabled based on demand. Manual activation or deactivation is not supported.
 
-## Azure OpenAI Deployments
+## Azure OpenAI-Powered Artificial Intelligence Deployments Feature
 
-The **Azure OpenAI Deployments** feature (`CrestApps.OrchardCore.OpenAI.Azure.Deployments`) allows integration with Azure OpenAI deployments. Initially, certain UI features required for direct creation of Azure deployments were not available. To create a deployment, use the **Azure AI Foundry** portal, then configure it within the UI by selecting the `Azure` source and entering the same deployment name.
+The **Azure OpenAI-Powered Artificial Intelligence Deployments** feature (`CrestApps.OrchardCore.OpenAI.Azure.Deployments`) enables integration with Azure OpenAI deployments. Initially, certain UI features for creating Azure deployments were unavailable. To create a deployment, use the **Azure AI Foundry** portal, then configure it in the UI by selecting the `Azure` source and entering the deployment name.
 
-Before using this feature, ensure that the necessary services are configured. You can configure them using different methods. Below is an example of how to set up these services in the `appsettings.json` file:
+Before utilizing this feature, ensure that the required services are configured. These can be set up in various ways. Below is an example of configuring these services within the `appsettings.json` file:
 
 ```json
 {
-  "CrestApps_OpenAI":{
-    "Connections":{
-      "Azure":[
-        {
-          "Name":"<!-- A unique name for your connection. It’s recommended to match your Azure account's AccountName -->",
-          "TenantId":"<!-- Your Azure TenantId -->",
-          "ClientId":"<!-- Your Azure ClientId -->",
-          "ClientSecret":"<!-- Your Azure ClientSecret -->",
-          "SubscriptionId":"<!-- Your Azure SubscriptionId -->",
-          "AccountName":"<!-- Your Azure Cognitive Account Name -->",
-          "ResourceGroupName":"<!-- Your Azure Cognitive Resource Group Name -->",
-          "ApiKey":"<!-- API Key to connect to your Azure AI instance -->"
+  "OrchardCore":{
+    "CrestApps_AI":{
+      "Providers":{
+        "Azure":{
+          "DefaultConnectionName":"<!-- The default connection name -->",
+          "DefaultDeploymentName":"<!-- The default deployment name -->",
+          "Connections":{
+            "<!-- A unique name for your connection. It's recommended to match your Azure account's AccountName -->":{
+              "TenantId":"<!-- Your Azure TenantId -->",
+              "ClientId":"<!-- Your Azure ClientId -->",
+              "ClientSecret":"<!-- Your Azure ClientSecret -->",
+              "SubscriptionId":"<!-- Your Azure SubscriptionId -->",
+              "AccountName":"<!-- Your Azure Cognitive Account Name -->",
+              "ResourceGroupName":"<!-- Your Azure Cognitive Resource Group Name -->",
+              "ApiKey":"<!-- API Key to connect to your Azure AI instance -->",
+              "DefaultDeploymentName":"<!-- The default deployment name -->"
+            }
+          }
         }
-      ]
+      }
     }
   }
 }
 ```
 
-#### How to Retrieve Required Information from the Azure Portal
+#### How to Retrieve the Required Information from the Azure Portal
 
 ##### 1. Retrieve the Tenant ID
 1. Open the **Azure Portal** and search for **Microsoft Entra ID** (formerly Azure Active Directory).
 2. In the **Overview** section, locate and copy the **Tenant ID**.
 
 ##### 2. Obtain the Client ID and Client Secret
-1. In the **Microsoft Entra ID** service within the **Azure Portal**, navigate to **Manage** > **App registrations**.
-2. Create a new application or select an existing one.
+1. In **Microsoft Entra ID** within the **Azure Portal**, navigate to **Manage** > **App registrations**.
+2. Either create a new application or select an existing one.
 3. In the application details:
    - Copy the **Application (client) ID**.
    - Copy the **Directory (tenant) ID**.
-4. Go to the **Certificates & secrets** section.
+4. Navigate to the **Certificates & secrets** section.
    - Click **New client secret**.
    - Provide a description and expiration date, then save.
-   - Copy the **Client Secret value** (make sure to save it securely, as it won’t be visible again after this step).
+   - Copy the **Client Secret value** (ensure to save it securely, as it will not be shown again).
 
 ##### 3. Retrieve the API Key for Azure OpenAI
 1. Navigate to your **Azure OpenAI** instance in the **Azure Portal**.
@@ -55,7 +61,7 @@ Before using this feature, ensure that the necessary services are configured. Yo
 
 ### Recipes
 
-If you're using the Recipes feature, you can import all the deployments from your Azure account as follows:
+If you're utilizing the Recipes feature, you can import all deployments from your Azure account as shown below:
 
 ```json
 {
@@ -68,7 +74,7 @@ If you're using the Recipes feature, you can import all the deployments from you
 }
 ```
 
-Alternatively, if you have multiple connections configured, you can specify which ones to import. For example, the following imports deployments from `us-west-connection` and `canada-east-connection`:
+Alternatively, if you have multiple connections, specify which ones to import. For example, to import deployments from `us-west-connection` and `canada-east-connection`:
 
 ```json
 {
@@ -84,32 +90,33 @@ Alternatively, if you have multiple connections configured, you can specify whic
 }
 ```
 
-## Azure OpenAI
+## Azure OpenAI-Powered Artificial Intelligence Chat Feature
 
-The **Azure OpenAI** feature (`CrestApps.OrchardCore.OpenAI.Azure.Standard`) allows you to use Azure OpenAI services to create AI Chat Profiles.
+The **Azure OpenAI-Powered Artificial Intelligence Chat** feature (`CrestApps.OrchardCore.OpenAI.Azure.Standard`) enables the creation of AI Chat Profiles using Azure OpenAI services.
 
 !!! info
-    This feature depends on the `Azure OpenAI Deployments` feature. Ensure that the `Azure OpenAI Deployments` feature is properly configured.
+    This feature depends on the **Azure OpenAI-Powered Artificial Intelligence Deployments** feature. Be sure to configure it properly before using this feature.
 
 ### Recipes
 
-If you're using the Recipes feature, you can create an Azure profile using the following recipe step:
+When using the Recipes feature, you can create an Azure profile with the following recipe step:
 
 ```json
 {
   "steps":[
     {
-      "name":"OpenAIChatProfile",
+      "name":"AIChatProfile",
       "profiles":[
         {
           "Source":"Azure",
-          "Name":"Example Profile",
+          "Name":"ExampleProfile",
+          "DisplayText": "Example Profile",
           "WelcomeMessage": "What do you want to know?",
           "FunctionNames": [],
           "Type": "Chat",
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
-          "DeploymentId":"<!-- The deployment id for the deployment. -->",
+          "DeploymentId":"<!-- A deployment ID for the deployment; if left blank, the default deployment will be used. -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",
           "Properties": 
           {
@@ -130,32 +137,33 @@ If you're using the Recipes feature, you can create an Azure profile using the f
 }
 ```
 
-## Azure OpenAI with Azure AI Search
+## Azure OpenAI-Powered Artificial Intelligence Chat with Azure AI Search Feature
 
-The **Azure OpenAI with Azure AI Search** feature (`CrestApps.OrchardCore.OpenAI.Azure.AISearch`) allows you to leverage Azure OpenAI services on custom data stored in the Azure AI Search index to create AI Chat Profiles. Enabling this module will automatically activate the **Azure AI Search** feature within OrchardCore. To connect your AI chat, navigate to `Search` > `Indexing` > `Azure AI Indices` and add an index.
+The **Azure OpenAI-Powered Artificial Intelligence Chat with Azure AI Search** feature (`CrestApps.OrchardCore.OpenAI.Azure.AISearch`) enables the use of Azure OpenAI services on custom data stored in an Azure AI Search index to create AI Chat Profiles. Enabling this module will automatically activate the **Azure AI Search** feature within OrchardCore. To connect your AI chat, navigate to `Search` > `Indexing` > `Azure AI Indices` and add an index.
 
 !!! info
-    This feature depends on the `Azure OpenAI Deployments` feature. Be sure to configure the `Azure OpenAI Deployments` feature first.
+    This feature depends on the **Azure OpenAI Deployments** feature. Ensure the **Azure OpenAI Deployments** feature is configured first.
 
 ### Recipes
 
-If you're using the Recipes feature, you can create an Azure profile with the following recipe step:
+When using the Recipes feature, you can create an Azure profile with the following recipe step:
 
 ```json
 {
   "steps":[
     {
-      "name":"OpenAIChatProfile",
+      "name":"AIChatProfile",
       "profiles":[
         {
           "Source":"AzureAISearch",
-          "Name":"Example Profile",
+          "Name":"ExampleProfile",
+          "DisplayText": "Example Profile",
           "WelcomeMessage": "What do you want to know?",
           "FunctionNames": [],
           "Type": "Chat",
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
-          "DeploymentId":"<!-- The deployment id for the deployment. -->",
+          "DeploymentId":"<!-- A deployment ID for the deployment; if left blank, the default deployment will be used. -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",
           "Properties": 
           {

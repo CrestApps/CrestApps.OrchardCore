@@ -1,0 +1,27 @@
+@using CrestApps.OrchardCore.AI.Deployments.Steps
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIChatProfileDeploymentStep>
+
+@{
+    var includeAll = Model.Value.IncludeAll;
+    var profileNames = Model.Value.ProfileNames;
+}
+
+<h5>@T["AI Chat Profiles"]</h5>
+
+@if (includeAll)
+{
+    <span class="badge text-bg-success">@T["All profiles"]</span>
+}
+else if (profileNames?.Length > 0)
+{
+    foreach (var profileName in profileNames)
+    {
+        <span class="badge ta-badge">@profileName</span>
+    }
+}
+else
+{
+    <span class="badge text-bg-warning">@T["No profile selected."]</span>
+}

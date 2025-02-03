@@ -1,6 +1,6 @@
 using Azure.ResourceManager;
 using Azure.ResourceManager.CognitiveServices;
-using CrestApps.OrchardCore.OpenAI.Models;
+using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
@@ -14,13 +14,13 @@ public sealed class AzureOpenAIDeploymentsService
         _logger = logger;
     }
 
-    public async Task<IEnumerable<CognitiveServicesAccountDeploymentResource>> GetAllAsync(OpenAIConnectionEntry entry)
+    public async Task<IEnumerable<CognitiveServicesAccountDeploymentResource>> GetAllAsync(AIProviderConnection connection)
     {
-        var client = new ArmClient(entry.GetCredential());
+        var client = new ArmClient(connection.GetCredential());
 
-        var subscriptionId = entry.GetSubscriptionId();
-        var resourceGroupName = entry.GetResourceGroupName();
-        var accountName = entry.GetAccountName();
+        var subscriptionId = connection.GetSubscriptionId();
+        var resourceGroupName = connection.GetResourceGroupName();
+        var accountName = connection.GetAccountName();
 
         // Get the Cognitive Services resource group.
         var cognitiveServicesAccountResourceId = CognitiveServicesAccountResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, accountName);

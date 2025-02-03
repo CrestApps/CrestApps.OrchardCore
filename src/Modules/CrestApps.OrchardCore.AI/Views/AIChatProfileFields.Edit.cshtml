@@ -1,0 +1,244 @@
+@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
+
+@model EditChatProfileViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Name" class="@Orchard.GetLabelClasses()">@T["Name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="Name" class="form-control" disabled="@(!Model.IsNew)" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        @if (Model.IsNew)
+        {
+            <span class="hint">@T["Profile name. This name cannot be changed later."]</span>
+        }
+        else
+        {
+            <span class="hint">@T["Profile name."]</span>
+        }
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DisplayText" class="@Orchard.GetLabelClasses()">@T["Display Text"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="DisplayText" class="form-control" />
+        <span asp-validation-for="DisplayText" class="text-danger"></span>
+        <span class="hint">@T["Profile name for the user interface."]</span>
+    </div>
+</div>
+
+@if (Model.ConnectionNames.Count > 1)
+{
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection name"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <select asp-for="ConnectionName" asp-items="Model.ConnectionNames" class="form-select">
+                <option value="">@T["Default connection"]</option>
+            </select>
+            <span asp-validation-for="DeploymentId" class="text-danger"></span>
+            <span class="hint">@T["The connection to use for this profile."]</span>
+        </div>
+    </div>
+}
+else
+{
+    <input type="hidden" asp-for="ConnectionName" />
+}
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DeploymentId" class="@Orchard.GetLabelClasses()">@T["Deployment"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DeploymentId" class="form-select">
+            <option value="">@T["Default deployment"]</option>
+            @if (Model.Deployments != null)
+            {
+                foreach (var deployment in Model.Deployments)
+                {
+                    <option value="@deployment.Value">@deployment.Text</option>
+                }
+            }
+        </select>
+        <span asp-validation-for="DeploymentId" class="text-danger"></span>
+        <span class="hint">@T["The deployment to use for this profile."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="ProfileType" class="@Orchard.GetLabelClasses()">@T["Profile type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="ProfileType" asp-items="Model.ProfileTypes" class="form-select"></select>
+        <span asp-validation-for="ProfileType" class="text-danger"></span>
+        <span class="hint">@T["Choose how the type of the profile."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IsOnAdminMenu">
+            <label class="form-check-label" asp-for="IsOnAdminMenu">@T["Show on admin menu"]</label>
+            <span class="hint dashed">@T["When enabled, the profile will be added to the admin menu."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-template-prompt")@(Model.ProfileType == AIChatProfileType.TemplatePrompt ? string.Empty : " d-none")">
+    <label asp-for="PromptTemplate" class="@Orchard.GetLabelClasses()">@T["Prompt template"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="PromptTemplate" class="form-control content-preview-text" rows="5"></textarea>
+        <span class="hint">@T["When using the session tool, the prompt is dynamically generated based on a prompt template. You can structure the prompt using Liquid syntax and incorporate the <code>{0}</code> and <code>{1}</code> variables.", "session", "profile"]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
+    <label asp-for="TitleType" class="@Orchard.GetLabelClasses()">@T["Title type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="TitleType" asp-items="Model.TitleTypes" class="form-select"></select>
+        <span asp-validation-for="TitleType" class="text-danger"></span>
+        <span class="hint">@T["Choose how the session title should be set when a new session is created."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
+    <label asp-for="WelcomeMessage" class="@Orchard.GetLabelClasses()">@T["Welcome message"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="WelcomeMessage" class="form-control" />
+        <span asp-validation-for="WelcomeMessage" class="text-danger"></span>
+        <span class="hint">@T["The welcome message to show on the user-interface when a new session is created."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="PromptSubject" class="@Orchard.GetLabelClasses()">@T["Prompt subject"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="PromptSubject" class="form-control" />
+        <span asp-validation-for="PromptSubject" class="text-danger"></span>
+        <span class="hint">@T["When set, this title will be displayed as the response header for each message from the model."]</span>
+    </div>
+</div>
+
+@if (Model.Functions != null && Model.Functions.Length > 0)
+{
+    <h6>@T["Available functions"]</h6>
+    <div class="mb-3">
+        @for (var i = 0; i < Model.Functions.Length; i++)
+        {
+            <div class="form-check">
+                <input type="hidden" asp-for="Functions[i].Name" />
+                <input asp-for="Functions[i].IsSelected" type="checkbox" class="form-check-input">
+                <label class="form-check-label" asp-for="Functions[i].IsSelected">@Model.Functions[i].Name</label>
+                <span class="hint dashed">@Model.Functions[i].Description</span>
+            </div>
+        }
+    </div>
+}
+
+<style asp-name="codemirror"></style>
+<script asp-name="codemirror" at="Foot"></script>
+<script asp-src="~/OrchardCore.Markdown/Scripts/mde.mediatoolbar.min.js" debug-src="~/OrchardCore.Markdown/Scripts/mde.mediatoolbar.js" depends-on="jQuery" at="Foot"></script>
+<script asp-name="codemirror-mode-javascript" at="Foot"></script>
+<script asp-name="codemirror-addon-display-autorefresh" at="Foot"></script>
+<script asp-name="codemirror-addon-mode-simple" at="Foot"></script>
+<script asp-name="codemirror-addon-mode-multiplex" at="Foot"></script>
+<script asp-name="codemirror-mode-xml" at="Foot"></script>
+<script asp-src="~/OrchardCore.Liquid/codemirror/liquid.js" at="Foot"></script>
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const convertToKebabCase = (str) => {
+            return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+        }
+
+        const initializeLiquidEditor = (textArea) => {
+
+            if (!textArea) {
+                return;
+            }
+
+            var editor = CodeMirror.fromTextArea(textArea, {
+                autoRefresh: true,
+                lineNumbers: true,
+                styleActiveLine: true,
+                matchBrackets: true,
+                mode: { name: "liquid" },
+            });
+
+            editor.on('change', function (cmEditor) {
+                cmEditor.save();
+                document.dispatchEvent(new Event('contentpreview:render'));
+            });
+        }
+
+        const hasMultipleConnection = @(Model.ConnectionNames.Count > 1 ? "true" : "false");
+        if (hasMultipleConnection) {
+            const connectionNameElement = document.getElementById('@Html.IdFor(x => x.ConnectionName)');
+            const deploymentsElement = document.getElementById('@Html.IdFor(x => x.DeploymentId)');
+            const source = '@(Model.Source)';
+
+            connectionNameElement.addEventListener('change', async (e) => {
+                const selectedConnection = e.target.value;
+
+                // Remove only options that have a value
+                [...deploymentsElement.options].forEach(option => {
+                    if (option.value) {
+                        option.remove();
+                    }
+                });
+
+                if (!selectedConnection) {
+
+                    deploymentsElement.value = '';
+
+                    return;
+                }
+
+                var url = '@(Url.RouteUrl(AIConstants.RouteNames.GetDeploymentsByConnectionRouteName))';
+                try {
+                    const response = await fetch(`${url}?source=${encodeURIComponent(source)}&connection=${encodeURIComponent(selectedConnection)}`);
+
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch deployments');
+                    }
+
+                    const deployments = await response.json();
+
+                    // Populate new options
+                    deployments.forEach(deployment => {
+                        let option = document.createElement('option');
+                        option.value = deployment.id;
+                        option.textContent = deployment.name;
+                        deploymentsElement.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Error fetching deployments:', error);
+                }
+            });
+        }
+
+        const profileType = document.getElementById('@Html.IdFor(x => x.ProfileType)');
+
+        profileType.addEventListener('change', function (e) {
+
+            let value = e.target.value;
+            let className = 'profile-type-' + convertToKebabCase(value);
+            let elements = document.querySelectorAll('.profile-type');
+
+            for (let i = 0; i < elements.length; i++) {
+                var element = elements[i];
+
+                if (element.classList.contains(className)) {
+                    element.classList.remove('d-none');
+                } else {
+                    element.classList.add('d-none');
+                }
+            }
+        });
+
+        profileType.dispatchEvent(new Event('change'));
+
+        initializeLiquidEditor(document.getElementById('@Html.IdFor(x => x.PromptTemplate)'));
+    });
+</script>

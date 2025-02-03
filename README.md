@@ -1,25 +1,23 @@
 # CrestApps - Orchard Core
 
-CrestApps offers a collection of open-source modules designed to extend and enrich the functionality of Orchard Core, a versatile application framework built on ASP.NET Core.
+CrestApps provides a collection of open-source modules designed to enhance **Orchard Core**, a powerful application framework built on **ASP.NET Core**.  
 
 ## Overview
 
-Orchard Core provides a robust foundation for developing dynamic, data-driven websites and applications. CrestApps modules are crafted to enhance this framework with a focus on usability, security, and performance.
+Orchard Core offers a **flexible and scalable** foundation for building dynamic, data-driven websites and applications. CrestApps modules are developed to further improve this framework, focusing on:  
 
-## Key Features
-
-- **Modularity**: Each module operates independently, allowing selective integration based on project requirements.
-- **Security**: Designed following best practices to fortify application security.
-- **Performance**: Optimized for speed and efficiency to enhance Orchard Core application performance.
+- **Modularity** – Independent modules allow for seamless integration based on project requirements.  
+- **Security** – Designed following industry best practices to ensure application safety.  
+- **Performance** – Optimized for speed and efficiency to maximize Orchard Core’s potential.  
 
 ## Project Structure
 
-The CrestApps repository is organized for clarity and ease of use. Modules can be found in the `src/Modules` folder, with each module structured for independent usage and configuration. 
+The CrestApps repository is organized for clarity and ease of use. You can find all modules in the `src/Modules` folder, with each structured for independent usage and configuration.  
 
-- **Modules Folder**:  
-  Contains all CrestApps modules. Each module includes a `README.md` file that explains how to configure and integrate it into your project.
+- **Modules Folder:**
+  Contains all CrestApps modules. Each module includes a `README.md` file with setup and integration details.  
 
-Example structure:
+### Example Structure:
 ```
 src/
 └── Modules/
@@ -32,75 +30,75 @@ src/
         ├── ...
 ```
 
-To get started with any module, refer to its dedicated README file for detailed instructions.
+To get started with any module, refer to its respective `README.md` file for detailed setup instructions.  
 
 ## Available Modules
 
 ### Users Module
+Enhances user management with customizable display names and avatars. See the [Users Module README](src/Modules/CrestApps.OrchardCore.Users/README.md) for details.  
 
-Enhances user management with customizable display names and avatars. For detailed information, refer to the [Users Module README](src/Modules/CrestApps.OrchardCore.Users/README.md).
+### AI Module
+Provides a user-friendly interface for interacting with AI models like **ChatGPT**. See the [AI Module README](src/Modules/CrestApps.OrchardCore.AI/README.md) for more details.  
 
 ### OpenAI Module
-
-This feature enabled you to use UI to interact with OpenAI modules like ChatGTP modules. For detailed information, refer to the [Users Module README](src/Modules/CrestApps.OrchardCore.OpenAI/README.md).
+Extends the **AI Module** by integrating OpenAI-powered services. See the [OpenAI Module README](src/Modules/CrestApps.OrchardCore.OpenAI/README.md).  
 
 ### Azure OpenAI Module
-
-This feature enabled you to use UI to interact with Azure OpenAI modules. For detailed information, refer to the [Users Module README](src/Modules/CrestApps.OrchardCore.OpenAI.Azure/README.md).
+Adds support for **Azure OpenAI** services within the **OpenAI Module**. See the [Azure OpenAI Module README](src/Modules/CrestApps.OrchardCore.OpenAI.Azure/README.md).  
 
 ### Resources Module
-
-This feature provides you with additional resources that you can utilize to speed up development. For detailed information, refer to the [Users Module README](src/Modules/CrestApps.OrchardCore.Resources/README.md).
+Provides additional resources to accelerate development. See the [Resources Module README](src/Modules/CrestApps.OrchardCore.Resources/README.md).  
 
 ## Getting Started
 
 ### Running Locally
 
-To begin with CrestApps:
+Follow these steps to get started with CrestApps:  
 
-1. **Clone the Repository**:
+1. **Clone the Repository:**  
     ```sh
     git clone https://github.com/CrestApps/CrestApps.OrchardCore.git
-    ```
+    ```  
 
-2. **Navigate to the Project Directory**:
+2. **Navigate to the Project Directory:**  
     ```sh
     cd CrestApps.OrchardCore
-    ```
+    ```  
 
-3. **Build the Solution**:
-    Ensure you have the necessary .NET SDK installed, then run:
+3. **Build the Solution:**  
+    Ensure you have the required **.NET SDK** installed, then run:  
     ```sh
     dotnet build
-    ```
+    ```  
 
-4. **Launch the Application**:
+4. **Launch the Application:**  
     ```sh
     dotnet run
-    ```
+    ```  
 
-5. **Enable Modules**:
-    Access the Orchard Core admin dashboard to enable desired CrestApps modules.
+5. **Enable Modules:**  
+   Access the **Orchard Core Admin Dashboard** to enable desired CrestApps modules.  
 
-### Package Manager
+## Package Management 
 
-#### Production Packages
+### Production Packages
+Stable releases are available on [NuGet.org](https://www.nuget.org/).  
 
-Stable releases are available on [NuGet.org](https://www.nuget.org/). For the latest updates and previews:
+### Preview Package Feed
+[![Hosted By: Cloudsmith](https://img.shields.io/badge/OSS%20hosting%20by-cloudsmith-blue?logo=cloudsmith&style=for-the-badge)](https://cloudsmith.com)  
 
-#### Preview Package Feed
+For the latest updates and preview packages, visit the [Cloudsmith CrestApps OrchardCore repository](https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore).  
 
-[![Hosted By: Cloudsmith](https://img.shields.io/badge/OSS%20hosting%20by-cloudsmith-blue?logo=cloudsmith&style=for-the-badge)](https://cloudsmith.com)
+### Adding the Preview Feed
 
-Explore our preview packages and updates on the [Cloudsmith CrestApps OrchardCore repository](https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore). For usage guidelines, visit the [preview package feed documentation](https://docs.orchardcore.net/en/latest/getting-started/preview-package-source/).
+#### In Visual Studio 
+1. Open **NuGet Package Manager Settings** (under *Tools*).  
+2. Add a new package source:  
+   - **Name:** `CrestAppsPreview`  
+   - **URL:** `https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json`  
 
-##### Adding the Preview Feed to Visual Studio
-
-Navigate to NuGet Package Manager Settings in Visual Studio under Tools. Add a new source with the name `CrestAppsPreview` and URL `https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json`.
-
-##### Adding the Preview Feed via NuGet.config
-
-Alternatively, update your NuGet.config file:
+#### Via NuGet.config
+Alternatively, update your **NuGet.config** file:  
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -116,14 +114,14 @@ Alternatively, update your NuGet.config file:
 
 ## Contributing
 
-We welcome community contributions! To contribute to CrestApps:
+We welcome contributions from the community! To contribute:  
 
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Make your changes and commit them with clear messages.
-4. Push your changes to your fork.
-5. Submit a pull request to the main repository.
+1. **Fork the repository.**  
+2. **Create a new branch** for your feature or bug fix.  
+3. **Make your changes** and commit them with clear messages.  
+4. **Push your changes** to your fork.  
+5. **Submit a pull request** to the main repository.  
 
 ## License
 
-CrestApps is licensed under the MIT License. See the [LICENSE](https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt) file for more details.
+CrestApps is licensed under the **MIT License**. See the [LICENSE](https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt) file for more details.  

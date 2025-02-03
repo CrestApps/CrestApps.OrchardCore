@@ -4,5 +4,26 @@
       "node_modules/vue/dist/vue.global.js"
     ],
     "output": "wwwroot/Scripts/vue.global.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@fortawesome/fontawesome-free/css/*"
+    ],
+    "output": "wwwroot/Vendor/fontawesome-free/css/@"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@fortawesome/fontawesome-free/js/*"
+    ],
+    "output": "wwwroot/Vendor/fontawesome-free/js/@"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@fortawesome/fontawesome-free/webfonts/*"
+    ],
+    "output": "wwwroot/Vendor/fontawesome-free/webfonts/@"
   }
 ]
