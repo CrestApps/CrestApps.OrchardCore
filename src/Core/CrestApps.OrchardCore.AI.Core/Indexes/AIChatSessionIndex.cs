@@ -2,7 +2,7 @@ using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.AI.Core.Indexes;
 
-public class AIChatSessionIndex : MapIndex
+public sealed class AIChatSessionIndex : MapIndex
 {
     public string SessionId { get; set; }
 

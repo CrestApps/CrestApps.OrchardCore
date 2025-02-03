@@ -15,7 +15,7 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 {
     private readonly IAIChatProfileStore _profileStore;
-    private readonly IAIDeploymentManager _modelDeploymentManager;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IAIToolsService _toolsService;
     private readonly IServiceProvider _serviceProvider;
@@ -25,7 +25,7 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 
     public AIChatProfileDisplayDriver(
         IAIChatProfileStore profileStore,
-        IAIDeploymentManager modelDeploymentManager,
+        IAIDeploymentManager deploymentManager,
         ILiquidTemplateManager liquidTemplateManager,
         IAIToolsService toolsService,
         IServiceProvider serviceProvider,
@@ -33,7 +33,7 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
         IStringLocalizer<AIChatProfileDisplayDriver> stringLocalizer)
     {
         _profileStore = profileStore;
-        _modelDeploymentManager = modelDeploymentManager;
+        _deploymentManager = deploymentManager;
         _liquidTemplateManager = liquidTemplateManager;
         _toolsService = toolsService;
         _serviceProvider = serviceProvider;
@@ -68,13 +68,13 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 
             if (!string.IsNullOrEmpty(profile.DeploymentId))
             {
-                var deployment = await _modelDeploymentManager.FindByIdAsync(profile.DeploymentId);
+                var deployment = await _deploymentManager.FindByIdAsync(profile.DeploymentId);
 
                 if (deployment is not null)
                 {
                     hasDeployment = true;
                     model.ConnectionName = deployment.ConnectionName;
-                    model.Deployments = (await _modelDeploymentManager.GetAsync(profile.Source, deployment.ConnectionName)).Select(x => new SelectListItem(x.Name, x.Id));
+                    model.Deployments = (await _deploymentManager.GetAsync(profile.Source, deployment.ConnectionName)).Select(x => new SelectListItem(x.Name, x.Id));
                 }
             }
 
@@ -120,7 +120,7 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 
                     var connection = provider.Connections.First();
                     model.ConnectionName = connection.Key;
-                    model.Deployments = (await _modelDeploymentManager.GetAsync(profile.Source, connection.Key)).Select(x => new SelectListItem(x.Name, x.Id));
+                    model.Deployments = (await _deploymentManager.GetAsync(profile.Source, connection.Key)).Select(x => new SelectListItem(x.Name, x.Id));
                 }
 
                 model.ConnectionNames = provider.Connections.Select(x => new SelectListItem(x.Key, x.Key)).ToArray();
@@ -165,7 +165,7 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 
         if (!string.IsNullOrEmpty(model.DeploymentId))
         {
-            var deployment = await _modelDeploymentManager.FindByIdAsync(model.DeploymentId);
+            var deployment = await _deploymentManager.FindByIdAsync(model.DeploymentId);
 
             if (deployment is null ||
                 !hasConnection ||

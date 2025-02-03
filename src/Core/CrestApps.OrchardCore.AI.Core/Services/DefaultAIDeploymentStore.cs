@@ -14,7 +14,7 @@ public sealed class DefaultAIDeploymentStore : IAIDeploymentStore
         _documentManager = documentManager;
     }
 
-    public async Task<bool> DeleteAsync(AIDeployment deployment)
+    public async ValueTask<bool> DeleteAsync(AIDeployment deployment)
     {
         ArgumentNullException.ThrowIfNull(deployment);
 
@@ -30,7 +30,7 @@ public sealed class DefaultAIDeploymentStore : IAIDeploymentStore
         return removed;
     }
 
-    public async Task<AIDeployment> FindByIdAsync(string id)
+    public async ValueTask<AIDeployment> FindByIdAsync(string id)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
 
@@ -44,7 +44,7 @@ public sealed class DefaultAIDeploymentStore : IAIDeploymentStore
         return null;
     }
 
-    public async Task<AIDeployment> FindByNameAsync(string name)
+    public async ValueTask<AIDeployment> FindByNameAsync(string name)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
@@ -60,7 +60,7 @@ public sealed class DefaultAIDeploymentStore : IAIDeploymentStore
         return null;
     }
 
-    public async Task SaveAsync(AIDeployment deployment)
+    public async ValueTask SaveAsync(AIDeployment deployment)
     {
         ArgumentNullException.ThrowIfNull(deployment);
 
@@ -81,7 +81,7 @@ public sealed class DefaultAIDeploymentStore : IAIDeploymentStore
         await _documentManager.UpdateAsync(document);
     }
 
-    public async Task<AIDeploymentResult> PageAsync(int page, int pageSize, QueryContext context)
+    public async ValueTask<AIDeploymentResult> PageAsync(int page, int pageSize, QueryContext context)
     {
         var records = await LocateQueriesAsync(context);
 
@@ -94,14 +94,14 @@ public sealed class DefaultAIDeploymentStore : IAIDeploymentStore
         };
     }
 
-    public async Task<IEnumerable<AIDeployment>> GetAllAsync()
+    public async ValueTask<IEnumerable<AIDeployment>> GetAllAsync()
     {
         var document = await _documentManager.GetOrCreateImmutableAsync();
 
         return document.Deployments.Values;
     }
 
-    private async Task<IEnumerable<AIDeployment>> LocateQueriesAsync(QueryContext context)
+    private async ValueTask<IEnumerable<AIDeployment>> LocateQueriesAsync(QueryContext context)
     {
         var document = await _documentManager.GetOrCreateImmutableAsync();
 

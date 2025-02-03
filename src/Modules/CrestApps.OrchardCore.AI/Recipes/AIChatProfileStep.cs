@@ -95,4 +95,3 @@ public sealed class AIChatProfileStep : NamedRecipeStepHandler
         public JsonArray Profiles { get; set; }
     }
 }
-

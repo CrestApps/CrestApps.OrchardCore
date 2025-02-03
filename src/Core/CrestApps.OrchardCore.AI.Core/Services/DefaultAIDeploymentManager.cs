@@ -26,7 +26,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         _logger = logger;
     }
 
-    public async Task<bool> DeleteAsync(AIDeployment deployment)
+    public async ValueTask<bool> DeleteAsync(AIDeployment deployment)
     {
         ArgumentNullException.ThrowIfNull(deployment);
 
@@ -46,7 +46,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         return removed;
     }
 
-    public async Task<AIDeployment> FindByIdAsync(string id)
+    public async ValueTask<AIDeployment> FindByIdAsync(string id)
     {
         var deployment = await _deploymentStore.FindByIdAsync(id);
 
@@ -60,7 +60,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         return null;
     }
 
-    public async Task<AIDeployment> NewAsync(string source, JsonNode data = null)
+    public async ValueTask<AIDeployment> NewAsync(string source, JsonNode data = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(source);
 
@@ -98,7 +98,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         return deployment;
     }
 
-    public async Task<AIDeploymentResult> PageQueriesAsync(int page, int pageSize, QueryContext context)
+    public async ValueTask<AIDeploymentResult> PageQueriesAsync(int page, int pageSize, QueryContext context)
     {
         var result = await _deploymentStore.PageAsync(page, pageSize, context);
 
@@ -110,7 +110,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         return result;
     }
 
-    public async Task<IEnumerable<AIDeployment>> GetAllAsync()
+    public async ValueTask<IEnumerable<AIDeployment>> GetAllAsync()
     {
         var deployments = await _deploymentStore.GetAllAsync();
 
@@ -151,7 +151,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         return deployments;
     }
 
-    public async Task SaveAsync(AIDeployment deployment)
+    public async ValueTask SaveAsync(AIDeployment deployment)
     {
         ArgumentNullException.ThrowIfNull(deployment);
 
@@ -164,7 +164,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         await _handlers.InvokeAsync((handler, ctx) => handler.SavedAsync(ctx), savedContext, _logger);
     }
 
-    public async Task UpdateAsync(AIDeployment deployment, JsonNode data = null)
+    public async ValueTask UpdateAsync(AIDeployment deployment, JsonNode data = null)
     {
         ArgumentNullException.ThrowIfNull(deployment);
 
@@ -175,7 +175,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         await _handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, _logger);
     }
 
-    public async Task<AIDeploymentValidateResult> ValidateAsync(AIDeployment deployment)
+    public async ValueTask<AIDeploymentValidateResult> ValidateAsync(AIDeployment deployment)
     {
         ArgumentNullException.ThrowIfNull(deployment);
 

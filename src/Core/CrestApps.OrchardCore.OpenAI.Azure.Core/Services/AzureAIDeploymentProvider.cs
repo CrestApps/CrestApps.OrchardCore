@@ -11,7 +11,8 @@ public sealed class AzureAIDeploymentProvider : IAIDeploymentProvider
         Description = S["Azure OpenAI model deployments."];
     }
 
-    public string TechnicalName => AzureOpenAIConstants.AzureProviderName;
+    public string TechnicalName
+        => AzureOpenAIConstants.AzureProviderName;
 
     public LocalizedString DisplayName { get; }
 

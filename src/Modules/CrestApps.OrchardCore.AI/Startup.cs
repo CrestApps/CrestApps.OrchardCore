@@ -156,3 +156,12 @@ public sealed class DeploymentsStartup : StartupBase
         services.AddDeployment<AIChatProfileDeploymentSource, AIChatProfileDeploymentStep, AIChatProfileDeploymentStepDisplayDriver>();
     }
 }
+
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class DeploymentDeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<AIDeploymentDeploymentSource, AIDeploymentDeploymentStep, AIDeploymentDeploymentStepDisplayDriver>();
+    }
+}

@@ -8,6 +8,8 @@ namespace CrestApps.OrchardCore.AI.Recipes;
 
 public sealed class AIDeploymentStep : NamedRecipeStepHandler
 {
+    public const string StepKey = "AIDeployment";
+
     private readonly IAIDeploymentManager _deploymentManager;
 
     internal readonly IStringLocalizer S;
@@ -15,7 +17,7 @@ public sealed class AIDeploymentStep : NamedRecipeStepHandler
     public AIDeploymentStep(
         IAIDeploymentManager deploymentManager,
         IStringLocalizer<AIDeploymentStep> stringLocalizer)
-         : base("AIDeployment")
+         : base(StepKey)
     {
         _deploymentManager = deploymentManager;
         S = stringLocalizer;

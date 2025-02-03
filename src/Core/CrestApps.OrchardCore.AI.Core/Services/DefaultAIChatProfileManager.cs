@@ -29,7 +29,7 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
         _logger = logger;
     }
 
-    public async Task<bool> DeleteAsync(AIChatProfile profile)
+    public async ValueTask<bool> DeleteAsync(AIChatProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
@@ -51,7 +51,7 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
         return removed;
     }
 
-    public async Task<AIChatProfile> FindByIdAsync(string id)
+    public async ValueTask<AIChatProfile> FindByIdAsync(string id)
     {
         var profile = await _profileStore.FindByIdAsync(id);
 
@@ -65,7 +65,7 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
         return null;
     }
 
-    public async Task<AIChatProfile> FindByNameAsync(string name)
+    public async ValueTask<AIChatProfile> FindByNameAsync(string name)
     {
         var profile = await _profileStore.FindByNameAsync(name);
 
@@ -79,7 +79,19 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
         return null;
     }
 
-    public async Task<AIChatProfile> NewAsync(string source, JsonNode data = null)
+    public async ValueTask<IEnumerable<AIChatProfile>> GetAsync(AIChatProfileType type)
+    {
+        var profiles = await _profileStore.GetProfilesAsync(type);
+
+        foreach (var profile in profiles)
+        {
+            await LoadAsync(profile);
+        }
+
+        return profiles;
+    }
+
+    public async ValueTask<AIChatProfile> NewAsync(string source, JsonNode data = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(source);
 
@@ -117,7 +129,7 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
         return profile;
     }
 
-    public async Task<AIChatProfileResult> PageAsync(int page, int pageSize, AIChatProfileQueryContext context)
+    public async ValueTask<AIChatProfileResult> PageAsync(int page, int pageSize, AIChatProfileQueryContext context)
     {
         var result = await _profileStore.PageAsync(page, pageSize, context);
 
@@ -129,7 +141,7 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
         return result;
     }
 
-    public async Task SaveAsync(AIChatProfile profile)
+    public async ValueTask SaveAsync(AIChatProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
@@ -142,7 +154,7 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
         await _handlers.InvokeAsync((handler, ctx) => handler.SavedAsync(ctx), savedContext, _logger);
     }
 
-    public async Task UpdateAsync(AIChatProfile profile, JsonNode data = null)
+    public async ValueTask UpdateAsync(AIChatProfile profile, JsonNode data = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
@@ -153,7 +165,7 @@ public sealed class DefaultAIChatProfileManager : IAIChatProfileManager
         await _handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, _logger);
     }
 
-    public async Task<AIChatProfileValidateResult> ValidateAsync(AIChatProfile profile)
+    public async ValueTask<AIChatProfileValidateResult> ValidateAsync(AIChatProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 

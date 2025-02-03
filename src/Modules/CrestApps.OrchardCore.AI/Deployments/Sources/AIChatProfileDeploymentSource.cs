@@ -39,6 +39,9 @@ public sealed class AIChatProfileDeploymentSource : DeploymentSourceBase<AIChatP
                 { "Type", profile.Type.ToString() },
                 { "PromptTemplate", profile.PromptTemplate },
                 { "DeploymentId", profile.DeploymentId },
+                { "CreatedUtc", profile.CreatedUtc },
+                { "OwnerId", profile.OwnerId },
+                { "Author", profile.Author },
             };
 
             if (profile.FunctionNames is not null && profile.FunctionNames.Length > 0)

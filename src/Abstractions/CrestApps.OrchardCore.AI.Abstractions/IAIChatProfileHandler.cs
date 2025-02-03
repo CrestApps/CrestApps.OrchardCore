@@ -70,4 +70,3 @@ public interface IAIChatProfileHandler
     /// <param name="context">An instance of <see cref="SavedAIChatProfileContext"/>.</param>
     Task SavedAsync(SavedAIChatProfileContext context);
 }
-

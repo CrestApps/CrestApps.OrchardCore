@@ -12,17 +12,17 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 {
     private readonly AIProviderOptions _providerOptions;
-    private readonly IAIDeploymentStore _modelDeploymentStore;
+    private readonly IAIDeploymentStore _deploymentStore;
 
     internal readonly IStringLocalizer S;
 
     public AIDeploymentDisplayDriver(
-        IAIDeploymentStore modelDeploymentStore,
+        IAIDeploymentStore deploymentStore,
         IOptions<AIProviderOptions> providerOptions,
         IStringLocalizer<AIDeploymentDisplayDriver> stringLocalizer)
     {
         _providerOptions = providerOptions.Value;
-        _modelDeploymentStore = modelDeploymentStore;
+        _deploymentStore = deploymentStore;
         S = stringLocalizer;
     }
 
@@ -99,7 +99,7 @@ public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             }
         }
 
-        var anotherExists = (await _modelDeploymentStore.GetAllAsync())
+        var anotherExists = (await _deploymentStore.GetAllAsync())
             .Any(d => d.ProviderName.Equals(deployment.ProviderName, StringComparison.OrdinalIgnoreCase) &&
             d.ConnectionName.Equals(deployment.ConnectionName, StringComparison.OrdinalIgnoreCase) &&
             d.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase)

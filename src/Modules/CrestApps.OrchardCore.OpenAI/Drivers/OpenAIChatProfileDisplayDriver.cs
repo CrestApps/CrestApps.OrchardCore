@@ -12,15 +12,15 @@ namespace CrestApps.OrchardCore.OpenAI.Drivers;
 
 public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 {
-    private readonly IAIDeploymentStore _modelDeploymentStore;
+    private readonly IAIDeploymentStore _deploymentStore;
 
     internal readonly IStringLocalizer S;
 
     public OpenAIChatProfileDisplayDriver(
-        IAIDeploymentStore modelDeploymentStore,
+        IAIDeploymentStore deploymentStore,
         IStringLocalizer<OpenAIChatProfileDisplayDriver> stringLocalizer)
     {
-        _modelDeploymentStore = modelDeploymentStore;
+        _deploymentStore = deploymentStore;
         S = stringLocalizer;
     }
 
@@ -40,7 +40,7 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<AIChatProfile
 
             model.IsSystemMessageLocked = profile.GetSettings<OpenAIChatProfileSettings>().LockSystemMessage;
 
-            var azureDeployments = await _modelDeploymentStore.GetAllAsync();
+            var azureDeployments = await _deploymentStore.GetAllAsync();
 
             model.Deployments = azureDeployments.Select(x => new SelectListItem(x.Name, x.Id));
 

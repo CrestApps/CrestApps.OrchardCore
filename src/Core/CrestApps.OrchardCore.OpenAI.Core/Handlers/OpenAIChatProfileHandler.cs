@@ -15,7 +15,7 @@ public sealed class OpenAIChatProfileHandler : AIChatProfileHandlerBase
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAIChatProfileStore _profileStore;
-    private readonly IAIDeploymentStore _modelDeploymentStore;
+    private readonly IAIDeploymentStore _deploymentStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IClock _clock;
 
@@ -24,14 +24,14 @@ public sealed class OpenAIChatProfileHandler : AIChatProfileHandlerBase
     public OpenAIChatProfileHandler(
         IHttpContextAccessor httpContextAccessor,
         IAIChatProfileStore profileStore,
-        IAIDeploymentStore modelDeploymentStore,
+        IAIDeploymentStore deploymentStore,
         ILiquidTemplateManager liquidTemplateManager,
         IClock clock,
         IStringLocalizer<OpenAIChatProfileHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _profileStore = profileStore;
-        _modelDeploymentStore = modelDeploymentStore;
+        _deploymentStore = deploymentStore;
         _liquidTemplateManager = liquidTemplateManager;
         _clock = clock;
         S = stringLocalizer;
