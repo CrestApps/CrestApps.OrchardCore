@@ -19,7 +19,7 @@ public interface IAIChatProfileSource
     string ProviderName { get; }
 
     /// <summary>
-    /// Get the technology name.
+    /// Get the name of the technology this source provides (i.e., OpenAI, DeepSeek).
     /// </summary>
     string TechnologyName { get; }
 

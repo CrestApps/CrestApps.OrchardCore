@@ -176,6 +176,8 @@ public sealed class AzureProfileSource : IAIChatProfileSource
 
     public string ProviderName => "Azure";
 
+    public string TechnologyName => "OpenAI";
+
     public LocalizedString DisplayName { get; }
 
     public LocalizedString Description { get; }
