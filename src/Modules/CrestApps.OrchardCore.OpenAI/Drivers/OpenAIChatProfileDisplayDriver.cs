@@ -1,8 +1,10 @@
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Models;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -13,19 +15,29 @@ namespace CrestApps.OrchardCore.OpenAI.Drivers;
 public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 {
     private readonly IAIDeploymentStore _deploymentStore;
+    private readonly IServiceProvider _serviceProvider;
 
     internal readonly IStringLocalizer S;
 
     public OpenAIChatProfileDisplayDriver(
         IAIDeploymentStore deploymentStore,
+        IServiceProvider serviceProvider,
         IStringLocalizer<OpenAIChatProfileDisplayDriver> stringLocalizer)
     {
         _deploymentStore = deploymentStore;
+        _serviceProvider = serviceProvider;
         S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIChatProfile profile, BuildEditorContext context)
     {
+        var profileSource = _serviceProvider.GetKeyedService<IAIChatProfileSource>(profile.Source);
+
+        if (profileSource.TechnologyName != OpenAIConstants.TechnologyName)
+        {
+            return null;
+        }
+
         return Initialize<ChatProfileMetadataViewModel>("OpenAIChatProfileMetadata_Edit", async model =>
         {
             var metadata = profile.As<OpenAIChatProfileMetadata>();
@@ -49,6 +61,13 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<AIChatProfile
 
     public override async Task<IDisplayResult> UpdateAsync(AIChatProfile profile, UpdateEditorContext context)
     {
+        var profileSource = _serviceProvider.GetKeyedService<IAIChatProfileSource>(profile.Source);
+
+        if (profileSource.TechnologyName != OpenAIConstants.TechnologyName)
+        {
+            return null;
+        }
+
         var model = new ChatProfileMetadataViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);

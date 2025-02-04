@@ -1,7 +1,7 @@
 using System.ClientModel;
-using System.Text.Json;
 using Azure.Core;
 using Azure.Identity;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core;
@@ -9,25 +9,25 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core;
 public static class OpenAIAIProviderConnectionExtensions
 {
     public static string GetSubscriptionId(this AIProviderConnection entry, bool throwException = true)
-        => entry.GetValueInternal("SubscriptionId", throwException);
+        => entry.GetStringValue("SubscriptionId", throwException);
 
     public static string GetClientId(this AIProviderConnection entry, bool throwException = true)
-        => entry.GetValueInternal("ClientId", throwException);
+        => entry.GetStringValue("ClientId", throwException);
 
     public static string GetClientSecret(this AIProviderConnection entry, bool throwException = true)
-        => entry.GetValueInternal("ClientSecret", throwException);
+        => entry.GetStringValue("ClientSecret", throwException);
 
     public static string GetTenantId(this AIProviderConnection entry, bool throwException = true)
-        => entry.GetValueInternal("TenantId", throwException);
+        => entry.GetStringValue("TenantId", throwException);
 
     public static string GetAccountName(this AIProviderConnection entry, bool throwException = true)
-        => entry.GetValueInternal("AccountName", throwException);
+        => entry.GetStringValue("AccountName", throwException);
 
     public static string GetResourceGroupName(this AIProviderConnection entry, bool throwException = true)
-        => entry.GetValueInternal("ResourceGroupName", throwException);
+        => entry.GetStringValue("ResourceGroupName", throwException);
 
     public static string GetApiKey(this AIProviderConnection entry, bool throwException = true)
-        => entry.GetValueInternal("ApiKey", throwException);
+        => entry.GetStringValue("ApiKey", throwException);
 
     public static TokenCredential GetCredential(this AIProviderConnection entry)
     {
@@ -47,35 +47,4 @@ public static class OpenAIAIProviderConnectionExtensions
 
     public static ApiKeyCredential GetApiKeyCredential(this AIProviderConnection entry)
         => new(entry.GetApiKey());
-
-    private static string GetValueInternal(this AIProviderConnection entry, string key, bool throwException)
-    {
-        if (entry.TryGetValue(key, out var value))
-        {
-            string stringValue = null;
-
-            if (value is JsonElement jsonElement)
-            {
-                stringValue = jsonElement.GetString();
-            }
-            else if (value is string)
-            {
-                stringValue = value as string;
-            }
-
-            if (throwException && string.IsNullOrWhiteSpace(stringValue))
-            {
-                throw new InvalidOperationException($"The '{key}' does not have a value in the Azure Connection entry.");
-            }
-
-            return stringValue;
-        }
-
-        if (!throwException)
-        {
-            return null;
-        }
-
-        throw new InvalidOperationException($"The '{key}' does not exists in the Azure Connection entry.");
-    }
 }

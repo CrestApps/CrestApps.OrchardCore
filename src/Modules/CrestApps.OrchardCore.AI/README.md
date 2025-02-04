@@ -27,6 +27,10 @@ Before using any AI features, ensure that the appropriate settings are configure
 }
 ```
 
+### Artificial Intelligence Deployments Feature
+
+The **Artificial Intelligence Deployments** feature builds on the **Artificial Intelligence** feature by AI Model deployments capabilities.
+
 ### Artificial Intelligence Chat Feature
 
 The **Artificial Intelligence Chat** feature builds on the **Artificial Intelligence** feature by adding AI chat capabilities. After enabling this feature, a new **Profiles** menu item will appear under the **Artificial Intelligence** section in the admin menu, allowing you to manage chat profiles.

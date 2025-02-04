@@ -13,7 +13,6 @@ public sealed class AIChatProfileHandler : AIChatProfileHandlerBase
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAIChatProfileStore _profileStore;
-    private readonly IAIDeploymentStore _deploymentStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IClock _clock;
 
@@ -22,14 +21,12 @@ public sealed class AIChatProfileHandler : AIChatProfileHandlerBase
     public AIChatProfileHandler(
         IHttpContextAccessor httpContextAccessor,
         IAIChatProfileStore profileStore,
-        IAIDeploymentStore deploymentStore,
         ILiquidTemplateManager liquidTemplateManager,
         IClock clock,
         IStringLocalizer<AIChatProfileHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _profileStore = profileStore;
-        _deploymentStore = deploymentStore;
         _liquidTemplateManager = liquidTemplateManager;
         _clock = clock;
         S = stringLocalizer;
@@ -60,11 +57,6 @@ public sealed class AIChatProfileHandler : AIChatProfileHandlerBase
         if (string.IsNullOrWhiteSpace(context.Profile.Source))
         {
             context.Result.Fail(new ValidationResult(S["Source is required."], [nameof(AIChatProfile.Source)]));
-        }
-
-        if (!string.IsNullOrEmpty(context.Profile.DeploymentId) && await _deploymentStore.FindByIdAsync(context.Profile.DeploymentId) is null)
-        {
-            context.Result.Fail(new ValidationResult(S["Invalid DeploymentId provided."], [nameof(AIChatProfile.DeploymentId)]));
         }
 
         if (context.Profile.Type == AIChatProfileType.TemplatePrompt)

@@ -23,7 +23,7 @@ internal static class GetDeploymentsEndpoint
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         IAIDeploymentManager deploymentManager,
-        string source,
+        string providerName,
         string connection)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIChatPermissions.ManageAIChatProfiles))
@@ -31,9 +31,9 @@ internal static class GetDeploymentsEndpoint
             return TypedResults.Forbid();
         }
 
-        if (string.IsNullOrWhiteSpace(source))
+        if (string.IsNullOrWhiteSpace(providerName))
         {
-            return TypedResults.BadRequest("Source is required.");
+            return TypedResults.BadRequest("providerName is required.");
         }
 
         if (string.IsNullOrWhiteSpace(connection))
@@ -41,7 +41,7 @@ internal static class GetDeploymentsEndpoint
             return TypedResults.BadRequest("Connection is required.");
         }
 
-        var deployments = await deploymentManager.GetAsync(source, connection);
+        var deployments = await deploymentManager.GetAsync(providerName, connection);
 
         return TypedResults.Ok(deployments.Select(x => new
         {
