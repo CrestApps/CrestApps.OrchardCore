@@ -31,6 +31,11 @@ public class AIChatProfile : Entity
     public AIChatProfileType Type { get; set; }
 
     /// <summary>
+    /// Gets or sets the connection name to use for this profile.
+    /// </summary>
+    public string ConnectionName { get; set; }
+
+    /// <summary>
     /// Gets or sets the deployment identifier associated with the profile.
     /// </summary>
     public string DeploymentId { get; set; }
@@ -105,5 +110,15 @@ public class AIChatProfile : Entity
             Properties = Properties.Clone(),
             Settings = Settings.Clone(),
         };
+    }
+
+    public override string ToString()
+    {
+        if (string.IsNullOrEmpty(DisplayText))
+        {
+            return Name;
+        }
+
+        return DisplayText;
     }
 }

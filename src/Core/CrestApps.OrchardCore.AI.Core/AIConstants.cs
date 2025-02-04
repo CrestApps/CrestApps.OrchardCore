@@ -15,6 +15,8 @@ public static class AIConstants
     {
         public const string Area = "CrestApps.OrchardCore.AI";
 
+        public const string Deployments = "CrestApps.OrchardCore.AI.Deployments";
+
         public const string Chat = "CrestApps.OrchardCore.AI.Chat";
     }
 

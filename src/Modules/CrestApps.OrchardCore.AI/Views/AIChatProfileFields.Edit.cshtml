@@ -6,67 +6,6 @@
 @model EditChatProfileViewModel
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Name" class="@Orchard.GetLabelClasses()">@T["Name"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <input asp-for="Name" class="form-control" disabled="@(!Model.IsNew)" />
-        <span asp-validation-for="Name" class="text-danger"></span>
-        @if (Model.IsNew)
-        {
-            <span class="hint">@T["Profile name. This name cannot be changed later."]</span>
-        }
-        else
-        {
-            <span class="hint">@T["Profile name."]</span>
-        }
-    </div>
-</div>
-
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DisplayText" class="@Orchard.GetLabelClasses()">@T["Display Text"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <input asp-for="DisplayText" class="form-control" />
-        <span asp-validation-for="DisplayText" class="text-danger"></span>
-        <span class="hint">@T["Profile name for the user interface."]</span>
-    </div>
-</div>
-
-@if (Model.ConnectionNames.Count > 1)
-{
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection name"]</label>
-        <div class="@Orchard.GetEndClasses()">
-            <select asp-for="ConnectionName" asp-items="Model.ConnectionNames" class="form-select">
-                <option value="">@T["Default connection"]</option>
-            </select>
-            <span asp-validation-for="DeploymentId" class="text-danger"></span>
-            <span class="hint">@T["The connection to use for this profile."]</span>
-        </div>
-    </div>
-}
-else
-{
-    <input type="hidden" asp-for="ConnectionName" />
-}
-
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DeploymentId" class="@Orchard.GetLabelClasses()">@T["Deployment"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <select asp-for="DeploymentId" class="form-select">
-            <option value="">@T["Default deployment"]</option>
-            @if (Model.Deployments != null)
-            {
-                foreach (var deployment in Model.Deployments)
-                {
-                    <option value="@deployment.Value">@deployment.Text</option>
-                }
-            }
-        </select>
-        <span asp-validation-for="DeploymentId" class="text-danger"></span>
-        <span class="hint">@T["The deployment to use for this profile."]</span>
-    </div>
-</div>
-
-<div class="@Orchard.GetWrapperClasses()">
     <label asp-for="ProfileType" class="@Orchard.GetLabelClasses()">@T["Profile type"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="ProfileType" asp-items="Model.ProfileTypes" class="form-select"></select>
@@ -172,56 +111,9 @@ else
             });
         }
 
-        const hasMultipleConnection = @(Model.ConnectionNames.Count > 1 ? "true" : "false");
-        if (hasMultipleConnection) {
-            const connectionNameElement = document.getElementById('@Html.IdFor(x => x.ConnectionName)');
-            const deploymentsElement = document.getElementById('@Html.IdFor(x => x.DeploymentId)');
-            const source = '@(Model.Source)';
-
-            connectionNameElement.addEventListener('change', async (e) => {
-                const selectedConnection = e.target.value;
-
-                // Remove only options that have a value
-                [...deploymentsElement.options].forEach(option => {
-                    if (option.value) {
-                        option.remove();
-                    }
-                });
-
-                if (!selectedConnection) {
-
-                    deploymentsElement.value = '';
-
-                    return;
-                }
-
-                var url = '@(Url.RouteUrl(AIConstants.RouteNames.GetDeploymentsByConnectionRouteName))';
-                try {
-                    const response = await fetch(`${url}?source=${encodeURIComponent(source)}&connection=${encodeURIComponent(selectedConnection)}`);
-
-                    if (!response.ok) {
-                        throw new Error('Failed to fetch deployments');
-                    }
-
-                    const deployments = await response.json();
-
-                    // Populate new options
-                    deployments.forEach(deployment => {
-                        let option = document.createElement('option');
-                        option.value = deployment.id;
-                        option.textContent = deployment.name;
-                        deploymentsElement.appendChild(option);
-                    });
-                } catch (error) {
-                    console.error('Error fetching deployments:', error);
-                }
-            });
-        }
-
         const profileType = document.getElementById('@Html.IdFor(x => x.ProfileType)');
 
         profileType.addEventListener('change', function (e) {
-
             let value = e.target.value;
             let className = 'profile-type-' + convertToKebabCase(value);
             let elements = document.querySelectorAll('.profile-type');
@@ -238,7 +130,6 @@ else
         });
 
         profileType.dispatchEvent(new Event('change'));
-
         initializeLiquidEditor(document.getElementById('@Html.IdFor(x => x.PromptTemplate)'));
     });
 </script>

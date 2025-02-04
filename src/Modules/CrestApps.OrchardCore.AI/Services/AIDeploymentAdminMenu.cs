@@ -5,11 +5,11 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Services;
 
-public sealed class AIAdminMenu : AdminNavigationProvider
+public sealed class AIDeploymentAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
-    public AIAdminMenu(IStringLocalizer<AIAdminMenu> stringLocalizer)
+    public AIDeploymentAdminMenu(IStringLocalizer<AIDeploymentAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -27,7 +27,7 @@ public sealed class AIAdminMenu : AdminNavigationProvider
                     .Permission(AIChatPermissions.ManageModelDeployments)
                     .LocalNav()
                 )
-            , priority: 1);
+            , priority: 2);
 
         return ValueTask.CompletedTask;
     }

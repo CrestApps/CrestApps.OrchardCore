@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Markdig;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -47,22 +48,43 @@ public sealed class Startup : StartupBase
         });
 
         services
-            .AddAIDeploymentServices()
             .AddSingleton<IAIToolsService, DefaultAIToolsService>()
             .Configure<AIMarkdownPipelineOptions>(options =>
             {
                 options.MarkdownPipelineBuilder.Configure("advanced");
             })
             .AddScoped<IAIMarkdownService, AIMarkdownService>()
+            .AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderOptionsConfiguration>();
+    }
+}
+
+[Feature(AIConstants.Feature.Deployments)]
+public sealed class DeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddAIDeploymentServices()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
-            .AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderOptionsConfiguration>()
-            .AddNavigationProvider<AIAdminMenu>();
+            .AddNavigationProvider<AIDeploymentAdminMenu>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
             .AddGetDeploymentsEndpoint();
+    }
+}
+
+[Feature(AIConstants.Feature.Deployments)]
+[RequireFeatures(AIConstants.Feature.Chat)]
+public sealed class ChatDeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddTransient<IAIChatProfileHandler, AIDeploymentChatProfileHandler>()
+            .AddDisplayDriver<AIChatProfile, AIChatProfileDeploymentDisplayDriver>();
     }
 }
 
@@ -149,7 +171,7 @@ public sealed class ChatWorkflowsStartup : StartupBase
 
 [Feature(AIConstants.Feature.Chat)]
 [RequireFeatures("OrchardCore.Deployment")]
-public sealed class DeploymentsStartup : StartupBase
+public sealed class ChatOCDeploymentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {

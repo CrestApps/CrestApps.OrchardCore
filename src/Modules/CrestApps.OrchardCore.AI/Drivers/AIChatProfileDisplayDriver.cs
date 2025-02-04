@@ -15,7 +15,6 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 {
     private readonly IAIChatProfileStore _profileStore;
-    private readonly IAIDeploymentManager _deploymentManager;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IAIToolsService _toolsService;
     private readonly IServiceProvider _serviceProvider;
@@ -25,7 +24,6 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 
     public AIChatProfileDisplayDriver(
         IAIChatProfileStore profileStore,
-        IAIDeploymentManager deploymentManager,
         ILiquidTemplateManager liquidTemplateManager,
         IAIToolsService toolsService,
         IServiceProvider serviceProvider,
@@ -33,7 +31,6 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
         IStringLocalizer<AIChatProfileDisplayDriver> stringLocalizer)
     {
         _profileStore = profileStore;
-        _deploymentManager = deploymentManager;
         _liquidTemplateManager = liquidTemplateManager;
         _toolsService = toolsService;
         _serviceProvider = serviceProvider;
@@ -53,7 +50,36 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 
     public override IDisplayResult Edit(AIChatProfile profile, BuildEditorContext context)
     {
-        return Initialize<EditChatProfileViewModel>("AIChatProfileFields_Edit", async model =>
+        var mainFieldsResult = Initialize<EditChatProfileMainFieldsViewModel>("AIChatProfileMainFields_Edit", model =>
+        {
+            model.Name = profile.Name;
+            model.DisplayText = profile.DisplayText;
+            model.IsNew = context.IsNew;
+        }).Location("Content:1");
+
+        var connectionFieldResult = Initialize<EditConnectionChatProfileViewModel>("AIChatProfileConnection_Edit", model =>
+        {
+            var profileSource = _serviceProvider.GetKeyedService<IAIChatProfileSource>(profile.Source);
+
+            if (profileSource is not null && _connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
+            {
+                if (provider.Connections.Count == 1)
+                {
+                    // At this point, there is no deployment associated with the profile. Check the connections to obtain available deployments.
+
+                    var connection = provider.Connections.First();
+                    model.ConnectionName = connection.Key;
+                }
+
+                model.ConnectionNames = provider.Connections.Select(x => new SelectListItem(x.Key, x.Key)).ToArray();
+            }
+            else
+            {
+                model.ConnectionNames = [];
+            }
+        }).Location("Content:2");
+
+        var fieldsResult = Initialize<EditChatProfileViewModel>("AIChatProfileFields_Edit", model =>
         {
             if (profile.TryGetSettings<AIChatProfileSettings>(out var settings))
             {
@@ -64,29 +90,10 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
                 model.IsOnAdminMenu = profile.Type == AIChatProfileType.Chat && context.IsNew;
             }
 
-            var hasDeployment = false;
-
-            if (!string.IsNullOrEmpty(profile.DeploymentId))
-            {
-                var deployment = await _deploymentManager.FindByIdAsync(profile.DeploymentId);
-
-                if (deployment is not null)
-                {
-                    hasDeployment = true;
-                    model.ConnectionName = deployment.ConnectionName;
-                    model.Deployments = (await _deploymentManager.GetAsync(profile.Source, deployment.ConnectionName)).Select(x => new SelectListItem(x.Name, x.Id));
-                }
-            }
-
-            model.Source = profile.Source;
-            model.Name = profile.Name;
-            model.DisplayText = profile.DisplayText;
             model.PromptSubject = profile.PromptSubject;
             model.PromptTemplate = profile.PromptTemplate;
             model.WelcomeMessage = profile.WelcomeMessage;
-            model.DeploymentId = profile.DeploymentId;
             model.TitleType = profile.TitleType;
-            model.IsNew = context.IsNew;
             model.ProfileType = profile.Type;
             model.TitleTypes =
             [
@@ -109,81 +116,54 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
                 Description = function.Metadata.Description,
                 IsSelected = profile.FunctionNames?.Contains(function.Metadata.Name) ?? false,
             }).ToArray();
+        }).Location("Content:5");
 
-            var profileSource = _serviceProvider.GetKeyedService<IAIChatProfileSource>(profile.Source);
-
-            if (profileSource is not null && _connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
-            {
-                if (!hasDeployment && provider.Connections.Count == 1)
-                {
-                    // At this point, there is no deployment associated with the profile. Check the connections to obtain available deployments.
-
-                    var connection = provider.Connections.First();
-                    model.ConnectionName = connection.Key;
-                    model.Deployments = (await _deploymentManager.GetAsync(profile.Source, connection.Key)).Select(x => new SelectListItem(x.Name, x.Id));
-                }
-
-                model.ConnectionNames = provider.Connections.Select(x => new SelectListItem(x.Key, x.Key)).ToArray();
-            }
-            else
-            {
-                model.ConnectionNames = [];
-            }
-
-        }).Location("Content:1");
+        return Combine(mainFieldsResult, connectionFieldResult, fieldsResult);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIChatProfile profile, UpdateEditorContext context)
     {
+        var mainFieldsModel = new EditChatProfileMainFieldsViewModel();
+
         var model = new EditChatProfileViewModel();
 
+        var connectionModel = new EditConnectionChatProfileViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+        await context.Updater.TryUpdateModelAsync(mainFieldsModel, Prefix);
+        await context.Updater.TryUpdateModelAsync(connectionModel, Prefix);
 
         if (context.IsNew)
         {
             // Set the name only during profile creation. Editing the name afterward is not allowed.
-            var name = model.Name?.Trim();
+            var name = mainFieldsModel.Name?.Trim();
 
             if (string.IsNullOrEmpty(name))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(mainFieldsModel.Name), S["Name is required."]);
             }
             else if (await _profileStore.FindByNameAsync(name) is not null)
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["A profile with this name already exists. The name must be unique."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(mainFieldsModel.Name), S["A profile with this name already exists. The name must be unique."]);
             }
 
             profile.Name = name;
         }
 
-        if (string.IsNullOrEmpty(model.DisplayText))
+        if (string.IsNullOrEmpty(mainFieldsModel.DisplayText))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["Display Text is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(mainFieldsModel.DisplayText), S["Display Text is required."]);
         }
 
-        var hasConnection = !string.IsNullOrEmpty(model.ConnectionName);
-
-        if (!string.IsNullOrEmpty(model.DeploymentId))
-        {
-            var deployment = await _deploymentManager.FindByIdAsync(model.DeploymentId);
-
-            if (deployment is null ||
-                !hasConnection ||
-                !deployment.ConnectionName.Equals(model.ConnectionName, StringComparison.OrdinalIgnoreCase))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.DeploymentId), S["Invalid deployment provided."]);
-            }
-        }
-
-        if (hasConnection)
+        if (!string.IsNullOrEmpty(connectionModel.ConnectionName))
         {
             var profileSource = _serviceProvider.GetKeyedService<IAIChatProfileSource>(profile.Source);
 
             if (profileSource is not null &&
                 _connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider) &&
-                !provider.Connections.TryGetValue(model.ConnectionName, out _))
+                !provider.Connections.TryGetValue(connectionModel.ConnectionName, out _))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["Invalid connection provided."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(connectionModel.ConnectionName), S["Invalid connection provided."]);
             }
         }
 
@@ -199,13 +179,13 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
             }
         }
 
-        profile.DisplayText = model.DisplayText;
+        profile.DisplayText = mainFieldsModel.DisplayText;
         profile.PromptSubject = model.PromptSubject?.Trim();
         profile.PromptTemplate = model.PromptTemplate;
-        profile.DeploymentId = model.DeploymentId;
         profile.WelcomeMessage = model.WelcomeMessage;
         profile.TitleType = model.TitleType;
         profile.Type = model.ProfileType;
+        profile.ConnectionName = connectionModel.ConnectionName;
 
         profile.AlterSettings<AIChatProfileSettings>(settings =>
         {

@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
+
+@model EditConnectionChatProfileViewModel
+
+@if (Model.ConnectionNames.Count > 1)
+{
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection name"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <select asp-for="ConnectionName" asp-items="Model.ConnectionNames" class="form-select">
+                <option value="">@T["Default connection"]</option>
+            </select>
+            <span asp-validation-for="ConnectionName" class="text-danger"></span>
+            <span class="hint">@T["The connection to use for this profile."]</span>
+        </div>
+    </div>
+}
+else
+{
+    <input type="hidden" asp-for="ConnectionName" />
+}

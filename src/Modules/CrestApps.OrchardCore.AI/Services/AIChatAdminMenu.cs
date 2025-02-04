@@ -27,6 +27,19 @@ public sealed class AIChatAdminMenu : AdminNavigationProvider
         var profiles = await _chatProfileStore.GetProfilesAsync(AIChatProfileType.Chat);
 
         builder
+            .Add(S["Artificial Intelligence"], "90", ai => ai
+                .AddClass("artificial-intelligence")
+                .Id("artificialIntelligence")
+                .Add(S["Profiles"], "after.5", profiles => profiles
+                    .AddClass("ai-profiles")
+                    .Id("aiProfiles")
+                    .Action("Index", "ChatProfiles", AIConstants.Feature.Area)
+                    .Permission(AIChatPermissions.ManageAIChatProfiles)
+                    .LocalNav()
+                )
+            , priority: 1);
+
+        builder
            .Add(S["Artificial Intelligence"], ai =>
            {
                var i = 1;
@@ -53,17 +66,5 @@ public sealed class AIChatAdminMenu : AdminNavigationProvider
                    );
                }
            });
-
-
-        builder
-            .Add(S["Artificial Intelligence"], ai => ai
-                .Add(S["Profiles"], "after.5", profiles => profiles
-                    .AddClass("ai-profiles")
-                    .Id("aiProfiles")
-                    .Action("Index", "ChatProfiles", AIConstants.Feature.Area)
-                    .Permission(AIChatPermissions.ManageAIChatProfiles)
-                    .LocalNav()
-                )
-            );
     }
 }

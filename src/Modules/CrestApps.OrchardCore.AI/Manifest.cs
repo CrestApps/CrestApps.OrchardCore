@@ -20,6 +20,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = AIConstants.Feature.Deployments,
+    Name = "Artificial Intelligence Deployments",
+    Description = "Provides a way to manage AI model Deployments.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
     Id = AIConstants.Feature.Chat,
     Name = "Artificial Intelligence Chat",
     Description = "Provides a way to manage AI chat profiles for AI models.",
