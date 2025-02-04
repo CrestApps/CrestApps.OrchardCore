@@ -9,6 +9,8 @@ public static class OpenAIConstants
     - Response must be under 255 characters in length.
     """;
 
+    public const string TechnologyName = "OpenAI";
+
     public static class Feature
     {
         public const string Area = "CrestApps.OrchardCore.OpenAI";

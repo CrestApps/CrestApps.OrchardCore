@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -98,7 +99,7 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
             }
             else
             {
-                provider.DefaultDeploymentName = connections.FirstOrDefault().Value["DefaultDeploymentName"] as string;
+                provider.DefaultDeploymentName = connections.FirstOrDefault().Value?.GetDefaultDeploymentName(false);
             }
 
             options.Providers.Add(providerName, provider);

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Core;
 using OrchardCore.Modules.Manifest;
@@ -22,12 +23,13 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = AzureOpenAIConstants.Feature.Deployments,
-    Name = "AzureOpenAI-Powered Artificial Intelligence Deployments",
+    Name = "Azure OpenAI-Powered Artificial Intelligence Azure Deployments",
     Description = "AI deployments utilizing models available through Azure OpenAI.",
     Category = "Artificial Intelligence",
     Dependencies =
     [
         AzureOpenAIConstants.Feature.Area,
+        AIConstants.Feature.Deployments,
     ]
 )]
 
@@ -52,5 +54,6 @@ using OrchardCore.Modules.Manifest;
     [
         "OrchardCore.Search.AzureAI",
         OpenAIConstants.Feature.ChatGPT,
+        AzureOpenAIConstants.Feature.Deployments,
     ]
 )]

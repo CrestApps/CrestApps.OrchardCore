@@ -219,7 +219,7 @@ public sealed class ChatProfilesController : Controller
 
         var model = new ChatProfileViewModel
         {
-            DisplayName = profile.DisplayText,
+            DisplayName = profile.Name,
             Editor = await _profileDisplayManager.BuildEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
