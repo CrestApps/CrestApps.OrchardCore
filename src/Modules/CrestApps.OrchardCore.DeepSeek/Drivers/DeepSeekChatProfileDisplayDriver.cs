@@ -1,8 +1,8 @@
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Core.Models;
-using CrestApps.OrchardCore.OpenAI.ViewModels;
+using CrestApps.OrchardCore.DeepSeek.Core;
+using CrestApps.OrchardCore.DeepSeek.Core.Models;
+using CrestApps.OrchardCore.DeepSeek.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -10,19 +10,19 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
 
-namespace CrestApps.OrchardCore.OpenAI.Drivers;
+namespace CrestApps.OrchardCore.DeepSeek.Drivers;
 
-public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
+public sealed class DeepSeekChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 {
     private readonly IAIDeploymentStore _deploymentStore;
     private readonly IServiceProvider _serviceProvider;
 
     internal readonly IStringLocalizer S;
 
-    public OpenAIChatProfileDisplayDriver(
+    public DeepSeekChatProfileDisplayDriver(
         IAIDeploymentStore deploymentStore,
         IServiceProvider serviceProvider,
-        IStringLocalizer<OpenAIChatProfileDisplayDriver> stringLocalizer)
+        IStringLocalizer<DeepSeekChatProfileDisplayDriver> stringLocalizer)
     {
         _deploymentStore = deploymentStore;
         _serviceProvider = serviceProvider;
@@ -33,14 +33,14 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<AIChatProfile
     {
         var profileSource = _serviceProvider.GetKeyedService<IAIChatProfileSource>(profile.Source);
 
-        if (profileSource.TechnologyName != OpenAIConstants.TechnologyName)
+        if (profileSource.TechnologyName != DeepSeekConstants.TechnologyName)
         {
             return null;
         }
 
-        return Initialize<ChatProfileMetadataViewModel>("OpenAIChatProfileMetadata_Edit", async model =>
+        return Initialize<ChatProfileMetadataViewModel>("DeepSeekChatProfileMetadata_Edit", async model =>
         {
-            var metadata = profile.As<OpenAIChatProfileMetadata>();
+            var metadata = profile.As<DeepSeekChatProfileMetadata>();
 
             model.SystemMessage = metadata.SystemMessage;
             model.FrequencyPenalty = metadata.FrequencyPenalty;
@@ -50,7 +50,7 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<AIChatProfile
             model.MaxTokens = metadata.MaxTokens;
             model.TopP = metadata.TopP;
 
-            model.IsSystemMessageLocked = profile.GetSettings<OpenAIChatProfileSettings>().LockSystemMessage;
+            model.IsSystemMessageLocked = profile.GetSettings<DeepSeekChatProfileSettings>().LockSystemMessage;
 
             var azureDeployments = await _deploymentStore.GetAllAsync();
 
@@ -63,7 +63,7 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<AIChatProfile
     {
         var profileSource = _serviceProvider.GetKeyedService<IAIChatProfileSource>(profile.Source);
 
-        if (profileSource.TechnologyName != OpenAIConstants.TechnologyName)
+        if (profileSource.TechnologyName != DeepSeekConstants.TechnologyName)
         {
             return null;
         }
@@ -72,7 +72,7 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<AIChatProfile
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = profile.As<OpenAIChatProfileMetadata>();
+        var metadata = profile.As<DeepSeekChatProfileMetadata>();
 
         metadata.FrequencyPenalty = model.FrequencyPenalty;
         metadata.PastMessagesCount = model.PastMessagesCount;
@@ -81,7 +81,7 @@ public sealed class OpenAIChatProfileDisplayDriver : DisplayDriver<AIChatProfile
         metadata.MaxTokens = model.MaxTokens;
         metadata.TopP = model.TopP;
 
-        var settings = profile.GetSettings<OpenAIChatProfileSettings>();
+        var settings = profile.GetSettings<DeepSeekChatProfileSettings>();
 
         if (!settings.LockSystemMessage)
         {
