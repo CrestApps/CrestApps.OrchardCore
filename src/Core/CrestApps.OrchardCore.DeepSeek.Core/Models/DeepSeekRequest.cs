@@ -8,7 +8,7 @@ internal sealed class DeepSeekRequest
 
     public IList<DeepSeekChatTool> Tools { get; set; }
 
-    public string FunctionCall { get; set; } = "auto";
+    public string ToolChoice { get; set; } = "auto";
 
     public float? Temperature { get; set; }
 

@@ -43,7 +43,6 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
         _logger = logger;
     }
 
-
     public string Name
         => DeepSeekCloudChatProfileSource.Key;
 
@@ -73,7 +72,6 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
 
         var metadata = context.Profile.As<DeepSeekChatProfileMetadata>();
 
-
         var request = new DeepSeekRequest()
         {
             Temperature = metadata.Temperature ?? _defaultOptions.Temperature,
@@ -81,8 +79,16 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
             FrequencyPenalty = metadata.FrequencyPenalty ?? _defaultOptions.FrequencyPenalty,
             PresencePenalty = metadata.PresencePenalty ?? _defaultOptions.PresencePenalty,
             MaxTokens = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
-            Model = connection.GetDefaultDeploymentName() ?? "deepseek-reasoner",
         };
+
+        var modelName = connection.GetDefaultDeploymentName();
+
+        if (string.IsNullOrEmpty(modelName))
+        {
+            modelName = "deepseek-reasoner";
+        }
+
+        request.Model = modelName;
 
         if (!context.DisableTools && context.Profile.FunctionNames is not null)
         {
@@ -200,7 +206,7 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
 
         request.Messages.Add(new DeepSeekMessage()
         {
-            Role = "assistant",
+            Role = ChatRole.Assistant.Value,
             ToolCalls = choice.Message.ToolCalls,
         });
 
@@ -228,7 +234,7 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
             {
                 request.Messages.Add(new DeepSeekToolMessage()
                 {
-                    Role = "tool",
+                    Role = ChatRole.Tool.Value,
                     ToolCallId = toolCall.Id,
                     Content = str,
                 });
@@ -239,7 +245,7 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
 
                 request.Messages.Add(new DeepSeekToolMessage()
                 {
-                    Role = "tool",
+                    Role = ChatRole.Tool.Value,
                     ToolCallId = toolCall.Id,
                     Content = resultJson,
                 });
