@@ -11,8 +11,8 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = OpenAIConstants.Feature.Area,
-    Name = "Artificial Intelligence Powered by OpenAI",
-    Description = "Provides essential services for any OpenAI technology provider.",
+    Name = "OpenAI Services",
+    Description = "Provides core AI services for OpenAI technology.",
     Category = "Artificial Intelligence",
     EnabledByDependencyOnly = true,
     Dependencies =
@@ -24,8 +24,8 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = OpenAIConstants.Feature.ChatGPT,
-    Name = "Artificial Intelligence Powered by OpenAI Chat",
-    Description = "Provides a way to manage AI chat profiles for any OpenAI provider.",
+    Name = "OpenAI Services Chat",
+    Description = "Manages AI chat profiles for OpenAI models.",
     Category = "Artificial Intelligence",
     EnabledByDependencyOnly = true,
     Dependencies =

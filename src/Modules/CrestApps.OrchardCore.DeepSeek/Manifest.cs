@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.DeepSeek.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
-    Name = "OpenAI",
+    Name = "DeepSeek AI Services",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
@@ -11,8 +11,8 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = DeepSeekConstants.Feature.Area,
-    Name = "DeepSeek-Powered Artificial Intelligence",
-    Description = "Provides essential services for any DeepSeek technology provider.",
+    Name = "DeepSeek AI Services",
+    Description = "Provides core AI services for DeepSeek technology.",
     Category = "Artificial Intelligence",
     EnabledByDependencyOnly = true,
     Dependencies =
@@ -24,8 +24,8 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = DeepSeekConstants.Feature.Chat,
-    Name = "DeepSeek-Powered Artificial Intelligence Chat",
-    Description = "Provides a way to manage AI chat profiles for any DeepSeek provider.",
+    Name = "DeepSeek AI Services Chat",
+    Description = "Manages AI chat profiles for DeepSeek providers.",
     Category = "Artificial Intelligence",
     EnabledByDependencyOnly = true,
     Dependencies =
@@ -39,8 +39,8 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = DeepSeekConstants.Feature.CloudChat,
-    Name = "Artificial Intelligence Powered by DeepSeek Cloud Service Chat",
-    Description = "Provides a way to manage AI chat profiles for DeepSeek cloud service.",
+    Name = "DeepSeek Cloud AI Chat",
+    Description = "Manages AI chat profiles for DeepSeek Cloud services.",
     Category = "Artificial Intelligence",
     Dependencies =
     [

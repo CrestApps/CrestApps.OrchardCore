@@ -8,7 +8,7 @@ Orchard Core offers a **flexible and scalable** foundation for building dynamic,
 
 - **Modularity** – Independent modules allow for seamless integration based on project requirements.  
 - **Security** – Designed following industry best practices to ensure application safety.  
-- **Performance** – Optimized for speed and efficiency to maximize Orchard Core’s potential.  
+- **Performance** – Optimized for speed and efficiency to maximize Orchard Core's potential.  
 
 ## Project Structure
 

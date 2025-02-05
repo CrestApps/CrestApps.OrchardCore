@@ -36,7 +36,7 @@
     <label asp-for="TopP" class="@Orchard.GetLabelClasses()">@T["Top P"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="TopP" step="0.01" min="0" max="1">
-        <span class="hint">@T["Similar to temperature, this controls randomness but uses a different method. Lowering Top P will narrow the model’s token selection to likelier tokens. Increasing Top P will let the model choose from tokens with both high and low likelihood. Try adjusting temperature or Top P but not both. Leave it blank to use the app default of {0}.", DeepSeekOptions.Value.TopP]</span>
+        <span class="hint">@T["Similar to temperature, this controls randomness but uses a different method. Lowering Top P will narrow the model's token selection to likelier tokens. Increasing Top P will let the model choose from tokens with both high and low likelihood. Try adjusting temperature or Top P but not both. Leave it blank to use the app default of {0}.", DeepSeekOptions.Value.TopP]</span>
     </div>
 </div>
 

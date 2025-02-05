@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
-    Name = "AI",
+    Name = "Artificial Intelligence",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
@@ -21,8 +21,8 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = AIConstants.Feature.Deployments,
-    Name = "Artificial Intelligence Deployments",
-    Description = "Provides a way to manage AI model Deployments.",
+    Name = "AI Deployments",
+    Description = "Manages AI model deployments.",
     Category = "Artificial Intelligence",
     Dependencies =
     [
@@ -32,8 +32,8 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = AIConstants.Feature.Chat,
-    Name = "Artificial Intelligence Chat",
-    Description = "Provides a way to manage AI chat profiles for AI models.",
+    Name = "AI Chat",
+    Description = "Manages AI chat profiles for various models.",
     Category = "Artificial Intelligence",
     Dependencies =
     [

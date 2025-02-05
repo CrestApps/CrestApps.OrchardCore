@@ -1,12 +1,12 @@
-## DeepSeek-Powered Artificial Intelligence Feature
+## DeepSeek AI Services Feature
 
-The **DeepSeek-Powered Artificial Intelligence** feature enhances the **Artificial Intelligence** functionality by integrating DeepSeek's models. It provides a suite of services to interact with these models, enabling advanced AI capabilities. This feature is available on demand and cannot be manually toggled.
+The **DeepSeek AI Services** feature enhances the **AI Services** functionality by integrating DeepSeek's models. It provides a suite of services to interact with these models, enabling advanced AI capabilities. This feature is available on demand and cannot be manually toggled.
 
-### DeepSeek-Powered AI Chat Feature
+### DeepSeek AI Services Chat Feature
 
-The **DeepSeek-Powered AI Chat** feature builds upon the core **DeepSeek-Powered Artificial Intelligence** functionality, offering tools to create AI chatbots that engage users using DeepSeek's advanced language models. This feature is also activated on demand and cannot be manually enabled or disabled.
+The **DeepSeek AI Services Chat** feature builds upon the core **DeepSeek AI Services** functionality, offering tools to create AI chatbots that engage users using DeepSeek's advanced language models. This feature is also activated on demand and cannot be manually enabled or disabled.
 
-### Configuration
+#### Configuration
 
 In addition to setting up the AI services [as explained here](../CrestApps.OrchardCore.AI/README.md), you can customize the OpenAI parameters to fine-tune its default behavior. Below is an example of how to configure the default parameters in the `appsettings.json` file:
 
@@ -29,9 +29,9 @@ In addition to setting up the AI services [as explained here](../CrestApps.Orcha
 }
 ```
 
-### Artificial Intelligence Powered by DeepSeek Cloud Service Chat Feature
+### DeepSeek Cloud AI Chat Feature
 
-The **Artificial Intelligence Powered by DeepSeek Cloud Service Chat** feature builds upon the core **DeepSeek-Powered Artificial Intelligence** functionality, offering tools to create AI chatbots that engage users using DeepSeek's Cloud service. To obtain API key for DeepSeek, you can visit the [DeepSeek website](https://platform.deepseek.com/). You can configure it as follow:
+The **DeepSeek Cloud AI Chat** feature builds upon the core **DeepSeek AI Services Chat** functionality, offering tools to create AI chatbots that engage users using DeepSeek's Cloud service. To obtain API key for DeepSeek, you can visit the [DeepSeek website](https://platform.deepseek.com/). You can configure it as follow:
 
 ```json
 {
@@ -53,3 +53,4 @@ The **Artificial Intelligence Powered by DeepSeek Cloud Service Chat** feature b
   }
 }
 ```
+Please note that the connection name `deepseek-cloud` should not change when using the **DeepSeek Cloud AI Chat** feature.
