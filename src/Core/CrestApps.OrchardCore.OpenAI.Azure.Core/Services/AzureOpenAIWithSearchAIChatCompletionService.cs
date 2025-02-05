@@ -54,7 +54,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
 
     public string Name { get; } = AzureWithAzureAISearchProfileSource.Key;
 
-    public async Task<AIChatCompletionResponse> ChatAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AIChatCompletionContext context)
+    public async Task<AIChatCompletionResponse> ChatAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AIChatCompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -131,7 +131,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
 
         try
         {
-            var data = await chatClient.CompleteChatAsync(prompts, chatOptions);
+            var data = await chatClient.CompleteChatAsync(prompts, chatOptions, cancellationToken);
 
             if (data is null)
             {
@@ -143,7 +143,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
                 await ProcessToolCallsAsync(prompts, data.Value.ToolCalls);
 
                 // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
-                data = await chatClient.CompleteChatAsync(prompts, GetOptions(context));
+                data = await chatClient.CompleteChatAsync(prompts, GetOptions(context), cancellationToken);
             }
 
             if (data.Value.FinishReason == ChatFinishReason.Stop)

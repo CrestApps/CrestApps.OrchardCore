@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.DeepSeek.Core.Models;
+namespace CrestApps.OrchardCore.DeepSeek.Core.Models;
 
 internal sealed class DeepSeekChatFunction
 {

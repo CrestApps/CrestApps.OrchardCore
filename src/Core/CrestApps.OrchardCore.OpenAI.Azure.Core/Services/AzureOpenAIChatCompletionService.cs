@@ -35,7 +35,7 @@ public sealed class AzureOpenAIChatCompletionService : IAIChatCompletionService
 
     public string Name { get; } = AzureProfileSource.Key;
 
-    public async Task<AIChatCompletionResponse> ChatAsync(IEnumerable<ChatMessage> messages, AIChatCompletionContext context)
+    public async Task<AIChatCompletionResponse> ChatAsync(IEnumerable<ChatMessage> messages, AIChatCompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -116,7 +116,7 @@ public sealed class AzureOpenAIChatCompletionService : IAIChatCompletionService
 
         try
         {
-            var data = await chatClient.CompleteAsync(prompts, chatOptions);
+            var data = await chatClient.CompleteAsync(prompts, chatOptions, cancellationToken);
 
             if (data?.Choices is not null && data.FinishReason == ChatFinishReason.Stop)
             {

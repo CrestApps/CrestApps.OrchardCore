@@ -19,5 +19,5 @@ public interface IAIChatCompletionService
     /// <param name="messages">A collection of messages that are part of the chat conversation.</param>
     /// <param name="context">The context that may provide additional parameters or configurations for the chat request.</param>
     /// <returns>A task representing the asynchronous operation, with the completion response as the result.</returns>
-    Task<AIChatCompletionResponse> ChatAsync(IEnumerable<ChatMessage> messages, AIChatCompletionContext context);
+    Task<AIChatCompletionResponse> ChatAsync(IEnumerable<ChatMessage> messages, AIChatCompletionContext context, CancellationToken cancellationToken = default);
 }

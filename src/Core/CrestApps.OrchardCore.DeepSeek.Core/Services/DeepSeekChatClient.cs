@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.DeepSeek.Core.Models;
@@ -42,7 +43,7 @@ public sealed class DeepSeekChatClient : IChatClient
         {
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
-            return new ChatCompletion(new ChatMessage(ChatRole.Assistant, "AI model drew blank!"));
+            return new ChatCompletion(new ChatMessage(ChatRole.Assistant, content: null));
         }
 
         var data = await response.Content.ReadFromJsonAsync<DeepSeekResponse>(_jsonSerializerOptions, cancellationToken);
@@ -51,9 +52,7 @@ public sealed class DeepSeekChatClient : IChatClient
 
         if (data?.Choices is not null && data.Choices.Count > 0)
         {
-            var count = 0;
-
-            while (data.Choices[0].FinishReason == "tool_calls")
+            if (data.Choices[0].FinishReason == "tool_calls")
             {
                 if (options.ToolMode == ChatToolMode.Auto && options?.Tools is not null)
                 {
@@ -77,24 +76,11 @@ public sealed class DeepSeekChatClient : IChatClient
                         {
                             data = await response.Content.ReadFromJsonAsync<DeepSeekResponse>(_jsonSerializerOptions, cancellationToken);
                         }
-                        else
-                        {
-                            break;
-                        }
                     }
-                    else
-                    {
-                        break;
-                    }
-                }
-
-                if (++count >= 3)
-                {
-                    break;
                 }
             }
 
-            if (data.Choices.Count > 0 && data.Choices[0].FinishReason != "tool_calls")
+            if (data.Choices.Count > 0 && data.Choices[0].FinishReason == "stop")
             {
                 return new ChatCompletion(data.Choices.Select(x => GetMessage(x.Message)).ToArray())
                 {
@@ -110,9 +96,23 @@ public sealed class DeepSeekChatClient : IChatClient
                     },
                 };
             }
+
+            return new ChatCompletion(new ChatMessage(ChatRole.Assistant, content: null))
+            {
+                FinishReason = new ChatFinishReason(data.Choices[0].FinishReason),
+                CompletionId = data.Id,
+                ModelId = data.Model,
+                CreatedAt = dateTimeOffset.UtcDateTime,
+                Usage = new UsageDetails
+                {
+                    InputTokenCount = data.Usage?.PromptTokens,
+                    OutputTokenCount = data.Usage?.CompletionTokens,
+                    TotalTokenCount = data.Usage?.TotalTokens,
+                },
+            };
         }
 
-        return new ChatCompletion(new ChatMessage(ChatRole.Assistant, "AI model drew blank!"))
+        return new ChatCompletion(new ChatMessage(ChatRole.Assistant, content: null))
         {
             FinishReason = ChatFinishReason.Stop,
             CompletionId = data.Id,
@@ -125,6 +125,77 @@ public sealed class DeepSeekChatClient : IChatClient
                 TotalTokenCount = data.Usage?.TotalTokens,
             },
         };
+    }
+
+    public async IAsyncEnumerable<StreamingChatCompletionUpdate> CompleteStreamingAsync(
+        IList<ChatMessage> chatMessages,
+        ChatOptions options = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var request = GetRequest(chatMessages, options, out var httpClient);
+        request.Stream = true;
+
+        using var response = await httpClient.PostAsJsonAsync(_completionEndpoint, request, _jsonSerializerOptions, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            throw new HttpRequestException($"Request failed with status code {response.StatusCode}: {body}");
+        }
+
+        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var reader = new StreamReader(stream);
+
+        while (!reader.EndOfStream)
+        {
+            var line = await reader.ReadLineAsync(cancellationToken);
+            if (string.IsNullOrEmpty(line) || !line.StartsWith("data:"))
+            {
+                continue;
+            }
+
+            var json = line.Substring("data:".Length).Trim();
+
+            if (json == "[DONE]")
+            {
+                yield break;
+            }
+
+            var update = JsonSerializer.Deserialize<DeepSeekStreamingResponse>(json, _jsonSerializerOptions);
+
+            if (update?.Choices != null && update.Choices.Count > 0)
+            {
+                foreach (var choice in update.Choices)
+                {
+                    yield return new StreamingChatCompletionUpdate
+                    {
+                        CompletionId = update.Id,
+                        ModelId = update.Model,
+                        CreatedAt = DateTimeOffset.FromUnixTimeSeconds(update.Created).UtcDateTime,
+                        Role = string.IsNullOrEmpty(choice.Delta?.Role) ? ChatRole.Assistant : new ChatRole(choice.Delta?.Role),
+                        Text = choice.Delta?.Content,
+                        FinishReason = string.IsNullOrEmpty(choice.FinishReason) ? null : new ChatFinishReason(choice.FinishReason),
+                    };
+                }
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        // Nothing to dispose. Implementation required for the IChatClient interface.
+    }
+
+    public object GetService(Type serviceType, object serviceKey = null)
+    {
+        ArgumentNullException.ThrowIfNull(serviceType);
+
+        return
+            serviceKey is not null
+            ? null
+            : serviceType.IsInstanceOfType(this)
+                ? this
+                : null;
     }
 
     private DeepSeekRequest GetRequest(IList<ChatMessage> chatMessages, ChatOptions options, out HttpClient httpClient)
@@ -179,21 +250,6 @@ public sealed class DeepSeekChatClient : IChatClient
         }).ToList();
 
         return request;
-    }
-
-    public IAsyncEnumerable<StreamingChatCompletionUpdate> CompleteStreamingAsync(IList<ChatMessage> chatMessages, ChatOptions options = null, CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void Dispose()
-    {
-
-    }
-
-    public object GetService(Type serviceType, object serviceKey = null)
-    {
-        throw new NotImplementedException();
     }
 
     private static ChatMessage GetMessage(DeepSeekMessage message)

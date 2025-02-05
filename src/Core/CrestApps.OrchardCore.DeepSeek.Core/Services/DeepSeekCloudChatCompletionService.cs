@@ -35,7 +35,7 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
     public string Name
         => DeepSeekCloudChatProfileSource.Key;
 
-    public async Task<AIChatCompletionResponse> ChatAsync(IEnumerable<ChatMessage> messages, AIChatCompletionContext context)
+    public async Task<AIChatCompletionResponse> ChatAsync(IEnumerable<ChatMessage> messages, AIChatCompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -75,7 +75,7 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
 
             var chatOptions = GetChatOptions(context, metadata, connection);
 
-            var data = await chatClient.CompleteAsync(prompts, chatOptions);
+            var data = await chatClient.CompleteAsync(prompts, chatOptions, cancellationToken);
 
             if (data?.Choices is not null && data.FinishReason == ChatFinishReason.Stop)
             {
