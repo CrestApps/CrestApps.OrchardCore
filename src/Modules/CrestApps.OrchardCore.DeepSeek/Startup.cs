@@ -20,7 +20,7 @@ public sealed class Startup : StartupBase
 }
 
 [Feature(DeepSeekConstants.Feature.Chat)]
-public sealed class ChatGPTStartup : StartupBase
+public sealed class ChatStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -29,15 +29,31 @@ public sealed class ChatGPTStartup : StartupBase
     }
 }
 
+[Feature(DeepSeekConstants.Feature.Chat)]
+[RequireFeatures(AIConstants.Feature.Deployments)]
+public sealed class ChatDeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddAIDeploymentProvider<DeepSeekAIDeploymentProvider>(DeepSeekConstants.DeepSeekProviderName);
+    }
+}
+
 [Feature(DeepSeekConstants.Feature.CloudChat)]
 public sealed class CloudChatStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddAITool<GetWeatherFunction>();
+
         services.AddAIChatCompletionService<DeepSeekCloudChatCompletionService>(DeepSeekCloudChatProfileSource.Key);
 
         services
-            .AddAIChatProfileSource<DeepSeekCloudChatProfileSource>(DeepSeekCloudChatProfileSource.Key);
-        services.AddDataMigration<DeepSeekTitleGeneratorProfileMigrations>();
+            .AddDataMigration<DefaultDeepSeekDeploymentMigrations>();
+
+        services
+            .AddAIChatProfileSource<DeepSeekCloudChatProfileSource>(DeepSeekCloudChatProfileSource.Key)
+            .AddDataMigration<DeepSeekTitleGeneratorProfileMigrations>();
     }
 }

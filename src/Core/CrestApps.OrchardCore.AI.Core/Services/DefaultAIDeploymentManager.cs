@@ -60,15 +60,15 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         return null;
     }
 
-    public async ValueTask<AIDeployment> NewAsync(string source, JsonNode data = null)
+    public async ValueTask<AIDeployment> NewAsync(string providerName, JsonNode data = null)
     {
-        ArgumentException.ThrowIfNullOrEmpty(source);
+        ArgumentException.ThrowIfNullOrEmpty(providerName);
 
-        var deploymentSource = _serviceProvider.GetKeyedService<IAIDeploymentProvider>(source);
+        var deploymentSource = _serviceProvider.GetKeyedService<IAIDeploymentProvider>(providerName);
 
         if (deploymentSource == null)
         {
-            _logger.LogWarning("Unable to find a deployment-source that can handle the source '{Source}'.", source);
+            _logger.LogWarning("Unable to find a deployment-source that can handle the source '{ProviderName}'.", providerName);
 
             return null;
         }
@@ -78,7 +78,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         var deployment = new AIDeployment()
         {
             Id = id,
-            ProviderName = source,
+            ProviderName = providerName,
         };
 
         var initializingContext = new InitializingAIDeploymentContext(deployment, data);
@@ -87,8 +87,8 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         var initializedContext = new InitializedAIDeploymentContext(deployment);
         await _handlers.InvokeAsync((handler, ctx) => handler.InitializedAsync(ctx), initializedContext, _logger);
 
-        // Set the source and the connectionName again after calling handlers to prevent handlers from updating the source during initialization.
-        deployment.ProviderName = source;
+        // Set the provider name and the connectionName again after calling handlers to prevent handlers from updating the source during initialization.
+        deployment.ProviderName = providerName;
 
         if (string.IsNullOrEmpty(deployment.Id))
         {

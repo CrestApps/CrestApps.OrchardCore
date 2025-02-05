@@ -14,6 +14,7 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
 {
     private readonly IAIToolsService _toolsService;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IAIDeploymentStore _deploymentStore;
     private readonly DefaultDeepSeekOptions _defaultOptions;
     private readonly AIProviderOptions _providerOptions;
     private readonly ILogger _logger;
@@ -23,10 +24,12 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
         IAIToolsService toolsService,
         IOptions<DefaultDeepSeekOptions> defaultOptions,
         IHttpClientFactory httpClientFactory,
+        IAIDeploymentStore deploymentStore,
         ILogger<DeepSeekCloudChatCompletionService> logger)
     {
         _toolsService = toolsService;
         _httpClientFactory = httpClientFactory;
+        _deploymentStore = deploymentStore;
         _defaultOptions = defaultOptions.Value;
         _providerOptions = providerOptions.Value;
         _logger = logger;
@@ -42,9 +45,20 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
 
         AIProviderConnection connection = null;
 
+        string deploymentName = null;
+
         if (_providerOptions.Providers.TryGetValue(DeepSeekConstants.DeepSeekProviderName, out var entry))
         {
-            var connectionName = "deepseek-cloud";
+            var connectionName = DeepSeekConstants.DefaultCloudConnectionName;
+            deploymentName = entry.DefaultDeploymentName;
+
+            var deployment = await GetDeploymentAsync(context);
+
+            if (deployment is not null)
+            {
+                connectionName = deployment.ConnectionName;
+                deploymentName = deployment.Name;
+            }
 
             if (!string.IsNullOrEmpty(connectionName) && entry.Connections.TryGetValue(connectionName, out var connectionProperties))
             {
@@ -71,9 +85,9 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
 
         try
         {
-            var chatClient = new DeepSeekChatClient(_httpClientFactory, connection.GetModel(false));
+            var chatClient = new DeepSeekChatClient(_httpClientFactory, deploymentName);
 
-            var chatOptions = GetChatOptions(context, metadata, connection);
+            var chatOptions = GetChatOptions(context, metadata, connection.GetApiKey(false), deploymentName);
 
             var data = await chatClient.CompleteAsync(prompts, chatOptions, cancellationToken);
 
@@ -96,7 +110,7 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
         return AIChatCompletionResponse.Empty;
     }
 
-    private ChatOptions GetChatOptions(AIChatCompletionContext context, DeepSeekChatProfileMetadata metadata, AIProviderConnection connection)
+    private ChatOptions GetChatOptions(AIChatCompletionContext context, DeepSeekChatProfileMetadata metadata, string apiKey, string modelName)
     {
         var chatOptions = new ChatOptions()
         {
@@ -108,9 +122,9 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
             AdditionalProperties = [],
         };
 
-        chatOptions.AdditionalProperties.TryAdd("apiKey", connection.GetApiKey(false));
+        chatOptions.AdditionalProperties.TryAdd("apiKey", apiKey);
 
-        if (!context.DisableTools && context.Profile.FunctionNames is not null && context.Profile.FunctionNames.Length > 0 && connection.GetModel(false) != "deepseek-reasoner")
+        if (!context.DisableTools && context.Profile.FunctionNames is not null && context.Profile.FunctionNames.Length > 0 && modelName != "deepseek-reasoner")
         {
             chatOptions.Tools = [];
 
@@ -133,6 +147,16 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
         }
 
         return chatOptions;
+    }
+
+    private async Task<AIDeployment> GetDeploymentAsync(AIChatCompletionContext content)
+    {
+        if (!string.IsNullOrEmpty(content.Profile.DeploymentId))
+        {
+            return await _deploymentStore.FindByIdAsync(content.Profile.DeploymentId);
+        }
+
+        return null;
     }
 
     private static int GetTotalMessagesToSkip(int totalMessages, int pastMessageCount)

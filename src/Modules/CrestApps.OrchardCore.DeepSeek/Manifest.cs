@@ -45,5 +45,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         DeepSeekConstants.Feature.Chat,
+        AIConstants.Feature.Deployments,
     ]
 )]

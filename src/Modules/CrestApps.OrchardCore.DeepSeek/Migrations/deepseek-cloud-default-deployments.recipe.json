@@ -1,0 +1,19 @@
+{
+  "steps": [
+    {
+      "name": "AIDeployment",
+      "deployments": [
+        {
+          "Name": "deepseek-chat",
+          "ProviderName": "DeepSeek",
+          "ConnectionName": "deepseek-cloud"
+        },
+        {
+          "Name": "deepseek-reasoner",
+          "ProviderName": "DeepSeek",
+          "ConnectionName": "deepseek-cloud"
+        }
+      ]
+    }
+  ]
+}

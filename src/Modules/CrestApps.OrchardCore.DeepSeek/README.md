@@ -40,10 +40,11 @@ The **Artificial Intelligence Powered by DeepSeek Cloud Service Chat** feature b
       "Providers":{
         "DeepSeek": {
           "DefaultConnectionName": "deepseek-cloud",
+          "DefaultDeploymentName": "deepseek-chat",
           "Connections": {
             "deepseek-cloud": {
               "ApiKey": "<!-- Your API Key Goes here. -->",
-              "Model": "deepseek-chat"
+              "DefaultDeploymentName": "deepseek-chat"
             }
           }
         }
