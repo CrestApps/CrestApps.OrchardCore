@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.DeepSeek.Core.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -70,9 +71,9 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
 
         try
         {
-            var chatClient = new DeepSeekChatClient(_httpClientFactory, connection.GetDefaultDeploymentName());
+            var chatClient = new DeepSeekChatClient(_httpClientFactory, connection.GetModel(false));
 
-            var chatOptions = GetChatOptions(context, metadata);
+            var chatOptions = GetChatOptions(context, metadata, connection);
 
             var data = await chatClient.CompleteAsync(prompts, chatOptions);
 
@@ -95,7 +96,7 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
         return AIChatCompletionResponse.Empty;
     }
 
-    private ChatOptions GetChatOptions(AIChatCompletionContext context, DeepSeekChatProfileMetadata metadata)
+    private ChatOptions GetChatOptions(AIChatCompletionContext context, DeepSeekChatProfileMetadata metadata, AIProviderConnection connection)
     {
         var chatOptions = new ChatOptions()
         {
@@ -104,11 +105,13 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
             FrequencyPenalty = metadata.FrequencyPenalty ?? _defaultOptions.FrequencyPenalty,
             PresencePenalty = metadata.PresencePenalty ?? _defaultOptions.PresencePenalty,
             MaxOutputTokens = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
+            AdditionalProperties = [],
         };
 
-        if (!context.DisableTools && context.Profile.FunctionNames is not null)
+        chatOptions.AdditionalProperties.TryAdd("apiKey", connection.GetApiKey(false));
+
+        if (!context.DisableTools && context.Profile.FunctionNames is not null && context.Profile.FunctionNames.Length > 0 && connection.GetModel(false) != "deepseek-reasoner")
         {
-            chatOptions.ToolMode = ChatToolMode.Auto;
             chatOptions.Tools = [];
 
             foreach (var functionName in context.Profile.FunctionNames)
@@ -121,6 +124,11 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
                 }
 
                 chatOptions.Tools.Add(function);
+            }
+
+            if (chatOptions.Tools.Count == 0)
+            {
+                chatOptions.Tools = null;
             }
         }
 

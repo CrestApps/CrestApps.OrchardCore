@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.DeepSeek.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Services;
+using CrestApps.OrchardCore.DeepSeek.Services;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
@@ -16,7 +16,9 @@ public sealed class DeepSeekChatClient : IChatClient
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    private const string _defaultModelName = "deepseek-reasoner";
+    private const string _defaultModelName = "deepseek-chat";
+
+    private const string _completionEndpoint = "chat/completions";
 
     private static readonly Uri _baseUri = new("https://api.deepseek.com");
 
@@ -34,22 +36,27 @@ public sealed class DeepSeekChatClient : IChatClient
     {
         var request = GetRequest(chatMessages, options, out var httpClient);
 
-        var response = await httpClient.PostAsJsonAsync("v1/completions", request, cancellationToken);
+        var response = await httpClient.PostAsJsonAsync(_completionEndpoint, request, _jsonSerializerOptions, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            return new ChatCompletion(new ChatMessage(ChatRole.Assistant, "AI model drew blank!"));
+        }
 
         var data = await response.Content.ReadFromJsonAsync<DeepSeekResponse>(_jsonSerializerOptions, cancellationToken);
 
+        var dateTimeOffset = DateTimeOffset.FromUnixTimeSeconds(data.Created);
+
         if (data?.Choices is not null && data.Choices.Count > 0)
         {
-            var forceStop = false;
+            var count = 0;
 
-            if (data.Choices[0].FinishReason == "tool_calls")
+            while (data.Choices[0].FinishReason == "tool_calls")
             {
                 if (options.ToolMode == ChatToolMode.Auto && options?.Tools is not null)
                 {
-                    forceStop = true;
-
                     var functions = new List<AIFunction>();
 
                     foreach (var tool in options.Tools)
@@ -64,24 +71,60 @@ public sealed class DeepSeekChatClient : IChatClient
 
                     if (await ProcessToolCallsAsync(request, data.Choices[0], functions))
                     {
-                        response = await httpClient.PostAsJsonAsync("v1/completions", request, cancellationToken);
-                        response.EnsureSuccessStatusCode();
-                        data = await response.Content.ReadFromJsonAsync<DeepSeekResponse>(_jsonSerializerOptions, cancellationToken);
+                        response = await httpClient.PostAsJsonAsync(_completionEndpoint, request, _jsonSerializerOptions, cancellationToken);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            data = await response.Content.ReadFromJsonAsync<DeepSeekResponse>(_jsonSerializerOptions, cancellationToken);
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        break;
                     }
                 }
-                else
+
+                if (++count >= 3)
                 {
-                    forceStop = true;
+                    break;
                 }
             }
 
-            if (data.Choices.Count > 0 && (data.Choices[0].FinishReason != "tool_calls" || forceStop))
+            if (data.Choices.Count > 0 && data.Choices[0].FinishReason != "tool_calls")
             {
-                return new ChatCompletion(data.Choices.Select(x => GetMessage(x.Message)).ToArray());
+                return new ChatCompletion(data.Choices.Select(x => GetMessage(x.Message)).ToArray())
+                {
+                    FinishReason = new ChatFinishReason(data.Choices[0].FinishReason),
+                    CompletionId = data.Id,
+                    ModelId = data.Model,
+                    CreatedAt = dateTimeOffset.UtcDateTime,
+                    Usage = new UsageDetails
+                    {
+                        InputTokenCount = data.Usage?.PromptTokens,
+                        OutputTokenCount = data.Usage?.CompletionTokens,
+                        TotalTokenCount = data.Usage?.TotalTokens,
+                    },
+                };
             }
         }
 
-        return new ChatCompletion(new ChatMessage(ChatRole.Assistant, "AI model drew blank!"));
+        return new ChatCompletion(new ChatMessage(ChatRole.Assistant, "AI model drew blank!"))
+        {
+            FinishReason = ChatFinishReason.Stop,
+            CompletionId = data.Id,
+            ModelId = data.Model,
+            CreatedAt = dateTimeOffset.UtcDateTime,
+            Usage = new UsageDetails
+            {
+                InputTokenCount = data.Usage?.PromptTokens,
+                OutputTokenCount = data.Usage?.CompletionTokens,
+                TotalTokenCount = data.Usage?.TotalTokens,
+            },
+        };
     }
 
     private DeepSeekRequest GetRequest(IList<ChatMessage> chatMessages, ChatOptions options, out HttpClient httpClient)
@@ -89,6 +132,7 @@ public sealed class DeepSeekChatClient : IChatClient
         httpClient = _httpClientFactory.CreateClient(DeepSeekConstants.DeepSeekProviderName);
 
         httpClient.BaseAddress = _baseUri;
+
         var request = new DeepSeekRequest()
         {
             Model = Metadata.ModelId,
@@ -133,6 +177,7 @@ public sealed class DeepSeekChatClient : IChatClient
             Role = message.Role.Value,
             Content = message.Text,
         }).ToList();
+
         return request;
     }
 
@@ -200,7 +245,7 @@ public sealed class DeepSeekChatClient : IChatClient
 
             if (result is string str)
             {
-                request.Messages.Add(new DeepSeekToolMessage()
+                request.Messages.Add(new DeepSeekMessage()
                 {
                     Role = ChatRole.Tool.Value,
                     ToolCallId = toolCall.Id,
@@ -211,7 +256,7 @@ public sealed class DeepSeekChatClient : IChatClient
             {
                 var resultJson = JsonSerializer.Serialize(result);
 
-                request.Messages.Add(new DeepSeekToolMessage()
+                request.Messages.Add(new DeepSeekMessage()
                 {
                     Role = ChatRole.Tool.Value,
                     ToolCallId = toolCall.Id,

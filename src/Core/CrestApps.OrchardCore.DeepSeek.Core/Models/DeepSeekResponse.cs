@@ -10,5 +10,7 @@ internal sealed class DeepSeekResponse
 
     public string Model { get; set; }
 
+    public DeepSeekUsage Usage { get; set; }
+
     public List<DeepSeekChoice> Choices { get; set; }
 }

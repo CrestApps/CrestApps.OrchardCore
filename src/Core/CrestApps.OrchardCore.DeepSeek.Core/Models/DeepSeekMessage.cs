@@ -6,9 +6,11 @@ internal class DeepSeekMessage
 
     public string Content { get; set; }
 
+    public string Name { get; set; }
+
     public string ReasoningContent { get; set; }
 
     public DeepSeekToolCall[] ToolCalls { get; set; }
 
-    public string Name { get; set; }
+    public string ToolCallId { get; set; }
 }

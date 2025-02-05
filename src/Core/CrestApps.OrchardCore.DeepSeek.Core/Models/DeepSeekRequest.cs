@@ -12,6 +12,10 @@ internal sealed class DeepSeekRequest
 
     public float? Temperature { get; set; }
 
+    public DeepSeekResponseFormat ResponseFormat { get; set; } = DeepSeekResponseFormat.Text;
+
+    public bool Stream { get; set; }
+
     public float? TopP { get; set; }
 
     public float? FrequencyPenalty { get; set; }

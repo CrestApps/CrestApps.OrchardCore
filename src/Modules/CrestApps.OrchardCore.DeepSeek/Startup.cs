@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.DeepSeek.Core;
 using CrestApps.OrchardCore.DeepSeek.Core.Services;
 using CrestApps.OrchardCore.DeepSeek.Drivers;
 using CrestApps.OrchardCore.DeepSeek.Migrations;
-using CrestApps.OrchardCore.OpenAI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;

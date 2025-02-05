@@ -9,7 +9,7 @@ public static class DeepSeekConstants
     - Response must be under 255 characters in length.
     """;
 
-    public const string DeepSeekProviderName = "DeepSeekCloud";
+    public const string DeepSeekProviderName = "DeepSeek";
 
     public const string TechnologyName = "DeepSeek";
 

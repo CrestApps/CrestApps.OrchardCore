@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.DeepSeek.Core;
 using CrestApps.OrchardCore.DeepSeek.Core.Models;
 using CrestApps.OrchardCore.DeepSeek.ViewModels;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -14,17 +13,14 @@ namespace CrestApps.OrchardCore.DeepSeek.Drivers;
 
 public sealed class DeepSeekChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
 {
-    private readonly IAIDeploymentStore _deploymentStore;
     private readonly IServiceProvider _serviceProvider;
 
     internal readonly IStringLocalizer S;
 
     public DeepSeekChatProfileDisplayDriver(
-        IAIDeploymentStore deploymentStore,
         IServiceProvider serviceProvider,
         IStringLocalizer<DeepSeekChatProfileDisplayDriver> stringLocalizer)
     {
-        _deploymentStore = deploymentStore;
         _serviceProvider = serviceProvider;
         S = stringLocalizer;
     }
@@ -38,7 +34,7 @@ public sealed class DeepSeekChatProfileDisplayDriver : DisplayDriver<AIChatProfi
             return null;
         }
 
-        return Initialize<ChatProfileMetadataViewModel>("DeepSeekChatProfileMetadata_Edit", async model =>
+        return Initialize<ChatProfileMetadataViewModel>("DeepSeekChatProfileMetadata_Edit", model =>
         {
             var metadata = profile.As<DeepSeekChatProfileMetadata>();
 
@@ -51,10 +47,6 @@ public sealed class DeepSeekChatProfileDisplayDriver : DisplayDriver<AIChatProfi
             model.TopP = metadata.TopP;
 
             model.IsSystemMessageLocked = profile.GetSettings<DeepSeekChatProfileSettings>().LockSystemMessage;
-
-            var azureDeployments = await _deploymentStore.GetAllAsync();
-
-            model.Deployments = azureDeployments.Select(x => new SelectListItem(x.Name, x.Id));
 
         }).Location("Content:5");
     }

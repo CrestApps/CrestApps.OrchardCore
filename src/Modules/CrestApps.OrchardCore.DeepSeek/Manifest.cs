@@ -11,7 +11,7 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = DeepSeekConstants.Feature.Area,
-    Name = "Artificial Intelligence Powered by DeepSeek",
+    Name = "DeepSeek-Powered Artificial Intelligence",
     Description = "Provides essential services for any DeepSeek technology provider.",
     Category = "Artificial Intelligence",
     EnabledByDependencyOnly = true,
@@ -24,7 +24,7 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = DeepSeekConstants.Feature.Chat,
-    Name = "Artificial Intelligence Powered by DeepSeek Chat",
+    Name = "DeepSeek-Powered Artificial Intelligence Chat",
     Description = "Provides a way to manage AI chat profiles for any DeepSeek provider.",
     Category = "Artificial Intelligence",
     EnabledByDependencyOnly = true,

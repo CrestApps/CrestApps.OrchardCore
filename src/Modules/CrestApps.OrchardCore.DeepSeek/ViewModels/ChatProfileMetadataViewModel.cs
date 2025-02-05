@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.DeepSeek.ViewModels;
 
@@ -14,13 +13,13 @@ public class ChatProfileMetadataViewModel
     [Range(0f, 1f)]
     public float? TopP { get; set; }
 
-    [Range(0f, 1f)]
+    [Range(-2f, 2f)]
     public float? FrequencyPenalty { get; set; }
 
     [Range(0f, 1f)]
     public float? PresencePenalty { get; set; }
 
-    [Range(4, int.MaxValue)]
+    [Range(2, int.MaxValue)]
     public int? MaxTokens { get; set; }
 
     [Range(2, 20)]
@@ -28,7 +27,4 @@ public class ChatProfileMetadataViewModel
 
     [BindNever]
     public bool IsSystemMessageLocked { get; set; }
-
-    [BindNever]
-    public IEnumerable<SelectListItem> Deployments { get; set; }
 }
