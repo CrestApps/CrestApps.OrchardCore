@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.DeepSeek.Core.Models;
 
-internal class DeepSeekMessage
+internal sealed class DeepSeekMessage
 {
     public string Role { get; set; }
 
