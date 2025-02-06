@@ -1,3 +1,4 @@
+using CrestApps.Extensions.AI.DeepSeek;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;

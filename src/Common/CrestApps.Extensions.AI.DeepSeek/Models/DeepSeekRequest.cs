@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.DeepSeek.Core.Models;
+namespace CrestApps.Extensions.AI.DeepSeek.Models;
 
 internal sealed class DeepSeekRequest
 {

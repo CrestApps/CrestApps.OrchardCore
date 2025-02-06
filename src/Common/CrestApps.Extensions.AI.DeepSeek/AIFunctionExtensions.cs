@@ -1,7 +1,7 @@
-using CrestApps.OrchardCore.DeepSeek.Core.Models;
+using CrestApps.Extensions.AI.DeepSeek.Models;
 using Microsoft.Extensions.AI;
 
-namespace CrestApps.OrchardCore.DeepSeek.Services;
+namespace CrestApps.Extensions.AI.DeepSeek;
 
 internal static class AIFunctionExtensions
 {

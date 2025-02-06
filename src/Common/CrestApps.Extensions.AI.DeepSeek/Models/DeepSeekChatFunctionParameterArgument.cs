@@ -1,6 +1,6 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
-namespace CrestApps.OrchardCore.DeepSeek.Core.Models;
+namespace CrestApps.Extensions.AI.DeepSeek.Models;
 
 internal sealed class DeepSeekChatFunctionParameterArgument
 {

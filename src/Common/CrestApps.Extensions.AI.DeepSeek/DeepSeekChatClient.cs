@@ -3,12 +3,11 @@ using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using CrestApps.OrchardCore.DeepSeek.Core.Models;
-using CrestApps.OrchardCore.DeepSeek.Services;
+using CrestApps.Extensions.AI.DeepSeek.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
-namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
+namespace CrestApps.Extensions.AI.DeepSeek;
 
 public sealed class DeepSeekChatClient : IChatClient
 {
@@ -216,7 +215,7 @@ public sealed class DeepSeekChatClient : IChatClient
 
     private DeepSeekRequest GetRequest(IList<ChatMessage> chatMessages, ChatOptions options, out HttpClient httpClient)
     {
-        httpClient = _httpClientFactory.CreateClient(DeepSeekConstants.TechnologyName);
+        httpClient = _httpClientFactory.CreateClient("DeepSeek");
 
         httpClient.BaseAddress = _baseUri;
 
