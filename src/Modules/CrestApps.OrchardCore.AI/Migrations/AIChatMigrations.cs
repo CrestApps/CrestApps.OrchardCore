@@ -18,7 +18,7 @@ public sealed class AIChatMigrations : DataMigration
         await _contentDefinitionManager.AlterPartDefinitionAsync("AIChatProfilePart", part => part
             .Attachable()
             .WithDisplayName("Artificial Intelligence Chat")
-            .WithDescription("Provides a way to add a Artificial Intelligence chat to a content item.")
+            .WithDescription("Provides a way to add a Artificial Intelligence Chat to a content item.")
         );
 
         await _contentDefinitionManager.AlterTypeDefinitionAsync("AIChat", type => type
@@ -28,7 +28,7 @@ public sealed class AIChatMigrations : DataMigration
             .Creatable(false)
             .Versionable(false)
             .DisplayedAs("Artificial Intelligence Chat")
-            .WithDescription("A widget to add a Artificial Intelligence chat.")
+            .WithDescription("A widget to add a Artificial Intelligence Chat.")
             .WithPart("AIChatProfilePart")
             .Stereotype("Widget")
         );

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -12,16 +13,19 @@ public sealed class AIChatProfileDeploymentDisplayDriver : DisplayDriver<AIChatP
 {
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IServiceProvider _serviceProvider;
+    private readonly AIProviderOptions _providerOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIChatProfileDeploymentDisplayDriver(
         IAIDeploymentManager deploymentManager,
         IServiceProvider serviceProvider,
+        IOptions<AIProviderOptions> providerOptions,
         IStringLocalizer<AIChatProfileDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
         _serviceProvider = serviceProvider;
+        _providerOptions = providerOptions.Value;
         S = stringLocalizer;
     }
 
@@ -41,14 +45,25 @@ public sealed class AIChatProfileDeploymentDisplayDriver : DisplayDriver<AIChatP
 
                 if (deployment is not null)
                 {
-                    model.Deployments = (await _deploymentManager.GetAsync(profile.Source, deployment.ConnectionName))
+                    model.Deployments = (await _deploymentManager.GetAsync(profileSource.ProviderName, deployment.ConnectionName))
                     .Select(x => new SelectListItem(x.Name, x.Id));
                 }
             }
-            else if (!string.IsNullOrEmpty(profile.ConnectionName))
+
+            if (model.Deployments is null || !model.Deployments.Any())
             {
-                model.Deployments = (await _deploymentManager.GetAsync(profileSource.ProviderName, profile.ConnectionName))
-                .Select(x => new SelectListItem(x.Name, x.Id));
+                var connectionName = profile.ConnectionName;
+
+                if (string.IsNullOrEmpty(connectionName) && _providerOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
+                {
+                    connectionName = provider.DefaultConnectionName;
+                }
+
+                if (!string.IsNullOrEmpty(connectionName))
+                {
+                    model.Deployments = (await _deploymentManager.GetAsync(profileSource.ProviderName, connectionName))
+                    .Select(x => new SelectListItem(x.Name, x.Id));
+                }
             }
         }).Location("Content:3");
     }

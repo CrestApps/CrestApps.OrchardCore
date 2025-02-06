@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore AI Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Enables seamless management of AI models and profiles, offering advanced features for configuring, deploying, and optimizing AI's capabilities.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS AI</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.DeepSeek.Core\CrestApps.OrchardCore.DeepSeek.Core.csproj" />
+  </ItemGroup>
+
+</Project>

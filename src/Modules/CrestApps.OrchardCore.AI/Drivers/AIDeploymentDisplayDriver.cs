@@ -72,8 +72,6 @@ public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             }
 
             deployment.Name = name;
-
-            return Edit(deployment, context);
         }
 
         if (!_providerOptions.Providers.TryGetValue(deployment.ProviderName, out var provider))
@@ -100,8 +98,8 @@ public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
         }
 
         var anotherExists = (await _deploymentStore.GetAllAsync())
-            .Any(d => d.ProviderName.Equals(deployment.ProviderName, StringComparison.OrdinalIgnoreCase) &&
-            d.ConnectionName.Equals(deployment.ConnectionName, StringComparison.OrdinalIgnoreCase) &&
+            .Any(d => d.ProviderName == deployment.ProviderName &&
+            d.ConnectionName == deployment.ConnectionName &&
             d.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase)
             && d.Id != deployment.Id);
 

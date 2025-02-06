@@ -32,8 +32,8 @@ public static class AIConstants
 
     }
 
-    public static string GetTitleGeneratorProfileName(string source)
+    public static string GetTitleGeneratorProfileName(string profileSource)
     {
-        return $"ChatTitleGenerator{source}";
+        return $"ChatTitleGenerator{profileSource}";
     }
 }

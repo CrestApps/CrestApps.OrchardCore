@@ -11,7 +11,7 @@ public sealed class AzureWithAzureAISearchProfileSource : IAIChatProfileSource
     public AzureWithAzureAISearchProfileSource(IStringLocalizer<AzureProfileSource> S)
     {
         DisplayName = S["Azure OpenAI with Azure AI Search"];
-        Description = S["AI-powered chat using Azure OpenAI models with data from Azure AI Search."];
+        Description = S["Provides AI profiles using Azure OpenAI models with your data."];
     }
 
     public string TechnicalName

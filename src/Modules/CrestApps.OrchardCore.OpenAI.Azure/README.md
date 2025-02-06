@@ -2,11 +2,11 @@
 
 ## Azure OpenAI Services Feature
 
-The **Azure OpenAI-Powered Artificial Intelligence** feature (`CrestApps.OrchardCore.OpenAI.Azure`) provides the primary functionality for integrating with Azure OpenAI. This module is dependency-managed, meaning it is automatically enabled or disabled based on demand. Manual activation or deactivation is not supported.
+The **Azure OpenAI Services** feature (`CrestApps.OrchardCore.OpenAI.Azure`) provides the primary functionality for integrating with Azure OpenAI. This module is dependency-managed, meaning it is automatically enabled or disabled based on demand. Manual activation or deactivation is not supported.
 
-## Azure OpenAI-Powered Artificial Intelligence Deployments Feature
+## Azure OpenAI Deployments Feature
 
-The **Azure OpenAI-Powered Artificial Intelligence Deployments** feature (`CrestApps.OrchardCore.OpenAI.Azure.Deployments`) enables integration with Azure OpenAI deployments. Initially, certain UI features for creating Azure deployments were unavailable. To create a deployment, use the **Azure AI Foundry** portal, then configure it in the UI by selecting the `Azure` source and entering the deployment name.
+The **Azure OpenAI Deployments** feature (`CrestApps.OrchardCore.OpenAI.Azure.Deployments`) enables integration with Azure OpenAI deployments. Initially, certain UI features for creating Azure deployments were unavailable. To create a deployment, use the **Azure AI Foundry** portal, then configure it in the UI by selecting the `Azure` source and entering the deployment name.
 
 Before utilizing this feature, ensure that the required services are configured. These can be set up in various ways. Below is an example of configuring these services within the `appsettings.json` file:
 
@@ -90,12 +90,12 @@ Alternatively, if you have multiple connections, specify which ones to import. F
 }
 ```
 
-## Azure OpenAI-Powered Artificial Intelligence Chat Feature
+## Azure OpenAI Chat Feature
 
-The **Azure OpenAI-Powered Artificial Intelligence Chat** feature (`CrestApps.OrchardCore.OpenAI.Azure.Standard`) enables the creation of AI Chat Profiles using Azure OpenAI services.
+The **Azure OpenAI Chat** feature (`CrestApps.OrchardCore.OpenAI.Azure.Standard`) enables the creation of AI Chat Profiles using Azure OpenAI services.
 
 !!! info
-    This feature depends on the **Azure OpenAI-Powered Artificial Intelligence Deployments** feature. Be sure to configure it properly before using this feature.
+    This feature depends on the **Azure OpenAI Deployments** feature. Be sure to configure it properly before using this feature.
 
 ### Recipes
 
@@ -116,6 +116,7 @@ When using the Recipes feature, you can create an Azure profile with the followi
           "Type": "Chat",
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
+          "ConnectionName":"<!-- The connection name to use for the deployment; if left blank, the default connection will be used. -->",
           "DeploymentId":"<!-- A deployment ID for the deployment; if left blank, the default deployment will be used. -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",
           "Properties": 
@@ -137,9 +138,9 @@ When using the Recipes feature, you can create an Azure profile with the followi
 }
 ```
 
-## Azure OpenAI-Powered Artificial Intelligence Chat with Azure AI Search Feature
+## Azure OpenAI Chat with Your Data Feature
 
-The **Azure OpenAI-Powered Artificial Intelligence Chat with Azure AI Search** feature (`CrestApps.OrchardCore.OpenAI.Azure.AISearch`) enables the use of Azure OpenAI services on custom data stored in an Azure AI Search index to create AI Chat Profiles. Enabling this module will automatically activate the **Azure AI Search** feature within OrchardCore. To connect your AI chat, navigate to `Search` > `Indexing` > `Azure AI Indices` and add an index.
+The **Azure OpenAI Chat with Your Data** feature (`CrestApps.OrchardCore.OpenAI.Azure.AISearch`) enables the use of Azure OpenAI services on custom data stored in an Azure AI Search index to create AI Chat Profiles. Enabling this module will automatically activate the **Azure AI Search** feature within OrchardCore. To connect your AI chat, navigate to `Search` > `Indexing` > `Azure AI Indices` and add an index.
 
 !!! info
     This feature depends on the **Azure OpenAI Deployments** feature. Ensure the **Azure OpenAI Deployments** feature is configured first.
@@ -162,7 +163,7 @@ When using the Recipes feature, you can create an Azure profile with the followi
           "FunctionNames": [],
           "Type": "Chat",
           "TitleType": "InitialPrompt",
-          "PromptTemplate": null,
+          "ConnectionName":"<!-- The connection name to use for the deployment; if left blank, the default connection will be used. -->",
           "DeploymentId":"<!-- A deployment ID for the deployment; if left blank, the default deployment will be used. -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",
           "Properties": 

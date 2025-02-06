@@ -11,8 +11,8 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = AzureOpenAIConstants.Feature.Area,
-    Name = "Azure OpenAI-Powered Artificial Intelligence",
-    Description = "AI-powered chat using Azure OpenAI models.",
+    Name = "Azure OpenAI Services",
+    Description = "Provides AI services using Azure OpenAI models.",
     Category = "Artificial Intelligence",
     EnabledByDependencyOnly = true,
     Dependencies =
@@ -23,8 +23,8 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = AzureOpenAIConstants.Feature.Deployments,
-    Name = "Azure OpenAI-Powered Artificial Intelligence Azure Deployments",
-    Description = "AI deployments utilizing models available through Azure OpenAI.",
+    Name = "Azure OpenAI Deployments",
+    Description = "Manages AI deployments using Azure OpenAI models.",
     Category = "Artificial Intelligence",
     Dependencies =
     [
@@ -35,8 +35,8 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = AzureOpenAIConstants.Feature.Standard,
-    Name = "Azure OpenAI-Powered Artificial Intelligence Chat",
-    Description = "AI-powered chat using Azure OpenAI models.",
+    Name = "Azure OpenAI Chat",
+    Description = "Provides AI services using Azure OpenAI models.",
     Category = "Artificial Intelligence",
     Dependencies =
     [
@@ -47,8 +47,8 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = AzureOpenAIConstants.Feature.AISearch,
-    Name = "Azure OpenAI-Powered Artificial Intelligence Chat with Azure AI Search",
-    Description = "AI-powered chat using Azure OpenAI models with data from Azure AI Search.",
+    Name = "Azure OpenAI Chat with Your Data",
+    Description = "AI chat using Azure OpenAI models with Azure AI Search data.",
     Category = "Artificial Intelligence",
     Dependencies =
     [
