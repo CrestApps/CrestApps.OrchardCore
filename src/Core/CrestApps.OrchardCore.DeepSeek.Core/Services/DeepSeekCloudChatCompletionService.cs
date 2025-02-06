@@ -1,20 +1,22 @@
-using CrestApps.Extensions.AI.DeepSeek;
+using System.ClientModel;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.DeepSeek.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenAI;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
 
 public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionService
 {
+    private readonly IDistributedCache _distributedCache;
     private readonly IAIToolsService _toolsService;
-    private readonly IHttpClientFactory _httpClientFactory;
     private readonly IAIDeploymentStore _deploymentStore;
     private readonly DefaultDeepSeekOptions _defaultOptions;
     private readonly AIProviderOptions _providerOptions;
@@ -22,14 +24,14 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
 
     public DeepSeekCloudChatCompletionService(
         IOptions<AIProviderOptions> providerOptions,
+        IDistributedCache distributedCache,
         IAIToolsService toolsService,
         IOptions<DefaultDeepSeekOptions> defaultOptions,
-        IHttpClientFactory httpClientFactory,
         IAIDeploymentStore deploymentStore,
         ILogger<DeepSeekCloudChatCompletionService> logger)
     {
+        _distributedCache = distributedCache;
         _toolsService = toolsService;
-        _httpClientFactory = httpClientFactory;
         _deploymentStore = deploymentStore;
         _defaultOptions = defaultOptions.Value;
         _providerOptions = providerOptions.Value;
@@ -85,9 +87,9 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
 
         try
         {
-            var chatClient = new DeepSeekChatClient(_httpClientFactory, deploymentName, _logger);
+            var chatClient = GetChatClient(connection.GetApiKey(false), deploymentName);
 
-            var chatOptions = GetChatOptions(context, metadata, connection.GetApiKey(false), deploymentName);
+            var chatOptions = GetChatOptions(context, metadata, deploymentName);
 
             var data = await chatClient.CompleteAsync(prompts, chatOptions, cancellationToken);
 
@@ -110,7 +112,30 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
         return AIChatCompletionResponse.Empty;
     }
 
-    private ChatOptions GetChatOptions(AIChatCompletionContext context, DeepSeekChatProfileMetadata metadata, string apiKey, string modelName)
+    private IChatClient GetChatClient(string apiKey, string modelId)
+    {
+        var client = new OpenAIClient(new ApiKeyCredential(apiKey), new OpenAIClientOptions()
+        {
+            Endpoint = new Uri("https://api.deepseek.com/v1"),
+        });
+
+        var builder = new ChatClientBuilder(client.AsChatClient(modelId))
+            .UseDistributedCache(_distributedCache);
+
+        if (modelId != "deepseek-reasoner")
+        {
+            // The 'deepseek-reasoner' model does not support tool calling.
+            builder.UseFunctionInvocation(null, (r) =>
+            {
+                // Set the maximum number of iterations per request to 1 to prevent infinite function calling.
+                r.MaximumIterationsPerRequest = 1;
+            });
+        }
+
+        return builder.Build();
+    }
+
+    private ChatOptions GetChatOptions(AIChatCompletionContext context, DeepSeekChatProfileMetadata metadata, string modelName)
     {
         var chatOptions = new ChatOptions()
         {
@@ -119,10 +144,6 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
             FrequencyPenalty = metadata.FrequencyPenalty ?? _defaultOptions.FrequencyPenalty,
             PresencePenalty = metadata.PresencePenalty ?? _defaultOptions.PresencePenalty,
             MaxOutputTokens = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
-            AdditionalProperties = new AdditionalPropertiesDictionary()
-            {
-                { "ApiKey", apiKey },
-            }
         };
 
         // The 'deepseek-reasoner' model does not support tool calling.

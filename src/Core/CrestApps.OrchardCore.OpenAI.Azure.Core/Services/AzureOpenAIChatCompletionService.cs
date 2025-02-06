@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Core.Models;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
@@ -14,6 +15,7 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 public sealed class AzureOpenAIChatCompletionService : IAIChatCompletionService
 {
     private readonly IAIDeploymentStore _deploymentStore;
+    private readonly IDistributedCache _distributedCache;
     private readonly IAIToolsService _toolsService;
     private readonly DefaultOpenAIOptions _defaultOptions;
     private readonly AIProviderOptions _providerOptions;
@@ -21,12 +23,14 @@ public sealed class AzureOpenAIChatCompletionService : IAIChatCompletionService
 
     public AzureOpenAIChatCompletionService(
         IAIDeploymentStore deploymentStore,
+        IDistributedCache distributedCache,
         IOptions<AIProviderOptions> providerOptions,
         IAIToolsService toolsService,
         IOptions<DefaultOpenAIOptions> defaultOptions,
         ILogger<AzureOpenAIChatCompletionService> logger)
     {
         _deploymentStore = deploymentStore;
+        _distributedCache = distributedCache;
         _toolsService = toolsService;
         _defaultOptions = defaultOptions.Value;
         _providerOptions = providerOptions.Value;
@@ -169,7 +173,7 @@ public sealed class AzureOpenAIChatCompletionService : IAIChatCompletionService
         return null;
     }
 
-    private static IChatClient GetChatClient(AIProviderConnection connection, string deploymentName)
+    private IChatClient GetChatClient(AIProviderConnection connection, string deploymentName)
     {
         var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
 
@@ -178,7 +182,11 @@ public sealed class AzureOpenAIChatCompletionService : IAIChatCompletionService
         return azureClient
             .AsChatClient(deploymentName)
             .AsBuilder()
-            .UseFunctionInvocation()
-            .Build();
+            .UseDistributedCache(_distributedCache)
+            .UseFunctionInvocation(null, (options) =>
+            {
+                // Set the maximum number of iterations per request to 1 as a safe net to prevent infinite function calling.
+                options.MaximumIterationsPerRequest = 1;
+            }).Build();
     }
 }
