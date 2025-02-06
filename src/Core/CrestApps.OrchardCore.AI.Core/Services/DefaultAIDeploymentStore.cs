@@ -71,9 +71,9 @@ public sealed class DefaultAIDeploymentStore : IAIDeploymentStore
             deployment.Id = IdGenerator.GenerateId();
         }
 
-        if (document.Deployments.Values.Any(x => x.ProviderName.Equals(deployment.ProviderName, StringComparison.OrdinalIgnoreCase) && x.ConnectionName.Equals(deployment.ConnectionName, StringComparison.OrdinalIgnoreCase) && x.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase) && x.Id != deployment.Id))
+        if (document.Deployments.Values.Any(x => x.ProviderName == deployment.ProviderName && x.ConnectionName == deployment.ConnectionName && x.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase) && x.Id != deployment.Id))
         {
-            throw new InvalidOperationException("The is already another deployment with the same name.");
+            throw new InvalidOperationException("There is already another deployment with the same name.");
         }
 
         document.Deployments[deployment.Id] = deployment;

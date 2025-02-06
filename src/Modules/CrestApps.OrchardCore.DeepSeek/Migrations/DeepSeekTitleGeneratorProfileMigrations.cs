@@ -20,9 +20,9 @@ internal sealed class DeepSeekTitleGeneratorProfileMigrations : DataMigration
 
     public async Task<int> CreateAsync()
     {
-        var profile = await _chatProfileManager.NewAsync(DeepSeekCloudChatProfileSource.Key);
+        var profile = await _chatProfileManager.NewAsync(DeepSeekAIDeploymentProvider.ProviderName);
 
-        profile.Name = AIConstants.GetTitleGeneratorProfileName(DeepSeekCloudChatProfileSource.Key);
+        profile.Name = AIConstants.GetTitleGeneratorProfileName(DeepSeekAIDeploymentProvider.ProviderName);
         profile.DisplayText = "Chat Title Generator";
         profile.Type = AIChatProfileType.Utility;
 

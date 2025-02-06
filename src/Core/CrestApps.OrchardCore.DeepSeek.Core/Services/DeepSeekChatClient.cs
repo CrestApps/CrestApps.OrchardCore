@@ -6,11 +6,13 @@ using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.DeepSeek.Core.Models;
 using CrestApps.OrchardCore.DeepSeek.Services;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
 
 public sealed class DeepSeekChatClient : IChatClient
 {
+    private static readonly Uri _baseUri = new("https://api.deepseek.com");
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -18,19 +20,20 @@ public sealed class DeepSeekChatClient : IChatClient
     };
 
     private const string _defaultModelName = "deepseek-chat";
-
     private const string _completionEndpoint = "chat/completions";
 
-    private static readonly Uri _baseUri = new("https://api.deepseek.com");
-
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger _logger;
 
     public ChatClientMetadata Metadata { get; }
 
-    public DeepSeekChatClient(IHttpClientFactory httpClientFactory, string modelName = null)
+    public DeepSeekChatClient(IHttpClientFactory httpClientFactory, string modelName = null, ILogger logger = null)
     {
-        Metadata = new ChatClientMetadata(DeepSeekConstants.DeepSeekProviderName, _baseUri, string.IsNullOrEmpty(modelName) ? _defaultModelName : modelName);
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
+
         _httpClientFactory = httpClientFactory;
+        _logger = logger;
+        Metadata = new ChatClientMetadata("DeepSeek", _baseUri, string.IsNullOrEmpty(modelName) ? _defaultModelName : modelName);
     }
 
     public async Task<ChatCompletion> CompleteAsync(IList<ChatMessage> chatMessages, ChatOptions options = null, CancellationToken cancellationToken = default)
@@ -41,7 +44,12 @@ public sealed class DeepSeekChatClient : IChatClient
 
         if (!response.IsSuccessStatusCode)
         {
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (_logger is not null)
+            {
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                _logger.LogError("Request failed with status code {StatusCode}: {Body}", response.StatusCode, body);
+            }
 
             return new ChatCompletion(new ChatMessage(ChatRole.Assistant, content: null));
         }
@@ -75,6 +83,12 @@ public sealed class DeepSeekChatClient : IChatClient
                         if (response.IsSuccessStatusCode)
                         {
                             data = await response.Content.ReadFromJsonAsync<DeepSeekResponse>(_jsonSerializerOptions, cancellationToken);
+                        }
+                        else if (_logger is not null)
+                        {
+                            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                            _logger.LogError("Request failed with status code {StatusCode}: {Body}", response.StatusCode, body);
                         }
                     }
                 }
@@ -140,6 +154,8 @@ public sealed class DeepSeekChatClient : IChatClient
         {
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
+            _logger?.LogError("Request failed with status code {StatusCode}: {Body}", response.StatusCode, body);
+
             throw new HttpRequestException($"Request failed with status code {response.StatusCode}: {body}");
         }
 
@@ -200,7 +216,7 @@ public sealed class DeepSeekChatClient : IChatClient
 
     private DeepSeekRequest GetRequest(IList<ChatMessage> chatMessages, ChatOptions options, out HttpClient httpClient)
     {
-        httpClient = _httpClientFactory.CreateClient(DeepSeekConstants.DeepSeekProviderName);
+        httpClient = _httpClientFactory.CreateClient(DeepSeekConstants.TechnologyName);
 
         httpClient.BaseAddress = _baseUri;
 
@@ -211,7 +227,7 @@ public sealed class DeepSeekChatClient : IChatClient
 
         if (options is not null)
         {
-            if (options?.AdditionalProperties is not null && options.AdditionalProperties.TryGetValue("apiKey", out var apiKey))
+            if (options?.AdditionalProperties is not null && options.AdditionalProperties.TryGetValue("ApiKey", out var apiKey))
             {
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey.ToString());
             }

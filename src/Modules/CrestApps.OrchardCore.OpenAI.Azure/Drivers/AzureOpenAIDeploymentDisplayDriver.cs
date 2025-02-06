@@ -23,7 +23,7 @@ public sealed class AzureOpenAIDeploymentDisplayDriver : DisplayDriver<AIDeploym
     {
         if (deployment.ProviderName != AzureOpenAIConstants.AzureProviderName)
         {
-            return null;
+            return Task.FromResult<IDisplayResult>(null);
         }
 
         return EditAsync(deployment, context);

@@ -11,7 +11,7 @@ public static class ServiceCollectionExtensions
     {
         services
             .AddTransient<IConfigureOptions<DefaultDeepSeekOptions>, DefaultDeepSeekOptionsConfiguration>()
-            .AddHttpClient(DeepSeekConstants.DeepSeekProviderName)
+            .AddHttpClient(DeepSeekConstants.TechnologyName)
             .AddStandardResilienceHandler(options =>
             {
                 options.Retry = new HttpRetryStrategyOptions

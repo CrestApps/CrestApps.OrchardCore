@@ -126,7 +126,8 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
 
-        var deployments = (await _deploymentStore.GetAllAsync()).Where(deployment => deployment.ProviderName == providerName);
+        var deployments = (await _deploymentStore.GetAllAsync())
+            .Where(deployment => deployment.ProviderName == providerName);
 
         foreach (var deployment in deployments)
         {
@@ -141,7 +142,8 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         ArgumentException.ThrowIfNullOrEmpty(providerName);
         ArgumentException.ThrowIfNullOrEmpty(connectionName);
 
-        var deployments = (await _deploymentStore.GetAllAsync()).Where(deployment => deployment.ProviderName == providerName && deployment.ConnectionName == connectionName);
+        var deployments = (await _deploymentStore.GetAllAsync())
+            .Where(deployment => deployment.ProviderName == providerName && deployment.ConnectionName == connectionName);
 
         foreach (var deployment in deployments)
         {
@@ -193,5 +195,18 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         var loadedContext = new LoadedAIDeploymentContext(deployment);
 
         return _handlers.InvokeAsync((handler, context) => handler.LoadedAsync(context), loadedContext, _logger);
+    }
+
+    public async Task<AIDeployment> FindAsync(string providerName, string deploymentName)
+    {
+        var deployment = (await _deploymentStore.GetAllAsync())
+            .FirstOrDefault(x => x.ProviderName == providerName && x.Name.Equals(deploymentName, StringComparison.OrdinalIgnoreCase));
+
+        if (deployment is not null)
+        {
+            await LoadAsync(deployment);
+        }
+
+        return deployment;
     }
 }

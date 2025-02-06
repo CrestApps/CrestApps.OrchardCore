@@ -5,8 +5,6 @@ namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
 
 public sealed class DeepSeekCloudChatProfileSource : IAIChatProfileSource
 {
-    public const string Key = "DeepSeekCloud";
-
     public DeepSeekCloudChatProfileSource(IStringLocalizer<DeepSeekCloudChatProfileSource> S)
     {
         DisplayName = S["DeepSeek Cloud Service"];
@@ -14,10 +12,10 @@ public sealed class DeepSeekCloudChatProfileSource : IAIChatProfileSource
     }
 
     public string TechnicalName
-        => Key;
+        => DeepSeekAIDeploymentProvider.ProviderName;
 
     public string ProviderName
-        => DeepSeekConstants.DeepSeekProviderName;
+        => DeepSeekAIDeploymentProvider.ProviderName;
 
     public string TechnologyName
         => DeepSeekConstants.TechnologyName;

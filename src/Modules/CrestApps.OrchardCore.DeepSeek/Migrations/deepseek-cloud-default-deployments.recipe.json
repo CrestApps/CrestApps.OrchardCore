@@ -5,12 +5,12 @@
       "deployments": [
         {
           "Name": "deepseek-chat",
-          "ProviderName": "DeepSeek",
+          "ProviderName": "DeepSeekCloud",
           "ConnectionName": "deepseek-cloud"
         },
         {
           "Name": "deepseek-reasoner",
-          "ProviderName": "DeepSeek",
+          "ProviderName": "DeepSeekCloud",
           "ConnectionName": "deepseek-cloud"
         }
       ]

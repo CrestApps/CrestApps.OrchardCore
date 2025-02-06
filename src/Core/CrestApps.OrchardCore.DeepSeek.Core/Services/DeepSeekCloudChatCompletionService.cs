@@ -35,8 +35,7 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
         _logger = logger;
     }
 
-    public string Name
-        => DeepSeekCloudChatProfileSource.Key;
+    public string Name { get; } = DeepSeekAIDeploymentProvider.ProviderName;
 
     public async Task<AIChatCompletionResponse> ChatAsync(IEnumerable<ChatMessage> messages, AIChatCompletionContext context, CancellationToken cancellationToken = default)
     {
@@ -47,7 +46,7 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
 
         string deploymentName = null;
 
-        if (_providerOptions.Providers.TryGetValue(DeepSeekConstants.DeepSeekProviderName, out var entry))
+        if (_providerOptions.Providers.TryGetValue(DeepSeekAIDeploymentProvider.ProviderName, out var entry))
         {
             var connectionName = DeepSeekConstants.DefaultCloudConnectionName;
             deploymentName = entry.DefaultDeploymentName;
@@ -85,7 +84,7 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
 
         try
         {
-            var chatClient = new DeepSeekChatClient(_httpClientFactory, deploymentName);
+            var chatClient = new DeepSeekChatClient(_httpClientFactory, deploymentName, _logger);
 
             var chatOptions = GetChatOptions(context, metadata, connection.GetApiKey(false), deploymentName);
 
@@ -119,12 +118,16 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
             FrequencyPenalty = metadata.FrequencyPenalty ?? _defaultOptions.FrequencyPenalty,
             PresencePenalty = metadata.PresencePenalty ?? _defaultOptions.PresencePenalty,
             MaxOutputTokens = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
-            AdditionalProperties = [],
+            AdditionalProperties = new AdditionalPropertiesDictionary()
+            {
+                { "ApiKey", apiKey },
+            }
         };
 
-        chatOptions.AdditionalProperties.TryAdd("apiKey", apiKey);
-
-        if (!context.DisableTools && context.Profile.FunctionNames is not null && context.Profile.FunctionNames.Length > 0 && modelName != "deepseek-reasoner")
+        // The 'deepseek-reasoner' model does not support tool calling.
+        if (!context.DisableTools && context.Profile.FunctionNames is not null &&
+            context.Profile.FunctionNames.Length > 0 &&
+            modelName != "deepseek-reasoner")
         {
             chatOptions.Tools = [];
 

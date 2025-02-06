@@ -54,13 +54,33 @@ public sealed class AIDeploymentStep : NamedRecipeStepHandler
                     continue;
                 }
 
-                deployment = await _deploymentManager.NewAsync(providerName, token);
+                var name = token[nameof(AIDeployment.Name)]?.GetValue<string>();
 
-                if (deployment == null)
+                if (string.IsNullOrEmpty(name))
                 {
-                    context.Errors.Add(S["Unable to find a provider with the name '{ProviderName}'.", providerName]);
+                    context.Errors.Add(S["Could not find deployment name. The deployment will not be imported"]);
 
                     continue;
+                }
+
+                deployment = await _deploymentManager.FindAsync(providerName, name);
+
+                if (deployment is null)
+                {
+                    // If we get this far and deployment is still null, we need to create a new deployment
+
+                    deployment = await _deploymentManager.NewAsync(providerName, token);
+
+                    if (deployment == null)
+                    {
+                        context.Errors.Add(S["Unable to find a provider with the name '{ProviderName}'.", providerName]);
+
+                        continue;
+                    }
+                }
+                else
+                {
+                    await _deploymentManager.UpdateAsync(deployment, token);
                 }
             }
 
