@@ -10,9 +10,10 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = AIConstants.Feature.Area,
-    Name = "Artificial Intelligence",
+    Name = "AI Services",
     Description = "Provides AI services.",
     Category = "Artificial Intelligence",
+    EnabledByDependencyOnly = true,
     Dependencies =
     [
         "OrchardCore.Markdown",

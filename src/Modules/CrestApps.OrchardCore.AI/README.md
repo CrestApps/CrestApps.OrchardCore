@@ -220,7 +220,7 @@ If you're using the Recipes module, you can create or update AI chat profiles us
           "Type": "Chat",
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
-          "ConnectionName":"<!-- The connection name to use for the deployment; if left blank, the default connection will be used. -->","
+          "ConnectionName":"<!-- The connection name to use for the deployment; if left blank, the default connection will be used. -->",
           "DeploymentId":"<!-- A deployment ID for the deployment; if left blank, the default deployment will be used. -->",
           "SystemMessage": "You are an AI assistant that helps people find information.",
           "Properties": {

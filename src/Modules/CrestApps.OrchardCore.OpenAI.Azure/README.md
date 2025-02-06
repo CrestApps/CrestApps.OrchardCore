@@ -116,7 +116,7 @@ When using the Recipes feature, you can create an Azure profile with the followi
           "Type": "Chat",
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
-          "ConnectionName":"<!-- The connection name to use for the deployment; if left blank, the default connection will be used. -->","
+          "ConnectionName":"<!-- The connection name to use for the deployment; if left blank, the default connection will be used. -->",
           "DeploymentId":"<!-- A deployment ID for the deployment; if left blank, the default deployment will be used. -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",
           "Properties": 
@@ -163,7 +163,7 @@ When using the Recipes feature, you can create an Azure profile with the followi
           "FunctionNames": [],
           "Type": "Chat",
           "TitleType": "InitialPrompt",
-          "ConnectionName":"<!-- The connection name to use for the deployment; if left blank, the default connection will be used. -->","
+          "ConnectionName":"<!-- The connection name to use for the deployment; if left blank, the default connection will be used. -->",
           "DeploymentId":"<!-- A deployment ID for the deployment; if left blank, the default deployment will be used. -->",
           "SystemMessage":"You are an AI assistant that helps people find information.",
           "Properties": 

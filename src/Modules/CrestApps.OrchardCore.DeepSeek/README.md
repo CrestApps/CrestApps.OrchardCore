@@ -38,7 +38,7 @@ The **DeepSeek Cloud AI Chat** feature builds upon the core **DeepSeek AI Servic
   "OrchardCore":{
     "CrestApps_AI":{
       "Providers":{
-        "DeepSeek": {
+        "DeepSeekCloud": {
           "DefaultConnectionName": "deepseek-cloud",
           "DefaultDeploymentName": "deepseek-chat",
           "Connections": {
