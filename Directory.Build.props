@@ -27,6 +27,7 @@
     <IsPackable>true</IsPackable>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/CrestApps/CrestApps.OrchardCore</RepositoryUrl>
+    <CompanyUrl>https://crestapps.com</CompanyUrl>
     <CrestAppsDescription>CrestApps enhances the capabilities of Orchard Core, a modular and multi-tenant application framework built on ASP.NET Core. By leveraging Orchard Core's powerful foundation for creating dynamic, data-driven websites and applications, CrestApps introduces additional features and tools that empower developers to build more flexible, scalable, and feature-rich solutions.</CrestAppsDescription>
     <PackageTags>CrestApps OrchardCore</PackageTags>
   </PropertyGroup>
