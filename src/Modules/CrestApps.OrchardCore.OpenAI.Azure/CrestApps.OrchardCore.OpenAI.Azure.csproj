@@ -3,7 +3,7 @@
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
-    <Title>CrestApps OrchardCore OpenAI Azure Module</Title>
+    <Title>CrestApps OrchardCore Azure OpenAI Module</Title>
     <Description>
       $(CrestAppsDescription)
 
