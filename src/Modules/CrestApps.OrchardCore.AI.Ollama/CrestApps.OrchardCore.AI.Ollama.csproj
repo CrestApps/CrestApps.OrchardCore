@@ -1,6 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore AI Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Provides a way to chat against any Ollama models.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS AI</PackageTags>
+  </PropertyGroup>
+
+
+  <PropertyGroup>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
   </PropertyGroup>
 
@@ -15,6 +28,7 @@
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
   </ItemGroup>
 
   <ItemGroup>
