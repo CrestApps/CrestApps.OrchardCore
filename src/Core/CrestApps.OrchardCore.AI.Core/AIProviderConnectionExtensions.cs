@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.AI.Core;
 public static class AIProviderConnectionExtensions
 {
     public static string GetDefaultDeploymentName(this AIProviderConnection entry, bool throwException = true)
-        => entry.GetStringValue("GetDefaultDeploymentName", throwException);
+        => entry.GetStringValue("DefaultDeploymentName", throwException);
 
     public static string GetStringValue(this AIProviderConnection entry, string key, bool throwException = false)
     {
