@@ -4,12 +4,9 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <OrchardCoreVersion>[2.1.0,3.0.0)</OrchardCoreVersion>
   </PropertyGroup>
+
   <ItemGroup>
     <!-- OrchardCore Packages -->
-    <PackageVersion Include="Azure.AI.OpenAI" Version="2.1.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI" Version="9.1.0-preview.1.25064.3" />
-    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.1.0-preview.1.25064.3" />
-    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.1.0-preview.1.25064.3" />
     <PackageVersion Include="OrchardCore.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Application.Cms.Core.Targets" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentFields" Version="$(OrchardCoreVersion)" />
@@ -41,22 +38,50 @@
     <PackageVersion Include="TheComingSoonTheme" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheTheme" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="SafeMode" Version="$(OrchardCoreVersion)" />
-    <!-- Miscellaneous Packages -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Microsoft Packages -->
+    <PackageVersion Include="Azure.AI.OpenAI" Version="2.1.0" />
     <PackageVersion Include="Azure.Identity" Version="1.13.1" />
     <PackageVersion Include="Azure.ResourceManager.CognitiveServices" Version="1.4.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="9.1.0-preview.1.25064.3" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.1.0-preview.1.25064.3" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Ollama" Version="9.1.0-preview.1.25064.3" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.1.0-preview.1.25064.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Miscellaneous Packages -->
     <PackageVersion Include="NuGet.Versioning" Version="6.12.1" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.1.1" />
     <PackageVersion Include="Markdig" Version="0.39.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Testing Packages -->
     <PackageVersion Include="coverlet.collector" Version="6.0.3" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.0" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Aspire Packages -->
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="9.0.0" />
+    <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="9.1.1-beta.169" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <!-- .Net9 Packages -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.0" />
   </ItemGroup>
+
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <!-- .Net8 Packages -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="8.10.0" />
   </ItemGroup>
+
 </Project>

@@ -3,11 +3,11 @@
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
-    <Title>CrestApps OrchardCore AI Module</Title>
+    <Title>CrestApps OrchardCore DeepSeek Module</Title>
     <Description>
       $(CrestAppsDescription)
 
-      Enables seamless management of AI models and profiles, offering advanced features for configuring, deploying, and optimizing AI's capabilities.
+      Enables implemnation
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS AI</PackageTags>
   </PropertyGroup>
