@@ -1,6 +1,6 @@
-namespace CrestApps.OrchardCore.OpenAI.Core.Models;
+namespace CrestApps.OrchardCore.AI.Core.Models;
 
-public sealed class DefaultOpenAIOptions
+public sealed class DefaultAIOptions
 {
     public float Temperature = 0;
 

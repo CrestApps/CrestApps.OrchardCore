@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.AI.Models;
 
-namespace CrestApps.OrchardCore.AI;
+namespace CrestApps.OrchardCore.AI.Core;
 
 public interface IAIChatProfileManagerSession
 {

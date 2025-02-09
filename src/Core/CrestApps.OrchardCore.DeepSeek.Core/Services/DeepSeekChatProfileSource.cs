@@ -3,12 +3,12 @@ using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
 
-public sealed class DeepSeekCloudChatProfileSource : IAIChatProfileSource
+public sealed class DeepSeekChatProfileSource : IAIChatProfileSource
 {
-    public DeepSeekCloudChatProfileSource(IStringLocalizer<DeepSeekCloudChatProfileSource> S)
+    public DeepSeekChatProfileSource(IStringLocalizer<DeepSeekChatProfileSource> S)
     {
-        DisplayName = S["DeepSeek Cloud Service"];
-        Description = S["AI-powered chat using DeepSeek Cloud Service."];
+        DisplayName = S["DeepSeek Service"];
+        Description = S["AI-powered chat using DeepSeek Service."];
     }
 
     public string TechnicalName
@@ -16,9 +16,6 @@ public sealed class DeepSeekCloudChatProfileSource : IAIChatProfileSource
 
     public string ProviderName
         => DeepSeekAIDeploymentProvider.ProviderName;
-
-    public string TechnologyName
-        => DeepSeekConstants.TechnologyName;
 
     public LocalizedString DisplayName { get; }
 

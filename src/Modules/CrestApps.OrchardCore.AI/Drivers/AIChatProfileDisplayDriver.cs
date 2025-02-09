@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
 using OrchardCore.Liquid;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -118,7 +120,22 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
             }).ToArray();
         }).Location("Content:5");
 
-        return Combine(mainFieldsResult, connectionFieldResult, fieldsResult);
+        var parametersResult = Initialize<ChatProfileMetadataViewModel>("AIChatProfileParameters_Edit", model =>
+        {
+            var metadata = profile.As<AIChatProfileMetadata>();
+
+            model.SystemMessage = metadata.SystemMessage;
+            model.FrequencyPenalty = metadata.FrequencyPenalty;
+            model.PastMessagesCount = metadata.PastMessagesCount;
+            model.PresencePenalty = metadata.PresencePenalty;
+            model.Temperature = metadata.Temperature;
+            model.MaxTokens = metadata.MaxTokens;
+            model.TopP = metadata.TopP;
+
+            model.IsSystemMessageLocked = profile.GetSettings<AIChatProfileSettings>().LockSystemMessage;
+        }).Location("Content:10");
+
+        return Combine(mainFieldsResult, connectionFieldResult, fieldsResult, parametersResult);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIChatProfile profile, UpdateEditorContext context)
@@ -205,6 +222,28 @@ public sealed class AIChatProfileDisplayDriver : DisplayDriver<AIChatProfile>
                 .Intersect(selectedFunctionNames)
                 .ToArray();
         }
+
+        var parametersModel = new ChatProfileMetadataViewModel();
+
+        await context.Updater.TryUpdateModelAsync(parametersModel, Prefix);
+
+        var metadata = profile.As<AIChatProfileMetadata>();
+
+        metadata.FrequencyPenalty = parametersModel.FrequencyPenalty;
+        metadata.PastMessagesCount = parametersModel.PastMessagesCount;
+        metadata.PresencePenalty = parametersModel.PresencePenalty;
+        metadata.Temperature = parametersModel.Temperature;
+        metadata.MaxTokens = parametersModel.MaxTokens;
+        metadata.TopP = parametersModel.TopP;
+
+        var settings = profile.GetSettings<AIChatProfileSettings>();
+
+        if (!settings.LockSystemMessage)
+        {
+            metadata.SystemMessage = parametersModel.SystemMessage;
+        }
+
+        profile.Put(metadata);
 
         return Edit(profile, context);
     }

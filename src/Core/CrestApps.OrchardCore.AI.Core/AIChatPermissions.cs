@@ -1,6 +1,6 @@
 using OrchardCore.Security.Permissions;
 
-namespace CrestApps.OrchardCore.AI.Azure.Core;
+namespace CrestApps.OrchardCore.AI.Core;
 
 public static class AIChatPermissions
 {

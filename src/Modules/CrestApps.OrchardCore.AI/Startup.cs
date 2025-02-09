@@ -47,6 +47,8 @@ public sealed class Startup : StartupBase
             o.MemberAccessStrategy.Register<AIChatSessionPrompt>();
         });
 
+        services.AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>();
+
         services
             .AddSingleton<IAIToolsService, DefaultAIToolsService>()
             .Configure<AIMarkdownPipelineOptions>(options =>

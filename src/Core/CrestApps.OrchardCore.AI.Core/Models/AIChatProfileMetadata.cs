@@ -1,6 +1,6 @@
-namespace CrestApps.OrchardCore.DeepSeek.Core.Models;
+namespace CrestApps.OrchardCore.AI.Core.Models;
 
-public class DeepSeekChatProfileMetadata
+public class AIChatProfileMetadata
 {
     public string SystemMessage { get; set; }
 

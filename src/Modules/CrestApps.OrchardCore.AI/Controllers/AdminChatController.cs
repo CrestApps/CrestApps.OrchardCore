@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.AI.Azure.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;

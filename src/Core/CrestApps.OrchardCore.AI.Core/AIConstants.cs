@@ -2,6 +2,13 @@ namespace CrestApps.OrchardCore.AI.Core;
 
 public static class AIConstants
 {
+    public const string TitleGeneratorSystemMessage =
+    """
+    - Generate a short topic title about the user prompt.
+    - Response using title case.
+    - Response must be under 255 characters in length.
+    """;
+
     public const string CollectionName = "AI";
 
     public const string DefaultBlankMessage = "AI drew blank and no message was generated!";

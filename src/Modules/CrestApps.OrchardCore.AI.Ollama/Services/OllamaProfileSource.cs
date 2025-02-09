@@ -18,9 +18,6 @@ public sealed class OllamaProfileSource : IAIChatProfileSource
     public string ProviderName
         => Key;
 
-    public string TechnologyName
-        => Key;
-
     public LocalizedString DisplayName { get; }
 
     public LocalizedString Description { get; }

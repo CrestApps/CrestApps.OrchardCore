@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Azure.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using OrchardCore;
 using OrchardCore.Documents;

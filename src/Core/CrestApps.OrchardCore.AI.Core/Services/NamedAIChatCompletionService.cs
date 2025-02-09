@@ -1,36 +1,30 @@
-using System.ClientModel;
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.DeepSeek.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OpenAI;
 using OrchardCore.Entities;
 
-namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
+namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionService
+public abstract class NamedAIChatCompletionService : IAIChatCompletionService
 {
-    private readonly IDistributedCache _distributedCache;
     private readonly IAIToolsService _toolsService;
     private readonly IAIDeploymentStore _deploymentStore;
-    private readonly DefaultDeepSeekOptions _defaultOptions;
+    private readonly DefaultAIOptions _defaultOptions;
     private readonly AIProviderOptions _providerOptions;
     private readonly ILogger _logger;
 
-    public DeepSeekCloudChatCompletionService(
+    public NamedAIChatCompletionService(
+        string name,
         IOptions<AIProviderOptions> providerOptions,
-        IDistributedCache distributedCache,
         IAIToolsService toolsService,
-        IOptions<DefaultDeepSeekOptions> defaultOptions,
+        IOptions<DefaultAIOptions> defaultOptions,
         IAIDeploymentStore deploymentStore,
-        ILogger<DeepSeekCloudChatCompletionService> logger)
+        ILogger logger)
     {
-        _distributedCache = distributedCache;
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        Name = name;
         _toolsService = toolsService;
         _deploymentStore = deploymentStore;
         _defaultOptions = defaultOptions.Value;
@@ -38,7 +32,26 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
         _logger = logger;
     }
 
-    public string Name { get; } = DeepSeekAIDeploymentProvider.ProviderName;
+    public string Name { get; }
+
+    protected abstract string ProviderName { get; }
+
+    protected virtual string GetDefaultConnectionName(AIProvider provider)
+    {
+        return provider.DefaultConnectionName;
+    }
+
+    protected virtual string GetDefaultDeploymentName(AIProvider provider)
+    {
+        return provider.DefaultDeploymentName;
+    }
+
+    protected virtual void OnOptions(ChatOptions options, string modelName)
+    {
+
+    }
+
+    protected abstract IChatClient GetChatClient(AIProviderConnection connection, AIChatCompletionContext context, string modelName);
 
     public async Task<AIChatCompletionResponse> ChatAsync(IEnumerable<ChatMessage> messages, AIChatCompletionContext context, CancellationToken cancellationToken = default)
     {
@@ -49,10 +62,11 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
 
         string deploymentName = null;
 
-        if (_providerOptions.Providers.TryGetValue(DeepSeekAIDeploymentProvider.ProviderName, out var entry))
+        if (_providerOptions.Providers.TryGetValue(ProviderName, out var provider))
         {
-            var connectionName = DeepSeekConstants.DefaultCloudConnectionName;
-            deploymentName = entry.DefaultDeploymentName;
+            var connectionName = GetDefaultConnectionName(provider);
+
+            deploymentName = GetDefaultDeploymentName(provider);
 
             var deployment = await GetDeploymentAsync(context);
 
@@ -62,7 +76,7 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
                 deploymentName = deployment.Name;
             }
 
-            if (!string.IsNullOrEmpty(connectionName) && entry.Connections.TryGetValue(connectionName, out var connectionProperties))
+            if (!string.IsNullOrEmpty(connectionName) && provider.Connections.TryGetValue(connectionName, out var connectionProperties))
             {
                 connection = connectionProperties;
             }
@@ -75,21 +89,21 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
             return AIChatCompletionResponse.Empty;
         }
 
-        var metadata = context.Profile.As<DeepSeekChatProfileMetadata>();
+        var metadata = context.Profile.As<AIChatProfileMetadata>();
 
         var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
 
-        var chatMessages = messages.Where(x => (x.Role == ChatRole.User || x.Role == ChatRole.Assistant) && !string.IsNullOrWhiteSpace(x.Text)).ToArray();
+        var chatMessages = messages.Where(x => (x.Role == ChatRole.User || x.Role == ChatRole.Assistant) && !string.IsNullOrWhiteSpace(x.Text));
 
-        var skip = GetTotalMessagesToSkip(chatMessages.Length, pastMessageCount);
+        var skip = GetTotalMessagesToSkip(chatMessages.Count(), pastMessageCount);
 
         var prompts = chatMessages.Skip(skip).Take(pastMessageCount).ToList();
 
         try
         {
-            var chatClient = GetChatClient(connection.GetApiKey(false), deploymentName);
+            var chatClient = GetChatClient(connection, context, deploymentName);
 
-            var chatOptions = GetChatOptions(context, metadata, deploymentName);
+            var chatOptions = GetChatOptions(context, metadata);
 
             var data = await chatClient.CompleteAsync(prompts, chatOptions, cancellationToken);
 
@@ -106,36 +120,13 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while chatting with the OpenAI service.");
+            _logger.LogError(ex, "An error occurred while chatting with the {Name} service.", Name);
         }
 
         return AIChatCompletionResponse.Empty;
     }
 
-    private IChatClient GetChatClient(string apiKey, string modelId)
-    {
-        var client = new OpenAIClient(new ApiKeyCredential(apiKey), new OpenAIClientOptions()
-        {
-            Endpoint = new Uri("https://api.deepseek.com/v1"),
-        });
-
-        var builder = new ChatClientBuilder(client.AsChatClient(modelId))
-            .UseDistributedCache(_distributedCache);
-
-        if (modelId != "deepseek-reasoner")
-        {
-            // The 'deepseek-reasoner' model does not support tool calling.
-            builder.UseFunctionInvocation(null, (r) =>
-            {
-                // Set the maximum number of iterations per request to 1 to prevent infinite function calling.
-                r.MaximumIterationsPerRequest = 1;
-            });
-        }
-
-        return builder.Build();
-    }
-
-    private ChatOptions GetChatOptions(AIChatCompletionContext context, DeepSeekChatProfileMetadata metadata, string modelName)
+    private ChatOptions GetChatOptions(AIChatCompletionContext context, AIChatProfileMetadata metadata)
     {
         var chatOptions = new ChatOptions()
         {
@@ -146,10 +137,8 @@ public sealed class DeepSeekCloudChatCompletionService : IAIChatCompletionServic
             MaxOutputTokens = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
         };
 
-        // The 'deepseek-reasoner' model does not support tool calling.
         if (!context.DisableTools && context.Profile.FunctionNames is not null &&
-            context.Profile.FunctionNames.Length > 0 &&
-            modelName != "deepseek-reasoner")
+            context.Profile.FunctionNames.Length > 0)
         {
             chatOptions.Tools = [];
 

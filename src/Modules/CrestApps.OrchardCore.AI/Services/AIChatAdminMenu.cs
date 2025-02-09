@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Azure.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Routing;

@@ -14,8 +14,6 @@ public static class AzureOpenAIConstants
     {
         public const string Area = "CrestApps.OrchardCore.OpenAI.Azure";
 
-        public const string Deployments = "CrestApps.OrchardCore.OpenAI.Azure.Deployments";
-
         public const string Standard = "CrestApps.OrchardCore.OpenAI.Azure.Standard";
 
         public const string AISearch = "CrestApps.OrchardCore.OpenAI.Azure.AISearch";

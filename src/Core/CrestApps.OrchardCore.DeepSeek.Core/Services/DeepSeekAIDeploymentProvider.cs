@@ -5,12 +5,12 @@ namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
 
 public sealed class DeepSeekAIDeploymentProvider : IAIDeploymentProvider
 {
-    public const string ProviderName = "DeepSeekCloud";
+    public const string ProviderName = "DeepSeek";
 
     public DeepSeekAIDeploymentProvider(IStringLocalizer<DeepSeekAIDeploymentProvider> S)
     {
-        DisplayName = S["DeepSeek Cloud"];
-        Description = S["DeepSeek Cloud model deployments."];
+        DisplayName = S["DeepSeek"];
+        Description = S["DeepSeek model deployments."];
     }
 
     public string TechnicalName

@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Azure.Core;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;

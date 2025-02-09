@@ -1,8 +1,8 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core.Handlers;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
@@ -45,20 +45,20 @@ public sealed class OpenAIChatProfileHandler : AIChatProfileHandlerBase
 
     private static Task PopulateAsync(AIChatProfile profile, JsonNode data)
     {
-        var metadataNode = data["Properties"]?[nameof(OpenAIChatProfileMetadata)]?.AsObject();
+        var metadataNode = data["Properties"]?[nameof(AIChatProfileMetadata)]?.AsObject();
 
         if (metadataNode == null || metadataNode.Count == 0)
         {
             return Task.CompletedTask;
         }
 
-        var metadata = profile.As<OpenAIChatProfileMetadata>();
+        var metadata = profile.As<AIChatProfileMetadata>();
 
-        var settings = profile.GetSettings<OpenAIChatProfileSettings>();
+        var settings = profile.GetSettings<AIChatProfileSettings>();
 
         if (!settings.LockSystemMessage)
         {
-            var systemMessage = data[nameof(OpenAIChatProfileMetadata.SystemMessage)]?.GetValue<string>()?.Trim();
+            var systemMessage = data[nameof(AIChatProfileMetadata.SystemMessage)]?.GetValue<string>()?.Trim();
 
             if (!string.IsNullOrEmpty(systemMessage))
             {

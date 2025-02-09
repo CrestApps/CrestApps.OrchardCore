@@ -19,25 +19,15 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-    }
-}
-
-[Feature(AzureOpenAIConstants.Feature.Deployments)]
-public sealed class DeploymentsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
         services.AddScoped<AzureOpenAIModelService>();
         services.AddScoped<AzureOpenAIDeploymentsService>();
 
         services
             .AddAIDeploymentProvider<AzureAIDeploymentProvider>(AzureOpenAIConstants.AzureProviderName)
-            .AddDisplayDriver<AIDeployment, AzureOpenAIDeploymentDisplayDriver>()
             .AddScoped<AzureCognitiveServicesAccountServices>();
     }
 }
 
-[Feature(AzureOpenAIConstants.Feature.Deployments)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class RecipesStartup : StartupBase
 {

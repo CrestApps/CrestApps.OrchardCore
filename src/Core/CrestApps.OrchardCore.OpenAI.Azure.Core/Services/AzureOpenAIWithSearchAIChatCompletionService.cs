@@ -6,9 +6,9 @@ using Azure.AI.OpenAI;
 using Azure.AI.OpenAI.Chat;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Services;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;
@@ -27,7 +27,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
     private readonly IAILinkGenerator _openAILinkGenerator;
     private readonly AzureAISearchIndexSettingsService _azureAISearchIndexSettingsService;
     private readonly IAIToolsService _toolsService;
-    private readonly DefaultOpenAIOptions _defaultOptions;
+    private readonly DefaultAIOptions _defaultOptions;
     private readonly AIProviderOptions _providerOptions;
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
     private readonly ILogger _logger;
@@ -39,7 +39,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         IAILinkGenerator openAILinkGenerator,
         AzureAISearchIndexSettingsService azureAISearchIndexSettingsService,
         IAIToolsService toolService,
-        IOptions<DefaultOpenAIOptions> defaultOptions,
+        IOptions<DefaultAIOptions> defaultOptions,
         ILogger<AzureOpenAIChatCompletionService> logger)
     {
         _deploymentStore = deploymentStore;
@@ -111,7 +111,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
             }
         }
 
-        var metadata = context.Profile.As<OpenAIChatProfileMetadata>();
+        var metadata = context.Profile.As<AIChatProfileMetadata>();
 
         var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
         var skip = GetTotalMessagesToSkip(azureMessages.Count, pastMessageCount);
@@ -199,7 +199,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         return 0;
     }
 
-    private static string GetSystemMessage(AIChatCompletionContext context, OpenAIChatProfileMetadata metadata)
+    private static string GetSystemMessage(AIChatCompletionContext context, AIChatProfileMetadata metadata)
     {
         var systemMessage = metadata.SystemMessage ?? string.Empty;
 
@@ -267,7 +267,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
 
     private ChatCompletionOptions GetOptions(AIChatCompletionContext context)
     {
-        var metadata = context.Profile.As<OpenAIChatProfileMetadata>();
+        var metadata = context.Profile.As<AIChatProfileMetadata>();
 
         var chatOptions = new ChatCompletionOptions()
         {

@@ -1,5 +1,3 @@
-using Azure.AI.OpenAI;
-using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -8,37 +6,35 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenAI;
 
-namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
+namespace CrestApps.OrchardCore.AI.OpenAI.Services;
 
-public sealed class AzureOpenAIChatCompletionService : NamedAIChatCompletionService
+public sealed class OpenAIChatCompletionService : NamedAIChatCompletionService
 {
     private readonly IDistributedCache _distributedCache;
 
-    public AzureOpenAIChatCompletionService(
+    public OpenAIChatCompletionService(
         IAIDeploymentStore deploymentStore,
         IDistributedCache distributedCache,
         IOptions<AIProviderOptions> providerOptions,
         IAIToolsService toolsService,
         IOptions<DefaultAIOptions> defaultOptions,
-        ILogger<AzureOpenAIChatCompletionService> logger)
-        : base(AzureProfileSource.Key, providerOptions, toolsService, defaultOptions, deploymentStore, logger)
+        ILogger<OpenAIChatCompletionService> logger)
+        : base(OpenAIProfileSource.Key, providerOptions, toolsService, defaultOptions, deploymentStore, logger)
     {
         _distributedCache = distributedCache;
     }
 
     protected override string ProviderName
-        => AzureOpenAIConstants.AzureProviderName;
+        => OpenAIProfileSource.Key;
 
-    protected override IChatClient GetChatClient(AIProviderConnection connection, AIChatCompletionContext context, string modelName)
+    protected override IChatClient GetChatClient(AIProviderConnection connection, AIChatCompletionContext context, string deploymentName)
     {
-        var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
+        var azureClient = new OpenAIClient(connection.GetApiKey())
+            .AsChatClient(connection.GetDefaultDeploymentName());
 
-        var azureClient = new AzureOpenAIClient(endpoint, connection.GetApiKeyCredential());
-
-        return azureClient
-            .AsChatClient(modelName)
-            .AsBuilder()
+        return new ChatClientBuilder(azureClient)
             .UseDistributedCache(_distributedCache)
             .UseFunctionInvocation(null, (options) =>
             {

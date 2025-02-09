@@ -1,8 +1,7 @@
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.DeepSeek.Core;
-using CrestApps.OrchardCore.DeepSeek.Core.Models;
 using CrestApps.OrchardCore.DeepSeek.Core.Services;
 using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
@@ -32,14 +31,14 @@ internal sealed class DeepSeekTitleGeneratorProfileMigrations : DataMigration
             IsOnAdminMenu = false,
         });
 
-        profile.WithSettings(new DeepSeekChatProfileSettings
+        profile.WithSettings(new AIChatProfileSettings
         {
             LockSystemMessage = true,
         });
 
-        profile.Put(new DeepSeekChatProfileMetadata
+        profile.Put(new AIChatProfileMetadata
         {
-            SystemMessage = DeepSeekConstants.TitleGeneratorSystemMessage,
+            SystemMessage = AIConstants.TitleGeneratorSystemMessage,
         });
 
         await _chatProfileManager.SaveAsync(profile);

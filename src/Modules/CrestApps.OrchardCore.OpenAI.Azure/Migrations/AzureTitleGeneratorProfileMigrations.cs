@@ -1,9 +1,8 @@
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
-using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Core.Models;
 using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
 
@@ -32,14 +31,14 @@ internal sealed class AzureTitleGeneratorProfileMigrations : DataMigration
             IsOnAdminMenu = false,
         });
 
-        profile.WithSettings(new OpenAIChatProfileSettings
+        profile.WithSettings(new AIChatProfileSettings
         {
             LockSystemMessage = true,
         });
 
-        profile.Put(new OpenAIChatProfileMetadata
+        profile.Put(new AIChatProfileMetadata
         {
-            SystemMessage = OpenAIConstants.TitleGeneratorSystemMessage,
+            SystemMessage = AIConstants.TitleGeneratorSystemMessage,
         });
 
         await _chatProfileManager.SaveAsync(profile);
