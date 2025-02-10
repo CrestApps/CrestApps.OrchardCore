@@ -3,11 +3,11 @@ using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.AI.ViewModels;
 
-public class ListChatProfilesViewModel
+public class ListProfilesViewModel
 {
-    public IList<AIChatProfileEntry> Profiles { get; set; }
+    public IList<AIProfileEntry> Profiles { get; set; }
 
-    public AIChatProfileOptions Options { get; set; }
+    public AIProfileOptions Options { get; set; }
 
     public IEnumerable<string> SourceNames { get; set; }
 

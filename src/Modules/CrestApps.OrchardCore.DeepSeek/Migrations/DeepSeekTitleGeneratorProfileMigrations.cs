@@ -10,9 +10,9 @@ namespace CrestApps.OrchardCore.DeepSeek.Migrations;
 
 internal sealed class DeepSeekTitleGeneratorProfileMigrations : DataMigration
 {
-    private readonly IAIChatProfileManager _chatProfileManager;
+    private readonly IAIProfileManager _chatProfileManager;
 
-    public DeepSeekTitleGeneratorProfileMigrations(IAIChatProfileManager chatProfileManager)
+    public DeepSeekTitleGeneratorProfileMigrations(IAIProfileManager chatProfileManager)
     {
         _chatProfileManager = chatProfileManager;
     }
@@ -23,20 +23,20 @@ internal sealed class DeepSeekTitleGeneratorProfileMigrations : DataMigration
 
         profile.Name = AIConstants.GetTitleGeneratorProfileName(DeepSeekAIDeploymentProvider.ProviderName);
         profile.DisplayText = "Chat Title Generator";
-        profile.Type = AIChatProfileType.Utility;
+        profile.Type = AIProfileType.Utility;
 
-        profile.WithSettings(new AIChatProfileSettings
+        profile.WithSettings(new AIProfileSettings
         {
             IsRemovable = false,
             IsOnAdminMenu = false,
         });
 
-        profile.WithSettings(new AIChatProfileSettings
+        profile.WithSettings(new AIProfileSettings
         {
             LockSystemMessage = true,
         });
 
-        profile.Put(new AIChatProfileMetadata
+        profile.Put(new AIProfileMetadata
         {
             SystemMessage = AIConstants.TitleGeneratorSystemMessage,
         });

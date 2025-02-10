@@ -4,13 +4,13 @@ public class AIChatCompletionContext
 {
     public AIChatSession Session { get; set; }
 
-    public AIChatProfile Profile { get; }
+    public AIProfile Profile { get; }
 
     public bool UserMarkdownInResponse { get; set; }
 
     public bool DisableTools { get; set; }
 
-    public AIChatCompletionContext(AIChatProfile profile)
+    public AIChatCompletionContext(AIProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 

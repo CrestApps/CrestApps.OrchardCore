@@ -2,7 +2,7 @@ using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.AI.OpenAI.Services;
 
-public sealed class OpenAIProfileSource : IAIChatProfileSource
+public sealed class OpenAIProfileSource : IAIProfileSource
 {
     public const string Key = "OpenAI";
 

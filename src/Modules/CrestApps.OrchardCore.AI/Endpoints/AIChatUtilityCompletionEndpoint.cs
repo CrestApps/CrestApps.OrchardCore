@@ -25,7 +25,7 @@ internal static class AIChatUtilityCompletionEndpoint
 
     private static async Task<IResult> HandleAsync<T>(
         IAuthorizationService authorizationService,
-        IAIChatProfileManager chatProfileManager,
+        IAIProfileManager chatProfileManager,
         IHttpContextAccessor httpContextAccessor,
         IServiceProvider serviceProvider,
         IAIMarkdownService markdownService,
@@ -49,14 +49,14 @@ internal static class AIChatUtilityCompletionEndpoint
             return TypedResults.NotFound();
         }
 
-        if (profile.Type != AIChatProfileType.Utility)
+        if (profile.Type != AIProfileType.Utility)
         {
             logger.LogWarning("The requested profile '{ProfileId}' has a type of '{ProfileType}', but it must be of type 'Utility' to use the utility-completion endpoint.", profile.Id, profile.Type.ToString());
 
             return TypedResults.NotFound();
         }
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIChatPermissions.QueryAnyAIChatProfile, profile))
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
         {
             return TypedResults.Forbid();
         }
@@ -78,7 +78,7 @@ internal static class AIChatUtilityCompletionEndpoint
         return TypedResults.Ok(new AIChatResponse
         {
             Success = completion.Choices.Any(),
-            Type = nameof(AIChatProfileType.Utility),
+            Type = nameof(AIProfileType.Utility),
             Message = new AIChatResponseMessageDetailed
             {
                 Content = bestChoice?.Content ?? AIConstants.DefaultBlankMessage,

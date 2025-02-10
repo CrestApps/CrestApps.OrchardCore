@@ -2,7 +2,7 @@ using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.AI.Ollama.Services;
 
-public sealed class OllamaProfileSource : IAIChatProfileSource
+public sealed class OllamaProfileSource : IAIProfileSource
 {
     public const string Key = "Ollama";
 

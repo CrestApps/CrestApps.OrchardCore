@@ -10,9 +10,9 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 
 internal sealed class AzureAISearchTitleGeneratorProfileMigrations : DataMigration
 {
-    private readonly IAIChatProfileManager _chatProfileManager;
+    private readonly IAIProfileManager _chatProfileManager;
 
-    public AzureAISearchTitleGeneratorProfileMigrations(IAIChatProfileManager chatProfileManager)
+    public AzureAISearchTitleGeneratorProfileMigrations(IAIProfileManager chatProfileManager)
     {
         _chatProfileManager = chatProfileManager;
     }
@@ -23,20 +23,20 @@ internal sealed class AzureAISearchTitleGeneratorProfileMigrations : DataMigrati
 
         profile.Name = AIConstants.GetTitleGeneratorProfileName(AzureWithAzureAISearchProfileSource.Key);
         profile.DisplayText = "Chat Title Generator";
-        profile.Type = AIChatProfileType.Utility;
+        profile.Type = AIProfileType.Utility;
 
-        profile.WithSettings(new AIChatProfileSettings
+        profile.WithSettings(new AIProfileSettings
         {
             IsRemovable = false,
             IsOnAdminMenu = false,
         });
 
-        profile.WithSettings(new AIChatProfileSettings
+        profile.WithSettings(new AIProfileSettings
         {
             LockSystemMessage = true,
         });
 
-        profile.Put(new AIChatProfileMetadata
+        profile.Put(new AIProfileMetadata
         {
             SystemMessage = AIConstants.TitleGeneratorSystemMessage,
         });

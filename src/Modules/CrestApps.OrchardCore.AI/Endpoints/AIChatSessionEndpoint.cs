@@ -23,7 +23,7 @@ internal static class AIChatSessionEndpoint
 
     private static async Task<IResult> HandleAsync(
         IAuthorizationService authorizationService,
-        IAIChatProfileManager chatProfileManager,
+        IAIProfileManager chatProfileManager,
         IAIChatSessionManager sessionManager,
         ILiquidTemplateManager liquidTemplateManager,
         IHttpContextAccessor httpContextAccessor,
@@ -46,7 +46,7 @@ internal static class AIChatSessionEndpoint
 
         var profile = await chatProfileManager.FindByIdAsync(chatSession.ProfileId);
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIChatPermissions.QueryAnyAIChatProfile, profile))
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
         {
             return TypedResults.Forbid();
         }

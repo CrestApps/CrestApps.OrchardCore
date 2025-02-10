@@ -25,29 +25,29 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAIChatProfileServices(this IServiceCollection services)
     {
         services
-            .AddScoped<IAIChatProfileStore, DefaultAIChatProfileStore>()
-            .AddScoped<IAIChatProfileManager, DefaultAIChatProfileManager>()
-            .AddScoped<IAIChatProfileManagerSession, DefaultAIChatProfileManagerSession>()
-            .AddScoped<IAIChatProfileHandler, AIChatProfileHandler>()
+            .AddScoped<IAIProfileStore, DefaultAIProfileStore>()
+            .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
+            .AddScoped<IAIProfileManagerSession, DefaultAIProfileManagerSession>()
+            .AddScoped<IAIProfileHandler, AIProfileHandler>()
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>();
 
         services
             .AddPermissionProvider<AIChatPermissionsProvider>()
-            .AddScoped<IAuthorizationHandler, AIChatProfileAuthenticationHandler>()
+            .AddScoped<IAuthorizationHandler, AIProfileAuthenticationHandler>()
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.CollectionName));
 
         return services;
     }
 
     public static IServiceCollection AddAIChatProfileSource<TSource>(this IServiceCollection services, string sourceKey)
-         where TSource : class, IAIChatProfileSource
+         where TSource : class, IAIProfileSource
     {
         ArgumentNullException.ThrowIfNull(sourceKey);
 
         services
             .AddScoped<TSource>()
-            .AddScoped<IAIChatProfileSource>(sp => sp.GetService<TSource>())
-            .AddKeyedScoped<IAIChatProfileSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
+            .AddScoped<IAIProfileSource>(sp => sp.GetService<TSource>())
+            .AddKeyedScoped<IAIProfileSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
 
         return services;
     }

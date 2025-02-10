@@ -89,7 +89,7 @@ public abstract class NamedAIChatCompletionService : IAIChatCompletionService
             return AIChatCompletionResponse.Empty;
         }
 
-        var metadata = context.Profile.As<AIChatProfileMetadata>();
+        var metadata = context.Profile.As<AIProfileMetadata>();
 
         var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
 
@@ -126,7 +126,7 @@ public abstract class NamedAIChatCompletionService : IAIChatCompletionService
         return AIChatCompletionResponse.Empty;
     }
 
-    private ChatOptions GetChatOptions(AIChatCompletionContext context, AIChatProfileMetadata metadata)
+    private ChatOptions GetChatOptions(AIChatCompletionContext context, AIProfileMetadata metadata)
     {
         var chatOptions = new ChatOptions()
         {

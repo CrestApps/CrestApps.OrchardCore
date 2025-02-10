@@ -3,7 +3,7 @@ using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
 
-public sealed class DeepSeekChatProfileSource : IAIChatProfileSource
+public sealed class DeepSeekChatProfileSource : IAIProfileSource
 {
     public DeepSeekChatProfileSource(IStringLocalizer<DeepSeekChatProfileSource> S)
     {

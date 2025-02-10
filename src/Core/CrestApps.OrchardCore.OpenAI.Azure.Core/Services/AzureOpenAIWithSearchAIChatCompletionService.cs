@@ -111,7 +111,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
             }
         }
 
-        var metadata = context.Profile.As<AIChatProfileMetadata>();
+        var metadata = context.Profile.As<AIProfileMetadata>();
 
         var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
         var skip = GetTotalMessagesToSkip(azureMessages.Count, pastMessageCount);
@@ -199,7 +199,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         return 0;
     }
 
-    private static string GetSystemMessage(AIChatCompletionContext context, AIChatProfileMetadata metadata)
+    private static string GetSystemMessage(AIChatCompletionContext context, AIProfileMetadata metadata)
     {
         var systemMessage = metadata.SystemMessage ?? string.Empty;
 
@@ -222,7 +222,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
 
     private async Task<ChatCompletionOptions> GetOptionsWithDataSourceAsync(AIChatCompletionContext context)
     {
-        if (!context.Profile.TryGet<AzureAIChatProfileAISearchMetadata>(out var metadata))
+        if (!context.Profile.TryGet<AzureAIProfileAISearchMetadata>(out var metadata))
         {
             throw new InvalidOperationException();
         }
@@ -267,7 +267,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
 
     private ChatCompletionOptions GetOptions(AIChatCompletionContext context)
     {
-        var metadata = context.Profile.As<AIChatProfileMetadata>();
+        var metadata = context.Profile.As<AIProfileMetadata>();
 
         var chatOptions = new ChatCompletionOptions()
         {

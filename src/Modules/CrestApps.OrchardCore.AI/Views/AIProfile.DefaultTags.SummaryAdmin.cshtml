@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProfile>
+@{
+    var type = Model.Value.Type switch
+    {
+        AIProfileType.Utility => T["Utility"],
+        AIProfileType.TemplatePrompt => T["Template generated prompt"],
+        AIProfileType.Chat => T["Chat"],
+        _ => T["Unknown type"]
+    };
+}
+
+<span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Source"]">
+    <i class="text-secondary me-1" aria-hidden="true"></i>@Model.Value.Source
+</span>
+
+<span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Profile type"]">
+    <i class="text-secondary me-1" aria-hidden="true"></i>@type
+</span>
+
+@if (!Model.Value.GetSettings<AIProfileSettings>().IsRemovable)
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["The '{0}' profile cannot be deleted.", Model.Value.DisplayText])">
+        <i class="fa-solid fa-shield text-secondary me-1" aria-hidden="true"></i>@T["System"]
+    </span>
+}

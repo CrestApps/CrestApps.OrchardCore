@@ -5,7 +5,7 @@ using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
-public sealed class AIDeploymentChatProfileHandler : AIChatProfileHandlerBase
+public sealed class AIDeploymentChatProfileHandler : AIProfileHandlerBase
 {
     private readonly IAIDeploymentStore _deploymentStore;
 
@@ -13,29 +13,29 @@ public sealed class AIDeploymentChatProfileHandler : AIChatProfileHandlerBase
 
     public AIDeploymentChatProfileHandler(
         IAIDeploymentStore deploymentStore,
-        IStringLocalizer<AIChatProfileHandler> stringLocalizer)
+        IStringLocalizer<AIProfileHandler> stringLocalizer)
     {
         _deploymentStore = deploymentStore;
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingAIChatProfileContext context)
+    public override Task InitializingAsync(InitializingAIProfileContext context)
         => PopulateAsync(context.Profile, context.Data);
 
-    public override Task UpdatingAsync(UpdatingAIChatProfileContext context)
+    public override Task UpdatingAsync(UpdatingAIProfileContext context)
         => PopulateAsync(context.Profile, context.Data);
 
-    public override async Task ValidatingAsync(ValidatingAIChatProfileContext context)
+    public override async Task ValidatingAsync(ValidatingAIProfileContext context)
     {
         if (!string.IsNullOrEmpty(context.Profile.DeploymentId) && await _deploymentStore.FindByIdAsync(context.Profile.DeploymentId) is null)
         {
-            context.Result.Fail(new ValidationResult(S["Invalid DeploymentId provided."], [nameof(AIChatProfile.DeploymentId)]));
+            context.Result.Fail(new ValidationResult(S["Invalid DeploymentId provided."], [nameof(AIProfile.DeploymentId)]));
         }
     }
 
-    private static Task PopulateAsync(AIChatProfile profile, JsonNode data)
+    private static Task PopulateAsync(AIProfile profile, JsonNode data)
     {
-        var deploymentId = data[nameof(AIChatProfile.DeploymentId)]?.GetValue<string>()?.Trim();
+        var deploymentId = data[nameof(AIProfile.DeploymentId)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(deploymentId))
         {

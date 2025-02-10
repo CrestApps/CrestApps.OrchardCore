@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.AI.Controllers;
 [Feature(AIConstants.Feature.Chat)]
 public sealed class AdminChatController : Controller
 {
-    private readonly IAIChatProfileManager _profileManager;
+    private readonly IAIProfileManager _profileManager;
     private readonly IAIChatSessionManager _sessionManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly ISession _session;
@@ -31,7 +31,7 @@ public sealed class AdminChatController : Controller
     internal readonly IStringLocalizer S;
 
     public AdminChatController(
-        IAIChatProfileManager profileManager,
+        IAIProfileManager profileManager,
         IAIChatSessionManager sessionManager,
         IAuthorizationService authorizationService,
         ISession session,
@@ -64,7 +64,7 @@ public sealed class AdminChatController : Controller
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.QueryAnyAIChatProfile, profile))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
         {
             return Forbid();
         }
@@ -135,7 +135,7 @@ public sealed class AdminChatController : Controller
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, AIChatPermissions.QueryAnyAIChatProfile, profile))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
         {
             return Forbid();
         }

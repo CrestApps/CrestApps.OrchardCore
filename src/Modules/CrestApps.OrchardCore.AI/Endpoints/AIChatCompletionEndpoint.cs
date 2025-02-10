@@ -30,7 +30,7 @@ internal static class AIChatCompletionEndpoint
 
     private static async Task<IResult> HandleAsync<T>(
         IAuthorizationService authorizationService,
-        IAIChatProfileManager chatProfileManager,
+        IAIProfileManager chatProfileManager,
         IAIChatSessionManager sessionManager,
         ILiquidTemplateManager liquidTemplateManager,
         IHttpContextAccessor httpContextAccessor,
@@ -51,7 +51,7 @@ internal static class AIChatCompletionEndpoint
             return TypedResults.NotFound();
         }
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIChatPermissions.QueryAnyAIChatProfile, profile))
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
         {
             return TypedResults.Forbid();
         }
@@ -67,7 +67,7 @@ internal static class AIChatCompletionEndpoint
         bool isNew;
         AIChatSession chatSession;
 
-        if (profile.Type == AIChatProfileType.TemplatePrompt)
+        if (profile.Type == AIProfileType.TemplatePrompt)
         {
             if (string.IsNullOrWhiteSpace(requestData.SessionProfileId))
             {
@@ -105,7 +105,7 @@ internal static class AIChatCompletionEndpoint
 
             userPrompt = requestData.Prompt.Trim();
 
-            if (profile.Type == AIChatProfileType.Utility)
+            if (profile.Type == AIProfileType.Utility)
             {
                 return await GetToolMessageAsync(completionService, profile, markdownService, userPrompt, requestData.IncludeHtmlResponse);
             }
@@ -117,7 +117,7 @@ internal static class AIChatCompletionEndpoint
         AIChatSessionPrompt message = null;
         AIChatCompletionChoice bestChoice = null;
 
-        if (profile.Type == AIChatProfileType.TemplatePrompt)
+        if (profile.Type == AIProfileType.TemplatePrompt)
         {
             completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, userPrompt)], new AIChatCompletionContext(profile)
             {
@@ -193,7 +193,7 @@ internal static class AIChatCompletionEndpoint
         });
     }
 
-    private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, IAIChatProfileManager profileManager, string sessionId, AIChatProfile profile, IAIChatCompletionService completionService, string userPrompt)
+    private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, IAIProfileManager profileManager, string sessionId, AIProfile profile, IAIChatCompletionService completionService, string userPrompt)
     {
         if (!string.IsNullOrWhiteSpace(sessionId))
         {
@@ -238,7 +238,7 @@ internal static class AIChatCompletionEndpoint
         return (chatSession, true);
     }
 
-    private static async Task<IResult> GetToolMessageAsync(IAIChatCompletionService completionService, AIChatProfile profile, IAIMarkdownService markdownService, string prompt, bool respondWithHtml)
+    private static async Task<IResult> GetToolMessageAsync(IAIChatCompletionService completionService, AIProfile profile, IAIMarkdownService markdownService, string prompt, bool respondWithHtml)
     {
         var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, prompt)], new AIChatCompletionContext(profile)
         {
@@ -250,7 +250,7 @@ internal static class AIChatCompletionEndpoint
         return TypedResults.Ok(new AIChatResponse
         {
             Success = completion.Choices.Any(),
-            Type = nameof(AIChatProfileType.Utility),
+            Type = nameof(AIProfileType.Utility),
             Message = new AIChatResponseMessageDetailed
             {
                 Content = bestChoice?.Content ?? AIConstants.DefaultBlankMessage,

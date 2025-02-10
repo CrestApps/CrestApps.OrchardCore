@@ -27,7 +27,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         _session = session;
     }
 
-    public async Task<AIChatSession> NewAsync(AIChatProfile profile)
+    public async Task<AIChatSession> NewAsync(AIProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 

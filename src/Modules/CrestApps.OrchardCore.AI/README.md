@@ -209,7 +209,7 @@ If you're using the Recipes module, you can create or update AI chat profiles us
 {
   "steps": [
     {
-      "name": "AIChatProfile",
+      "name": "AIProfile",
       "profiles": [
         {
           "Source": "CustomSource",

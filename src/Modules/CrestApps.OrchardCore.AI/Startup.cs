@@ -42,12 +42,16 @@ public sealed class Startup : StartupBase
     {
         services.Configure<TemplateOptions>(o =>
         {
-            o.MemberAccessStrategy.Register<AIChatProfile>();
+            o.MemberAccessStrategy.Register<AIProfile>();
             o.MemberAccessStrategy.Register<AIChatSession>();
             o.MemberAccessStrategy.Register<AIChatSessionPrompt>();
         });
 
-        services.AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>();
+        services
+            .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
+            .AddDisplayDriver<AIChatListOptions, AIProfileOptionsDisplayDriver>()
+            .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
+            .AddNavigationProvider<AIProfileAdminMenu>();
 
         services
             .AddSingleton<IAIToolsService, DefaultAIToolsService>()
@@ -57,6 +61,13 @@ public sealed class Startup : StartupBase
             })
             .AddScoped<IAIMarkdownService, AIMarkdownService>()
             .AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderOptionsConfiguration>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes
+            .AddAIChatCompletionEndpoint<ChatStartup>()
+            .AddAIChatUtilityCompletionEndpoint<ChatStartup>();
     }
 }
 
@@ -85,8 +96,8 @@ public sealed class ChatDeploymentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddTransient<IAIChatProfileHandler, AIDeploymentChatProfileHandler>()
-            .AddDisplayDriver<AIChatProfile, AIChatProfileDeploymentDisplayDriver>();
+            .AddTransient<IAIProfileHandler, AIDeploymentChatProfileHandler>()
+            .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>();
     }
 }
 
@@ -100,12 +111,9 @@ public sealed class ChatStartup : StartupBase
             .AddScoped<IAILinkGenerator, DefaultAILinkGenerator>()
             .AddKeyedScoped<IAIMarkdownService, AIChatMarkdownService>("chat")
             .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()
-            .AddNavigationProvider<AIChatAdminMenu>()
             .AddDataMigration<AIChatSessionIndexMigrations>()
             .AddIndexProvider<AIChatSessionIndexProvider>()
-            .AddDisplayDriver<AIChatProfile, AIChatProfileDisplayDriver>()
             .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()
-            .AddDisplayDriver<AIChatListOptions, AIChatListOptionsDisplayDriver>()
             .Configure<AIChatMarkdownPipelineOptions>(options =>
             {
                 options.MarkdownPipelineBuilder
@@ -117,29 +125,7 @@ public sealed class ChatStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-            .AddAIChatCompletionEndpoint<ChatStartup>()
-            .AddAIChatUtilityCompletionEndpoint<ChatStartup>()
             .AddAIChatSessionEndpoint();
-    }
-}
-
-[Feature(AIConstants.Feature.Area)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class RecipesStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddRecipeExecutionStep<AIDeploymentStep>();
-    }
-}
-
-[Feature(AIConstants.Feature.Chat)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class ChatRecipesStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddRecipeExecutionStep<AIChatProfileStep>();
     }
 }
 
@@ -150,14 +136,22 @@ public sealed class WidgetsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddContentPart<AIChatProfilePart>()
+            .AddContentPart<AIProfilePart>()
             .UseDisplayDriver<AIChatProfilePartDisplayDriver>();
 
         services.AddDataMigration<AIChatMigrations>();
     }
 }
 
-[Feature(AIConstants.Feature.Chat)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class RecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<AIProfileStep>();
+    }
+}
+
 [RequireFeatures("OrchardCore.Workflows")]
 public sealed class ChatWorkflowsStartup : StartupBase
 {
@@ -171,21 +165,22 @@ public sealed class ChatWorkflowsStartup : StartupBase
     }
 }
 
-[Feature(AIConstants.Feature.Chat)]
 [RequireFeatures("OrchardCore.Deployment")]
-public sealed class ChatOCDeploymentsStartup : StartupBase
+public sealed class OCDeploymentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDeployment<AIChatProfileDeploymentSource, AIChatProfileDeploymentStep, AIChatProfileDeploymentStepDisplayDriver>();
+        services.AddDeployment<AIProfileDeploymentSource, AIProfileDeploymentStep, AIProfileDeploymentStepDisplayDriver>();
+        services.AddDeployment<AIDeploymentDeploymentSource, AIDeploymentDeploymentStep, AIDeploymentDeploymentStepDisplayDriver>();
     }
 }
 
-[RequireFeatures("OrchardCore.Deployment")]
-public sealed class DeploymentDeploymentsStartup : StartupBase
+[Feature(AIConstants.Feature.Deployments)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class DeploymentRecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDeployment<AIDeploymentDeploymentSource, AIDeploymentDeploymentStep, AIDeploymentDeploymentStepDisplayDriver>();
+        services.AddRecipeExecutionStep<AIDeploymentStep>();
     }
 }

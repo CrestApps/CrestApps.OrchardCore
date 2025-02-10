@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.AI.Workflows.Models;
 
 public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompletionTask>
 {
-    private readonly IAIChatProfileManager _chatProfileManager;
+    private readonly IAIProfileManager _chatProfileManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IAIMarkdownService _markdownService;
@@ -23,7 +23,7 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
     internal readonly IStringLocalizer S;
 
     public ChatUtilityCompletionTask(
-        IAIChatProfileManager chatProfileManager,
+        IAIProfileManager chatProfileManager,
         IServiceProvider serviceProvider,
         ILiquidTemplateManager liquidTemplateManager,
         IAIMarkdownService markdownService,
@@ -80,7 +80,7 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
             return Outcomes("Failed");
         }
 
-        if (profile.Type != AIChatProfileType.Utility)
+        if (profile.Type != AIProfileType.Utility)
         {
             _logger.LogWarning("The requested profile '{ProfileId}' has a type of '{ProfileType}', but it must be of type 'Utility' to use the Chat Utility Completion Task.", profile.Id, profile.Type.ToString());
 

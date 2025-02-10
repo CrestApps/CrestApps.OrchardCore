@@ -13,13 +13,13 @@ namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
 public sealed class ChatUtilityCompletionTaskDisplayDriver : ActivityDisplayDriver<ChatUtilityCompletionTask, ChatUtilityCompletionTaskViewModel>
 {
-    private readonly IAIChatProfileStore _chatProfileStore;
+    private readonly IAIProfileStore _chatProfileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
 
     internal readonly IStringLocalizer S;
 
     public ChatUtilityCompletionTaskDisplayDriver(
-        IAIChatProfileStore chatProfileStore,
+        IAIProfileStore chatProfileStore,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<ChatUtilityCompletionTaskDisplayDriver> stringLocalizer)
     {
@@ -35,7 +35,7 @@ public sealed class ChatUtilityCompletionTaskDisplayDriver : ActivityDisplayDriv
         model.ResultPropertyName = activity.ResultPropertyName;
         model.IncludeHtmlResponse = activity.IncludeHtmlResponse;
 
-        model.Profiles = (await _chatProfileStore.GetProfilesAsync(AIChatProfileType.Utility))
+        model.Profiles = (await _chatProfileStore.GetProfilesAsync(AIProfileType.Utility))
             .Select(profile => new SelectListItem(profile.DisplayText, profile.Id));
     }
 
@@ -53,7 +53,7 @@ public sealed class ChatUtilityCompletionTaskDisplayDriver : ActivityDisplayDriv
         {
             var profile = await _chatProfileStore.FindByIdAsync(model.ProfileId);
 
-            if (profile == null || profile.Type != AIChatProfileType.Utility)
+            if (profile == null || profile.Type != AIProfileType.Utility)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProfileId), S["The Profile is invalid."]);
             }

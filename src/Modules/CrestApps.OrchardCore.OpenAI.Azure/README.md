@@ -105,7 +105,7 @@ When using the Recipes feature, you can create an Azure profile with the followi
 {
   "steps":[
     {
-      "name":"AIChatProfile",
+      "name":"AIProfile",
       "profiles":[
         {
           "Source":"Azure",
@@ -153,7 +153,7 @@ When using the Recipes feature, you can create an Azure profile with the followi
 {
   "steps":[
     {
-      "name":"AIChatProfile",
+      "name":"AIProfile",
       "profiles":[
         {
           "Source":"AzureAISearch",

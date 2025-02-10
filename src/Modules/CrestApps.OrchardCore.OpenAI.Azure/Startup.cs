@@ -55,8 +55,8 @@ public sealed class AISearchStartup : StartupBase
     {
         services.AddAIChatCompletionService<AzureOpenAIWithSearchAIChatCompletionService>(AzureWithAzureAISearchProfileSource.Key);
         services.AddAIChatProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
-        services.AddDisplayDriver<AIChatProfile, AzureOpenAIChatProfileSearchAIDisplayDriver>();
-        services.AddScoped<IAIChatProfileHandler, AzureOpenAIChatProfileWithAISearchHandler>();
+        services.AddDisplayDriver<AIProfile, AzureOpenAIProfileSearchAIDisplayDriver>();
+        services.AddScoped<IAIProfileHandler, AzureOpenAIProfileWithAISearchHandler>();
         services.AddDataMigration<AzureAISearchTitleGeneratorProfileMigrations>();
     }
 }

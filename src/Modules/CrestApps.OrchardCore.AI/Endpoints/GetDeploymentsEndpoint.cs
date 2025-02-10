@@ -25,7 +25,7 @@ internal static class GetDeploymentsEndpoint
         string providerName,
         string connection)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIChatPermissions.ManageAIChatProfiles))
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles))
         {
             return TypedResults.Forbid();
         }
