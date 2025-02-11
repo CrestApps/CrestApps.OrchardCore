@@ -96,7 +96,7 @@ public sealed class ChatDeploymentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddTransient<IAIProfileHandler, AIDeploymentChatProfileHandler>()
+            .AddTransient<IAIProfileHandler, AIDeploymentProfileHandler>()
             .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>();
     }
 }

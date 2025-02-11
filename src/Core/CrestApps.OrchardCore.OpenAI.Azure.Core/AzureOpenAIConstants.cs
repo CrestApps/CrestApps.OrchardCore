@@ -6,8 +6,6 @@ public static class AzureOpenAIConstants
 
     public const int DefaultTopNDocuments = 5;
 
-    public const string ChatSearchProviderName = "ChatAI";
-
     public const string AzureProviderName = "Azure";
 
     public static class Feature

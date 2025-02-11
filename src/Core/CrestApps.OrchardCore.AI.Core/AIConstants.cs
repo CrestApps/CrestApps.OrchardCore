@@ -9,9 +9,9 @@ public static class AIConstants
     - Response must be under 255 characters in length.
     """;
 
-    public const string CollectionName = "AI";
-
     public const string DefaultBlankMessage = "AI drew blank and no message was generated!";
+
+    public const string CollectionName = "AI";
 
     public static class SystemMessages
     {

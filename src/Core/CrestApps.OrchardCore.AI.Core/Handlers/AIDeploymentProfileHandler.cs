@@ -1,17 +1,17 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
-public sealed class AIDeploymentChatProfileHandler : AIProfileHandlerBase
+public sealed class AIDeploymentProfileHandler : AIProfileHandlerBase
 {
     private readonly IAIDeploymentStore _deploymentStore;
 
     internal readonly IStringLocalizer S;
 
-    public AIDeploymentChatProfileHandler(
+    public AIDeploymentProfileHandler(
         IAIDeploymentStore deploymentStore,
         IStringLocalizer<AIProfileHandler> stringLocalizer)
     {
@@ -41,6 +41,8 @@ public sealed class AIDeploymentChatProfileHandler : AIProfileHandlerBase
         {
             profile.DeploymentId = deploymentId;
         }
+
+        var connectionName = data[nameof(AIProfile.ConnectionName)]?.GetValue<string>()?.Trim();
 
         return Task.CompletedTask;
     }

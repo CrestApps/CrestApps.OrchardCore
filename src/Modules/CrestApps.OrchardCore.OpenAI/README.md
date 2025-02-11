@@ -2,9 +2,9 @@
 
 The **OpenAI AI Chat** feature enhances the **AI Services** functionality by integrating OpenAI's models. It provides a suite of services to interact with these models, enabling advanced AI capabilities.
 
-#### Configuration
+### Configuration
 
-In addition to setting up the AI services [as explained here](../CrestApps.OrchardCore.AI/README.md), you can customize the OpenAI parameters to fine-tune its default behavior. Below is an example of how to configure the default parameters in the `appsettings.json` file:
+To configure the OpenAI connection, add the following settings to the `appsettings.json` file:
 
 ```json
 {

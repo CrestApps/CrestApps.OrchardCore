@@ -23,7 +23,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = AzureOpenAIConstants.Feature.Standard,
     Name = "Azure OpenAI Chat",
-    Description = "Provides AI services using Azure OpenAI models.",
+    Description = "Enables integration with OpenAI through the Azure service provider.",
     Category = "Artificial Intelligence",
     Dependencies =
     [
@@ -35,7 +35,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = AzureOpenAIConstants.Feature.AISearch,
     Name = "Azure OpenAI Chat with Your Data",
-    Description = "AI chat using Azure OpenAI models with Azure AI Search data.",
+    Description = "Enables integration with OpenAI and Azure AI Search data via the Azure service provider.",
     Category = "Artificial Intelligence",
     Dependencies =
     [

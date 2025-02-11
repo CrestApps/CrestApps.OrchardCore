@@ -12,20 +12,19 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 public sealed class AIDeploymentHandler : AIDeploymentHandlerBase
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly AIProviderOptions _connectionOptions;
+    private readonly AIProviderOptions _providerOptions;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
     public AIDeploymentHandler(
         IHttpContextAccessor httpContextAccessor,
-        IAIDeploymentStore deploymentStore,
-        IOptions<AIProviderOptions> connectionOptions,
+        IOptions<AIProviderOptions> providerOptions,
         IClock clock,
         IStringLocalizer<AIDeploymentHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
-        _connectionOptions = connectionOptions.Value;
+        _providerOptions = providerOptions.Value;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -59,7 +58,7 @@ public sealed class AIDeploymentHandler : AIDeploymentHandlerBase
         {
             if (hasConnectionName)
             {
-                if (!_connectionOptions.Providers.TryGetValue(context.Deployment.ProviderName, out var provider))
+                if (!_providerOptions.Providers.TryGetValue(context.Deployment.ProviderName, out var provider))
                 {
                     context.Result.Fail(new ValidationResult(S["There are no configured connection for the provider: {0}", context.Deployment.ProviderName], [nameof(AIDeployment.ProviderName)]));
                 }
@@ -88,7 +87,7 @@ public sealed class AIDeploymentHandler : AIDeploymentHandlerBase
         return Task.CompletedTask;
     }
 
-    private static Task PopulateAsync(AIDeployment deployment, JsonNode data)
+    private Task PopulateAsync(AIDeployment deployment, JsonNode data)
     {
         var name = data[nameof(AIDeployment.Name)]?.GetValue<string>()?.Trim();
 
@@ -109,6 +108,10 @@ public sealed class AIDeploymentHandler : AIDeploymentHandlerBase
         if (!string.IsNullOrEmpty(connectionName))
         {
             deployment.ConnectionName = connectionName;
+        }
+        else if (!string.IsNullOrEmpty(providerName) && _providerOptions.Providers.TryGetValue(providerName, out var provider))
+        {
+            deployment.ConnectionName = provider.DefaultConnectionName;
         }
 
         return Task.CompletedTask;

@@ -11,7 +11,7 @@ using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Recipes;
 
-public sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
+internal sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
 {
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly AzureOpenAIDeploymentsService _azureOpenAIDeploymentsService;

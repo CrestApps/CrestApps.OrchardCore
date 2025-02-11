@@ -47,10 +47,10 @@ The **AI Chat** feature builds upon the **AI Services** feature by adding AI cha
 
 **Note**: This feature does not provide chat service implementations (e.g., OpenAI, DeepSeek, etc.). It only manages chat profiles. To enable chat capabilities, you must integrate an AI chat provider, such as:
 
-- **Azure OpenAI Chat** (`CrestApps.OrchardCore.AI.Azure.Standard`): AI services using Azure OpenAI models.
-- **Azure OpenAI Chat with Your Data** (`CrestApps.OrchardCore.AI.Azure.AISearch`): AI chat using Azure OpenAI models combined with Azure AI Search data.
-- **DeepSeek AI Chat** (`CrestApps.OrchardCore.DeepSeek.Chat.Cloud`): AI-powered chat using Azure DeepSeek cloud service.
 - **OpenAI AI Chat** (`CrestApps.OrchardCore.OpenAI`): AI-powered chat using Azure OpenAI service.
+- **Azure OpenAI Chat** (`CrestApps.OrchardCore.OpenAI.Azure.Standard`): AI services using Azure OpenAI models.
+- **Azure OpenAI Chat with Your Data** (`CrestApps.OrchardCore.OpenAI.Azure.AISearch`): AI chat using Azure OpenAI models combined with Azure AI Search data.
+- **DeepSeek AI Chat** (`CrestApps.OrchardCore.DeepSeek`): AI-powered chat using Azure DeepSeek cloud service.
 - **Ollama AI Chat** (`CrestApps.OrchardCore.Ollama`): AI-powered chat using Azure Ollama service.
 
 ---
@@ -79,14 +79,10 @@ public sealed class SystemDefinedAIProfileMigrations : DataMigration
 
         profile.WithSettings(new AIProfileSettings
         {
+            LockSystemMessage = true, 
             IsRemovable = false, 
             IsListable = false, 
             IsOnAdminMenu = true,
-        });
-
-        profile.WithSettings(new AIProfileSettings
-        {
-            LockSystemMessage = true, 
         });
 
         profile.Put(new AIProfileMetadata
