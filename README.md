@@ -38,7 +38,16 @@ To get started with any module, refer to its respective `README.md` file for det
 Enhances user management with customizable display names and avatars. See the [Users Module README](src/Modules/CrestApps.OrchardCore.Users/README.md) for details.  
 
 ### AI Module
-Provides a user-friendly interface for interacting with AI models like **ChatGPT**. See the [AI Module README](src/Modules/CrestApps.OrchardCore.AI/README.md) for more details.  
+Provides services and interface for interacting with AI models like **ChatGPT**. See the [AI Module README](src/Modules/CrestApps.OrchardCore.AI/README.md) for more details.  
+
+### Ollama Module
+Extends the **AI Module** by integrating any Ollama model. See the [OpenAI Module README](src/Modules/CrestApps.OrchardCore.Ollama/README.md).  
+
+### Azure AI Inference Module
+Extends the **AI Module** by integrating Azure AI Inference services. See the [OpenAI Module README](src/Modules/CrestApps.OrchardCore.AzureAIInference/README.md).  
+
+### DeepSeek Module
+Extends the **AI Module** by integrating DeepSeek services. See the [OpenAI Module README](src/Modules/CrestApps.OrchardCore.DeepSeek/README.md).  
 
 ### OpenAI Module
 Extends the **AI Module** by integrating OpenAI-powered services. See the [OpenAI Module README](src/Modules/CrestApps.OrchardCore.OpenAI/README.md).  
