@@ -7,7 +7,7 @@ public sealed class DeepSeekChatProfileSource : IAIProfileSource
 {
     public DeepSeekChatProfileSource(IStringLocalizer<DeepSeekChatProfileSource> S)
     {
-        DisplayName = S["DeepSeek Service"];
+        DisplayName = S["DeepSeek"];
         Description = S["AI-powered chat using DeepSeek Service."];
     }
 

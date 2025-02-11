@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.AI.Endpoints;
 
 internal static class AIChatUtilityCompletionEndpoint
 {
-    public static IEndpointRouteBuilder AddAIChatUtilityCompletionEndpoint<T>(this IEndpointRouteBuilder builder)
+    public static IEndpointRouteBuilder AddAIUtilityCompletionEndpoint<T>(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapPost("AI/Chat/UtilityCompletion", HandleAsync<T>)
             .AllowAnonymous()

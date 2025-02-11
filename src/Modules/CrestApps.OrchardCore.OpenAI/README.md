@@ -1,10 +1,6 @@
-## OpenAI Services Feature
+## OpenAI AI Chat Feature
 
-The **OpenAI Services** feature enhances the **AI Services** functionality by integrating OpenAI's models. It provides a suite of services to interact with these models, enabling advanced AI capabilities. This feature is available on demand and cannot be manually toggled.
-
-### OpenAI Services Chat Feature
-
-The **OpenAI Services Chat** feature builds upon the core **OpenAI Services** functionality, offering tools to create AI chatbots that engage users using OpenAI's advanced language models. This feature is also activated on demand and cannot be manually enabled or disabled.
+The **OpenAI AI Chat** feature enhances the **AI Services** functionality by integrating OpenAI's models. It provides a suite of services to interact with these models, enabling advanced AI capabilities.
 
 #### Configuration
 
@@ -12,16 +8,18 @@ In addition to setting up the AI services [as explained here](../CrestApps.Orcha
 
 ```json
 {
-  "OrchardCore":{
-    "CrestApps_AI":{
-      "OpenAI":{
-        "DefaultParameters":{
-          "Temperature":0,
-          "MaxOutputTokens":800,
-          "TopP":1,
-          "FrequencyPenalty":0,
-          "PresencePenalty":0,
-          "PastMessagesCount":10
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Providers": {
+        "OpenAI": {
+          "DefaultConnectionName": "openai-cloud",
+          "DefaultDeploymentName": "gpt-4o-mini",
+          "Connections": {
+            "openai-cloud": {
+              "ApiKey": "<!-- Your API Key Goes here -->",
+              "DefaultDeploymentName": "gpt-4o-mini"
+            }
+          }
         }
       }
     }

@@ -72,6 +72,10 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                     var connection = provider.Connections.First();
                     model.ConnectionName = connection.Key;
                 }
+                else
+                {
+                    model.ConnectionName = profile.ConnectionName;
+                }
 
                 model.ConnectionNames = provider.Connections.Select(x => new SelectListItem(x.Key, x.Key)).ToArray();
             }

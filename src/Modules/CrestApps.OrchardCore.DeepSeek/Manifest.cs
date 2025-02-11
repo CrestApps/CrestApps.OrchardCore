@@ -14,7 +14,6 @@ using OrchardCore.Modules.Manifest;
     Name = "DeepSeek AI Chat",
     Description = "Provides a way to interact with the DeepSeek service provider.",
     Category = "Artificial Intelligence",
-    EnabledByDependencyOnly = true,
     Dependencies =
     [
         AIConstants.Feature.Area,

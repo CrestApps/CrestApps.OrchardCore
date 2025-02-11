@@ -10,7 +10,7 @@ public sealed class DeepSeekAIDeploymentProvider : IAIDeploymentProvider
     public DeepSeekAIDeploymentProvider(IStringLocalizer<DeepSeekAIDeploymentProvider> S)
     {
         DisplayName = S["DeepSeek"];
-        Description = S["DeepSeek model deployments."];
+        Description = S["DeepSeek AI deployments."];
     }
 
     public string TechnicalName

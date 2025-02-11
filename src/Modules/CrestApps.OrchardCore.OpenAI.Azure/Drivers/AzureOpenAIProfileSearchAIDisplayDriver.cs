@@ -27,7 +27,7 @@ public sealed class AzureOpenAIProfileSearchAIDisplayDriver : DisplayDriver<AIPr
             return null;
         }
 
-        return Initialize<AzureChatProfileSearchAIViewModel>("AzureOpenAIChatProfileSearchAI_Edit", async model =>
+        return Initialize<AzureProfileSearchAIViewModel>("AzureOpenAIProfileSearchAI_Edit", async model =>
         {
             var metadata = profile.As<AzureAIProfileAISearchMetadata>();
 
@@ -48,7 +48,7 @@ public sealed class AzureOpenAIProfileSearchAIDisplayDriver : DisplayDriver<AIPr
             return null;
         }
 
-        var model = new AzureChatProfileSearchAIViewModel();
+        var model = new AzureProfileSearchAIViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 

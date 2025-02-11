@@ -31,9 +31,6 @@ public sealed class DeepSeekChatCompletionService : NamedAIChatCompletionService
     protected override string ProviderName
         => DeepSeekAIDeploymentProvider.ProviderName;
 
-    protected override string GetDefaultConnectionName(AIProvider provider)
-        => DeepSeekConstants.DefaultCloudConnectionName;
-
     protected override void OnOptions(ChatOptions options, string modelName)
     {
         if (UseFunctions(modelName))

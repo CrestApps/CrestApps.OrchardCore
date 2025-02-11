@@ -66,8 +66,8 @@ public sealed class Startup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-            .AddAIChatCompletionEndpoint<ChatStartup>()
-            .AddAIChatUtilityCompletionEndpoint<ChatStartup>();
+            .AddAICompletionEndpoint<ChatStartup>()
+            .AddAIUtilityCompletionEndpoint<ChatStartup>();
     }
 }
 
@@ -120,6 +120,9 @@ public sealed class ChatStartup : StartupBase
                 .Configure("advanced")
                 .Use<NewTabLinkExtension>();
             });
+
+        services.AddNavigationProvider<ChatAdminMenu>();
+
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

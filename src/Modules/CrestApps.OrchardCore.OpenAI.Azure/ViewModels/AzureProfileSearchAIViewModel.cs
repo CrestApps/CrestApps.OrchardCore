@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 
-public class AzureChatProfileSearchAIViewModel
+public class AzureProfileSearchAIViewModel
 {
     [Required(AllowEmptyStrings = false)]
     public string IndexName { get; set; }
