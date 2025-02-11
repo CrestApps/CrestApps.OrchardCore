@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.OpenAI.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
-    Name = "OpenAI",
+    Name = "OpenAI Chat",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
@@ -11,28 +11,12 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = OpenAIConstants.Feature.Area,
-    Name = "OpenAI Services",
-    Description = "Provides core AI services for OpenAI technology.",
+    Name = "OpenAI Chat",
+    Description = "Provides a way to interact with the OpenAI service provider.",
     Category = "Artificial Intelligence",
-    EnabledByDependencyOnly = true,
     Dependencies =
     [
         AIConstants.Feature.Area,
-        "OrchardCore.Markdown",
-    ]
-)]
-
-[assembly: Feature(
-    Id = OpenAIConstants.Feature.ChatGPT,
-    Name = "OpenAI Services Chat",
-    Description = "Manages AI chat profiles for OpenAI models.",
-    Category = "Artificial Intelligence",
-    EnabledByDependencyOnly = true,
-    Dependencies =
-    [
-        AIConstants.Feature.Chat,
-        OpenAIConstants.Feature.Area,
-        "OrchardCore.Liquid",
-        "CrestApps.OrchardCore.Resources",
+        AIConstants.Feature.Deployments,
     ]
 )]

@@ -1,5 +1,4 @@
-using CrestApps.OrchardCore.AI.Core.Models;
-using Markdig;
+﻿using Markdig;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;

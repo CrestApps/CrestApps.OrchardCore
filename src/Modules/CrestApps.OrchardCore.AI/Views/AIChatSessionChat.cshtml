@@ -12,7 +12,7 @@
 
 @inject IUpdateModelAccessor UpdateModelAccessor
 @inject IDisplayManager<AIChatSessionPrompt> DisplayManager
-@inject IAIChatProfileStore ChatProfileStore
+@inject IAIProfileStore ProfileStore
 @inject IAIMarkdownService MarkdownService
 @{
     var baseId = Html.IdForModel();
@@ -22,7 +22,7 @@
     var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
 
-    var promptGeneratedProfiles = (await ChatProfileStore.GetAllAsync()).Where(x => x.Type == AIChatProfileType.TemplatePrompt);
+    var promptGeneratedProfiles = (await ProfileStore.GetAllAsync()).Where(x => x.Type == AIProfileType.TemplatePrompt);
 }
 
 <div class="mb-3 mx-3 p-3 overflow-y-auto h-100 rounded-2 border bg-theme" id="@chatContainerHtmlId">
@@ -98,7 +98,7 @@
 <script asp-name="OpenAIChatApp" at="Foot"></script>
 <script at="Foot" depends-on="OpenAIChatApp">
     openAIChatManager.initialize({
-        chatUrl: '@(Url.RouteUrl(AIConstants.RouteNames.ChatCompletionRouteName))',
+        chatUrl: '@(Url.RouteUrl(AIConstants.RouteNames.AICompletionRoute))',
         appElementSelector: '#@chatAppHtmlId',
         chatContainerElementSelector: '#@chatContainerHtmlId',
         inputElementSelector: '#@userPromptHtmlId',

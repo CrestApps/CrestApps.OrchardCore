@@ -20,7 +20,7 @@ internal static class AIFunctionExtensions
 
         if (function.Metadata.Parameters != null)
         {
-            var arguments = new AzureChatFunctionParameters()
+            var arguments = new AzureFunctionParameters()
             {
                 Properties = [],
             };

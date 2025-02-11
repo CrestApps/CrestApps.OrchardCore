@@ -6,15 +6,11 @@ public static class AzureOpenAIConstants
 
     public const int DefaultTopNDocuments = 5;
 
-    public const string ChatSearchProviderName = "ChatAI";
-
     public const string AzureProviderName = "Azure";
 
     public static class Feature
     {
         public const string Area = "CrestApps.OrchardCore.OpenAI.Azure";
-
-        public const string Deployments = "CrestApps.OrchardCore.OpenAI.Azure.Deployments";
 
         public const string Standard = "CrestApps.OrchardCore.OpenAI.Azure.Standard";
 

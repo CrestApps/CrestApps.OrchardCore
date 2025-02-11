@@ -1,5 +1,4 @@
 @using CrestApps.OrchardCore.AI
-@using CrestApps.OrchardCore.AI.Azure.Core
 @using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.Core.Models
 @using CrestApps.OrchardCore.AI.Models
@@ -7,33 +6,33 @@
 @using OrchardCore.ContentManagement
 @using OrchardCore.Environment.Shell
 
-@inject IAIChatProfileStore ChatProfileStore
+@inject IAIProfileStore ProfileStore
 @inject IAuthorizationService AuthorizationService
 @inject ShellSettings shellSettings;
 @{
     ContentItem contentItem = Model.ContentItem;
 
-    var part = contentItem.As<AIChatProfilePart>();
+    var part = contentItem.As<AIProfilePart>();
 
     if (string.IsNullOrEmpty(part?.ProfileId))
     {
         return;
     }
 
-    var profile = await ChatProfileStore.FindByIdAsync(part.ProfileId);
+    var profile = await ProfileStore.FindByIdAsync(part.ProfileId);
 
     if (profile == null)
     {
         return;
     }
 
-    if (!await AuthorizationService.AuthorizeAsync(User, AIChatPermissions.QueryAnyAIChatProfile, profile))
+    if (!await AuthorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
     {
         return;
     }
 
     var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
-    var promptGeneratedProfiles = (await ChatProfileStore.GetAllAsync()).Where(x => x.Type == AIChatProfileType.TemplatePrompt);
+    var promptGeneratedProfiles = await ProfileStore.GetProfilesAsync(AIProfileType.TemplatePrompt);
 
     var baseId = $"Widget_{contentItem.ContentItemId}";
     var chatAppHtmlId = $"{baseId}_ChatApp";
@@ -154,7 +153,7 @@
     document.addEventListener('DOMContentLoaded', () => {
 
         openAIChatManager.initialize({
-            chatUrl: '@(Url.RouteUrl(AIConstants.RouteNames.ChatCompletionRouteName))',
+            chatUrl: '@(Url.RouteUrl(AIConstants.RouteNames.AICompletionRoute))',
             appElementSelector: '#@chatAppHtmlId',
             chatContainerElementSelector: '#@chatContainerHtmlId',
             inputElementSelector: '#@userPromptHtmlId',
@@ -197,7 +196,7 @@
                 </div>
             `,
             widget: {
-                sessionUrl: '@(Url.RouteUrl(AIConstants.RouteNames.ChatSessionRouteName))',
+                sessionUrl: '@(Url.RouteUrl(AIConstants.RouteNames.AIChatSessionRouteName))',
                 showChatButton: '#@chatWidgetButton',
                 newChatButton: '#@newChatButton',
                 chatWidgetContainer: '#@chatWidgetContainer',

@@ -5,10 +5,8 @@ using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
-using CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 using CrestApps.OrchardCore.OpenAI.Azure.Recipes;
 using Microsoft.Extensions.DependencyInjection;
-using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Recipes;
@@ -19,25 +17,15 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-    }
-}
-
-[Feature(AzureOpenAIConstants.Feature.Deployments)]
-public sealed class DeploymentsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
         services.AddScoped<AzureOpenAIModelService>();
         services.AddScoped<AzureOpenAIDeploymentsService>();
 
         services
             .AddAIDeploymentProvider<AzureAIDeploymentProvider>(AzureOpenAIConstants.AzureProviderName)
-            .AddDisplayDriver<AIDeployment, AzureOpenAIDeploymentDisplayDriver>()
             .AddScoped<AzureCognitiveServicesAccountServices>();
     }
 }
 
-[Feature(AzureOpenAIConstants.Feature.Deployments)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class RecipesStartup : StartupBase
 {
@@ -52,9 +40,8 @@ public sealed class StandardStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIChatCompletionService<AzureOpenAIChatCompletionService>(AzureProfileSource.Key);
-        services.AddAIChatProfileSource<AzureProfileSource>(AzureProfileSource.Key);
-        services.AddDataMigration<AzureTitleGeneratorProfileMigrations>();
+        services.AddAICompletionService<AzureOpenAICompletionService>(AzureProfileSource.Key);
+        services.AddAIProfileSource<AzureProfileSource>(AzureProfileSource.Key);
     }
 }
 
@@ -63,10 +50,9 @@ public sealed class AISearchStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIChatCompletionService<AzureOpenAIWithSearchAIChatCompletionService>(AzureWithAzureAISearchProfileSource.Key);
-        services.AddAIChatProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
-        services.AddDisplayDriver<AIChatProfile, AzureOpenAIChatProfileSearchAIDisplayDriver>();
-        services.AddScoped<IAIChatProfileHandler, AzureOpenAIChatProfileWithAISearchHandler>();
-        services.AddDataMigration<AzureAISearchTitleGeneratorProfileMigrations>();
+        services.AddAICompletionService<AzureOpenAIWithSearchAICompletionService>(AzureWithAzureAISearchProfileSource.Key);
+        services.AddAIProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
+        services.AddDisplayDriver<AIProfile, AzureOpenAIProfileSearchAIDisplayDriver>();
+        services.AddScoped<IAIProfileHandler, AzureOpenAIProfileWithAISearchHandler>();
     }
 }

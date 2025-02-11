@@ -16,7 +16,7 @@ internal sealed class AIDeploymentDeploymentStepDisplayDriver : DisplayDriver<De
 
     public AIDeploymentDeploymentStepDisplayDriver(
         IAIDeploymentStore deploymentStore,
-        IStringLocalizer<AIChatProfileDeploymentStepDisplayDriver> stringLocalizer)
+        IStringLocalizer<AIProfileDeploymentStepDisplayDriver> stringLocalizer)
     {
         _deploymentStore = deploymentStore;
         S = stringLocalizer;

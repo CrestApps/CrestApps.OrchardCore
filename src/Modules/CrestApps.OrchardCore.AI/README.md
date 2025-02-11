@@ -1,15 +1,25 @@
 ## AI Services Feature
 
-The **AI Services** feature provides the necessary services to interact with AI models. Once enabled, a new **AI Services** menu item appears in the admin menu, offering options to manage AI model deployments.
+The **AI Services** feature enables interaction with AI models by providing essential services. Once activated, a new **Artificial Intelligence** menu item appears in the admin menu, offering options to manage AI profiles.
+
+An **AI Profile** defines how the AI chatbot engages with users, including configuring the chatbot's welcome message, system message, and response behavior.
 
 ### Configuration
 
-Before using any AI features, ensure that the appropriate settings are configured. You can do this using various setting providers. Below is an example of how to configure the services within the `appsettings.json` file:
+Before utilizing any AI features, ensure the necessary settings are configured. This can be done using various setting providers. Below is an example of how to configure the services in the `appsettings.json` file:
 
 ```json
 {
   "OrchardCore": {
     "CrestApps_AI": {
+      "DefaultParameters": {
+        "Temperature": 0,
+        "MaxOutputTokens": 800,
+        "TopP": 1,
+        "FrequencyPenalty": 0,
+        "PresencePenalty": 0,
+        "PastMessagesCount": 10
+      },
       "Providers": {
         "<!-- Provider name goes here -->": {
           "DefaultConnectionName": "<!-- The default connection name -->",
@@ -29,68 +39,61 @@ Before using any AI features, ensure that the appropriate settings are configure
 
 ### AI Deployments Feature
 
-The **AI Deployments** feature builds on the **AI Services** feature by AI Model deployments capabilities.
+The **AI Deployments** feature extends the **AI Services** feature by enabling AI model deployment capabilities.
 
 ### AI Chat Feature
 
-The **AI Chat** feature builds on the **AI Services** feature by adding AI chat capabilities. After enabling this feature, a new **Profiles** menu item will appear under the **Artificial Intelligence** section in the admin menu, allowing you to manage chat profiles.
+The **AI Chat** feature builds upon the **AI Services** feature by adding AI chat capabilities. Once enabled, any chat-type AI profile with the "Show On Admin Menu" option will appear under the **Artificial Intelligence** section in the admin menu, allowing you to interact with your chat profiles. If the Widgets feature is enabled, a widget will also be available to add to your content.
 
-A **Profile** defines how the AI chatbot interacts with users. This includes configuring the chatbot's welcome message, system message, and response behavior.
+**Note**: This feature does not provide chat service implementations (e.g., OpenAI, DeepSeek, etc.). It only manages chat profiles. To enable chat capabilities, you must integrate an AI chat provider, such as:
 
-**Note**: This feature does not provide chat service implementations, such as OpenAI, DeepSeek, or others. It only manages chat profiles. To enable chat capabilities, you must integrate an AI chat provider, such as:
-
-- **Azure OpenAI Chat** (`CrestApps.OrchardCore.AI.Azure.Standard`): Provides AI services using Azure OpenAI models.
-- **Azure OpenAI Chat with Your Data** (`CrestApps.OrchardCore.AI.Azure.AISearch`): AI-powered chat using Azure OpenAI models combined with Azure AI Search data.
-- **DeepSeek Cloud AI Chat** (`CrestApps.OrchardCore.DeepSeek.Chat.Cloud`): AI-powered chat using Azure DeepSeek cloud service.
-
-For detailed information on Azure OpenAI, refer to the [Azure OpenAI documentation](../CrestApps.OrchardCore.AI.Azure/README.md).
-
-For detailed information on DeepSeek, refer to the [DeepSeek documentation](../CrestApps.OrchardCore.DeepSeek/README.md).
-
+- **OpenAI AI Chat** (`CrestApps.OrchardCore.OpenAI`): AI-powered chat using Azure OpenAI service.
+- **Azure OpenAI Chat** (`CrestApps.OrchardCore.OpenAI.Azure.Standard`): AI services using Azure OpenAI models.
+- **Azure OpenAI Chat with Your Data** (`CrestApps.OrchardCore.OpenAI.Azure.AISearch`): AI chat using Azure OpenAI models combined with Azure AI Search data.
+- **Azure AI Inference Chat** (`CrestApps.OrchardCore.AzureAIInference`): AI services using Azure AI Inference (GitHub models) models.
+- **DeepSeek AI Chat** (`CrestApps.OrchardCore.DeepSeek`): AI-powered chat using Azure DeepSeek cloud service.
+- **Ollama AI Chat** (`CrestApps.OrchardCore.Ollama`): AI-powered chat using Azure Ollama service.
+- 
 ---
 
 ### Defining Chat Profiles Using Code
 
-To define chat profiles programmatically, you can create a migration class. Here's an example that demonstrates how to create a new chat profile using code:
+To define chat profiles programmatically, create a migration class. Here’s an example demonstrating how to create a new chat profile:
 
 ```csharp
 public sealed class SystemDefinedAIProfileMigrations : DataMigration
 {
-    private readonly IAIChatProfileManager _chatProfileManager;
+    private readonly IAIProfileManager _profileManager;
 
-    public SystemDefinedAIProfileMigrations(IAIChatProfileManager chatProfileManager)
+    public SystemDefinedAIProfileMigrations(IAIProfileManager profileManager)
     {
-        _chatProfileManager = chatProfileManager;
+        _profileManager = profileManager;
     }
 
     public async Task<int> CreateAsync()
     {
-        var profile = await _chatProfileManager.NewAsync("Azure");
+        var profile = await _profileManager.NewAsync("Azure");
 
         profile.Name = "UniqueTechnicalName";
         profile.DisplayText = "A Display name for the profile";
-        profile.Type = AIChatProfileType.Chat;
+        profile.Type = AIProfileType.Chat;
 
-        profile.WithSettings(new AIChatProfileSettings
+        profile.WithSettings(new AIProfileSettings
         {
+            LockSystemMessage = true, 
             IsRemovable = false, 
             IsListable = false, 
             IsOnAdminMenu = true,
         });
 
-        profile.WithSettings(new OpenAIChatProfileSettings
-        {
-            LockSystemMessage = true, 
-        });
-
-        profile.Put(new OpenAIChatProfileMetadata
+        profile.Put(new AIProfileMetadata
         {
             SystemMessage = "some system message",
             Temperature = 0.3f,
             MaxTokens = 4096,
         });
 
-        await _chatProfileManager.SaveAsync(profile);
+        await _profileManager.SaveAsync(profile);
 
         return 1;
     }
@@ -103,7 +106,7 @@ public sealed class SystemDefinedAIProfileMigrations : DataMigration
 
 ### Extending AI Chat with Custom Functions
 
-The module allows for extending the AI chat's capabilities by adding custom functions. To implement a custom function, derive a class from `AIFunction` and register it as a service. Here's an example of a custom function to fetch weather information based on user location:
+You can extend AI chat functionality by adding custom functions. To create a custom function, inherit from `AIFunction` and register it as a service. Here’s an example of a custom function that retrieves weather information based on the user’s location:
 
 ```csharp
 public sealed class GetWeatherFunction : AIFunction
@@ -117,14 +120,13 @@ public sealed class GetWeatherFunction : AIFunction
         Metadata = new AIFunctionMetadata("get_weather")
         {
             Description = "Retrieves weather information for a specified location.",
-            Parameters =
-            [
+            Parameters = [
                 new AIFunctionParameterMetadata(LocationProperty)
                 {
                     Description = "The geographic location for which the weather information is requested.",
                     IsRequired = true,
                     ParameterType = typeof(string),
-                },
+                }
             ],
             ReturnParameter = new AIFunctionReturnParameterMetadata
             {
@@ -144,7 +146,7 @@ public sealed class GetWeatherFunction : AIFunction
 
 #### Registering the Custom Function
 
-To register the function, add it as a service in the `Startup` class:
+To register the custom function, add it as a service in the `Startup` class:
 
 ```csharp
 services.AddAITool<GetWeatherFunction>();
@@ -154,18 +156,18 @@ You can then access the function via `IAIToolsService` in your module.
 
 ---
 
-### Configuring Chat Profiles with Custom Functions
+### Configuring AI Profiles with Custom Functions
 
-Once the custom function is registered, it can be added to chat profiles. When creating or editing a profile, the custom function will appear in the list of available functions, and you can enable or disable it as needed.
+Once the custom function is registered, you can add it to any AI profile. The custom function will be available in the list of functions when creating or editing a profile, and you can enable or disable it as needed.
 
 ---
 
 ### Implementing Custom AI Sources
 
-If you need to integrate custom AI sources, you can implement the `IAIChatProfileSource` interface. For example:
+To integrate custom AI sources, implement the `IAIProfileSource` interface. For example:
 
 ```csharp
-public sealed class AzureProfileSource : IAIChatProfileSource
+public sealed class AzureProfileSource : IAIProfileSource
 {
     public const string Key = "Azure";
 
@@ -178,8 +180,6 @@ public sealed class AzureProfileSource : IAIChatProfileSource
     public string TechnicalName => Key;
 
     public string ProviderName => "Azure";
-
-    public string TechnologyName => "OpenAI";
 
     public LocalizedString DisplayName { get; }
 
@@ -194,37 +194,37 @@ public sealed class StandardStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIChatProfileSource<AzureProfileSource>(AzureProfileSource.Key);
+        services.AddAIProfileSource<AzureProfileSource>(AzureProfileSource.Key);
     }
 }
 ```
 
 ---
 
-### Adding AI Chat Profiles via Recipes
+### Adding AI Profiles via Recipes
 
-If you're using the Recipes module, you can create or update AI chat profiles using the following recipe:
+You can create or update AI chat profiles via the Recipes module using the following recipe:
 
 ```json
 {
   "steps": [
     {
-      "name": "AIChatProfile",
+      "name": "AIProfile",
       "profiles": [
         {
           "Source": "CustomSource",
           "Name": "ExampleProfile",
-          "DisplayText": "Example Profile","
+          "DisplayText": "Example Profile",
           "WelcomeMessage": "What do you want to know?",
           "FunctionNames": [],
           "Type": "Chat",
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
-          "ConnectionName":"<!-- The connection name to use for the deployment; if left blank, the default connection will be used. -->",
-          "DeploymentId":"<!-- A deployment ID for the deployment; if left blank, the default deployment will be used. -->",
-          "SystemMessage": "You are an AI assistant that helps people find information.",
+          "ConnectionName":"<!-- Connection name for the deployment; leave blank for default. -->",
+          "DeploymentId":"<!-- Deployment ID for the deployment; leave blank for default. -->",
           "Properties": {
-            "OpenAIChatProfileMetadata": {
+            "AIProfileMetadata": {
+              "SystemMessage": "You are an AI assistant that helps people find information.",
               "Temperature": null,
               "TopP": null,
               "FrequencyPenalty": null,
@@ -240,7 +240,7 @@ If you're using the Recipes module, you can create or update AI chat profiles us
 }
 ```
 
-you can also create or update AI deployment using the following recipe:
+You can also create or update AI deployments using the following recipe:
 
 ```json
 {
@@ -249,9 +249,9 @@ you can also create or update AI deployment using the following recipe:
       "name": "AIDeployment",
       "deployments": [
         {
-          "Name": "<!-- The name of the deployment as specified at the vendor side. -->",
-          "ProviderName": "<!-- The provider name (e.g., OpenAI, DeepSeek). -->",
-          "ConnectionName": "<!-- The connection name you have used to configure the provider. -->"
+          "Name": "<!-- Deployment name as specified by the vendor -->",
+          "ProviderName": "<!-- Provider name (e.g., OpenAI, DeepSeek) -->",
+          "ConnectionName": "<!-- Connection name used to configure the provider -->"
         }
       ]
     }
@@ -263,19 +263,19 @@ you can also create or update AI deployment using the following recipe:
 
 ### AI Chat with Workflows
 
-When combined with the **Workflows** feature, the **AI Chat** feature introduces a new activity for interacting with AI chat services:
+When used with the **Workflows** feature, the **AI Services** feature introduces a new activity to interact with AI chat services:
 
 #### Chat Utility Completion Task
 
-This activity allows you to send a message to the AI chat service and store the generated response in a workflow property. To use it, search for the **Chat Utility Completion** task in your workflow and specify a unique **Result Property Name**. This property will store the response generated by the AI chat service.
+This activity allows you to send a message to the AI chat service and store the response in a workflow property. To use it, search for the **Chat Utility Completion** task in your workflow and specify a unique **Result Property Name**. The generated response will be stored in this property.
 
-For example, if the **Result Property Name** is `AI-CrestApps-Step1`, you can access the response later using:
+For example, if the **Result Property Name** is `AI-CrestApps-Step1`, access the response later with:
 
 ```liquid
 {{ Workflow.Output["AI-CrestApps-Step1"].Content }}
 ```
 
-If you want the response in HTML format, enable the `Include HTML Content` option, then access it using:
+If you want the response in HTML format, enable the `Include HTML Content` option, and access it with:
 
 ```liquid
 {{ Workflow.Output["AI-CrestApps-Step1"].HtmlContent }}
@@ -287,4 +287,4 @@ To avoid conflicts with other workflow tasks, it's recommended to prefix the **R
 
 ### Deployments with AI Chat
 
-The **AI Chat** feature integrates with the **Deployments** module, allowing you to deploy chat profiles to different environments through Orchard Core's Deployment UI.
+The **AI Services** feature integrates with the **Deployments** module, allowing profiles to be deployed to various environments through Orchard Core's Deployment UI.

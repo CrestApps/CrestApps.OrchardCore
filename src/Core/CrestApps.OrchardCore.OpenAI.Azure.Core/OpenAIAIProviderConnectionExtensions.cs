@@ -26,9 +26,6 @@ public static class OpenAIAIProviderConnectionExtensions
     public static string GetResourceGroupName(this AIProviderConnection entry, bool throwException = true)
         => entry.GetStringValue("ResourceGroupName", throwException);
 
-    public static string GetApiKey(this AIProviderConnection entry, bool throwException = true)
-        => entry.GetStringValue("ApiKey", throwException);
-
     public static TokenCredential GetCredential(this AIProviderConnection entry)
     {
         var tenantId = entry.GetTenantId(false);

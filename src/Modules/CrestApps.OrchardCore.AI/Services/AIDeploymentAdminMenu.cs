@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Azure.Core;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
@@ -17,17 +16,15 @@ public sealed class AIDeploymentAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Artificial Intelligence"], "90", ai => ai
-                .AddClass("artificial-intelligence")
-                .Id("artificialIntelligence")
+            .Add(S["Artificial Intelligence"], ai => ai
                 .Add(S["Deployments"], "after.10", deployments => deployments
                     .AddClass("ai-deployments")
                     .Id("aiDeployments")
                     .Action("Index", "Deployments", AIConstants.Feature.Area)
-                    .Permission(AIChatPermissions.ManageModelDeployments)
+                    .Permission(AIPermissions.ManageAIDeployments)
                     .LocalNav()
                 )
-            , priority: 2);
+            );
 
         return ValueTask.CompletedTask;
     }

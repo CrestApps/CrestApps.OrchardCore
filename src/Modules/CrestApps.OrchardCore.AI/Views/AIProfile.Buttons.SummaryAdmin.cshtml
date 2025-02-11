@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProfile>
+
+<a asp-action="Edit"
+   asp-controller="Profiles"
+   asp-route-id="@Model.Value.Id"
+   class="btn btn-primary btn-sm">@T["Edit"]</a>
+
+@if (Model.Value.GetSettings<AIProfileSettings>().IsRemovable)
+{
+    <a asp-action="Delete"
+       asp-controller="Profiles"
+       asp-route-id="@Model.Value.Id"
+       class="btn btn-danger btn-sm"
+       data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+}

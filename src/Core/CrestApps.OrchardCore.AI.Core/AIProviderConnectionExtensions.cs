@@ -5,6 +5,9 @@ namespace CrestApps.OrchardCore.AI.Core;
 
 public static class AIProviderConnectionExtensions
 {
+    public static string GetApiKey(this AIProviderConnection entry, bool throwException = true)
+        => entry.GetStringValue("ApiKey", throwException);
+
     public static string GetDefaultDeploymentName(this AIProviderConnection entry, bool throwException = true)
         => entry.GetStringValue("DefaultDeploymentName", throwException);
 

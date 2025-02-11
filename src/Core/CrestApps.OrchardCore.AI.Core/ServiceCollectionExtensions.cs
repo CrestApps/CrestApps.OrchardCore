@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Azure.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -23,32 +22,32 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddAIChatProfileServices(this IServiceCollection services)
+    public static IServiceCollection AddAIProfileServices(this IServiceCollection services)
     {
         services
-            .AddScoped<IAIChatProfileStore, DefaultAIChatProfileStore>()
-            .AddScoped<IAIChatProfileManager, DefaultAIChatProfileManager>()
-            .AddScoped<IAIChatProfileManagerSession, DefaultAIChatProfileManagerSession>()
-            .AddScoped<IAIChatProfileHandler, AIChatProfileHandler>()
+            .AddScoped<IAIProfileStore, DefaultAIProfileStore>()
+            .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
+            .AddScoped<IAIProfileManagerSession, DefaultAIProfileManagerSession>()
+            .AddScoped<IAIProfileHandler, AIProfileHandler>()
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>();
 
         services
-            .AddPermissionProvider<AIChatPermissionsProvider>()
-            .AddScoped<IAuthorizationHandler, AIChatProfileAuthenticationHandler>()
+            .AddPermissionProvider<AIPermissionsProvider>()
+            .AddScoped<IAuthorizationHandler, AIProfileAuthenticationHandler>()
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.CollectionName));
 
         return services;
     }
 
-    public static IServiceCollection AddAIChatProfileSource<TSource>(this IServiceCollection services, string sourceKey)
-         where TSource : class, IAIChatProfileSource
+    public static IServiceCollection AddAIProfileSource<TSource>(this IServiceCollection services, string sourceKey)
+         where TSource : class, IAIProfileSource
     {
         ArgumentNullException.ThrowIfNull(sourceKey);
 
         services
             .AddScoped<TSource>()
-            .AddScoped<IAIChatProfileSource>(sp => sp.GetService<TSource>())
-            .AddKeyedScoped<IAIChatProfileSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
+            .AddScoped<IAIProfileSource>(sp => sp.GetService<TSource>())
+            .AddKeyedScoped<IAIProfileSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
 
         return services;
     }
@@ -66,14 +65,14 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddAIChatCompletionService<TService>(this IServiceCollection services, string sourceKey)
-        where TService : class, IAIChatCompletionService
+    public static IServiceCollection AddAICompletionService<TService>(this IServiceCollection services, string sourceKey)
+        where TService : class, IAICompletionService
     {
         ArgumentNullException.ThrowIfNull(sourceKey);
 
         services.TryAddScoped<TService>();
-        services.TryAddScoped<IAIChatCompletionService>(sp => sp.GetService<TService>());
-        services.AddKeyedScoped<IAIChatCompletionService>(sourceKey, (sp, key) => sp.GetService<TService>());
+        services.TryAddScoped<IAICompletionService>(sp => sp.GetService<TService>());
+        services.AddKeyedScoped<IAICompletionService>(sourceKey, (sp, key) => sp.GetService<TService>());
 
         return services;
     }

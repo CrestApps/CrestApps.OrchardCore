@@ -1,10 +1,9 @@
 using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.OpenAI.Core;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureProfileSource : IAIChatProfileSource
+public sealed class AzureProfileSource : IAIProfileSource
 {
     public const string Key = "Azure";
 
@@ -19,9 +18,6 @@ public sealed class AzureProfileSource : IAIChatProfileSource
 
     public string ProviderName
         => AzureOpenAIConstants.AzureProviderName;
-
-    public string TechnologyName
-        => OpenAIConstants.TechnologyName;
 
     public LocalizedString DisplayName { get; }
 

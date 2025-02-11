@@ -34,7 +34,7 @@ public interface IAIChatSessionManager
     /// A task representing the asynchronous operation. The task result is a new <see cref="AIChatSession"/>
     /// associated with the provided profile.
     /// </returns>
-    Task<AIChatSession> NewAsync(AIChatProfile profile);
+    Task<AIChatSession> NewAsync(AIProfile profile);
 
     /// <summary>
     /// Asynchronously saves or updates the specified AI chat session.

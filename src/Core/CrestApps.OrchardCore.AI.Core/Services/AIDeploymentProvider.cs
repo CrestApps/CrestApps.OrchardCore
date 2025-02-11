@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Azure.Core;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
@@ -8,7 +7,7 @@ public sealed class AIDeploymentProvider : IPermissionProvider
 {
     private readonly static IEnumerable<Permission> _allPermissions =
     [
-        AIChatPermissions.ManageModelDeployments,
+        AIPermissions.ManageAIDeployments,
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()

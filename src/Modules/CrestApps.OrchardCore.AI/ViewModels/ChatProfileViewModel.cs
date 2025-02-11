@@ -2,7 +2,7 @@ using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.AI.ViewModels;
 
-public class ChatProfileViewModel
+public class ProfileViewModel
 {
     public string DisplayName { get; set; }
 

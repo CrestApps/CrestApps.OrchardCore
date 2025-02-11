@@ -4,10 +4,10 @@ namespace CrestApps.OrchardCore.AI.Models;
 
 public class AIDeploymentValidateResult
 {
-    private readonly List<ValidationResult> _errors = [];
+    private List<ValidationResult> _errors;
 
     public IReadOnlyList<ValidationResult> Errors
-        => _errors;
+        => _errors ??= [];
 
     /// <summary>
     /// Success may be altered by a handler during the validating async event.
@@ -17,6 +17,8 @@ public class AIDeploymentValidateResult
     public void Fail(ValidationResult error)
     {
         Succeeded = false;
+
+        _errors ??= [];
 
         _errors.Add(error);
     }

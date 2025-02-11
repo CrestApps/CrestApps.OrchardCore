@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Azure.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Endpoints.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -16,7 +15,7 @@ internal static class AIChatSessionEndpoint
     {
         _ = builder.MapGet("AI/Chat/Session", HandleAsync)
             .AllowAnonymous()
-            .WithName(AIConstants.RouteNames.ChatSessionRouteName)
+            .WithName(AIConstants.RouteNames.AIChatSessionRouteName)
             .DisableAntiforgery();
 
         return builder;
@@ -24,7 +23,7 @@ internal static class AIChatSessionEndpoint
 
     private static async Task<IResult> HandleAsync(
         IAuthorizationService authorizationService,
-        IAIChatProfileManager chatProfileManager,
+        IAIProfileManager chatProfileManager,
         IAIChatSessionManager sessionManager,
         ILiquidTemplateManager liquidTemplateManager,
         IHttpContextAccessor httpContextAccessor,
@@ -47,12 +46,12 @@ internal static class AIChatSessionEndpoint
 
         var profile = await chatProfileManager.FindByIdAsync(chatSession.ProfileId);
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIChatPermissions.QueryAnyAIChatProfile, profile))
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
         {
             return TypedResults.Forbid();
         }
 
-        var completionService = serviceProvider.GetKeyedService<IAIChatCompletionService>(profile.Source);
+        var completionService = serviceProvider.GetKeyedService<IAICompletionService>(profile.Source);
 
         if (completionService is null)
         {

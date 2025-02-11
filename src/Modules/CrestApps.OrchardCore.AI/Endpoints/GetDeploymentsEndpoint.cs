@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Azure.Core;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -11,7 +10,7 @@ internal static class GetDeploymentsEndpoint
 {
     public static IEndpointRouteBuilder AddGetDeploymentsEndpoint(this IEndpointRouteBuilder builder)
     {
-        _ = builder.MapGet("AI/Deployments/ByConnection", HandleAsync)
+        _ = builder.MapGet("AI/Deployments", HandleAsync)
             .AllowAnonymous()
             .WithName(AIConstants.RouteNames.GetDeploymentsByConnectionRouteName)
             .DisableAntiforgery();
@@ -26,7 +25,7 @@ internal static class GetDeploymentsEndpoint
         string providerName,
         string connection)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIChatPermissions.ManageAIChatProfiles))
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles))
         {
             return TypedResults.Forbid();
         }

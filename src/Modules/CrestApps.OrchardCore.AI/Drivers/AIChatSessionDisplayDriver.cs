@@ -7,9 +7,9 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 
 public sealed class AIChatSessionDisplayDriver : DisplayDriver<AIChatSession>
 {
-    private readonly IAIChatProfileManager _openAIChatProfileManager;
+    private readonly IAIProfileManager _openAIChatProfileManager;
 
-    public AIChatSessionDisplayDriver(IAIChatProfileManager openAIChatProfileManager)
+    public AIChatSessionDisplayDriver(IAIProfileManager openAIChatProfileManager)
     {
         _openAIChatProfileManager = openAIChatProfileManager;
     }

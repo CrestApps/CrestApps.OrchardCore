@@ -1,8 +1,6 @@
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Core;
-using CrestApps.OrchardCore.OpenAI.Drivers;
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.OpenAI.Services;
 using Microsoft.Extensions.DependencyInjection;
-using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.OpenAI;
@@ -11,16 +9,9 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddOpenAIChatServices();
+        services.AddAICompletionService<OpenAICompletionService>(OpenAIDeploymentProvider.ProviderName);
+        services.AddAIProfileSource<OpenAIProfileSource>(OpenAIDeploymentProvider.ProviderName);
+        services.AddAIDeploymentProvider<OpenAIDeploymentProvider>(OpenAIDeploymentProvider.ProviderName);
     }
 }
 
-[Feature(OpenAIConstants.Feature.ChatGPT)]
-public sealed class ChatGPTStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services
-            .AddDisplayDriver<AIChatProfile, OpenAIChatProfileDisplayDriver>();
-    }
-}
