@@ -48,7 +48,6 @@ public abstract class NamedAIChatCompletionService : IAIChatCompletionService
 
     protected virtual void OnOptions(ChatOptions options, string modelName)
     {
-
     }
 
     protected abstract IChatClient GetChatClient(AIProviderConnection connection, AIChatCompletionContext context, string modelName);
@@ -89,21 +88,28 @@ public abstract class NamedAIChatCompletionService : IAIChatCompletionService
             return null;
         }
 
-        var metadata = context.Profile.As<AIProfileMetadata>();
+        var metadata = context.Profile?.As<AIProfileMetadata>();
 
-        var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
+        var pastMessageCount = metadata?.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
 
         var chatMessages = messages.Where(x => (x.Role == ChatRole.User || x.Role == ChatRole.Assistant) && !string.IsNullOrWhiteSpace(x.Text));
 
         var skip = GetTotalMessagesToSkip(chatMessages.Count(), pastMessageCount);
 
-        var prompts = chatMessages.Skip(skip).Take(pastMessageCount).ToList();
+        var prompts = new List<ChatMessage>
+        {
+            new(ChatRole.System, GetSystemMessage(context, metadata))
+        };
 
         try
         {
             var chatClient = GetChatClient(connection, context, deploymentName);
 
             var chatOptions = GetChatOptions(context, metadata);
+
+            OnOptions(chatOptions, deploymentName);
+
+            prompts.AddRange(chatMessages.Skip(skip).Take(pastMessageCount));
 
             return await chatClient.CompleteAsync(prompts, chatOptions, cancellationToken);
         }
@@ -119,15 +125,15 @@ public abstract class NamedAIChatCompletionService : IAIChatCompletionService
     {
         var chatOptions = new ChatOptions()
         {
-            Temperature = metadata.Temperature ?? _defaultOptions.Temperature,
-            TopP = metadata.TopP ?? _defaultOptions.TopP,
-            FrequencyPenalty = metadata.FrequencyPenalty ?? _defaultOptions.FrequencyPenalty,
-            PresencePenalty = metadata.PresencePenalty ?? _defaultOptions.PresencePenalty,
-            MaxOutputTokens = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
+            Temperature = metadata?.Temperature ?? _defaultOptions.Temperature,
+            TopP = metadata?.TopP ?? _defaultOptions.TopP,
+            FrequencyPenalty = metadata?.FrequencyPenalty ?? _defaultOptions.FrequencyPenalty,
+            PresencePenalty = metadata?.PresencePenalty ?? _defaultOptions.PresencePenalty,
+            MaxOutputTokens = metadata?.MaxTokens ?? _defaultOptions.MaxOutputTokens,
         };
 
-        if (!context.DisableTools && context.Profile.FunctionNames is not null &&
-            context.Profile.FunctionNames.Length > 0)
+        if (!context.DisableTools && context.Profile?.FunctionNames is not null &&
+            context.Profile?.FunctionNames.Length > 0)
         {
             chatOptions.Tools = [];
 
@@ -154,7 +160,7 @@ public abstract class NamedAIChatCompletionService : IAIChatCompletionService
 
     private async Task<AIDeployment> GetDeploymentAsync(AIChatCompletionContext content)
     {
-        if (!string.IsNullOrEmpty(content.Profile.DeploymentId))
+        if (!string.IsNullOrEmpty(content.Profile?.DeploymentId))
         {
             return await _deploymentStore.FindByIdAsync(content.Profile.DeploymentId);
         }
@@ -170,5 +176,26 @@ public abstract class NamedAIChatCompletionService : IAIChatCompletionService
         }
 
         return 0;
+    }
+
+    private static string GetSystemMessage(AIChatCompletionContext context, AIProfileMetadata metadata)
+    {
+        var systemMessage = string.Empty;
+
+        if (!string.IsNullOrEmpty(context.SystemMessage))
+        {
+            systemMessage = context.SystemMessage;
+        }
+        else if (!string.IsNullOrEmpty(metadata?.SystemMessage))
+        {
+            systemMessage = metadata.SystemMessage;
+        }
+
+        if (context.UserMarkdownInResponse)
+        {
+            systemMessage += Environment.NewLine + AIConstants.SystemMessages.UseMarkdownSyntax;
+        }
+
+        return systemMessage;
     }
 }

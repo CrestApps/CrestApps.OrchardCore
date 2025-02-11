@@ -201,7 +201,16 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
 
     private static string GetSystemMessage(AIChatCompletionContext context, AIProfileMetadata metadata)
     {
-        var systemMessage = metadata.SystemMessage ?? string.Empty;
+        var systemMessage = string.Empty;
+
+        if (!string.IsNullOrEmpty(context.SystemMessage))
+        {
+            systemMessage = context.SystemMessage;
+        }
+        else if (!string.IsNullOrEmpty(metadata?.SystemMessage))
+        {
+            systemMessage = metadata.SystemMessage;
+        }
 
         if (context.UserMarkdownInResponse)
         {

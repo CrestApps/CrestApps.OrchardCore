@@ -119,8 +119,9 @@ internal static class AIChatCompletionEndpoint
 
         if (profile.Type == AIProfileType.TemplatePrompt)
         {
-            completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, userPrompt)], new AIChatCompletionContext(profile)
+            completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, userPrompt)], new AIChatCompletionContext()
             {
+                Profile = profile,
                 UserMarkdownInResponse = true,
             });
 
@@ -150,8 +151,9 @@ internal static class AIChatCompletionEndpoint
             var transcript = chatSession.Prompts.Where(x => !x.IsGeneratedPrompt)
                 .Select(prompt => new ChatMessage(prompt.Role, prompt.Content));
 
-            completion = await completionService.ChatAsync(transcript, new AIChatCompletionContext(profile)
+            completion = await completionService.ChatAsync(transcript, new AIChatCompletionContext()
             {
+                Profile = profile,
                 Session = chatSession,
                 UserMarkdownInResponse = requestData.IncludeHtmlResponse,
             });
@@ -219,7 +221,10 @@ internal static class AIChatCompletionEndpoint
                     new (ChatRole.User, userPrompt),
                 };
 
-                var context = new AIChatCompletionContext(titleProfile);
+                var context = new AIChatCompletionContext()
+                {
+                    Profile = titleProfile,
+                };
 
                 var titleResponse = await completionService.ChatAsync(transcription, context);
 
@@ -240,8 +245,9 @@ internal static class AIChatCompletionEndpoint
 
     private static async Task<IResult> GetToolMessageAsync(IAIChatCompletionService completionService, AIProfile profile, IAIMarkdownService markdownService, string prompt, bool respondWithHtml)
     {
-        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, prompt)], new AIChatCompletionContext(profile)
+        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, prompt)], new AIChatCompletionContext()
         {
+            Profile = profile,
             UserMarkdownInResponse = true,
         });
 

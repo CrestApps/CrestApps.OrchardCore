@@ -109,8 +109,9 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
             return Outcomes("Failed");
         }
 
-        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, userPrompt.Trim())], new AIChatCompletionContext(profile)
+        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, userPrompt.Trim())], new AIChatCompletionContext()
         {
+            Profile = profile,
             UserMarkdownInResponse = IncludeHtmlResponse,
         });
 
