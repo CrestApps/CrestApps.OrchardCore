@@ -12,7 +12,7 @@ using OpenAI;
 
 namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
 
-public sealed class DeepSeekChatCompletionService : NamedAIChatCompletionService
+public sealed class DeepSeekChatCompletionService : NamedAICompletionService
 {
     private readonly IDistributedCache _distributedCache;
 

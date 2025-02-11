@@ -7,7 +7,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public abstract class NamedAIChatCompletionService : IAIChatCompletionService
+public abstract class NamedAICompletionService : IAIChatCompletionService
 {
     private readonly IAIToolsService _toolsService;
     private readonly IAIDeploymentStore _deploymentStore;
@@ -15,7 +15,7 @@ public abstract class NamedAIChatCompletionService : IAIChatCompletionService
     private readonly AIProviderOptions _providerOptions;
     private readonly ILogger _logger;
 
-    public NamedAIChatCompletionService(
+    public NamedAICompletionService(
         string name,
         IOptions<AIProviderOptions> providerOptions,
         IAIToolsService toolsService,

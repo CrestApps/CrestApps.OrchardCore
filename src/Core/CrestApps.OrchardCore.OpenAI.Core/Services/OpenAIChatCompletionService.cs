@@ -10,7 +10,7 @@ using OpenAI;
 
 namespace CrestApps.OrchardCore.AI.OpenAI.Services;
 
-public sealed class OpenAIChatCompletionService : NamedAIChatCompletionService
+public sealed class OpenAIChatCompletionService : NamedAICompletionService
 {
     private readonly IDistributedCache _distributedCache;
 

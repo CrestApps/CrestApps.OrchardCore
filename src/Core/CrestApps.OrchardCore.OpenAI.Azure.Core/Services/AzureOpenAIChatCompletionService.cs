@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureOpenAIChatCompletionService : NamedAIChatCompletionService
+public sealed class AzureOpenAIChatCompletionService : NamedAICompletionService
 {
     private readonly IDistributedCache _distributedCache;
 
