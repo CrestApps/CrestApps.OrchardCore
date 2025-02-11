@@ -107,7 +107,7 @@ public sealed class ChatStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddAIChatProfileServices()
+            .AddAIProfileServices()
             .AddScoped<IAILinkGenerator, DefaultAILinkGenerator>()
             .AddKeyedScoped<IAIMarkdownService, AIChatMarkdownService>("chat")
             .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()

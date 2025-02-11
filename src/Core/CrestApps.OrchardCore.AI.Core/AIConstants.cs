@@ -38,9 +38,4 @@ public static class AIConstants
         public const string GetDeploymentsByConnectionRouteName = "GetDeploymentsByConnection";
 
     }
-
-    public static string GetTitleGeneratorProfileName(string profileSource)
-    {
-        return $"ChatTitleGenerator{profileSource}";
-    }
 }

@@ -5,10 +5,8 @@ using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
-using CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 using CrestApps.OrchardCore.OpenAI.Azure.Recipes;
 using Microsoft.Extensions.DependencyInjection;
-using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Recipes;
@@ -42,9 +40,8 @@ public sealed class StandardStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIChatCompletionService<AzureOpenAIChatCompletionService>(AzureProfileSource.Key);
-        services.AddAIChatProfileSource<AzureProfileSource>(AzureProfileSource.Key);
-        services.AddDataMigration<AzureTitleGeneratorProfileMigrations>();
+        services.AddAICompletionService<AzureOpenAIChatCompletionService>(AzureProfileSource.Key);
+        services.AddAIProfileSource<AzureProfileSource>(AzureProfileSource.Key);
     }
 }
 
@@ -53,10 +50,9 @@ public sealed class AISearchStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIChatCompletionService<AzureOpenAIWithSearchAIChatCompletionService>(AzureWithAzureAISearchProfileSource.Key);
-        services.AddAIChatProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
+        services.AddAICompletionService<AzureOpenAIWithSearchAIChatCompletionService>(AzureWithAzureAISearchProfileSource.Key);
+        services.AddAIProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
         services.AddDisplayDriver<AIProfile, AzureOpenAIProfileSearchAIDisplayDriver>();
         services.AddScoped<IAIProfileHandler, AzureOpenAIProfileWithAISearchHandler>();
-        services.AddDataMigration<AzureAISearchTitleGeneratorProfileMigrations>();
     }
 }

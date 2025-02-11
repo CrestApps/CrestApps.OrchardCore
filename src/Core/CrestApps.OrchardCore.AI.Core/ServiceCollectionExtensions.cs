@@ -22,7 +22,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddAIChatProfileServices(this IServiceCollection services)
+    public static IServiceCollection AddAIProfileServices(this IServiceCollection services)
     {
         services
             .AddScoped<IAIProfileStore, DefaultAIProfileStore>()
@@ -39,7 +39,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddAIChatProfileSource<TSource>(this IServiceCollection services, string sourceKey)
+    public static IServiceCollection AddAIProfileSource<TSource>(this IServiceCollection services, string sourceKey)
          where TSource : class, IAIProfileSource
     {
         ArgumentNullException.ThrowIfNull(sourceKey);
@@ -65,7 +65,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddAIChatCompletionService<TService>(this IServiceCollection services, string sourceKey)
+    public static IServiceCollection AddAICompletionService<TService>(this IServiceCollection services, string sourceKey)
         where TService : class, IAIChatCompletionService
     {
         ArgumentNullException.ThrowIfNull(sourceKey);

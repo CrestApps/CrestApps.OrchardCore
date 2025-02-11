@@ -13,11 +13,10 @@ public sealed class Startup : StartupBase
     {
         services
             .AddAIDeploymentProvider<DeepSeekAIDeploymentProvider>(DeepSeekAIDeploymentProvider.ProviderName)
-            .AddAIChatCompletionService<DeepSeekChatCompletionService>(DeepSeekAIDeploymentProvider.ProviderName)
+            .AddAICompletionService<DeepSeekChatCompletionService>(DeepSeekAIDeploymentProvider.ProviderName)
             .AddDataMigration<DefaultDeepSeekDeploymentMigrations>();
 
         services
-            .AddAIChatProfileSource<DeepSeekChatProfileSource>(DeepSeekAIDeploymentProvider.ProviderName)
-            .AddDataMigration<DeepSeekTitleGeneratorProfileMigrations>();
+            .AddAIProfileSource<DeepSeekChatProfileSource>(DeepSeekAIDeploymentProvider.ProviderName);
     }
 }

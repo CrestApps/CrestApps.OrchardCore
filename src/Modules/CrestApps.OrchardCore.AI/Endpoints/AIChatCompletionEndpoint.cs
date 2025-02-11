@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Endpoints.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Support;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Entities;
 using OrchardCore.Liquid;
 
 namespace CrestApps.OrchardCore.AI.Endpoints;
@@ -212,27 +214,31 @@ internal static class AIChatCompletionEndpoint
 
         if (profile.TitleType == AISessionTitleType.Generated)
         {
-            var titleProfile = await profileManager.FindByNameAsync(AIConstants.GetTitleGeneratorProfileName(profile.Source));
-
-            if (titleProfile is not null)
+            var transcription = new List<ChatMessage>
             {
-                var transcription = new List<ChatMessage>
-                {
-                    new (ChatRole.User, userPrompt),
-                };
+                new (ChatRole.User, userPrompt),
+            };
 
-                var context = new AIChatCompletionContext()
-                {
-                    Profile = titleProfile,
-                };
+            var profileClone = profile.Clone();
 
-                var titleResponse = await completionService.ChatAsync(transcription, context);
+            profileClone.Alter<AIProfileMetadata>(m =>
+            {
+                m.SystemMessage = null;
+                m.MaxTokens = 64; // 64 token to generate about 255 characters.
+            });
 
-                // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
-                chatSession.Title = titleResponse.Choices.Any()
-                    ? Str.Truncate(titleResponse.Choices.First().Text, 255)
-                    : Str.Truncate(userPrompt, 255);
-            }
+            var context = new AIChatCompletionContext()
+            {
+                Profile = profileClone,
+                SystemMessage = AIConstants.TitleGeneratorSystemMessage,
+            };
+
+            var titleResponse = await completionService.ChatAsync(transcription, context);
+
+            // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
+            chatSession.Title = titleResponse.Choices.Any()
+                ? Str.Truncate(titleResponse.Choices.First().Text, 255)
+                : Str.Truncate(userPrompt, 255);
         }
 
         if (string.IsNullOrEmpty(chatSession.Title))

@@ -2,13 +2,6 @@ namespace CrestApps.OrchardCore.OpenAI.Core;
 
 public static class OpenAIConstants
 {
-    public const string TitleGeneratorSystemMessage =
-    """
-    - Generate a short topic title about the user prompt.
-    - Response using title case.
-    - Response must be under 255 characters in length.
-    """;
-
     public const string TechnologyName = "OpenAI";
 
     public static class Feature
