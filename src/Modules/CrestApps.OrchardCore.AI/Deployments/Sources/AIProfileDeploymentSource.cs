@@ -70,6 +70,15 @@ public sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfileDe
 
             profileInfo["Properties"] = properties;
 
+            var settings = new JsonObject();
+
+            foreach (var pair in profile.Settings)
+            {
+                settings[pair.Key] = pair.Value.DeepClone();
+            }
+
+            profileInfo["Settings"] = settings;
+
             profilesData.Add(profileInfo);
         }
 

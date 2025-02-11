@@ -6,7 +6,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public abstract class NamedAICompletionService : IAIChatCompletionService
+public abstract class NamedAICompletionService : IAICompletionService
 {
     private readonly IAIToolsService _toolsService;
     private readonly IAIDeploymentStore _deploymentStore;
@@ -49,9 +49,9 @@ public abstract class NamedAICompletionService : IAIChatCompletionService
     {
     }
 
-    protected abstract IChatClient GetChatClient(AIProviderConnection connection, AIChatCompletionContext context, string modelName);
+    protected abstract IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string modelName);
 
-    public async Task<ChatCompletion> ChatAsync(IEnumerable<ChatMessage> messages, AIChatCompletionContext context, CancellationToken cancellationToken = default)
+    public async Task<ChatCompletion> ChatAsync(IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -120,7 +120,7 @@ public abstract class NamedAICompletionService : IAIChatCompletionService
         return null;
     }
 
-    private ChatOptions GetChatOptions(AIChatCompletionContext context, AIProfileMetadata metadata)
+    private ChatOptions GetChatOptions(AICompletionContext context, AIProfileMetadata metadata)
     {
         var chatOptions = new ChatOptions()
         {
@@ -157,7 +157,7 @@ public abstract class NamedAICompletionService : IAIChatCompletionService
         return chatOptions;
     }
 
-    private async Task<AIDeployment> GetDeploymentAsync(AIChatCompletionContext content)
+    private async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
     {
         if (!string.IsNullOrEmpty(content.Profile?.DeploymentId))
         {
@@ -177,7 +177,7 @@ public abstract class NamedAICompletionService : IAIChatCompletionService
         return 0;
     }
 
-    private static string GetSystemMessage(AIChatCompletionContext context, AIProfileMetadata metadata)
+    private static string GetSystemMessage(AICompletionContext context, AIProfileMetadata metadata)
     {
         var systemMessage = string.Empty;
 

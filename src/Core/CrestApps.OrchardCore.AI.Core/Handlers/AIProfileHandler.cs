@@ -165,6 +165,23 @@ public sealed class AIProfileHandler : AIProfileHandlerBase
             profile.PromptTemplate = promptTemplate;
         }
 
+        var properties = data[nameof(AIProfile.Properties)]?.AsObject();
+
+        if (properties != null)
+        {
+            profile.Properties = properties.Clone();
+        }
+
+        var settings = data[nameof(AIProfile.Settings)]?.AsObject();
+
+        if (settings != null)
+        {
+            foreach (var pair in settings)
+            {
+                profile.Settings[pair.Key] = pair.Value.Clone();
+            }
+        }
+
         return Task.CompletedTask;
     }
 }

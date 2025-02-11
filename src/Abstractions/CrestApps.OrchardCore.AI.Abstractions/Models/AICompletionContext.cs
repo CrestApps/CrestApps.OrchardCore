@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.AI.Models;
 
-public class AIChatCompletionContext
+public class AICompletionContext
 {
     public AIChatSession Session { get; set; }
 

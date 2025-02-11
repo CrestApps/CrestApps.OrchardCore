@@ -41,7 +41,7 @@ public sealed class DeepSeekAICompletionService : NamedAICompletionService
         options.Tools = null;
     }
 
-    protected override IChatClient GetChatClient(AIProviderConnection connection, AIChatCompletionContext context, string modelName)
+    protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string modelName)
     {
         var client = new OpenAIClient(new ApiKeyCredential(connection.GetApiKey()), new OpenAIClientOptions()
         {

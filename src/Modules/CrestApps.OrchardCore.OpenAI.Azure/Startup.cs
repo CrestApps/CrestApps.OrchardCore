@@ -40,7 +40,7 @@ public sealed class StandardStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAICompletionService<AzureOpenAIChatCompletionService>(AzureProfileSource.Key);
+        services.AddAICompletionService<AzureOpenAICompletionService>(AzureProfileSource.Key);
         services.AddAIProfileSource<AzureProfileSource>(AzureProfileSource.Key);
     }
 }
@@ -50,7 +50,7 @@ public sealed class AISearchStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAICompletionService<AzureOpenAIWithSearchAIChatCompletionService>(AzureWithAzureAISearchProfileSource.Key);
+        services.AddAICompletionService<AzureOpenAIWithSearchAICompletionService>(AzureWithAzureAISearchProfileSource.Key);
         services.AddAIProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
         services.AddDisplayDriver<AIProfile, AzureOpenAIProfileSearchAIDisplayDriver>();
         services.AddScoped<IAIProfileHandler, AzureOpenAIProfileWithAISearchHandler>();

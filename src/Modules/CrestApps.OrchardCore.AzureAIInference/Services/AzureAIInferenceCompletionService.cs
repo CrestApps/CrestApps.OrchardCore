@@ -31,7 +31,7 @@ public sealed class AzureAIInferenceCompletionService : NamedAICompletionService
     protected override string ProviderName
         => AzureAIInferenceDeploymentProvider.ProviderName;
 
-    protected override IChatClient GetChatClient(AIProviderConnection connection, AIChatCompletionContext context, string modelName)
+    protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string modelName)
     {
         var builder = new ChatCompletionsClient(
         endpoint: new Uri("https://models.inference.ai.azure.com"),

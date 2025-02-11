@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.AI.Workflows.ViewModels;
 
-public class ChatUtilityCompletionTaskViewModel
+public class AICompletionTaskViewModel
 {
     public string ProfileId { get; set; }
 

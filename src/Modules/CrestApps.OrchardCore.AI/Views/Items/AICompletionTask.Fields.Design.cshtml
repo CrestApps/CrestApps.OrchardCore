@@ -2,11 +2,11 @@
 @using OrchardCore.Workflows.Helpers
 @using OrchardCore.Workflows.ViewModels
 
-@model ActivityViewModel<ChatUtilityCompletionTask>
+@model ActivityViewModel<AICompletionTask>
 
 <header>
     <h4>
         <i class="fa-regular fa-comment" aria-hidden="true"></i>
-        @Model.Activity.GetTitleOrDefault(() => T["Chat Utility Completion. Property {0}.", Model.Activity.ResultPropertyName])
+        @Model.Activity.GetTitleOrDefault(() => T["AI Completion. Property {0}.", Model.Activity.ResultPropertyName])
     </h4>
 </header>

@@ -17,6 +17,6 @@ public sealed class Startup : StartupBase
             .AddDataMigration<DefaultDeepSeekDeploymentMigrations>();
 
         services
-            .AddAIProfileSource<DeepSeekChatProfileSource>(DeepSeekAIDeploymentProvider.ProviderName);
+            .AddAIProfileSource<DeepSeekProfileSource>(DeepSeekAIDeploymentProvider.ProviderName);
     }
 }

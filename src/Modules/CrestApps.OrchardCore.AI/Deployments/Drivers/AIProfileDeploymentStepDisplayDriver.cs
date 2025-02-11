@@ -26,14 +26,14 @@ internal sealed class AIProfileDeploymentStepDisplayDriver : DisplayDriver<Deplo
     {
         return
             CombineAsync(
-                View("AIChatProfileDeploymentStep_Summary", step).Location("Summary", "Content"),
-                View("AIChatProfileDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+                View("AIProfileDeploymentStep_Summary", step).Location("Summary", "Content"),
+                View("AIProfileDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
             );
     }
 
     public override IDisplayResult Edit(AIProfileDeploymentStep step, BuildEditorContext context)
     {
-        return Initialize<AIProfileDeploymentStepViewModel>("AIChatProfileDeploymentStep_Fields_Edit", async model =>
+        return Initialize<AIProfileDeploymentStepViewModel>("AIProfileDeploymentStep_Fields_Edit", async model =>
         {
             model.IncludeAll = step.IncludeAll;
             model.ProfileNames = step.ProfileNames;

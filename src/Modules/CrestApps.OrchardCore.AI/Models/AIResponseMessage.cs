@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.AI.Models;
 
-public class AIChatResponseMessage
+public class AIResponseMessage
 {
     public string Content { get; set; }
 

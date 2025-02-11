@@ -61,14 +61,14 @@ internal static class AIUtilityCompletionEndpoint
             return TypedResults.NotFound();
         }
 
-        var completionService = serviceProvider.GetKeyedService<IAIChatCompletionService>(profile.Source);
+        var completionService = serviceProvider.GetKeyedService<IAICompletionService>(profile.Source);
 
         if (completionService is null)
         {
             return TypedResults.Problem($"Unable to find a chat completion service for the source: '{profile.Source}'.");
         }
 
-        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], new AIChatCompletionContext()
+        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], new AICompletionContext()
         {
             Profile = profile,
             UserMarkdownInResponse = requestData.IncludeHtmlResponse,

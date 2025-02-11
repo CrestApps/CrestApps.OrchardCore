@@ -3,9 +3,9 @@ using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
 
-public sealed class DeepSeekChatProfileSource : IAIProfileSource
+public sealed class DeepSeekProfileSource : IAIProfileSource
 {
-    public DeepSeekChatProfileSource(IStringLocalizer<DeepSeekChatProfileSource> S)
+    public DeepSeekProfileSource(IStringLocalizer<DeepSeekProfileSource> S)
     {
         DisplayName = S["DeepSeek"];
         Description = S["AI-powered chat using DeepSeek Service."];

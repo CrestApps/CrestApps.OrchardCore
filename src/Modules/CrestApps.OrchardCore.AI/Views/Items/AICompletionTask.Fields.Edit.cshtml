@@ -1,15 +1,15 @@
 @using CrestApps.OrchardCore.AI.Workflows.ViewModels
 @using CrestApps.OrchardCore.AI.Models
 
-@model ChatUtilityCompletionTaskViewModel
+@model AICompletionTaskViewModel
 
 <div class="mb-3" asp-validation-class-for="ProfileId">
-    <label asp-for="ProfileId" class="form-label">@T["Utility profile"]</label>
+    <label asp-for="ProfileId" class="form-label">@T["Profiles"]</label>
     <select asp-for="ProfileId" class="form-select" asp-items="Model.Profiles">
-        <option value="">@T["Select a utility"]</option>
+        <option value="">@T["Select a profile"]</option>
     </select>
     <span asp-validation-for="ProfileId"></span>
-    <span class="hint">@T["The utility profile to use when generating the message."]</span>
+    <span class="hint">@T["The profile to use when generating the message."]</span>
 </div>
 
 <div class="mb-3" asp-validation-class-for="PromptTemplate">
@@ -30,6 +30,6 @@
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="IncludeHtmlResponse">
         <label class="form-check-label" asp-for="IncludeHtmlResponse">@T["include content formatted using HTML"]</label>
-        <span class="hint dashed">@T["When enabled, the model will populate the {0} property of the response.", nameof(AIChatResponseMessage.HtmlContent)]</span>
+        <span class="hint dashed">@T["When enabled, the model will populate the {0} property of the response.", nameof(AIResponseMessage.HtmlContent)]</span>
     </div>
 </div>

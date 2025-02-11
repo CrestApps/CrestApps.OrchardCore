@@ -1,6 +1,6 @@
-using Markdig;
+﻿using Markdig;
 
-namespace CrestApps.OrchardCore.AI.Core.Models;
+namespace CrestApps.OrchardCore.AI.Core.Services;
 
 public sealed class AIChatMarkdownPipelineOptions
 {

@@ -18,7 +18,7 @@ using OrchardCore.Liquid;
 
 namespace CrestApps.OrchardCore.AI.Endpoints;
 
-internal static class AIChatCompletionEndpoint
+internal static class AICompletionEndpoint
 {
     public static IEndpointRouteBuilder AddAICompletionEndpoint<T>(this IEndpointRouteBuilder builder)
     {
@@ -58,7 +58,7 @@ internal static class AIChatCompletionEndpoint
             return TypedResults.Forbid();
         }
 
-        var completionService = serviceProvider.GetKeyedService<IAIChatCompletionService>(profile.Source);
+        var completionService = serviceProvider.GetKeyedService<IAICompletionService>(profile.Source);
 
         if (completionService is null)
         {
@@ -121,7 +121,7 @@ internal static class AIChatCompletionEndpoint
 
         if (profile.Type == AIProfileType.TemplatePrompt)
         {
-            completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, userPrompt)], new AIChatCompletionContext()
+            completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, userPrompt)], new AICompletionContext()
             {
                 Profile = profile,
                 UserMarkdownInResponse = true,
@@ -153,7 +153,7 @@ internal static class AIChatCompletionEndpoint
             var transcript = chatSession.Prompts.Where(x => !x.IsGeneratedPrompt)
                 .Select(prompt => new ChatMessage(prompt.Role, prompt.Content));
 
-            completion = await completionService.ChatAsync(transcript, new AIChatCompletionContext()
+            completion = await completionService.ChatAsync(transcript, new AICompletionContext()
             {
                 Profile = profile,
                 Session = chatSession,
@@ -197,7 +197,7 @@ internal static class AIChatCompletionEndpoint
         });
     }
 
-    private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, IAIProfileManager profileManager, string sessionId, AIProfile profile, IAIChatCompletionService completionService, string userPrompt)
+    private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, IAIProfileManager profileManager, string sessionId, AIProfile profile, IAICompletionService completionService, string userPrompt)
     {
         if (!string.IsNullOrWhiteSpace(sessionId))
         {
@@ -227,7 +227,7 @@ internal static class AIChatCompletionEndpoint
                 m.MaxTokens = 64; // 64 token to generate about 255 characters.
             });
 
-            var context = new AIChatCompletionContext()
+            var context = new AICompletionContext()
             {
                 Profile = profileClone,
                 SystemMessage = AIConstants.TitleGeneratorSystemMessage,
@@ -249,9 +249,9 @@ internal static class AIChatCompletionEndpoint
         return (chatSession, true);
     }
 
-    private static async Task<IResult> GetToolMessageAsync(IAIChatCompletionService completionService, AIProfile profile, IAIMarkdownService markdownService, string prompt, bool respondWithHtml)
+    private static async Task<IResult> GetToolMessageAsync(IAICompletionService completionService, AIProfile profile, IAIMarkdownService markdownService, string prompt, bool respondWithHtml)
     {
-        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, prompt)], new AIChatCompletionContext()
+        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, prompt)], new AICompletionContext()
         {
             Profile = profile,
             UserMarkdownInResponse = true,

@@ -51,7 +51,7 @@ internal static class AIChatSessionEndpoint
             return TypedResults.Forbid();
         }
 
-        var completionService = serviceProvider.GetKeyedService<IAIChatCompletionService>(profile.Source);
+        var completionService = serviceProvider.GetKeyedService<IAICompletionService>(profile.Source);
 
         if (completionService is null)
         {

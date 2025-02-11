@@ -32,7 +32,7 @@ public static class ServiceCollectionExtensions
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>();
 
         services
-            .AddPermissionProvider<AIChatPermissionsProvider>()
+            .AddPermissionProvider<AIPermissionsProvider>()
             .AddScoped<IAuthorizationHandler, AIProfileAuthenticationHandler>()
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.CollectionName));
 
@@ -66,13 +66,13 @@ public static class ServiceCollectionExtensions
     }
 
     public static IServiceCollection AddAICompletionService<TService>(this IServiceCollection services, string sourceKey)
-        where TService : class, IAIChatCompletionService
+        where TService : class, IAICompletionService
     {
         ArgumentNullException.ThrowIfNull(sourceKey);
 
         services.TryAddScoped<TService>();
-        services.TryAddScoped<IAIChatCompletionService>(sp => sp.GetService<TService>());
-        services.AddKeyedScoped<IAIChatCompletionService>(sourceKey, (sp, key) => sp.GetService<TService>());
+        services.TryAddScoped<IAICompletionService>(sp => sp.GetService<TService>());
+        services.AddKeyedScoped<IAICompletionService>(sourceKey, (sp, key) => sp.GetService<TService>());
 
         return services;
     }

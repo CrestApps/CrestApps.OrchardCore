@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Models;
 
-internal sealed class AIChatResponseMessageDetailed : AIChatResponseMessage
+internal sealed class AIChatResponseMessageDetailed : AIResponseMessage
 {
     public string Id { get; set; }
 

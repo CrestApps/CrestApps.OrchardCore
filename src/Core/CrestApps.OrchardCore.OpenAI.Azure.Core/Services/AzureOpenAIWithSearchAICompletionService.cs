@@ -21,7 +21,7 @@ using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatCompletionService
+public sealed class AzureOpenAIWithSearchAICompletionService : IAICompletionService
 {
     private readonly IAIDeploymentStore _deploymentStore;
     private readonly IAILinkGenerator _openAILinkGenerator;
@@ -32,7 +32,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
     private readonly ILogger _logger;
 
-    public AzureOpenAIWithSearchAIChatCompletionService(
+    public AzureOpenAIWithSearchAICompletionService(
         IAIDeploymentStore deploymentStore,
         IOptions<AIProviderOptions> providerOptions,
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
@@ -40,7 +40,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         AzureAISearchIndexSettingsService azureAISearchIndexSettingsService,
         IAIToolsService toolService,
         IOptions<DefaultAIOptions> defaultOptions,
-        ILogger<AzureOpenAIChatCompletionService> logger)
+        ILogger<AzureOpenAICompletionService> logger)
     {
         _deploymentStore = deploymentStore;
         _openAILinkGenerator = openAILinkGenerator;
@@ -54,7 +54,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
 
     public string Name { get; } = AzureWithAzureAISearchProfileSource.Key;
 
-    public async Task<Microsoft.Extensions.AI.ChatCompletion> ChatAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AIChatCompletionContext context, CancellationToken cancellationToken = default)
+    public async Task<Microsoft.Extensions.AI.ChatCompletion> ChatAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -199,7 +199,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         return 0;
     }
 
-    private static string GetSystemMessage(AIChatCompletionContext context, AIProfileMetadata metadata)
+    private static string GetSystemMessage(AICompletionContext context, AIProfileMetadata metadata)
     {
         var systemMessage = string.Empty;
 
@@ -229,7 +229,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         return azureClient;
     }
 
-    private async Task<ChatCompletionOptions> GetOptionsWithDataSourceAsync(AIChatCompletionContext context)
+    private async Task<ChatCompletionOptions> GetOptionsWithDataSourceAsync(AICompletionContext context)
     {
         if (!context.Profile.TryGet<AzureAIProfileAISearchMetadata>(out var metadata))
         {
@@ -274,7 +274,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         return chatOptions;
     }
 
-    private ChatCompletionOptions GetOptions(AIChatCompletionContext context)
+    private ChatCompletionOptions GetOptions(AICompletionContext context)
     {
         var metadata = context.Profile.As<AIProfileMetadata>();
 
@@ -424,7 +424,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         };
     }
 
-    private async Task<AIDeployment> GetDeploymentAsync(AIChatCompletionContext content)
+    private async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
     {
         if (!string.IsNullOrEmpty(content.Profile.DeploymentId))
         {

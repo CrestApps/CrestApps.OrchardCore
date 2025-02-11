@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -11,37 +10,37 @@ using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
-public sealed class ChatUtilityCompletionTaskDisplayDriver : ActivityDisplayDriver<ChatUtilityCompletionTask, ChatUtilityCompletionTaskViewModel>
+public sealed class AICompletionTaskDisplayDriver : ActivityDisplayDriver<AICompletionTask, AICompletionTaskViewModel>
 {
-    private readonly IAIProfileStore _chatProfileStore;
+    private readonly IAIProfileStore _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
 
     internal readonly IStringLocalizer S;
 
-    public ChatUtilityCompletionTaskDisplayDriver(
-        IAIProfileStore chatProfileStore,
+    public AICompletionTaskDisplayDriver(
+        IAIProfileStore profileStore,
         ILiquidTemplateManager liquidTemplateManager,
-        IStringLocalizer<ChatUtilityCompletionTaskDisplayDriver> stringLocalizer)
+        IStringLocalizer<AICompletionTaskDisplayDriver> stringLocalizer)
     {
-        _chatProfileStore = chatProfileStore;
+        _profileStore = profileStore;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
     }
 
-    protected override async ValueTask EditActivityAsync(ChatUtilityCompletionTask activity, ChatUtilityCompletionTaskViewModel model)
+    protected override async ValueTask EditActivityAsync(AICompletionTask activity, AICompletionTaskViewModel model)
     {
         model.ProfileId = activity.ProfileId;
         model.PromptTemplate = activity.PromptTemplate;
         model.ResultPropertyName = activity.ResultPropertyName;
         model.IncludeHtmlResponse = activity.IncludeHtmlResponse;
 
-        model.Profiles = (await _chatProfileStore.GetProfilesAsync(AIProfileType.Utility))
+        model.Profiles = (await _profileStore.GetAllAsync())
             .Select(profile => new SelectListItem(profile.DisplayText, profile.Id));
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(ChatUtilityCompletionTask activity, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(AICompletionTask activity, UpdateEditorContext context)
     {
-        var model = new ChatUtilityCompletionTaskViewModel();
+        var model = new AICompletionTaskViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
@@ -51,9 +50,9 @@ public sealed class ChatUtilityCompletionTaskDisplayDriver : ActivityDisplayDriv
         }
         else
         {
-            var profile = await _chatProfileStore.FindByIdAsync(model.ProfileId);
+            var profile = await _profileStore.FindByIdAsync(model.ProfileId);
 
-            if (profile == null || profile.Type != AIProfileType.Utility)
+            if (profile is null)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProfileId), S["The Profile is invalid."]);
             }

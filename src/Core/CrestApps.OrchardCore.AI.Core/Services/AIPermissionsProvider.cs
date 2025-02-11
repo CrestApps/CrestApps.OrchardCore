@@ -4,7 +4,7 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class AIChatPermissionsProvider : IPermissionProvider
+public sealed class AIPermissionsProvider : IPermissionProvider
 {
     private readonly static IEnumerable<Permission> _allPermissions =
     [
@@ -14,7 +14,7 @@ public sealed class AIChatPermissionsProvider : IPermissionProvider
 
     private readonly IAIProfileStore _chatProfileStore;
 
-    public AIChatPermissionsProvider(IAIProfileStore chatProfileStore)
+    public AIPermissionsProvider(IAIProfileStore chatProfileStore)
     {
         _chatProfileStore = chatProfileStore;
     }

@@ -3,7 +3,7 @@ using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.AI;
 
-public interface IAIChatCompletionService
+public interface IAICompletionService
 {
     /// <summary>
     /// Gets the unique technical name of the chat completion service implementation.
@@ -19,5 +19,5 @@ public interface IAIChatCompletionService
     /// <param name="messages">A collection of messages that are part of the chat conversation.</param>
     /// <param name="context">The context that may provide additional parameters or configurations for the chat request.</param>
     /// <returns>A task representing the asynchronous operation, with the completion response as the result.</returns>
-    Task<ChatCompletion> ChatAsync(IEnumerable<ChatMessage> messages, AIChatCompletionContext context, CancellationToken cancellationToken = default);
+    Task<ChatCompletion> ChatAsync(IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default);
 }

@@ -12,7 +12,7 @@ using OrchardCore.Workflows.Models;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Models;
 
-public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompletionTask>
+public sealed class AICompletionTask : TaskActivity<AICompletionTask>
 {
     private readonly IAIProfileManager _chatProfileManager;
     private readonly IServiceProvider _serviceProvider;
@@ -22,13 +22,13 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
 
     internal readonly IStringLocalizer S;
 
-    public ChatUtilityCompletionTask(
+    public AICompletionTask(
         IAIProfileManager chatProfileManager,
         IServiceProvider serviceProvider,
         ILiquidTemplateManager liquidTemplateManager,
         IAIMarkdownService markdownService,
-        ILogger<ChatUtilityCompletionTask> logger,
-        IStringLocalizer<ChatUtilityCompletionTask> stringLocalizer)
+        ILogger<AICompletionTask> logger,
+        IStringLocalizer<AICompletionTask> stringLocalizer)
     {
         _chatProfileManager = chatProfileManager;
         _serviceProvider = serviceProvider;
@@ -38,7 +38,7 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
         S = stringLocalizer;
     }
 
-    public override LocalizedString DisplayText => S["Chat Utility Completion"];
+    public override LocalizedString DisplayText => S["AI Completion"];
 
     public override LocalizedString Category => S["Artificial Intelligence"];
 
@@ -80,14 +80,7 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
             return Outcomes("Failed");
         }
 
-        if (profile.Type != AIProfileType.Utility)
-        {
-            _logger.LogWarning("The requested profile '{ProfileId}' has a type of '{ProfileType}', but it must be of type 'Utility' to use the Chat Utility Completion Task.", profile.Id, profile.Type.ToString());
-
-            return Outcomes("Failed");
-        }
-
-        var completionService = _serviceProvider.GetKeyedService<IAIChatCompletionService>(profile.Source);
+        var completionService = _serviceProvider.GetKeyedService<IAICompletionService>(profile.Source);
 
         if (completionService is null)
         {
@@ -109,7 +102,7 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
             return Outcomes("Failed");
         }
 
-        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, userPrompt.Trim())], new AIChatCompletionContext()
+        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, userPrompt.Trim())], new AICompletionContext()
         {
             Profile = profile,
             UserMarkdownInResponse = IncludeHtmlResponse,
@@ -122,7 +115,7 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
             return Outcomes("Drew Blank");
         }
 
-        var value = new AIChatResponseMessage
+        var value = new AIResponseMessage
         {
             Content = bestChoice.Text,
         };
