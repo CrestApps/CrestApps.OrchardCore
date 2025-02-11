@@ -116,19 +116,19 @@ public sealed class ChatUtilityCompletionTask : TaskActivity<ChatUtilityCompleti
 
         var bestChoice = completion.Choices.FirstOrDefault();
 
-        if (string.IsNullOrEmpty(bestChoice?.Content))
+        if (string.IsNullOrEmpty(bestChoice?.Text))
         {
             return Outcomes("Drew Blank");
         }
 
         var value = new AIChatResponseMessage
         {
-            Content = bestChoice.Content,
+            Content = bestChoice.Text,
         };
 
         if (IncludeHtmlResponse)
         {
-            value.HtmlContent = _markdownService.ToHtml(bestChoice.Content);
+            value.HtmlContent = _markdownService.ToHtml(bestChoice.Text);
         }
 
         workflowContext.Output[ResultPropertyName] = value;

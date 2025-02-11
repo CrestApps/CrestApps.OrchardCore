@@ -81,9 +81,9 @@ internal static class AIChatUtilityCompletionEndpoint
             Type = nameof(AIProfileType.Utility),
             Message = new AIChatResponseMessageDetailed
             {
-                Content = bestChoice?.Content ?? AIConstants.DefaultBlankMessage,
-                HtmlContent = requestData.IncludeHtmlResponse && !string.IsNullOrEmpty(bestChoice?.Content)
-                ? markdownService.ToHtml(bestChoice.Content)
+                Content = bestChoice?.Text ?? AIConstants.DefaultBlankMessage,
+                HtmlContent = requestData.IncludeHtmlResponse && !string.IsNullOrEmpty(bestChoice?.Text)
+                ? markdownService.ToHtml(bestChoice.Text)
                 : null,
             },
         });

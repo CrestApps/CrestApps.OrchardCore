@@ -113,9 +113,9 @@ internal static class AIChatCompletionEndpoint
             (chatSession, isNew) = await GetSessionsAsync(sessionManager, chatProfileManager, requestData.SessionId, profile, completionService, userPrompt);
         }
 
-        AIChatCompletionResponse completion = null;
+        ChatCompletion completion = null;
         AIChatSessionPrompt message = null;
-        AIChatCompletionChoice bestChoice = null;
+        ChatMessage bestChoice = null;
 
         if (profile.Type == AIProfileType.TemplatePrompt)
         {
@@ -132,8 +132,8 @@ internal static class AIChatCompletionEndpoint
                 Role = ChatRole.Assistant,
                 IsGeneratedPrompt = true,
                 Title = profile.PromptSubject,
-                Content = !string.IsNullOrEmpty(bestChoice?.Content)
-                ? bestChoice.Content
+                Content = !string.IsNullOrEmpty(bestChoice?.Text)
+                ? bestChoice.Text
                 : AIConstants.DefaultBlankMessage,
             };
         }
@@ -163,8 +163,8 @@ internal static class AIChatCompletionEndpoint
                 Id = IdGenerator.GenerateId(),
                 Role = ChatRole.Assistant,
                 Title = profile.PromptSubject,
-                Content = !string.IsNullOrEmpty(bestChoice?.Content)
-                ? bestChoice.Content
+                Content = !string.IsNullOrEmpty(bestChoice?.Text)
+                ? bestChoice.Text
                 : AIConstants.DefaultBlankMessage,
             };
         }
@@ -225,7 +225,7 @@ internal static class AIChatCompletionEndpoint
 
                 // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
                 chatSession.Title = titleResponse.Choices.Any()
-                    ? Str.Truncate(titleResponse.Choices.First().Content, 255)
+                    ? Str.Truncate(titleResponse.Choices.First().Text, 255)
                     : Str.Truncate(userPrompt, 255);
             }
         }
@@ -253,9 +253,9 @@ internal static class AIChatCompletionEndpoint
             Type = nameof(AIProfileType.Utility),
             Message = new AIChatResponseMessageDetailed
             {
-                Content = bestChoice?.Content ?? AIConstants.DefaultBlankMessage,
-                HtmlContent = respondWithHtml && !string.IsNullOrEmpty(bestChoice?.Content)
-                ? markdownService.ToHtml(bestChoice.Content)
+                Content = bestChoice?.Text ?? AIConstants.DefaultBlankMessage,
+                HtmlContent = respondWithHtml && !string.IsNullOrEmpty(bestChoice?.Text)
+                ? markdownService.ToHtml(bestChoice.Text)
                 : null,
             },
         });

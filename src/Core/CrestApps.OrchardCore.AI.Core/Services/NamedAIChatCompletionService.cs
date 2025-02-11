@@ -53,7 +53,7 @@ public abstract class NamedAIChatCompletionService : IAIChatCompletionService
 
     protected abstract IChatClient GetChatClient(AIProviderConnection connection, AIChatCompletionContext context, string modelName);
 
-    public async Task<AIChatCompletionResponse> ChatAsync(IEnumerable<ChatMessage> messages, AIChatCompletionContext context, CancellationToken cancellationToken = default)
+    public async Task<ChatCompletion> ChatAsync(IEnumerable<ChatMessage> messages, AIChatCompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -86,7 +86,7 @@ public abstract class NamedAIChatCompletionService : IAIChatCompletionService
         {
             _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile.Id);
 
-            return AIChatCompletionResponse.Empty;
+            return null;
         }
 
         var metadata = context.Profile.As<AIProfileMetadata>();
@@ -105,25 +105,14 @@ public abstract class NamedAIChatCompletionService : IAIChatCompletionService
 
             var chatOptions = GetChatOptions(context, metadata);
 
-            var data = await chatClient.CompleteAsync(prompts, chatOptions, cancellationToken);
-
-            if (data?.Choices is not null && data.FinishReason == ChatFinishReason.Stop)
-            {
-                return new AIChatCompletionResponse
-                {
-                    Choices = data.Choices.Select(x => new AIChatCompletionChoice()
-                    {
-                        Content = x.Text,
-                    }),
-                };
-            }
+            return await chatClient.CompleteAsync(prompts, chatOptions, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while chatting with the {Name} service.", Name);
         }
 
-        return AIChatCompletionResponse.Empty;
+        return null;
     }
 
     private ChatOptions GetChatOptions(AIChatCompletionContext context, AIProfileMetadata metadata)

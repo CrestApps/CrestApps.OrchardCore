@@ -54,7 +54,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
 
     public string Name { get; } = AzureWithAzureAISearchProfileSource.Key;
 
-    public async Task<AIChatCompletionResponse> ChatAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AIChatCompletionContext context, CancellationToken cancellationToken = default)
+    public async Task<Microsoft.Extensions.AI.ChatCompletion> ChatAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AIChatCompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -86,7 +86,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         {
             _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile.Id);
 
-            return AIChatCompletionResponse.Empty;
+            return null;
         }
 
         var azureMessages = new List<ChatMessage>();
@@ -135,7 +135,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
 
             if (data is null)
             {
-                return AIChatCompletionResponse.Empty;
+                return null;
             }
 
             if (data.Value.FinishReason == ChatFinishReason.ToolCalls)
@@ -156,7 +156,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
             _logger.LogError(ex, "Unable to get chat completion result from Azure OpenAI.");
         }
 
-        return AIChatCompletionResponse.Empty;
+        return null;
     }
 
     private async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<ChatToolCall> tollCalls)
@@ -296,14 +296,14 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
         return chatOptions;
     }
 
-    private AIChatCompletionResponse GetResponse(ClientResult<ChatCompletion> data, string userPrompt)
+    private Microsoft.Extensions.AI.ChatCompletion GetResponse(ClientResult<ChatCompletion> data, string userPrompt)
     {
         var routeValues = new Dictionary<string, object>()
         {
             { "prompt", userPrompt },
         };
 
-        var results = new List<AIChatCompletionChoice>();
+        var results = new List<Microsoft.Extensions.AI.ChatMessage>();
 
 #pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         var context = data.Value.GetMessageContext();
@@ -320,18 +320,12 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
 
             if (context?.Citations is null || context.Citations.Count == 0)
             {
-                results.Add(new AIChatCompletionChoice()
-                {
-                    Content = Regex.Replace(choice.Text, @"\[doc\d+\]", string.Empty),
-                });
+                results.Add(new Microsoft.Extensions.AI.ChatMessage(Microsoft.Extensions.AI.ChatRole.Assistant, Regex.Replace(choice.Text, @"\[doc\d+\]", string.Empty)));
 
                 continue;
             }
 
-            var responseChoice = new AIChatCompletionChoice()
-            {
-                ContentItemIds = [],
-            };
+            var contentItemIds = new List<string>();
 
             var referenceBuilder = new StringBuilder();
 
@@ -371,7 +365,7 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
                     {
                         referenceIndex = map.LastOrDefault().Value + 1;
 
-                        responseChoice.ContentItemIds.Add(citation.FilePath);
+                        contentItemIds.Add(citation.FilePath);
 
                         // Create new citation reference.
                         map[citation.FilePath] = referenceIndex;
@@ -394,15 +388,30 @@ public sealed class AzureOpenAIWithSearchAIChatCompletionService : IAIChatComple
 
             // During replacements, we could end up with multiple [--reference-separator--]
             // back to back. We can replace them with a single comma.
-            responseChoice.Content = Regex.Replace(message, @"(\[--reference-separator--\])+", "<sup>,</sup>")
+            message = Regex.Replace(message, @"(\[--reference-separator--\])+", "<sup>,</sup>")
                 + Environment.NewLine + referenceBuilder.ToString();
 
-            results.Add(responseChoice);
+            results.Add(new Microsoft.Extensions.AI.ChatMessage(Microsoft.Extensions.AI.ChatRole.Assistant, message)
+            {
+                AdditionalProperties = new Microsoft.Extensions.AI.AdditionalPropertiesDictionary
+                {
+                    { "contentItemIds", contentItemIds },
+                },
+            });
         }
 
-        return new AIChatCompletionResponse
+        return new Microsoft.Extensions.AI.ChatCompletion(results)
         {
-            Choices = results,
+            CompletionId = data.Value.Id,
+            CreatedAt = data.Value.CreatedAt,
+            ModelId = data.Value.Model,
+            FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(data.Value.FinishReason.ToString()),
+            Usage = new Microsoft.Extensions.AI.UsageDetails()
+            {
+                InputTokenCount = data.Value.Usage.InputTokenCount,
+                OutputTokenCount = data.Value.Usage.OutputTokenCount,
+                TotalTokenCount = data.Value.Usage.TotalTokenCount,
+            },
         };
     }
 
