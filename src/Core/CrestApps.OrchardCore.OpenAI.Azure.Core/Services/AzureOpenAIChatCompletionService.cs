@@ -22,7 +22,7 @@ public sealed class AzureOpenAIChatCompletionService : NamedAICompletionService
         IAIToolsService toolsService,
         IOptions<DefaultAIOptions> defaultOptions,
         ILogger<AzureOpenAIChatCompletionService> logger)
-        : base(AzureProfileSource.Key, providerOptions, toolsService, defaultOptions, deploymentStore, logger)
+        : base(AzureProfileSource.Key, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore, logger)
     {
         _distributedCache = distributedCache;
     }

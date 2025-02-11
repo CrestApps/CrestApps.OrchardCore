@@ -6,7 +6,7 @@ public static class AIPermissions
 {
     public static readonly Permission ManageAIProfiles = new("ManageAIProfiles", "Manage AI profiles");
 
-    public static readonly Permission ManageModelDeployments = new("ManageAIDeployments", "Manage AI deployments");
+    public static readonly Permission ManageAIDeployments = new("ManageAIDeployments", "Manage AI deployments");
 
     public static readonly Permission QueryAnyAIProfile = new("QueryAnyAIProfile", "Query any AI profile");
 

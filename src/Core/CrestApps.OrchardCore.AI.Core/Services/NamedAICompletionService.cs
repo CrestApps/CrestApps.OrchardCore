@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
@@ -17,9 +16,9 @@ public abstract class NamedAICompletionService : IAIChatCompletionService
 
     public NamedAICompletionService(
         string name,
-        IOptions<AIProviderOptions> providerOptions,
+        AIProviderOptions providerOptions,
+        DefaultAIOptions defaultOptions,
         IAIToolsService toolsService,
-        IOptions<DefaultAIOptions> defaultOptions,
         IAIDeploymentStore deploymentStore,
         ILogger logger)
     {
@@ -27,8 +26,8 @@ public abstract class NamedAICompletionService : IAIChatCompletionService
         Name = name;
         _toolsService = toolsService;
         _deploymentStore = deploymentStore;
-        _defaultOptions = defaultOptions.Value;
-        _providerOptions = providerOptions.Value;
+        _defaultOptions = defaultOptions;
+        _providerOptions = providerOptions;
         _logger = logger;
     }
 

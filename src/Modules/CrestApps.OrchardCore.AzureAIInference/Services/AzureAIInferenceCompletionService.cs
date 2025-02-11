@@ -23,7 +23,7 @@ public sealed class AzureAIInferenceCompletionService : NamedAICompletionService
         IAIDeploymentStore deploymentStore,
         IDistributedCache distributedCache,
         ILogger logger)
-        : base(AzureAIInferenceDeploymentProvider.ProviderName, providerOptions, toolsService, defaultOptions, deploymentStore, logger)
+        : base(AzureAIInferenceDeploymentProvider.ProviderName, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore, logger)
     {
         _distributedCache = distributedCache;
     }

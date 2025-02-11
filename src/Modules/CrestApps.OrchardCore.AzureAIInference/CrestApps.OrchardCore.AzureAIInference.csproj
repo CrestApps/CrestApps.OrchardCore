@@ -3,11 +3,11 @@
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
-    <Title>CrestApps OrchardCore OpenAI Module</Title>
+    <Title>CrestApps OrchardCore Azure AI Inference Module</Title>
     <Description>
       $(CrestAppsDescription)
 
-      Enables seamless management of OpenAI models and profiles, offering advanced features for configuring, deploying, and optimizing OpenAI's capabilities.
+      Enables seamless management of Github models and profiles using Azure AI Inference service, offering advanced features for configuring, deploying, and optimizing OpenAI's capabilities.
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS OpenAI</PackageTags>
   </PropertyGroup>
@@ -17,16 +17,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.AI.abstractions" />
     <PackageReference Include="Microsoft.Extensions.AI" />
     <PackageReference Include="Microsoft.Extensions.AI.AzureAIInference" />
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
-    <PackageReference Include="OrchardCore.Recipes.Abstractions" />
-    <PackageReference Include="OrchardCore.ResourceManagement" />
-    <PackageReference Include="OrchardCore.Navigation.Core" />
   </ItemGroup>
 
   <ItemGroup>

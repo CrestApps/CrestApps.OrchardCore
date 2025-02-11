@@ -63,7 +63,7 @@ public sealed class DeploymentsController : Controller
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageModelDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
         {
             return Forbid();
         }
@@ -128,7 +128,7 @@ public sealed class DeploymentsController : Controller
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageModelDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
         {
             return Forbid();
         }
@@ -165,7 +165,7 @@ public sealed class DeploymentsController : Controller
     [Admin("AI/Deployments/Create/{providerName}", "AIDeploymentsCreate")]
     public async Task<ActionResult> CreatePOST(string providerName)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageModelDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
         {
             return Forbid();
         }
@@ -209,7 +209,7 @@ public sealed class DeploymentsController : Controller
     [Admin("AI/Deployments/Edit/{id}", "AIDeploymentsEdit")]
     public async Task<ActionResult> Edit(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageModelDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
         {
             return Forbid();
         }
@@ -235,7 +235,7 @@ public sealed class DeploymentsController : Controller
     [Admin("AI/Deployments/Edit/{id}", "AIDeploymentsEdit")]
     public async Task<ActionResult> EditPOST(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageModelDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
         {
             return Forbid();
         }
@@ -272,7 +272,7 @@ public sealed class DeploymentsController : Controller
     [Admin("AI/Deployments/Delete/{id}", "AIDeploymentsDelete")]
     public async Task<IActionResult> Delete(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageModelDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
         {
             return Forbid();
         }
@@ -297,7 +297,7 @@ public sealed class DeploymentsController : Controller
     [Admin("AI/Deployments", "AIDeploymentsIndex")]
     public async Task<ActionResult> IndexPost(AIDeploymentOptions options, IEnumerable<string> itemIds)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageModelDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
         {
             return Forbid();
         }

@@ -7,7 +7,7 @@ public sealed class AIDeploymentProvider : IPermissionProvider
 {
     private readonly static IEnumerable<Permission> _allPermissions =
     [
-        AIPermissions.ManageModelDeployments,
+        AIPermissions.ManageAIDeployments,
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()

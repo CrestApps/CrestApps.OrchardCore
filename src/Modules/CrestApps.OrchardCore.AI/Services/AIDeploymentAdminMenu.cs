@@ -21,7 +21,7 @@ public sealed class AIDeploymentAdminMenu : AdminNavigationProvider
                     .AddClass("ai-deployments")
                     .Id("aiDeployments")
                     .Action("Index", "Deployments", AIConstants.Feature.Area)
-                    .Permission(AIPermissions.ManageModelDeployments)
+                    .Permission(AIPermissions.ManageAIDeployments)
                     .LocalNav()
                 )
             );

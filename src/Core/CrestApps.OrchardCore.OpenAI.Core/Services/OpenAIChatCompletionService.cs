@@ -21,7 +21,7 @@ public sealed class OpenAIChatCompletionService : NamedAICompletionService
         IAIToolsService toolsService,
         IOptions<DefaultAIOptions> defaultOptions,
         ILogger<OpenAIChatCompletionService> logger)
-        : base(OpenAIDeploymentProvider.ProviderName, providerOptions, toolsService, defaultOptions, deploymentStore, logger)
+        : base(OpenAIDeploymentProvider.ProviderName, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore, logger)
     {
         _distributedCache = distributedCache;
     }

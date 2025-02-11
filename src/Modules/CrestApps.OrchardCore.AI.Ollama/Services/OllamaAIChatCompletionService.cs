@@ -20,7 +20,7 @@ public sealed class OllamaAIChatCompletionService : NamedAICompletionService
         IAIToolsService toolsService,
         IOptions<DefaultAIOptions> defaultOptions,
         ILogger<OllamaAIChatCompletionService> logger)
-        : base(OllamaProfileSource.Key, providerOptions, toolsService, defaultOptions, deploymentStore, logger)
+        : base(OllamaProfileSource.Key, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore, logger)
     {
         _distributedCache = distributedCache;
     }

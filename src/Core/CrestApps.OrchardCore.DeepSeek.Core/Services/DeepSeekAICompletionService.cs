@@ -12,18 +12,18 @@ using OpenAI;
 
 namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
 
-public sealed class DeepSeekChatCompletionService : NamedAICompletionService
+public sealed class DeepSeekAICompletionService : NamedAICompletionService
 {
     private readonly IDistributedCache _distributedCache;
 
-    public DeepSeekChatCompletionService(
+    public DeepSeekAICompletionService(
         IOptions<AIProviderOptions> providerOptions,
         IDistributedCache distributedCache,
         IAIToolsService toolsService,
         IOptions<DefaultAIOptions> defaultOptions,
         IAIDeploymentStore deploymentStore,
-        ILogger<DeepSeekChatCompletionService> logger)
-        : base(DeepSeekAIDeploymentProvider.ProviderName, providerOptions, toolsService, defaultOptions, deploymentStore, logger)
+        ILogger<DeepSeekAICompletionService> logger)
+        : base(DeepSeekAIDeploymentProvider.ProviderName, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore, logger)
     {
         _distributedCache = distributedCache;
     }
