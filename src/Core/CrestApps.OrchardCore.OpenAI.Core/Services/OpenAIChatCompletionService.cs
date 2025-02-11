@@ -21,13 +21,13 @@ public sealed class OpenAIChatCompletionService : NamedAICompletionService
         IAIToolsService toolsService,
         IOptions<DefaultAIOptions> defaultOptions,
         ILogger<OpenAIChatCompletionService> logger)
-        : base(OpenAIProfileSource.Key, providerOptions, toolsService, defaultOptions, deploymentStore, logger)
+        : base(OpenAIDeploymentProvider.ProviderName, providerOptions, toolsService, defaultOptions, deploymentStore, logger)
     {
         _distributedCache = distributedCache;
     }
 
     protected override string ProviderName
-        => OpenAIProfileSource.Key;
+        => OpenAIDeploymentProvider.ProviderName;
 
     protected override IChatClient GetChatClient(AIProviderConnection connection, AIChatCompletionContext context, string deploymentName)
     {

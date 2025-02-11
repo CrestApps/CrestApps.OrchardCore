@@ -10,7 +10,7 @@ internal static class GetDeploymentsEndpoint
 {
     public static IEndpointRouteBuilder AddGetDeploymentsEndpoint(this IEndpointRouteBuilder builder)
     {
-        _ = builder.MapGet("AI/Deployments/ByConnection", HandleAsync)
+        _ = builder.MapGet("AI/Deployments", HandleAsync)
             .AllowAnonymous()
             .WithName(AIConstants.RouteNames.GetDeploymentsByConnectionRouteName)
             .DisableAntiforgery();

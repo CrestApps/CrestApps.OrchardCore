@@ -153,7 +153,7 @@
     document.addEventListener('DOMContentLoaded', () => {
 
         openAIChatManager.initialize({
-            chatUrl: '@(Url.RouteUrl(AIConstants.RouteNames.ChatCompletionRouteName))',
+            chatUrl: '@(Url.RouteUrl(AIConstants.RouteNames.AICompletionRoute))',
             appElementSelector: '#@chatAppHtmlId',
             chatContainerElementSelector: '#@chatContainerHtmlId',
             inputElementSelector: '#@userPromptHtmlId',
@@ -196,7 +196,7 @@
                 </div>
             `,
             widget: {
-                sessionUrl: '@(Url.RouteUrl(AIConstants.RouteNames.ChatSessionRouteName))',
+                sessionUrl: '@(Url.RouteUrl(AIConstants.RouteNames.AIChatSessionRouteName))',
                 showChatButton: '#@chatWidgetButton',
                 newChatButton: '#@newChatButton',
                 chatWidgetContainer: '#@chatWidgetContainer',

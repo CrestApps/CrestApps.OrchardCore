@@ -11,13 +11,13 @@ using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Endpoints;
 
-internal static class AIChatUtilityCompletionEndpoint
+internal static class AIUtilityCompletionEndpoint
 {
     public static IEndpointRouteBuilder AddAIUtilityCompletionEndpoint<T>(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapPost("AI/Chat/UtilityCompletion", HandleAsync<T>)
             .AllowAnonymous()
-            .WithName(AIConstants.RouteNames.ChatUtilityCompletionRouteName)
+            .WithName(AIConstants.RouteNames.AIUtilityCompletionRouteName)
             .DisableAntiforgery();
 
         return builder;
@@ -49,16 +49,16 @@ internal static class AIChatUtilityCompletionEndpoint
             return TypedResults.NotFound();
         }
 
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+        {
+            return TypedResults.Forbid();
+        }
+
         if (profile.Type != AIProfileType.Utility)
         {
             logger.LogWarning("The requested profile '{ProfileId}' has a type of '{ProfileType}', but it must be of type 'Utility' to use the utility-completion endpoint.", profile.Id, profile.Type.ToString());
 
             return TypedResults.NotFound();
-        }
-
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
-        {
-            return TypedResults.Forbid();
         }
 
         var completionService = serviceProvider.GetKeyedService<IAIChatCompletionService>(profile.Source);

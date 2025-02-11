@@ -24,7 +24,7 @@ internal static class AIChatCompletionEndpoint
     {
         _ = builder.MapPost("AI/Chat/Completion", HandleAsync<T>)
             .AllowAnonymous()
-            .WithName(AIConstants.RouteNames.ChatCompletionRouteName)
+            .WithName(AIConstants.RouteNames.AICompletionRoute)
             .DisableAntiforgery();
 
         return builder;

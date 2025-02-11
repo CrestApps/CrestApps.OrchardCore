@@ -98,7 +98,7 @@
 <script asp-name="OpenAIChatApp" at="Foot"></script>
 <script at="Foot" depends-on="OpenAIChatApp">
     openAIChatManager.initialize({
-        chatUrl: '@(Url.RouteUrl(AIConstants.RouteNames.ChatCompletionRouteName))',
+        chatUrl: '@(Url.RouteUrl(AIConstants.RouteNames.AICompletionRoute))',
         appElementSelector: '#@chatAppHtmlId',
         chatContainerElementSelector: '#@chatContainerHtmlId',
         inputElementSelector: '#@userPromptHtmlId',

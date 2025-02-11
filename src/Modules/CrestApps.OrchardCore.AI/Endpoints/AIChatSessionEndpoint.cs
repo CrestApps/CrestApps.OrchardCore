@@ -15,7 +15,7 @@ internal static class AIChatSessionEndpoint
     {
         _ = builder.MapGet("AI/Chat/Session", HandleAsync)
             .AllowAnonymous()
-            .WithName(AIConstants.RouteNames.ChatSessionRouteName)
+            .WithName(AIConstants.RouteNames.AIChatSessionRouteName)
             .DisableAntiforgery();
 
         return builder;

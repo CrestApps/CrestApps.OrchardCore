@@ -1,16 +1,15 @@
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.DeepSeek.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
-    Name = "DeepSeek AI Services",
+    Name = "DeepSeek AI Chat",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
 )]
 
 [assembly: Feature(
-    Id = DeepSeekConstants.Feature.Area,
+    Id = "CrestApps.OrchardCore.DeepSeek",
     Name = "DeepSeek AI Chat",
     Description = "Provides a way to interact with the DeepSeek service provider.",
     Category = "Artificial Intelligence",

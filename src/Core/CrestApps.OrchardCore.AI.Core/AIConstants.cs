@@ -29,13 +29,12 @@ public static class AIConstants
 
     public static class RouteNames
     {
-        public const string ChatCompletionRouteName = "AIChatCompletion";
+        public const string AICompletionRoute = "AIChatCompletion";
 
-        public const string ChatUtilityCompletionRouteName = "AIChatUtilityCompletion";
+        public const string AIUtilityCompletionRouteName = "AIUtilityCompletion";
 
-        public const string ChatSessionRouteName = "AIChatSession";
+        public const string AIChatSessionRouteName = "AIChatSession";
 
         public const string GetDeploymentsByConnectionRouteName = "GetDeploymentsByConnection";
-
     }
 }
