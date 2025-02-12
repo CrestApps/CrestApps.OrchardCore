@@ -50,7 +50,7 @@ public sealed class AISearchStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAICompletionService<AzureOpenAIWithSearchAICompletionService>(AzureWithAzureAISearchProfileSource.Key);
+        services.AddAICompletionService<AzureAISearchCompletionService>(AzureWithAzureAISearchProfileSource.Key);
         services.AddAIProfileSource<AzureWithAzureAISearchProfileSource>(AzureWithAzureAISearchProfileSource.Key);
         services.AddDisplayDriver<AIProfile, AzureOpenAIProfileSearchAIDisplayDriver>();
         services.AddScoped<IAIProfileHandler, AzureOpenAIProfileWithAISearchHandler>();
