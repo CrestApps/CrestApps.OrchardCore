@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.AI.Deployments.Sources;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Drivers;
 using CrestApps.OrchardCore.AI.Endpoints;
+using CrestApps.OrchardCore.AI.Endpoints.Api;
 using CrestApps.OrchardCore.AI.Indexes;
 using CrestApps.OrchardCore.AI.Migrations;
 using CrestApps.OrchardCore.AI.Models;
@@ -129,6 +130,18 @@ public sealed class ChatStartup : StartupBase
     {
         routes
             .AddAIChatSessionEndpoint();
+    }
+}
+
+[Feature(AIConstants.Feature.ChatApi)]
+public sealed class ApiChatStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes
+            .AddApiAIChatSessionEndpoint()
+            .AddApiAIUtilityCompletionEndpoint<ApiChatStartup>()
+            .AddApiAICompletionEndpoint<ChatStartup>();
     }
 }
 

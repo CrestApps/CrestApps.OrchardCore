@@ -22,7 +22,7 @@ internal static class AICompletionEndpoint
 {
     public static IEndpointRouteBuilder AddAICompletionEndpoint<T>(this IEndpointRouteBuilder builder)
     {
-        _ = builder.MapPost("AI/Chat/Completion", HandleAsync<T>)
+        _ = builder.MapPost("ai/completion/chat", HandleAsync<T>)
             .AllowAnonymous()
             .WithName(AIConstants.RouteNames.AICompletionRoute)
             .DisableAntiforgery();
@@ -30,7 +30,7 @@ internal static class AICompletionEndpoint
         return builder;
     }
 
-    private static async Task<IResult> HandleAsync<T>(
+    internal static async Task<IResult> HandleAsync<T>(
         IAuthorizationService authorizationService,
         IAIProfileManager chatProfileManager,
         IAIChatSessionManager sessionManager,
@@ -39,7 +39,7 @@ internal static class AICompletionEndpoint
         IServiceProvider serviceProvider,
         [FromKeyedServices("chat")] IAIMarkdownService markdownService,
         ILogger<T> logger,
-        OpenAIChatCompletionRequest requestData)
+        AICompletionRequest requestData)
     {
         if (string.IsNullOrWhiteSpace(requestData.ProfileId))
         {
@@ -271,18 +271,5 @@ internal static class AICompletionEndpoint
                 : null,
             },
         });
-    }
-
-    private sealed class OpenAIChatCompletionRequest
-    {
-        public string SessionId { get; set; }
-
-        public string ProfileId { get; set; }
-
-        public string Prompt { get; set; }
-
-        public string SessionProfileId { get; set; }
-
-        public bool IncludeHtmlResponse { get; set; } = true;
     }
 }

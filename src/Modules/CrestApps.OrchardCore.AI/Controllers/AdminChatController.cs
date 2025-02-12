@@ -51,7 +51,7 @@ public sealed class AdminChatController : Controller
         S = stringLocalizer;
     }
 
-    [Admin("AI/Chat/Session/{profileId}/{sessionId?}", "AIChatSessionsIndex")]
+    [Admin("ai/chat/session/{profileId}/{sessionId?}", "AIChatSessionsIndex")]
     public async Task<IActionResult> Index(
         string profileId,
         string sessionId,
@@ -120,7 +120,7 @@ public sealed class AdminChatController : Controller
         return View(model);
     }
 
-    [Admin("AI/Chat/History/{profileId}", "AIChatHistory")]
+    [Admin("ai/chat/history/{profileId}", "AIChatHistory")]
     public async Task<IActionResult> History(
         string profileId,
         PagerParameters pagerParameters,
@@ -194,7 +194,7 @@ public sealed class AdminChatController : Controller
         return RedirectToAction(nameof(History), options.RouteValues);
     }
 
-    [Admin("AI/Chat/Interact/{profileId}/", "AIChatNewSession")]
+    [Admin("ai/chat/interact/{profileId}/", "AIChatNewSession")]
     public IActionResult Chat(string profileId)
         => RedirectToAction(nameof(Index), new { profileId });
 

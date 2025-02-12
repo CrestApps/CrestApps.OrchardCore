@@ -55,7 +55,7 @@ public sealed class DeploymentsController : Controller
         S = stringLocalizer;
     }
 
-    [Admin("AI/Deployments", "AIDeploymentsIndex")]
+    [Admin("ai/deployments", "AIDeploymentsIndex")]
     public async Task<IActionResult> Index(
         AIDeploymentOptions options,
         PagerParameters pagerParameters,
@@ -111,7 +111,7 @@ public sealed class DeploymentsController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
-    [Admin("AI/Deployments", "AIDeploymentsIndex")]
+    [Admin("ai/deployments", "AIDeploymentsIndex")]
     public ActionResult IndexFilterPOST(ListDeploymentsViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
@@ -120,7 +120,7 @@ public sealed class DeploymentsController : Controller
         });
     }
 
-    [Admin("AI/Deployments/Create/{providerName}", "AIDeploymentsCreate")]
+    [Admin("ai/deployment/create/{providerName}", "AIDeploymentsCreate")]
     public async Task<ActionResult> Create(string providerName)
     {
         if (string.IsNullOrEmpty(providerName))
@@ -162,7 +162,7 @@ public sealed class DeploymentsController : Controller
 
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("AI/Deployments/Create/{providerName}", "AIDeploymentsCreate")]
+    [Admin("ai/deployment/create/{providerName}", "AIDeploymentsCreate")]
     public async Task<ActionResult> CreatePOST(string providerName)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
@@ -206,7 +206,7 @@ public sealed class DeploymentsController : Controller
         return View(model);
     }
 
-    [Admin("AI/Deployments/Edit/{id}", "AIDeploymentsEdit")]
+    [Admin("ai/deployment/edit/{id}", "AIDeploymentsEdit")]
     public async Task<ActionResult> Edit(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
@@ -232,7 +232,7 @@ public sealed class DeploymentsController : Controller
 
     [HttpPost]
     [ActionName(nameof(Edit))]
-    [Admin("AI/Deployments/Edit/{id}", "AIDeploymentsEdit")]
+    [Admin("ai/deployment/edit/{id}", "AIDeploymentsEdit")]
     public async Task<ActionResult> EditPOST(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
@@ -269,7 +269,7 @@ public sealed class DeploymentsController : Controller
     }
 
     [HttpPost]
-    [Admin("AI/Deployments/Delete/{id}", "AIDeploymentsDelete")]
+    [Admin("ai/deployment/delete/{id}", "AIDeploymentsDelete")]
     public async Task<IActionResult> Delete(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
@@ -294,7 +294,7 @@ public sealed class DeploymentsController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
-    [Admin("AI/Deployments", "AIDeploymentsIndex")]
+    [Admin("ai/deployments", "AIDeploymentsIndex")]
     public async Task<ActionResult> IndexPost(AIDeploymentOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
