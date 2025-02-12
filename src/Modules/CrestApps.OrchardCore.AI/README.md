@@ -53,7 +53,7 @@ The **AI Chat** feature builds upon the **AI Services** feature by adding AI cha
 - **Azure AI Inference Chat** (`CrestApps.OrchardCore.AzureAIInference`): AI services using Azure AI Inference (GitHub models) models.
 - **DeepSeek AI Chat** (`CrestApps.OrchardCore.DeepSeek`): AI-powered chat using Azure DeepSeek cloud service.
 - **Ollama AI Chat** (`CrestApps.OrchardCore.Ollama`): AI-powered chat using Azure Ollama service.
-- 
+
 ---
 
 ### Defining Chat Profiles Using Code

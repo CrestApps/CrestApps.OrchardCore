@@ -21,7 +21,7 @@ using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureOpenAIWithSearchAICompletionService : IAICompletionService
+public sealed class AzureAISearchCompletionService : IAICompletionService
 {
     private readonly IAIDeploymentStore _deploymentStore;
     private readonly IAILinkGenerator _openAILinkGenerator;
@@ -32,7 +32,7 @@ public sealed class AzureOpenAIWithSearchAICompletionService : IAICompletionServ
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
     private readonly ILogger _logger;
 
-    public AzureOpenAIWithSearchAICompletionService(
+    public AzureAISearchCompletionService(
         IAIDeploymentStore deploymentStore,
         IOptions<AIProviderOptions> providerOptions,
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,

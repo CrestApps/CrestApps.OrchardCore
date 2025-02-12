@@ -9,8 +9,8 @@
 
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System description"]</label>
-    <span class="hint">@T["The system message in DeepSeek sets the AI's behavior and response style, guiding how it interacts in a conversation."]</span>
     <div class="@Orchard.GetEndClasses()">
+        <div class="hint mb-1 mt-2">@T["The system message in DeepSeek sets the AI's behavior and response style, guiding how it interacts in a conversation."]</div>
         <textarea asp-for="SystemMessage" class="form-control content-preview-text" rows="5" disabled="@Model.IsSystemMessageLocked"></textarea>
     </div>
 </div>

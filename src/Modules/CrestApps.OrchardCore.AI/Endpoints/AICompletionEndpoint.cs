@@ -127,7 +127,7 @@ internal static class AICompletionEndpoint
                 UserMarkdownInResponse = true,
             });
 
-            bestChoice = completion.Choices.FirstOrDefault();
+            bestChoice = completion?.Choices?.FirstOrDefault();
 
             message = new AIChatSessionPrompt
             {
@@ -160,7 +160,7 @@ internal static class AICompletionEndpoint
                 UserMarkdownInResponse = requestData.IncludeHtmlResponse,
             });
 
-            bestChoice = completion.Choices.FirstOrDefault();
+            bestChoice = completion?.Choices?.FirstOrDefault();
 
             message = new AIChatSessionPrompt
             {
@@ -179,7 +179,7 @@ internal static class AICompletionEndpoint
 
         return TypedResults.Ok(new AIChatResponse
         {
-            Success = completion.Choices.Any(),
+            Success = completion?.Choices?.Any() ?? false,
             Type = profile.Type.ToString(),
             SessionId = chatSession.SessionId,
             IsNew = isNew,
