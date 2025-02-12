@@ -13,7 +13,7 @@ internal static class AIChatSessionEndpoint
 {
     public static IEndpointRouteBuilder AddAIChatSessionEndpoint(this IEndpointRouteBuilder builder)
     {
-        _ = builder.MapGet("AI/Chat/Session", HandleAsync)
+        _ = builder.MapGet("ai/chat/session", HandleAsync)
             .AllowAnonymous()
             .WithName(AIConstants.RouteNames.AIChatSessionRouteName)
             .DisableAntiforgery();
@@ -21,7 +21,7 @@ internal static class AIChatSessionEndpoint
         return builder;
     }
 
-    private static async Task<IResult> HandleAsync(
+    internal static async Task<IResult> HandleAsync(
         IAuthorizationService authorizationService,
         IAIProfileManager chatProfileManager,
         IAIChatSessionManager sessionManager,

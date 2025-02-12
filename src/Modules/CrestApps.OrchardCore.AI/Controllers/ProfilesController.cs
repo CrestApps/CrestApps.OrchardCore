@@ -52,7 +52,7 @@ public sealed class ProfilesController : Controller
         S = stringLocalizer;
     }
 
-    [Admin("AI/Profiles", "AIProfilesIndex")]
+    [Admin("ai/profiles", "AIProfilesIndex")]
     public async Task<IActionResult> Index(
         AIProfileOptions options,
         PagerParameters pagerParameters,
@@ -109,7 +109,7 @@ public sealed class ProfilesController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
-    [Admin("AI/Profiles", "AIProfilesIndex")]
+    [Admin("ai/profiles", "AIProfilesIndex")]
     public ActionResult IndexFilterPOST(ListProfilesViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
@@ -118,7 +118,7 @@ public sealed class ProfilesController : Controller
         });
     }
 
-    [Admin("AI/Profiles/Create/{source}", "AIProfilesCreate")]
+    [Admin("ai/profile/create/{source}", "AIProfilesCreate")]
     public async Task<ActionResult> Create(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
@@ -155,7 +155,7 @@ public sealed class ProfilesController : Controller
 
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("AI/Profiles/Create/{source}", "AIProfilesCreate")]
+    [Admin("ai/profile/create/{source}", "AIProfilesCreate")]
     public async Task<ActionResult> CreatePOST(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
@@ -199,7 +199,7 @@ public sealed class ProfilesController : Controller
         return View(model);
     }
 
-    [Admin("AI/Profiles/Edit/{id}", "AIProfilesEdit")]
+    [Admin("ai/profile/edit/{id}", "AIProfilesEdit")]
     public async Task<ActionResult> Edit(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
@@ -225,7 +225,7 @@ public sealed class ProfilesController : Controller
 
     [HttpPost]
     [ActionName(nameof(Edit))]
-    [Admin("AI/Profiles/Edit/{id}", "AIProfilesEdit")]
+    [Admin("ai/profile/edit/{id}", "AIProfilesEdit")]
     public async Task<ActionResult> EditPOST(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
@@ -262,7 +262,7 @@ public sealed class ProfilesController : Controller
     }
 
     [HttpPost]
-    [Admin("AI/Profiles/Delete/{id}", "AIProfilesDelete")]
+    [Admin("ai/profile/delete/{id}", "AIProfilesDelete")]
     public async Task<IActionResult> Delete(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
@@ -306,7 +306,7 @@ public sealed class ProfilesController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
-    [Admin("AI/Profiles", "AIProfilesIndex")]
+    [Admin("ai/profiles", "AIProfilesIndex")]
 
     public async Task<ActionResult> IndexPost(AIProfileOptions options, IEnumerable<string> itemIds)
     {
