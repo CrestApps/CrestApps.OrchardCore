@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.AI.Workflows.Models;
 
 public sealed class AICompletionTask : TaskActivity<AICompletionTask>
 {
-    private readonly IAIProfileManager _chatProfileManager;
+    private readonly IAIProfileManager _profileManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IAIMarkdownService _markdownService;
@@ -23,14 +23,14 @@ public sealed class AICompletionTask : TaskActivity<AICompletionTask>
     internal readonly IStringLocalizer S;
 
     public AICompletionTask(
-        IAIProfileManager chatProfileManager,
+        IAIProfileManager profileManager,
         IServiceProvider serviceProvider,
         ILiquidTemplateManager liquidTemplateManager,
         IAIMarkdownService markdownService,
         ILogger<AICompletionTask> logger,
         IStringLocalizer<AICompletionTask> stringLocalizer)
     {
-        _chatProfileManager = chatProfileManager;
+        _profileManager = profileManager;
         _serviceProvider = serviceProvider;
         _liquidTemplateManager = liquidTemplateManager;
         _markdownService = markdownService;
@@ -73,7 +73,7 @@ public sealed class AICompletionTask : TaskActivity<AICompletionTask>
 
     public override async Task<ActivityExecutionResult> ExecuteAsync(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
-        var profile = await _chatProfileManager.FindByIdAsync(ProfileId);
+        var profile = await _profileManager.FindByIdAsync(ProfileId);
 
         if (profile is null)
         {

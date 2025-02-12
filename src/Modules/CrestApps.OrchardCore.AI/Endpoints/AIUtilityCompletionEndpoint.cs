@@ -74,11 +74,11 @@ internal static class AIUtilityCompletionEndpoint
             UserMarkdownInResponse = requestData.IncludeHtmlResponse,
         });
 
-        var bestChoice = completion.Choices.FirstOrDefault();
+        var bestChoice = completion?.Choices?.FirstOrDefault();
 
         return TypedResults.Ok(new AIChatResponse
         {
-            Success = completion.Choices.Any(),
+            Success = completion?.Choices?.Any() ?? false,
             Type = nameof(AIProfileType.Utility),
             Message = new AIChatResponseMessageDetailed
             {

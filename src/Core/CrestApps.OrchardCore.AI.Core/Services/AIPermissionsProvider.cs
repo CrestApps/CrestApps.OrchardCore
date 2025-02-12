@@ -12,18 +12,18 @@ public sealed class AIPermissionsProvider : IPermissionProvider
         AIPermissions.QueryAnyAIProfile,
     ];
 
-    private readonly IAIProfileStore _chatProfileStore;
+    private readonly IAIProfileStore _profileStore;
 
-    public AIPermissionsProvider(IAIProfileStore chatProfileStore)
+    public AIPermissionsProvider(IAIProfileStore profileStore)
     {
-        _chatProfileStore = chatProfileStore;
+        _profileStore = profileStore;
     }
 
     public async Task<IEnumerable<Permission>> GetPermissionsAsync()
     {
         var permissions = new List<Permission>(_allPermissions);
 
-        foreach (var profile in await _chatProfileStore.GetProfilesAsync(AIProfileType.Chat))
+        foreach (var profile in await _profileStore.GetProfilesAsync(AIProfileType.Chat))
         {
             permissions.Add(AIPermissions.CreateDynamicPermission(profile.Name));
         }
