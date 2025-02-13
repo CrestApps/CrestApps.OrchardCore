@@ -10,6 +10,7 @@ internal static class ApiAIUtilityCompletionEndpoint
     {
         _ = builder.MapPost("api/ai/completion/utility", AIUtilityCompletionEndpoint.HandleAsync<T>)
             .DisableAntiforgery()
+            .RequireCors("AllowAllOriginsHeadersMethods")
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = "Api" });
 
         return builder;
