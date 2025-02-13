@@ -13,7 +13,11 @@ public static class AIConstants
 
     public const string CollectionName = "AI";
 
-    public const string AllowAllOriginsHeadersMethodsPolicyName = "AllowAllOriginsHeadersMethods";
+    public const string AiCompletionUtilityPolicyName = "__AICompletionUtility";
+
+    public const string AiCompletionChatPolicyName = "__AICompletionChat";
+
+    public const string AiChatSessionPolicyName = "__AIChatSession";
 
     public static class SystemMessages
     {

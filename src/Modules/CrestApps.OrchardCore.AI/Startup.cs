@@ -137,21 +137,14 @@ public sealed class ChatStartup : StartupBase
 [Feature(AIConstants.Feature.ChatApi)]
 public sealed class ApiChatStartup : StartupBase
 {
-    public override int Order
-        => OrchardCoreConstants.ConfigureOrder.Cors;
-
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddCors(options =>
         {
-            options.AddPolicy(AIConstants.AllowAllOriginsHeadersMethodsPolicyName,
-                builder =>
-                {
-                    builder
-                        .AllowAnyOrigin()
-                        .AllowAnyHeader()
-                        .AllowAnyMethod();
-                });
+            // There policies are intentionally left blank to allow consumers to configure these routes if needed.
+            options.AddPolicy(AIConstants.AiCompletionUtilityPolicyName, policy => { });
+            options.AddPolicy(AIConstants.AiCompletionChatPolicyName, policy => { });
+            options.AddPolicy(AIConstants.AiChatSessionPolicyName, policy => { });
         });
     }
 

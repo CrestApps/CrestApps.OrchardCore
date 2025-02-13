@@ -11,7 +11,7 @@ internal static class ApiAICompletionEndpoint
     {
         _ = builder.MapPost("api/ai/completion/chat", AICompletionEndpoint.HandleAsync<T>)
             .DisableAntiforgery()
-            .RequireCors(AIConstants.AllowAllOriginsHeadersMethodsPolicyName)
+            .RequireCors(AIConstants.AiCompletionChatPolicyName)
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = "Api" });
 
         return builder;
