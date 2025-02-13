@@ -144,10 +144,14 @@ public sealed class ApiChatStartup : StartupBase
     {
         services.AddCors(options =>
         {
-            options.AddPolicy("AllowAllOriginsHeadersMethods",
-                builder => builder.AllowAnyOrigin()
-                                  .AllowAnyHeader()
-                                  .AllowAnyMethod());
+            options.AddPolicy(AIConstants.AllowAllOriginsHeadersMethodsPolicyName,
+                builder =>
+                {
+                    builder
+                        .AllowAnyOrigin()
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
         });
     }
 

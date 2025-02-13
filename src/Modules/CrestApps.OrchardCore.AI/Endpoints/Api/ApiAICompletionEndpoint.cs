@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -10,7 +11,7 @@ internal static class ApiAICompletionEndpoint
     {
         _ = builder.MapPost("api/ai/completion/chat", AICompletionEndpoint.HandleAsync<T>)
             .DisableAntiforgery()
-            .RequireCors("AllowAllOriginsHeadersMethods")
+            .RequireCors(AIConstants.AllowAllOriginsHeadersMethodsPolicyName)
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = "Api" });
 
         return builder;

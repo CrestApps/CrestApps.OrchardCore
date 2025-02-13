@@ -13,6 +13,8 @@ public static class AIConstants
 
     public const string CollectionName = "AI";
 
+    public const string AllowAllOriginsHeadersMethodsPolicyName = "AllowAllOriginsHeadersMethods";
+
     public static class SystemMessages
     {
         public const string UseMarkdownSyntax = "- Provide a response using Markdown syntax.";
