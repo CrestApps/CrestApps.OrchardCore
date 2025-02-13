@@ -13,6 +13,12 @@ public static class AIConstants
 
     public const string CollectionName = "AI";
 
+    public const string AiCompletionUtilityPolicyName = "__AICompletionUtility";
+
+    public const string AiCompletionChatPolicyName = "__AICompletionChat";
+
+    public const string AiChatSessionPolicyName = "__AIChatSession";
+
     public static class SystemMessages
     {
         public const string UseMarkdownSyntax = "- Provide a response using Markdown syntax.";
