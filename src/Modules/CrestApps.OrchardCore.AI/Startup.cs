@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
@@ -136,8 +137,28 @@ public sealed class ChatStartup : StartupBase
 [Feature(AIConstants.Feature.ChatApi)]
 public sealed class ApiChatStartup : StartupBase
 {
+    public override int Order
+        => OrchardCoreConstants.ConfigureOrder.Cors;
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddCors(options =>
+        {
+            options.AddPolicy(AIConstants.AllowAllOriginsHeadersMethodsPolicyName,
+                builder =>
+                {
+                    builder
+                        .AllowAnyOrigin()
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
+        });
+    }
+
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
+        app.UseCors();
+
         routes
             .AddApiAIChatSessionEndpoint()
             .AddApiAIUtilityCompletionEndpoint<ApiChatStartup>()

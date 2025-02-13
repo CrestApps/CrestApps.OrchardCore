@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -10,6 +11,7 @@ internal static class ApiAIChatSessionEndpoint
     {
         _ = builder.MapGet("api/ai/chat/session", AIChatSessionEndpoint.HandleAsync)
             .DisableAntiforgery()
+            .RequireCors(AIConstants.AllowAllOriginsHeadersMethodsPolicyName)
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = "Api" });
 
         return builder;
