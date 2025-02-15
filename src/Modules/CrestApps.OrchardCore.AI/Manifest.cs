@@ -46,7 +46,7 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = AIConstants.Feature.ChatApi,
-    Name = "AI Chat Completion API",
+    Name = "AI Chat WebAPI",
     Description = "Provides a RESTful API for interacting with the AI chat.",
     Category = "Artificial Intelligence",
     Dependencies =
