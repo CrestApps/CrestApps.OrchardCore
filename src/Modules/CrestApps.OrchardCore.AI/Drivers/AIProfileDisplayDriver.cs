@@ -20,6 +20,7 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IAIToolsService _toolsService;
     private readonly IServiceProvider _serviceProvider;
+    private readonly DefaultAIOptions _defaultAIOptions;
     private readonly AIProviderOptions _connectionOptions;
 
     internal readonly IStringLocalizer S;
@@ -30,12 +31,14 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         IAIToolsService toolsService,
         IServiceProvider serviceProvider,
         IOptions<AIProviderOptions> connectionOptions,
+        IOptions<DefaultAIOptions> defaultAIOptions,
         IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
     {
         _profileStore = profileStore;
         _liquidTemplateManager = liquidTemplateManager;
         _toolsService = toolsService;
         _serviceProvider = serviceProvider;
+        _defaultAIOptions = defaultAIOptions.Value;
         _connectionOptions = connectionOptions.Value;
         S = stringLocalizer;
     }
@@ -135,6 +138,8 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.Temperature = metadata.Temperature;
             model.MaxTokens = metadata.MaxTokens;
             model.TopP = metadata.TopP;
+            model.UseCaching = metadata.UseCaching;
+            model.AllowCaching = _defaultAIOptions.EnableDistributedCaching;
 
             model.IsSystemMessageLocked = profile.GetSettings<AIProfileSettings>().LockSystemMessage;
         }).Location("Content:10");
@@ -239,6 +244,11 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         metadata.Temperature = parametersModel.Temperature;
         metadata.MaxTokens = parametersModel.MaxTokens;
         metadata.TopP = parametersModel.TopP;
+
+        if (_defaultAIOptions.EnableDistributedCaching)
+        {
+            metadata.UseCaching = parametersModel.UseCaching;
+        }
 
         var settings = profile.GetSettings<AIProfileSettings>();
 

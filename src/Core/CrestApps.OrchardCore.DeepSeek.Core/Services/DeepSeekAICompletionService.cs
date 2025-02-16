@@ -12,34 +12,21 @@ using OpenAI;
 
 namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
 
-public sealed class DeepSeekAICompletionService : NamedAICompletionService
+public sealed class DeepSeekAICompletionService : DeploymentNamedAICompletionService
 {
-    private readonly IDistributedCache _distributedCache;
-
     public DeepSeekAICompletionService(
-        IOptions<AIProviderOptions> providerOptions,
-        IDistributedCache distributedCache,
-        IAIToolsService toolsService,
-        IOptions<DefaultAIOptions> defaultOptions,
-        IAIDeploymentStore deploymentStore,
-        ILogger<DeepSeekAICompletionService> logger)
-        : base(DeepSeekAIDeploymentProvider.ProviderName, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore, logger)
+           ILoggerFactory loggerFactory,
+           IDistributedCache distributedCache,
+           IOptions<AIProviderOptions> providerOptions,
+           IAIToolsService toolsService,
+           IOptions<DefaultAIOptions> defaultOptions,
+           IAIDeploymentStore deploymentStore
+           ) : base(DeepSeekAIDeploymentProvider.ProviderName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
     {
-        _distributedCache = distributedCache;
     }
 
     protected override string ProviderName
         => DeepSeekAIDeploymentProvider.ProviderName;
-
-    protected override void OnOptions(ChatOptions options, string modelName)
-    {
-        if (UseFunctions(modelName))
-        {
-            return;
-        }
-
-        options.Tools = null;
-    }
 
     protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string modelName)
     {
@@ -48,22 +35,12 @@ public sealed class DeepSeekAICompletionService : NamedAICompletionService
             Endpoint = new Uri("https://api.deepseek.com/v1"),
         });
 
-        var builder = new ChatClientBuilder(client.AsChatClient(modelName))
-            .UseDistributedCache(_distributedCache);
-
-        if (UseFunctions(modelName))
-        {
-            builder.UseFunctionInvocation(null, (r) =>
-            {
-                // Set the maximum number of iterations per request to 1 to prevent infinite function calling.
-                r.MaximumIterationsPerRequest = 1;
-            });
-        }
-
-        return builder.Build();
+        return client.AsChatClient(modelName);
     }
 
     // The 'deepseek-reasoner' model does not support tool calling.
-    private static bool UseFunctions(string modelName)
-        => modelName != "deepseek-reasoner";
+    protected override bool SupportFunctionInvocation(AICompletionContext context, string modelName)
+    {
+        return modelName != "deepseek-reasoner" && base.SupportFunctionInvocation(context, modelName);
+    }
 }

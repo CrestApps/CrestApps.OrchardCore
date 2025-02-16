@@ -12,20 +12,17 @@ using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AzureAIInference.Services;
 
-public sealed class AzureAIInferenceCompletionService : NamedAICompletionService
+public sealed class AzureAIInferenceCompletionService : DeploymentNamedAICompletionService
 {
-    private readonly IDistributedCache _distributedCache;
-
     public AzureAIInferenceCompletionService(
+        ILoggerFactory loggerFactory,
+        IDistributedCache distributedCache,
         IOptions<AIProviderOptions> providerOptions,
         IAIToolsService toolsService,
         IOptions<DefaultAIOptions> defaultOptions,
-        IAIDeploymentStore deploymentStore,
-        IDistributedCache distributedCache,
-        ILogger logger)
-        : base(AzureAIInferenceDeploymentProvider.ProviderName, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore, logger)
+        IAIDeploymentStore deploymentStore
+        ) : base(AzureAIInferenceDeploymentProvider.ProviderName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
     {
-        _distributedCache = distributedCache;
     }
 
     protected override string ProviderName
@@ -33,18 +30,11 @@ public sealed class AzureAIInferenceCompletionService : NamedAICompletionService
 
     protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string modelName)
     {
-        var builder = new ChatCompletionsClient(
-        endpoint: new Uri("https://models.inference.ai.azure.com"),
-        new AzureKeyCredential(connection.GetApiKey()))
-        .AsChatClient(connection.GetDefaultDeploymentName())
-        .AsBuilder()
-        .UseDistributedCache(_distributedCache)
-        .UseFunctionInvocation(null, options =>
-        {
-            // Set the maximum number of iterations per request to 1 as a safe net to prevent infinite function calling.
-            options.MaximumIterationsPerRequest = 1;
-        });
+        var client = new ChatCompletionsClient(
+            endpoint: new Uri("https://models.inference.ai.azure.com"),
+            credential: new AzureKeyCredential(connection.GetApiKey()))
+        .AsChatClient(connection.GetDefaultDeploymentName());
 
-        return builder.Build();
+        return client;
     }
 }

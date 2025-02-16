@@ -26,9 +26,14 @@ public class ProfileMetadataViewModel
     [Range(2, 20)]
     public int? PastMessagesCount { get; set; }
 
+    public bool UseCaching { get; set; }
+
     [BindNever]
     public bool IsSystemMessageLocked { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> Deployments { get; set; }
+
+    [BindNever]
+    public bool AllowCaching { get; set; }
 }

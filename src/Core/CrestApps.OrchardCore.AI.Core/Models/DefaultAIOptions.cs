@@ -13,4 +13,10 @@ public sealed class DefaultAIOptions
     public float PresencePenalty = 0;
 
     public int PastMessagesCount = 10;
+
+    public int? MaximumIterationsPerRequest { get; set; } = 1;
+
+    public bool EnableOpenTelemetry { get; set; }
+
+    public bool EnableDistributedCaching { get; set; } = true;
 }

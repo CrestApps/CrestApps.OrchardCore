@@ -11,20 +11,17 @@ using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureOpenAICompletionService : NamedAICompletionService
+public sealed class AzureOpenAICompletionService : DeploymentNamedAICompletionService
 {
-    private readonly IDistributedCache _distributedCache;
-
     public AzureOpenAICompletionService(
-        IAIDeploymentStore deploymentStore,
-        IDistributedCache distributedCache,
-        IOptions<AIProviderOptions> providerOptions,
-        IAIToolsService toolsService,
-        IOptions<DefaultAIOptions> defaultOptions,
-        ILogger<AzureOpenAICompletionService> logger)
-        : base(AzureProfileSource.Key, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore, logger)
+       ILoggerFactory loggerFactory,
+       IDistributedCache distributedCache,
+       IOptions<AIProviderOptions> providerOptions,
+       IAIToolsService toolsService,
+       IOptions<DefaultAIOptions> defaultOptions,
+       IAIDeploymentStore deploymentStore
+       ) : base(AzureProfileSource.Key, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
     {
-        _distributedCache = distributedCache;
     }
 
     protected override string ProviderName
@@ -36,14 +33,6 @@ public sealed class AzureOpenAICompletionService : NamedAICompletionService
 
         var azureClient = new AzureOpenAIClient(endpoint, connection.GetApiKeyCredential());
 
-        return azureClient
-            .AsChatClient(modelName)
-            .AsBuilder()
-            .UseDistributedCache(_distributedCache)
-            .UseFunctionInvocation(null, (options) =>
-            {
-                // Set the maximum number of iterations per request to 1 as a safe net to prevent infinite function calling.
-                options.MaximumIterationsPerRequest = 1;
-            }).Build();
+        return azureClient.AsChatClient(modelName);
     }
 }

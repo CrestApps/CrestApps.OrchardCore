@@ -108,6 +108,13 @@ public sealed class OpenAIProfileHandler : AIProfileHandlerBase
             metadata.PastMessagesCount = pastMessagesCount;
         }
 
+        var useCaching = metadataNode[nameof(metadata.UseCaching)]?.GetValue<bool?>();
+
+        if (useCaching.HasValue)
+        {
+            metadata.UseCaching = useCaching.Value;
+        }
+
         profile.Put(metadata);
 
         return Task.CompletedTask;

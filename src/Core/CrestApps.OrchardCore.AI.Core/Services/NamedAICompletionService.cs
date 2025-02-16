@@ -1,114 +1,107 @@
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public abstract class NamedAICompletionService : IAICompletionService
+public abstract class NamedAICompletionService : AICompletionServiceBase, IAICompletionService
 {
+    private static readonly AIProfileMetadata _defaultMetadata = new();
+
+    public const string DefaultLogCategory = "AICompletionService";
+
     private readonly IAIToolsService _toolsService;
-    private readonly IAIDeploymentStore _deploymentStore;
     private readonly DefaultAIOptions _defaultOptions;
-    private readonly AIProviderOptions _providerOptions;
+    private readonly IDistributedCache _distributedCache;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger _logger;
 
     public NamedAICompletionService(
         string name,
+        IDistributedCache distributedCache,
+        ILoggerFactory loggerFactory,
         AIProviderOptions providerOptions,
         DefaultAIOptions defaultOptions,
-        IAIToolsService toolsService,
-        IAIDeploymentStore deploymentStore,
-        ILogger logger)
+        IAIToolsService toolsService)
+        : base(providerOptions)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;
+        _distributedCache = distributedCache;
+        _loggerFactory = loggerFactory;
         _toolsService = toolsService;
-        _deploymentStore = deploymentStore;
         _defaultOptions = defaultOptions;
-        _providerOptions = providerOptions;
-        _logger = logger;
+        _logger = loggerFactory.CreateLogger(DefaultLogCategory);
     }
 
     public string Name { get; }
 
     protected abstract string ProviderName { get; }
 
-    protected virtual string GetDefaultConnectionName(AIProvider provider)
-    {
-        return provider.DefaultConnectionName;
-    }
-
-    protected virtual string GetDefaultDeploymentName(AIProvider provider)
-    {
-        return provider.DefaultDeploymentName;
-    }
-
-    protected virtual void OnOptions(ChatOptions options, string modelName)
-    {
-    }
-
     protected abstract IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string modelName);
+
+
+    protected virtual void ConfigureChatOptions(ChatOptions options, string modelName)
+    {
+    }
+
+    protected virtual void ConfigureFunctionInvocation(FunctionInvokingChatClient client)
+    {
+        client.MaximumIterationsPerRequest = _defaultOptions.MaximumIterationsPerRequest;
+    }
+
+    protected virtual bool SupportFunctionInvocation(AICompletionContext context, string modelName)
+    {
+        return !context.DisableTools;
+    }
+
+    protected virtual void ConfigureLogger(LoggingChatClient client)
+    {
+    }
+
+    protected virtual void ConfigureOpenTelemetry(OpenTelemetryChatClient client)
+    {
+    }
 
     public async Task<ChatCompletion> ChatAsync(IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
 
-        AIProviderConnection connection = null;
-
-        string deploymentName = null;
-
-        if (_providerOptions.Providers.TryGetValue(ProviderName, out var provider))
-        {
-            var connectionName = GetDefaultConnectionName(provider);
-
-            deploymentName = GetDefaultDeploymentName(provider);
-
-            var deployment = await GetDeploymentAsync(context);
-
-            if (deployment is not null)
-            {
-                connectionName = deployment.ConnectionName;
-                deploymentName = deployment.Name;
-            }
-
-            if (!string.IsNullOrEmpty(connectionName) && provider.Connections.TryGetValue(connectionName, out var connectionProperties))
-            {
-                connection = connectionProperties;
-            }
-        }
+        (var connection, var deploymentName) = await GetConnectionAsync(context, ProviderName);
 
         if (connection is null)
         {
-            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile.Id);
+            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
 
             return null;
         }
 
-        var metadata = context.Profile?.As<AIProfileMetadata>();
+        if (context.Profile is null || !context.Profile.TryGet<AIProfileMetadata>(out var metadata))
+        {
+            metadata = _defaultMetadata;
+        }
 
-        var pastMessageCount = metadata?.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
+        var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
 
-        var chatMessages = messages.Where(x => (x.Role == ChatRole.User || x.Role == ChatRole.Assistant) && !string.IsNullOrWhiteSpace(x.Text));
+        var chatMessages = messages.Where(x => (x.Role == ChatRole.User || x.Role == ChatRole.Assistant) && !string.IsNullOrEmpty(x.Text));
 
         var skip = GetTotalMessagesToSkip(chatMessages.Count(), pastMessageCount);
 
-        var prompts = new List<ChatMessage>
+        var prompts = new List<ChatMessage>()
         {
             new(ChatRole.System, GetSystemMessage(context, metadata))
-        };
+        }.Concat(chatMessages.Skip(skip).Take(pastMessageCount))
+        .ToList();
 
         try
         {
-            var chatClient = GetChatClient(connection, context, deploymentName);
+            var chatClient = BuildClient(connection, context, metadata, deploymentName);
 
-            var chatOptions = GetChatOptions(context, metadata);
-
-            OnOptions(chatOptions, deploymentName);
-
-            prompts.AddRange(chatMessages.Skip(skip).Take(pastMessageCount));
+            var chatOptions = GetChatOptions(context, metadata, deploymentName);
 
             return await chatClient.CompleteAsync(prompts, chatOptions, cancellationToken);
         }
@@ -120,19 +113,19 @@ public abstract class NamedAICompletionService : IAICompletionService
         return null;
     }
 
-    private ChatOptions GetChatOptions(AICompletionContext context, AIProfileMetadata metadata)
+    private ChatOptions GetChatOptions(AICompletionContext context, AIProfileMetadata metadata, string deploymentName)
     {
         var chatOptions = new ChatOptions()
         {
-            Temperature = metadata?.Temperature ?? _defaultOptions.Temperature,
-            TopP = metadata?.TopP ?? _defaultOptions.TopP,
-            FrequencyPenalty = metadata?.FrequencyPenalty ?? _defaultOptions.FrequencyPenalty,
-            PresencePenalty = metadata?.PresencePenalty ?? _defaultOptions.PresencePenalty,
-            MaxOutputTokens = metadata?.MaxTokens ?? _defaultOptions.MaxOutputTokens,
+            Temperature = metadata.Temperature ?? _defaultOptions.Temperature,
+            TopP = metadata.TopP ?? _defaultOptions.TopP,
+            FrequencyPenalty = metadata.FrequencyPenalty ?? _defaultOptions.FrequencyPenalty,
+            PresencePenalty = metadata.PresencePenalty ?? _defaultOptions.PresencePenalty,
+            MaxOutputTokens = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
         };
 
-        if (!context.DisableTools && context.Profile?.FunctionNames is not null &&
-            context.Profile?.FunctionNames.Length > 0)
+        if (SupportFunctionInvocation(context, deploymentName) &&
+            context.Profile?.FunctionNames?.Length > 0)
         {
             chatOptions.Tools = [];
 
@@ -154,47 +147,34 @@ public abstract class NamedAICompletionService : IAICompletionService
             }
         }
 
+        ConfigureChatOptions(chatOptions, deploymentName);
+
         return chatOptions;
     }
 
-    private async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
+    private IChatClient BuildClient(AIProviderConnection connection, AICompletionContext context, AIProfileMetadata metadata, string modelName)
     {
-        if (!string.IsNullOrEmpty(content.Profile?.DeploymentId))
+        var client = GetChatClient(connection, context, modelName);
+
+        var builder = new ChatClientBuilder(client);
+
+        builder.UseLogging(_loggerFactory, ConfigureLogger);
+
+        if (SupportFunctionInvocation(context, modelName))
         {
-            return await _deploymentStore.FindByIdAsync(content.Profile.DeploymentId);
+            builder.UseFunctionInvocation(_loggerFactory, ConfigureFunctionInvocation);
         }
 
-        return null;
-    }
-
-    private static int GetTotalMessagesToSkip(int totalMessages, int pastMessageCount)
-    {
-        if (pastMessageCount > 0 && totalMessages > pastMessageCount)
+        if (_defaultOptions.EnableDistributedCaching && context.UseCaching && metadata.UseCaching)
         {
-            return totalMessages - pastMessageCount;
+            builder.UseDistributedCache(_distributedCache);
         }
 
-        return 0;
-    }
-
-    private static string GetSystemMessage(AICompletionContext context, AIProfileMetadata metadata)
-    {
-        var systemMessage = string.Empty;
-
-        if (!string.IsNullOrEmpty(context.SystemMessage))
+        if (_defaultOptions.EnableOpenTelemetry)
         {
-            systemMessage = context.SystemMessage;
-        }
-        else if (!string.IsNullOrEmpty(metadata?.SystemMessage))
-        {
-            systemMessage = metadata.SystemMessage;
+            builder.UseOpenTelemetry(_loggerFactory, sourceName: DefaultLogCategory, ConfigureOpenTelemetry);
         }
 
-        if (context.UserMarkdownInResponse)
-        {
-            systemMessage += Environment.NewLine + AIConstants.SystemMessages.UseMarkdownSyntax;
-        }
-
-        return systemMessage;
+        return builder.Build();
     }
 }
