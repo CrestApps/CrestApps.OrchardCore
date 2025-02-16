@@ -135,6 +135,7 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.Temperature = metadata.Temperature;
             model.MaxTokens = metadata.MaxTokens;
             model.TopP = metadata.TopP;
+            model.UseCaching = metadata.UseCaching;
 
             model.IsSystemMessageLocked = profile.GetSettings<AIProfileSettings>().LockSystemMessage;
         }).Location("Content:10");
@@ -239,6 +240,7 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         metadata.Temperature = parametersModel.Temperature;
         metadata.MaxTokens = parametersModel.MaxTokens;
         metadata.TopP = parametersModel.TopP;
+        metadata.UseCaching = parametersModel.UseCaching;
 
         var settings = profile.GetSettings<AIProfileSettings>();
 

@@ -18,7 +18,10 @@ Before utilizing any AI features, ensure the necessary settings are configured. 
         "TopP": 1,
         "FrequencyPenalty": 0,
         "PresencePenalty": 0,
-        "PastMessagesCount": 10
+        "PastMessagesCount": 10,
+        "MaximumIterationsPerRequest": 1,
+        "EnableOpenTelemetry": false,
+        "EnableDistributedCaching": true
       },
       "Providers": {
         "<!-- Provider name goes here -->": {

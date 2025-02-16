@@ -7,6 +7,7 @@ using Azure.AI.OpenAI.Chat;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Services;
@@ -21,14 +22,15 @@ using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureAISearchCompletionService : IAICompletionService
+public sealed class AzureAISearchCompletionService : AICompletionServiceBase, IAICompletionService
 {
+    private static readonly AIProfileMetadata _defaultMetadata = new();
+
     private readonly IAIDeploymentStore _deploymentStore;
     private readonly IAILinkGenerator _openAILinkGenerator;
     private readonly AzureAISearchIndexSettingsService _azureAISearchIndexSettingsService;
     private readonly IAIToolsService _toolsService;
     private readonly DefaultAIOptions _defaultOptions;
-    private readonly AIProviderOptions _providerOptions;
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
     private readonly ILogger _logger;
 
@@ -41,13 +43,13 @@ public sealed class AzureAISearchCompletionService : IAICompletionService
         IAIToolsService toolService,
         IOptions<DefaultAIOptions> defaultOptions,
         ILogger<AzureOpenAICompletionService> logger)
+        : base(providerOptions.Value)
     {
         _deploymentStore = deploymentStore;
         _openAILinkGenerator = openAILinkGenerator;
         _azureAISearchIndexSettingsService = azureAISearchIndexSettingsService;
         _toolsService = toolService;
         _defaultOptions = defaultOptions.Value;
-        _providerOptions = providerOptions.Value;
         _azureAISearchDefaultOptions = azureAISearchDefaultOptions.Value;
         _logger = logger;
     }
@@ -59,32 +61,11 @@ public sealed class AzureAISearchCompletionService : IAICompletionService
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
 
-        AIProviderConnection connection = null;
-
-        string deploymentName = null;
-
-        if (_providerOptions.Providers.TryGetValue(AzureOpenAIConstants.AzureProviderName, out var entry))
-        {
-            var connectionName = entry.DefaultConnectionName;
-            deploymentName = entry.DefaultDeploymentName;
-
-            var deployment = await GetDeploymentAsync(context);
-
-            if (deployment is not null)
-            {
-                connectionName = deployment.ConnectionName;
-                deploymentName = deployment.Name;
-            }
-
-            if (!string.IsNullOrEmpty(connectionName) && entry.Connections.TryGetValue(connectionName, out var connectionProperties))
-            {
-                connection = connectionProperties;
-            }
-        }
+        (var connection, var deploymentName) = await GetConnectionAsync(context, AzureOpenAIConstants.AzureProviderName);
 
         if (connection is null)
         {
-            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile.Id);
+            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
 
             return null;
         }
@@ -111,7 +92,10 @@ public sealed class AzureAISearchCompletionService : IAICompletionService
             }
         }
 
-        var metadata = context.Profile.As<AIProfileMetadata>();
+        if (context.Profile is null || !context.Profile.TryGet<AIProfileMetadata>(out var metadata))
+        {
+            metadata = _defaultMetadata;
+        }
 
         var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
         var skip = GetTotalMessagesToSkip(azureMessages.Count, pastMessageCount);
@@ -189,37 +173,6 @@ public sealed class AzureAISearchCompletionService : IAICompletionService
         }
     }
 
-    private static int GetTotalMessagesToSkip(int totalMessages, int pastMessageCount)
-    {
-        if (pastMessageCount > 0 && totalMessages > pastMessageCount)
-        {
-            return totalMessages - pastMessageCount;
-        }
-
-        return 0;
-    }
-
-    private static string GetSystemMessage(AICompletionContext context, AIProfileMetadata metadata)
-    {
-        var systemMessage = string.Empty;
-
-        if (!string.IsNullOrEmpty(context.SystemMessage))
-        {
-            systemMessage = context.SystemMessage;
-        }
-        else if (!string.IsNullOrEmpty(metadata?.SystemMessage))
-        {
-            systemMessage = metadata.SystemMessage;
-        }
-
-        if (context.UserMarkdownInResponse)
-        {
-            systemMessage += Environment.NewLine + AIConstants.SystemMessages.UseMarkdownSyntax;
-        }
-
-        return systemMessage;
-    }
-
     private static AzureOpenAIClient GetChatClient(AIProviderConnection connection)
     {
         var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
@@ -231,7 +184,7 @@ public sealed class AzureAISearchCompletionService : IAICompletionService
 
     private async Task<ChatCompletionOptions> GetOptionsWithDataSourceAsync(AICompletionContext context)
     {
-        if (!context.Profile.TryGet<AzureAIProfileAISearchMetadata>(out var metadata))
+        if (context.Profile is null || !context.Profile.TryGet<AzureAIProfileAISearchMetadata>(out var metadata))
         {
             throw new InvalidOperationException();
         }
@@ -276,7 +229,10 @@ public sealed class AzureAISearchCompletionService : IAICompletionService
 
     private ChatCompletionOptions GetOptions(AICompletionContext context)
     {
-        var metadata = context.Profile.As<AIProfileMetadata>();
+        if (context.Profile is null || !context.Profile.TryGet<AIProfileMetadata>(out var metadata))
+        {
+            metadata = _defaultMetadata;
+        }
 
         var chatOptions = new ChatCompletionOptions()
         {
@@ -287,7 +243,7 @@ public sealed class AzureAISearchCompletionService : IAICompletionService
             MaxOutputTokenCount = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
         };
 
-        if (!context.DisableTools)
+        if (!context.DisableTools && context.Profile is not null)
         {
             foreach (var functionName in context.Profile.FunctionNames)
             {
@@ -424,7 +380,7 @@ public sealed class AzureAISearchCompletionService : IAICompletionService
         };
     }
 
-    private async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
+    protected override async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
     {
         if (!string.IsNullOrEmpty(content.Profile.DeploymentId))
         {

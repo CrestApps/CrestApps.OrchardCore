@@ -11,4 +11,6 @@ public class AICompletionContext
     public bool UserMarkdownInResponse { get; set; }
 
     public bool DisableTools { get; set; }
+
+    public bool UseCaching { get; set; } = true;
 }

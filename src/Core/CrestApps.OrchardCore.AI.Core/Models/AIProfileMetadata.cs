@@ -15,4 +15,6 @@ public class AIProfileMetadata
     public int? MaxTokens { get; set; }
 
     public int? PastMessagesCount { get; set; }
+
+    public bool UseCaching { get; set; } = true;
 }
