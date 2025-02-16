@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
@@ -58,7 +58,6 @@ public abstract class AICompletionServiceBase
 
         return 0;
     }
-
 
     protected virtual Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
     {

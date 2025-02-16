@@ -33,4 +33,7 @@ public class ProfileMetadataViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> Deployments { get; set; }
+
+    [BindNever]
+    public bool AllowCaching { get; set; }
 }

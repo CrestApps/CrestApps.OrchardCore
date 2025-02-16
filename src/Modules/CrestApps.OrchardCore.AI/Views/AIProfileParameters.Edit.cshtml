@@ -63,15 +63,18 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses(true)">
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="UseCaching">
-            <label class="form-check-label" asp-for="UseCaching">@T["Use caching"]</label>
-            <span class="hint dashed">@T["When enabled, prompts will utilize semantic caching to reduce AI service costs and improve speed and performance."]</span>
+@if (Model.AllowCaching)
+{
+    <div class="@Orchard.GetWrapperClasses()">
+        <div class="@Orchard.GetEndClasses(true)">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UseCaching">
+                <label class="form-check-label" asp-for="UseCaching">@T["Use caching"]</label>
+                <span class="hint dashed">@T["When enabled, prompts will utilize semantic caching to reduce AI service costs and improve speed and performance."]</span>
+            </div>
         </div>
     </div>
-</div>
+}
 
 <style asp-name="codemirror"></style>
 <style asp-name="mdecss" asp-src="~/OrchardCore.Markdown/Styles/mde.min.css" debug-src="~/OrchardCore.Markdown/Styles/mde.css"></style>
