@@ -29,6 +29,11 @@ public static class AIConstants
         public const string ChatApi = "CrestApps.OrchardCore.AI.Chat.Api";
     }
 
+    public static class Hubs
+    {
+        public const string ChatHub = "/AIChatHub";
+    }
+
     public static class RouteNames
     {
         public const string AICompletionRoute = "AIChatCompletion";

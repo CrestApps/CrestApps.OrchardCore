@@ -68,7 +68,7 @@ internal static class AIUtilityCompletionEndpoint
             return TypedResults.Problem($"Unable to find a chat completion service for the source: '{profile.Source}'.");
         }
 
-        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], new AICompletionContext()
+        var completion = await completionService.CompleteAsync([new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], new AICompletionContext()
         {
             Profile = profile,
             UserMarkdownInResponse = requestData.IncludeHtmlResponse,

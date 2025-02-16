@@ -86,7 +86,7 @@ internal static class AICompletionEndpoint
                 return TypedResults.NotFound();
             }
 
-            (chatSession, isNew) = await GetSessionsAsync(sessionManager, chatProfileManager, requestData.SessionId, parentProfile, completionService, userPrompt: profile.Name);
+            (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, parentProfile, completionService, userPrompt: profile.Name);
 
             userPrompt = await liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
                 new Dictionary<string, FluidValue>()
@@ -112,7 +112,7 @@ internal static class AICompletionEndpoint
                 return await GetToolMessageAsync(completionService, profile, markdownService, userPrompt, requestData.IncludeHtmlResponse);
             }
 
-            (chatSession, isNew) = await GetSessionsAsync(sessionManager, chatProfileManager, requestData.SessionId, profile, completionService, userPrompt);
+            (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, profile, completionService, userPrompt);
         }
 
         ChatCompletion completion = null;
@@ -121,7 +121,7 @@ internal static class AICompletionEndpoint
 
         if (profile.Type == AIProfileType.TemplatePrompt)
         {
-            completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, userPrompt)], new AICompletionContext()
+            completion = await completionService.CompleteAsync([new ChatMessage(ChatRole.User, userPrompt)], new AICompletionContext()
             {
                 Profile = profile,
                 UserMarkdownInResponse = true,
@@ -153,7 +153,7 @@ internal static class AICompletionEndpoint
             var transcript = chatSession.Prompts.Where(x => !x.IsGeneratedPrompt)
                 .Select(prompt => new ChatMessage(prompt.Role, prompt.Content));
 
-            completion = await completionService.ChatAsync(transcript, new AICompletionContext()
+            completion = await completionService.CompleteAsync(transcript, new AICompletionContext()
             {
                 Profile = profile,
                 Session = chatSession,
@@ -197,7 +197,7 @@ internal static class AICompletionEndpoint
         });
     }
 
-    private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, IAIProfileManager profileManager, string sessionId, AIProfile profile, IAICompletionService completionService, string userPrompt)
+    private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, IAICompletionService completionService, string userPrompt)
     {
         if (!string.IsNullOrWhiteSpace(sessionId))
         {
@@ -233,7 +233,7 @@ internal static class AICompletionEndpoint
                 SystemMessage = AIConstants.TitleGeneratorSystemMessage,
             };
 
-            var titleResponse = await completionService.ChatAsync(transcription, context);
+            var titleResponse = await completionService.CompleteAsync(transcription, context);
 
             // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
             chatSession.Title = titleResponse.Choices.Any()
@@ -251,7 +251,7 @@ internal static class AICompletionEndpoint
 
     private static async Task<IResult> GetToolMessageAsync(IAICompletionService completionService, AIProfile profile, IAIMarkdownService markdownService, string prompt, bool respondWithHtml)
     {
-        var completion = await completionService.ChatAsync([new ChatMessage(ChatRole.User, prompt)], new AICompletionContext()
+        var completion = await completionService.CompleteAsync([new ChatMessage(ChatRole.User, prompt)], new AICompletionContext()
         {
             Profile = profile,
             UserMarkdownInResponse = true,

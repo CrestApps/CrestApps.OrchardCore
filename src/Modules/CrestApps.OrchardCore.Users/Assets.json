@@ -4,6 +4,6 @@
     "inputs": [
       "Assets/scss/user-profile-avatar.scss"
     ],
-    "output": "wwwroot/Styles/user-profile-avatar.css"
+    "output": "wwwroot/styles/user-profile-avatar.css"
   }
 ]

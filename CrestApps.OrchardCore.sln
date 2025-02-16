@@ -65,6 +65,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Azure
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Ollama", "src\Modules\CrestApps.OrchardCore.Ollama\CrestApps.OrchardCore.Ollama.csproj", "{00A868B3-8906-45D9-A841-AC96FD9DEAAF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.SignalR", "src\Modules\CrestApps.OrchardCore.SignalR\CrestApps.OrchardCore.SignalR.csproj", "{1564CFE5-670A-4402-A0F6-32F7866CAE9E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -151,6 +153,10 @@ Global
 		{00A868B3-8906-45D9-A841-AC96FD9DEAAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{00A868B3-8906-45D9-A841-AC96FD9DEAAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{00A868B3-8906-45D9-A841-AC96FD9DEAAF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1564CFE5-670A-4402-A0F6-32F7866CAE9E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1564CFE5-670A-4402-A0F6-32F7866CAE9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1564CFE5-670A-4402-A0F6-32F7866CAE9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1564CFE5-670A-4402-A0F6-32F7866CAE9E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -176,6 +182,7 @@ Global
 		{A150B068-E1A5-46BA-B77F-72A5013ABC29} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{0A5DE869-61E1-4AF8-A083-F1A313558F78} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{00A868B3-8906-45D9-A841-AC96FD9DEAAF} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{1564CFE5-670A-4402-A0F6-32F7866CAE9E} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0E9F9B00-7078-4EA8-87A9-0B2E74375F1E}

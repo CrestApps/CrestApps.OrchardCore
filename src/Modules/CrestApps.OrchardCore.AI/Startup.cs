@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Drivers;
 using CrestApps.OrchardCore.AI.Endpoints;
 using CrestApps.OrchardCore.AI.Endpoints.Api;
+using CrestApps.OrchardCore.AI.Hubs;
 using CrestApps.OrchardCore.AI.Indexes;
 using CrestApps.OrchardCore.AI.Migrations;
 using CrestApps.OrchardCore.AI.Models;
@@ -21,6 +22,7 @@ using Fluid;
 using Markdig;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
@@ -122,12 +124,18 @@ public sealed class ChatStartup : StartupBase
                 .Use<NewTabLinkExtension>();
             });
 
-        services.AddNavigationProvider<ChatAdminMenu>();
+        services
+            .AddSingleton<IConfigureOptions<HubOptions<ChatHub>>, HubOptionsSetup<ChatHub>>();
+
+        services
+            .AddNavigationProvider<ChatAdminMenu>();
 
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
+        routes.MapHub<ChatHub>(AIConstants.Hubs.ChatHub);
+
         routes
             .AddAIChatSessionEndpoint();
     }

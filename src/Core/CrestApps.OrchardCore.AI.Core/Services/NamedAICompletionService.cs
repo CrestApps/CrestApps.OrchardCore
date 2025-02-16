@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
@@ -66,7 +67,7 @@ public abstract class NamedAICompletionService : AICompletionServiceBase, IAICom
     {
     }
 
-    public async Task<ChatCompletion> ChatAsync(IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
+    public async Task<ChatCompletion> CompleteAsync(IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -111,6 +112,47 @@ public abstract class NamedAICompletionService : AICompletionServiceBase, IAICom
         }
 
         return null;
+    }
+
+    public async IAsyncEnumerable<StreamingChatCompletionUpdate> CompleteStreamingAsync(IEnumerable<ChatMessage> messages, AICompletionContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(messages);
+        ArgumentNullException.ThrowIfNull(context);
+
+        (var connection, var deploymentName) = await GetConnectionAsync(context, ProviderName);
+
+        if (connection is null)
+        {
+            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
+
+            yield break;
+        }
+
+        if (context.Profile is null || !context.Profile.TryGet<AIProfileMetadata>(out var metadata))
+        {
+            metadata = _defaultMetadata;
+        }
+
+        var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
+
+        var chatMessages = messages.Where(x => (x.Role == ChatRole.User || x.Role == ChatRole.Assistant) && !string.IsNullOrEmpty(x.Text));
+
+        var skip = GetTotalMessagesToSkip(chatMessages.Count(), pastMessageCount);
+
+        var prompts = new List<ChatMessage>()
+        {
+            new(ChatRole.System, GetSystemMessage(context, metadata))
+        }.Concat(chatMessages.Skip(skip).Take(pastMessageCount))
+        .ToList();
+
+        var chatClient = BuildClient(connection, context, metadata, deploymentName);
+
+        var chatOptions = GetChatOptions(context, metadata, deploymentName);
+
+        await foreach (var update in chatClient.CompleteStreamingAsync(prompts, chatOptions, cancellationToken))
+        {
+            yield return update;
+        }
     }
 
     private ChatOptions GetChatOptions(AICompletionContext context, AIProfileMetadata metadata, string deploymentName)

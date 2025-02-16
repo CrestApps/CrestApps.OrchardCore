@@ -1,0 +1,14 @@
+{
+  "name": "crestapps.orchardcore.ai",
+  "version": "1.0.0",
+  "description": "The **AI Services** feature enables interaction with AI models by providing essential services. Once activated, a new **Artificial Intelligence** menu item appears in the admin menu, offering options to manage AI profiles.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "marked": "^15.0.7"
+  }
+}

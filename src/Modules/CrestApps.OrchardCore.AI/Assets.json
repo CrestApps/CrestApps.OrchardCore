@@ -3,12 +3,18 @@
     "inputs": [
       "Assets/js/admin-ui.js"
     ],
-    "output": "wwwroot/Scripts/admin-ui.js"
+    "output": "wwwroot/scripts/admin-ui.js"
   },
   {
     "inputs": [
       "Assets/js/ai-chat.js"
     ],
-    "output": "wwwroot/Scripts/ai-chat.js"
+    "output": "wwwroot/scripts/ai-chat.js"
+  },
+  {
+    "inputs": [
+      "./node_modules/marked/marked.min.js"
+    ],
+    "output": "wwwroot/scripts/marked.js"
   }
 ]

@@ -1,4 +1,5 @@
 using System.ClientModel;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -56,7 +57,7 @@ public sealed class AzureAISearchCompletionService : AICompletionServiceBase, IA
 
     public string Name { get; } = AzureWithAzureAISearchProfileSource.Key;
 
-    public async Task<Microsoft.Extensions.AI.ChatCompletion> ChatAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
+    public async Task<Microsoft.Extensions.AI.ChatCompletion> CompleteAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -143,6 +144,89 @@ public sealed class AzureAISearchCompletionService : AICompletionServiceBase, IA
         return null;
     }
 
+    public async IAsyncEnumerable<Microsoft.Extensions.AI.StreamingChatCompletionUpdate> CompleteStreamingAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(messages);
+        ArgumentNullException.ThrowIfNull(context);
+
+        (var connection, var deploymentName) = await GetConnectionAsync(context, AzureOpenAIConstants.AzureProviderName);
+
+        if (connection is null)
+        {
+            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
+
+            yield break;
+        }
+
+        var azureMessages = new List<ChatMessage>();
+
+        var currentPrompt = string.Empty;
+
+        foreach (var message in messages)
+        {
+            if (string.IsNullOrWhiteSpace(message.Text))
+            {
+                continue;
+            }
+
+            if (message.Role == Microsoft.Extensions.AI.ChatRole.User)
+            {
+                azureMessages.Add(new UserChatMessage(message.Text));
+                currentPrompt = message.Text;
+            }
+            else if (message.Role == Microsoft.Extensions.AI.ChatRole.Assistant)
+            {
+                azureMessages.Add(new AssistantChatMessage(message.Text));
+            }
+        }
+
+        if (context.Profile is null || !context.Profile.TryGet<AIProfileMetadata>(out var metadata))
+        {
+            metadata = _defaultMetadata;
+        }
+
+        var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
+        var skip = GetTotalMessagesToSkip(azureMessages.Count, pastMessageCount);
+
+        var prompts = new List<ChatMessage>
+        {
+            new SystemChatMessage(GetSystemMessage(context, metadata))
+        };
+
+        prompts.AddRange(azureMessages.Skip(skip).Take(pastMessageCount));
+
+        var azureClient = GetChatClient(connection);
+
+        var chatClient = azureClient.GetChatClient(deploymentName);
+
+        var chatOptions = await GetOptionsWithDataSourceAsync(context);
+
+        await foreach (var update in chatClient.CompleteChatStreamingAsync(prompts, chatOptions, cancellationToken))
+        {
+            if (update.FinishReason == ChatFinishReason.ToolCalls)
+            {
+                await ProcessToolCallsAsync(prompts, update.ToolCallUpdates);
+            }
+
+            await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, GetOptions(context), cancellationToken))
+            {
+                yield return new Microsoft.Extensions.AI.StreamingChatCompletionUpdate
+                {
+                    ChoiceIndex = 0,
+                    CompletionId = newUpdate.CompletionId,
+                    CreatedAt = newUpdate.CreatedAt,
+                    FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(newUpdate.FinishReason.ToString()),
+                    Text = string.Join(' ', newUpdate.ContentUpdate.SelectMany(x => x.Text)),
+                    Role = new Microsoft.Extensions.AI.ChatRole(newUpdate.Role.ToString()),
+                    ModelId = newUpdate.Model,
+                    Contents = newUpdate.ContentUpdate.Select(x => new Microsoft.Extensions.AI.TextContent(x.Text))
+                    .Cast<Microsoft.Extensions.AI.AIContent>()
+                    .ToList(),
+                };
+            }
+        }
+    }
+
     private async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<ChatToolCall> tollCalls)
     {
         prompts.Add(ChatMessage.CreateAssistantMessage(tollCalls));
@@ -169,6 +253,38 @@ public sealed class AzureAISearchCompletionService : AICompletionServiceBase, IA
                 var resultJson = JsonSerializer.Serialize(result);
 
                 prompts.Add(new ToolChatMessage(toolCall.Id, resultJson));
+            }
+        }
+    }
+
+    private async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<StreamingChatToolCallUpdate> tollCallsUpdate)
+    {
+        var tollCalls = tollCallsUpdate.Select(x => ChatToolCall.CreateFunctionToolCall(x.ToolCallId, x.FunctionName, x.FunctionArgumentsUpdate));
+
+        prompts.Add(ChatMessage.CreateAssistantMessage(tollCalls));
+
+        foreach (var toolCall in tollCallsUpdate)
+        {
+            var function = _toolsService.GetFunction(toolCall.FunctionName);
+
+            if (function is null)
+            {
+                continue;
+            }
+
+            var arguments = toolCall.FunctionArgumentsUpdate.ToObjectFromJson<Dictionary<string, object>>();
+
+            var result = await function.InvokeAsync(arguments);
+
+            if (result is string str)
+            {
+                prompts.Add(new ToolChatMessage(toolCall.ToolCallId, str));
+            }
+            else
+            {
+                var resultJson = JsonSerializer.Serialize(result);
+
+                prompts.Add(new ToolChatMessage(toolCall.ToolCallId, resultJson));
             }
         }
     }

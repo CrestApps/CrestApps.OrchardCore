@@ -13,7 +13,7 @@ public sealed class AvatarResourceManagementOptionsConfiguration : IConfigureOpt
 
         _manifest
             .DefineStyle("user-profile-avatar")
-            .SetUrl("~/CrestApps.OrchardCore.Users/Styles/user-profile-avatar.min.css", "~/CrestApps.OrchardCore.Users/Styles/user-profile-avatar.css")
+            .SetUrl("~/CrestApps.OrchardCore.Users/styles/user-profile-avatar.min.css", "~/CrestApps.OrchardCore.Users/styles/user-profile-avatar.css")
             .SetVersion("1.0.0");
     }
 

@@ -40,6 +40,7 @@ using OrchardCore.Modules.Manifest;
     [
         "OrchardCore.Liquid",
         "CrestApps.OrchardCore.Resources",
+        "CrestApps.OrchardCore.SignalR",
         AIConstants.Feature.Area,
     ]
 )]
