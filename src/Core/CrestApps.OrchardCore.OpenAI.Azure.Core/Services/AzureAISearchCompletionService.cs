@@ -1,8 +1,5 @@
-using System.ClientModel;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Azure.AI.OpenAI;
 using Azure.AI.OpenAI.Chat;
 using CrestApps.OrchardCore.AI;
@@ -28,9 +25,9 @@ public sealed class AzureAISearchCompletionService : AICompletionServiceBase, IA
     private static readonly AIProfileMetadata _defaultMetadata = new();
 
     private readonly IAIDeploymentStore _deploymentStore;
-    private readonly IAILinkGenerator _openAILinkGenerator;
     private readonly AzureAISearchIndexSettingsService _azureAISearchIndexSettingsService;
     private readonly IAIToolsService _toolsService;
+    private readonly IAILinkGenerator _linkGenerator;
     private readonly DefaultAIOptions _defaultOptions;
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
     private readonly ILogger _logger;
@@ -39,23 +36,23 @@ public sealed class AzureAISearchCompletionService : AICompletionServiceBase, IA
         IAIDeploymentStore deploymentStore,
         IOptions<AIProviderOptions> providerOptions,
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
-        IAILinkGenerator openAILinkGenerator,
         AzureAISearchIndexSettingsService azureAISearchIndexSettingsService,
         IAIToolsService toolService,
+        IAILinkGenerator linkGenerator,
         IOptions<DefaultAIOptions> defaultOptions,
         ILogger<AzureOpenAICompletionService> logger)
         : base(providerOptions.Value)
     {
         _deploymentStore = deploymentStore;
-        _openAILinkGenerator = openAILinkGenerator;
         _azureAISearchIndexSettingsService = azureAISearchIndexSettingsService;
         _toolsService = toolService;
+        _linkGenerator = linkGenerator;
         _defaultOptions = defaultOptions.Value;
         _azureAISearchDefaultOptions = azureAISearchDefaultOptions.Value;
         _logger = logger;
     }
 
-    public string Name { get; } = AzureWithAzureAISearchProfileSource.Key;
+    public string Name { get; } = AzureAISearchProfileSource.Key;
 
     public async Task<Microsoft.Extensions.AI.ChatCompletion> CompleteAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
@@ -131,10 +128,67 @@ public sealed class AzureAISearchCompletionService : AICompletionServiceBase, IA
                 data = await chatClient.CompleteChatAsync(prompts, GetOptions(context), cancellationToken);
             }
 
-            if (data.Value.FinishReason == ChatFinishReason.Stop)
+            var role = new Microsoft.Extensions.AI.ChatRole(data.Value.Role.ToString().ToLowerInvariant());
+            var choices = new List<Microsoft.Extensions.AI.ChatMessage>();
+
+            foreach (var choice in data.Value.Content)
             {
-                return GetResponse(data, currentPrompt);
+                choices.Add(new Microsoft.Extensions.AI.ChatMessage(role, choice.Text));
             }
+
+            var result = new Microsoft.Extensions.AI.ChatCompletion(choices)
+            {
+                CompletionId = data.Value.Id,
+                CreatedAt = data.Value.CreatedAt,
+                ModelId = data.Value.Model,
+                FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(data.Value.FinishReason.ToString()),
+                Usage = new Microsoft.Extensions.AI.UsageDetails()
+                {
+                    InputTokenCount = data.Value.Usage.InputTokenCount,
+                    OutputTokenCount = data.Value.Usage.OutputTokenCount,
+                    TotalTokenCount = data.Value.Usage.TotalTokenCount,
+                },
+            };
+
+#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+            var messageContext = data.Value.GetMessageContext();
+#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
+            if (messageContext?.Citations is not null && messageContext.Citations.Count > 0)
+            {
+                var linkContext = new Dictionary<string, object>
+                {
+                    { "prompt", currentPrompt },
+                };
+
+                var contentItemIds = new HashSet<string>();
+                var references = new Dictionary<string, AICompletionReference>();
+                foreach (var citation in messageContext.Citations)
+                {
+                    if (string.IsNullOrEmpty(citation.FilePath))
+                    {
+                        continue;
+                    }
+
+                    if (contentItemIds.Add(citation.FilePath))
+                    {
+                        references[citation.FilePath] = new AICompletionReference
+                        {
+                            Text = $"[doc{references.Count + 1}]",
+                            Link = _linkGenerator.GetContentItemPath(citation.FilePath, linkContext),
+                            Title = citation.Title,
+                        };
+                    }
+                }
+
+                result.AdditionalProperties = new Microsoft.Extensions.AI.AdditionalPropertiesDictionary
+                {
+                    {"ContentItemIds", contentItemIds },
+                    {"References", references },
+                };
+            }
+
+            return result;
         }
         catch (Exception ex)
         {
@@ -201,28 +255,102 @@ public sealed class AzureAISearchCompletionService : AICompletionServiceBase, IA
 
         var chatOptions = await GetOptionsWithDataSourceAsync(context);
 
+        Dictionary<string, object> linkContext = null;
+
         await foreach (var update in chatClient.CompleteChatStreamingAsync(prompts, chatOptions, cancellationToken))
         {
             if (update.FinishReason == ChatFinishReason.ToolCalls)
             {
                 await ProcessToolCallsAsync(prompts, update.ToolCallUpdates);
-            }
 
-            await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, GetOptions(context), cancellationToken))
+                await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, GetOptions(context), cancellationToken))
+                {
+                    var result = new Microsoft.Extensions.AI.StreamingChatCompletionUpdate
+                    {
+                        ChoiceIndex = 0,
+                        CompletionId = newUpdate.CompletionId,
+                        CreatedAt = newUpdate.CreatedAt,
+                        ModelId = newUpdate.Model,
+                        Contents = newUpdate.ContentUpdate.Select(x => new Microsoft.Extensions.AI.TextContent(x.Text))
+                        .Cast<Microsoft.Extensions.AI.AIContent>()
+                        .ToList(),
+                    };
+
+                    if (newUpdate.FinishReason is not null)
+                    {
+                        result.FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(newUpdate.FinishReason?.ToString());
+                    }
+
+                    if (newUpdate.Role is not null)
+                    {
+                        result.Role = new Microsoft.Extensions.AI.ChatRole(newUpdate.Role.ToString().ToLowerInvariant());
+                    }
+
+                    yield return result;
+                }
+            }
+            else
             {
-                yield return new Microsoft.Extensions.AI.StreamingChatCompletionUpdate
+                var result = new Microsoft.Extensions.AI.StreamingChatCompletionUpdate
                 {
                     ChoiceIndex = 0,
-                    CompletionId = newUpdate.CompletionId,
-                    CreatedAt = newUpdate.CreatedAt,
-                    FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(newUpdate.FinishReason.ToString()),
-                    Text = string.Join(' ', newUpdate.ContentUpdate.SelectMany(x => x.Text)),
-                    Role = new Microsoft.Extensions.AI.ChatRole(newUpdate.Role.ToString()),
-                    ModelId = newUpdate.Model,
-                    Contents = newUpdate.ContentUpdate.Select(x => new Microsoft.Extensions.AI.TextContent(x.Text))
+                    CompletionId = update.CompletionId,
+                    CreatedAt = update.CreatedAt,
+                    ModelId = update.Model,
+                    Contents = update.ContentUpdate.Select(x => new Microsoft.Extensions.AI.TextContent(x.Text))
                     .Cast<Microsoft.Extensions.AI.AIContent>()
                     .ToList(),
                 };
+
+                if (update.FinishReason is not null)
+                {
+                    result.FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(update.FinishReason?.ToString());
+                }
+
+                if (update.Role is not null)
+                {
+                    result.Role = new Microsoft.Extensions.AI.ChatRole(update.Role.ToString().ToLowerInvariant());
+                }
+
+#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+                var updateContext = update.GetMessageContext();
+#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
+                if (updateContext?.Citations is not null && updateContext.Citations.Count > 0)
+                {
+                    linkContext ??= new Dictionary<string, object>
+                    {
+                        { "prompt", currentPrompt },
+                    };
+
+                    var contentItemIds = new HashSet<string>();
+                    var references = new Dictionary<string, AICompletionReference>();
+                    foreach (var citation in updateContext.Citations)
+                    {
+                        if (string.IsNullOrEmpty(citation.FilePath))
+                        {
+                            continue;
+                        }
+
+                        if (contentItemIds.Add(citation.FilePath))
+                        {
+                            references[citation.FilePath] = new AICompletionReference
+                            {
+                                Text = $"[doc{references.Count + 1}]",
+                                Link = _linkGenerator.GetContentItemPath(citation.FilePath, linkContext),
+                                Title = citation.Title,
+                            };
+                        }
+                    }
+
+                    result.AdditionalProperties = new Microsoft.Extensions.AI.AdditionalPropertiesDictionary
+                    {
+                        {"ContentItemIds", contentItemIds },
+                        {"References", references },
+                    };
+                }
+
+                yield return result;
             }
         }
     }
@@ -375,125 +503,6 @@ public sealed class AzureAISearchCompletionService : AICompletionServiceBase, IA
         }
 
         return chatOptions;
-    }
-
-    private Microsoft.Extensions.AI.ChatCompletion GetResponse(ClientResult<ChatCompletion> data, string userPrompt)
-    {
-        var routeValues = new Dictionary<string, object>()
-        {
-            { "prompt", userPrompt },
-        };
-
-        var results = new List<Microsoft.Extensions.AI.ChatMessage>();
-
-#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        var context = data.Value.GetMessageContext();
-#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-
-        for (var i = 0; i < data.Value.Content.Count; i++)
-        {
-            var choice = data.Value.Content[i];
-
-            if (string.IsNullOrEmpty(choice.Text))
-            {
-                continue;
-            }
-
-            if (context?.Citations is null || context.Citations.Count == 0)
-            {
-                results.Add(new Microsoft.Extensions.AI.ChatMessage(Microsoft.Extensions.AI.ChatRole.Assistant, Regex.Replace(choice.Text, @"\[doc\d+\]", string.Empty)));
-
-                continue;
-            }
-
-            var contentItemIds = new List<string>();
-
-            var referenceBuilder = new StringBuilder();
-
-            // Key is contentItemId and the index to use as template.
-            var map = new Dictionary<string, int>();
-
-            // Occasionally, templates like this [doc1][doc2] are used.
-            // To prevent concatenating two numbers, a comma is added.
-            var message = choice.Text.Replace("][doc", "][--reference-separator--][doc");
-
-            for (var c = 0; c < context.Citations.Count; c++)
-            {
-                var citation = context.Citations[c];
-                var referenceIndex = c + 1;
-
-                var citationTemplate = $"[doc{c + 1}]";
-
-                var hasFilePath = !string.IsNullOrEmpty(citation.FilePath);
-
-                var needsReference = hasFilePath && choice.Text.Contains(citationTemplate);
-
-                if (needsReference && hasFilePath)
-                {
-                    var referenceTitle = citation.Title;
-
-                    if (string.IsNullOrWhiteSpace(referenceTitle))
-                    {
-                        referenceTitle = citationTemplate;
-                    }
-
-                    if (map.TryGetValue(citation.FilePath, out var index))
-                    {
-                        // Reuse existing citation reference.
-                        referenceIndex = index;
-                    }
-                    else
-                    {
-                        referenceIndex = map.LastOrDefault().Value + 1;
-
-                        contentItemIds.Add(citation.FilePath);
-
-                        // Create new citation reference.
-                        map[citation.FilePath] = referenceIndex;
-
-                        var link = _openAILinkGenerator.GetContentItemPath(citation.FilePath, routeValues);
-
-                        if (!string.IsNullOrEmpty(link))
-                        {
-                            referenceBuilder.AppendLine($"{referenceIndex}. [{referenceTitle}]({link})");
-                        }
-                        else
-                        {
-                            referenceBuilder.AppendLine($"{referenceIndex}. {referenceTitle}");
-                        }
-                    }
-                }
-
-                message = message.Replace(citationTemplate, needsReference ? $"<sup>{referenceIndex}</sup>" : string.Empty);
-            }
-
-            // During replacements, we could end up with multiple [--reference-separator--]
-            // back to back. We can replace them with a single comma.
-            message = Regex.Replace(message, @"(\[--reference-separator--\])+", "<sup>,</sup>")
-                + Environment.NewLine + referenceBuilder.ToString();
-
-            results.Add(new Microsoft.Extensions.AI.ChatMessage(Microsoft.Extensions.AI.ChatRole.Assistant, message)
-            {
-                AdditionalProperties = new Microsoft.Extensions.AI.AdditionalPropertiesDictionary
-                {
-                    { "contentItemIds", contentItemIds },
-                },
-            });
-        }
-
-        return new Microsoft.Extensions.AI.ChatCompletion(results)
-        {
-            CompletionId = data.Value.Id,
-            CreatedAt = data.Value.CreatedAt,
-            ModelId = data.Value.Model,
-            FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(data.Value.FinishReason.ToString()),
-            Usage = new Microsoft.Extensions.AI.UsageDetails()
-            {
-                InputTokenCount = data.Value.Usage.InputTokenCount,
-                OutputTokenCount = data.Value.Usage.OutputTokenCount,
-                TotalTokenCount = data.Value.Usage.TotalTokenCount,
-            },
-        };
     }
 
     protected override async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)

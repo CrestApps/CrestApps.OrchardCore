@@ -9,11 +9,11 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 
-public sealed class AzureOpenAIProfileWithAISearchHandler : AIProfileHandlerBase
+public sealed class AzureAISearchAIProfileHandler : AIProfileHandlerBase
 {
     internal readonly IStringLocalizer S;
 
-    public AzureOpenAIProfileWithAISearchHandler(IStringLocalizer<AzureOpenAIProfileWithAISearchHandler> stringLocalizer)
+    public AzureAISearchAIProfileHandler(IStringLocalizer<AzureAISearchAIProfileHandler> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -26,7 +26,7 @@ public sealed class AzureOpenAIProfileWithAISearchHandler : AIProfileHandlerBase
 
     public override Task ValidatedAsync(ValidatedAIProfileContext context)
     {
-        if (context.Profile?.Source != AzureWithAzureAISearchProfileSource.Key)
+        if (context.Profile?.Source != AzureAISearchProfileSource.Key)
         {
             return Task.CompletedTask;
         }
@@ -43,7 +43,7 @@ public sealed class AzureOpenAIProfileWithAISearchHandler : AIProfileHandlerBase
 
     private static Task PopulateAsync(AIProfile profile, JsonNode data)
     {
-        if (profile.Source != AzureWithAzureAISearchProfileSource.Key)
+        if (profile.Source != AzureAISearchProfileSource.Key)
         {
             return Task.CompletedTask;
         }

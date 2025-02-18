@@ -14,7 +14,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
         _manifest
             .DefineScript("OpenAIChatApp")
             .SetUrl("~/CrestApps.OrchardCore.AI/scripts/ai-chat.min.js", "~/CrestApps.OrchardCore.AI/scripts/ai-chat.js")
-            .SetDependencies("vuejs:3")
+            .SetDependencies("vuejs:3", "signalr", "marked")
             .SetVersion("1.0.0");
 
         _manifest

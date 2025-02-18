@@ -13,4 +13,6 @@ public sealed class AIChatSessionPrompt
     public string Title { get; set; }
 
     public bool IsGeneratedPrompt { get; set; }
+
+    public IEnumerable<string> ContentItemIds { get; set; }
 }

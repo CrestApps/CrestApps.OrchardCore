@@ -22,7 +22,7 @@ public abstract class AICompletionServiceBase
         return provider.DefaultDeploymentName;
     }
 
-    protected async Task<Tuple<AIProviderConnection, string>> GetConnectionAsync(AICompletionContext context, string providerName)
+    protected async Task<(AIProviderConnection, string)> GetConnectionAsync(AICompletionContext context, string providerName)
     {
         string deploymentName = null;
 
@@ -42,11 +42,11 @@ public abstract class AICompletionServiceBase
 
             if (!string.IsNullOrEmpty(connectionName) && provider.Connections.TryGetValue(connectionName, out var connectionProperties))
             {
-                return new Tuple<AIProviderConnection, string>(connectionProperties, deploymentName);
+                return new(connectionProperties, deploymentName);
             }
         }
 
-        return new Tuple<AIProviderConnection, string>(null, deploymentName);
+        return new(null, deploymentName);
     }
 
     protected static int GetTotalMessagesToSkip(int totalMessages, int pastMessageCount)

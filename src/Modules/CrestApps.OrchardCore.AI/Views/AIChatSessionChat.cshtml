@@ -1,12 +1,15 @@
 @using CrestApps.OrchardCore.AI
 @using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.Core.Services
+@using CrestApps.OrchardCore.AI.Hubs
 @using CrestApps.OrchardCore.AI.Models
 @using CrestApps.OrchardCore.AI.ViewModels.Sessions
+@using CrestApps.OrchardCore.SignalR.Core.Services
 @using OrchardCore.DisplayManagement
 @using OrchardCore.DisplayManagement.ModelBinding
 @using OrchardCore.Entities
 @using System.Text.Json
+@using OrchardCore.Environment.Shell
 
 @model ChatSessionCapsuleViewModel
 
@@ -14,6 +17,7 @@
 @inject IDisplayManager<AIChatSessionPrompt> DisplayManager
 @inject IAIProfileStore ProfileStore
 @inject IAIMarkdownService MarkdownService
+@inject HubLinkGenerator LinkGenerator
 @{
     var baseId = Html.IdForModel();
     var chatAppHtmlId = $"{baseId}_ChatApp";
@@ -94,12 +98,11 @@
         }
     }
 }
-<script asp-name="signalr" at="Foot"></script>
-<script asp-name="marked" at="Foot"></script>
+
 <script asp-name="OpenAIChatApp" at="Foot"></script>
 <script at="Foot" depends-on="OpenAIChatApp">
     openAIChatManager.initialize({
-        chatUrl: '@(Url.RouteUrl(AIConstants.RouteNames.AICompletionRoute))',
+        signalRHubUrl: '@(LinkGenerator.GetUriByHub<AIChatHub>(ViewContext.HttpContext))',
         appElementSelector: '#@chatAppHtmlId',
         chatContainerElementSelector: '#@chatContainerHtmlId',
         inputElementSelector: '#@userPromptHtmlId',

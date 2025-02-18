@@ -18,6 +18,7 @@ using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
+using CrestApps.OrchardCore.SignalR.Core.Services;
 using Fluid;
 using Markdig;
 using Microsoft.AspNetCore.Builder;
@@ -125,7 +126,7 @@ public sealed class ChatStartup : StartupBase
             });
 
         services
-            .AddSingleton<IConfigureOptions<HubOptions<ChatHub>>, HubOptionsSetup<ChatHub>>();
+            .AddSingleton<IConfigureOptions<HubOptions<AIChatHub>>, HubOptionsSetup<AIChatHub>>();
 
         services
             .AddNavigationProvider<ChatAdminMenu>();
@@ -134,7 +135,9 @@ public sealed class ChatStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.MapHub<ChatHub>(AIConstants.Hubs.ChatHub);
+        var hubLinkGenerator = serviceProvider.GetRequiredService<HubLinkGenerator>();
+
+        hubLinkGenerator.MapHub<AIChatHub>(routes);
 
         routes
             .AddAIChatSessionEndpoint();

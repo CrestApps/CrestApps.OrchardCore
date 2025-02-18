@@ -22,7 +22,7 @@ public sealed class AzureOpenAIProfileSearchAIDisplayDriver : DisplayDriver<AIPr
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
     {
-        if (profile.Source is null || profile.Source != AzureWithAzureAISearchProfileSource.Key)
+        if (profile.Source is null || profile.Source != AzureAISearchProfileSource.Key)
         {
             return null;
         }
@@ -43,7 +43,7 @@ public sealed class AzureOpenAIProfileSearchAIDisplayDriver : DisplayDriver<AIPr
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
-        if (profile.Source is null || profile.Source != AzureWithAzureAISearchProfileSource.Key)
+        if (profile.Source is null || profile.Source != AzureAISearchProfileSource.Key)
         {
             return null;
         }
