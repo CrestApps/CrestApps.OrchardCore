@@ -5,11 +5,11 @@ using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public abstract class DeploymentNamedAICompletionClient : NamedAICompletionClient
+public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClient
 {
     private readonly IAIDeploymentStore _deploymentStore;
 
-    public DeploymentNamedAICompletionClient(
+    public DeploymentAwareAICompletionClient(
         string name,
         IDistributedCache distributedCache,
         ILoggerFactory loggerFactory,

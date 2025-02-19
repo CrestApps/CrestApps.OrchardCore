@@ -16,7 +16,7 @@
 @inject IUpdateModelAccessor UpdateModelAccessor
 @inject IDisplayManager<AIChatSessionPrompt> DisplayManager
 @inject IAIProfileStore ProfileStore
-@inject HubLinkGenerator LinkGenerator
+@inject HubRouteManager HubRouteManager
 @{
     var baseId = Html.IdForModel();
     var chatAppHtmlId = $"{baseId}_ChatApp";
@@ -101,7 +101,7 @@
 <script asp-name="OpenAIChatApp" at="Foot"></script>
 <script at="Foot" depends-on="OpenAIChatApp">
     openAIChatManager.initialize({
-        signalRHubUrl: '@(LinkGenerator.GetUriByHub<AIChatHub>(ViewContext.HttpContext))',
+        signalRHubUrl: '@(HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext))',
         appElementSelector: '#@chatAppHtmlId',
         chatContainerElementSelector: '#@chatContainerHtmlId',
         inputElementSelector: '#@userPromptHtmlId',

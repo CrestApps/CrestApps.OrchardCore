@@ -21,7 +21,6 @@ using CrestApps.OrchardCore.SignalR.Core.Services;
 using Fluid;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
@@ -106,17 +105,14 @@ public sealed class ChatStartup : StartupBase
             .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>();
 
         services
-            .AddSingleton<IConfigureOptions<HubOptions<AIChatHub>>, HubOptionsSetup<AIChatHub>>();
-
-        services
             .AddNavigationProvider<ChatAdminMenu>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        var hubLinkGenerator = serviceProvider.GetRequiredService<HubLinkGenerator>();
+        var hubRouteManager = serviceProvider.GetRequiredService<HubRouteManager>();
 
-        hubLinkGenerator.MapHub<AIChatHub>(routes);
+        hubRouteManager.MapHub<AIChatHub>(routes);
     }
 }
 

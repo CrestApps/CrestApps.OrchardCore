@@ -8,7 +8,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddSignalRServices(this IServiceCollection services)
     {
         services
-            .AddScoped<HubLinkGenerator>();
+            .AddScoped<HubRouteManager>();
 
         return services;
     }

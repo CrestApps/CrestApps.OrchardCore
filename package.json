@@ -47,9 +47,7 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@microsoft/signalr": "^8.0.7",
     "extendable-media-recorder": "^9.1.7",
-    "gulp-util": "^3.0.8",
-    "marked": "^15.0.7"
+    "gulp-util": "^3.0.8"
   }
 }

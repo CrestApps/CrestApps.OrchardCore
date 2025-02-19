@@ -6,13 +6,13 @@ using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.SignalR.Core.Services;
 
-public sealed class HubLinkGenerator
+public sealed class HubRouteManager
 {
     private const string DefaultPath = "/Communication/Hub/";
 
     private readonly string _hubPrefix;
 
-    public HubLinkGenerator(ShellSettings shellSettings)
+    public HubRouteManager(ShellSettings shellSettings)
     {
         if (!string.IsNullOrEmpty(shellSettings.RequestUrlPrefix))
         {
@@ -30,8 +30,8 @@ public sealed class HubLinkGenerator
         where T : Hub
     {
         builder.MapHub<T>(DefaultPath + typeof(T).Name);
-
     }
+
     public string GetPathByRoute(string pattern)
     {
         ArgumentException.ThrowIfNullOrEmpty(pattern);
@@ -45,18 +45,14 @@ public sealed class HubLinkGenerator
         return _hubPrefix + DefaultPath + typeof(T).Name;
     }
 
-#pragma warning disable CA1822 // Mark members as static
     public string GetUriByRoute(HttpContext httpContext, string pattern)
-#pragma warning restore CA1822 // Mark members as static
     {
         ArgumentException.ThrowIfNullOrEmpty(pattern);
 
         return $"{httpContext.Request.Scheme}://{httpContext.Request.Host}{_hubPrefix}/{pattern.TrimStart('/')}";
     }
 
-#pragma warning disable CA1822 // Mark members as static
     public string GetUriByHub<T>(HttpContext httpContext)
-#pragma warning restore CA1822 // Mark members as static
         where T : Hub
     {
         return $"{httpContext.Request.Scheme}://{httpContext.Request.Host}{_hubPrefix}{DefaultPath}{typeof(T).Name}";

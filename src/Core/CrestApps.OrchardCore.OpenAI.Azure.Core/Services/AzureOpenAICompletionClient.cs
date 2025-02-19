@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureOpenAICompletionClient : DeploymentNamedAICompletionClient
+public sealed class AzureOpenAICompletionClient : DeploymentAwareAICompletionClient
 {
     public AzureOpenAICompletionClient(
        ILoggerFactory loggerFactory,

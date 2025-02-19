@@ -7,5 +7,6 @@ public sealed class AICompletionReference
     public string Link { get; set; }
 
     public string Title { get; set; }
+
     public int Index { get; set; }
 }

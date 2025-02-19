@@ -11,7 +11,7 @@
 @inject IAIProfileStore ProfileStore
 @inject IAuthorizationService AuthorizationService
 @inject ShellSettings ShellSettings
-@inject HubLinkGenerator LinkGenerator
+@inject HubRouteManager HubRouteManager
 @{
     ContentItem contentItem = Model.ContentItem;
 
@@ -34,7 +34,7 @@
         return;
     }
 
-    var hubLink = LinkGenerator.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
+    var hubLink = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
     var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
     var promptGeneratedProfiles = await ProfileStore.GetProfilesAsync(AIProfileType.TemplatePrompt);
 
@@ -200,7 +200,6 @@
                 </div>
             `,
             widget: {
-                sessionUrl: '@hubLink',
                 showChatButton: '#@chatWidgetButton',
                 newChatButton: '#@newChatButton',
                 chatWidgetContainer: '#@chatWidgetContainer',

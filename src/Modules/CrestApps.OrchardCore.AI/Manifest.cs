@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.SignalR.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -36,7 +37,7 @@ using OrchardCore.Modules.Manifest;
     [
         "OrchardCore.Liquid",
         "CrestApps.OrchardCore.Resources",
-        "CrestApps.OrchardCore.SignalR",
+        SignalRConstants.Feature.Area,
         AIConstants.Feature.Area,
     ]
 )]

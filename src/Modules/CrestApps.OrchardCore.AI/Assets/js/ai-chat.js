@@ -111,7 +111,7 @@ window.openAIChatManager = function () {
                         console.log('CompleteMessageStream', buffer.references && Object.keys(buffer.references).length);
 
                         if (buffer.references && Object.keys(buffer.references).length) {
-                            processedContent = buffer.content + '<br>';
+                            processedContent = buffer.content.trim() + '<br><br>';
 
                             for (const [key, value] of Object.entries(buffer.references)) {
                                 processedContent += `**${value.index}**. [${value.text}](${value.link})<br>`;
@@ -160,14 +160,14 @@ window.openAIChatManager = function () {
 
                         (data.messages ?? []).forEach(msg => {
 
-                            let processedContent = msg.content;
+                            let processedContent = msg.content.trim();
                             if (msg.references && typeof msg.references === "object" && Object.keys(chunk.references).length) {
 
                                 for (const [key, value] of Object.entries(chunk.references)) {
                                     processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
                                 }
 
-                                processedContent += '<br>';
+                                processedContent += '<br><br>';
 
                                 for (const [key, value] of Object.entries(chunk.references)) {
                                     processedContent += `**${value.index}**. [${value.text}](${value.link})<br>`;

@@ -92,7 +92,7 @@ window.openAIChatManager = function () {
                     var buffer = _this.messageBuffers[messageId];
                     console.log('CompleteMessageStream', buffer.references && Object.keys(buffer.references).length);
                     if (buffer.references && Object.keys(buffer.references).length) {
-                      processedContent = buffer.content + '<br>';
+                      processedContent = buffer.content.trim() + '<br><br>';
                       for (var _i = 0, _Object$entries = Object.entries(buffer.references); _i < _Object$entries.length; _i++) {
                         var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
                           key = _Object$entries$_i[0],
@@ -138,7 +138,7 @@ window.openAIChatManager = function () {
                     _this.initializeSession(data.sessionId, true);
                     _this.messages = [];
                     ((_data$messages = data.messages) !== null && _data$messages !== void 0 ? _data$messages : []).forEach(function (msg) {
-                      var processedContent = msg.content;
+                      var processedContent = msg.content.trim();
                       if (msg.references && _typeof(msg.references) === "object" && Object.keys(chunk.references).length) {
                         for (var _i3 = 0, _Object$entries3 = Object.entries(chunk.references); _i3 < _Object$entries3.length; _i3++) {
                           var _Object$entries3$_i = _slicedToArray(_Object$entries3[_i3], 2),
@@ -146,7 +146,7 @@ window.openAIChatManager = function () {
                             value = _Object$entries3$_i[1];
                           processedContent = processedContent.replaceAll(key, "<sup><strong>".concat(value.index, "</strong></sup>"));
                         }
-                        processedContent += '<br>';
+                        processedContent += '<br><br>';
                         for (var _i4 = 0, _Object$entries4 = Object.entries(chunk.references); _i4 < _Object$entries4.length; _i4++) {
                           var _Object$entries4$_i = _slicedToArray(_Object$entries4[_i4], 2),
                             _key = _Object$entries4$_i[0],
