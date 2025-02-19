@@ -19,7 +19,7 @@ internal static class ApiAIChatSessionEndpoint
         return builder;
     }
 
-    internal static async Task<IResult> HandleAsync(
+    private static async Task<IResult> HandleAsync(
        IAuthorizationService authorizationService,
        IAIProfileManager chatProfileManager,
        IAIChatSessionManager sessionManager,

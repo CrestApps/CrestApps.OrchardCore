@@ -10,20 +10,20 @@
     "inputs": [
       "node_modules/@fortawesome/fontawesome-free/css/*"
     ],
-    "output": "wwwroot/vendor/fontawesome-free/css/@"
+    "output": "wwwroot/vendors/fontawesome-free/css/@"
   },
   {
     "copy": true,
     "inputs": [
       "node_modules/@fortawesome/fontawesome-free/js/*"
     ],
-    "output": "wwwroot/vendor/fontawesome-free/js/@"
+    "output": "wwwroot/vendors/fontawesome-free/js/@"
   },
   {
     "copy": true,
     "inputs": [
       "node_modules/@fortawesome/fontawesome-free/webfonts/*"
     ],
-    "output": "wwwroot/vendor/fontawesome-free/webfonts/@"
+    "output": "wwwroot/vendors/fontawesome-free/webfonts/@"
   }
 ]

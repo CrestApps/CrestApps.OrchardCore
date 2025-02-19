@@ -19,4 +19,3 @@
     <ProjectReference Include="..\..\Common\CrestApps.Support\CrestApps.Support.csproj" />
   </ItemGroup>
 </Project>
-

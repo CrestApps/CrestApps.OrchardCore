@@ -35,7 +35,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.AI.Abstractions\CrestApps.OrchardCore.AI.Abstractions.csproj" />
     <ProjectReference Include="..\..\Common\CrestApps.Support\CrestApps.Support.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.SignalR\CrestApps.OrchardCore.SignalR.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.SignalR.Core\CrestApps.OrchardCore.SignalR.Core.csproj" />
   </ItemGroup>
 
 </Project>

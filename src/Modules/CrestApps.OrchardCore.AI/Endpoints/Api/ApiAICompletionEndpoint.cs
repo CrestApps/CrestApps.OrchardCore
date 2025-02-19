@@ -114,7 +114,6 @@ internal static class ApiAICompletionEndpoint
             completion = await completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, userPrompt)], new AICompletionContext()
             {
                 Profile = profile,
-                UserMarkdownInResponse = true,
             });
 
             bestChoice = completion?.Choices?.FirstOrDefault();
