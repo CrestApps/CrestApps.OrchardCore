@@ -8,7 +8,7 @@ public class AICompletionContext
 
     public string SystemMessage { get; set; }
 
-    public bool UserMarkdownInResponse { get; set; }
+    public bool UserMarkdownInResponse { get; set; } = true;
 
     public bool DisableTools { get; set; }
 

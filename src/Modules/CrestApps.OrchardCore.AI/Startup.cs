@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Handlers;
-using CrestApps.OrchardCore.AI.Core.Markdig;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Drivers;
@@ -9,6 +8,7 @@ using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Drivers;
 using CrestApps.OrchardCore.AI.Endpoints;
 using CrestApps.OrchardCore.AI.Endpoints.Api;
+using CrestApps.OrchardCore.AI.Hubs;
 using CrestApps.OrchardCore.AI.Indexes;
 using CrestApps.OrchardCore.AI.Migrations;
 using CrestApps.OrchardCore.AI.Models;
@@ -17,8 +17,8 @@ using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
+using CrestApps.OrchardCore.SignalR.Core.Services;
 using Fluid;
-using Markdig;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,7 +41,7 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIProfileServices();
+        services.AddAICoreServices();
         services.Configure<TemplateOptions>(o =>
         {
             o.MemberAccessStrategy.Register<AIProfile>();
@@ -58,19 +58,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddSingleton<IAIToolsService, DefaultAIToolsService>()
-            .Configure<AIMarkdownPipelineOptions>(options =>
-            {
-                options.MarkdownPipelineBuilder.Configure("advanced");
-            })
-            .AddScoped<IAIMarkdownService, AIMarkdownService>()
             .AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderOptionsConfiguration>();
-    }
-
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes
-            .AddAICompletionEndpoint<ChatStartup>()
-            .AddAIUtilityCompletionEndpoint<ChatStartup>();
     }
 }
 
@@ -110,26 +98,21 @@ public sealed class ChatStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddKeyedScoped<IAIMarkdownService, AIChatMarkdownService>("chat")
+            .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
             .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()
             .AddDataMigration<AIChatSessionIndexMigrations>()
             .AddIndexProvider<AIChatSessionIndexProvider>()
-            .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()
-            .Configure<AIChatMarkdownPipelineOptions>(options =>
-            {
-                options.MarkdownPipelineBuilder
-                .Configure("advanced")
-                .Use<NewTabLinkExtension>();
-            });
+            .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>();
 
-        services.AddNavigationProvider<ChatAdminMenu>();
-
+        services
+            .AddNavigationProvider<ChatAdminMenu>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes
-            .AddAIChatSessionEndpoint();
+        var hubRouteManager = serviceProvider.GetRequiredService<HubRouteManager>();
+
+        hubRouteManager.MapHub<AIChatHub>(routes);
     }
 }
 

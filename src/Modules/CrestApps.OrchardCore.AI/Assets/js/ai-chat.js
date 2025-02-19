@@ -1,10 +1,17 @@
-const openAIChatManager = function () {
+window.openAIChatManager = function () {
+
+    const renderer = new marked.Renderer();
+
+    // Modify the link rendering to open in a new tab
+    renderer.link = function (data) {
+        return `<a href="${data.href}" target="_blank" rel="noopener noreferrer">${data.text}</a>`;
+    };
 
     var defaultConfig = {
         messageTemplate: `
             <div class="list-group">
                 <div v-for="(message, index) in messages" :key="index" class="list-group-item">
-                    <div class="d-flex">
+                    <div class="d-flex align-items-center">
                         <div class="p-2">
                             <i :class="message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'"></i>
                         </div>
@@ -22,14 +29,14 @@ const openAIChatManager = function () {
             </div>
         `,
         indicatorTemplate: `<div class="spinner-grow spinner-grow-sm" role="status"><span class="visually-hidden">Loading...</span></div>`
-    }
+    };
 
     const initialize = (instanceConfig) => {
 
         const config = Object.assign({}, defaultConfig, instanceConfig);
 
-        if (!config.chatUrl) {
-            console.error('The chatUrl is required.');
+        if (!config.signalRHubUrl) {
+            console.error('The signalRHubUrl is required.');
             return;
         }
 
@@ -53,7 +60,6 @@ const openAIChatManager = function () {
             return;
         }
 
-
         const app = Vue.createApp({
             data() {
                 return {
@@ -68,10 +74,107 @@ const openAIChatManager = function () {
                     chatHistorySection: null,
                     widgetIsInitialized: false,
                     messages: [],
-                    prompt: ''
+                    prompt: '',
+                    messageBuffers: {} // Holds partial messages
                 };
             },
             methods: {
+                async startConnection() {
+                    this.connection = new signalR.HubConnectionBuilder()
+                        .withUrl(config.signalRHubUrl)
+                        .withAutomaticReconnect()
+                        .build();
+
+                    this.connection.on("StartMessageStream", (messageId) => {
+                        this.hideTypingIndicator();
+
+                        if (!this.messageBuffers[messageId]) {
+                            let newMessage = {
+                                role: "assistant",
+                                content: "",
+                                htmlContent: "",
+                            };
+
+                            this.messages.push(newMessage);
+
+                            this.messageBuffers[messageId] = {
+                                content: "",
+                                messageIndex: this.messages.length - 1,
+                                references: {},
+                            };
+                        }
+                    });
+
+                    this.connection.on("CompleteMessageStream", (messageId) => {
+
+                        let buffer = this.messageBuffers[messageId];
+
+                        if (buffer.references && Object.keys(buffer.references).length) {
+                            processedContent = buffer.content.trim() + '<br><br>';
+
+                            for (const [key, value] of Object.entries(buffer.references)) {
+                                processedContent += `**${value.index}**. [${value.text}](${value.link})<br>`;
+
+                                buffer.references[key] = value;
+                            }
+
+                            let message = this.messages[buffer.messageIndex];
+                            message.content = processedContent;
+                            message.htmlContent = marked.parse(processedContent, { renderer });
+                        }
+
+                        delete this.messageBuffers[messageId];
+                    });
+
+                    this.connection.on("ReceiveMessageStream", (chunk, messageId) => {
+
+                        let buffer = this.messageBuffers[messageId];
+
+                        if (chunk.content) {
+
+                            let processedContent = chunk.content;
+                            if (chunk.references && typeof chunk.references === "object" && Object.keys(chunk.references).length) {
+
+                                for (const [key, value] of Object.entries(chunk.references)) {
+                                    processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
+
+                                    buffer.references[key] = value;
+                                }
+                            }
+                            // Append processed content to the buffer
+                            // if we have multiple references, add a comma to ensure we don't concatenate numbers.
+                            buffer.content += processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+                        }
+
+                        // Update the existing message
+                        let message = this.messages[buffer.messageIndex];
+                        message.content = buffer.content;
+                        message.htmlContent = marked.parse(buffer.content, { renderer });
+
+                        this.scrollToBottom();
+                    });
+
+                    this.connection.on("LoadSession", (data) => {
+                        this.initializeSession(data.sessionId, true);
+                        this.messages = [];
+
+                        (data.messages ?? []).forEach(msg => {
+
+                            this.addMessage(msg);
+                        });
+
+                    });
+
+                    this.connection.on("ReceiveError", (error) => {
+                        console.log("SignalR Error: ", error);
+                    });
+
+                    try {
+                        await this.connection.start();
+                    } catch (err) {
+                        console.error("SignalR Connection Error: ", err);
+                    }
+                },
                 addMessageInternal(message) {
                     this.fireEvent(new CustomEvent("addingOpenAIPromotMessage", { detail: { message: message } }));
                     this.messages.push(message);
@@ -81,6 +184,28 @@ const openAIChatManager = function () {
                     });
                 },
                 addMessage(message) {
+
+                    if (message.content) {
+                        let processedContent = message.content.trim();
+                        if (message.references && typeof message.references === "object" && Object.keys(message.references).length) {
+
+                            for (const [key, value] of Object.entries(message.references)) {
+                                processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
+                            }
+
+                            // if we have multiple references, add a comma to ensure we don't concatenate numbers.
+                            processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+                            processedContent += '<br><br>';
+
+                            for (const [key, value] of Object.entries(message.references)) {
+                                processedContent += `**${value.index}**. [${value.text}](${value.link})<br>`;
+                            }
+                        }
+
+                        message.content = processedContent;
+                        message.htmlContent = marked.parse(processedContent, { renderer });
+                    }
+
                     this.addMessageInternal(message);
                     this.hidePlaceholder();
                     this.$nextTick(() => {
@@ -109,6 +234,70 @@ const openAIChatManager = function () {
                         this.placeholder.classList.remove('d-none');
                     }
                     this.isPlaceholderVisible = true;
+                },
+                fireEvent(event) {
+                    document.dispatchEvent(event);
+                },
+                sendMessage() {
+                    let trimmedPrompt = this.prompt.trim();
+
+                    if (!trimmedPrompt) {
+                        return;
+                    }
+
+                    this.addMessage({
+                        role: 'user',
+                        content: trimmedPrompt
+                    });
+
+                    this.connection.invoke("SendMessage", this.getProfileId(), trimmedPrompt, this.getSessionId(), null).catch(err => console.error(err));
+
+                    this.showTypingIndicator();
+                    this.inputElement.value = '';
+                    this.prompt = '';
+                    this.buttonElement.setAttribute('disabled', true);
+                },
+                generatePrompt(element) {
+                    if (!element) {
+                        console.error('The element paramter is required.');
+
+                        return;
+                    }
+
+                    let profileId = element.getAttribute('data-profile-id');
+                    let sessionId = this.getSessionId();
+
+                    if (!profileId || !sessionId) {
+
+                        console.error('The given element is missing data-profile-id or the session has not yet started.');
+                        return;
+                    }
+
+                    this.showTypingIndicator();
+                    this.connection.invoke("SendMessage", profileId, null, sessionId, this.getProfileId()).catch(err => console.error(err));
+                },
+                createSessionUrl(baseUrl, param, value) {
+
+                    const fullUrl = baseUrl.toLowerCase().startsWith('http') ? baseUrl : window.location.origin + baseUrl;
+                    const url = new URL(fullUrl);
+
+                    url.searchParams.set(param, value);
+
+                    return url.toString();
+                },
+                showTypingIndicator() {
+                    this.addMessage({
+                        role: 'indicator',
+                        htmlContent: config.indicatorTemplate
+                    });
+                },
+                hideTypingIndicator() {
+                    this.messages = this.messages.filter(msg => msg.role !== 'indicator');
+                },
+                scrollToBottom() {
+                    setTimeout(() => {
+                        this.chatContainer.scrollTop = this.chatContainer.scrollHeight - this.chatContainer.clientHeight;
+                    }, 50);
                 },
                 handleUserInput(event) {
                     this.prompt = event.target.value;
@@ -183,11 +372,26 @@ const openAIChatManager = function () {
                         this.addMessage(config.messages[i]);
                     }
                 },
+                loadSession(sessionId) {
+                    this.connection.invoke("LoadSession", sessionId).catch(err => console.error(err));
+                },
                 reloadCurrentSession() {
 
                     var sessionId = this.getSessionId();
                     if (sessionId) {
                         this.loadSession(sessionId);
+                    }
+                },
+                initializeSession(sessionId, force) {
+                    if (this.isSessionStarted && !force) {
+                        return
+                    }
+                    this.fireEvent(new CustomEvent("initializingSessionOpenAIChat", { detail: { sessionId: sessionId } }))
+                    this.inputElement.setAttribute('data-session-id', sessionId);
+                    this.isSessionStarted = true;
+
+                    if (this.widgetIsInitialized) {
+                        localStorage.setItem(this.chatWidgetStateSession, sessionId);
                     }
                 },
                 initializeWidget() {
@@ -308,150 +512,11 @@ const openAIChatManager = function () {
                 },
                 copyResponse(message) {
                     navigator.clipboard.writeText(message);
-                },
-                sendMessage() {
-                    let trimmedPrompt = this.prompt.trim();
-
-                    if (!trimmedPrompt) {
-                        return;
-                    }
-
-                    this.addMessage({
-                        role: 'user',
-                        content: trimmedPrompt
-                    });
-                    this.showTypingIndicator();
-                    this.inputElement.value = '';
-                    this.prompt = '';
-                    this.buttonElement.setAttribute('disabled', true);
-
-                    this.completeChat(this.getProfileId(), trimmedPrompt, this.getSessionId());
-                },
-                generatePrompt(element) {
-                    if (!element) {
-                        console.error('The element paramter is required.');
-
-                        return;
-                    }
-
-                    let profileId = element.getAttribute('data-profile-id');
-                    let sessionId = this.getSessionId();
-
-                    if (!profileId || !sessionId) {
-
-                        console.error('The given element is missing data-profile-id or the session has not yet started.');
-                        return;
-                    }
-
-                    this.showTypingIndicator();
-                    this.completeChat(profileId, null, sessionId);
-                },
-                completeChat(profileId, prompt, sessionId) {
-
-                    var sessionProfileId = this.getProfileId();
-
-                    fetch(config.chatUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            profileId: profileId,
-                            sessionId: sessionId,
-                            prompt: prompt,
-                            sessionProfileId: sessionProfileId == profileId ? null : sessionProfileId
-                        })
-                    }).then(response => {
-
-                        if (!response.ok) {
-                            throw new Error(`Request failed with status ${response.status}`);
-                        }
-
-                        return response.json();
-                    }).then(result => {
-                        this.initializeSession(result.sessionId, false);
-                        this.addMessage(result.message);
-                        this.hideTypingIndicator();
-                    }).catch(error => {
-                        console.error('Failed to send the message.', error);
-                        this.hideTypingIndicator();
-                    });
-                },
-                createSessionUrl(baseUrl, param, value) {
-
-                    const fullUrl = baseUrl.toLowerCase().startsWith('http') ? baseUrl : window.location.origin + baseUrl;
-                    const url = new URL(fullUrl);
-
-                    url.searchParams.set(param, value);
-
-                    return url.toString();
-                },
-                loadSession(sessionId) {
-                    if (!config.widget.sessionUrl) {
-                        console.error('The sessionUrl is required.');
-
-                        return;
-                    }
-
-                    const url = this.createSessionUrl(config.widget.sessionUrl, 'sessionId', sessionId);
-
-                    fetch(url, {
-                        method: 'GET'
-                    }).then(response => {
-
-                        if (!response.ok) {
-                            throw new Error(`Request failed with status ${response.status}`);
-                        }
-
-                        return response.json();
-                    }).then(result => {
-                        this.initializeSession(result.sessionId, true);
-                        this.messages = result.messages ?? [];
-                        if (this.messages.length) {
-                            this.hidePlaceholder();
-                        } else {
-                            this.showPlaceholder();
-                        }
-
-                        this.$nextTick(() => {
-                            this.scrollToBottom();
-                        });
-                    }).catch(error => {
-                        console.error('Failed to load session.', error);
-                        this.hideTypingIndicator();
-                    });
-                },
-                fireEvent(event) {
-                    document.dispatchEvent(event);
-                },
-                initializeSession(sessionId, force) {
-                    if (this.isSessionStarted && !force) {
-                        return
-                    }
-                    this.fireEvent(new CustomEvent("initializingSessionOpenAIChat", { detail: { sessionId: sessionId } }))
-                    this.inputElement.setAttribute('data-session-id', sessionId);
-                    this.isSessionStarted = true;
-
-                    if (this.widgetIsInitialized) {
-                        localStorage.setItem(this.chatWidgetStateSession, sessionId);
-                    }
-                },
-                showTypingIndicator() {
-                    this.addMessage({
-                        role: 'indicator',
-                        htmlContent: config.indicatorTemplate
-                    });
-                },
-                hideTypingIndicator() {
-                    this.messages = this.messages.filter(msg => msg.role != 'indicator');
-                },
-                scrollToBottom() {
-                    setTimeout(() => {
-                        this.chatContainer.scrollTop = this.chatContainer.scrollHeight - this.chatContainer.clientHeight;
-                    }, 50)
                 }
             },
             mounted() {
                 this.initializeApp();
-
+                this.startConnection();
                 if (config.widget) {
                     this.initializeWidget();
                 }
@@ -460,9 +525,9 @@ const openAIChatManager = function () {
         }).mount(config.appElementSelector);
 
         return app;
-    }
+    };
 
     return {
         initialize: initialize
-    }
+    };
 }();

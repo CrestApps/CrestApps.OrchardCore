@@ -13,7 +13,7 @@ public sealed class Startup : StartupBase
     {
         services
             .AddAIDeploymentProvider<DeepSeekAIDeploymentProvider>(DeepSeekAIDeploymentProvider.ProviderName)
-            .AddAICompletionService<DeepSeekAICompletionService>(DeepSeekAIDeploymentProvider.ProviderName)
+            .AddAICompletionClient<DeepSeekAICompletionClient>(DeepSeekAIDeploymentProvider.ProviderName)
             .AddDataMigration<DefaultDeepSeekDeploymentMigrations>();
 
         services

@@ -22,14 +22,14 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddAIProfileServices(this IServiceCollection services)
+    public static IServiceCollection AddAICoreServices(this IServiceCollection services)
     {
         services
             .AddScoped<IAIProfileStore, DefaultAIProfileStore>()
+            .AddScoped<IAICompletionService, DefaultAICompletionService>()
             .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
             .AddScoped<IAIProfileManagerSession, DefaultAIProfileManagerSession>()
-            .AddScoped<IAIProfileHandler, AIProfileHandler>()
-            .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>();
+            .AddScoped<IAIProfileHandler, AIProfileHandler>();
 
         services
             .AddPermissionProvider<AIPermissionsProvider>()
@@ -65,14 +65,14 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddAICompletionService<TService>(this IServiceCollection services, string sourceKey)
-        where TService : class, IAICompletionService
+    public static IServiceCollection AddAICompletionClient<TClient>(this IServiceCollection services, string clientName)
+        where TClient : class, IAICompletionClient
     {
-        ArgumentNullException.ThrowIfNull(sourceKey);
+        ArgumentNullException.ThrowIfNull(clientName);
 
-        services.TryAddScoped<TService>();
-        services.TryAddScoped<IAICompletionService>(sp => sp.GetService<TService>());
-        services.AddKeyedScoped<IAICompletionService>(sourceKey, (sp, key) => sp.GetService<TService>());
+        services.TryAddScoped<TClient>();
+        services.TryAddScoped<IAICompletionClient>(sp => sp.GetService<TClient>());
+        services.AddKeyedScoped<IAICompletionClient>(clientName, (sp, key) => sp.GetService<TClient>());
 
         return services;
     }

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.SignalR.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -13,11 +14,7 @@ using OrchardCore.Modules.Manifest;
     Name = "AI Services",
     Description = "Provides AI services.",
     Category = "Artificial Intelligence",
-    EnabledByDependencyOnly = true,
-    Dependencies =
-    [
-        "OrchardCore.Markdown",
-    ]
+    EnabledByDependencyOnly = true
 )]
 
 [assembly: Feature(
@@ -40,6 +37,7 @@ using OrchardCore.Modules.Manifest;
     [
         "OrchardCore.Liquid",
         "CrestApps.OrchardCore.Resources",
+        SignalRConstants.Feature.Area,
         AIConstants.Feature.Area,
     ]
 )]

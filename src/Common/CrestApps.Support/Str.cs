@@ -275,14 +275,14 @@ public partial class Str
     }
 
 
-    public static string PrependOnce(string original, string toAppend = "/")
+    public static string PrependOnce(string original, string toPrefix = "/")
     {
-        if (original == null || original.StartsWith(toAppend))
+        if (original == null || original.StartsWith(toPrefix))
         {
             return original;
         }
 
-        return toAppend + original;
+        return toPrefix + original;
     }
 
     public static string TrimStart(string subject, string pattern)

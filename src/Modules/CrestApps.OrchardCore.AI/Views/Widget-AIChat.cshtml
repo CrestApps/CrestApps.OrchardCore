@@ -2,13 +2,16 @@
 @using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.Core.Models
 @using CrestApps.OrchardCore.AI.Models
+@using CrestApps.OrchardCore.SignalR.Core.Services
 @using Microsoft.AspNetCore.Authorization
 @using OrchardCore.ContentManagement
 @using OrchardCore.Environment.Shell
+@using CrestApps.OrchardCore.AI.Hubs
 
 @inject IAIProfileStore ProfileStore
 @inject IAuthorizationService AuthorizationService
-@inject ShellSettings shellSettings;
+@inject ShellSettings ShellSettings
+@inject HubRouteManager HubRouteManager
 @{
     ContentItem contentItem = Model.ContentItem;
 
@@ -31,6 +34,7 @@
         return;
     }
 
+    var hubLink = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
     var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
     var promptGeneratedProfiles = await ProfileStore.GetProfilesAsync(AIProfileType.TemplatePrompt);
 
@@ -43,8 +47,8 @@
     var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
 
     var chatWidgetContainer = $"{baseId}_ChatWidget";
-    var chatWidgetStateName = $"{shellSettings.Name}-{baseId}WidgetState";
-    var chatWidgetStateSession = $"{shellSettings.Name}-{baseId}WidgetSession";
+    var chatWidgetStateName = $"{ShellSettings.Name}-{baseId}WidgetState";
+    var chatWidgetStateSession = $"{ShellSettings.Name}-{baseId}WidgetSession";
     var chatWidgetButton = $"{baseId}_ChatButton";
     var closeChatButton = $"{baseId}_CloseChatButton";
 
@@ -153,7 +157,7 @@
     document.addEventListener('DOMContentLoaded', () => {
 
         openAIChatManager.initialize({
-            chatUrl: '@(Url.RouteUrl(AIConstants.RouteNames.AICompletionRoute))',
+            signalRHubUrl: '@hubLink',
             appElementSelector: '#@chatAppHtmlId',
             chatContainerElementSelector: '#@chatContainerHtmlId',
             inputElementSelector: '#@userPromptHtmlId',
@@ -196,7 +200,6 @@
                 </div>
             `,
             widget: {
-                sessionUrl: '@(Url.RouteUrl(AIConstants.RouteNames.AIChatSessionRouteName))',
                 showChatButton: '#@chatWidgetButton',
                 newChatButton: '#@newChatButton',
                 chatWidgetContainer: '#@chatWidgetContainer',

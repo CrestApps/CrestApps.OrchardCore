@@ -11,7 +11,7 @@ public sealed class Startup : StartupBase
     {
         services
             .AddAIDeploymentProvider<AzureAIInferenceDeploymentProvider>(AzureAIInferenceDeploymentProvider.ProviderName)
-            .AddAICompletionService<AzureAIInferenceCompletionService>(AzureAIInferenceDeploymentProvider.ProviderName);
+            .AddAICompletionClient<AzureAIInferenceCompletionClient>(AzureAIInferenceDeploymentProvider.ProviderName);
 
         services
             .AddAIProfileSource<AzureAIInferenceProfileSource>(AzureAIInferenceDeploymentProvider.ProviderName);

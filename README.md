@@ -55,6 +55,9 @@ Extends the **AI Module** by integrating OpenAI-powered services. See the [OpenA
 ### Azure OpenAI Module
 Adds support for **Azure OpenAI** services within the **OpenAI Module**. See the [Azure OpenAI Module README](src/Modules/CrestApps.OrchardCore.OpenAI.Azure/README.md).  
 
+### SignalR Module
+The **SignalR** module enables seamless integration of SignalR within Orchard Core. See the [Azure OpenAI Module README](src/Modules/CrestApps.OrchardCore.SignalR/README.md).  
+
 ### Resources Module
 Provides additional resources to accelerate development. See the [Resources Module README](src/Modules/CrestApps.OrchardCore.Resources/README.md).  
 
