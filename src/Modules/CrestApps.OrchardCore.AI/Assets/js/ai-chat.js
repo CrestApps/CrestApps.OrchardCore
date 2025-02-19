@@ -108,7 +108,6 @@ window.openAIChatManager = function () {
                     this.connection.on("CompleteMessageStream", (messageId) => {
 
                         let buffer = this.messageBuffers[messageId];
-                        console.log('CompleteMessageStream', buffer.references && Object.keys(buffer.references).length);
 
                         if (buffer.references && Object.keys(buffer.references).length) {
                             processedContent = buffer.content.trim() + '<br><br>';
@@ -134,7 +133,7 @@ window.openAIChatManager = function () {
                         if (chunk.content) {
 
                             let processedContent = chunk.content;
-                            if (chunk.references && typeof chunk.references === "object") {
+                            if (chunk.references && typeof chunk.references === "object" && Object.keys(chunk.references).length) {
 
                                 for (const [key, value] of Object.entries(chunk.references)) {
                                     processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
@@ -143,7 +142,8 @@ window.openAIChatManager = function () {
                                 }
                             }
                             // Append processed content to the buffer
-                            buffer.content += processedContent;
+                            // if we have multiple references, add a comma to ensure we don't concatenate numbers.
+                            buffer.content += processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
                         }
 
                         // Update the existing message
@@ -160,37 +160,9 @@ window.openAIChatManager = function () {
 
                         (data.messages ?? []).forEach(msg => {
 
-                            let processedContent = msg.content.trim();
-                            if (msg.references && typeof msg.references === "object" && Object.keys(chunk.references).length) {
-
-                                for (const [key, value] of Object.entries(chunk.references)) {
-                                    processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
-                                }
-
-                                processedContent += '<br><br>';
-
-                                for (const [key, value] of Object.entries(chunk.references)) {
-                                    processedContent += `**${value.index}**. [${value.text}](${value.link})<br>`;
-                                }
-                            }
-
-                            this.messages.push({
-                                role: msg.role,
-                                title: msg.title,
-                                content: processedContent,
-                                htmlContent: marked.parse(processedContent, { renderer })
-                            })
+                            this.addMessage(msg);
                         });
 
-                        if (this.messages.length) {
-                            this.hidePlaceholder();
-                        } else {
-                            this.showPlaceholder();
-                        }
-
-                        this.$nextTick(() => {
-                            this.scrollToBottom();
-                        });
                     });
 
                     this.connection.on("ReceiveError", (error) => {
@@ -212,6 +184,28 @@ window.openAIChatManager = function () {
                     });
                 },
                 addMessage(message) {
+
+                    if (message.content) {
+                        let processedContent = message.content.trim();
+                        if (message.references && typeof message.references === "object" && Object.keys(message.references).length) {
+
+                            for (const [key, value] of Object.entries(message.references)) {
+                                processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
+                            }
+
+                            // if we have multiple references, add a comma to ensure we don't concatenate numbers.
+                            processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+                            processedContent += '<br><br>';
+
+                            for (const [key, value] of Object.entries(message.references)) {
+                                processedContent += `**${value.index}**. [${value.text}](${value.link})<br>`;
+                            }
+                        }
+
+                        message.content = processedContent;
+                        message.htmlContent = marked.parse(processedContent, { renderer });
+                    }
+
                     this.addMessageInternal(message);
                     this.hidePlaceholder();
                     this.$nextTick(() => {

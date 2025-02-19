@@ -90,7 +90,6 @@ window.openAIChatManager = function () {
                   });
                   _this.connection.on("CompleteMessageStream", function (messageId) {
                     var buffer = _this.messageBuffers[messageId];
-                    console.log('CompleteMessageStream', buffer.references && Object.keys(buffer.references).length);
                     if (buffer.references && Object.keys(buffer.references).length) {
                       processedContent = buffer.content.trim() + '<br><br>';
                       for (var _i = 0, _Object$entries = Object.entries(buffer.references); _i < _Object$entries.length; _i++) {
@@ -112,7 +111,7 @@ window.openAIChatManager = function () {
                     var buffer = _this.messageBuffers[messageId];
                     if (chunk.content) {
                       var _processedContent = chunk.content;
-                      if (chunk.references && _typeof(chunk.references) === "object") {
+                      if (chunk.references && _typeof(chunk.references) === "object" && Object.keys(chunk.references).length) {
                         for (var _i2 = 0, _Object$entries2 = Object.entries(chunk.references); _i2 < _Object$entries2.length; _i2++) {
                           var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
                             key = _Object$entries2$_i[0],
@@ -122,7 +121,8 @@ window.openAIChatManager = function () {
                         }
                       }
                       // Append processed content to the buffer
-                      buffer.content += _processedContent;
+                      // if we have multiple references, add a comma to ensure we don't concatenate numbers.
+                      buffer.content += _processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
                     }
 
                     // Update the existing message
@@ -138,38 +138,7 @@ window.openAIChatManager = function () {
                     _this.initializeSession(data.sessionId, true);
                     _this.messages = [];
                     ((_data$messages = data.messages) !== null && _data$messages !== void 0 ? _data$messages : []).forEach(function (msg) {
-                      var processedContent = msg.content.trim();
-                      if (msg.references && _typeof(msg.references) === "object" && Object.keys(chunk.references).length) {
-                        for (var _i3 = 0, _Object$entries3 = Object.entries(chunk.references); _i3 < _Object$entries3.length; _i3++) {
-                          var _Object$entries3$_i = _slicedToArray(_Object$entries3[_i3], 2),
-                            key = _Object$entries3$_i[0],
-                            value = _Object$entries3$_i[1];
-                          processedContent = processedContent.replaceAll(key, "<sup><strong>".concat(value.index, "</strong></sup>"));
-                        }
-                        processedContent += '<br><br>';
-                        for (var _i4 = 0, _Object$entries4 = Object.entries(chunk.references); _i4 < _Object$entries4.length; _i4++) {
-                          var _Object$entries4$_i = _slicedToArray(_Object$entries4[_i4], 2),
-                            _key = _Object$entries4$_i[0],
-                            _value = _Object$entries4$_i[1];
-                          processedContent += "**".concat(_value.index, "**. [").concat(_value.text, "](").concat(_value.link, ")<br>");
-                        }
-                      }
-                      _this.messages.push({
-                        role: msg.role,
-                        title: msg.title,
-                        content: processedContent,
-                        htmlContent: marked.parse(processedContent, {
-                          renderer: renderer
-                        })
-                      });
-                    });
-                    if (_this.messages.length) {
-                      _this.hidePlaceholder();
-                    } else {
-                      _this.showPlaceholder();
-                    }
-                    _this.$nextTick(function () {
-                      _this.scrollToBottom();
+                      _this.addMessage(msg);
                     });
                   });
                   _this.connection.on("ReceiveError", function (error) {
@@ -210,6 +179,31 @@ window.openAIChatManager = function () {
         },
         addMessage: function addMessage(message) {
           var _this3 = this;
+          if (message.content) {
+            var _processedContent2 = message.content.trim();
+            if (message.references && _typeof(message.references) === "object" && Object.keys(message.references).length) {
+              for (var _i3 = 0, _Object$entries3 = Object.entries(message.references); _i3 < _Object$entries3.length; _i3++) {
+                var _Object$entries3$_i = _slicedToArray(_Object$entries3[_i3], 2),
+                  key = _Object$entries3$_i[0],
+                  value = _Object$entries3$_i[1];
+                _processedContent2 = _processedContent2.replaceAll(key, "<sup><strong>".concat(value.index, "</strong></sup>"));
+              }
+
+              // if we have multiple references, add a comma to ensure we don't concatenate numbers.
+              _processedContent2 = _processedContent2.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+              _processedContent2 += '<br><br>';
+              for (var _i4 = 0, _Object$entries4 = Object.entries(message.references); _i4 < _Object$entries4.length; _i4++) {
+                var _Object$entries4$_i = _slicedToArray(_Object$entries4[_i4], 2),
+                  _key = _Object$entries4$_i[0],
+                  _value = _Object$entries4$_i[1];
+                _processedContent2 += "**".concat(_value.index, "**. [").concat(_value.text, "](").concat(_value.link, ")<br>");
+              }
+            }
+            message.content = _processedContent2;
+            message.htmlContent = marked.parse(_processedContent2, {
+              renderer: renderer
+            });
+          }
           this.addMessageInternal(message);
           this.hidePlaceholder();
           this.$nextTick(function () {

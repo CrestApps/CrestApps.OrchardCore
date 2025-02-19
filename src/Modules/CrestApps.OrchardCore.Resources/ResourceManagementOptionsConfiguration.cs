@@ -20,14 +20,14 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
 
         _manifest
             .DefineScript("font-awesome")
-            .SetUrl("~/CrestApps.OrchardCore.Resources/vendor/fontawesome-free/js/all.min.js", "~/CrestApps.OrchardCore.Resources/vendor/fontawesome-free/js/all.js")
+            .SetUrl("~/CrestApps.OrchardCore.Resources/vendors/fontawesome-free/js/all.min.js", "~/CrestApps.OrchardCore.Resources/vendors/fontawesome-free/js/all.js")
             .SetCdn("https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/js/all.min.js", "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/js/all.js")
             .SetCdnIntegrity("sha384-DsXFqEUf3HnCU8om0zbXN58DxV7Bo8/z7AbHBGd2XxkeNpdLrygNiGFr/03W0Xmt", "sha384-103HZqplx8RDtihZoKY8x3qZcFKEwjwT7B2gSWIPsHW3Bw+oZ/YuC4ZG2NCs9X2l")
             .SetVersion("6.7.2");
 
         _manifest
             .DefineScript("font-awesome-v4-shims")
-            .SetUrl("~/OrchardCore.Resources/vendor/fontawesome-free/js/v4-shims.min.js", "~/OrchardCore.Resources/vendor/fontawesome-free/js/v4-shims.js")
+            .SetUrl("~/OrchardCore.Resources/vendors/fontawesome-free/js/v4-shims.min.js", "~/OrchardCore.Resources/vendors/fontawesome-free/js/v4-shims.js")
             .SetCdn("https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/js/v4-shims.min.js", "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/js/v4-shims.js")
             .SetCdnIntegrity("sha384-WVm8++sQXsfFD5HmhLau6q7RS11CQOYMBHGi1pfF2PHd/vthiacQvsVLrRk6lH8O", "sha384-8wHa6NoZT1zIIflbE6bEpvkCitRAeXbtoIAZAaddda+A7iyDB1/WHrGFXXXOqRzp")
             .SetVersion("6.7.2");
