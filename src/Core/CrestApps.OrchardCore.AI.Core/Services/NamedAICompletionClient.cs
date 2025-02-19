@@ -8,7 +8,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public abstract class NamedAICompletionService : AICompletionServiceBase, IAICompletionService
+public abstract class NamedAICompletionClient : AICompletionServiceBase, IAICompletionClient
 {
     private static readonly AIProfileMetadata _defaultMetadata = new();
 
@@ -20,7 +20,7 @@ public abstract class NamedAICompletionService : AICompletionServiceBase, IAICom
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger _logger;
 
-    public NamedAICompletionService(
+    public NamedAICompletionClient(
         string name,
         IDistributedCache distributedCache,
         ILoggerFactory loggerFactory,

@@ -20,7 +20,7 @@ using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureAISearchCompletionService : AICompletionServiceBase, IAICompletionService
+public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAICompletionClient
 {
     private static readonly AIProfileMetadata _defaultMetadata = new();
 
@@ -32,7 +32,7 @@ public sealed class AzureAISearchCompletionService : AICompletionServiceBase, IA
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
     private readonly ILogger _logger;
 
-    public AzureAISearchCompletionService(
+    public AzureAISearchCompletionClient(
         IAIDeploymentStore deploymentStore,
         IOptions<AIProviderOptions> providerOptions,
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
@@ -40,7 +40,7 @@ public sealed class AzureAISearchCompletionService : AICompletionServiceBase, IA
         IAIToolsService toolService,
         IAILinkGenerator linkGenerator,
         IOptions<DefaultAIOptions> defaultOptions,
-        ILogger<AzureOpenAICompletionService> logger)
+        ILogger<AzureOpenAICompletionClient> logger)
         : base(providerOptions.Value)
     {
         _deploymentStore = deploymentStore;
@@ -170,15 +170,15 @@ public sealed class AzureAISearchCompletionService : AICompletionServiceBase, IA
                         continue;
                     }
 
-                    if (contentItemIds.Add(citation.FilePath))
+                    contentItemIds.Add(citation.FilePath);
+                    var template = $"[doc{references.Count + 1}]";
+
+                    references[template] = new AICompletionReference
                     {
-                        references[citation.FilePath] = new AICompletionReference
-                        {
-                            Text = $"[doc{references.Count + 1}]",
-                            Link = _linkGenerator.GetContentItemPath(citation.FilePath, linkContext),
-                            Title = citation.Title,
-                        };
-                    }
+                        Text = string.IsNullOrEmpty(citation.Title) ? template : citation.Title,
+                        Link = _linkGenerator.GetContentItemPath(citation.FilePath, linkContext),
+                        Title = citation.Title,
+                    };
                 }
 
                 result.AdditionalProperties = new Microsoft.Extensions.AI.AdditionalPropertiesDictionary
@@ -332,15 +332,18 @@ public sealed class AzureAISearchCompletionService : AICompletionServiceBase, IA
                             continue;
                         }
 
-                        if (contentItemIds.Add(citation.FilePath))
+                        contentItemIds.Add(citation.FilePath);
+                        var templateIndex = references.Count + 1;
+
+                        var template = $"[doc{templateIndex}]";
+
+                        references[template] = new AICompletionReference
                         {
-                            references[citation.FilePath] = new AICompletionReference
-                            {
-                                Text = $"[doc{references.Count + 1}]",
-                                Link = _linkGenerator.GetContentItemPath(citation.FilePath, linkContext),
-                                Title = citation.Title,
-                            };
-                        }
+                            Text = string.IsNullOrEmpty(citation.Title) ? template : citation.Title,
+                            Index = templateIndex,
+                            Link = _linkGenerator.GetContentItemPath(citation.FilePath, linkContext),
+                            Title = citation.Title,
+                        };
                     }
 
                     result.AdditionalProperties = new Microsoft.Extensions.AI.AdditionalPropertiesDictionary

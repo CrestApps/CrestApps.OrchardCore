@@ -11,4 +11,6 @@ internal sealed class AIChatResponseMessageDetailed : AIResponseMessage
     public bool IsGeneratedPrompt { get; set; }
 
     public string Title { get; set; }
+
+    public Dictionary<string, AICompletionReference> References { get; set; }
 }

@@ -10,9 +10,9 @@ using OpenAI;
 
 namespace CrestApps.OrchardCore.AI.OpenAI.Services;
 
-public sealed class OpenAICompletionService : DeploymentNamedAICompletionService
+public sealed class OpenAICompletionClient : DeploymentNamedAICompletionClient
 {
-    public OpenAICompletionService(
+    public OpenAICompletionClient(
        ILoggerFactory loggerFactory,
        IDistributedCache distributedCache,
        IOptions<AIProviderOptions> providerOptions,

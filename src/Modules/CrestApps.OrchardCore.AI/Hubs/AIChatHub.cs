@@ -9,8 +9,6 @@ using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Entities;
 using OrchardCore.Liquid;
@@ -24,26 +22,23 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly IAIProfileManager _profileManager;
     private readonly IAIChatSessionManager _sessionManager;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
-    private readonly IEnumerable<IAICompletionHandler> _completionHandlers;
     private readonly ISession _session;
-    private readonly ILogger _logger;
+    private readonly IAICompletionService _completionService;
 
     public AIChatHub(
         IAuthorizationService authorizationService,
         IAIProfileManager profileManager,
         IAIChatSessionManager sessionManager,
         ILiquidTemplateManager liquidTemplateManager,
-        IEnumerable<IAICompletionHandler> completionHandlers,
         ISession session,
-        ILogger<AIChatHub> logger)
+        IAICompletionService completionService)
     {
         _authorizationService = authorizationService;
         _profileManager = profileManager;
         _sessionManager = sessionManager;
         _liquidTemplateManager = liquidTemplateManager;
-        _completionHandlers = completionHandlers;
         _session = session;
-        _logger = logger;
+        _completionService = completionService;
     }
 
     public async Task SendMessage(string profileId, string prompt, string sessionId, string sessionProfileId = null)
@@ -73,15 +68,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
             return;
         }
 
-        var completionService = httpContext.RequestServices.GetKeyedService<IAICompletionService>(profile.Source);
-
-        if (completionService is null)
-        {
-            await Clients.Caller.ReceiveError($"Unable to find a chat completion service for the source: '{profile.Source}'.");
-
-            return;
-        }
-
         if (profile.Type == AIProfileType.Utility)
         {
             if (string.IsNullOrWhiteSpace(prompt))
@@ -91,7 +77,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 return;
             }
 
-            await ProcessUtilityAsync(completionService, profile, prompt.Trim());
+            await ProcessUtilityAsync(profile, prompt.Trim());
 
             // We don't need to save the session for utility profiles.
             return;
@@ -115,12 +101,12 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 return;
             }
 
-            await ProcessGeneratedPromptAsync(completionService, profile, sessionId, parentProfile);
+            await ProcessGeneratedPromptAsync(profile, sessionId, parentProfile);
         }
         else
         {
             // At this point, we are dealing with a chat profile.
-            await ProcessChatPromptAsync(completionService, profile, sessionId, prompt.Trim());
+            await ProcessChatPromptAsync(profile, sessionId, prompt.Trim());
         }
 
         await _session.SaveChangesAsync();
@@ -162,15 +148,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
             return;
         }
 
-        var completionService = httpContext.RequestServices.GetKeyedService<IAICompletionService>(profile.Source);
-
-        if (completionService is null)
-        {
-            await Clients.Caller.ReceiveError($"Unable to find a chat completion service for the source: '{profile.Source}'.");
-
-            return;
-        }
-
         await Clients.Caller.LoadSession(new
         {
             chatSession.SessionId,
@@ -186,11 +163,12 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 IsGeneratedPrompt = message.IsGeneratedPrompt,
                 Title = message.Title,
                 Content = message.Content,
+                References = message.References,
             })
         });
     }
 
-    private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, IAICompletionService completionService, string userPrompt)
+    private async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, string userPrompt)
     {
         if (!string.IsNullOrWhiteSpace(sessionId))
         {
@@ -221,7 +199,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 SystemMessage = AIConstants.TitleGeneratorSystemMessage,
             };
 
-            var titleResponse = await completionService.CompleteAsync(
+            var titleResponse = await _completionService.CompleteAsync(profile.Source,
             [
                 new (ChatRole.User, userPrompt),
             ], context);
@@ -240,9 +218,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
         return (chatSession, true);
     }
 
-    private async Task ProcessChatPromptAsync(IAICompletionService completionService, AIProfile profile, string sessionId, string prompt)
+    private async Task ProcessChatPromptAsync(AIProfile profile, string sessionId, string prompt)
     {
-        (var chatSession, var isNew) = await GetSessionsAsync(_sessionManager, sessionId, profile, completionService, prompt);
+        (var chatSession, var isNew) = await GetSessionsAsync(_sessionManager, sessionId, profile, prompt);
 
         chatSession.Prompts.Add(new AIChatSessionPrompt
         {
@@ -273,17 +251,21 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         await Clients.Caller.StartMessageStream(assistantMessage.Id);
 
+        var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
 
-        await foreach (var chunk in completionService.CompleteStreamingAsync(transcript, completionContext))
+        await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, transcript, completionContext))
         {
             if (chunk.ChoiceIndex == 0)
             {
                 if (chunk.AdditionalProperties is not null)
                 {
-                    if (chunk.AdditionalProperties.TryGetValue<IList<string>>("ContentItemIds", out var contentItemIds))
+                    if (chunk.AdditionalProperties.TryGetValue<IList<string>>("ContentItemIds", out var ids))
                     {
-                        assistantMessage.ContentItemIds = contentItemIds;
+                        foreach (var id in ids)
+                        {
+                            contentItemIds.Add(id);
+                        }
                     }
 
                     if (chunk.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
@@ -315,15 +297,17 @@ public class AIChatHub : Hub<IAIChatHubClient>
         await Clients.Caller.CompleteMessageStream(assistantMessage.Id);
 
         assistantMessage.Content = builder.ToString();
+        assistantMessage.ContentItemIds = contentItemIds.ToList();
+        assistantMessage.References = references;
 
         chatSession.Prompts.Add(assistantMessage);
 
         await _sessionManager.SaveAsync(chatSession);
     }
 
-    private async Task ProcessGeneratedPromptAsync(IAICompletionService completionService, AIProfile profile, string sessionId, AIProfile parentProfile)
+    private async Task ProcessGeneratedPromptAsync(AIProfile profile, string sessionId, AIProfile parentProfile)
     {
-        (var chatSession, _) = await GetSessionsAsync(_sessionManager, sessionId, parentProfile, completionService, userPrompt: profile.Name);
+        (var chatSession, _) = await GetSessionsAsync(_sessionManager, sessionId, parentProfile, userPrompt: profile.Name);
 
         var generatedPrompt = await _liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
             new Dictionary<string, FluidValue>()
@@ -350,17 +334,21 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         var builder = new StringBuilder();
 
+        var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
 
-        await foreach (var chunk in completionService.CompleteStreamingAsync([new ChatMessage(ChatRole.User, generatedPrompt)], completionContext))
+        await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, generatedPrompt)], completionContext))
         {
             if (chunk.ChoiceIndex == 0)
             {
                 if (chunk.AdditionalProperties is not null)
                 {
-                    if (chunk.AdditionalProperties.TryGetValue<IList<string>>("ContentItemIds", out var contentItemIds))
+                    if (chunk.AdditionalProperties.TryGetValue<IList<string>>("ContentItemIds", out var ids))
                     {
-                        assistantMessage.ContentItemIds = contentItemIds;
+                        foreach (var id in ids)
+                        {
+                            contentItemIds.Add(id);
+                        }
                     }
 
                     if (chunk.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
@@ -392,13 +380,15 @@ public class AIChatHub : Hub<IAIChatHubClient>
         await Clients.Caller.CompleteMessageStream(assistantMessage.Id);
 
         assistantMessage.Content = builder.ToString();
+        assistantMessage.ContentItemIds = contentItemIds.ToList();
+        assistantMessage.References = references;
 
         chatSession.Prompts.Add(assistantMessage);
 
         await _sessionManager.SaveAsync(chatSession);
     }
 
-    private async Task ProcessUtilityAsync(IAICompletionService completionService, AIProfile profile, string prompt)
+    private async Task ProcessUtilityAsync(AIProfile profile, string prompt)
     {
         var messageId = IdGenerator.GenerateId();
 
@@ -412,7 +402,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         var references = new Dictionary<string, AICompletionReference>();
 
-        await foreach (var chunk in completionService.CompleteStreamingAsync([new ChatMessage(ChatRole.User, prompt)], completionContext))
+        await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, prompt)], completionContext))
         {
             if (chunk.ChoiceIndex == 0)
             {

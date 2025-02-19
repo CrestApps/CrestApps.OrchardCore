@@ -9,7 +9,7 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAICompletionService<OllamaAIChatCompletionService>(OllamaProfileSource.Key);
+        services.AddAICompletionClient<OllamaAIChatCompletionClient>(OllamaProfileSource.Key);
         services.AddAIProfileSource<OllamaProfileSource>(OllamaProfileSource.Key);
     }
 }

@@ -32,7 +32,6 @@ public sealed class AICompletionTaskDisplayDriver : ActivityDisplayDriver<AIComp
         model.ProfileId = activity.ProfileId;
         model.PromptTemplate = activity.PromptTemplate;
         model.ResultPropertyName = activity.ResultPropertyName;
-        model.IncludeHtmlResponse = activity.IncludeHtmlResponse;
 
         model.Profiles = (await _profileStore.GetAllAsync())
             .Select(profile => new SelectListItem(profile.DisplayText, profile.Id));
@@ -75,7 +74,6 @@ public sealed class AICompletionTaskDisplayDriver : ActivityDisplayDriver<AIComp
         activity.ProfileId = model.ProfileId;
         activity.PromptTemplate = model.PromptTemplate;
         activity.ResultPropertyName = model.ResultPropertyName?.Trim();
-        activity.IncludeHtmlResponse = model.IncludeHtmlResponse;
 
         return Edit(activity, context);
     }

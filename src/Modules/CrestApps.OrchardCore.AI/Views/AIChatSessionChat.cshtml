@@ -16,7 +16,6 @@
 @inject IUpdateModelAccessor UpdateModelAccessor
 @inject IDisplayManager<AIChatSessionPrompt> DisplayManager
 @inject IAIProfileStore ProfileStore
-@inject IAIMarkdownService MarkdownService
 @inject HubLinkGenerator LinkGenerator
 @{
     var baseId = Html.IdForModel();
@@ -93,7 +92,7 @@
                 prompt.Content,
                 prompt.Title,
                 prompt.IsGeneratedPrompt,
-                htmlContent = !string.IsNullOrEmpty(prompt.Content) ? MarkdownService.ToHtml(prompt.Content) : null,
+                prompt.References,
             });
         }
     }

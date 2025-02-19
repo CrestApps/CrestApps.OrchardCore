@@ -15,4 +15,6 @@ public sealed class AIChatSessionPrompt
     public bool IsGeneratedPrompt { get; set; }
 
     public IEnumerable<string> ContentItemIds { get; set; }
+
+    public Dictionary<string, AICompletionReference> References { get; set; }
 }

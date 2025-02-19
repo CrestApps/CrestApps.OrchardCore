@@ -12,9 +12,9 @@ using OpenAI;
 
 namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
 
-public sealed class DeepSeekAICompletionService : DeploymentNamedAICompletionService
+public sealed class DeepSeekAICompletionClient : DeploymentNamedAICompletionClient
 {
-    public DeepSeekAICompletionService(
+    public DeepSeekAICompletionClient(
            ILoggerFactory loggerFactory,
            IDistributedCache distributedCache,
            IOptions<AIProviderOptions> providerOptions,

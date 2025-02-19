@@ -92,19 +92,38 @@ window.openAIChatManager = function () {
                             let newMessage = {
                                 role: "assistant",
                                 content: "",
-                                htmlContent: ""
+                                htmlContent: "",
                             };
 
                             this.messages.push(newMessage);
 
                             this.messageBuffers[messageId] = {
                                 content: "",
-                                messageIndex: this.messages.length - 1
+                                messageIndex: this.messages.length - 1,
+                                references: {},
                             };
                         }
                     });
 
                     this.connection.on("CompleteMessageStream", (messageId) => {
+
+                        let buffer = this.messageBuffers[messageId];
+                        console.log('CompleteMessageStream', buffer.references && Object.keys(buffer.references).length);
+
+                        if (buffer.references && Object.keys(buffer.references).length) {
+                            processedContent = buffer.content + '<br>';
+
+                            for (const [key, value] of Object.entries(buffer.references)) {
+                                processedContent += `**${value.index}**. [${value.text}](${value.link})<br>`;
+
+                                buffer.references[key] = value;
+                            }
+
+                            let message = this.messages[buffer.messageIndex];
+                            message.content = processedContent;
+                            message.htmlContent = marked.parse(processedContent, { renderer });
+                        }
+
                         delete this.messageBuffers[messageId];
                     });
 
@@ -118,7 +137,9 @@ window.openAIChatManager = function () {
                             if (chunk.references && typeof chunk.references === "object") {
 
                                 for (const [key, value] of Object.entries(chunk.references)) {
-                                    processedContent = processedContent.replaceAll(value.text, `[${value.text}](${value.link})`);
+                                    processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
+
+                                    buffer.references[key] = value;
                                 }
                             }
                             // Append processed content to the buffer
@@ -138,11 +159,26 @@ window.openAIChatManager = function () {
                         this.messages = [];
 
                         (data.messages ?? []).forEach(msg => {
+
+                            let processedContent = msg.content;
+                            if (msg.references && typeof msg.references === "object" && Object.keys(chunk.references).length) {
+
+                                for (const [key, value] of Object.entries(chunk.references)) {
+                                    processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
+                                }
+
+                                processedContent += '<br>';
+
+                                for (const [key, value] of Object.entries(chunk.references)) {
+                                    processedContent += `**${value.index}**. [${value.text}](${value.link})<br>`;
+                                }
+                            }
+
                             this.messages.push({
                                 role: msg.role,
                                 title: msg.title,
-                                content: msg.content,
-                                htmlContent: marked.parse(msg.content, { renderer })
+                                content: processedContent,
+                                htmlContent: marked.parse(processedContent, { renderer })
                             })
                         });
 
@@ -159,15 +195,6 @@ window.openAIChatManager = function () {
 
                     this.connection.on("ReceiveError", (error) => {
                         console.log("SignalR Error: ", error);
-                    });
-
-                    this.connection.on("ReceiveMessage", (data) => {
-                        this.addMessage({
-                            role: data.message.role,
-                            title: data.message.title,
-                            content: data.message.content,
-                            htmlcontent: marked.parse(data.message.content, { renderer })
-                        });
                     });
 
                     try {

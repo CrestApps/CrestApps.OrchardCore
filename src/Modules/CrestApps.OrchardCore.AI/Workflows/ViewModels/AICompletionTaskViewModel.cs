@@ -11,8 +11,6 @@ public class AICompletionTaskViewModel
 
     public string ResultPropertyName { get; set; }
 
-    public bool IncludeHtmlResponse { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> Profiles { get; set; }
 }

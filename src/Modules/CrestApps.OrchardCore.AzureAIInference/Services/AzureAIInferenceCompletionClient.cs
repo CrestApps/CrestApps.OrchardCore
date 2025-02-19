@@ -12,9 +12,9 @@ using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AzureAIInference.Services;
 
-public sealed class AzureAIInferenceCompletionService : DeploymentNamedAICompletionService
+public sealed class AzureAIInferenceCompletionClient : DeploymentNamedAICompletionClient
 {
-    public AzureAIInferenceCompletionService(
+    public AzureAIInferenceCompletionClient(
         ILoggerFactory loggerFactory,
         IDistributedCache distributedCache,
         IOptions<AIProviderOptions> providerOptions,

@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.AI.Endpoints.Models;
+namespace CrestApps.OrchardCore.AI.Endpoints.Models;
 
 internal sealed class AICompletionRequest
 {
@@ -9,6 +9,4 @@ internal sealed class AICompletionRequest
     public string Prompt { get; set; }
 
     public string SessionProfileId { get; set; }
-
-    public bool IncludeHtmlResponse { get; set; } = true;
 }
