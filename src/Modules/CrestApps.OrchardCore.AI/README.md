@@ -4,6 +4,8 @@ The **AI Services** feature enables interaction with AI models by providing esse
 
 An **AI Profile** defines how the AI chatbot engages with users, including configuring the chatbot's welcome message, system message, and response behavior.
 
+Note: This feature does not provide any completion client implementations (e.g., OpenAI, DeepSeek, etc.). It only provide user interface to manager manages profiles along with the key services.
+
 ### Configuration
 
 Before utilizing any AI features, ensure the necessary settings are configured. This can be done using various setting providers. Below is an example of how to configure the services in the `appsettings.json` file:
