@@ -178,22 +178,23 @@ Once the custom function is registered, you can add it to any AI profile. The cu
 
 ### Implementing Custom AI Sources
 
-To integrate custom AI sources, implement the `IAIProfileSource` interface. For example:
+To integrate custom AI sources, implement the `IAIProfileSource` interface. Here’s an example:
 
 ```csharp
-public sealed class AzureProfileSource : IAIProfileSource
+public sealed class CustomProfileSource : IAIProfileSource
 {
-    public const string Key = "Azure";
+    public const string ProviderTechnicalName = "ThirdPartyProviderName";
+    public const string ImplementationName = "Custom";
 
-    public AzureProfileSource(IStringLocalizer<AzureProfileSource> localizer)
+    public CustomProfileSource(IStringLocalizer<CustomProfileSource> localizer)
     {
         DisplayName = localizer["Azure OpenAI"];
         Description = localizer["Provides AI services using Azure OpenAI models."];
     }
 
-    public string TechnicalName => Key;
+    public string TechnicalName => ImplementationName;
 
-    public string ProviderName => "Azure";
+    public string ProviderName => ProviderTechnicalName;
 
     public LocalizedString DisplayName { get; }
 
@@ -201,17 +202,47 @@ public sealed class AzureProfileSource : IAIProfileSource
 }
 ```
 
-Register the custom source in the `Startup` class:
+You'll also need to register a custom completion client for the source. Below is an example implementation:
+
+```csharp
+public sealed class CustomCompletionClient : NamedAICompletionClient
+{
+    public CustomCompletionClient(
+       ILoggerFactory loggerFactory,
+       IDistributedCache distributedCache,
+       IOptions<AIProviderOptions> providerOptions,
+       IAIToolsService toolsService,
+       IOptions<DefaultAIOptions> defaultOptions,
+       IAIDeploymentStore deploymentStore
+    ) : base(CustomProfileSource.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
+    {
+    }
+
+    protected override string ProviderName => CustomProfileSource.ProviderTechnicalName;
+
+    protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string deploymentName)
+    {
+        return new OpenAIClient(connection.GetApiKey())
+            .AsChatClient(connection.GetDefaultDeploymentName());
+    }
+}
+```
+
+> **Note:** The `CustomCompletionClient` above inherits from `NamedAICompletionClient`. If the provider supports multiple deployments, you can instead inherit from `DeploymentAwareAICompletionClient`.
+
+Finally, register the custom source and completion client in the `Startup` class:
 
 ```csharp
 public sealed class StandardStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIProfileSource<AzureProfileSource>(AzureProfileSource.Key);
+        services.AddAIProfile<CustomProfileSource, CustomCompletionClient>(CustomProfileSource.ImplementationName);
     }
 }
 ```
+
+> **Important:** Ensure that both the profile source and the completion client share the same registration key.
 
 ---
 

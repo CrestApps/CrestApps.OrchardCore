@@ -21,12 +21,12 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
         IAIToolsService toolsService,
         IOptions<DefaultAIOptions> defaultOptions,
         IAIDeploymentStore deploymentStore
-        ) : base(AzureAIInferenceDeploymentProvider.ProviderName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
+        ) : base(AzureAIInferenceProfileSource.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
     {
     }
 
     protected override string ProviderName
-        => AzureAIInferenceDeploymentProvider.ProviderName;
+        => AzureAIInferenceProfileSource.ProviderTechnicalName;
 
     protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string modelName)
     {

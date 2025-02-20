@@ -21,12 +21,12 @@ public sealed class DeepSeekAICompletionClient : DeploymentAwareAICompletionClie
            IAIToolsService toolsService,
            IOptions<DefaultAIOptions> defaultOptions,
            IAIDeploymentStore deploymentStore
-           ) : base(DeepSeekAIDeploymentProvider.ProviderName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
+           ) : base(DeepSeekProfileSource.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
     {
     }
 
     protected override string ProviderName
-        => DeepSeekAIDeploymentProvider.ProviderName;
+        => DeepSeekProfileSource.ProviderTechnicalName;
 
     protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string modelName)
     {

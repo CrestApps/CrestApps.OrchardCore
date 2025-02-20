@@ -12,11 +12,10 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddAIDeploymentProvider<DeepSeekAIDeploymentProvider>(DeepSeekAIDeploymentProvider.ProviderName)
-            .AddAICompletionClient<DeepSeekAICompletionClient>(DeepSeekAIDeploymentProvider.ProviderName)
-            .AddDataMigration<DefaultDeepSeekDeploymentMigrations>();
+            .AddAIProfile<DeepSeekProfileSource, DeepSeekAICompletionClient>(DeepSeekProfileSource.ImplementationName);
 
         services
-            .AddAIProfileSource<DeepSeekProfileSource>(DeepSeekAIDeploymentProvider.ProviderName);
+            .AddAIDeploymentProvider<DeepSeekAIDeploymentProvider>(DeepSeekProfileSource.ProviderTechnicalName)
+            .AddDataMigration<DefaultDeepSeekDeploymentMigrations>();
     }
 }

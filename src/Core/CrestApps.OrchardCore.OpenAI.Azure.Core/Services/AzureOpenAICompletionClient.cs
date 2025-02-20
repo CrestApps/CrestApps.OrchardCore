@@ -20,12 +20,12 @@ public sealed class AzureOpenAICompletionClient : DeploymentAwareAICompletionCli
        IAIToolsService toolsService,
        IOptions<DefaultAIOptions> defaultOptions,
        IAIDeploymentStore deploymentStore
-       ) : base(AzureProfileSource.Key, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
+       ) : base(AzureProfileSource.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
     {
     }
 
     protected override string ProviderName
-        => AzureOpenAIConstants.AzureProviderName;
+        => AzureOpenAIConstants.ProviderName;
 
     protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string modelName)
     {

@@ -17,12 +17,12 @@ public sealed class OllamaAIChatCompletionClient : NamedAICompletionClient
            IOptions<AIProviderOptions> providerOptions,
            IAIToolsService toolsService,
            IOptions<DefaultAIOptions> defaultOptions
-           ) : base(OllamaProfileSource.Key, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService)
+           ) : base(OllamaProfileSource.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService)
     {
     }
 
     protected override string ProviderName
-        => OllamaProfileSource.Key;
+        => OllamaProfileSource.ProviderTechnicalName;
 
     protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string deploymentName)
     {

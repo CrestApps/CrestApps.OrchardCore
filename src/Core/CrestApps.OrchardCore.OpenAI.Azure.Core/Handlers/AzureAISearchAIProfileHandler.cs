@@ -26,7 +26,7 @@ public sealed class AzureAISearchAIProfileHandler : AIProfileHandlerBase
 
     public override Task ValidatedAsync(ValidatedAIProfileContext context)
     {
-        if (context.Profile?.Source != AzureAISearchProfileSource.Key)
+        if (context.Profile?.Source != AzureAISearchProfileSource.ImplementationName)
         {
             return Task.CompletedTask;
         }
@@ -43,7 +43,7 @@ public sealed class AzureAISearchAIProfileHandler : AIProfileHandlerBase
 
     private static Task PopulateAsync(AIProfile profile, JsonNode data)
     {
-        if (profile.Source != AzureAISearchProfileSource.Key)
+        if (profile.Source != AzureAISearchProfileSource.ImplementationName)
         {
             return Task.CompletedTask;
         }

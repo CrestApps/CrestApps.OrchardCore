@@ -6,7 +6,7 @@ public static class AzureOpenAIConstants
 
     public const int DefaultTopNDocuments = 5;
 
-    public const string AzureProviderName = "Azure";
+    public const string ProviderName = "Azure";
 
     public static class Feature
     {

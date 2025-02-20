@@ -1,11 +1,9 @@
-﻿using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.AI.OpenAI.Services;
 
 public sealed class OpenAIDeploymentProvider : IAIDeploymentProvider
 {
-    public const string ProviderName = "OpenAI";
-
     public OpenAIDeploymentProvider(IStringLocalizer<OpenAIDeploymentProvider> S)
     {
         DisplayName = S["OpenAI"];
@@ -13,7 +11,7 @@ public sealed class OpenAIDeploymentProvider : IAIDeploymentProvider
     }
 
     public string TechnicalName
-        => ProviderName;
+        => OpenAIProfileSource.ProviderTechnicalName;
 
     public LocalizedString DisplayName { get; }
 
