@@ -10,6 +10,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Content Management",
     Dependencies =
     [
-        AIConstants.Feature.Chat,
+        AIConstants.Feature.Area,
     ]
 )]

@@ -8,23 +8,18 @@ using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Drivers;
 using CrestApps.OrchardCore.AI.Endpoints;
 using CrestApps.OrchardCore.AI.Endpoints.Api;
-using CrestApps.OrchardCore.AI.Hubs;
 using CrestApps.OrchardCore.AI.Indexes;
 using CrestApps.OrchardCore.AI.Migrations;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Recipes;
 using CrestApps.OrchardCore.AI.Services;
-using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
-using CrestApps.OrchardCore.SignalR.Core.Services;
 using Fluid;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using OrchardCore.ContentManagement;
-using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
@@ -52,7 +47,6 @@ public sealed class Startup : StartupBase
         services
             .AddScoped<IAILinkGenerator, DefaultAILinkGenerator>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
-            .AddDisplayDriver<AIChatListOptions, AIProfileOptionsDisplayDriver>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
             .AddNavigationProvider<AIProfileAdminMenu>();
 
@@ -81,7 +75,7 @@ public sealed class DeploymentsStartup : StartupBase
 }
 
 [Feature(AIConstants.Feature.Deployments)]
-[RequireFeatures(AIConstants.Feature.Chat)]
+[RequireFeatures(AIConstants.Feature.ChatCore)]
 public sealed class ChatDeploymentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -92,8 +86,8 @@ public sealed class ChatDeploymentsStartup : StartupBase
     }
 }
 
-[Feature(AIConstants.Feature.Chat)]
-public sealed class ChatStartup : StartupBase
+[Feature(AIConstants.Feature.ChatCore)]
+public sealed class ChatCoreStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -101,18 +95,7 @@ public sealed class ChatStartup : StartupBase
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
             .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()
             .AddDataMigration<AIChatSessionIndexMigrations>()
-            .AddIndexProvider<AIChatSessionIndexProvider>()
-            .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>();
-
-        services
-            .AddNavigationProvider<ChatAdminMenu>();
-    }
-
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        var hubRouteManager = serviceProvider.GetRequiredService<HubRouteManager>();
-
-        hubRouteManager.MapHub<AIChatHub>(routes);
+            .AddIndexProvider<AIChatSessionIndexProvider>();
     }
 }
 
@@ -124,7 +107,7 @@ public sealed class ApiChatStartup : StartupBase
         routes
             .AddApiAIChatSessionEndpoint()
             .AddApiAIUtilityCompletionEndpoint<ApiChatStartup>()
-            .AddApiAICompletionEndpoint<ChatStartup>();
+            .AddApiAICompletionEndpoint<ApiChatStartup>();
     }
 }
 
@@ -157,20 +140,6 @@ public sealed class OCDeploymentsStartup : StartupBase
     {
         services.AddDeployment<AIProfileDeploymentSource, AIProfileDeploymentStep, AIProfileDeploymentStepDisplayDriver>();
         services.AddDeployment<AIDeploymentDeploymentSource, AIDeploymentDeploymentStep, AIDeploymentDeploymentStepDisplayDriver>();
-    }
-}
-
-[Feature(AIConstants.Feature.Chat)]
-[RequireFeatures("OrchardCore.Widgets")]
-public sealed class WidgetsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services
-            .AddContentPart<AIProfilePart>()
-            .UseDisplayDriver<AIChatProfilePartDisplayDriver>();
-
-        services.AddDataMigration<AIChatMigrations>();
     }
 }
 

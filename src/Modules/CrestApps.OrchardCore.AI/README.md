@@ -93,6 +93,10 @@ public sealed class SystemDefinedAIProfileMigrations : DataMigration
             LockSystemMessage = true, 
             IsRemovable = false, 
             IsListable = false, 
+        });
+
+        profile.WithSettings(new AIChatProfileSettings
+        {
             IsOnAdminMenu = true,
         });
 

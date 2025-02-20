@@ -28,7 +28,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AIConstants.Feature.Chat,
+        AIConstants.Feature.Area,
         AzureOpenAIConstants.Feature.Area,
     ]
 )]
@@ -40,7 +40,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AIConstants.Feature.Chat,
+        AIConstants.Feature.Area,
         AzureOpenAIConstants.Feature.Area,
         "OrchardCore.Search.AzureAI",
     ]

@@ -12,8 +12,6 @@ public class EditProfileViewModel
 
     public string PromptSubject { get; set; }
 
-    public bool IsOnAdminMenu { get; set; }
-
     public AIProfileType ProfileType { get; set; }
 
     public AISessionTitleType? TitleType { get; set; }
