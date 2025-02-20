@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.SignalR.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -29,15 +28,15 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = AIConstants.Feature.Chat,
-    Name = "AI Chat",
-    Description = "Manages AI chat profiles for various models.",
+    Id = AIConstants.Feature.ChatCore,
+    Name = "AI Chat Core Services",
+    Description = "Provides all the necessary services to enable chatting with AI models using profiles.",
     Category = "Artificial Intelligence",
+    EnabledByDependencyOnly = true,
     Dependencies =
     [
         "OrchardCore.Liquid",
         "CrestApps.OrchardCore.Resources",
-        SignalRConstants.Feature.Area,
         AIConstants.Feature.Area,
     ]
 )]
@@ -49,6 +48,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AIConstants.Feature.Chat,
+        AIConstants.Feature.ChatCore,
     ]
 )]

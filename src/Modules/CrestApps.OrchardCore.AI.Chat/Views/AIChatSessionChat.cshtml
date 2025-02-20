@@ -1,0 +1,119 @@
+@using CrestApps.OrchardCore.AI
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.Services
+@using CrestApps.OrchardCore.AI.Chat.Hubs
+@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.OrchardCore.SignalR.Core.Services
+@using OrchardCore.DisplayManagement
+@using OrchardCore.DisplayManagement.ModelBinding
+@using OrchardCore.Entities
+@using System.Text.Json
+@using OrchardCore.Environment.Shell
+
+@model ChatSessionCapsuleViewModel
+
+@inject IUpdateModelAccessor UpdateModelAccessor
+@inject IDisplayManager<AIChatSessionPrompt> DisplayManager
+@inject IAIProfileStore ProfileStore
+@inject HubRouteManager HubRouteManager
+@{
+    var baseId = Html.IdForModel();
+    var chatAppHtmlId = $"{baseId}_ChatApp";
+    var buttonHtmlId = $"{baseId}_SendButton";
+    var userPromptHtmlId = $"{baseId}_UserPrompt";
+    var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
+    var chatContainerHtmlId = $"{baseId}_ChatContainer";
+
+    var promptGeneratedProfiles = (await ProfileStore.GetAllAsync()).Where(x => x.Type == AIProfileType.TemplatePrompt);
+}
+
+    <div class="mb-3 mx-3 p-3 overflow-y-auto h-100 rounded-2 border bg-theme" id="@chatContainerHtmlId">
+        <div class="list-group list-group-flush w-100">
+            @if (Model.Session.Prompts.Count == 0)
+            {
+                <div id="@placeholderHtmlId" class="text-center p-3">
+                    <h1 class="mb-3">
+                        @(string.IsNullOrEmpty(Model.Profile?.WelcomeMessage) ? T["What do you want to know?"] : Model.Profile?.WelcomeMessage)
+                    </h1>
+                </div>
+            }
+
+            <div id="@chatAppHtmlId"></div>
+        </div>
+    </div>
+
+    <div class="container-fluid mb-3">
+
+        <div class="text-bg-light rounded-5 border w-100">
+            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
+
+            <div class="d-flex justify-content-between px-3 my-2">
+                <div>
+                    @if (promptGeneratedProfiles.Any())
+                    {
+                        <div class="d-flex justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
+                                    {
+                                        <li>
+                                            <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.Id">@promptGeneratedProfile.DisplayText</button>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div>
+                    <button class="btn btn-dark rounded-circle" type="button" id="@buttonHtmlId" disabled>
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @{
+        var prompts = new List<object>();
+
+        if (Model.Session.Prompts != null)
+        {
+            foreach (var prompt in Model.Session.Prompts)
+            {
+                prompts.Add(new
+                {
+                    prompt.Id,
+                    prompt.Role,
+                    prompt.Content,
+                    prompt.Title,
+                    prompt.IsGeneratedPrompt,
+                    prompt.References,
+                });
+            }
+        }
+    }
+
+    <script asp-name="OpenAIChatApp" at="Foot"></script>
+    <script at="Foot" depends-on="OpenAIChatApp">
+        openAIChatManager.initialize({
+            signalRHubUrl: '@(HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext))',
+            appElementSelector: '#@chatAppHtmlId',
+            chatContainerElementSelector: '#@chatContainerHtmlId',
+            inputElementSelector: '#@userPromptHtmlId',
+            sendButtonElementSelector: '#@buttonHtmlId',
+            placeholderElementSelector: '#@placeholderHtmlId',
+            messages: @Html.Raw(JsonSerializer.Serialize(prompts, JOptions.CamelCase))
+        });
+    </script>
+
+    <style at="Head">
+        .chat-user-prompt-input:focus {
+            border: none;
+            box-shadow: none;
+        }
+    </style>

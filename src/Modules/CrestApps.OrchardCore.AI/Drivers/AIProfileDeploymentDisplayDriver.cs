@@ -35,6 +35,11 @@ public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
         {
             var profileSource = _serviceProvider.GetKeyedService<IAIProfileSource>(profile.Source);
 
+            if (profileSource is null)
+            {
+                return;
+            }
+
             model.ConnectionName = profile.ConnectionName;
             model.DeploymentId = profile.DeploymentId;
             model.ProviderName = profileSource.ProviderName;
@@ -70,6 +75,13 @@ public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
+        var profileSource = _serviceProvider.GetKeyedService<IAIProfileSource>(profile.Source);
+
+        if (profileSource is null)
+        {
+            return null;
+        }
+
         var model = new EditProfileDeploymentViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);

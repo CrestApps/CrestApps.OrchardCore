@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using OrchardCore
+
+@model AIProfileMenuViewModel
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IsOnAdminMenu">
+            <label class="form-check-label" asp-for="IsOnAdminMenu">@T["Show on admin menu"]</label>
+            <span class="hint dashed">@T["When enabled, the profile will be added to the admin menu."]</span>
+        </div>
+    </div>
+</div>

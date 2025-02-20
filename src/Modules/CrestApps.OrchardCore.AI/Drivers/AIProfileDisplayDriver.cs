@@ -90,15 +90,6 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
         var fieldsResult = Initialize<EditProfileViewModel>("AIProfileFields_Edit", model =>
         {
-            if (profile.TryGetSettings<AIProfileSettings>(out var settings))
-            {
-                model.IsOnAdminMenu = settings.IsOnAdminMenu;
-            }
-            else
-            {
-                model.IsOnAdminMenu = profile.Type == AIProfileType.Chat && context.IsNew;
-            }
-
             model.PromptSubject = profile.PromptSubject;
             model.PromptTemplate = profile.PromptTemplate;
             model.WelcomeMessage = profile.WelcomeMessage;
@@ -212,11 +203,6 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         profile.TitleType = model.TitleType;
         profile.Type = model.ProfileType;
         profile.ConnectionName = connectionModel.ConnectionName;
-
-        profile.AlterSettings<AIProfileSettings>(settings =>
-        {
-            settings.IsOnAdminMenu = profile.Type == AIProfileType.Chat && model.IsOnAdminMenu;
-        });
 
         var selectedFunctionNames = model.Functions?.Where(x => x.IsSelected).Select(x => x.Name).ToArray();
 

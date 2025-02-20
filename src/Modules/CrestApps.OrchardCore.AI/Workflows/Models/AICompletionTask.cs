@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Fluid;
 using Fluid.Values;
