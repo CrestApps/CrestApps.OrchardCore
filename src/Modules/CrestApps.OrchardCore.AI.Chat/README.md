@@ -2,7 +2,7 @@
 
 The **AI Chat** feature builds upon the **AI Services** feature by adding AI chat capabilities. Once enabled, any chat-type AI profile with the "Show On Admin Menu" option will appear under the **Artificial Intelligence** section in the admin menu, allowing you to interact with your chat profiles. If the Widgets feature is enabled, a widget will also be available to add to your content.
 
-**Note**: This feature does not provide completion client implementations (e.g., OpenAI, DeepSeek, etc.). To enable chat capabilities, you must enable at least one feature that provides AI completion client, such as:
+**Note**: This feature does not provide completion client implementations (e.g., OpenAI, DeepSeek, etc.). To enable chat capabilities, you must enable at least one feature that implements an AI completion client, such as:
 
 - **OpenAI AI Chat** (`CrestApps.OrchardCore.OpenAI`): AI-powered chat using Azure OpenAI service.
 - **Azure OpenAI Chat** (`CrestApps.OrchardCore.OpenAI.Azure.Standard`): AI services using Azure OpenAI models.

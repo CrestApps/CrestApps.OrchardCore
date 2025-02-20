@@ -29,7 +29,7 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = AIConstants.Feature.ChatCore,
-    Name = "AI Chat Core Services",
+    Name = "AI Chat Services",
     Description = "Provides all the necessary services to enable chatting with AI models using profiles.",
     Category = "Artificial Intelligence",
     EnabledByDependencyOnly = true,
