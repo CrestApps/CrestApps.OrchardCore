@@ -52,14 +52,15 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
         _logger = logger;
     }
 
-    public string Name { get; } = AzureAISearchProfileSource.Key;
+    public string Name
+        => AzureAISearchProfileSource.ImplementationName;
 
     public async Task<Microsoft.Extensions.AI.ChatCompletion> CompleteAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
 
-        (var connection, var deploymentName) = await GetConnectionAsync(context, AzureOpenAIConstants.AzureProviderName);
+        (var connection, var deploymentName) = await GetConnectionAsync(context, AzureOpenAIConstants.ProviderName);
 
         if (connection is null)
         {
@@ -203,7 +204,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
 
-        (var connection, var deploymentName) = await GetConnectionAsync(context, AzureOpenAIConstants.AzureProviderName);
+        (var connection, var deploymentName) = await GetConnectionAsync(context, AzureOpenAIConstants.ProviderName);
 
         if (connection is null)
         {

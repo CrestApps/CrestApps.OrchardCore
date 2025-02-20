@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
 public sealed class AzureAISearchProfileSource : IAIProfileSource
 {
-    public const string Key = "AzureAISearch";
+    public const string ImplementationName = "AzureAISearch";
 
     public AzureAISearchProfileSource(IStringLocalizer<AzureProfileSource> S)
     {
@@ -14,10 +14,10 @@ public sealed class AzureAISearchProfileSource : IAIProfileSource
     }
 
     public string TechnicalName
-        => Key;
+        => ImplementationName;
 
     public string ProviderName
-        => AzureOpenAIConstants.AzureProviderName;
+        => AzureOpenAIConstants.ProviderName;
 
     public LocalizedString DisplayName { get; }
 

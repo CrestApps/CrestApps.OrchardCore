@@ -10,11 +10,10 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddAIDeploymentProvider<AzureAIInferenceDeploymentProvider>(AzureAIInferenceDeploymentProvider.ProviderName)
-            .AddAICompletionClient<AzureAIInferenceCompletionClient>(AzureAIInferenceDeploymentProvider.ProviderName);
+            .AddAIProfile<AzureAIInferenceProfileSource, AzureAIInferenceCompletionClient>(AzureAIInferenceProfileSource.ImplementationName);
 
         services
-            .AddAIProfileSource<AzureAIInferenceProfileSource>(AzureAIInferenceDeploymentProvider.ProviderName);
+            .AddAIDeploymentProvider<AzureAIInferenceDeploymentProvider>(AzureAIInferenceProfileSource.ProviderTechnicalName);
     }
 }
 

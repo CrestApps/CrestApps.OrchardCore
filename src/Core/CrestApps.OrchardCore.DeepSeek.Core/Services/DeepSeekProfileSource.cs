@@ -5,6 +5,10 @@ namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
 
 public sealed class DeepSeekProfileSource : IAIProfileSource
 {
+    public const string ProviderTechnicalName = "DeepSeek";
+
+    public const string ImplementationName = "DeepSeek";
+
     public DeepSeekProfileSource(IStringLocalizer<DeepSeekProfileSource> S)
     {
         DisplayName = S["DeepSeek"];
@@ -12,10 +16,10 @@ public sealed class DeepSeekProfileSource : IAIProfileSource
     }
 
     public string TechnicalName
-        => DeepSeekAIDeploymentProvider.ProviderName;
+        => ImplementationName;
 
     public string ProviderName
-        => DeepSeekAIDeploymentProvider.ProviderName;
+        => ProviderTechnicalName;
 
     public LocalizedString DisplayName { get; }
 

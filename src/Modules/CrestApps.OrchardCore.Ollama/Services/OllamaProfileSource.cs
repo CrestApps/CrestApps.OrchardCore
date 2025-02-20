@@ -4,7 +4,9 @@ namespace CrestApps.OrchardCore.AI.Ollama.Services;
 
 public sealed class OllamaProfileSource : IAIProfileSource
 {
-    public const string Key = "Ollama";
+    public const string ProviderTechnicalName = "Ollama";
+
+    public const string ImplementationName = "Ollama";
 
     public OllamaProfileSource(IStringLocalizer<OllamaProfileSource> S)
     {
@@ -13,10 +15,10 @@ public sealed class OllamaProfileSource : IAIProfileSource
     }
 
     public string TechnicalName
-        => Key;
+        => ImplementationName;
 
     public string ProviderName
-        => Key;
+        => ProviderTechnicalName;
 
     public LocalizedString DisplayName { get; }
 

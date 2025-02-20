@@ -5,6 +5,10 @@ namespace CrestApps.OrchardCore.AzureAIInference.Services;
 
 public sealed class AzureAIInferenceProfileSource : IAIProfileSource
 {
+    public const string ProviderTechnicalName = "AzureAIInference";
+
+    public const string ImplementationName = "AzureAIInference";
+
     public AzureAIInferenceProfileSource(IStringLocalizer<AzureAIInferenceProfileSource> S)
     {
         DisplayName = S["Azure AI Inference (GitHub Models)"];
@@ -12,10 +16,10 @@ public sealed class AzureAIInferenceProfileSource : IAIProfileSource
     }
 
     public string TechnicalName
-        => AzureAIInferenceDeploymentProvider.ProviderName;
+        => ImplementationName;
 
     public string ProviderName
-        => AzureAIInferenceDeploymentProvider.ProviderName;
+        => ProviderTechnicalName;
 
     public LocalizedString DisplayName { get; }
 

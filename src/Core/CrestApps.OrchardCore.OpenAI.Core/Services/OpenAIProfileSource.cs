@@ -4,6 +4,10 @@ namespace CrestApps.OrchardCore.AI.OpenAI.Services;
 
 public sealed class OpenAIProfileSource : IAIProfileSource
 {
+    public const string ProviderTechnicalName = "OpenAI";
+
+    public const string ImplementationName = "OpenAI";
+
     public OpenAIProfileSource(IStringLocalizer<OpenAIProfileSource> S)
     {
         DisplayName = S["OpenAI"];
@@ -11,10 +15,10 @@ public sealed class OpenAIProfileSource : IAIProfileSource
     }
 
     public string TechnicalName
-        => OpenAIDeploymentProvider.ProviderName;
+        => ImplementationName;
 
     public string ProviderName
-        => OpenAIDeploymentProvider.ProviderName;
+        => ProviderTechnicalName;
 
     public LocalizedString DisplayName { get; }
 

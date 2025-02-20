@@ -12,7 +12,7 @@ public sealed class AzureAIDeploymentProvider : IAIDeploymentProvider
     }
 
     public string TechnicalName
-        => AzureOpenAIConstants.AzureProviderName;
+        => AzureOpenAIConstants.ProviderName;
 
     public LocalizedString DisplayName { get; }
 

@@ -4,6 +4,8 @@ The **AI Services** feature enables interaction with AI models by providing esse
 
 An **AI Profile** defines how the AI chatbot engages with users, including configuring the chatbot's welcome message, system message, and response behavior.
 
+Note: This feature does not provide any completion client implementations (e.g., OpenAI, DeepSeek, etc.). It only provides a user interface to manage AI profiles along with the core services.
+
 ### Configuration
 
 Before utilizing any AI features, ensure the necessary settings are configured. This can be done using various setting providers. Below is an example of how to configure the services in the `appsettings.json` file:
@@ -44,31 +46,19 @@ Before utilizing any AI features, ensure the necessary settings are configured. 
 
 The **AI Deployments** feature extends the **AI Services** feature by enabling AI model deployment capabilities.
 
-### AI Chat Feature
+### AI Chat Services Feature
 
-The **AI Chat** feature builds upon the **AI Services** feature by adding AI chat capabilities. Once enabled, any chat-type AI profile with the "Show On Admin Menu" option will appear under the **Artificial Intelligence** section in the admin menu, allowing you to interact with your chat profiles. If the Widgets feature is enabled, a widget will also be available to add to your content.
-
-**Note**: This feature does not provide chat service implementations (e.g., OpenAI, DeepSeek, etc.). It only manages chat profiles. To enable chat capabilities, you must integrate an AI chat provider, such as:
-
-- **OpenAI AI Chat** (`CrestApps.OrchardCore.OpenAI`): AI-powered chat using Azure OpenAI service.
-- **Azure OpenAI Chat** (`CrestApps.OrchardCore.OpenAI.Azure.Standard`): AI services using Azure OpenAI models.
-- **Azure OpenAI Chat with Your Data** (`CrestApps.OrchardCore.OpenAI.Azure.AISearch`): AI chat using Azure OpenAI models combined with Azure AI Search data.
-- **Azure AI Inference Chat** (`CrestApps.OrchardCore.AzureAIInference`): AI services using Azure AI Inference (GitHub models) models.
-- **DeepSeek AI Chat** (`CrestApps.OrchardCore.DeepSeek`): AI-powered chat using Azure DeepSeek cloud service.
-- **Ollama AI Chat** (`CrestApps.OrchardCore.Ollama`): AI-powered chat using Azure Ollama service.
-
-
-![Screenshot of the admin chat](../../docs/images/admin-ui-sample.gif)
+The **AI Chat Services** feature builds upon the **AI Services** feature by adding AI chat capabilities. This feature is enabled on demand by other modules that provide AI completion clients.
 
 ### AI Chat WebAPI
 
-The **AI Chat WebAPI** feature extends the **AI Services** feature by enabling a REST WebAPI endpoints to allow you to interact with the models.
+The **AI Chat WebAPI** feature extends the **AI Chat Services** feature by enabling a REST WebAPI endpoints to allow you to interact with the models.
 
 ---
 
 ### Defining Chat Profiles Using Code
 
-To define chat profiles programmatically, create a migration class. Here’s an example demonstrating how to create a new chat profile:
+To define chat profiles programmatically, create a migration class. Here's an example demonstrating how to create a new chat profile:
 
 ```csharp
 public sealed class SystemDefinedAIProfileMigrations : DataMigration
@@ -120,7 +110,7 @@ public sealed class SystemDefinedAIProfileMigrations : DataMigration
 
 ### Extending AI Chat with Custom Functions
 
-You can extend AI chat functionality by adding custom functions. To create a custom function, inherit from `AIFunction` and register it as a service. Here’s an example of a custom function that retrieves weather information based on the user’s location:
+You can extend AI chat functionality by adding custom functions. To create a custom function, inherit from `AIFunction` and register it as a service. Here's an example of a custom function that retrieves weather information based on the user's location:
 
 ```csharp
 public sealed class GetWeatherFunction : AIFunction
@@ -178,22 +168,23 @@ Once the custom function is registered, you can add it to any AI profile. The cu
 
 ### Implementing Custom AI Sources
 
-To integrate custom AI sources, implement the `IAIProfileSource` interface. For example:
+To integrate custom AI sources, implement the `IAIProfileSource` interface. Here's an example:
 
 ```csharp
-public sealed class AzureProfileSource : IAIProfileSource
+public sealed class CustomProfileSource : IAIProfileSource
 {
-    public const string Key = "Azure";
+    public const string ProviderTechnicalName = "ThirdPartyProviderName";
+    public const string ImplementationName = "Custom";
 
-    public AzureProfileSource(IStringLocalizer<AzureProfileSource> localizer)
+    public CustomProfileSource(IStringLocalizer<CustomProfileSource> localizer)
     {
         DisplayName = localizer["Azure OpenAI"];
         Description = localizer["Provides AI services using Azure OpenAI models."];
     }
 
-    public string TechnicalName => Key;
+    public string TechnicalName => ImplementationName;
 
-    public string ProviderName => "Azure";
+    public string ProviderName => ProviderTechnicalName;
 
     public LocalizedString DisplayName { get; }
 
@@ -201,17 +192,46 @@ public sealed class AzureProfileSource : IAIProfileSource
 }
 ```
 
-Register the custom source in the `Startup` class:
+You'll also need to register a custom completion client for the source. Below is an example implementation:
+
+```csharp
+public sealed class CustomCompletionClient : NamedAICompletionClient
+{
+    public CustomCompletionClient(
+       ILoggerFactory loggerFactory,
+       IDistributedCache distributedCache,
+       IOptions<AIProviderOptions> providerOptions,
+       IAIToolsService toolsService,
+       IOptions<DefaultAIOptions> defaultOptions,
+    ) : base(CustomProfileSource.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService)
+    {
+    }
+
+    protected override string ProviderName => CustomProfileSource.ProviderTechnicalName;
+
+    protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string deploymentName)
+    {
+        return new OpenAIClient(connection.GetApiKey())
+            .AsChatClient(connection.GetDefaultDeploymentName());
+    }
+}
+```
+
+> **Note:** The `CustomCompletionClient` above inherits from `NamedAICompletionClient`. If the provider supports multiple deployments, you can instead inherit from `DeploymentAwareAICompletionClient`.
+
+Finally, register the custom source and completion client in the `Startup` class:
 
 ```csharp
 public sealed class StandardStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIProfileSource<AzureProfileSource>(AzureProfileSource.Key);
+        services.AddAIProfile<CustomProfileSource, CustomCompletionClient>(CustomProfileSource.ImplementationName);
     }
 }
 ```
+
+> **Important:** Ensure that both the profile source and the completion client share the same registration key.
 
 ---
 

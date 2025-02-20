@@ -9,9 +9,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAICompletionClient<OpenAICompletionClient>(OpenAIDeploymentProvider.ProviderName);
-        services.AddAIProfileSource<OpenAIProfileSource>(OpenAIDeploymentProvider.ProviderName);
-        services.AddAIDeploymentProvider<OpenAIDeploymentProvider>(OpenAIDeploymentProvider.ProviderName);
+        services.AddAIProfile<OpenAIProfileSource, OpenAICompletionClient>(OpenAIProfileSource.ImplementationName);
+        services.AddAIDeploymentProvider<OpenAIDeploymentProvider>(OpenAIProfileSource.ProviderTechnicalName);
     }
 }
 

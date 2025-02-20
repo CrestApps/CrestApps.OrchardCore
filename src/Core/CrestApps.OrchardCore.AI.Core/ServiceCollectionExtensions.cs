@@ -39,6 +39,15 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddAIProfile<TSource, TClient>(this IServiceCollection services, string implementationName)
+        where TSource : class, IAIProfileSource
+        where TClient : class, IAICompletionClient
+    {
+        return services
+            .AddAIProfileSource<TSource>(implementationName)
+            .AddAICompletionClient<TClient>(implementationName);
+    }
+
     public static IServiceCollection AddAIProfileSource<TSource>(this IServiceCollection services, string sourceKey)
          where TSource : class, IAIProfileSource
     {
