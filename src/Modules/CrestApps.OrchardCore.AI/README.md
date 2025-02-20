@@ -58,7 +58,7 @@ The **AI Chat WebAPI** feature extends the **AI Chat Services** feature by enabl
 
 ### Defining Chat Profiles Using Code
 
-To define chat profiles programmatically, create a migration class. Here’s an example demonstrating how to create a new chat profile:
+To define chat profiles programmatically, create a migration class. Here's an example demonstrating how to create a new chat profile:
 
 ```csharp
 public sealed class SystemDefinedAIProfileMigrations : DataMigration
@@ -110,7 +110,7 @@ public sealed class SystemDefinedAIProfileMigrations : DataMigration
 
 ### Extending AI Chat with Custom Functions
 
-You can extend AI chat functionality by adding custom functions. To create a custom function, inherit from `AIFunction` and register it as a service. Here’s an example of a custom function that retrieves weather information based on the user’s location:
+You can extend AI chat functionality by adding custom functions. To create a custom function, inherit from `AIFunction` and register it as a service. Here's an example of a custom function that retrieves weather information based on the user's location:
 
 ```csharp
 public sealed class GetWeatherFunction : AIFunction
@@ -168,7 +168,7 @@ Once the custom function is registered, you can add it to any AI profile. The cu
 
 ### Implementing Custom AI Sources
 
-To integrate custom AI sources, implement the `IAIProfileSource` interface. Here’s an example:
+To integrate custom AI sources, implement the `IAIProfileSource` interface. Here's an example:
 
 ```csharp
 public sealed class CustomProfileSource : IAIProfileSource
@@ -203,8 +203,7 @@ public sealed class CustomCompletionClient : NamedAICompletionClient
        IOptions<AIProviderOptions> providerOptions,
        IAIToolsService toolsService,
        IOptions<DefaultAIOptions> defaultOptions,
-       IAIDeploymentStore deploymentStore
-    ) : base(CustomProfileSource.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
+    ) : base(CustomProfileSource.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService)
     {
     }
 
