@@ -42,7 +42,7 @@
       they won't need to manually include the AI and SignalR packages. 
       This guarantees the module functions correctly and resolves the feature dependency.
     -->
-    <ProjectReference Include="..\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>
