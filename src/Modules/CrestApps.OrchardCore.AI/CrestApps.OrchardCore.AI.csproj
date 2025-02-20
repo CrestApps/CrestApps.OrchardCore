@@ -37,8 +37,4 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.SignalR.Core\CrestApps.OrchardCore.SignalR.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="ViewModels\Sessions\" />
-  </ItemGroup>
-
 </Project>

@@ -24,7 +24,7 @@ using OrchardCore.ResourceManagement;
 namespace CrestApps.OrchardCore.AI.Chat;
 
 [Feature(AIConstants.Feature.Chat)]
-public sealed class ChatStartup : StartupBase
+public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {

@@ -11,14 +11,12 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
-using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 
 [Admin]
-[Feature(AIConstants.Feature.Chat)]
 public sealed class AdminController : Controller
 {
     private readonly IAIProfileManager _profileManager;
