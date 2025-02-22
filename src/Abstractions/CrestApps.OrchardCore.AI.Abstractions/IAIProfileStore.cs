@@ -51,10 +51,10 @@ public interface IAIProfileStore
     /// <param name="pageSize">The number of profiles to retrieve per page.</param>
     /// <param name="context">The query context containing additional filtering, sorting, and search criteria. Can be null.</param>
     /// <returns>
-    /// A task representing the asynchronous operation. The task result is an <see cref="AIProfileResult"/> object,
+    /// A task representing the asynchronous operation. The task result is an <see cref="AIProfilesResult"/> object,
     /// which contains the list of AI chat profiles for the requested page, along with metadata for pagination (such as total count, etc.).
     /// </returns>
-    ValueTask<AIProfileResult> PageAsync(int page, int pageSize, AIProfileQueryContext context);
+    ValueTask<AIProfilesResult> PageAsync(int page, int pageSize, AIProfileQueryContext context);
 
     /// <summary>
     /// Asynchronously saves or updates the specified AI chat profile in the store.

@@ -41,11 +41,6 @@ public class AIProfile : Entity
     public string DeploymentId { get; set; }
 
     /// <summary>
-    /// Gets or sets the names of functions associated with this profile.
-    /// </summary>
-    public string[] FunctionNames { get; set; }
-
-    /// <summary>
     /// Gets or sets the type of title used in the session.
     /// </summary>
     public AISessionTitleType? TitleType { get; set; }
@@ -97,7 +92,6 @@ public class AIProfile : Entity
             Name = Name,
             DisplayText = DisplayText,
             Source = Source,
-            FunctionNames = FunctionNames,
             Type = Type,
             DeploymentId = DeploymentId,
             TitleType = TitleType,

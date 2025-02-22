@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.AI.Deployments.Steps
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIToolInstanceDeploymentStep>
+
+<h5>@T["AI Tool Instances"]</h5>
+
+@if (Model.Value.IncludeAll)
+{
+    <span class="badge text-bg-success">@T["All Instances"]</span>
+}
+else if (Model.Value.InstanceIds?.Length > 0)
+{
+    <span class="badge text-bg-warning">@T.Plural(Model.Value.InstanceIds.Length, "1 selected instance.", "{0} selected instances.", Model.Value.InstanceIds.Length)</span>
+}
+else
+{
+    <span class="badge text-bg-warning">@T["No selected instance."]</span>
+}

@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.AI.Models;
 
-public class AIProfileResult
+public class AIProfilesResult
 {
     public int Count { get; set; }
 

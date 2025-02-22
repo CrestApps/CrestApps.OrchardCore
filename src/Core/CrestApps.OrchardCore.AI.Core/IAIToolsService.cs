@@ -5,21 +5,23 @@ namespace CrestApps.OrchardCore.AI.Core;
 public interface IAIToolsService
 {
     /// <summary>
-    /// Retrieves a specific AI function by its name.
+    /// Retrieves an AI tool by either its instance ID or name.
     /// </summary>
-    /// <param name="name">The name of the AI function to retrieve.</param>
-    /// <returns>The <see cref="AIFunction"/> corresponding to the specified name, or <c>null</c> if no function is found.</returns>
-    AIFunction GetFunction(string name);
+    /// <param name="instanceIdOrToolName">The instance ID or name of the AI tool.</param>
+    /// <returns>A task that represents the asynchronous operation, containing the retrieved <see cref="AITool"/>.</returns>
+    ValueTask<AITool> GetAsync(string instanceIdOrToolName);
 
     /// <summary>
-    /// Retrieves all available AI functions.
+    /// Retrieves an AI tool by its instance ID.
     /// </summary>
-    /// <returns>An enumerable collection of <see cref="AIFunction"/> objects.</returns>
-    IEnumerable<AIFunction> GetFunctions();
+    /// <param name="id">The unique instance ID of the AI tool.</param>
+    /// <returns>A task that represents the asynchronous operation, containing the retrieved <see cref="AITool"/>.</returns>
+    ValueTask<AITool> GetByInstanceIdAsync(string id);
 
     /// <summary>
-    /// Retrieves all available AI tools.
+    /// Retrieves an AI tool by its name.
     /// </summary>
-    /// <returns>An enumerable collection of <see cref="AITool"/> objects.</returns>
-    IEnumerable<AITool> GetTools();
+    /// <param name="name">The name of the AI tool.</param>
+    /// <returns>A task that represents the asynchronous operation, containing the retrieved <see cref="AITool"/>.</returns>
+    ValueTask<AITool> GetByNameAsync(string name);
 }

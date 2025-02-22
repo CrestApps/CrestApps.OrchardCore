@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
@@ -18,7 +17,6 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IAIProfileStore _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
-    private readonly IAIToolsService _toolsService;
     private readonly IServiceProvider _serviceProvider;
     private readonly DefaultAIOptions _defaultAIOptions;
     private readonly AIProviderOptions _connectionOptions;
@@ -28,7 +26,6 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     public AIProfileDisplayDriver(
         IAIProfileStore profileStore,
         ILiquidTemplateManager liquidTemplateManager,
-        IAIToolsService toolsService,
         IServiceProvider serviceProvider,
         IOptions<AIProviderOptions> connectionOptions,
         IOptions<DefaultAIOptions> defaultAIOptions,
@@ -36,7 +33,6 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     {
         _profileStore = profileStore;
         _liquidTemplateManager = liquidTemplateManager;
-        _toolsService = toolsService;
         _serviceProvider = serviceProvider;
         _defaultAIOptions = defaultAIOptions.Value;
         _connectionOptions = connectionOptions.Value;
@@ -107,15 +103,6 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                 new SelectListItem(S["Utility"], nameof(AIProfileType.Utility)),
                 new SelectListItem(S["Template generated prompt"], nameof(AIProfileType.TemplatePrompt)),
             ];
-
-            model.Functions = _toolsService.GetFunctions()
-            .OrderBy(function => function.Metadata.Name)
-            .Select(function => new FunctionEntry
-            {
-                Name = function.Metadata.Name,
-                Description = function.Metadata.Description,
-                IsSelected = profile.FunctionNames?.Contains(function.Metadata.Name) ?? false,
-            }).ToArray();
         }).Location("Content:5");
 
         var parametersResult = Initialize<ProfileMetadataViewModel>("AIProfileParameters_Edit", model =>
@@ -203,20 +190,6 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         profile.TitleType = model.TitleType;
         profile.Type = model.ProfileType;
         profile.ConnectionName = connectionModel.ConnectionName;
-
-        var selectedFunctionNames = model.Functions?.Where(x => x.IsSelected).Select(x => x.Name).ToArray();
-
-        if (selectedFunctionNames is null || selectedFunctionNames.Length == 0)
-        {
-            profile.FunctionNames = [];
-        }
-        else
-        {
-            profile.FunctionNames = _toolsService.GetFunctions()
-                .Select(x => x.Metadata.Name)
-                .Intersect(selectedFunctionNames)
-                .ToArray();
-        }
 
         var parametersModel = new ProfileMetadataViewModel();
 

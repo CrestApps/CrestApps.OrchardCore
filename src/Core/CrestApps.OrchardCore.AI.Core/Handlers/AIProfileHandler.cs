@@ -151,13 +151,6 @@ public sealed class AIProfileHandler : AIProfileHandlerBase
             profile.WelcomeMessage = welcomeMessage;
         }
 
-        var functionNames = data[nameof(AIProfile.FunctionNames)]?.AsArray();
-
-        if (functionNames != null)
-        {
-            profile.FunctionNames = functionNames.Select(x => x.GetValue<string>()).ToArray();
-        }
-
         var promptTemplate = data[nameof(AIProfile.PromptTemplate)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(promptTemplate))

@@ -126,7 +126,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
                 await ProcessToolCallsAsync(prompts, data.Value.ToolCalls);
 
                 // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
-                data = await chatClient.CompleteChatAsync(prompts, GetOptions(context), cancellationToken);
+                data = await chatClient.CompleteChatAsync(prompts, await GetOptionsAsync(context), cancellationToken);
             }
 
             var role = new Microsoft.Extensions.AI.ChatRole(data.Value.Role.ToString().ToLowerInvariant());
@@ -264,7 +264,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
             {
                 await ProcessToolCallsAsync(prompts, update.ToolCallUpdates);
 
-                await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, GetOptions(context), cancellationToken))
+                await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, await GetOptionsAsync(context), cancellationToken))
                 {
                     var result = new Microsoft.Extensions.AI.StreamingChatCompletionUpdate
                     {
@@ -365,7 +365,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
 
         foreach (var toolCall in tollCalls)
         {
-            var function = _toolsService.GetFunction(toolCall.FunctionName);
+            var function = await _toolsService.GetAsync(toolCall.FunctionName) as Microsoft.Extensions.AI.AIFunction;
 
             if (function is null)
             {
@@ -397,7 +397,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
 
         foreach (var toolCall in tollCallsUpdate)
         {
-            var function = _toolsService.GetFunction(toolCall.FunctionName);
+            var function = await _toolsService.GetAsync(toolCall.FunctionName) as Microsoft.Extensions.AI.AIFunction;
 
             if (function is null)
             {
@@ -437,7 +437,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
             throw new InvalidOperationException();
         }
 
-        var chatOptions = GetOptions(context);
+        var chatOptions = await GetOptionsAsync(context);
 
         var indexSettings = await _azureAISearchIndexSettingsService.GetAsync(metadata.IndexName);
 
@@ -475,7 +475,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
         return chatOptions;
     }
 
-    private ChatCompletionOptions GetOptions(AICompletionContext context)
+    private async Task<ChatCompletionOptions> GetOptionsAsync(AICompletionContext context)
     {
         if (context.Profile is null || !context.Profile.TryGet<AIProfileMetadata>(out var metadata))
         {
@@ -491,18 +491,37 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
             MaxOutputTokenCount = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
         };
 
-        if (!context.DisableTools && context.Profile is not null)
+        if (!context.DisableTools && context.Profile is not null &&
+            (context?.Profile.TryGet<AIProfileFunctionInvocationMetadata>(out var funcMetadata) ?? false))
         {
-            foreach (var functionName in context.Profile.FunctionNames)
+            if (funcMetadata.Names is not null && funcMetadata.Names.Length > 0)
             {
-                var function = _toolsService.GetFunction(functionName);
-
-                if (function is null)
+                foreach (var name in funcMetadata.Names)
                 {
-                    continue;
-                }
+                    var tool = await _toolsService.GetByNameAsync(name);
 
-                chatOptions.Tools.Add(function.ToChatTool());
+                    if (tool is null || tool is not Microsoft.Extensions.AI.AIFunction function)
+                    {
+                        continue;
+                    }
+
+                    chatOptions.Tools.Add(function.ToChatTool());
+                }
+            }
+
+            if (funcMetadata.InstanceIds is not null && funcMetadata.InstanceIds.Length > 0)
+            {
+                foreach (var instanceId in funcMetadata.InstanceIds)
+                {
+                    var tool = await _toolsService.GetByInstanceIdAsync(instanceId);
+
+                    if (tool is null || tool is not Microsoft.Extensions.AI.AIFunction function)
+                    {
+                        continue;
+                    }
+
+                    chatOptions.Tools.Add(function.ToChatTool());
+                }
             }
         }
 

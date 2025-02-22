@@ -49,22 +49,6 @@
     </div>
 </div>
 
-@if (Model.Functions != null && Model.Functions.Length > 0)
-{
-    <h6>@T["Available functions"]</h6>
-    <div class="mb-3">
-        @for (var i = 0; i < Model.Functions.Length; i++)
-        {
-            <div class="form-check">
-                <input type="hidden" asp-for="Functions[i].Name" />
-                <input asp-for="Functions[i].IsSelected" type="checkbox" class="form-check-input">
-                <label class="form-check-label" asp-for="Functions[i].IsSelected">@Model.Functions[i].Name</label>
-                <span class="hint dashed">@Model.Functions[i].Description</span>
-            </div>
-        }
-    </div>
-}
-
 <style asp-name="codemirror"></style>
 <script asp-name="codemirror" at="Foot"></script>
 <script asp-src="~/OrchardCore.Markdown/Scripts/mde.mediatoolbar.min.js" debug-src="~/OrchardCore.Markdown/Scripts/mde.mediatoolbar.js" depends-on="jQuery" at="Foot"></script>

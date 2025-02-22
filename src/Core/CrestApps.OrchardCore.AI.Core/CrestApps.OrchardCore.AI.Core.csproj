@@ -21,4 +21,8 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.AI.Abstractions\CrestApps.OrchardCore.AI.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Tools\" />
+  </ItemGroup>
+
 </Project>

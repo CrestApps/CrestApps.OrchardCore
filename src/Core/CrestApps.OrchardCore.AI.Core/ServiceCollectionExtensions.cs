@@ -85,12 +85,4 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
-    public static IServiceCollection AddAITool<TTool>(this IServiceCollection services)
-        where TTool : AITool
-    {
-        services.AddTransient<AITool, TTool>();
-
-        return services;
-    }
 }
