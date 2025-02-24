@@ -1,5 +1,4 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -130,11 +129,11 @@ public sealed class DefaultAIProfileManager : IAIProfileManager
         return profile;
     }
 
-    public async ValueTask<AIProfileResult> PageAsync(int page, int pageSize, AIProfileQueryContext context)
+    public async ValueTask<PageResult<AIProfile>> PageAsync(int page, int pageSize, AIProfileQueryContext context)
     {
         var result = await _profileStore.PageAsync(page, pageSize, context);
 
-        foreach (var record in result.Profiles)
+        foreach (var record in result.Records)
         {
             await LoadAsync(record);
         }
@@ -166,7 +165,7 @@ public sealed class DefaultAIProfileManager : IAIProfileManager
         await _handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, _logger);
     }
 
-    public async ValueTask<AIProfileValidateResult> ValidateAsync(AIProfile profile)
+    public async ValueTask<ValidationResultDetails> ValidateAsync(AIProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 

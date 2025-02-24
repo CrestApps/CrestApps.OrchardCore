@@ -10,15 +10,15 @@ namespace CrestApps.OrchardCore.AI.Deployments.Drivers;
 
 internal sealed class AIProfileDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, AIProfileDeploymentStep>
 {
-    private readonly IAIProfileStore _openAIChatProfileStore;
+    private readonly IAIProfileStore _store;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileDeploymentStepDisplayDriver(
-        IAIProfileStore openAIChatProfileStore,
+        IAIProfileStore store,
         IStringLocalizer<AIProfileDeploymentStepDisplayDriver> stringLocalizer)
     {
-        _openAIChatProfileStore = openAIChatProfileStore;
+        _store = store;
         S = stringLocalizer;
     }
 
@@ -37,7 +37,7 @@ internal sealed class AIProfileDeploymentStepDisplayDriver : DisplayDriver<Deplo
         {
             model.IncludeAll = step.IncludeAll;
             model.ProfileNames = step.ProfileNames;
-            model.AllProfileNames = (await _openAIChatProfileStore.GetAllAsync()).Select(x => x.DisplayText ?? x.Name).ToArray();
+            model.AllProfileNames = (await _store.GetAllAsync()).Select(x => x.DisplayText ?? x.Name).ToArray();
         }).Location("Content");
     }
 

@@ -25,7 +25,7 @@ public sealed class AIProfileStep : NamedRecipeStepHandler
 
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
-        var model = context.Step.ToObject<OpenAIProfileStepModel>();
+        var model = context.Step.ToObject<AIProfileStepModel>();
         var tokens = model.Profiles.Cast<JsonObject>() ?? [];
 
         foreach (var token in tokens)
@@ -90,7 +90,7 @@ public sealed class AIProfileStep : NamedRecipeStepHandler
         }
     }
 
-    private sealed class OpenAIProfileStepModel
+    private sealed class AIProfileStepModel
     {
         public JsonArray Profiles { get; set; }
     }

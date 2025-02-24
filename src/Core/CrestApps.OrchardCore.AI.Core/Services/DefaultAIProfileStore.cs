@@ -93,16 +93,16 @@ public sealed class DefaultAIProfileStore : IAIProfileStore
         await _documentManager.UpdateAsync(document);
     }
 
-    public async ValueTask<AIProfileResult> PageAsync(int page, int pageSize, AIProfileQueryContext context)
+    public async ValueTask<PageResult<AIProfile>> PageAsync(int page, int pageSize, AIProfileQueryContext context)
     {
         var records = await LocateProfilesAsync(context);
 
         var skip = (page - 1) * pageSize;
 
-        return new AIProfileResult
+        return new PageResult<AIProfile>
         {
             Count = records.Count(),
-            Profiles = records.Skip(skip).Take(pageSize).ToArray()
+            Records = records.Skip(skip).Take(pageSize).ToArray()
         };
     }
 

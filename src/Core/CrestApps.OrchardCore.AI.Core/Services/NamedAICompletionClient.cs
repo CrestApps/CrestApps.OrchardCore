@@ -56,7 +56,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
     protected virtual bool SupportFunctionInvocation(AICompletionContext context, string modelName)
     {
-        return !context.DisableTools;
+        return !context.DisableTools && _defaultOptions.EnableFunctionInvocation;
     }
 
     protected virtual void ConfigureLogger(LoggingChatClient client)
@@ -102,7 +102,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         {
             var chatClient = BuildClient(connection, context, metadata, deploymentName);
 
-            var chatOptions = GetChatOptions(context, metadata, deploymentName);
+            var chatOptions = await GetChatOptionsAsync(context, metadata, deploymentName);
 
             return await chatClient.CompleteAsync(prompts, chatOptions, cancellationToken);
         }
@@ -147,7 +147,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         var chatClient = BuildClient(connection, context, metadata, deploymentName);
 
-        var chatOptions = GetChatOptions(context, metadata, deploymentName);
+        var chatOptions = await GetChatOptionsAsync(context, metadata, deploymentName);
 
         await foreach (var update in chatClient.CompleteStreamingAsync(prompts, chatOptions, cancellationToken))
         {
@@ -155,7 +155,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         }
     }
 
-    private ChatOptions GetChatOptions(AICompletionContext context, AIProfileMetadata metadata, string deploymentName)
+    private async Task<ChatOptions> GetChatOptionsAsync(AICompletionContext context, AIProfileMetadata metadata, string deploymentName)
     {
         var chatOptions = new ChatOptions()
         {
@@ -166,21 +166,38 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             MaxOutputTokens = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
         };
 
-        if (SupportFunctionInvocation(context, deploymentName) &&
-            context.Profile?.FunctionNames?.Length > 0)
+        if (SupportFunctionInvocation(context, deploymentName) && (context?.Profile.TryGet<AIProfileFunctionInvocationMetadata>(out var funcMetadata) ?? false))
         {
             chatOptions.Tools = [];
 
-            foreach (var functionName in context.Profile.FunctionNames)
+            if (funcMetadata.Names is not null && funcMetadata.Names.Length > 0)
             {
-                var function = _toolsService.GetFunction(functionName);
-
-                if (function is null)
+                foreach (var name in funcMetadata.Names)
                 {
-                    continue;
-                }
+                    var tool = await _toolsService.GetByNameAsync(name);
 
-                chatOptions.Tools.Add(function);
+                    if (tool is null)
+                    {
+                        continue;
+                    }
+
+                    chatOptions.Tools.Add(tool);
+                }
+            }
+
+            if (funcMetadata.InstanceIds is not null && funcMetadata.InstanceIds.Length > 0)
+            {
+                foreach (var instanceId in funcMetadata.InstanceIds)
+                {
+                    var tool = await _toolsService.GetByInstanceIdAsync(instanceId);
+
+                    if (tool is null)
+                    {
+                        continue;
+                    }
+
+                    chatOptions.Tools.Add(tool);
+                }
             }
 
             if (chatOptions.Tools.Count == 0)

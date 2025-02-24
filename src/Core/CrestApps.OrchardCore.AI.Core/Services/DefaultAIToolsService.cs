@@ -1,46 +1,57 @@
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
 public sealed class DefaultAIToolsService : IAIToolsService
 {
-    private readonly IEnumerable<AITool> _tools;
+    private readonly AIToolDefinitions _toolDefinitions;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IAIToolInstanceStore _toolInstanceStore;
 
-    private Dictionary<string, AIFunction> _functions;
-
-    public DefaultAIToolsService(IEnumerable<AITool> tools)
+    public DefaultAIToolsService(
+        AIToolDefinitions toolDefinitions,
+        IServiceProvider serviceProvider,
+        IAIToolInstanceStore aIToolInstanceStore)
     {
-        _tools = tools;
+        _toolDefinitions = toolDefinitions;
+        _serviceProvider = serviceProvider;
+        _toolInstanceStore = aIToolInstanceStore;
     }
 
-    public IEnumerable<AIFunction> GetFunctions()
-    {
-        LoadFunctions();
-
-        return _functions.Values;
-    }
-
-    public IEnumerable<AITool> GetTools()
-        => _tools;
-
-    public AIFunction GetFunction(string name)
+    public ValueTask<AITool> GetByNameAsync(string name)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
-        LoadFunctions();
-
-        return _functions.TryGetValue(name, out var function)
-            ? function
-            : null;
-    }
-
-    private void LoadFunctions()
-    {
-        if (_functions is not null)
+        if (_toolDefinitions.Tools.TryGetValue(name, out var definition))
         {
-            return;
+            return ValueTask.FromResult(ActivatorUtilities.CreateInstance(_serviceProvider, definition.ToolType) as AITool);
         }
 
-        _functions = _tools.Where(x => x is AIFunction).Cast<AIFunction>().ToDictionary(x => x.Metadata.Name);
+        return ValueTask.FromResult<AITool>(null);
+    }
+
+    public async ValueTask<AITool> GetByInstanceIdAsync(string id)
+    {
+        var instance = await _toolInstanceStore.FindByIdAsync(id);
+
+        if (instance is not null)
+        {
+            var source = _serviceProvider.GetKeyedService<IAIToolSource>(instance.Source);
+
+            if (source != null)
+            {
+                return await source.CreateAsync(instance);
+            }
+        }
+
+        return null;
+    }
+
+    public async ValueTask<AITool> GetAsync(string instanceIdOrToolName)
+    {
+        var tool = await GetByInstanceIdAsync(instanceIdOrToolName);
+
+        return tool ?? await GetByNameAsync(instanceIdOrToolName);
     }
 }

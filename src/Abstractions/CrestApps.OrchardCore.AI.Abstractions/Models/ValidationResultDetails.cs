@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public class AIDeploymentValidateResult
+public class ValidationResultDetails
 {
     private List<ValidationResult> _errors;
 
@@ -23,3 +23,4 @@ public class AIDeploymentValidateResult
         _errors.Add(error);
     }
 }
+

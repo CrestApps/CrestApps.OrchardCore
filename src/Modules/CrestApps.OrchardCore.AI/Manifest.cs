@@ -28,6 +28,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = AIConstants.Feature.AITools,
+    Name = "AI Tool Management",
+    Description = "Provides a way to manage AI Tool instances.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
     Id = AIConstants.Feature.ChatCore,
     Name = "AI Chat Services",
     Description = "Provides all the necessary services to enable chatting with AI models using profiles.",

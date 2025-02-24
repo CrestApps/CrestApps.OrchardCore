@@ -98,11 +98,11 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         return deployment;
     }
 
-    public async ValueTask<AIDeploymentResult> PageQueriesAsync(int page, int pageSize, QueryContext context)
+    public async ValueTask<PageResult<AIDeployment>> PageQueriesAsync(int page, int pageSize, QueryContext context)
     {
         var result = await _deploymentStore.PageAsync(page, pageSize, context);
 
-        foreach (var record in result.Deployments)
+        foreach (var record in result.Records)
         {
             await LoadAsync(record);
         }
@@ -177,7 +177,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         await _handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, _logger);
     }
 
-    public async ValueTask<AIDeploymentValidateResult> ValidateAsync(AIDeployment deployment)
+    public async ValueTask<ValidationResultDetails> ValidateAsync(AIDeployment deployment)
     {
         ArgumentNullException.ThrowIfNull(deployment);
 

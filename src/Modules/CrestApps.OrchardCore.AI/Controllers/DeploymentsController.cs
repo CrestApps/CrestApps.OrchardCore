@@ -91,12 +91,12 @@ public sealed class DeploymentsController : Controller
             ProviderNames = deploymentSources.Select(x => x.TechnicalName).Order(),
         };
 
-        foreach (var deployment in result.Deployments)
+        foreach (var record in result.Records)
         {
             model.Deployments.Add(new AIDeploymentEntry
             {
-                Deployment = deployment,
-                Shape = await _deploymentDisplayManager.BuildDisplayAsync(deployment, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+                Deployment = record,
+                Shape = await _deploymentDisplayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
             });
         }
 

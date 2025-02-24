@@ -32,6 +32,7 @@ public sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfileDe
 
             var profileInfo = new JsonObject()
             {
+                { "Id", profile.Id },
                 { "Source", profile.Source },
                 { "Name", profile.Name },
                 { "DisplayText", profile.DisplayText },
@@ -43,18 +44,6 @@ public sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfileDe
                 { "OwnerId", profile.OwnerId },
                 { "Author", profile.Author },
             };
-
-            if (profile.FunctionNames is not null && profile.FunctionNames.Length > 0)
-            {
-                var functionNames = new JsonArray();
-
-                foreach (var functionName in profile.FunctionNames)
-                {
-                    functionNames.Add(functionName);
-                }
-
-                profileInfo.Add("FunctionNames", functionNames);
-            }
 
             if (profile.TitleType.HasValue)
             {

@@ -16,8 +16,6 @@ public class EditProfileViewModel
 
     public AISessionTitleType? TitleType { get; set; }
 
-    public FunctionEntry[] Functions { get; set; }
-
     [BindNever]
     public IList<SelectListItem> TitleTypes { get; set; }
 

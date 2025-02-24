@@ -2,9 +2,9 @@ namespace CrestApps.OrchardCore.AI.Models;
 
 public sealed class ValidatedModelDeploymentContext : AIDeploymentContextBase
 {
-    public readonly AIDeploymentValidateResult Result;
+    public readonly ValidationResultDetails Result;
 
-    public ValidatedModelDeploymentContext(AIDeployment deployment, AIDeploymentValidateResult result)
+    public ValidatedModelDeploymentContext(AIDeployment deployment, ValidationResultDetails result)
         : base(deployment)
     {
         Result = result ?? new();
