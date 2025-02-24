@@ -42,10 +42,10 @@ public interface IAIDeploymentManager
     /// <param name="pageSize">The number of results to retrieve per page.</param>
     /// <param name="context">The context for the query operation, which may include filtering, sorting, and other criteria. Can be null.</param>
     /// <returns>
-    /// A ValueTask that represents the asynchronous operation. The result is a <see cref="AIDeploymentResult"/> containing
+    /// A ValueTask that represents the asynchronous operation. The result is a <see cref="PageResult<AIDeployment>"/> containing
     /// the paginated list of model deployments and any relevant metadata (such as total count, etc.).
     /// </returns>
-    ValueTask<AIDeploymentResult> PageQueriesAsync(int page, int pageSize, QueryContext context);
+    ValueTask<PageResult<AIDeployment>> PageQueriesAsync(int page, int pageSize, QueryContext context);
 
     /// <summary>
     /// Asynchronously retrieves a list of all model deployments.

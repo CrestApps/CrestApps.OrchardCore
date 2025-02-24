@@ -90,12 +90,12 @@ public sealed class ToolInstancesController : Controller
             SourceNames = toolSources.Select(toolSource => toolSource.Name).Order(),
         };
 
-        foreach (var instance in result.Instances)
+        foreach (var record in result.Records)
         {
             model.Instances.Add(new AIToolInstanceEntry
             {
-                Instance = instance,
-                Shape = await _instanceDisplayDriver.BuildDisplayAsync(instance, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+                Instance = record,
+                Shape = await _instanceDisplayDriver.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
             });
         }
 

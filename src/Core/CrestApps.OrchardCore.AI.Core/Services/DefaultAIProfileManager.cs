@@ -129,11 +129,11 @@ public sealed class DefaultAIProfileManager : IAIProfileManager
         return profile;
     }
 
-    public async ValueTask<AIProfilesResult> PageAsync(int page, int pageSize, AIProfileQueryContext context)
+    public async ValueTask<PageResult<AIProfile>> PageAsync(int page, int pageSize, AIProfileQueryContext context)
     {
         var result = await _profileStore.PageAsync(page, pageSize, context);
 
-        foreach (var record in result.Profiles)
+        foreach (var record in result.Records)
         {
             await LoadAsync(record);
         }

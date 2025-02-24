@@ -81,16 +81,16 @@ public sealed class DefaultAIDeploymentStore : IAIDeploymentStore
         await _documentManager.UpdateAsync(document);
     }
 
-    public async ValueTask<AIDeploymentResult> PageAsync(int page, int pageSize, QueryContext context)
+    public async ValueTask<PageResult<AIDeployment>> PageAsync(int page, int pageSize, QueryContext context)
     {
         var records = await LocateQueriesAsync(context);
 
         var skip = (page - 1) * pageSize;
 
-        return new AIDeploymentResult
+        return new PageResult<AIDeployment>
         {
             Count = records.Count(),
-            Deployments = records.Skip(skip).Take(pageSize).ToArray()
+            Records = records.Skip(skip).Take(pageSize).ToArray()
         };
     }
 

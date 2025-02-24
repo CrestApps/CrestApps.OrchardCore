@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -98,13 +98,13 @@ public sealed class DefaultAIToolInstanceManager : IAIToolInstanceManager
         return instance;
     }
 
-    public async ValueTask<AIToolInstancesResult> PageAsync(int page, int pageSize, QueryContext context)
+    public async ValueTask<PageResult<AIToolInstance>> PageAsync(int page, int pageSize, QueryContext context)
     {
         var result = await _store.PageAsync(page, pageSize, context);
 
-        foreach (var instance in result.Instances)
+        foreach (var record in result.Records)
         {
-            await LoadAsync(instance);
+            await LoadAsync(record);
         }
 
         return result;

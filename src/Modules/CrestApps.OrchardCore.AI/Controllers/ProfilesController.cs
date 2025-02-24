@@ -89,12 +89,12 @@ public sealed class ProfilesController : Controller
             SourceNames = profileSources.Select(x => x.TechnicalName).Order(),
         };
 
-        foreach (var profile in result.Profiles)
+        foreach (var record in result.Records)
         {
             model.Profiles.Add(new AIProfileEntry
             {
-                Profile = profile,
-                Shape = await _profileDisplayManager.BuildDisplayAsync(profile, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+                Profile = record,
+                Shape = await _profileDisplayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
             });
         }
 

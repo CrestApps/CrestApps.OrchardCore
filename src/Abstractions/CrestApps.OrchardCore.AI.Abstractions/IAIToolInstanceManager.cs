@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.AI;
@@ -34,7 +34,7 @@ public interface IAIToolInstanceManager
     /// <param name="pageSize">The number of results per page.</param>
     /// <param name="context">The context for the query operation, which may include filtering, sorting, etc.</param>
     /// <returns>A ValueTask that represents the asynchronous operation. The result is an AIToolTemplateResult containing the paginated query results.</returns>
-    ValueTask<AIToolInstancesResult> PageAsync(int page, int pageSize, QueryContext context);
+    ValueTask<PageResult<AIToolInstance>> PageAsync(int page, int pageSize, QueryContext context);
 
     /// <summary>
     /// Asynchronously saves (or updates) the specified AI chat profile.

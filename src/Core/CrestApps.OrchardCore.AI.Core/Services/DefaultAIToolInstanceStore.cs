@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using OrchardCore;
 using OrchardCore.Documents;
@@ -65,16 +65,16 @@ public sealed class DefaultAIToolInstanceStore : IAIToolInstanceStore
         await _documentManager.UpdateAsync(document);
     }
 
-    public async ValueTask<AIToolInstancesResult> PageAsync(int page, int pageSize, QueryContext context)
+    public async ValueTask<PageResult<AIToolInstance>> PageAsync(int page, int pageSize, QueryContext context)
     {
         var records = await LocateInstancesAsync(context);
 
         var skip = (page - 1) * pageSize;
 
-        return new AIToolInstancesResult
+        return new PageResult<AIToolInstance>
         {
             Count = records.Count(),
-            Instances = records.Skip(skip).Take(pageSize).ToArray()
+            Records = records.Skip(skip).Take(pageSize).ToArray()
         };
     }
 
