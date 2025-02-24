@@ -80,10 +80,10 @@ public interface IAIDeploymentManager
     /// </summary>
     /// <param name="profile">The model deployment to validate. Must not be null.</param>
     /// <returns>
-    /// A ValueTask that represents the asynchronous operation. The result is a <see cref="AIValidateResult"/>
+    /// A ValueTask that represents the asynchronous operation. The result is a <see cref="ValidationResultDetails"/>
     /// containing the validation results (e.g., success or failure and any associated errors).
     /// </returns>
-    ValueTask<AIValidateResult> ValidateAsync(AIDeployment profile);
+    ValueTask<ValidationResultDetails> ValidateAsync(AIDeployment profile);
 
     /// <summary>
     /// Asynchronously retrieves a list of model deployments for the specified provider.

@@ -177,7 +177,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         await _handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, _logger);
     }
 
-    public async ValueTask<AIValidateResult> ValidateAsync(AIDeployment deployment)
+    public async ValueTask<ValidationResultDetails> ValidateAsync(AIDeployment deployment)
     {
         ArgumentNullException.ThrowIfNull(deployment);
 

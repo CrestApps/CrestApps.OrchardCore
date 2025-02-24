@@ -56,5 +56,5 @@ public interface IAIToolInstanceManager
     /// </summary>
     /// <param name="template">The profile to be validated.</param>
     /// <returns>A ValueTask that represents the asynchronous operation. The result is an AIValidateResult, which indicates whether the profile is valid or not.</returns>
-    ValueTask<AIValidateResult> ValidateAsync(AIToolInstance template);
+    ValueTask<ValidationResultDetails> ValidateAsync(AIToolInstance template);
 }

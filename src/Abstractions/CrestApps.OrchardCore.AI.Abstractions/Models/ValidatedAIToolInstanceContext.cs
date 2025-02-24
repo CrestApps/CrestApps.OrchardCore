@@ -2,11 +2,11 @@ namespace CrestApps.OrchardCore.AI.Models;
 
 public sealed class ValidatedAIToolInstanceContext : AIToolInstanceContextBase
 {
-    public AIValidateResult Result { get; } = new();
+    public ValidationResultDetails Result { get; }
 
-    public ValidatedAIToolInstanceContext(AIToolInstance instance, AIValidateResult result)
+    public ValidatedAIToolInstanceContext(AIToolInstance instance, ValidationResultDetails result)
         : base(instance)
     {
-        Result = result ?? new AIValidateResult();
+        Result = result ?? new ValidationResultDetails();
     }
 }

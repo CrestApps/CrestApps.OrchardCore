@@ -63,7 +63,7 @@ public interface IAIProfileManager
     /// </summary>
     /// <param name="profile">The profile to be validated.</param>
     /// <returns>A ValueTask that represents the asynchronous operation. The result is an AIChatProfileValidateResult, which indicates whether the profile is valid or not.</returns>
-    ValueTask<AIValidateResult> ValidateAsync(AIProfile profile);
+    ValueTask<ValidationResultDetails> ValidateAsync(AIProfile profile);
 
     /// <summary>
     /// Asynchronously retrieves a collection of AI chat profiles of the specified type.

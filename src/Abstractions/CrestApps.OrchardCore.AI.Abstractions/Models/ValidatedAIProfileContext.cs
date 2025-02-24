@@ -2,9 +2,9 @@ namespace CrestApps.OrchardCore.AI.Models;
 
 public sealed class ValidatedAIProfileContext : AIProfileContextBase
 {
-    public readonly AIValidateResult Result;
+    public readonly ValidationResultDetails Result;
 
-    public ValidatedAIProfileContext(AIProfile profile, AIValidateResult result)
+    public ValidatedAIProfileContext(AIProfile profile, ValidationResultDetails result)
         : base(profile)
     {
         Result = result ?? new();

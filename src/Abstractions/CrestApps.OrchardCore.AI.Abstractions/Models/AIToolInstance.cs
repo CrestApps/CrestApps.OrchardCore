@@ -34,4 +34,3 @@ public class AIToolInstance : Entity
         return DisplayText;
     }
 }
-

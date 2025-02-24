@@ -134,7 +134,7 @@ public sealed class DefaultAIToolInstanceManager : IAIToolInstanceManager
         await _handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, _logger);
     }
 
-    public async ValueTask<AIValidateResult> ValidateAsync(AIToolInstance instance)
+    public async ValueTask<ValidationResultDetails> ValidateAsync(AIToolInstance instance)
     {
         ArgumentNullException.ThrowIfNull(instance);
 

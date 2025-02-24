@@ -165,7 +165,7 @@ public sealed class DefaultAIProfileManager : IAIProfileManager
         await _handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, _logger);
     }
 
-    public async ValueTask<AIValidateResult> ValidateAsync(AIProfile profile)
+    public async ValueTask<ValidationResultDetails> ValidateAsync(AIProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
