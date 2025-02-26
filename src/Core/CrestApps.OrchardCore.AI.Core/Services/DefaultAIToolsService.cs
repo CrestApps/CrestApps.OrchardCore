@@ -1,5 +1,6 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
@@ -10,11 +11,11 @@ public sealed class DefaultAIToolsService : IAIToolsService
     private readonly IAIToolInstanceStore _toolInstanceStore;
 
     public DefaultAIToolsService(
-        AIToolDefinitions toolDefinitions,
+        IOptions<AIToolDefinitions> toolDefinitions,
         IServiceProvider serviceProvider,
         IAIToolInstanceStore aIToolInstanceStore)
     {
-        _toolDefinitions = toolDefinitions;
+        _toolDefinitions = toolDefinitions.Value;
         _serviceProvider = serviceProvider;
         _toolInstanceStore = aIToolInstanceStore;
     }

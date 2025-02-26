@@ -21,7 +21,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<AzureOpenAIDeploymentsService>();
 
         services
-            .AddAIDeploymentProvider<AzureAIDeploymentProvider>(AzureOpenAIConstants.ProviderName)
+            .AddAIDeploymentProvider(AzureOpenAIConstants.ProviderName, o =>
+            {
+                o.DisplayName = "Azure OpenAI";
+                o.Description = "Azure OpenAI AI deployments.";
+            })
             .AddScoped<AzureCognitiveServicesAccountServices>();
     }
 }
@@ -40,7 +44,11 @@ public sealed class StandardStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIProfile<AzureProfileSource, AzureOpenAICompletionClient>(AzureProfileSource.ImplementationName);
+        services.AddAIProfile<AzureOpenAICompletionClient>(AzureOpenAIConstants.StandardImplementationName, AzureOpenAIConstants.ProviderName, o =>
+        {
+            o.DisplayName = "Azure OpenAI";
+            o.Description = "Provides AI profiles using Azure OpenAI models.";
+        });
     }
 }
 
@@ -49,7 +57,11 @@ public sealed class AISearchStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIProfile<AzureAISearchProfileSource, AzureAISearchCompletionClient>(AzureAISearchProfileSource.ImplementationName);
+        services.AddAIProfile<AzureAISearchCompletionClient>(AzureOpenAIConstants.AISearchImplementationName, AzureOpenAIConstants.ProviderName, o =>
+        {
+            o.DisplayName = "Azure OpenAI with Azure AI Search";
+            o.Description = "Provides AI profiles using Azure OpenAI models with your data.";
+        });
         services.AddDisplayDriver<AIProfile, AzureOpenAIProfileSearchAIDisplayDriver>();
         services.AddScoped<IAIProfileHandler, AzureAISearchAIProfileHandler>();
     }

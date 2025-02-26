@@ -8,6 +8,10 @@ public static class AzureOpenAIConstants
 
     public const string ProviderName = "Azure";
 
+    public const string StandardImplementationName = "Azure";
+
+    public const string AISearchImplementationName = "AzureAISearch";
+
     public static class Feature
     {
         public const string Area = "CrestApps.OrchardCore.OpenAI.Azure";

@@ -3,7 +3,6 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 
@@ -26,7 +25,7 @@ public sealed class AzureAISearchAIProfileHandler : AIProfileHandlerBase
 
     public override Task ValidatedAsync(ValidatedAIProfileContext context)
     {
-        if (context.Profile?.Source != AzureAISearchProfileSource.ImplementationName)
+        if (context.Profile?.Source != AzureOpenAIConstants.AISearchImplementationName)
         {
             return Task.CompletedTask;
         }
@@ -43,7 +42,7 @@ public sealed class AzureAISearchAIProfileHandler : AIProfileHandlerBase
 
     private static Task PopulateAsync(AIProfile profile, JsonNode data)
     {
-        if (profile.Source != AzureAISearchProfileSource.ImplementationName)
+        if (profile.Source != AzureOpenAIConstants.AISearchImplementationName)
         {
             return Task.CompletedTask;
         }

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.OpenAI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -19,12 +20,12 @@ public sealed class OpenAICompletionClient : DeploymentAwareAICompletionClient
        IAIToolsService toolsService,
        IOptions<DefaultAIOptions> defaultOptions,
        IAIDeploymentStore deploymentStore
-       ) : base(OpenAIProfileSource.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
+       ) : base(OpenAIConstants.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
     {
     }
 
     protected override string ProviderName
-        => OpenAIProfileSource.ProviderTechnicalName;
+        => OpenAIConstants.ProviderName;
 
     protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string deploymentName)
     {

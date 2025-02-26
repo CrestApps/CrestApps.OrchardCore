@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Modules;
 
@@ -12,6 +12,7 @@ public sealed class DefaultAIProfileManager : IAIProfileManager
     private readonly IAIProfileStore _profileStore;
     private readonly IAIProfileManagerSession _profileManagerSession;
     private readonly IServiceProvider _serviceProvider;
+    private readonly AICompletionOptions _options;
     private readonly IEnumerable<IAIProfileHandler> _handlers;
     private readonly ILogger _logger;
 
@@ -19,12 +20,14 @@ public sealed class DefaultAIProfileManager : IAIProfileManager
         IAIProfileStore profileStore,
         IAIProfileManagerSession profileManagerSession,
         IServiceProvider serviceProvider,
+        IOptions<AICompletionOptions> options,
         IEnumerable<IAIProfileHandler> handlers,
         ILogger<DefaultAIProfileManager> logger)
     {
         _profileStore = profileStore;
         _profileManagerSession = profileManagerSession;
         _serviceProvider = serviceProvider;
+        _options = options.Value;
         _handlers = handlers;
         _logger = logger;
     }
@@ -95,9 +98,7 @@ public sealed class DefaultAIProfileManager : IAIProfileManager
     {
         ArgumentException.ThrowIfNullOrEmpty(source);
 
-        var profileSource = _serviceProvider.GetKeyedService<IAIProfileSource>(source);
-
-        if (profileSource == null)
+        if (!_options.ProfileSources.TryGetValue(source, out var profileSource))
         {
             _logger.LogWarning("Unable to find a profile-source that can handle the source '{Source}'.", source);
 
@@ -133,9 +134,9 @@ public sealed class DefaultAIProfileManager : IAIProfileManager
     {
         var result = await _profileStore.PageAsync(page, pageSize, context);
 
-        foreach (var record in result.Records)
+        foreach (var profile in result.Records)
         {
-            await LoadAsync(record);
+            await LoadAsync(profile);
         }
 
         return result;

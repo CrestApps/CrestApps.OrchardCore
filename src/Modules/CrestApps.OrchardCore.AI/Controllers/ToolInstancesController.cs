@@ -271,11 +271,6 @@ public sealed class ToolInstancesController : Controller
             return Forbid();
         }
 
-        if (string.IsNullOrEmpty(id))
-        {
-            return NotFound();
-        }
-
         var instance = await _templateManager.FindByIdAsync(id);
 
         if (instance == null)

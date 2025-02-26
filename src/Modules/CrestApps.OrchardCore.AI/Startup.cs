@@ -29,6 +29,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.AI;
@@ -38,6 +39,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAICoreServices();
+        services.AddPermissionProvider<AIPermissionsProvider>();
         services.Configure<TemplateOptions>(o =>
         {
             o.MemberAccessStrategy.Register<AIProfile>();
@@ -64,6 +66,7 @@ public sealed class DeploymentsStartup : StartupBase
     {
         services
             .AddAIDeploymentServices()
+            .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
             .AddNavigationProvider<AIDeploymentAdminMenu>();
     }
@@ -163,15 +166,12 @@ public sealed class AIToolsStartup : StartupBase
             options.EnableFunctionInvocation = true;
         });
 
-        services.AddSingleton<AIToolDefinitions>();
-        services.AddScoped<IAIToolInstanceStore, DefaultAIToolInstanceStore>();
-        services.AddScoped<IAIToolInstanceManager, DefaultAIToolInstanceManager>();
-        services.AddScoped<IAIToolInstanceHandler, AIToolInstanceHandler>();
         services.AddDisplayDriver<AIToolInstance, InvokableToolMetadataDisplayDriver>();
         services.AddDisplayDriver<AIToolInstance, AIProfileToolMetadataDisplayDriver>();
         services.AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>();
         services.AddDisplayDriver<AIProfile, AIProfileToolsDisplayDriver>();
         services.AddNavigationProvider<AIToolInstancesAdminMenu>();
+        services.AddPermissionProvider<AIToolPermissionProvider>();
 
         services.AddAIToolSource<ProfileAwareAIToolSource>(ProfileAwareAIToolSource.ToolSource);
     }

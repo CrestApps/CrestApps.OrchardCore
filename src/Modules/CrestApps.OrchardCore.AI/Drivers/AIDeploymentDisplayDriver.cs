@@ -1,3 +1,4 @@
+using System.Linq;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
+using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
@@ -46,7 +48,7 @@ public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 
             if (_providerOptions.Providers.TryGetValue(deployment.ProviderName, out var providerOptions))
             {
-                model.Connections = providerOptions.Connections.Select(x => new SelectListItem(x.Key, x.Key)).ToArray();
+                model.Connections = providerOptions.Connections.Select(x => new SelectListItem(x.Value.GetValue<string>("ConnectionNameAlias") ?? x.Key, x.Key)).ToArray();
 
                 if (string.IsNullOrEmpty(model.ConnectionName) && providerOptions.Connections.Count == 1)
                 {
@@ -86,13 +88,14 @@ public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             }
             else
             {
-                if (!provider.Connections.TryGetValue(model.ConnectionName, out _))
+                if (!provider.Connections.TryGetValue(model.ConnectionName, out var connection))
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["Invalid connection name provided."]);
                 }
                 else
                 {
                     deployment.ConnectionName = model.ConnectionName;
+                    deployment.ConnectionNameAlias = connection.GetValue<string>("ConnectionNameAlias");
                 }
             }
         }

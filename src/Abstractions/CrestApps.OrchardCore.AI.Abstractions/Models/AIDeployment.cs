@@ -13,6 +13,8 @@ public class AIDeployment : Entity
 
     public string ConnectionName { get; set; }
 
+    public string ConnectionNameAlias { get; set; }
+
     public DateTime CreatedUtc { get; set; }
 
     public string Author { get; set; }
@@ -27,6 +29,7 @@ public class AIDeployment : Entity
             Name = Name,
             ProviderName = ProviderName,
             ConnectionName = ConnectionName,
+            ConnectionNameAlias = ConnectionNameAlias,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,

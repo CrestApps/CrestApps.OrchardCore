@@ -1,6 +1,6 @@
-﻿namespace CrestApps.OrchardCore.AI;
+namespace CrestApps.OrchardCore.AI;
 
-public class AIToolDefinitionEntry
+public sealed class AIToolDefinitionEntry
 {
     public AIToolDefinitionEntry(Type type)
     {

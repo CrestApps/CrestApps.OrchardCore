@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Mvc.Utilities;
 using OrchardCore.Navigation;
 
@@ -10,18 +11,17 @@ namespace CrestApps.OrchardCore.AI.Chat.Services;
 public sealed class ChatAdminMenu : AdminNavigationProvider
 {
     private readonly IAIProfileStore _profileStore;
+    private readonly AICompletionOptions _options;
 
     internal readonly IStringLocalizer S;
 
-    private readonly HashSet<string> _activeProfileSources;
-
     public ChatAdminMenu(
         IAIProfileStore profileStore,
-        IEnumerable<IAIProfileSource> profileSources,
+        IOptions<AICompletionOptions> options,
         IStringLocalizer<ChatAdminMenu> stringLocalizer)
     {
         _profileStore = profileStore;
-        _activeProfileSources = profileSources.Select(x => x.TechnicalName).ToHashSet();
+        _options = options.Value;
         S = stringLocalizer;
     }
 
@@ -37,7 +37,7 @@ public sealed class ChatAdminMenu : AdminNavigationProvider
                {
                    var settings = profile.GetSettings<AIChatProfileSettings>();
 
-                   if (!settings.IsOnAdminMenu || !_activeProfileSources.Contains(profile.Source))
+                   if (!settings.IsOnAdminMenu || !_options.ProfileSources.ContainsKey(profile.Source))
                    {
                        continue;
                    }

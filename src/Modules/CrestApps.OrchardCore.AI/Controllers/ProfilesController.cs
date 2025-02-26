@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -26,7 +25,7 @@ public sealed class ProfilesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIProfile> _profileDisplayManager;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly AICompletionOptions _aiOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -37,7 +36,7 @@ public sealed class ProfilesController : Controller
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIProfile> profileDisplayManager,
-        IServiceProvider serviceProvider,
+        IOptions<AICompletionOptions> aiOptions,
         INotifier notifier,
         IHtmlLocalizer<ProfilesController> htmlLocalizer,
         IStringLocalizer<ProfilesController> stringLocalizer)
@@ -46,7 +45,7 @@ public sealed class ProfilesController : Controller
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _profileDisplayManager = profileDisplayManager;
-        _serviceProvider = serviceProvider;
+        _aiOptions = aiOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -56,7 +55,6 @@ public sealed class ProfilesController : Controller
     public async Task<IActionResult> Index(
         AIProfileOptions options,
         PagerParameters pagerParameters,
-        [FromServices] IEnumerable<IAIProfileSource> profileSources,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
     {
@@ -86,7 +84,7 @@ public sealed class ProfilesController : Controller
             Profiles = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            SourceNames = profileSources.Select(x => x.TechnicalName).Order(),
+            SourceNames = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
         };
 
         foreach (var record in result.Records)
@@ -126,9 +124,7 @@ public sealed class ProfilesController : Controller
             return Forbid();
         }
 
-        var provider = _serviceProvider.GetKeyedService<IAIProfileSource>(source);
-
-        if (provider == null)
+        if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
         {
             await _notifier.ErrorAsync(H["Unable to find a profile-source that can handle the source '{Source}'.", source]);
 
@@ -163,9 +159,7 @@ public sealed class ProfilesController : Controller
             return Forbid();
         }
 
-        var provider = _serviceProvider.GetKeyedService<IAIProfileSource>(source);
-
-        if (provider == null)
+        if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
         {
             await _notifier.ErrorAsync(H["Unable to find a profile-source that can handle the source '{Source}'.", source]);
 
@@ -268,11 +262,6 @@ public sealed class ProfilesController : Controller
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
             return Forbid();
-        }
-
-        if (string.IsNullOrEmpty(id))
-        {
-            return NotFound();
         }
 
         var profile = await _profileManager.FindByIdAsync(id);

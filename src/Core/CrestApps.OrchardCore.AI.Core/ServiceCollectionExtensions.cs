@@ -11,17 +11,6 @@ namespace CrestApps.OrchardCore.AI.Core;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddAIDeploymentServices(this IServiceCollection services)
-    {
-        services
-            .AddScoped<IAIDeploymentStore, DefaultAIDeploymentStore>()
-            .AddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>()
-            .AddScoped<IAIDeploymentHandler, AIDeploymentHandler>()
-            .AddPermissionProvider<AIDeploymentProvider>();
-
-        return services;
-    }
-
     public static IServiceCollection AddAICoreServices(this IServiceCollection services)
     {
         services
@@ -36,40 +25,43 @@ public static class ServiceCollectionExtensions
             .AddScoped<IAuthorizationHandler, AIProfileAuthenticationHandler>()
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.CollectionName));
 
+        services
+            .AddScoped<IAIToolInstanceStore, DefaultAIToolInstanceStore>()
+            .AddScoped<IAIToolInstanceManager, DefaultAIToolInstanceManager>()
+            .AddScoped<IAIToolInstanceHandler, AIToolInstanceHandler>();
+
         return services;
     }
 
-    public static IServiceCollection AddAIProfile<TSource, TClient>(this IServiceCollection services, string implementationName)
-        where TSource : class, IAIProfileSource
+    public static IServiceCollection AddAIDeploymentServices(this IServiceCollection services)
+    {
+        services
+            .AddScoped<IAIDeploymentStore, DefaultAIDeploymentStore>()
+            .AddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>()
+            .AddScoped<IAIDeploymentHandler, AIDeploymentHandler>()
+            .AddPermissionProvider<AIDeploymentProvider>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddAIProfile<TClient>(this IServiceCollection services, string implementationName, string providerName, Action<AIProfileProviderEntry> configure = null)
         where TClient : class, IAICompletionClient
     {
         return services
-            .AddAIProfileSource<TSource>(implementationName)
+            .Configure<AICompletionOptions>(o =>
+            {
+                o.AddProfileSource(implementationName, providerName, configure);
+            })
             .AddAICompletionClient<TClient>(implementationName);
     }
 
-    public static IServiceCollection AddAIProfileSource<TSource>(this IServiceCollection services, string sourceKey)
-         where TSource : class, IAIProfileSource
+    public static IServiceCollection AddAIDeploymentProvider(this IServiceCollection services, string providerName, Action<AIDeploymentProviderEntry> configure = null)
     {
-        ArgumentNullException.ThrowIfNull(sourceKey);
-
         services
-            .AddScoped<TSource>()
-            .AddScoped<IAIProfileSource>(sp => sp.GetService<TSource>())
-            .AddKeyedScoped<IAIProfileSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
-
-        return services;
-    }
-
-    public static IServiceCollection AddAIDeploymentProvider<TProvider>(this IServiceCollection services, string providerKey)
-        where TProvider : class, IAIDeploymentProvider
-    {
-        ArgumentNullException.ThrowIfNull(providerKey);
-
-        services
-            .AddScoped<TProvider>()
-            .AddScoped<IAIDeploymentProvider>(sp => sp.GetService<TProvider>())
-            .AddKeyedScoped<IAIDeploymentProvider>(providerKey, (sp, key) => sp.GetService<TProvider>());
+            .Configure<AICompletionOptions>(o =>
+            {
+                o.AddDeploymentProvider(providerName, configure);
+            });
 
         return services;
     }
@@ -77,11 +69,12 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAICompletionClient<TClient>(this IServiceCollection services, string clientName)
         where TClient : class, IAICompletionClient
     {
-        ArgumentNullException.ThrowIfNull(clientName);
-
+        services.Configure<AICompletionOptions>(o =>
+        {
+            o.AddClient<TClient>(clientName);
+        });
         services.TryAddScoped<TClient>();
-        services.TryAddScoped<IAICompletionClient>(sp => sp.GetService<TClient>());
-        services.AddKeyedScoped<IAICompletionClient>(clientName, (sp, key) => sp.GetService<TClient>());
+        services.AddScoped<IAICompletionClient>(sp => sp.GetService<TClient>()); ;
 
         return services;
     }

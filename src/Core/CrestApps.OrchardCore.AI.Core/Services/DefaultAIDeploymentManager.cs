@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Modules;
 
@@ -11,17 +12,20 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
 {
     private readonly IAIDeploymentStore _deploymentStore;
     private readonly IServiceProvider _serviceProvider;
+    private readonly AICompletionOptions _completionOptions;
     private readonly IEnumerable<IAIDeploymentHandler> _handlers;
     private readonly ILogger _logger;
 
     public DefaultAIDeploymentManager(
         IAIDeploymentStore deploymentStore,
         IServiceProvider serviceProvider,
+        IOptions<AICompletionOptions> completionOptions,
         IEnumerable<IAIDeploymentHandler> handlers,
         ILogger<DefaultAIDeploymentManager> logger)
     {
         _deploymentStore = deploymentStore;
         _serviceProvider = serviceProvider;
+        _completionOptions = completionOptions.Value;
         _handlers = handlers;
         _logger = logger;
     }
@@ -64,9 +68,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
 
-        var deploymentSource = _serviceProvider.GetKeyedService<IAIDeploymentProvider>(providerName);
-
-        if (deploymentSource == null)
+        if (!_completionOptions.Deployments.TryGetValue(providerName, out var deploymentType))
         {
             _logger.LogWarning("Unable to find a deployment-source that can handle the source '{ProviderName}'.", providerName);
 

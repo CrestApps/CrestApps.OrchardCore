@@ -15,7 +15,7 @@ public sealed class AIProvider
 
     public string DefaultDeploymentName { get; set; }
 
-    public IReadOnlyDictionary<string, AIProviderConnection> Connections { get; set; }
+    public IDictionary<string, AIProviderConnection> Connections { get; set; }
 }
 
 [JsonConverter(typeof(AIProviderConnectionConverter))]
