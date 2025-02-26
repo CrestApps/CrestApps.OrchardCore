@@ -20,7 +20,7 @@ public sealed class AzureOpenAICompletionClient : DeploymentAwareAICompletionCli
        IAIToolsService toolsService,
        IOptions<DefaultAIOptions> defaultOptions,
        IAIDeploymentStore deploymentStore
-       ) : base(AzureProfileSource.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
+       ) : base(AzureOpenAIConstants.StandardImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
     {
     }
 

@@ -2,25 +2,25 @@ using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.AI;
 
-public class AIToolDefinitions
+public sealed class AIToolDefinitions
 {
-    private readonly Dictionary<string, AIToolDefinitionEntry> _tools = [];
+    private readonly Dictionary<string, AIToolDefinitionEntry> _tools = new(StringComparer.OrdinalIgnoreCase);
 
     public IReadOnlyDictionary<string, AIToolDefinitionEntry> Tools => _tools;
 
     internal void Add<TTool>(string name, Action<AIToolDefinitionEntry> configure = null)
         where TTool : AITool
     {
-        if (!_tools.TryGetValue(name, out var definition))
+        if (!_tools.TryGetValue(name, out var entry))
         {
-            definition = new AIToolDefinitionEntry(typeof(TTool));
+            entry = new AIToolDefinitionEntry(typeof(TTool));
         }
 
         if (configure != null)
         {
-            configure(definition);
+            configure(entry);
         }
 
-        _tools[name] = definition;
+        _tools[name] = entry;
     }
 }

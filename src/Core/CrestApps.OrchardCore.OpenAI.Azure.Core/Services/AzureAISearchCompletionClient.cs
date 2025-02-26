@@ -53,7 +53,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
     }
 
     public string Name
-        => AzureAISearchProfileSource.ImplementationName;
+        => AzureOpenAIConstants.AISearchImplementationName;
 
     public async Task<Microsoft.Extensions.AI.ChatCompletion> CompleteAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {

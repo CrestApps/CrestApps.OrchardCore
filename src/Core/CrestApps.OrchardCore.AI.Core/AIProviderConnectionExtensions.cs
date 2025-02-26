@@ -8,6 +8,24 @@ public static class AIProviderConnectionExtensions
     public static string GetApiKey(this AIProviderConnection entry, bool throwException = true)
         => entry.GetStringValue("ApiKey", throwException);
 
+    public static Uri GetEndpoint(this AIProviderConnection entry, bool throwException = true)
+    {
+        var endpoint = entry.GetStringValue("Endpoint", throwException);
+
+        Uri uri = null;
+
+        if (throwException)
+        {
+            uri = new Uri(endpoint);
+        }
+        else if (!string.IsNullOrEmpty(endpoint))
+        {
+            Uri.TryCreate(endpoint, UriKind.Absolute, out uri);
+        }
+
+        return uri;
+    }
+
     public static string GetDefaultDeploymentName(this AIProviderConnection entry, bool throwException = true)
         => entry.GetStringValue("DefaultDeploymentName", throwException);
 
@@ -24,6 +42,10 @@ public static class AIProviderConnectionExtensions
             else if (value is string)
             {
                 stringValue = value as string;
+            }
+            else
+            {
+                stringValue = value?.ToString();
             }
 
             if (throwException && string.IsNullOrWhiteSpace(stringValue))

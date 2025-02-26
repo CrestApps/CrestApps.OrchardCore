@@ -20,3 +20,15 @@ using OrchardCore.Modules.Manifest;
         AIConstants.Feature.Deployments,
     ]
 )]
+
+[assembly: Feature(
+    Id = OpenAIConstants.Feature.Settings,
+    Name = "OpenAI Compatible Chat",
+    Description = "Provides a way to interact with any provider that is compatible with OpenAI.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+        AIConstants.Feature.Deployments,
+    ]
+)]

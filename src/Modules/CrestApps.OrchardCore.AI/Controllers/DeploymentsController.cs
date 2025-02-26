@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -25,6 +24,7 @@ public sealed class DeploymentsController : Controller
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly AICompletionOptions _completionOptions;
     private readonly IDisplayManager<AIDeployment> _deploymentDisplayManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly AIProviderOptions _connectionOptions;
@@ -37,6 +37,7 @@ public sealed class DeploymentsController : Controller
         IAIDeploymentManager deploymentManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
+        IOptions<AICompletionOptions> completionOptions,
         IDisplayManager<AIDeployment> deploymentDisplayManager,
         IServiceProvider serviceProvider,
         IOptions<AIProviderOptions> connectionOptions,
@@ -47,6 +48,7 @@ public sealed class DeploymentsController : Controller
         _deploymentManager = deploymentManager;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
+        _completionOptions = completionOptions.Value;
         _deploymentDisplayManager = deploymentDisplayManager;
         _serviceProvider = serviceProvider;
         _connectionOptions = connectionOptions.Value;
@@ -59,7 +61,6 @@ public sealed class DeploymentsController : Controller
     public async Task<IActionResult> Index(
         AIDeploymentOptions options,
         PagerParameters pagerParameters,
-        [FromServices] IEnumerable<IAIDeploymentProvider> deploymentSources,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
     {
@@ -88,7 +89,7 @@ public sealed class DeploymentsController : Controller
             Deployments = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            ProviderNames = deploymentSources.Select(x => x.TechnicalName).Order(),
+            ProviderNames = _completionOptions.Deployments.Select(x => x.Key).Order(),
         };
 
         foreach (var record in result.Records)
@@ -133,11 +134,9 @@ public sealed class DeploymentsController : Controller
             return Forbid();
         }
 
-        var provider = _serviceProvider.GetKeyedService<IAIDeploymentProvider>(providerName);
-
-        if (provider == null)
+        if (!_completionOptions.Deployments.TryGetValue(providerName, out var provider))
         {
-            await _notifier.ErrorAsync(H["Unable to find a provider with the name '{ProviderName}'.", providerName]);
+            await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -170,11 +169,9 @@ public sealed class DeploymentsController : Controller
             return Forbid();
         }
 
-        var provider = _serviceProvider.GetKeyedService<IAIDeploymentProvider>(providerName);
-
-        if (provider == null)
+        if (!_completionOptions.Deployments.TryGetValue(providerName, out var provider))
         {
-            await _notifier.ErrorAsync(H["Unable to find a deployment-source that can handle the source '{ProviderName}'.", providerName]);
+            await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
 
             return RedirectToAction(nameof(Index));
         }

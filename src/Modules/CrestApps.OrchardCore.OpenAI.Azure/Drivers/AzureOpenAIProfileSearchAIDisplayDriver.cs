@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement.Handlers;
@@ -22,7 +22,7 @@ public sealed class AzureOpenAIProfileSearchAIDisplayDriver : DisplayDriver<AIPr
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
     {
-        if (profile.Source is null || profile.Source != AzureAISearchProfileSource.ImplementationName)
+        if (profile.Source is null || profile.Source != AzureOpenAIConstants.AISearchImplementationName)
         {
             return null;
         }
@@ -43,7 +43,7 @@ public sealed class AzureOpenAIProfileSearchAIDisplayDriver : DisplayDriver<AIPr
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
-        if (profile.Source is null || profile.Source != AzureAISearchProfileSource.ImplementationName)
+        if (profile.Source is null || profile.Source != AzureOpenAIConstants.AISearchImplementationName)
         {
             return null;
         }

@@ -163,10 +163,6 @@ public sealed class AIToolsStartup : StartupBase
             options.EnableFunctionInvocation = true;
         });
 
-        services.AddSingleton<AIToolDefinitions>();
-        services.AddScoped<IAIToolInstanceStore, DefaultAIToolInstanceStore>();
-        services.AddScoped<IAIToolInstanceManager, DefaultAIToolInstanceManager>();
-        services.AddScoped<IAIToolInstanceHandler, AIToolInstanceHandler>();
         services.AddDisplayDriver<AIToolInstance, InvokableToolMetadataDisplayDriver>();
         services.AddDisplayDriver<AIToolInstance, AIProfileToolMetadataDisplayDriver>();
         services.AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>();

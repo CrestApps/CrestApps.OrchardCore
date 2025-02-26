@@ -5,7 +5,6 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -27,6 +26,7 @@ public sealed class AdminController : Controller
     private readonly IDisplayManager<AIChatSessionListOptions> _optionsDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IServiceProvider _serviceProvider;
+    private readonly AICompletionOptions _aICompletionOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -39,6 +39,7 @@ public sealed class AdminController : Controller
         IDisplayManager<AIChatSessionListOptions> optionsDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         IServiceProvider serviceProvider,
+        IOptions<AICompletionOptions> aICompletionOptions,
         IStringLocalizer<AdminController> stringLocalizer
         )
     {
@@ -50,6 +51,7 @@ public sealed class AdminController : Controller
         _optionsDisplayManager = optionsDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _serviceProvider = serviceProvider;
+        _aICompletionOptions = aICompletionOptions.Value;
         S = stringLocalizer;
     }
 
@@ -66,9 +68,7 @@ public sealed class AdminController : Controller
             return NotFound();
         }
 
-        var completionClient = _serviceProvider.GetKeyedService<IAICompletionClient>(profile.Source);
-
-        if (completionClient is null)
+        if (!_aICompletionOptions.Clients.TryGetValue(profile.Source, out var clientOptions))
         {
             return NotFound();
         }

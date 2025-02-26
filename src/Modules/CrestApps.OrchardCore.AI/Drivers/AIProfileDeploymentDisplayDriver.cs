@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
@@ -12,19 +11,19 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IAIDeploymentManager _deploymentManager;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly AICompletionOptions _options;
     private readonly AIProviderOptions _providerOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileDeploymentDisplayDriver(
         IAIDeploymentManager deploymentManager,
-        IServiceProvider serviceProvider,
+        IOptions<AICompletionOptions> options,
         IOptions<AIProviderOptions> providerOptions,
         IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
-        _serviceProvider = serviceProvider;
+        _options = options.Value;
         _providerOptions = providerOptions.Value;
         S = stringLocalizer;
     }
@@ -33,9 +32,7 @@ public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
     {
         return Initialize<EditProfileDeploymentViewModel>("AIProfileDeployment_Edit", async model =>
         {
-            var profileSource = _serviceProvider.GetKeyedService<IAIProfileSource>(profile.Source);
-
-            if (profileSource is null)
+            if (!_options.ProfileSources.TryGetValue(profile.Source, out var profileSource))
             {
                 return;
             }
@@ -75,9 +72,7 @@ public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
-        var profileSource = _serviceProvider.GetKeyedService<IAIProfileSource>(profile.Source);
-
-        if (profileSource is null)
+        if (!_options.ProfileSources.TryGetValue(profile.Source, out var profileSource))
         {
             return null;
         }
