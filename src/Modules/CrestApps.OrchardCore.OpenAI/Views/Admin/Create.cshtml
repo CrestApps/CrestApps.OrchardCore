@@ -44,18 +44,18 @@
     <div class="@Orchard.GetWrapperClasses()">
         <label asp-for="ApiKey" class="@Orchard.GetLabelClasses()">@T["API key"]</label>
         <div class="@Orchard.GetEndClasses()">
-            <input asp-for="ApiKey" class="form-control" />
+            <input asp-for="ApiKey" class="form-control" autocomplete="new-password" />
             <span asp-validation-for="ApiKey" class="text-danger"></span>
             <span class="hint">@T["The service API key."]</span>
         </div>
     </div>
 
     <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="DefaultDeploymentName" class="@Orchard.GetLabelClasses()">@T["Deployment name"]</label>
+        <label asp-for="DefaultDeploymentName" class="@Orchard.GetLabelClasses()">@T["Deployment/Model name"]</label>
         <div class="@Orchard.GetEndClasses()">
             <input asp-for="DefaultDeploymentName" class="form-control" />
             <span asp-validation-for="DefaultDeploymentName" class="text-danger"></span>
-            <span class="hint">@T["The name of the default deployment to use."]</span>
+            <span class="hint">@T["The name of the default deployment or model to use."]</span>
         </div>
     </div>
 

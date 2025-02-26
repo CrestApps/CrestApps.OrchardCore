@@ -23,7 +23,7 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = OpenAIConstants.Feature.Settings,
-    Name = "OpenAI Compatible Chat",
+    Name = "OpenAI-Compatible Chat",
     Description = "Provides a way to interact with any provider that is compatible with OpenAI.",
     Category = "Artificial Intelligence",
     Dependencies =

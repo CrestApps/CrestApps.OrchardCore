@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -81,8 +82,14 @@ public sealed class AdminController : Controller
 
         var total = records.Count();
 
+        options.BulkActions =
+        [
+            new SelectListItem(S["Delete"], nameof(OpenAIConnectionAction.Remove)),
+        ];
+
         var model = new ListOpenAIConnectionViewModel
         {
+            Options = options,
             Count = document.Connections.Values.Count,
             Pager = await shapeFactory.PagerAsync(pager, document.Connections.Values.Count, routeData),
             Records = records.Select(x => new DisplayOpenAIConnectionViewModel
@@ -136,9 +143,14 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
+        if (string.IsNullOrWhiteSpace(model.Name))
+        {
+            ModelState.AddModelError(nameof(model.Name), S["The Name field is required."]);
+        }
+
         if (string.IsNullOrWhiteSpace(model.ApiKey))
         {
-            ModelState.AddModelError(nameof(model.ApiKey), S["A API-key is required."]);
+            ModelState.AddModelError(nameof(model.ApiKey), S["The API key field is required."]);
         }
 
         if (ModelState.IsValid)
@@ -229,15 +241,14 @@ public sealed class AdminController : Controller
 
         if (ModelState.IsValid)
         {
-            var protector = dataProtector.CreateProtector(OpenAIConstants.ConnectionProtectorName);
-
-            connection.Name = model.Name;
             connection.DisplayText = model.DisplayText;
             connection.Endpoint = model.Endpoint;
             connection.DefaultDeploymentName = model.DefaultDeploymentName;
 
             if (!string.IsNullOrWhiteSpace(model.ApiKey))
             {
+                var protector = dataProtector.CreateProtector(OpenAIConstants.ConnectionProtectorName);
+
                 connection.ApiKey = protector.Protect(model.ApiKey);
             }
 

@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAI;
 
-namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
+namespace CrestApps.OrchardCore.DeepSeek.Services;
 
 public sealed class DeepSeekAICompletionClient : DeploymentAwareAICompletionClient
 {

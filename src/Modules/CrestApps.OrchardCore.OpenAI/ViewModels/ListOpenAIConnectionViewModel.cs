@@ -49,7 +49,6 @@ public sealed class DisplayOpenAIConnectionViewModel
 
 public sealed class OpenAIConnectionViewModel
 {
-    [Required(AllowEmptyStrings = false)]
     public string Name { get; set; }
 
     [Required(AllowEmptyStrings = false)]

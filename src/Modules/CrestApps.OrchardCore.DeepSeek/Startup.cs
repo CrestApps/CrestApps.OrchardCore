@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.DeepSeek.Core.Services;
 using CrestApps.OrchardCore.DeepSeek.Migrations;
+using CrestApps.OrchardCore.DeepSeek.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;

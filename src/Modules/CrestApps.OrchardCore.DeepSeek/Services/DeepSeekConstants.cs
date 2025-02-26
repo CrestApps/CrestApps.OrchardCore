@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.DeepSeek.Core.Services;
+namespace CrestApps.OrchardCore.DeepSeek.Services;
 
 public static class DeepSeekConstants
 {
