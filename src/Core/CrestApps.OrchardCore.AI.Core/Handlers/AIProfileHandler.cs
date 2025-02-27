@@ -9,7 +9,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
-public sealed class AIProfileHandler : ModelHandlerBase<AIProfile>, IAIProfileHandler
+public sealed class AIProfileHandler : ModelHandlerBase<AIProfile>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAIProfileStore _profileStore;

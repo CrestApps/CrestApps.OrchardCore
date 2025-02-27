@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,7 +19,7 @@ public static class ServiceCollectionExtensions
             .AddScoped<IAICompletionService, DefaultAICompletionService>()
             .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
             .AddScoped<IAIProfileManagerSession, DefaultAIProfileManagerSession>()
-            .AddScoped<IAIProfileHandler, AIProfileHandler>();
+            .AddScoped<IModelHandler<AIProfile>, AIProfileHandler>();
 
         services
             .AddPermissionProvider<AIPermissionsProvider>()
@@ -28,7 +29,7 @@ public static class ServiceCollectionExtensions
         services
             .AddScoped<IAIToolInstanceStore, DefaultAIToolInstanceStore>()
             .AddScoped<IAIToolInstanceManager, DefaultAIToolInstanceManager>()
-            .AddScoped<IAIToolInstanceHandler, AIToolInstanceHandler>();
+            .AddScoped<IModelHandler<AIToolInstance>, AIToolInstanceHandler>();
 
         return services;
     }
@@ -38,7 +39,7 @@ public static class ServiceCollectionExtensions
         services
             .AddScoped<IAIDeploymentStore, DefaultAIDeploymentStore>()
             .AddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>()
-            .AddScoped<IAIDeploymentHandler, AIDeploymentHandler>()
+            .AddScoped<IModelHandler<AIDeployment>, AIDeploymentHandler>()
             .AddPermissionProvider<AIDeploymentProvider>();
 
         return services;

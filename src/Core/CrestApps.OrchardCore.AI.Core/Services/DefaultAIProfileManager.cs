@@ -12,14 +12,14 @@ public sealed class DefaultAIProfileManager : IAIProfileManager
     private readonly IAIProfileStore _profileStore;
     private readonly IAIProfileManagerSession _profileManagerSession;
     private readonly AICompletionOptions _options;
-    private readonly IEnumerable<IAIProfileHandler> _handlers;
+    private readonly IEnumerable<IModelHandler<AIProfile>> _handlers;
     private readonly ILogger _logger;
 
     public DefaultAIProfileManager(
         IAIProfileStore profileStore,
         IAIProfileManagerSession profileManagerSession,
         IOptions<AICompletionOptions> options,
-        IEnumerable<IAIProfileHandler> handlers,
+        IEnumerable<IModelHandler<AIProfile>> handlers,
         ILogger<DefaultAIProfileManager> logger)
     {
         _profileStore = profileStore;

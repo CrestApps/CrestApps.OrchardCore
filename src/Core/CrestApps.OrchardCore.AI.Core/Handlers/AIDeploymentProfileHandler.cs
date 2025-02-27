@@ -5,7 +5,7 @@ using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
-public sealed class AIDeploymentProfileHandler : ModelHandlerBase<AIProfile>, IAIProfileHandler
+public sealed class AIDeploymentProfileHandler : ModelHandlerBase<AIProfile>
 {
     private readonly IAIDeploymentStore _deploymentStore;
 

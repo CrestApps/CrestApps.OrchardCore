@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
@@ -9,7 +8,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 
-public sealed class AzureAISearchAIProfileHandler : ModelHandlerBase<AIProfile>, IAIProfileHandler
+public sealed class AzureAISearchAIProfileHandler : ModelHandlerBase<AIProfile>
 {
     internal readonly IStringLocalizer S;
 

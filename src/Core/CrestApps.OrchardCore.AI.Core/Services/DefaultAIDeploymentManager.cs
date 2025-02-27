@@ -11,13 +11,13 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
 {
     private readonly IAIDeploymentStore _deploymentStore;
     private readonly AICompletionOptions _completionOptions;
-    private readonly IEnumerable<IAIDeploymentHandler> _handlers;
+    private readonly IEnumerable<IModelHandler<AIDeployment>> _handlers;
     private readonly ILogger _logger;
 
     public DefaultAIDeploymentManager(
         IAIDeploymentStore deploymentStore,
         IOptions<AICompletionOptions> completionOptions,
-        IEnumerable<IAIDeploymentHandler> handlers,
+        IEnumerable<IModelHandler<AIDeployment>> handlers,
         ILogger<DefaultAIDeploymentManager> logger)
     {
         _deploymentStore = deploymentStore;

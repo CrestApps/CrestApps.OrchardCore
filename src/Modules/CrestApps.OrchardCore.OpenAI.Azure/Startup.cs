@@ -63,6 +63,6 @@ public sealed class AISearchStartup : StartupBase
             o.Description = "Provides AI profiles using Azure OpenAI models with your data.";
         });
         services.AddDisplayDriver<AIProfile, AzureOpenAIProfileSearchAIDisplayDriver>();
-        services.AddScoped<IAIProfileHandler, AzureAISearchAIProfileHandler>();
+        services.AddScoped<IModelHandler<AIProfile>, AzureAISearchAIProfileHandler>();
     }
 }

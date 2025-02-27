@@ -11,13 +11,13 @@ public sealed class DefaultAIToolInstanceManager : IAIToolInstanceManager
 {
     private readonly IAIToolInstanceStore _store;
     private readonly IServiceProvider _serviceProvider;
-    private readonly IEnumerable<IAIToolInstanceHandler> _handlers;
+    private readonly IEnumerable<IModelHandler<AIToolInstance>> _handlers;
     private readonly ILogger _logger;
 
     public DefaultAIToolInstanceManager(
         IAIToolInstanceStore store,
         IServiceProvider serviceProvider,
-        IEnumerable<IAIToolInstanceHandler> handlers,
+        IEnumerable<IModelHandler<AIToolInstance>> handlers,
         ILogger<DefaultAIProfileManager> logger)
     {
         _store = store;
