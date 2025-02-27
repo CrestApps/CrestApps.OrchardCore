@@ -128,7 +128,7 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
 
         var domains = info.GetDomains();
 
-        if (shellSettings.Any(settings => settings.HasUrlHost(domains)))
+        if (domains.Length > 0 && shellSettings.Any(settings => settings.HasUrlHost(domains)))
         {
             throw new InvalidOperationException("Provided domain belong to another tenant.");
         }
