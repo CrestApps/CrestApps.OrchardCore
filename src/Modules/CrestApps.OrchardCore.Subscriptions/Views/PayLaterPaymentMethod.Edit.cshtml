@@ -32,7 +32,9 @@
                             bubbles: true,
                             cancelable: true
                         });
-                        form.dispatchEvent(submitEvent);
+                        if (form.dispatchEvent(submitEvent)) {
+                            form.requestSubmit();
+                        }
                     } else {
                         enablePayButtonButton(payButtonElement, true);
 
