@@ -6,12 +6,12 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 
 public sealed class DefaultAIToolsService : IAIToolsService
 {
-    private readonly AIToolDefinitions _toolDefinitions;
+    private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly IServiceProvider _serviceProvider;
     private readonly IAIToolInstanceStore _toolInstanceStore;
 
     public DefaultAIToolsService(
-        IOptions<AIToolDefinitions> toolDefinitions,
+        IOptions<AIToolDefinitionOptions> toolDefinitions,
         IServiceProvider serviceProvider,
         IAIToolInstanceStore aIToolInstanceStore)
     {

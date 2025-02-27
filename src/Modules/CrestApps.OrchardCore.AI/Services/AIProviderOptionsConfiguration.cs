@@ -61,11 +61,11 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
                 continue;
             }
 
-            var connections = new Dictionary<string, AIProviderConnection>(StringComparer.OrdinalIgnoreCase);
+            var connections = new Dictionary<string, AIProviderConnectionEntry>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var connectionPair in connectionsObject)
             {
-                connections.Add(connectionPair.Key, connectionPair.Value.Deserialize<AIProviderConnection>());
+                connections.Add(connectionPair.Key, connectionPair.Value.Deserialize<AIProviderConnectionEntry>());
             }
 
             if (connections.Count == 0)

@@ -30,7 +30,7 @@ public sealed class DefaultAIToolInstanceManager : IAIToolInstanceManager
     {
         ArgumentNullException.ThrowIfNull(instance);
 
-        var deletingContext = new DeletingAIToolInstanceContext(instance);
+        var deletingContext = new DeletingContext<AIToolInstance>(instance);
         await _handlers.InvokeAsync((handler, ctx) => handler.DeletingAsync(ctx), deletingContext, _logger);
 
         if (string.IsNullOrEmpty(instance.Id))
@@ -40,7 +40,7 @@ public sealed class DefaultAIToolInstanceManager : IAIToolInstanceManager
 
         var removed = await _store.DeleteAsync(instance);
 
-        var deletedContext = new DeletedAIToolInstanceContext(instance);
+        var deletedContext = new DeletedContext<AIToolInstance>(instance);
         await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, _logger);
 
         return removed;
@@ -81,10 +81,10 @@ public sealed class DefaultAIToolInstanceManager : IAIToolInstanceManager
             Source = source,
         };
 
-        var initializingContext = new InitializingAIToolInstanceContext(instance, data);
+        var initializingContext = new InitializingContext<AIToolInstance>(instance, data);
         await _handlers.InvokeAsync((handler, ctx) => handler.InitializingAsync(ctx), initializingContext, _logger);
 
-        var initializedContext = new InitializedAIToolInstanceContext(instance);
+        var initializedContext = new InitializedContext<AIToolInstance>(instance);
         await _handlers.InvokeAsync((handler, ctx) => handler.InitializedAsync(ctx), initializedContext, _logger);
 
         // Set the source again after calling handlers to prevent handlers from updating the source during initialization.
@@ -114,12 +114,12 @@ public sealed class DefaultAIToolInstanceManager : IAIToolInstanceManager
     {
         ArgumentNullException.ThrowIfNull(instance);
 
-        var savingContext = new SavingAIToolInstanceContext(instance);
+        var savingContext = new SavingContext<AIToolInstance>(instance);
         await _handlers.InvokeAsync((handler, ctx) => handler.SavingAsync(ctx), savingContext, _logger);
 
         await _store.SaveAsync(instance);
 
-        var savedContext = new SavedAIToolInstanceContext(instance);
+        var savedContext = new SavedContext<AIToolInstance>(instance);
         await _handlers.InvokeAsync((handler, ctx) => handler.SavedAsync(ctx), savedContext, _logger);
     }
 
@@ -127,10 +127,10 @@ public sealed class DefaultAIToolInstanceManager : IAIToolInstanceManager
     {
         ArgumentNullException.ThrowIfNull(instance);
 
-        var updatingContext = new UpdatingAIToolInstanceContext(instance, data);
+        var updatingContext = new UpdatingContext<AIToolInstance>(instance, data);
         await _handlers.InvokeAsync((handler, ctx) => handler.UpdatingAsync(ctx), updatingContext, _logger);
 
-        var updatedContext = new UpdatedAIToolInstanceContext(instance);
+        var updatedContext = new UpdatedContext<AIToolInstance>(instance);
         await _handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, _logger);
     }
 
@@ -138,10 +138,10 @@ public sealed class DefaultAIToolInstanceManager : IAIToolInstanceManager
     {
         ArgumentNullException.ThrowIfNull(instance);
 
-        var validatingContext = new ValidatingAIToolInstanceContext(instance);
+        var validatingContext = new ValidatingContext<AIToolInstance>(instance);
         await _handlers.InvokeAsync((handler, ctx) => handler.ValidatingAsync(ctx), validatingContext, _logger);
 
-        var validatedContext = new ValidatedAIToolInstanceContext(instance, validatingContext.Result);
+        var validatedContext = new ValidatedContext<AIToolInstance>(instance, validatingContext.Result);
         await _handlers.InvokeAsync((handler, ctx) => handler.ValidatedAsync(ctx), validatedContext, _logger);
 
         return validatingContext.Result;
@@ -149,7 +149,7 @@ public sealed class DefaultAIToolInstanceManager : IAIToolInstanceManager
 
     private Task LoadAsync(AIToolInstance instance)
     {
-        var loadedContext = new LoadedAIToolInstanceContext(instance);
+        var loadedContext = new LoadedContext<AIToolInstance>(instance);
 
         return _handlers.InvokeAsync((handler, context) => handler.LoadedAsync(context), loadedContext, _logger);
     }

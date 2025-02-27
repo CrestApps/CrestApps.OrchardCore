@@ -1,40 +1,9 @@
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.AI;
 
-public interface IAIDeploymentManager
+public interface IAIDeploymentManager : IModelManager<AIDeployment>
 {
-    /// <summary>
-    /// Asynchronously deletes the specified model deployment.
-    /// </summary>
-    /// <param name="profile">The model deployment to be deleted. Must not be null.</param>
-    /// <returns>
-    /// A ValueTask that represents the asynchronous operation. The result is <c>true</c> if the deletion was successful,
-    /// and <c>false</c> if the deletion failed (e.g., if the deployment does not exist).
-    /// </returns>
-    ValueTask<bool> DeleteAsync(AIDeployment profile);
-
-    /// <summary>
-    /// Asynchronously retrieves a model deployment by its unique identifier.
-    /// </summary>
-    /// <param name="id">The unique identifier of the model deployment. Must not be null or empty.</param>
-    /// <returns>
-    /// A ValueTask that represents the asynchronous operation. The result is the <see cref="AIDeployment"/> corresponding
-    /// to the specified ID, or <c>null</c> if no deployment with the specified ID is found.
-    /// </returns>
-    ValueTask<AIDeployment> FindByIdAsync(string id);
-
-    /// <summary>
-    /// Asynchronously creates a new model deployment with the given source and optional additional data.
-    /// </summary>
-    /// <param name="providerName">The source from which the model deployment is created. Must not be null or empty.</param>
-    /// <param name="data">Optional additional data associated with the deployment. Defaults to <c>null</c>.</param>
-    /// <returns>
-    /// A ValueTask that represents the asynchronous operation. The result is the newly created <see cref="AIDeployment"/>.
-    /// </returns>
-    ValueTask<AIDeployment> NewAsync(string providerName, JsonNode data = null);
-
     /// <summary>
     /// Asynchronously retrieves a paginated list of model deployments based on the specified pagination and filtering parameters.
     /// </summary>
@@ -45,45 +14,16 @@ public interface IAIDeploymentManager
     /// A ValueTask that represents the asynchronous operation. The result is a <see cref="PageResult<AIDeployment>"/> containing
     /// the paginated list of model deployments and any relevant metadata (such as total count, etc.).
     /// </returns>
-    ValueTask<PageResult<AIDeployment>> PageQueriesAsync(int page, int pageSize, QueryContext context);
+    ValueTask<PageResult<AIDeployment>> PageAsync(int page, int pageSize, QueryContext context);
 
     /// <summary>
     /// Asynchronously retrieves a list of all model deployments.
     /// </summary>
     /// <returns>
-    /// A ValueTask that represents the asynchronous operation. The result is an <see cref="IEnumerable{ModelDeployment}"/>
+    /// A ValueTask that represents the asynchronous operation. The result is an <see cref="IEnumerable{AIDeployment}"/>
     /// containing all model deployments.
     /// </returns>
     ValueTask<IEnumerable<AIDeployment>> GetAllAsync();
-
-    /// <summary>
-    /// Asynchronously saves or updates the specified model deployment.
-    /// </summary>
-    /// <param name="profile">The model deployment to be saved or updated. Must not be null.</param>
-    /// <returns>
-    /// A ValueTask that represents the asynchronous operation. This method does not return any value.
-    /// </returns>
-    ValueTask SaveAsync(AIDeployment profile);
-
-    /// <summary>
-    /// Asynchronously updates the specified model deployment with optional additional data.
-    /// </summary>
-    /// <param name="profile">The model deployment to update. Must not be null.</param>
-    /// <param name="data">Optional additional data to update the deployment with. Defaults to <c>null</c>.</param>
-    /// <returns>
-    /// A ValueTask that represents the asynchronous operation. This method does not return any value.
-    /// </returns>
-    ValueTask UpdateAsync(AIDeployment profile, JsonNode data = null);
-
-    /// <summary>
-    /// Asynchronously validates the specified model deployment.
-    /// </summary>
-    /// <param name="profile">The model deployment to validate. Must not be null.</param>
-    /// <returns>
-    /// A ValueTask that represents the asynchronous operation. The result is a <see cref="ValidationResultDetails"/>
-    /// containing the validation results (e.g., success or failure and any associated errors).
-    /// </returns>
-    ValueTask<ValidationResultDetails> ValidateAsync(AIDeployment profile);
 
     /// <summary>
     /// Asynchronously retrieves a list of model deployments for the specified provider.

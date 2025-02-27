@@ -34,7 +34,7 @@ public sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvide
         {
             provider = new AIProvider()
             {
-                Connections = new Dictionary<string, AIProviderConnection>(),
+                Connections = new Dictionary<string, AIProviderConnectionEntry>(),
             };
         }
 
@@ -50,7 +50,7 @@ public sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvide
                 { "ConnectionNameAlias", connection.Name },
             };
 
-            provider.Connections[connection.Id] = new AIProviderConnection(values);
+            provider.Connections[connection.Id] = new AIProviderConnectionEntry(values);
         }
 
         var defaultConnection = document.DefaultConnectionId is not null &&

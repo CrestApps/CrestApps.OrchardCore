@@ -28,7 +28,7 @@ public sealed class DeepSeekAICompletionClient : DeploymentAwareAICompletionClie
     protected override string ProviderName
         => DeepSeekConstants.ProviderTechnicalName;
 
-    protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string modelName)
+    protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, AICompletionContext context, string modelName)
     {
         var client = new OpenAIClient(new ApiKeyCredential(connection.GetApiKey()), new OpenAIClientOptions()
         {

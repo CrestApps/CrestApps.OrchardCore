@@ -93,6 +93,19 @@ public sealed class DefaultAIProfileStore : IAIProfileStore
         await _documentManager.UpdateAsync(document);
     }
 
+    public async ValueTask<PageResult<AIProfile>> PageAsync(int page, int pageSize, QueryContext context)
+    {
+        var records = await LocateProfilesAsync(context);
+
+        var skip = (page - 1) * pageSize;
+
+        return new PageResult<AIProfile>
+        {
+            Count = records.Count(),
+            Records = records.Skip(skip).Take(pageSize).ToArray()
+        };
+    }
+
     public async ValueTask<PageResult<AIProfile>> PageAsync(int page, int pageSize, AIProfileQueryContext context)
     {
         var records = await LocateProfilesAsync(context);
@@ -132,6 +145,35 @@ public sealed class DefaultAIProfileStore : IAIProfileStore
         if (context.IsListableOnly)
         {
             profiles = profiles.Where(x => x.GetSettings<AIProfileSettings>().IsListable);
+        }
+
+        if (!string.IsNullOrEmpty(context.Name))
+        {
+            profiles = profiles.Where(x => x.Name.Contains(context.Name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (context.Sorted)
+        {
+            profiles = profiles.OrderBy(x => x.DisplayText);
+        }
+
+        return profiles;
+    }
+
+    private async ValueTask<IEnumerable<AIProfile>> LocateProfilesAsync(QueryContext context)
+    {
+        var document = await _documentManager.GetOrCreateImmutableAsync();
+
+        if (context == null)
+        {
+            return document.Profiles.Values;
+        }
+
+        var profiles = document.Profiles.Values.AsEnumerable();
+
+        if (!string.IsNullOrEmpty(context.Source))
+        {
+            profiles = profiles.Where(x => x.Source.Equals(context.Source, StringComparison.OrdinalIgnoreCase));
         }
 
         if (!string.IsNullOrEmpty(context.Name))

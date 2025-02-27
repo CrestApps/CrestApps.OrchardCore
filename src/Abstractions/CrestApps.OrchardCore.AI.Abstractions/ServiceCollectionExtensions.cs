@@ -11,7 +11,7 @@ public static class ServiceCollectionExtensions
         ArgumentException.ThrowIfNullOrEmpty(name);
 
         services.AddScoped<TTool>();
-        services.Configure<AIToolDefinitions>(o =>
+        services.Configure<AIToolDefinitionOptions>(o =>
         {
             o.Add<TTool>(name, configure);
         });

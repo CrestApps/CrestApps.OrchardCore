@@ -9,7 +9,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
-public sealed class AIToolInstanceHandler : AIToolInstanceHandlerBase
+public sealed class AIToolInstanceHandler : ModelHandlerBase<AIToolInstance>, IAIToolInstanceHandler
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IServiceProvider _serviceProvider;
@@ -29,19 +29,19 @@ public sealed class AIToolInstanceHandler : AIToolInstanceHandlerBase
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingAIToolInstanceContext context)
-        => PopulateAsync(context.Instance, context.Data, true);
+    public override Task InitializingAsync(InitializingContext<AIToolInstance> context)
+        => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingAIToolInstanceContext context)
-        => PopulateAsync(context.Instance, context.Data, false);
+    public override Task UpdatingAsync(UpdatingContext<AIToolInstance> context)
+        => PopulateAsync(context.Model, context.Data);
 
-    public override Task ValidatingAsync(ValidatingAIToolInstanceContext context)
+    public override Task ValidatingAsync(ValidatingContext<AIToolInstance> context)
     {
-        if (string.IsNullOrWhiteSpace(context.Instance.Source))
+        if (string.IsNullOrWhiteSpace(context.Model.Source))
         {
             context.Result.Fail(new ValidationResult(S["Source is required."], [nameof(AIToolInstance.Source)]));
         }
-        else if (_serviceProvider.GetKeyedService<IAIToolSource>(context.Instance.Source) is null)
+        else if (_serviceProvider.GetKeyedService<IAIToolSource>(context.Model.Source) is null)
         {
             context.Result.Fail(new ValidationResult(S["Invalid source."], [nameof(AIToolInstance.Source)]));
         }
@@ -49,22 +49,22 @@ public sealed class AIToolInstanceHandler : AIToolInstanceHandlerBase
         return Task.CompletedTask;
     }
 
-    public override Task InitializedAsync(InitializedAIToolInstanceContext context)
+    public override Task InitializedAsync(InitializedContext<AIToolInstance> context)
     {
-        context.Instance.CreatedUtc = _clock.UtcNow;
+        context.Model.CreatedUtc = _clock.UtcNow;
 
         var user = _httpContextAccessor.HttpContext?.User;
 
         if (user != null)
         {
-            context.Instance.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Instance.Author = user.Identity.Name;
+            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            context.Model.Author = user.Identity.Name;
         }
 
         return Task.CompletedTask;
     }
 
-    private static Task PopulateAsync(AIToolInstance instance, JsonNode data, bool isNew)
+    private static Task PopulateAsync(AIToolInstance instance, JsonNode data)
     {
         var displayText = data[nameof(AIToolInstance.DisplayText)]?.GetValue<string>()?.Trim();
 

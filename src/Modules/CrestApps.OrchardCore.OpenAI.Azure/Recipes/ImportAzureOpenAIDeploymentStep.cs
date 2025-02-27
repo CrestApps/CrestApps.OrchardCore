@@ -41,7 +41,7 @@ internal sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
             return;
         }
 
-        var importableConnections = new Dictionary<string, AIProviderConnection>(StringComparer.OrdinalIgnoreCase);
+        var importableConnections = new Dictionary<string, AIProviderConnectionEntry>(StringComparer.OrdinalIgnoreCase);
 
         if (context.Step.TryGetPropertyValue("ConnectionNames", out var connectionName))
         {

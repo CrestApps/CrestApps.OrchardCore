@@ -9,7 +9,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
-public sealed class AIDeploymentHandler : AIDeploymentHandlerBase
+public sealed class AIDeploymentHandler : ModelHandlerBase<AIDeployment>, IAIDeploymentHandler
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AIProviderOptions _providerOptions;
@@ -29,28 +29,28 @@ public sealed class AIDeploymentHandler : AIDeploymentHandlerBase
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingAIDeploymentContext context)
-        => PopulateAsync(context.Deployment, context.Data);
+    public override Task InitializingAsync(InitializingContext<AIDeployment> context)
+        => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingModelDeploymentContext context)
-        => PopulateAsync(context.Deployment, context.Data);
+    public override Task UpdatingAsync(UpdatingContext<AIDeployment> context)
+        => PopulateAsync(context.Model, context.Data);
 
-    public override Task ValidatingAsync(ValidatingAIDeploymentContext context)
+    public override Task ValidatingAsync(ValidatingContext<AIDeployment> context)
     {
-        if (string.IsNullOrWhiteSpace(context.Deployment.Name))
+        if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
             context.Result.Fail(new ValidationResult(S["Deployment Name is required."], [nameof(AIDeployment.Name)]));
         }
 
         var hasConnectionName = true;
 
-        if (string.IsNullOrWhiteSpace(context.Deployment.ConnectionName))
+        if (string.IsNullOrWhiteSpace(context.Model.ConnectionName))
         {
             hasConnectionName = false;
             context.Result.Fail(new ValidationResult(S["Connection name is required."], [nameof(AIDeployment.ConnectionName)]));
         }
 
-        if (string.IsNullOrWhiteSpace(context.Deployment.ProviderName))
+        if (string.IsNullOrWhiteSpace(context.Model.ProviderName))
         {
             context.Result.Fail(new ValidationResult(S["Provider is required."], [nameof(AIDeployment.ProviderName)]));
         }
@@ -58,11 +58,11 @@ public sealed class AIDeploymentHandler : AIDeploymentHandlerBase
         {
             if (hasConnectionName)
             {
-                if (!_providerOptions.Providers.TryGetValue(context.Deployment.ProviderName, out var provider))
+                if (!_providerOptions.Providers.TryGetValue(context.Model.ProviderName, out var provider))
                 {
-                    context.Result.Fail(new ValidationResult(S["There are no configured connection for the provider: {0}", context.Deployment.ProviderName], [nameof(AIDeployment.ProviderName)]));
+                    context.Result.Fail(new ValidationResult(S["There are no configured connection for the provider: {0}", context.Model.ProviderName], [nameof(AIDeployment.ProviderName)]));
                 }
-                else if (!provider.Connections.TryGetValue(context.Deployment.ConnectionName, out var _))
+                else if (!provider.Connections.TryGetValue(context.Model.ConnectionName, out var _))
                 {
                     context.Result.Fail(new ValidationResult(S["Invalid connection name provided."], [nameof(AIDeployment.ConnectionName)]));
                 }
@@ -72,16 +72,16 @@ public sealed class AIDeploymentHandler : AIDeploymentHandlerBase
         return Task.CompletedTask;
     }
 
-    public override Task InitializedAsync(InitializedAIDeploymentContext context)
+    public override Task InitializedAsync(InitializedContext<AIDeployment> context)
     {
-        context.Deployment.CreatedUtc = _clock.UtcNow;
+        context.Model.CreatedUtc = _clock.UtcNow;
 
         var user = _httpContextAccessor.HttpContext?.User;
 
         if (user != null)
         {
-            context.Deployment.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Deployment.Author = user.Identity.Name;
+            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            context.Model.Author = user.Identity.Name;
         }
 
         return Task.CompletedTask;

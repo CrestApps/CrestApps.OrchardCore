@@ -421,7 +421,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
         }
     }
 
-    private static AzureOpenAIClient GetChatClient(AIProviderConnection connection)
+    private static AzureOpenAIClient GetChatClient(AIProviderConnectionEntry connection)
     {
         var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
 

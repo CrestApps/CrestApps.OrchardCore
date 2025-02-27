@@ -5,10 +5,10 @@ namespace CrestApps.OrchardCore.AI.Core;
 
 public static class AIProviderConnectionExtensions
 {
-    public static string GetApiKey(this AIProviderConnection entry, bool throwException = true)
+    public static string GetApiKey(this AIProviderConnectionEntry entry, bool throwException = true)
         => entry.GetStringValue("ApiKey", throwException);
 
-    public static Uri GetEndpoint(this AIProviderConnection entry, bool throwException = true)
+    public static Uri GetEndpoint(this AIProviderConnectionEntry entry, bool throwException = true)
     {
         var endpoint = entry.GetStringValue("Endpoint", throwException);
 
@@ -26,10 +26,10 @@ public static class AIProviderConnectionExtensions
         return uri;
     }
 
-    public static string GetDefaultDeploymentName(this AIProviderConnection entry, bool throwException = true)
+    public static string GetDefaultDeploymentName(this AIProviderConnectionEntry entry, bool throwException = true)
         => entry.GetStringValue("DefaultDeploymentName", throwException);
 
-    public static string GetStringValue(this AIProviderConnection entry, string key, bool throwException = false)
+    public static string GetStringValue(this AIProviderConnectionEntry entry, string key, bool throwException = false)
     {
         if (entry.TryGetValue(key, out var value))
         {

@@ -2,7 +2,7 @@ using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.AI;
 
-public sealed class AIToolDefinitions
+public sealed class AIToolDefinitionOptions
 {
     private readonly Dictionary<string, AIToolDefinitionEntry> _tools = new(StringComparer.OrdinalIgnoreCase);
 

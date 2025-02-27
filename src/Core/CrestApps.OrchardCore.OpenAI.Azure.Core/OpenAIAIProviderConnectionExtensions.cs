@@ -8,25 +8,25 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core;
 
 public static class OpenAIAIProviderConnectionExtensions
 {
-    public static string GetSubscriptionId(this AIProviderConnection entry, bool throwException = true)
+    public static string GetSubscriptionId(this AIProviderConnectionEntry entry, bool throwException = true)
         => entry.GetStringValue("SubscriptionId", throwException);
 
-    public static string GetClientId(this AIProviderConnection entry, bool throwException = true)
+    public static string GetClientId(this AIProviderConnectionEntry entry, bool throwException = true)
         => entry.GetStringValue("ClientId", throwException);
 
-    public static string GetClientSecret(this AIProviderConnection entry, bool throwException = true)
+    public static string GetClientSecret(this AIProviderConnectionEntry entry, bool throwException = true)
         => entry.GetStringValue("ClientSecret", throwException);
 
-    public static string GetTenantId(this AIProviderConnection entry, bool throwException = true)
+    public static string GetTenantId(this AIProviderConnectionEntry entry, bool throwException = true)
         => entry.GetStringValue("TenantId", throwException);
 
-    public static string GetAccountName(this AIProviderConnection entry, bool throwException = true)
+    public static string GetAccountName(this AIProviderConnectionEntry entry, bool throwException = true)
         => entry.GetStringValue("AccountName", throwException);
 
-    public static string GetResourceGroupName(this AIProviderConnection entry, bool throwException = true)
+    public static string GetResourceGroupName(this AIProviderConnectionEntry entry, bool throwException = true)
         => entry.GetStringValue("ResourceGroupName", throwException);
 
-    public static TokenCredential GetCredential(this AIProviderConnection entry)
+    public static TokenCredential GetCredential(this AIProviderConnectionEntry entry)
     {
         var tenantId = entry.GetTenantId(false);
         var clientId = entry.GetClientId(false);
@@ -42,6 +42,6 @@ public static class OpenAIAIProviderConnectionExtensions
         return new DefaultAzureCredential();
     }
 
-    public static ApiKeyCredential GetApiKeyCredential(this AIProviderConnection entry)
+    public static ApiKeyCredential GetApiKeyCredential(this AIProviderConnectionEntry entry)
         => new(entry.GetApiKey());
 }

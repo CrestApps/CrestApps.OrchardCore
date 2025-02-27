@@ -42,7 +42,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
     protected abstract string ProviderName { get; }
 
-    protected abstract IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string modelName);
+    protected abstract IChatClient GetChatClient(AIProviderConnectionEntry connection, AICompletionContext context, string modelName);
 
 
     protected virtual void ConfigureChatOptions(ChatOptions options, string modelName)
@@ -211,7 +211,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         return chatOptions;
     }
 
-    private IChatClient BuildClient(AIProviderConnection connection, AICompletionContext context, AIProfileMetadata metadata, string modelName)
+    private IChatClient BuildClient(AIProviderConnectionEntry connection, AICompletionContext context, AIProfileMetadata metadata, string modelName)
     {
         var client = GetChatClient(connection, context, modelName);
 

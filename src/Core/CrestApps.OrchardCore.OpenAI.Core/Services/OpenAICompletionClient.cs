@@ -27,7 +27,7 @@ public sealed class OpenAICompletionClient : DeploymentAwareAICompletionClient
     protected override string ProviderName
         => OpenAIConstants.ProviderName;
 
-    protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string deploymentName)
+    protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, AICompletionContext context, string deploymentName)
     {
         return new OpenAIClient(connection.GetApiKey())
             .AsChatClient(connection.GetDefaultDeploymentName());

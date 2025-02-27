@@ -1,6 +1,5 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
@@ -11,20 +10,17 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
 {
     private readonly IAIDeploymentStore _deploymentStore;
-    private readonly IServiceProvider _serviceProvider;
     private readonly AICompletionOptions _completionOptions;
     private readonly IEnumerable<IAIDeploymentHandler> _handlers;
     private readonly ILogger _logger;
 
     public DefaultAIDeploymentManager(
         IAIDeploymentStore deploymentStore,
-        IServiceProvider serviceProvider,
         IOptions<AICompletionOptions> completionOptions,
         IEnumerable<IAIDeploymentHandler> handlers,
         ILogger<DefaultAIDeploymentManager> logger)
     {
         _deploymentStore = deploymentStore;
-        _serviceProvider = serviceProvider;
         _completionOptions = completionOptions.Value;
         _handlers = handlers;
         _logger = logger;
@@ -34,7 +30,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
     {
         ArgumentNullException.ThrowIfNull(deployment);
 
-        var deletingContext = new DeletingAIDeploymentContext(deployment);
+        var deletingContext = new DeletingContext<AIDeployment>(deployment);
         await _handlers.InvokeAsync((handler, ctx) => handler.DeletingAsync(ctx), deletingContext, _logger);
 
         if (string.IsNullOrEmpty(deployment.Id))
@@ -44,7 +40,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
 
         var removed = await _deploymentStore.DeleteAsync(deployment);
 
-        var deletedContext = new DeletedAIDeploymentContext(deployment);
+        var deletedContext = new DeletedContext<AIDeployment>(deployment);
         await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, _logger);
 
         return removed;
@@ -83,10 +79,10 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
             ProviderName = providerName,
         };
 
-        var initializingContext = new InitializingAIDeploymentContext(deployment, data);
+        var initializingContext = new InitializingContext<AIDeployment>(deployment, data);
         await _handlers.InvokeAsync((handler, ctx) => handler.InitializingAsync(ctx), initializingContext, _logger);
 
-        var initializedContext = new InitializedAIDeploymentContext(deployment);
+        var initializedContext = new InitializedContext<AIDeployment>(deployment);
         await _handlers.InvokeAsync((handler, ctx) => handler.InitializedAsync(ctx), initializedContext, _logger);
 
         // Set the provider name and the connectionName again after calling handlers to prevent handlers from updating the source during initialization.
@@ -100,7 +96,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         return deployment;
     }
 
-    public async ValueTask<PageResult<AIDeployment>> PageQueriesAsync(int page, int pageSize, QueryContext context)
+    public async ValueTask<PageResult<AIDeployment>> PageAsync(int page, int pageSize, QueryContext context)
     {
         var result = await _deploymentStore.PageAsync(page, pageSize, context);
 
@@ -159,12 +155,12 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
     {
         ArgumentNullException.ThrowIfNull(deployment);
 
-        var savingContext = new SavingModelDeploymentContext(deployment);
+        var savingContext = new SavingContext<AIDeployment>(deployment);
         await _handlers.InvokeAsync((handler, ctx) => handler.SavingAsync(ctx), savingContext, _logger);
 
         await _deploymentStore.SaveAsync(deployment);
 
-        var savedContext = new SavedAIDeploymentContext(deployment);
+        var savedContext = new SavedContext<AIDeployment>(deployment);
         await _handlers.InvokeAsync((handler, ctx) => handler.SavedAsync(ctx), savedContext, _logger);
     }
 
@@ -172,10 +168,10 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
     {
         ArgumentNullException.ThrowIfNull(deployment);
 
-        var updatingContext = new UpdatingModelDeploymentContext(deployment, data);
+        var updatingContext = new UpdatingContext<AIDeployment>(deployment, data);
         await _handlers.InvokeAsync((handler, ctx) => handler.UpdatingAsync(ctx), updatingContext, _logger);
 
-        var updatedContext = new UpdatedModelDeploymentContext(deployment);
+        var updatedContext = new UpdatedContext<AIDeployment>(deployment);
         await _handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, _logger);
     }
 
@@ -183,10 +179,10 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
     {
         ArgumentNullException.ThrowIfNull(deployment);
 
-        var validatingContext = new ValidatingAIDeploymentContext(deployment);
+        var validatingContext = new ValidatingContext<AIDeployment>(deployment);
         await _handlers.InvokeAsync((handler, ctx) => handler.ValidatingAsync(ctx), validatingContext, _logger);
 
-        var validatedContext = new ValidatedModelDeploymentContext(deployment, validatingContext.Result);
+        var validatedContext = new ValidatedContext<AIDeployment>(deployment, validatingContext.Result);
         await _handlers.InvokeAsync((handler, ctx) => handler.ValidatedAsync(ctx), validatedContext, _logger);
 
         return validatingContext.Result;
@@ -194,7 +190,7 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
 
     private Task LoadAsync(AIDeployment deployment)
     {
-        var loadedContext = new LoadedAIDeploymentContext(deployment);
+        var loadedContext = new LoadedContext<AIDeployment>(deployment);
 
         return _handlers.InvokeAsync((handler, context) => handler.LoadedAsync(context), loadedContext, _logger);
     }

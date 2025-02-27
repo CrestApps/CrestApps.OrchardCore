@@ -22,7 +22,7 @@ public abstract class AICompletionServiceBase
         return provider.DefaultDeploymentName;
     }
 
-    protected async Task<(AIProviderConnection, string)> GetConnectionAsync(AICompletionContext context, string providerName)
+    protected async Task<(AIProviderConnectionEntry, string)> GetConnectionAsync(AICompletionContext context, string providerName)
     {
         string deploymentName = null;
 

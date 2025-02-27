@@ -27,7 +27,7 @@ public sealed class AzureOpenAICompletionClient : DeploymentAwareAICompletionCli
     protected override string ProviderName
         => AzureOpenAIConstants.ProviderName;
 
-    protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string modelName)
+    protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, AICompletionContext context, string modelName)
     {
         var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
 

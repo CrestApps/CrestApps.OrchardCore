@@ -11,7 +11,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 
-public sealed class OpenAIProfileHandler : AIProfileHandlerBase
+public sealed class OpenAIProfileHandler : ModelHandlerBase<AIProfile>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAIProfileStore _profileStore;
@@ -37,11 +37,11 @@ public sealed class OpenAIProfileHandler : AIProfileHandlerBase
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingAIProfileContext context)
-        => PopulateAsync(context.Profile, context.Data);
+    public override Task InitializingAsync(InitializingContext<AIProfile> context)
+        => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingAIProfileContext context)
-        => PopulateAsync(context.Profile, context.Data);
+    public override Task UpdatingAsync(UpdatingContext<AIProfile> context)
+        => PopulateAsync(context.Model, context.Data);
 
     private static Task PopulateAsync(AIProfile profile, JsonNode data)
     {

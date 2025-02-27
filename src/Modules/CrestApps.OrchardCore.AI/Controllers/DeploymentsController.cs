@@ -71,7 +71,7 @@ public sealed class DeploymentsController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var result = await _deploymentManager.PageQueriesAsync(pager.Page, pager.PageSize, new QueryContext
+        var result = await _deploymentManager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
             Name = options.Search,
         });
