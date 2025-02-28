@@ -9,6 +9,9 @@ public class SubscriptionPermissionsProvider : IPermissionProvider
     private readonly IEnumerable<Permission> _allPermissions =
     [
         SubscriptionPermissions.ManageSubscriptionSettings,
+        SubscriptionPermissions.ManageSubscriptions,
+        SubscriptionPermissions.ManageOwnSubscriptions,
+        SubscriptionPermissions.AccessSubscriberDashboard
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
