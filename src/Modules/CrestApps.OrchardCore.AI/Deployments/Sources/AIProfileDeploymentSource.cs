@@ -6,11 +6,12 @@ using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
-public sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfileDeploymentStep>
+internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfileDeploymentStep>
 {
     private readonly INamedModelStore<AIProfile> _profileStore;
 
-    public AIProfileDeploymentSource(INamedModelStore<AIProfile> profileStore)
+    public AIProfileDeploymentSource(
+        INamedModelStore<AIProfile> profileStore)
     {
         _profileStore = profileStore;
     }

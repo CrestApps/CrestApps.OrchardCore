@@ -14,16 +14,5 @@ public interface IAIDeploymentManager : INamedModelManager<AIDeployment>
     /// A ValueTask that represents the asynchronous operation. The result is an <see cref="IEnumerable{AIDeployment}"/>
     /// containing the model deployments for the specified provider and connection.
     /// </returns>
-    ValueTask<IEnumerable<AIDeployment>> GetAsync(string providerName, string connectionName);
-
-    /// <summary>
-    /// Asynchronously retrieves a deployment by provider-name and deployment name.
-    /// </summary>
-    /// <param name="providerName">The name of the provider. Must not be null or empty.</param>
-    /// <param name="deploymentName">The name of the deployment. Must not be null or empty.</param>
-    /// <returns>
-    /// A ValueTask that represents the asynchronous operation. The result is an <see cref="AIDeployment"/>
-    /// of the model deployment for the given provider-name and deployment-name if one exists.
-    /// </returns>
-    Task<AIDeployment> FindAsync(string providerName, string deploymentName);
+    ValueTask<IEnumerable<AIDeployment>> GetAllAsync(string providerName, string connectionName);
 }

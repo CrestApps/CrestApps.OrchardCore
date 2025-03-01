@@ -19,7 +19,9 @@ public static class ServiceCollectionExtensions
         services
             .AddCoreModelServices()
             .AddScoped<INamedModelStore<AIProfile>, DefaultAIProfileStore>()
-            .AddScoped<INamedModelStore<AIProviderConnection>, AIProviderConnectionStore>()
+            .AddScoped<AIProviderConnectionStore>()
+            .AddScoped<IModelStore<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
+            .AddScoped<INamedModelStore<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
             .AddScoped<IAICompletionService, DefaultAICompletionService>()
             .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
             .AddScoped<IModelHandler<AIProfile>, AIProfileHandler>();
@@ -38,7 +40,9 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAIDeploymentServices(this IServiceCollection services)
     {
         services
-            .AddScoped<INamedModelStore<AIDeployment>, DefaultAIDeploymentStore>()
+            .AddScoped<DefaultAIDeploymentStore>()
+            .AddScoped<IModelStore<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
+            .AddScoped<INamedModelStore<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
             .AddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>()
             .AddScoped<IModelHandler<AIDeployment>, AIDeploymentHandler>()
             .AddPermissionProvider<AIDeploymentProvider>();

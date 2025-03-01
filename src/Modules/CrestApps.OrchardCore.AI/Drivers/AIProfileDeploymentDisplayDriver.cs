@@ -8,7 +8,7 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
-public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
+internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly AIOptions _aiOptions;
@@ -47,7 +47,7 @@ public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
 
                 if (deployment is not null)
                 {
-                    model.Deployments = (await _deploymentManager.GetAsync(profileSource.ProviderName, deployment.ConnectionName))
+                    model.Deployments = (await _deploymentManager.GetAllAsync(profileSource.ProviderName, deployment.ConnectionName))
                     .Select(x => new SelectListItem(x.Name, x.Id));
                 }
             }
@@ -63,7 +63,7 @@ public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
 
                 if (!string.IsNullOrEmpty(connectionName))
                 {
-                    model.Deployments = (await _deploymentManager.GetAsync(profileSource.ProviderName, connectionName))
+                    model.Deployments = (await _deploymentManager.GetAllAsync(profileSource.ProviderName, connectionName))
                     .Select(x => new SelectListItem(x.Name, x.Id));
                 }
             }

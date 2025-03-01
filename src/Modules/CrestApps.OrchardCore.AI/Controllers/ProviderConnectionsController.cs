@@ -14,6 +14,7 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
@@ -28,6 +29,7 @@ public sealed class ProviderConnectionsController : Controller
     private readonly IModelManager<AIProviderConnection> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly IShellReleaseManager _shellReleaseManager;
     private readonly IDisplayManager<AIProviderConnection> _displayDriver;
     private readonly AIOptions _aiOptions;
     private readonly INotifier _notifier;
@@ -39,6 +41,7 @@ public sealed class ProviderConnectionsController : Controller
         IModelManager<AIProviderConnection> manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
+        IShellReleaseManager shellReleaseManager,
         IDisplayManager<AIProviderConnection> instanceDisplayManager,
         IOptions<AIOptions> aiOptions,
         INotifier notifier,
@@ -48,6 +51,7 @@ public sealed class ProviderConnectionsController : Controller
         _manager = manager;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
+        _shellReleaseManager = shellReleaseManager;
         _displayDriver = instanceDisplayManager;
         _aiOptions = aiOptions.Value;
         _notifier = notifier;
@@ -173,8 +177,9 @@ public sealed class ProviderConnectionsController : Controller
 
         if (ModelState.IsValid)
         {
-            await _manager.SaveAsync(model);
+            _shellReleaseManager.RequestRelease();
 
+            await _manager.SaveAsync(model);
             await _notifier.SuccessAsync(H["A new connection has been created successfully."]);
 
             return RedirectToAction(nameof(Index));
@@ -235,6 +240,8 @@ public sealed class ProviderConnectionsController : Controller
 
         if (ModelState.IsValid)
         {
+            _shellReleaseManager.RequestRelease();
+
             await _manager.SaveAsync(mutableInstance);
 
             await _notifier.SuccessAsync(H["The connection has been updated successfully."]);
@@ -264,6 +271,8 @@ public sealed class ProviderConnectionsController : Controller
 
         if (await _manager.DeleteAsync(model))
         {
+            _shellReleaseManager.RequestRelease();
+
             await _notifier.SuccessAsync(H["The connection has been deleted successfully."]);
         }
         else
@@ -313,6 +322,8 @@ public sealed class ProviderConnectionsController : Controller
                     }
                     else
                     {
+                        _shellReleaseManager.RequestRelease();
+
                         await _notifier.SuccessAsync(H.Plural(counter, "1 connection has been removed successfully.", "{0} connections have been removed successfully."));
                     }
                     break;

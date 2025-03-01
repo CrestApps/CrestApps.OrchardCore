@@ -229,3 +229,13 @@ public sealed class ConnectionManagementRecipesStartup : StartupBase
         services.AddRecipeExecutionStep<AIProviderConnectionsStep>();
     }
 }
+
+[Feature(AIConstants.Feature.ConnectionManagement)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class ConnectionManagementOCDeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<AIProviderConnectionDeploymentSource, AIProviderConnectionDeploymentStep, AIProviderConnectionDeploymentStepDisplayDriver>();
+    }
+}

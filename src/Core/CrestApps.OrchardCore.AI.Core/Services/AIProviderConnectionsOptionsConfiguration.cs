@@ -56,7 +56,7 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
 
             foreach (var connection in group.Connections)
             {
-                var mappingContext = new MappingAIProviderConnectionContext(connection);
+                var mappingContext = new InitializingAIProviderConnectionContext(connection);
 
                 if (defaultConnection is null && connection.IsDefault)
                 {
@@ -66,7 +66,7 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
                 mappingContext.Values["DefaultDeploymentName"] = connection.DefaultDeploymentName;
                 mappingContext.Values["ConnectionNameAlias"] = connection.Name;
 
-                _handlers.Invoke((handler, ctx) => handler.Mapping(ctx), mappingContext, _logger);
+                _handlers.Invoke((handler, ctx) => handler.Initializing(ctx), mappingContext, _logger);
 
                 provider.Connections[connection.Id] = new AIProviderConnectionEntry(mappingContext.Values);
             }

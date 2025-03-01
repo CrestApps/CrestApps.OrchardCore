@@ -25,6 +25,16 @@ public class ModelManager<T> : IModelManager<T>
         Logger = logger;
     }
 
+    protected ModelManager(
+        IModelStore<T> store,
+        IEnumerable<IModelHandler<T>> handlers,
+        ILogger logger)
+    {
+        Store = store;
+        _handlers = handlers;
+        Logger = logger;
+    }
+
     public async ValueTask<bool> DeleteAsync(T model)
     {
         ArgumentNullException.ThrowIfNull(model);
@@ -176,5 +186,17 @@ public class ModelManager<T> : IModelManager<T>
         var loadedContext = new LoadedContext<T>(model);
 
         await _handlers.InvokeAsync((handler, context) => handler.LoadedAsync(context), loadedContext, Logger);
+    }
+
+    public async ValueTask<IEnumerable<T>> GetAsync(string source)
+    {
+        var models = await Store.GetAsync(source);
+
+        foreach (var model in models)
+        {
+            await LoadAsync(model);
+        }
+
+        return models;
     }
 }

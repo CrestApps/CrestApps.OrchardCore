@@ -40,8 +40,9 @@ public class AIProviderConnection : SourceModel, INameAwareModel, IDisplayTextAw
         {
             Id = Id,
             Source = Source,
-            DisplayText = DisplayText,
             Name = Name,
+            DisplayText = DisplayText,
+            IsDefault = IsDefault,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,

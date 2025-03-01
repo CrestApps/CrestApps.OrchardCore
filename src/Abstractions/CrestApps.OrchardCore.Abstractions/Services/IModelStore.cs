@@ -35,6 +35,16 @@ public interface IModelStore<T>
     ValueTask<IEnumerable<T>> GetAllAsync();
 
     /// <summary>
+    /// Asynchronously retrieves all models in the store with the given source.
+    /// </summary>
+    /// <returns>
+    /// <param name="source">The source of the model. Must not be null or empty.</param>
+    /// A ValueTask representing the asynchronous operation. The task result is an <see cref="IEnumerable{T}"/>
+    /// containing all models available in the store.
+    /// </returns>
+    ValueTask<IEnumerable<T>> GetAsync(string source);
+
+    /// <summary>
     /// Asynchronously retrieves a paged list of models based on the specified pagination and filtering parameters.
     /// </summary>
     /// <param name="page">The page number to retrieve, where the index is 1-based.</param>

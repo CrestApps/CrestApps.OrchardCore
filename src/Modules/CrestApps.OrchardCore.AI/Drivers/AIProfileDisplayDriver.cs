@@ -13,7 +13,7 @@ using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
-public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
+internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly INamedModelStore<AIProfile> _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;

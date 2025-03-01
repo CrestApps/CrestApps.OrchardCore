@@ -2,5 +2,7 @@ namespace CrestApps.OrchardCore.AI.Models;
 
 public interface IAIProviderConnectionHandler
 {
-    void Mapping(MappingAIProviderConnectionContext context);
+    void Initializing(InitializingAIProviderConnectionContext context);
+
+    void Exporting(ExportingAIProviderConnectionContext context);
 }

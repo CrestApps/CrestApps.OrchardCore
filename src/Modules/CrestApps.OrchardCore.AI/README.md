@@ -54,7 +54,62 @@ The **AI Chat Services** feature builds upon the **AI Services** feature by addi
 
 The **AI Chat WebAPI** feature extends the **AI Chat Services** feature by enabling a REST WebAPI endpoints to allow you to interact with the models.
 
----
+### AI Connection Management  
+
+The **AI Connection Management** feature enhances **AI Services** by providing a user interface to manage provider connections.  
+
+#### Setting Up a Connection  
+
+1. **Navigate to AI Settings**  
+   - Go to **"Artificial Intelligence"** in the admin menu.  
+   - Click **"Connections"** to configure a new connection.  
+
+2. **Add a New Connection**  
+   - Click **"Add Connection"**, select a provider, and enter the required details.  
+   - Example: Connecting to **Google Gemini**  
+     - Generate an **API Key** from [Google AI Studio](https://aistudio.google.com).  
+     - Enter the **Endpoint**:  
+       ```
+       https://generativelanguage.googleapis.com/v1beta/openai/
+       ```  
+     - Specify the **Model**, e.g., **gemini-2.0-flash**.  
+
+#### Creating AI Profiles  
+
+After setting up a connection, you can create **AI Profiles** to interact with the configured model.  
+
+#### Recipes
+
+You can add or update a connection using **recipes**. Below is a recipe for adding or updating a connection to the **DeepSeek** service:  
+
+```json
+{
+  "steps": [
+    {
+      "name": "AIProviderConnections",
+      "connections": [
+        {
+          "Source": "OpenAI",
+          "Name": "deepseek",
+          "IsDefault": false,
+          "DefaultDeploymentName": "deepseek-chat",
+          "DisplayText": "DeepSeek",
+          "Properties": {
+            "OpenAIConnectionMetadata": {
+              "Endpoint": "https://api.deepseek.com/v1",
+              "ApiKey": "<!-- DeepSeek API Key -->"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```  
+
+This recipe ensures that a **DeepSeek** connection is added or updated within the AI provider settings. Replace `<!-- DeepSeek API Key -->` with a valid API key to authenticate the connection.  
+
+If a connection with the same `Name` and `Source` already exists, the recipe updates its properties. Otherwise, it creates a new connection.
 
 ### Defining Chat Profiles Using Code
 

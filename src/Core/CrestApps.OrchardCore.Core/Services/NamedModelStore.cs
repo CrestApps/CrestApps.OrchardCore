@@ -18,11 +18,28 @@ public class NamedModelStore<T> : ModelStore<T>, INamedModelStore<T>
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
-        var profile = document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        var model = document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
-        if (profile is not null)
+        if (model is not null)
         {
-            return profile;
+            return model;
+        }
+
+        return null;
+    }
+
+    public async ValueTask<T> GetAsync(string name, string source)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(name);
+        ArgumentException.ThrowIfNullOrEmpty(source);
+
+        var document = await DocumentManager.GetOrCreateImmutableAsync();
+
+        var model = document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && x.Source.Equals(source, StringComparison.OrdinalIgnoreCase));
+
+        if (model is not null)
+        {
+            return model;
         }
 
         return null;

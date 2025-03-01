@@ -10,7 +10,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Tools;
 
-public sealed class ProfileAwareAIToolSource : IAIToolSource
+internal sealed class ProfileAwareAIToolSource : IAIToolSource
 {
     public const string ToolSource = "ProfileAware";
 

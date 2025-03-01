@@ -95,6 +95,13 @@ public class ModelStore<T> : IModelStore<T>
         return document.Records.Values;
     }
 
+    public async ValueTask<IEnumerable<T>> GetAsync(string source)
+    {
+        var document = await DocumentManager.GetOrCreateImmutableAsync();
+
+        return document.Records.Values.Where(x => x.Source.Equals(source, StringComparison.OrdinalIgnoreCase));
+    }
+
     protected virtual async ValueTask<IEnumerable<T>> LocateInstancesAsync(QueryContext context)
     {
         var document = await DocumentManager.GetOrCreateImmutableAsync();

@@ -38,6 +38,16 @@ public interface IModelManager<T>
     ValueTask<IEnumerable<T>> GetAllAsync();
 
     /// <summary>
+    /// Asynchronously retrieves all models in the store with the given source.
+    /// </summary>
+    /// <returns>
+    /// <param name="source">The source of the model. Must not be null or empty.</param>
+    /// A ValueTask representing the asynchronous operation. The task result is an <see cref="IEnumerable{T}"/>
+    /// containing all models available in the store.
+    /// </returns>
+    ValueTask<IEnumerable<T>> GetAsync(string source);
+
+    /// <summary>
     /// Asynchronously retrieves a list of models for the specified provider.
     /// </summary>
     /// <param name="source">The name of the provider. Must not be null or empty.</param>

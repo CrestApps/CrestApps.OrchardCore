@@ -8,7 +8,7 @@ using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Recipes;
 
-public sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
+internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 {
     public const string StepKey = "AIProviderConnections";
 
@@ -44,13 +44,23 @@ public sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
                 connection = await _manager.FindByIdAsync(id);
             }
 
+            var sourceName = token[nameof(AIProviderConnection.Source)]?.GetValue<string>();
+            var hasSource = !string.IsNullOrEmpty(sourceName);
+
             if (connection is null)
             {
+                if (!hasSource)
+                {
+                    context.Errors.Add(S["Could not find connection-source value. The profile will not be imported"]);
+
+                    continue;
+                }
+
                 var name = token[nameof(AIProviderConnection.Name)]?.GetValue<string>()?.Trim();
 
                 if (!string.IsNullOrEmpty(name))
                 {
-                    connection = await _manager.FindByNameAsync(name);
+                    connection = await _manager.GetAsync(name, sourceName);
                 }
             }
 
@@ -60,11 +70,9 @@ public sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
             }
             else
             {
-                var sourceName = token[nameof(AIProviderConnection.Source)]?.GetValue<string>();
-
-                if (string.IsNullOrEmpty(sourceName))
+                if (!hasSource)
                 {
-                    context.Errors.Add(S["Could not find profile-source value. The profile will not be imported"]);
+                    context.Errors.Add(S["Could not find connection-source value. The profile will not be imported"]);
 
                     continue;
                 }

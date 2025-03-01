@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Models;
@@ -15,18 +16,38 @@ public sealed class OpenAIProviderConnectionHandler : IAIProviderConnectionHandl
         _dataProtectionProvider = dataProtectionProvider;
     }
 
-    public void Mapping(MappingAIProviderConnectionContext context)
+    public void Exporting(ExportingAIProviderConnectionContext context)
     {
         if (!string.Equals(context.Connection.ProviderName, OpenAIConstants.ProviderName, StringComparison.Ordinal))
         {
             return;
         }
 
-        var metadata = context.Connection.As<OpenAIProviderConnectionMetadata>();
+        var metadataNode = context.ExportData["Properties"]?[nameof(OpenAIConnectionMetadata)]?.AsObject();
+
+        if (metadataNode == null || metadataNode.Count == 0)
+        {
+            return;
+        }
+
+        // Always set the API key to an empty string during export to prevent accidental exposure.
+        metadataNode[nameof(OpenAIConnectionMetadata.ApiKey)] = string.Empty;
+
+        context.ExportData["Properties"][nameof(OpenAIConnectionMetadata)] = metadataNode;
+    }
+
+    public void Initializing(InitializingAIProviderConnectionContext context)
+    {
+        if (!string.Equals(context.Connection.ProviderName, OpenAIConstants.ProviderName, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var metadata = context.Connection.As<OpenAIConnectionMetadata>();
 
         if (!string.IsNullOrEmpty(metadata.ApiKey))
         {
-            var protector = _dataProtectionProvider.CreateProtector(OpenAIConstants.ConnectionProtectorName);
+            var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
 
             context.Values["ApiKey"] = protector.Unprotect(metadata.ApiKey);
         }

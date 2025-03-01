@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.OpenAI.Core.Models;
 
-public sealed class OpenAIProviderConnectionMetadata
+public sealed class OpenAIConnectionMetadata
 {
     public Uri Endpoint { get; set; }
 

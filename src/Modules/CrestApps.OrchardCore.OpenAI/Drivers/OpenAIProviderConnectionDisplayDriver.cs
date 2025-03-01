@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Models;
@@ -34,7 +35,7 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
         return Initialize<OpenAIConnectionViewModel>("OpenAIConnection_Edit", model =>
         {
-            var metadata = connection.As<OpenAIProviderConnectionMetadata>();
+            var metadata = connection.As<OpenAIConnectionMetadata>();
 
             model.Endpoint = metadata.Endpoint?.ToString();
             model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
@@ -52,7 +53,7 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = connection.As<OpenAIProviderConnectionMetadata>();
+        var metadata = connection.As<OpenAIConnectionMetadata>();
 
         if (string.IsNullOrEmpty(model.Endpoint))
         {
@@ -69,14 +70,14 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
 
-        if (!string.IsNullOrEmpty(metadata.ApiKey) && !hasNewKey)
+        if (string.IsNullOrEmpty(metadata.ApiKey) && !hasNewKey)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["API key is required field."]);
         }
 
         if (hasNewKey)
         {
-            var protector = _dataProtectionProvider.CreateProtector(OpenAIConstants.ConnectionProtectorName);
+            var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
 
             metadata.ApiKey = protector.Protect(model.ApiKey);
         }

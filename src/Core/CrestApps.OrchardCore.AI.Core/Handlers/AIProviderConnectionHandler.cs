@@ -1,12 +1,13 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
@@ -14,7 +15,7 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderConnection>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly AIOptions _aiOptions;
     private readonly INamedModelStore<AIProviderConnection> _store;
     private readonly IClock _clock;
 
@@ -22,13 +23,13 @@ public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderCon
 
     public AIProviderConnectionHandler(
         IHttpContextAccessor httpContextAccessor,
-        IServiceProvider serviceProvider,
+        IOptions<AIOptions> aiOptions,
         INamedModelStore<AIProviderConnection> store,
         IClock clock,
         IStringLocalizer<AIProviderConnectionHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
-        _serviceProvider = serviceProvider;
+        _aiOptions = aiOptions.Value;
         _store = store;
         _clock = clock;
         S = stringLocalizer;
@@ -60,11 +61,10 @@ public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderCon
         {
             context.Result.Fail(new ValidationResult(S["Source is required."], [nameof(AIProviderConnection.Source)]));
         }
-        else if (_serviceProvider.GetKeyedService<IAIToolSource>(context.Model.Source) is null)
+        else if (!_aiOptions.ConnectionSources.TryGetValue(context.Model.Source, out _))
         {
             context.Result.Fail(new ValidationResult(S["Invalid source."], [nameof(AIProviderConnection.Source)]));
         }
-
 
         if (string.IsNullOrWhiteSpace(context.Model.DefaultDeploymentName))
         {

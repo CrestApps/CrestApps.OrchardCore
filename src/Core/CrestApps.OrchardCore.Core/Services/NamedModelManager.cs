@@ -18,6 +18,15 @@ public class NamedModelManager<T> : ModelManager<T>, INamedModelManager<T>
         NamedStore = store;
     }
 
+    protected NamedModelManager(
+        INamedModelStore<T> store,
+        IEnumerable<IModelHandler<T>> handlers,
+        ILogger logger)
+    : base(store, handlers, logger)
+    {
+        NamedStore = store;
+    }
+
     public async ValueTask<T> FindByNameAsync(string name)
     {
         var model = await NamedStore.FindByNameAsync(name);
@@ -26,6 +35,19 @@ public class NamedModelManager<T> : ModelManager<T>, INamedModelManager<T>
         {
             await LoadAsync(model);
         }
+
+        return model;
+    }
+
+    public async ValueTask<T> GetAsync(string name, string source)
+    {
+        var model = await NamedStore.GetAsync(name, source);
+
+        if (model is not null)
+        {
+            await LoadAsync(model);
+        }
+
         return model;
     }
 }

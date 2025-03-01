@@ -10,7 +10,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 
-public sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
+internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly IModelStore<AIToolInstance> _toolInstanceStore;

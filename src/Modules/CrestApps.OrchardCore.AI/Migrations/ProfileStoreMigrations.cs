@@ -7,7 +7,7 @@ using OrchardCore.Documents;
 namespace CrestApps.OrchardCore.AI.Migrations;
 
 [Obsolete("This class will be removed before the v1 is released.")]
-public sealed class ProfileStoreMigrations : DataMigration
+internal sealed class ProfileStoreMigrations : DataMigration
 {
     private readonly INamedModelStore<AIProfile> _profilesStore;
     private readonly IDocumentManager<AIProfileDocument> _profileDocument;

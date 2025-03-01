@@ -11,7 +11,7 @@ using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
-public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
+internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 {
     private readonly AIProviderOptions _providerOptions;
     private readonly INamedModelStore<AIDeployment> _deploymentStore;

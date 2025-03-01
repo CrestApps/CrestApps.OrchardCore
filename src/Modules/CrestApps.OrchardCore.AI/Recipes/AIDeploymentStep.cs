@@ -6,7 +6,7 @@ using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Recipes;
 
-public sealed class AIDeploymentStep : NamedRecipeStepHandler
+internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 {
     public const string StepKey = "AIDeployment";
 
@@ -63,7 +63,7 @@ public sealed class AIDeploymentStep : NamedRecipeStepHandler
                     continue;
                 }
 
-                deployment = await _deploymentManager.FindAsync(providerName, name);
+                deployment = await _deploymentManager.GetAsync(name, providerName);
 
                 if (deployment is null)
                 {

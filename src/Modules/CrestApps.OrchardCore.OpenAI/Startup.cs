@@ -2,8 +2,10 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.OpenAI.Services;
 using CrestApps.OrchardCore.OpenAI.Core;
+using CrestApps.OrchardCore.OpenAI.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Drivers;
 using CrestApps.OrchardCore.OpenAI.Handlers;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -33,6 +35,7 @@ public sealed class ConnectionManagementStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IModelHandler<AIProviderConnection>, OpenAIProviderConnectionSettingsHandler>();
         services.AddTransient<IAIProviderConnectionHandler, OpenAIProviderConnectionHandler>();
         services.AddDisplayDriver<AIProviderConnection, OpenAIProviderConnectionDisplayDriver>();
         services.AddAIConnectionSource(OpenAIConstants.ProviderName, o =>
