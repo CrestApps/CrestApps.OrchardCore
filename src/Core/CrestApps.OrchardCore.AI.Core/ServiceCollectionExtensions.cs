@@ -22,7 +22,6 @@ public static class ServiceCollectionExtensions
             .AddScoped<INamedModelStore<AIProviderConnection>, AIProviderConnectionStore>()
             .AddScoped<IAICompletionService, DefaultAICompletionService>()
             .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
-            .AddScoped<IAIProfileManagerSession, DefaultAIProfileManagerSession>()
             .AddScoped<IModelHandler<AIProfile>, AIProfileHandler>();
 
         services
