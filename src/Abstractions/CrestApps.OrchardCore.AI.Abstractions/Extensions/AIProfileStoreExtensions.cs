@@ -1,10 +1,10 @@
 using CrestApps.OrchardCore.AI.Models;
 
-namespace CrestApps.OrchardCore.AI;
+namespace CrestApps.OrchardCore.Services;
 
 public static class AIProfileStoreExtensions
 {
-    public static async ValueTask<IEnumerable<AIProfile>> GetProfilesAsync(this IAIProfileStore store, AIProfileType type)
+    public static async ValueTask<IEnumerable<AIProfile>> GetProfilesAsync(this INamedModelStore<AIProfile> store, AIProfileType type)
     {
         var profiles = await store.GetAllAsync();
 

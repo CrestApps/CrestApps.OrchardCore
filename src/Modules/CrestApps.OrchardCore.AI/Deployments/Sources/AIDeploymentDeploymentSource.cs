@@ -1,14 +1,16 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
+using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
 public sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDeploymentDeploymentStep>
 {
-    private readonly IAIDeploymentStore _deploymentStore;
+    private readonly INamedModelStore<AIProfile> _deploymentStore;
 
-    public AIDeploymentDeploymentSource(IAIDeploymentStore deploymentStore)
+    public AIDeploymentDeploymentSource(INamedModelStore<AIProfile> deploymentStore)
     {
         _deploymentStore = deploymentStore;
     }
@@ -34,7 +36,7 @@ public sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDeploy
             {
                 { "Id", deployment.Id },
                 { "Name", deployment.Name },
-                { "ProviderName" , deployment.ProviderName },
+                { "ProviderName" , deployment.Source },
                 { "ConnectionName", deployment.ConnectionName },
                 { "Author", deployment.Author },
                 { "CreatedUtc" , deployment.CreatedUtc },

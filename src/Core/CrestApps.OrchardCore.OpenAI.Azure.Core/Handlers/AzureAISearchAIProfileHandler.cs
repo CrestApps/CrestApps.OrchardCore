@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;

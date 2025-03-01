@@ -33,7 +33,7 @@ public static class AIProviderConnectionExtensions
     {
         if (entry.TryGetValue(key, out var value))
         {
-            string stringValue = null;
+            string stringValue;
 
             if (value is JsonElement jsonElement)
             {

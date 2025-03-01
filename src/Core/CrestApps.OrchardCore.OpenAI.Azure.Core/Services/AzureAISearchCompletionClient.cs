@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Services;
+using CrestApps.OrchardCore.Services;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -24,7 +25,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
 {
     private static readonly AIProfileMetadata _defaultMetadata = new();
 
-    private readonly IAIDeploymentStore _deploymentStore;
+    private readonly INamedModelStore<AIDeployment> _deploymentStore;
     private readonly AzureAISearchIndexSettingsService _azureAISearchIndexSettingsService;
     private readonly IAIToolsService _toolsService;
     private readonly IAILinkGenerator _linkGenerator;
@@ -33,7 +34,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
     private readonly ILogger _logger;
 
     public AzureAISearchCompletionClient(
-        IAIDeploymentStore deploymentStore,
+        INamedModelStore<AIDeployment> deploymentStore,
         IOptions<AIProviderOptions> providerOptions,
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
         AzureAISearchIndexSettingsService azureAISearchIndexSettingsService,

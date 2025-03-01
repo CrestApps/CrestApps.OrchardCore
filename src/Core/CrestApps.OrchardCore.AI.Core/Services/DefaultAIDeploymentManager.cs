@@ -1,203 +1,23 @@
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Core.Services;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using OrchardCore;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
+public sealed class DefaultAIDeploymentManager : NamedModelManager<AIDeployment>, IAIDeploymentManager
 {
-    private readonly IAIDeploymentStore _deploymentStore;
-    private readonly AICompletionOptions _completionOptions;
-    private readonly IEnumerable<IModelHandler<AIDeployment>> _handlers;
-    private readonly ILogger _logger;
-
     public DefaultAIDeploymentManager(
-        IAIDeploymentStore deploymentStore,
-        IOptions<AICompletionOptions> completionOptions,
+        INamedModelStore<AIDeployment> deploymentStore,
         IEnumerable<IModelHandler<AIDeployment>> handlers,
         ILogger<DefaultAIDeploymentManager> logger)
+        : base(deploymentStore, handlers, logger)
     {
-        _deploymentStore = deploymentStore;
-        _completionOptions = completionOptions.Value;
-        _handlers = handlers;
-        _logger = logger;
-    }
-
-    public async ValueTask<bool> DeleteAsync(AIDeployment deployment)
-    {
-        ArgumentNullException.ThrowIfNull(deployment);
-
-        var deletingContext = new DeletingContext<AIDeployment>(deployment);
-        await _handlers.InvokeAsync((handler, ctx) => handler.DeletingAsync(ctx), deletingContext, _logger);
-
-        if (string.IsNullOrEmpty(deployment.Id))
-        {
-            return false;
-        }
-
-        var removed = await _deploymentStore.DeleteAsync(deployment);
-
-        var deletedContext = new DeletedContext<AIDeployment>(deployment);
-        await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, _logger);
-
-        return removed;
-    }
-
-    public async ValueTask<AIDeployment> FindByIdAsync(string id)
-    {
-        var deployment = await _deploymentStore.FindByIdAsync(id);
-
-        if (deployment is not null)
-        {
-            await LoadAsync(deployment);
-
-            return deployment;
-        }
-
-        return null;
-    }
-
-    public async ValueTask<AIDeployment> NewAsync(string providerName, JsonNode data = null)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(providerName);
-
-        if (!_completionOptions.Deployments.TryGetValue(providerName, out var deploymentType))
-        {
-            _logger.LogWarning("Unable to find a deployment-source that can handle the source '{ProviderName}'.", providerName);
-
-            return null;
-        }
-
-        var id = IdGenerator.GenerateId();
-
-        var deployment = new AIDeployment()
-        {
-            Id = id,
-            ProviderName = providerName,
-        };
-
-        var initializingContext = new InitializingContext<AIDeployment>(deployment, data);
-        await _handlers.InvokeAsync((handler, ctx) => handler.InitializingAsync(ctx), initializingContext, _logger);
-
-        var initializedContext = new InitializedContext<AIDeployment>(deployment);
-        await _handlers.InvokeAsync((handler, ctx) => handler.InitializedAsync(ctx), initializedContext, _logger);
-
-        // Set the provider name and the connectionName again after calling handlers to prevent handlers from updating the source during initialization.
-        deployment.ProviderName = providerName;
-
-        if (string.IsNullOrEmpty(deployment.Id))
-        {
-            deployment.Id = id;
-        }
-
-        return deployment;
-    }
-
-    public async ValueTask<PageResult<AIDeployment>> PageAsync(int page, int pageSize, QueryContext context)
-    {
-        var result = await _deploymentStore.PageAsync(page, pageSize, context);
-
-        foreach (var record in result.Records)
-        {
-            await LoadAsync(record);
-        }
-
-        return result;
-    }
-
-    public async ValueTask<IEnumerable<AIDeployment>> GetAllAsync()
-    {
-        var deployments = await _deploymentStore.GetAllAsync();
-
-        foreach (var deployment in deployments)
-        {
-            await LoadAsync(deployment);
-        }
-
-        return deployments;
-    }
-
-    public async ValueTask<IEnumerable<AIDeployment>> GetAsync(string providerName)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(providerName);
-
-        var deployments = (await _deploymentStore.GetAllAsync())
-            .Where(deployment => deployment.ProviderName == providerName);
-
-        foreach (var deployment in deployments)
-        {
-            await LoadAsync(deployment);
-        }
-
-        return deployments;
-    }
-
-    public async ValueTask<IEnumerable<AIDeployment>> GetAsync(string providerName, string connectionName)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(providerName);
-        ArgumentException.ThrowIfNullOrEmpty(connectionName);
-
-        var deployments = (await _deploymentStore.GetAllAsync())
-            .Where(deployment => deployment.ProviderName == providerName && deployment.ConnectionName == connectionName);
-
-        foreach (var deployment in deployments)
-        {
-            await LoadAsync(deployment);
-        }
-
-        return deployments;
-    }
-
-    public async ValueTask SaveAsync(AIDeployment deployment)
-    {
-        ArgumentNullException.ThrowIfNull(deployment);
-
-        var savingContext = new SavingContext<AIDeployment>(deployment);
-        await _handlers.InvokeAsync((handler, ctx) => handler.SavingAsync(ctx), savingContext, _logger);
-
-        await _deploymentStore.SaveAsync(deployment);
-
-        var savedContext = new SavedContext<AIDeployment>(deployment);
-        await _handlers.InvokeAsync((handler, ctx) => handler.SavedAsync(ctx), savedContext, _logger);
-    }
-
-    public async ValueTask UpdateAsync(AIDeployment deployment, JsonNode data = null)
-    {
-        ArgumentNullException.ThrowIfNull(deployment);
-
-        var updatingContext = new UpdatingContext<AIDeployment>(deployment, data);
-        await _handlers.InvokeAsync((handler, ctx) => handler.UpdatingAsync(ctx), updatingContext, _logger);
-
-        var updatedContext = new UpdatedContext<AIDeployment>(deployment);
-        await _handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, _logger);
-    }
-
-    public async ValueTask<ValidationResultDetails> ValidateAsync(AIDeployment deployment)
-    {
-        ArgumentNullException.ThrowIfNull(deployment);
-
-        var validatingContext = new ValidatingContext<AIDeployment>(deployment);
-        await _handlers.InvokeAsync((handler, ctx) => handler.ValidatingAsync(ctx), validatingContext, _logger);
-
-        var validatedContext = new ValidatedContext<AIDeployment>(deployment, validatingContext.Result);
-        await _handlers.InvokeAsync((handler, ctx) => handler.ValidatedAsync(ctx), validatedContext, _logger);
-
-        return validatingContext.Result;
-    }
-
-    private Task LoadAsync(AIDeployment deployment)
-    {
-        var loadedContext = new LoadedContext<AIDeployment>(deployment);
-
-        return _handlers.InvokeAsync((handler, context) => handler.LoadedAsync(context), loadedContext, _logger);
     }
 
     public async Task<AIDeployment> FindAsync(string providerName, string deploymentName)
     {
-        var deployment = (await _deploymentStore.GetAllAsync())
+        var deployment = (await Store.GetAllAsync())
             .FirstOrDefault(x => x.ProviderName == providerName && x.Name.Equals(deploymentName, StringComparison.OrdinalIgnoreCase));
 
         if (deployment is not null)
@@ -206,5 +26,18 @@ public sealed class DefaultAIDeploymentManager : IAIDeploymentManager
         }
 
         return deployment;
+    }
+
+    public async ValueTask<IEnumerable<AIDeployment>> GetAsync(string providerName, string connectionName)
+    {
+        var deployments = (await Store.GetAllAsync())
+            .Where(x => x.ProviderName == providerName && x.ConnectionName.Equals(connectionName, StringComparison.OrdinalIgnoreCase));
+
+        foreach (var deployment in deployments)
+        {
+            await LoadAsync(deployment);
+        }
+
+        return deployments;
     }
 }

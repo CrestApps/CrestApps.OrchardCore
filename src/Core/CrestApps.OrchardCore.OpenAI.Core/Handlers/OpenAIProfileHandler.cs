@@ -1,8 +1,9 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
@@ -14,8 +15,8 @@ namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 public sealed class OpenAIProfileHandler : ModelHandlerBase<AIProfile>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAIProfileStore _profileStore;
-    private readonly IAIDeploymentStore _deploymentStore;
+    private readonly INamedModelStore<AIProfile> _profileStore;
+    private readonly INamedModelStore<AIDeployment> _deploymentStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IClock _clock;
 
@@ -23,8 +24,8 @@ public sealed class OpenAIProfileHandler : ModelHandlerBase<AIProfile>
 
     public OpenAIProfileHandler(
         IHttpContextAccessor httpContextAccessor,
-        IAIProfileStore profileStore,
-        IAIDeploymentStore deploymentStore,
+        INamedModelStore<AIProfile> profileStore,
+        INamedModelStore<AIDeployment> deploymentStore,
         ILiquidTemplateManager liquidTemplateManager,
         IClock clock,
         IStringLocalizer<OpenAIProfileHandler> stringLocalizer)

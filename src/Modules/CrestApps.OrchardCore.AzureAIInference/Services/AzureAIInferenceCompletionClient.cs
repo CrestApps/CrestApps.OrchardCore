@@ -1,10 +1,10 @@
 using Azure;
 using Azure.AI.Inference;
-using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -20,7 +20,7 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
         IOptions<AIProviderOptions> providerOptions,
         IAIToolsService toolsService,
         IOptions<DefaultAIOptions> defaultOptions,
-        IAIDeploymentStore deploymentStore
+        INamedModelStore<AIDeployment> deploymentStore
         ) : base(AzureAIInferenceConstants.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
     {
     }

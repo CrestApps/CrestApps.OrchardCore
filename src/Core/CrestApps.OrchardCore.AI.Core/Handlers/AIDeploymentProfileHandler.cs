@@ -1,18 +1,20 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
 public sealed class AIDeploymentProfileHandler : ModelHandlerBase<AIProfile>
 {
-    private readonly IAIDeploymentStore _deploymentStore;
+    private readonly INamedModelStore<AIDeployment> _deploymentStore;
 
     internal readonly IStringLocalizer S;
 
     public AIDeploymentProfileHandler(
-        IAIDeploymentStore deploymentStore,
+        INamedModelStore<AIDeployment> deploymentStore,
         IStringLocalizer<AIProfileHandler> stringLocalizer)
     {
         _deploymentStore = deploymentStore;

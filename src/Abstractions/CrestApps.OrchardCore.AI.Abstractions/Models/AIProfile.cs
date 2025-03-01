@@ -1,15 +1,10 @@
 using System.Text.Json.Nodes;
-using OrchardCore.Entities;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public class AIProfile : Entity
+public class AIProfile : SourceModel, INameAwareModel, IDisplayTextAwareModel
 {
-    /// <summary>
-    /// Gets or sets the unique identifier for the profile.
-    /// </summary>
-    public string Id { get; set; }
-
     /// <summary>
     /// Gets or sets the technical name of the profile.
     /// </summary>
@@ -19,11 +14,6 @@ public class AIProfile : Entity
     /// Gets or sets the display text of the profile.
     /// </summary>
     public string DisplayText { get; set; }
-
-    /// <summary>
-    /// Gets the name of the source for this profile.
-    /// </summary>
-    public string Source { get; set; }
 
     /// <summary>
     /// Gets or sets the type of AI chat profile.

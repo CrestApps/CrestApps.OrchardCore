@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Endpoints.Models;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -24,7 +25,7 @@ internal static class ApiAIUtilityCompletionEndpoint
 
     private static async Task<IResult> HandleAsync<T>(
        IAuthorizationService authorizationService,
-       IAIProfileManager chatProfileManager,
+       INamedModelManager<AIProfile> chatProfileManager,
        IHttpContextAccessor httpContextAccessor,
        IAICompletionService completionService,
        ILogger<T> logger,

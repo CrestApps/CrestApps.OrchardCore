@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -19,7 +20,7 @@ public sealed class OpenAICompletionClient : DeploymentAwareAICompletionClient
        IOptions<AIProviderOptions> providerOptions,
        IAIToolsService toolsService,
        IOptions<DefaultAIOptions> defaultOptions,
-       IAIDeploymentStore deploymentStore
+       INamedModelStore<AIDeployment> deploymentStore
        ) : base(OpenAIConstants.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
     {
     }

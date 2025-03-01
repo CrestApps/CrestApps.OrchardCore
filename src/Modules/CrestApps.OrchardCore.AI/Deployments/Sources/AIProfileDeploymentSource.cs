@@ -1,14 +1,16 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
+using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
 public sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfileDeploymentStep>
 {
-    private readonly IAIProfileStore _profileStore;
+    private readonly INamedModelStore<AIProfile> _profileStore;
 
-    public AIProfileDeploymentSource(IAIProfileStore profileStore)
+    public AIProfileDeploymentSource(INamedModelStore<AIProfile> profileStore)
     {
         _profileStore = profileStore;
     }

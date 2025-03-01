@@ -79,7 +79,7 @@ internal sealed class ImportAzureOpenAIDeploymentStep : NamedRecipeStepHandler
             return;
         }
 
-        var existingDeployments = await _deploymentManager.GetAsync(AzureOpenAIConstants.ProviderName);
+        var existingDeployments = await _deploymentManager.FindBySourceAsync(AzureOpenAIConstants.ProviderName);
 
         foreach (var importableConnection in importableConnections)
         {

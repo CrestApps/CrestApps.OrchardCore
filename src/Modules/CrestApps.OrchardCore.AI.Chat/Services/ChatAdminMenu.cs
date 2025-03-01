@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -10,13 +11,13 @@ namespace CrestApps.OrchardCore.AI.Chat.Services;
 
 public sealed class ChatAdminMenu : AdminNavigationProvider
 {
-    private readonly IAIProfileStore _profileStore;
+    private readonly INamedModelStore<AIProfile> _profileStore;
     private readonly AICompletionOptions _options;
 
     internal readonly IStringLocalizer S;
 
     public ChatAdminMenu(
-        IAIProfileStore profileStore,
+        INamedModelStore<AIProfile> profileStore,
         IOptions<AICompletionOptions> options,
         IStringLocalizer<ChatAdminMenu> stringLocalizer)
     {
@@ -27,7 +28,7 @@ public sealed class ChatAdminMenu : AdminNavigationProvider
 
     protected override async ValueTask BuildAsync(NavigationBuilder builder)
     {
-        var profiles = await _profileStore.GetProfilesAsync(AIProfileType.Chat);
+        var profiles = await _profileStore.GetAsync(AIProfileType.Chat);
 
         builder
            .Add(S["Artificial Intelligence"], ai =>

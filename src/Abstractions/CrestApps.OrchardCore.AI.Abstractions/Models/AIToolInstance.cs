@@ -1,13 +1,9 @@
-using OrchardCore.Entities;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public class AIToolInstance : Entity
+public class AIToolInstance : SourceModel, IDisplayTextAwareModel
 {
-    public string Id { get; set; }
-
-    public string Source { get; set; }
-
     public string DisplayText { get; set; }
 
     public DateTime CreatedUtc { get; set; }

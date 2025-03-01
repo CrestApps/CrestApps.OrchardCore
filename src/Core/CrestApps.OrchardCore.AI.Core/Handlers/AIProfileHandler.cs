@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Liquid;
@@ -12,7 +14,7 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 public sealed class AIProfileHandler : ModelHandlerBase<AIProfile>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAIProfileStore _profileStore;
+    private readonly INamedModelStore<AIProfile> _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IClock _clock;
 
@@ -20,7 +22,7 @@ public sealed class AIProfileHandler : ModelHandlerBase<AIProfile>
 
     public AIProfileHandler(
         IHttpContextAccessor httpContextAccessor,
-        IAIProfileStore profileStore,
+        INamedModelStore<AIProfile> profileStore,
         ILiquidTemplateManager liquidTemplateManager,
         IClock clock,
         IStringLocalizer<AIProfileHandler> stringLocalizer)

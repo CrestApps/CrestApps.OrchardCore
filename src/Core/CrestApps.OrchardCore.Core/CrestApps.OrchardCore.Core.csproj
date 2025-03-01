@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services project.
+    </Description>
+    <PackageTags>$(PackageTags) AI</PackageTags>
+  </PropertyGroup>
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

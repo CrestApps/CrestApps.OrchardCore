@@ -1,6 +1,6 @@
-using System.Linq;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -14,12 +14,12 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 public sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 {
     private readonly AIProviderOptions _providerOptions;
-    private readonly IAIDeploymentStore _deploymentStore;
+    private readonly INamedModelStore<AIDeployment> _deploymentStore;
 
     internal readonly IStringLocalizer S;
 
     public AIDeploymentDisplayDriver(
-        IAIDeploymentStore deploymentStore,
+        INamedModelStore<AIDeployment> deploymentStore,
         IOptions<AIProviderOptions> providerOptions,
         IStringLocalizer<AIDeploymentDisplayDriver> stringLocalizer)
     {

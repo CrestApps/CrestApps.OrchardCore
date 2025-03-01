@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Tools.ViewModels;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -11,12 +12,12 @@ namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 
 internal sealed class AIProfileToolMetadataDisplayDriver : DisplayDriver<AIToolInstance>
 {
-    private readonly IAIProfileStore _profileStore;
+    private readonly INamedModelStore<AIProfile> _profileStore;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileToolMetadataDisplayDriver(
-        IAIProfileStore profileStore,
+        INamedModelStore<AIProfile> profileStore,
         IStringLocalizer<AIProfileToolMetadataDisplayDriver> stringLocalizer)
     {
         _profileStore = profileStore;

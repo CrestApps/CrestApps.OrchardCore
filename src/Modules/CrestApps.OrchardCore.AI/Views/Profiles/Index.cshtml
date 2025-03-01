@@ -1,8 +1,9 @@
-@using CrestApps.OrchardCore.AI.ViewModels
+@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.OrchardCore.Core.Models
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
 
-@model ListProfilesViewModel
+@model ListModelViewModel<AIProfile>
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["AI Profiles"])</h1></zone>
 
@@ -29,10 +30,10 @@
     </div>
 
     <ul class="list-group with-checkbox" id="rewrite-rules-sortable-list">
-        @if (Model.Profiles.Count > 0)
+        @if (Model.Models.Count > 0)
         {
             int startIndex = 0;
-            int endIndex = startIndex + Model.Profiles.Count - 1;
+            int endIndex = startIndex + Model.Models.Count - 1;
 
             <li class="list-group-item text-bg-theme ignore-elements">
                 <div class="row gx-3">
@@ -41,9 +42,9 @@
                             <input type="checkbox" class="form-check-input" id="select-all">
                             <label class="form-check-label" for="select-all" id="select-all-label" title="@T["Select All"]"></label>
                             <label id="items" for="select-all">
-                                @T.Plural(Model.Profiles.Count, "1 item", "{0} items")
+                                @T.Plural(Model.Models.Count, "1 item", "{0} items")
                                 <span class="text-muted" title="@T["Items {0} to {1}", startIndex, endIndex]">
-                                    @T.Plural(Model.Profiles.Count, " / {0} item in total", " / {0} items in total")
+                                    @T.Plural(Model.Models.Count, " / {0} item in total", " / {0} items in total")
                                 </span>
                             </label>
                             <label id="selected-items" class="text-muted" for="select-all"></label>
@@ -66,13 +67,13 @@
                     </div>
                 </div>
             </li>
-            @foreach (var entry in Model.Profiles)
+            @foreach (var entry in Model.Models)
             {
-                <li class="list-group-item item d-flex justify-content-between align-items-center" data-filter-value="@entry.Profile.Name.ToLowerInvariant()">
+                <li class="list-group-item item d-flex justify-content-between align-items-center" data-filter-value="@entry.Model.Name.ToLowerInvariant()">
                     <div class="d-flex flex-row">
                         <div class="form-check">
-                            <input type="checkbox" class="form-check-input" value="@entry.Profile.Id" name="itemIds" id="itemIds-@entry.Profile.Id">
-                            <label class="form-check-label" for="itemIds-@entry.Profile.Id">&nbsp;</label>
+                            <input type="checkbox" class="form-check-input" value="@entry.Model.Id" name="itemIds" id="itemIds-@entry.Model.Id">
+                            <label class="form-check-label" for="itemIds-@entry.Model.Id">&nbsp;</label>
                         </div>
                     </div>
 

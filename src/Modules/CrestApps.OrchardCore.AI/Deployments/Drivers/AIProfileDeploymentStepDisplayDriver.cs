@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Deployments.ViewModels;
+using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -10,12 +12,12 @@ namespace CrestApps.OrchardCore.AI.Deployments.Drivers;
 
 internal sealed class AIProfileDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, AIProfileDeploymentStep>
 {
-    private readonly IAIProfileStore _store;
+    private readonly INamedModelStore<AIProfile> _store;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileDeploymentStepDisplayDriver(
-        IAIProfileStore store,
+        INamedModelStore<AIProfile> store,
         IStringLocalizer<AIProfileDeploymentStepDisplayDriver> stringLocalizer)
     {
         _store = store;

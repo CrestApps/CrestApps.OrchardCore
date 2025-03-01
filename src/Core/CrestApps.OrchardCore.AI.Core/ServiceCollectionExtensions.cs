@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,7 +17,9 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAICoreServices(this IServiceCollection services)
     {
         services
-            .AddScoped<IAIProfileStore, DefaultAIProfileStore>()
+            .AddCoreModelServices()
+            .AddScoped<INamedModelStore<AIProfile>, DefaultAIProfileStore>()
+            .AddScoped<INamedModelStore<AIProviderConnection>, AIProviderConnectionStore>()
             .AddScoped<IAICompletionService, DefaultAICompletionService>()
             .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
             .AddScoped<IAIProfileManagerSession, DefaultAIProfileManagerSession>()
@@ -27,8 +31,6 @@ public static class ServiceCollectionExtensions
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.CollectionName));
 
         services
-            .AddScoped<IAIToolInstanceStore, DefaultAIToolInstanceStore>()
-            .AddScoped<IAIToolInstanceManager, DefaultAIToolInstanceManager>()
             .AddScoped<IModelHandler<AIToolInstance>, AIToolInstanceHandler>();
 
         return services;
@@ -37,7 +39,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAIDeploymentServices(this IServiceCollection services)
     {
         services
-            .AddScoped<IAIDeploymentStore, DefaultAIDeploymentStore>()
+            .AddScoped<INamedModelStore<AIDeployment>, DefaultAIDeploymentStore>()
             .AddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>()
             .AddScoped<IModelHandler<AIDeployment>, AIDeploymentHandler>()
             .AddPermissionProvider<AIDeploymentProvider>();
@@ -74,8 +76,19 @@ public static class ServiceCollectionExtensions
         {
             o.AddClient<TClient>(clientName);
         });
+
         services.TryAddScoped<TClient>();
-        services.AddScoped<IAICompletionClient>(sp => sp.GetService<TClient>()); ;
+        services.AddScoped<IAICompletionClient>(sp => sp.GetService<TClient>());
+
+        return services;
+    }
+
+    public static IServiceCollection AddAIConnectionSource(this IServiceCollection services, string providerName, Action<AIProviderConnectionOptionsEntry> configure = null)
+    {
+        services.Configure<AICompletionOptions>(o =>
+        {
+            o.AddConnectionSource(providerName, configure);
+        });
 
         return services;
     }

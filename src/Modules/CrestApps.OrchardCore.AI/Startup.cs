@@ -17,6 +17,8 @@ using CrestApps.OrchardCore.AI.Tools;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
+using CrestApps.OrchardCore.OpenAI.Core.Services;
+using CrestApps.OrchardCore.Services;
 using Fluid;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -56,6 +58,10 @@ public sealed class Startup : StartupBase
         services
             .AddScoped<IAIToolsService, DefaultAIToolsService>()
             .AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderOptionsConfiguration>();
+
+#pragma warning disable CS0618 // Type or member is obsolete
+        services.AddDataMigration<ProfileStoreMigrations>();
+#pragma warning restore CS0618 // Type or member is obsolete
     }
 }
 
@@ -69,6 +75,10 @@ public sealed class DeploymentsStartup : StartupBase
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
             .AddNavigationProvider<AIDeploymentAdminMenu>();
+
+#pragma warning disable CS0618 // Type or member is obsolete
+        services.AddDataMigration<DeploymentStoreMigrations>();
+#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -194,5 +204,28 @@ public sealed class ToolOCDeploymentStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<AIToolInstanceDeploymentSource, AIToolInstanceDeploymentStep, AIToolInstanceDeploymentStepDisplayDriver>();
+    }
+}
+
+[Feature(AIConstants.Feature.ConnectionManagement)]
+public sealed class ConnectionManagementStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IModelHandler<AIProviderConnection>, AIProviderConnectionHandler>();
+        services.AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderConnectionsOptionsConfiguration>();
+        services.AddDisplayDriver<AIProviderConnection, AIProviderConnectionDisplayDriver>();
+        services.AddNavigationProvider<AIConnectionsAdminMenu>();
+        services.AddPermissionProvider<AIPermissionProvider>();
+    }
+}
+
+[Feature(AIConstants.Feature.ConnectionManagement)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class ConnectionManagementRecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<AIProviderConnectionsStep>();
     }
 }

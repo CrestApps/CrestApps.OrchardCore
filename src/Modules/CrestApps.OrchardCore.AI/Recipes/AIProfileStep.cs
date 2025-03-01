@@ -1,6 +1,8 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
@@ -10,16 +12,19 @@ public sealed class AIProfileStep : NamedRecipeStepHandler
 {
     public const string StepKey = "AIProfile";
 
-    private readonly IAIProfileManager _profileManager;
+    private readonly INamedModelManager<AIProfile> _profileManager;
+    private readonly AICompletionOptions _options;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileStep(
-        IAIProfileManager profileManager,
+        INamedModelManager<AIProfile> profileManager,
+        IOptions<AICompletionOptions> options,
         IStringLocalizer<AIProfileStep> stringLocalizer)
         : base(StepKey)
     {
         _profileManager = profileManager;
+        _options = options.Value;
         S = stringLocalizer;
     }
 
@@ -64,14 +69,14 @@ public sealed class AIProfileStep : NamedRecipeStepHandler
                     continue;
                 }
 
-                profile = await _profileManager.NewAsync(sourceName, token);
-
-                if (profile == null)
+                if (!_options.ProfileSources.TryGetValue(sourceName, out var entry))
                 {
-                    context.Errors.Add(S["Unable to find a profile-source that can handle the source '{Source}'.", sourceName]);
+                    context.Errors.Add(S["Unable to find a profile-source that can handle the source '{0}'.", sourceName]);
 
-                    continue;
+                    return;
                 }
+
+                profile = await _profileManager.NewAsync(sourceName, token);
             }
 
             var validationResult = await _profileManager.ValidateAsync(profile);

@@ -6,7 +6,7 @@ public static class AIPermissions
 {
     public static readonly Permission ManageAIToolInstances = new("ManageAIToolInstances", "Manage AI Tool Instances");
 
-    public static readonly Permission ManageOpenAIConnections = new("ManageOpenAIConnections", "Manage OpenAI Connections");
+    public static readonly Permission ManageProviderConnections = new("ManageProviderConnections", "Manage AI Provider Connections");
 
     public static readonly Permission ManageAIProfiles = new("ManageAIProfiles", "Manage AI profiles");
 

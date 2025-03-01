@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -14,7 +15,7 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 
 public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 {
-    private readonly IAIProfileStore _profileStore;
+    private readonly INamedModelStore<AIProfile> _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly AICompletionOptions _options;
     private readonly DefaultAIOptions _defaultAIOptions;
@@ -23,7 +24,7 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     internal readonly IStringLocalizer S;
 
     public AIProfileDisplayDriver(
-        IAIProfileStore profileStore,
+        INamedModelStore<AIProfile> profileStore,
         ILiquidTemplateManager liquidTemplateManager,
         IOptions<AICompletionOptions> options,
         IOptions<AIProviderOptions> connectionOptions,

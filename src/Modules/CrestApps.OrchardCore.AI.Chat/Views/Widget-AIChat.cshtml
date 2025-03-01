@@ -7,8 +7,9 @@
 @using OrchardCore.ContentManagement
 @using OrchardCore.Environment.Shell
 @using CrestApps.OrchardCore.AI.Chat.Hubs
+@using CrestApps.OrchardCore.Services
 
-@inject IAIProfileStore ProfileStore
+@inject INamedModelStore<AIProfile> ProfileStore
 @inject IAuthorizationService AuthorizationService
 @inject ShellSettings ShellSettings
 @inject HubRouteManager HubRouteManager
@@ -36,7 +37,7 @@
 
     var hubLink = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
     var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
-    var promptGeneratedProfiles = await ProfileStore.GetProfilesAsync(AIProfileType.TemplatePrompt);
+    var promptGeneratedProfiles = await ProfileStore.GetAsync(AIProfileType.TemplatePrompt);
 
     var baseId = $"Widget_{contentItem.ContentItemId}";
     var chatAppHtmlId = $"{baseId}_ChatApp";
