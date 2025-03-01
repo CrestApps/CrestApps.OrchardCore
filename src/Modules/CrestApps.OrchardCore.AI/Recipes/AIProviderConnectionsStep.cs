@@ -1,8 +1,7 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -13,20 +12,19 @@ public sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 {
     public const string StepKey = "AIProviderConnections";
 
-    private readonly INamedModelManager<AIProviderConnection> manager;
-    private readonly AICompletionOptions _options;
+    private readonly INamedModelManager<AIProviderConnection> _manager;
+    private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIProviderConnectionsStep(
         INamedModelManager<AIProviderConnection> manager,
-        IOptions<AICompletionOptions> options,
-        ILogger<AIProfileStep> logger,
+        IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIProfileStep> stringLocalizer)
         : base(StepKey)
     {
-        this.manager = manager;
-        _options = options.Value;
+        _manager = manager;
+        _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
 
@@ -43,7 +41,7 @@ public sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 
             if (!string.IsNullOrEmpty(id))
             {
-                connection = await manager.FindByIdAsync(id);
+                connection = await _manager.FindByIdAsync(id);
             }
 
             if (connection is null)
@@ -52,13 +50,13 @@ public sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 
                 if (!string.IsNullOrEmpty(name))
                 {
-                    connection = await manager.FindByNameAsync(name);
+                    connection = await _manager.FindByNameAsync(name);
                 }
             }
 
             if (connection is not null)
             {
-                await manager.UpdateAsync(connection, token);
+                await _manager.UpdateAsync(connection, token);
             }
             else
             {
@@ -71,17 +69,17 @@ public sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
                     continue;
                 }
 
-                if (!_options.ConnectionSources.TryGetValue(sourceName, out var entry))
+                if (!_aiOptions.ConnectionSources.TryGetValue(sourceName, out var entry))
                 {
                     context.Errors.Add(S["Unable to find a tool-source that can handle the source '{0}'.", sourceName]);
 
                     return;
                 }
 
-                connection = await manager.NewAsync(sourceName, token);
+                connection = await _manager.NewAsync(sourceName, token);
             }
 
-            var validationResult = await manager.ValidateAsync(connection);
+            var validationResult = await _manager.ValidateAsync(connection);
 
             if (!validationResult.Succeeded)
             {
@@ -93,7 +91,7 @@ public sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await manager.SaveAsync(connection);
+            await _manager.SaveAsync(connection);
         }
     }
 

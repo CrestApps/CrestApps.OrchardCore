@@ -12,17 +12,17 @@ namespace CrestApps.OrchardCore.AI.Chat.Services;
 public sealed class ChatAdminMenu : AdminNavigationProvider
 {
     private readonly INamedModelStore<AIProfile> _profileStore;
-    private readonly AICompletionOptions _options;
+    private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
     public ChatAdminMenu(
         INamedModelStore<AIProfile> profileStore,
-        IOptions<AICompletionOptions> options,
+        IOptions<AIOptions> aiOptions,
         IStringLocalizer<ChatAdminMenu> stringLocalizer)
     {
         _profileStore = profileStore;
-        _options = options.Value;
+        _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
 
@@ -38,7 +38,7 @@ public sealed class ChatAdminMenu : AdminNavigationProvider
                {
                    var settings = profile.GetSettings<AIChatProfileSettings>();
 
-                   if (!settings.IsOnAdminMenu || !_options.ProfileSources.ContainsKey(profile.Source))
+                   if (!settings.IsOnAdminMenu || !_aiOptions.ProfileSources.ContainsKey(profile.Source))
                    {
                        continue;
                    }

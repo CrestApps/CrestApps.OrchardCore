@@ -26,10 +26,8 @@ public sealed class DeploymentsController : Controller
     private readonly INamedModelManager<AIDeployment> _deploymentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly AICompletionOptions _completionOptions;
+    private readonly AIOptions _aiOptions;
     private readonly IDisplayManager<AIDeployment> _deploymentDisplayManager;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly AIProviderOptions _connectionOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -39,10 +37,8 @@ public sealed class DeploymentsController : Controller
         INamedModelManager<AIDeployment> deploymentManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
-        IOptions<AICompletionOptions> completionOptions,
+        IOptions<AIOptions> aiOptions,
         IDisplayManager<AIDeployment> deploymentDisplayManager,
-        IServiceProvider serviceProvider,
-        IOptions<AIProviderOptions> connectionOptions,
         INotifier notifier,
         IHtmlLocalizer<DeploymentsController> htmlLocalizer,
         IStringLocalizer<DeploymentsController> stringLocalizer)
@@ -50,10 +46,8 @@ public sealed class DeploymentsController : Controller
         _deploymentManager = deploymentManager;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
-        _completionOptions = completionOptions.Value;
+        _aiOptions = aiOptions.Value;
         _deploymentDisplayManager = deploymentDisplayManager;
-        _serviceProvider = serviceProvider;
-        _connectionOptions = connectionOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -92,7 +86,7 @@ public sealed class DeploymentsController : Controller
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            SourceNames = _completionOptions.Deployments.Select(x => x.Key).Order(),
+            SourceNames = _aiOptions.Deployments.Select(x => x.Key).Order(),
         };
 
         foreach (var record in result.Models)
@@ -137,7 +131,7 @@ public sealed class DeploymentsController : Controller
             return Forbid();
         }
 
-        if (!_completionOptions.Deployments.TryGetValue(providerName, out var provider))
+        if (!_aiOptions.Deployments.TryGetValue(providerName, out var provider))
         {
             await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
 
@@ -172,7 +166,7 @@ public sealed class DeploymentsController : Controller
             return Forbid();
         }
 
-        if (!_completionOptions.Deployments.TryGetValue(providerName, out var provider))
+        if (!_aiOptions.Deployments.TryGetValue(providerName, out var provider))
         {
             await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
 

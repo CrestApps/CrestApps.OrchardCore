@@ -51,7 +51,7 @@ public static class ServiceCollectionExtensions
         where TClient : class, IAICompletionClient
     {
         return services
-            .Configure<AICompletionOptions>(o =>
+            .Configure<AIOptions>(o =>
             {
                 o.AddProfileSource(implementationName, providerName, configure);
             })
@@ -61,7 +61,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAIDeploymentProvider(this IServiceCollection services, string providerName, Action<AIDeploymentProviderEntry> configure = null)
     {
         services
-            .Configure<AICompletionOptions>(o =>
+            .Configure<AIOptions>(o =>
             {
                 o.AddDeploymentProvider(providerName, configure);
             });
@@ -72,7 +72,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAICompletionClient<TClient>(this IServiceCollection services, string clientName)
         where TClient : class, IAICompletionClient
     {
-        services.Configure<AICompletionOptions>(o =>
+        services.Configure<AIOptions>(o =>
         {
             o.AddClient<TClient>(clientName);
         });
@@ -85,7 +85,7 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddAIConnectionSource(this IServiceCollection services, string providerName, Action<AIProviderConnectionOptionsEntry> configure = null)
     {
-        services.Configure<AICompletionOptions>(o =>
+        services.Configure<AIOptions>(o =>
         {
             o.AddConnectionSource(providerName, configure);
         });

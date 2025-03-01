@@ -13,18 +13,18 @@ public sealed class AIProfileStep : NamedRecipeStepHandler
     public const string StepKey = "AIProfile";
 
     private readonly INamedModelManager<AIProfile> _profileManager;
-    private readonly AICompletionOptions _options;
+    private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileStep(
         INamedModelManager<AIProfile> profileManager,
-        IOptions<AICompletionOptions> options,
+        IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIProfileStep> stringLocalizer)
         : base(StepKey)
     {
         _profileManager = profileManager;
-        _options = options.Value;
+        _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
 
@@ -69,7 +69,7 @@ public sealed class AIProfileStep : NamedRecipeStepHandler
                     continue;
                 }
 
-                if (!_options.ProfileSources.TryGetValue(sourceName, out var entry))
+                if (!_aiOptions.ProfileSources.TryGetValue(sourceName, out var entry))
                 {
                     context.Errors.Add(S["Unable to find a profile-source that can handle the source '{0}'.", sourceName]);
 

@@ -17,7 +17,7 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly INamedModelStore<AIProfile> _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
-    private readonly AICompletionOptions _options;
+    private readonly AIOptions _aiOptions;
     private readonly DefaultAIOptions _defaultAIOptions;
     private readonly AIProviderOptions _connectionOptions;
 
@@ -26,14 +26,14 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     public AIProfileDisplayDriver(
         INamedModelStore<AIProfile> profileStore,
         ILiquidTemplateManager liquidTemplateManager,
-        IOptions<AICompletionOptions> options,
+        IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> connectionOptions,
         IOptions<DefaultAIOptions> defaultAIOptions,
         IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
     {
         _profileStore = profileStore;
         _liquidTemplateManager = liquidTemplateManager;
-        _options = options.Value;
+        _aiOptions = aiOptions.Value;
         _defaultAIOptions = defaultAIOptions.Value;
         _connectionOptions = connectionOptions.Value;
         S = stringLocalizer;
@@ -60,7 +60,7 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
         var connectionFieldResult = Initialize<EditConnectionProfileViewModel>("AIProfileConnection_Edit", model =>
         {
-            if (!_options.ProfileSources.TryGetValue(profile.Source, out var profileSource))
+            if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
             {
                 return;
             }
@@ -163,7 +163,7 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
         if (!string.IsNullOrEmpty(connectionModel.ConnectionName))
         {
-            if (_options.ProfileSources.TryGetValue(profile.Source, out var profileSource) &&
+            if (_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource) &&
                 _connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider) &&
                 !provider.Connections.TryGetValue(connectionModel.ConnectionName, out _))
             {

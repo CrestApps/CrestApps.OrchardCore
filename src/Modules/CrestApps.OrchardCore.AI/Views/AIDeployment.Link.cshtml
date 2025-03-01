@@ -5,11 +5,11 @@
 @using Microsoft.Extensions.Options
 
 @inject IOptions<AIProviderOptions> Options
-@inject IOptions<AICompletionOptions> CompletopmnOptions
+@inject IOptions<AIOptions> AIOptions
 @{
     string providerName = Model.ProviderName;
 
-    if (!CompletopmnOptions.Value.Deployments.TryGetValue(providerName, out var deploymentProvider))
+    if (!AIOptions.Value.Deployments.TryGetValue(providerName, out var deploymentProvider))
     {
         return;
     }

@@ -2,7 +2,7 @@ using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.AI;
 
-public sealed class AICompletionOptions
+public sealed class AIOptions
 {
     private readonly Dictionary<string, Type> _clients = new(StringComparer.OrdinalIgnoreCase);
 

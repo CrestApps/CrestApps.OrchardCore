@@ -11,19 +11,19 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IAIDeploymentManager _deploymentManager;
-    private readonly AICompletionOptions _options;
+    private readonly AIOptions _aiOptions;
     private readonly AIProviderOptions _providerOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileDeploymentDisplayDriver(
         IAIDeploymentManager deploymentManager,
-        IOptions<AICompletionOptions> options,
+        IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> providerOptions,
         IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
-        _options = options.Value;
+        _aiOptions = aiOptions.Value;
         _providerOptions = providerOptions.Value;
         S = stringLocalizer;
     }
@@ -32,7 +32,7 @@ public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
     {
         return Initialize<EditProfileDeploymentViewModel>("AIProfileDeployment_Edit", async model =>
         {
-            if (!_options.ProfileSources.TryGetValue(profile.Source, out var profileSource))
+            if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
             {
                 return;
             }
@@ -72,7 +72,7 @@ public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
-        if (!_options.ProfileSources.TryGetValue(profile.Source, out var profileSource))
+        if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
         {
             return null;
         }

@@ -3,12 +3,12 @@
 @using CrestApps.OrchardCore.AI
 @using Microsoft.Extensions.Options
 
-@inject IOptions<AICompletionOptions> Options
+@inject IOptions<AIOptions> AIOptions
 
 @{
     string sourceName = Model.Source;
 
-    if (!Options.Value.ProfileSources.TryGetValue(sourceName, out var source))
+    if (!AIOptions.Value.ProfileSources.TryGetValue(sourceName, out var source))
     {
         return;
     }

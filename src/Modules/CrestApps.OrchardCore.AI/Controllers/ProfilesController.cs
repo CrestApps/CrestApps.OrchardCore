@@ -26,7 +26,7 @@ public sealed class ProfilesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIProfile> _profileDisplayManager;
-    private readonly AICompletionOptions _aiOptions;
+    private readonly AIOptions _aiOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -37,7 +37,7 @@ public sealed class ProfilesController : Controller
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIProfile> profileDisplayManager,
-        IOptions<AICompletionOptions> aiOptions,
+        IOptions<AIOptions> aiOptions,
         INotifier notifier,
         IHtmlLocalizer<ProfilesController> htmlLocalizer,
         IStringLocalizer<ProfilesController> stringLocalizer)

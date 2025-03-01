@@ -12,18 +12,18 @@ public sealed class DefaultAICompletionService : IAICompletionService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IEnumerable<IAICompletionHandler> _completionHandlers;
-    private readonly AICompletionOptions _options;
+    private readonly AIOptions _aiOptions;
     private readonly ILogger _logger;
 
     public DefaultAICompletionService(
         IServiceProvider serviceProvider,
         IEnumerable<IAICompletionHandler> completionHandlers,
-        IOptions<AICompletionOptions> options,
+        IOptions<AIOptions> aiOptions,
         ILogger<DefaultAICompletionService> logger)
     {
         _serviceProvider = serviceProvider;
         _completionHandlers = completionHandlers;
-        _options = options.Value;
+        _aiOptions = aiOptions.Value;
         _logger = logger;
     }
 
@@ -31,7 +31,7 @@ public sealed class DefaultAICompletionService : IAICompletionService
     {
         ArgumentException.ThrowIfNullOrEmpty(clientName);
 
-        if (!_options.Clients.TryGetValue(clientName, out var clientType))
+        if (!_aiOptions.Clients.TryGetValue(clientName, out var clientType))
         {
             throw new UnregisteredCompletionClientException(clientName);
         }
@@ -51,7 +51,7 @@ public sealed class DefaultAICompletionService : IAICompletionService
     {
         ArgumentException.ThrowIfNullOrEmpty(clientName);
 
-        if (!_options.Clients.TryGetValue(clientName, out var clientType))
+        if (!_aiOptions.Clients.TryGetValue(clientName, out var clientType))
         {
             throw new UnregisteredCompletionClientException(clientName);
         }

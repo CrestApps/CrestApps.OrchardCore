@@ -29,8 +29,7 @@ public sealed class ProviderConnectionsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIProviderConnection> _displayDriver;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly AICompletionOptions _definitions;
+    private readonly AIOptions _aiOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -41,8 +40,7 @@ public sealed class ProviderConnectionsController : Controller
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIProviderConnection> instanceDisplayManager,
-        IServiceProvider serviceProvider,
-        IOptions<AICompletionOptions> definitions,
+        IOptions<AIOptions> aiOptions,
         INotifier notifier,
         IHtmlLocalizer<ProviderConnectionsController> htmlLocalizer,
         IStringLocalizer<ProviderConnectionsController> stringLocalizer)
@@ -51,8 +49,7 @@ public sealed class ProviderConnectionsController : Controller
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _displayDriver = instanceDisplayManager;
-        _serviceProvider = serviceProvider;
-        _definitions = definitions.Value;
+        _aiOptions = aiOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -91,7 +88,7 @@ public sealed class ProviderConnectionsController : Controller
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            SourceNames = _definitions.ConnectionSources.Keys.Order(),
+            SourceNames = _aiOptions.ConnectionSources.Keys.Order(),
         };
 
         foreach (var model in result.Models)
@@ -131,7 +128,7 @@ public sealed class ProviderConnectionsController : Controller
             return Forbid();
         }
 
-        if (!_definitions.ConnectionSources.TryGetValue(providerName, out var connectionSource))
+        if (!_aiOptions.ConnectionSources.TryGetValue(providerName, out var connectionSource))
         {
             await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
 
@@ -159,7 +156,7 @@ public sealed class ProviderConnectionsController : Controller
             return Forbid();
         }
 
-        if (!_definitions.ConnectionSources.TryGetValue(providerName, out var connectionSource))
+        if (!_aiOptions.ConnectionSources.TryGetValue(providerName, out var connectionSource))
         {
             await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
 
