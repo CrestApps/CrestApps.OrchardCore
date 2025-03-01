@@ -172,7 +172,7 @@ public static class SubscriptionPaymentSessionExtensions
 {
     public const string InitialPaymentPurpose = "InitialPayment";
     public const string SubscriptionPaymentInfoPurpose = "SubscriptionPaymentInfo";
-    public const string UserRegistrationPurpose = "SubscriptionPaymentInfo";
+    public const string UserRegistrationPurpose = "UserRegistration";
 
     public static Task<InitialPaymentMetadata> GetInitialPaymentInfoAsync(this SubscriptionPaymentSession session, string sessionId)
         => session.GetAsync<InitialPaymentMetadata>(sessionId, InitialPaymentPurpose);
@@ -219,7 +219,7 @@ public static class SubscriptionPaymentSessionExtensions
         ArgumentException.ThrowIfNullOrWhiteSpace(rawPassword);
 
         await session.SetAsync(sessionId,
-            purpose: SubscriptionPaymentInfoPurpose,
+            purpose: UserRegistrationPurpose,
             value: GetPasswordProtector(dataProtectionProvider).Protect(rawPassword));
     }
 

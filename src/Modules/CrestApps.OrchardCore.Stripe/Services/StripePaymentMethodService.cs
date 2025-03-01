@@ -11,10 +11,10 @@ public sealed class StripePaymentMethodService : IStripePaymentMethodService
 
     private readonly PaymentMethodService _paymentMethodService;
 
-    public StripePaymentMethodService(ILogger<StripePaymentMethodService> logger)
+    public StripePaymentMethodService(StripeClient stripeClient, ILogger<StripePaymentMethodService> logger)
     {
         _logger = logger;
-        _paymentMethodService = new PaymentMethodService();
+        _paymentMethodService = new PaymentMethodService(stripeClient);
     }
 
     public async Task<StripePaymentMethodInfoResponse> GetInformationAsync(string paymentMethodId)
