@@ -28,13 +28,7 @@
                     const form = document.getElementById('subscription-form');
 
                     if (data.status == 'completed') {
-                        var submitEvent = new Event("submit", {
-                            bubbles: true,
-                            cancelable: true
-                        });
-                        if (form.dispatchEvent(submitEvent)) {
-                            form.requestSubmit();
-                        }
+                        form.requestSubmit();
                     } else {
                         enablePayButtonButton(payButtonElement, true);
 
