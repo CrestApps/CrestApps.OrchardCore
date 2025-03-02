@@ -16,6 +16,7 @@ To configure the OpenAI connection, add the following settings to the `appsettin
           "DefaultDeploymentName": "Phi-3-medium-4k-instruct",
           "Connections": {
             "default": {
+              "AuthenticationType": "ApiKey",
               "ApiKey": "<!-- Your GitHub Access Token goes here -->",
               "DefaultDeploymentName": "Phi-3-medium-4k-instruct"
             }
@@ -26,3 +27,5 @@ To configure the OpenAI connection, add the following settings to the `appsettin
   }
 }
 ```
+
+Authentication Type in the connection can be `Default`, `ManagedIdentity` or `ApiKey`. When using `ApiKey` authentication type, `ApiKey` is required.

@@ -9,12 +9,10 @@
 @{
     string providerName = Model.ProviderName;
 
-    if (!AIOptions.Value.Deployments.TryGetValue(providerName, out var deploymentProvider))
+    if (!AIOptions.Value.ConnectionSources.TryGetValue(providerName, out var deploymentProvider))
     {
         return;
     }
-
-    var hasConnections = Options.Value.Providers.TryGetValue(providerName, out var provider) && provider.Connections.Count > 0;
 }
 
 <div class="col">

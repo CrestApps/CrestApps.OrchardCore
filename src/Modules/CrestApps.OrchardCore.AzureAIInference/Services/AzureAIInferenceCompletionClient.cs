@@ -1,9 +1,12 @@
 using Azure;
 using Azure.AI.Inference;
+using Azure.Core;
+using Azure.Identity;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AzureAIInference.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
@@ -30,11 +33,29 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
 
     protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, AICompletionContext context, string modelName)
     {
-        var client = new ChatCompletionsClient(
-            endpoint: new Uri("https://models.inference.ai.azure.com"),
-            credential: new AzureKeyCredential(connection.GetApiKey()))
-        .AsChatClient(connection.GetDefaultDeploymentName());
+        var authenticationTypeString = connection.GetStringValue("AuthenticationType");
 
-        return client;
+        if (string.IsNullOrEmpty(authenticationTypeString) ||
+            !Enum.TryParse<AzureAuthenticationType>(authenticationTypeString, true, out var authenticationType))
+        {
+            authenticationType = AzureAuthenticationType.Default;
+        }
+
+        if (authenticationType == AzureAuthenticationType.ApiKey)
+        {
+            return new ChatCompletionsClient(
+                endpoint: new Uri("https://models.inference.ai.azure.com"),
+                credential: new AzureKeyCredential(connection.GetApiKey()))
+                .AsChatClient(connection.GetDefaultDeploymentName());
+        }
+
+        TokenCredential credential = authenticationType == AzureAuthenticationType.ManagedIdentity
+            ? new ManagedIdentityCredential()
+            : new DefaultAzureCredential();
+
+        return new ChatCompletionsClient(
+            endpoint: new Uri("https://models.inference.ai.azure.com"),
+            credential: credential)
+            .AsChatClient(connection.GetDefaultDeploymentName());
     }
 }
