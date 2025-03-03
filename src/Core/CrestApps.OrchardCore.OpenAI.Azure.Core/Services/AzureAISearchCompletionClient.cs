@@ -1,12 +1,15 @@
+using System.ClientModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Azure.AI.OpenAI;
 using Azure.AI.OpenAI.Chat;
+using Azure.Identity;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Services;
 using CrestApps.OrchardCore.Services;
@@ -426,7 +429,20 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
     {
         var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
 
-        var azureClient = new AzureOpenAIClient(endpoint, connection.GetApiKeyCredential());
+        var authenticationTypeString = connection.GetStringValue("AuthenticationType");
+
+        if (string.IsNullOrEmpty(authenticationTypeString) ||
+            !Enum.TryParse<AzureAuthenticationType>(authenticationTypeString, true, out var authenticationType))
+        {
+            authenticationType = AzureAuthenticationType.Default;
+        }
+
+        var azureClient = authenticationType switch
+        {
+            AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey())),
+            AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential()),
+            _ => new AzureOpenAIClient(endpoint, new DefaultAzureCredential())
+        };
 
         return azureClient;
     }

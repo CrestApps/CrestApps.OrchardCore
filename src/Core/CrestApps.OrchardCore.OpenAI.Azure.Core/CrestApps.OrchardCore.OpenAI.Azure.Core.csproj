@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CrestApps.Azure.Core\CrestApps.Azure.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
   </ItemGroup>
 

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
+using CrestApps.OrchardCore.OpenAI.Azure.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Recipes;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,5 +65,21 @@ public sealed class AISearchStartup : StartupBase
         });
         services.AddDisplayDriver<AIProfile, AzureOpenAIProfileSearchAIDisplayDriver>();
         services.AddScoped<IModelHandler<AIProfile>, AzureAISearchAIProfileHandler>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.ConnectionManagement)]
+public sealed class ConnectionManagementStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IModelHandler<AIProviderConnection>, AzureOpenAIConnectionSettingsHandler>();
+        services.AddTransient<IAIProviderConnectionHandler, AzureOpenAIConnectionHandler>();
+        services.AddDisplayDriver<AIProviderConnection, AzureOpenAIConnectionDisplayDriver>();
+        services.AddAIConnectionSource(AzureOpenAIConstants.ProviderName, o =>
+        {
+            o.DisplayName = "Azure OpenAI";
+            o.Description = "Provides a way to Configure Azure OpenAI connections.";
+        });
     }
 }

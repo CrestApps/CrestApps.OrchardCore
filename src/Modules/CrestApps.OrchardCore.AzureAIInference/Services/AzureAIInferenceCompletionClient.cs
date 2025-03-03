@@ -1,3 +1,4 @@
+using System.ClientModel;
 using Azure;
 using Azure.AI.Inference;
 using Azure.Core;
@@ -6,7 +7,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.AzureAIInference.Models;
+using CrestApps.OrchardCore.Azure.Core.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
@@ -17,6 +18,8 @@ namespace CrestApps.OrchardCore.AzureAIInference.Services;
 
 public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompletionClient
 {
+    private readonly static Uri _endpoint = new("https://models.inference.ai.azure.com");
+
     public AzureAIInferenceCompletionClient(
         ILoggerFactory loggerFactory,
         IDistributedCache distributedCache,
@@ -41,21 +44,13 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
             authenticationType = AzureAuthenticationType.Default;
         }
 
-        if (authenticationType == AzureAuthenticationType.ApiKey)
+        var client = authenticationType switch
         {
-            return new ChatCompletionsClient(
-                endpoint: new Uri("https://models.inference.ai.azure.com"),
-                credential: new AzureKeyCredential(connection.GetApiKey()))
-                .AsChatClient(connection.GetDefaultDeploymentName());
-        }
+            AzureAuthenticationType.ApiKey => new ChatCompletionsClient(_endpoint, new AzureKeyCredential(connection.GetApiKey())),
+            AzureAuthenticationType.ManagedIdentity => new ChatCompletionsClient(_endpoint, new ManagedIdentityCredential()),
+            _ => new ChatCompletionsClient(_endpoint, new DefaultAzureCredential())
+        };
 
-        TokenCredential credential = authenticationType == AzureAuthenticationType.ManagedIdentity
-            ? new ManagedIdentityCredential()
-            : new DefaultAzureCredential();
-
-        return new ChatCompletionsClient(
-            endpoint: new Uri("https://models.inference.ai.azure.com"),
-            credential: credential)
-            .AsChatClient(connection.GetDefaultDeploymentName());
+        return client.AsChatClient(connection.GetDefaultDeploymentName());
     }
 }

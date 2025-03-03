@@ -2,9 +2,9 @@ using CrestApps.OrchardCore.Azure.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.OrchardCore.AzureAIInference.ViewModels;
+namespace CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 
-public class AzureAIInferenceConnectionViewModel
+public class AzureOpenAIConnectionViewModel
 {
     public AzureAuthenticationType AuthenticationType { get; set; }
 

@@ -1,8 +1,9 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Azure.Core.Models;
-using CrestApps.OrchardCore.AzureAIInference.Models;
-using CrestApps.OrchardCore.AzureAIInference.ViewModels;
+using CrestApps.OrchardCore.OpenAI.Azure.Core;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -10,17 +11,17 @@ using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
-namespace CrestApps.OrchardCore.AzureAIInference.Drivers;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 
-internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AIProviderConnection>
+internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProviderConnection>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
 
-    public AzureAIInferenceConnectionDisplayDriver(
+    public AzureOpenAIConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
-        IStringLocalizer<AzureAIInferenceConnectionDisplayDriver> stringLocalizer)
+        IStringLocalizer<AzureOpenAIConnectionDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
         S = stringLocalizer;
@@ -28,14 +29,14 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
 
     public override IDisplayResult Edit(AIProviderConnection connection, BuildEditorContext context)
     {
-        if (!string.Equals(connection.ProviderName, AzureAIInferenceConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.ProviderName, AzureOpenAIConstants.ProviderName, StringComparison.Ordinal))
         {
             return null;
         }
 
-        return Initialize<AzureAIInferenceConnectionViewModel>("AzureAIInferenceConnection_Edit", model =>
+        return Initialize<AzureOpenAIConnectionViewModel>("AzureOpenAIConnection_Edit", model =>
         {
-            var metadata = connection.As<AzureAIInferenceConnectionMetadata>();
+            var metadata = connection.As<AzureOpenAIConnectionMetadata>();
 
             model.AuthenticationTypes =
             [
@@ -51,16 +52,16 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
 
     public override async Task<IDisplayResult> UpdateAsync(AIProviderConnection connection, UpdateEditorContext context)
     {
-        if (!string.Equals(connection.ProviderName, AzureAIInferenceConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.ProviderName, AzureOpenAIConstants.ProviderName, StringComparison.Ordinal))
         {
             return null;
         }
 
-        var model = new AzureAIInferenceConnectionViewModel();
+        var model = new AzureOpenAIConnectionViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = connection.As<AzureAIInferenceConnectionMetadata>();
+        var metadata = connection.As<AzureOpenAIConnectionMetadata>();
 
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
 

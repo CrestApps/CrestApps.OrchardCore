@@ -3,24 +3,25 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Azure.Core.Models;
-using CrestApps.OrchardCore.AzureAIInference.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 
-namespace CrestApps.OrchardCore.AzureAIInference.Handlers;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Handlers;
 
-internal sealed class AzureAIInferenceConnectionSettingsHandler : ModelHandlerBase<AIProviderConnection>
+internal sealed class AzureOpenAIConnectionSettingsHandler : ModelHandlerBase<AIProviderConnection>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
 
-    public AzureAIInferenceConnectionSettingsHandler(
+    public AzureOpenAIConnectionSettingsHandler(
         IDataProtectionProvider dataProtectionProvider,
-        IStringLocalizer<AzureAIInferenceConnectionHandler> stringLocalizer)
+        IStringLocalizer<AzureOpenAIConnectionHandler> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
         S = stringLocalizer;
@@ -34,16 +35,16 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : ModelHandlerBa
 
     public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context)
     {
-        if (!string.Equals(context.Model.Source, AzureAIInferenceConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(context.Model.Source, AzureOpenAIConstants.ProviderName, StringComparison.Ordinal))
         {
             return Task.CompletedTask;
         }
 
-        var metadata = context.Model.As<AzureAIInferenceConnectionMetadata>();
+        var metadata = context.Model.As<AzureOpenAIConnectionMetadata>();
 
         if (metadata.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(metadata.ApiKey))
         {
-            context.Result.Fail(new ValidationResult(S["ApiKey is required when using ApiKey authentication."], [nameof(AzureAIInferenceConnectionMetadata.ApiKey)]));
+            context.Result.Fail(new ValidationResult(S["ApiKey is required when using ApiKey authentication."], [nameof(AzureOpenAIConnectionMetadata.ApiKey)]));
         }
 
         return Task.CompletedTask;
@@ -51,21 +52,22 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : ModelHandlerBa
 
     private Task PopulateAsync(AIProviderConnection connection, JsonNode data)
     {
-        if (!string.Equals(connection.Source, AzureAIInferenceConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.Source, AzureOpenAIConstants.ProviderName, StringComparison.Ordinal))
         {
             return Task.CompletedTask;
         }
 
-        var metadataNode = data["Properties"]?[nameof(AzureAIInferenceConnectionMetadata)]?.AsObject();
+        var metadataNode = data["Properties"]?[nameof(AzureOpenAIConnectionMetadata)]?.AsObject();
 
         if (metadataNode == null || metadataNode.Count == 0)
         {
             return Task.CompletedTask;
         }
 
-        var metadata = connection.As<AzureAIInferenceConnectionMetadata>();
+        var metadata = connection.As<AzureOpenAIConnectionMetadata>();
 
-        metadata.AuthenticationType = metadataNode[nameof(metadata.AuthenticationType)]?.GetEnumValue<AzureAuthenticationType>() ?? AzureAuthenticationType.Default;
+        metadata.AuthenticationType = metadataNode[nameof(metadata.AuthenticationType)]?.GetEnumValue<AzureAuthenticationType>()
+            ?? AzureAuthenticationType.Default;
 
         var apiKey = metadataNode[nameof(metadata.ApiKey)]?.GetValue<string>();
 
