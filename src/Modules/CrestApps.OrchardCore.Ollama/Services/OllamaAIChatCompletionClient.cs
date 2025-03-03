@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Ollama.Services;
 
-public sealed class OllamaAIChatCompletionClient : NamedAICompletionClient
+internal sealed class OllamaAIChatCompletionClient : NamedAICompletionClient
 {
     public OllamaAIChatCompletionClient(
            ILoggerFactory loggerFactory,

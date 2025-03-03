@@ -64,7 +64,9 @@ public sealed class AIDeploymentHandler : ModelHandlerBase<AIDeployment>
                 {
                     context.Result.Fail(new ValidationResult(S["There are no configured connection for the provider: {0}", context.Model.ProviderName], [nameof(AIDeployment.ProviderName)]));
                 }
-                else if (!provider.Connections.TryGetValue(context.Model.ConnectionName, out var _))
+                else if (!provider.Connections.TryGetValue(context.Model.ConnectionName, out var _) &&
+                    !provider.Connections.Any(x => x.Value.TryGetValue("ConnectionNameAlias", out var r) &&
+                    string.Equals(r.ToString(), context.Model.ConnectionName, StringComparison.OrdinalIgnoreCase)))
                 {
                     context.Result.Fail(new ValidationResult(S["Invalid connection name provided."], [nameof(AIDeployment.ConnectionName)]));
                 }

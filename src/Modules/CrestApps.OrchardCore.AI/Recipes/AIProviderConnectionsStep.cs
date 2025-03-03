@@ -51,7 +51,7 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
             {
                 if (!hasSource)
                 {
-                    context.Errors.Add(S["Could not find connection-source value. The profile will not be imported"]);
+                    context.Errors.Add(S["Could not find connection-source value. The profile will not be imported."]);
 
                     continue;
                 }
@@ -72,14 +72,14 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
             {
                 if (!hasSource)
                 {
-                    context.Errors.Add(S["Could not find connection-source value. The profile will not be imported"]);
+                    context.Errors.Add(S["Could not find connection-source value. The profile will not be imported."]);
 
                     continue;
                 }
 
-                if (!_aiOptions.ConnectionSources.TryGetValue(sourceName, out var entry))
+                if (!_aiOptions.ConnectionSources.TryGetValue(sourceName, out _))
                 {
-                    context.Errors.Add(S["Unable to find a tool-source that can handle the source '{0}'.", sourceName]);
+                    context.Errors.Add(S["Unable to find a connection-source that can handle the source '{0}'.", sourceName]);
 
                     return;
                 }

@@ -12,13 +12,17 @@ public sealed class AIOptions
 
     private readonly Dictionary<string, AIProviderConnectionOptionsEntry> _connectionSources = new(StringComparer.OrdinalIgnoreCase);
 
-    public IReadOnlyDictionary<string, Type> Clients => _clients;
+    public IReadOnlyDictionary<string, Type> Clients
+        => _clients;
 
-    public IReadOnlyDictionary<string, AIProfileProviderEntry> ProfileSources => _profileSources;
+    public IReadOnlyDictionary<string, AIProfileProviderEntry> ProfileSources
+        => _profileSources;
 
-    public IReadOnlyDictionary<string, AIDeploymentProviderEntry> Deployments => _deployments;
+    public IReadOnlyDictionary<string, AIDeploymentProviderEntry> Deployments
+        => _deployments;
 
-    public IReadOnlyDictionary<string, AIProviderConnectionOptionsEntry> ConnectionSources => _connectionSources;
+    public IReadOnlyDictionary<string, AIProviderConnectionOptionsEntry> ConnectionSources
+        => _connectionSources;
 
     internal void AddClient<TClient>(string name)
         where TClient : class, IAICompletionClient
@@ -28,7 +32,7 @@ public sealed class AIOptions
         _clients[name] = typeof(TClient);
     }
 
-    internal void AddProfileSource(string name, string providerName, Action<AIProfileProviderEntry> configure = null)
+    public void AddProfileSource(string name, string providerName, Action<AIProfileProviderEntry> configure = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
@@ -97,9 +101,9 @@ public sealed class AIOptions
 
 public sealed class AIDeploymentProviderEntry
 {
-    public string DisplayName { get; set; }
+    public LocalizedString DisplayName { get; set; }
 
-    public string Description { get; set; }
+    public LocalizedString Description { get; set; }
 }
 
 public sealed class AIProfileProviderEntry
@@ -111,9 +115,9 @@ public sealed class AIProfileProviderEntry
 
     public string ProviderName { get; }
 
-    public string DisplayName { get; set; }
+    public LocalizedString DisplayName { get; set; }
 
-    public string Description { get; set; }
+    public LocalizedString Description { get; set; }
 }
 
 public sealed class AIProviderConnectionOptionsEntry
@@ -125,7 +129,7 @@ public sealed class AIProviderConnectionOptionsEntry
 
     public string ProviderName { get; }
 
-    public string DisplayName { get; set; }
+    public LocalizedString DisplayName { get; set; }
 
-    public string Description { get; set; }
+    public LocalizedString Description { get; set; }
 }

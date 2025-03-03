@@ -243,6 +243,7 @@ To create a custom tool source, implement the `IAIToolSource` interface. Below i
 public sealed class ProfileAwareAIToolSource : IAIToolSource
 {
     public const string ToolSource = "ProfileAware";
+
     private readonly ILogger<ProfileAwareAIToolSource> _logger;
     private readonly IAICompletionService _completionService;
     private readonly IAIProfileStore _profileStore;
@@ -375,33 +376,17 @@ Once the custom function is registered, you can add it to any AI profile. The cu
 
 ---
 
-### Implementing Custom AI Sources
+Here’s an improved version of your documentation with better structure, clarity, and consistency:  
 
-To integrate custom AI sources, implement the `IAIProfileSource` interface. Here's an example:
+---
 
-```csharp
-public sealed class CustomProfileSource : IAIProfileSource
-{
-    public const string ProviderTechnicalName = "ThirdPartyProviderName";
-    public const string ImplementationName = "Custom";
+## Adding Custom AI Profile Sources  
 
-    public CustomProfileSource(IStringLocalizer<CustomProfileSource> localizer)
-    {
-        DisplayName = localizer["Azure OpenAI"];
-        Description = localizer["Provides AI services using Azure OpenAI models."];
-    }
+To integrate custom AI sources, implement the `IAICompletionClient` interface or use the `NamedAICompletionClient` base class.  
 
-    public string TechnicalName => ImplementationName;
+### Implementing a Custom Completion Client  
 
-    public string ProviderName => ProviderTechnicalName;
-
-    public LocalizedString DisplayName { get; }
-
-    public LocalizedString Description { get; }
-}
-```
-
-You'll also need to register a custom completion client for the source. Below is an example implementation:
+Below is an example of a custom AI completion client that extends `NamedAICompletionClient`:  
 
 ```csharp
 public sealed class CustomCompletionClient : NamedAICompletionClient
@@ -411,7 +396,7 @@ public sealed class CustomCompletionClient : NamedAICompletionClient
        IDistributedCache distributedCache,
        IOptions<AIProviderOptions> providerOptions,
        IAIToolsService toolsService,
-       IOptions<DefaultAIOptions> defaultOptions,
+       IOptions<DefaultAIOptions> defaultOptions
     ) : base(CustomProfileSource.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService)
     {
     }
@@ -426,21 +411,60 @@ public sealed class CustomCompletionClient : NamedAICompletionClient
 }
 ```
 
-> **Note:** The `CustomCompletionClient` above inherits from `NamedAICompletionClient`. If the provider supports multiple deployments, you can instead inherit from `DeploymentAwareAICompletionClient`.
+> **Note:**  
+> The `CustomCompletionClient` class inherits from `NamedAICompletionClient`. If the provider supports multiple deployments, consider inheriting from `DeploymentAwareAICompletionClient` instead.  
 
-Finally, register the custom source and completion client in the `Startup` class:
+---
+
+### Registering the Custom Completion Client  
+
+Once you've implemented the custom client, register it as an AI profile source in `Startup` file:  
 
 ```csharp
-public sealed class StandardStartup : StartupBase
+public sealed class Startup : StartupBase
 {
+    private readonly IStringLocalizer _localizer;
+
+    public Startup(IStringLocalizer<Startup> localizer)
+    {
+        _localizer = localizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIProfile<CustomProfileSource, CustomCompletionClient>(CustomProfileSource.ImplementationName);
+        services.AddAIProfile<CustomCompletionClient>("CustomAIDefaultImplementation", "CustomAI", options =>
+        {
+            options.DisplayName = _localizer["CustomAI"];
+            options.Description = _localizer["Provides AI profiles using the CustomAI provider."];
+        });
     }
 }
 ```
 
-> **Important:** Ensure that both the profile source and the completion client share the same registration key.
+#### Supporting Multiple Deployments  
+
+If your custom AI provider supports multiple deployments or models, register a deployment provider as follows:  
+
+```csharp
+public sealed class Startup : StartupBase
+{
+    private readonly IStringLocalizer _localizer;
+
+    public Startup(IStringLocalizer<Startup> localizer)
+    {
+        _localizer = localizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAIDeploymentProvider("CustomAI", options =>
+        {
+            options.DisplayName = _localizer["CustomAI"];
+            options.Description = _localizer["CustomAI deployments."];
+        });
+    }
+}
+```
 
 ---
 

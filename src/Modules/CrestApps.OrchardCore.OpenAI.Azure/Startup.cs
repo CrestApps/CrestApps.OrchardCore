@@ -8,14 +8,22 @@ using CrestApps.OrchardCore.OpenAI.Azure.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Recipes;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Recipes;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure;
 
-public sealed class Startup : StartupBase
+internal sealed class Startup : StartupBase
 {
+    internal readonly IStringLocalizer S;
+
+    public Startup(IStringLocalizer<Startup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<AzureOpenAIModelService>();
@@ -24,15 +32,15 @@ public sealed class Startup : StartupBase
         services
             .AddAIDeploymentProvider(AzureOpenAIConstants.ProviderName, o =>
             {
-                o.DisplayName = "Azure OpenAI";
-                o.Description = "Azure OpenAI AI deployments.";
+                o.DisplayName = S["Azure OpenAI"];
+                o.Description = S["Azure OpenAI AI deployments."];
             })
             .AddScoped<AzureCognitiveServicesAccountServices>();
     }
 }
 
 [RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class RecipesStartup : StartupBase
+internal sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -41,27 +49,41 @@ public sealed class RecipesStartup : StartupBase
 }
 
 [Feature(AzureOpenAIConstants.Feature.Standard)]
-public sealed class StandardStartup : StartupBase
+internal sealed class StandardStartup : StartupBase
 {
+    internal readonly IStringLocalizer S;
+
+    public StandardStartup(IStringLocalizer<StandardStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAIProfile<AzureOpenAICompletionClient>(AzureOpenAIConstants.StandardImplementationName, AzureOpenAIConstants.ProviderName, o =>
         {
-            o.DisplayName = "Azure OpenAI";
-            o.Description = "Provides AI profiles using Azure OpenAI models.";
+            o.DisplayName = S["Azure OpenAI"];
+            o.Description = S["Provides AI profiles using Azure OpenAI models."];
         });
     }
 }
 
 [Feature(AzureOpenAIConstants.Feature.AISearch)]
-public sealed class AISearchStartup : StartupBase
+internal sealed class AISearchStartup : StartupBase
 {
+    internal readonly IStringLocalizer S;
+
+    public AISearchStartup(IStringLocalizer<AISearchStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAIProfile<AzureAISearchCompletionClient>(AzureOpenAIConstants.AISearchImplementationName, AzureOpenAIConstants.ProviderName, o =>
         {
-            o.DisplayName = "Azure OpenAI with Azure AI Search";
-            o.Description = "Provides AI profiles using Azure OpenAI models with your data.";
+            o.DisplayName = S["Azure OpenAI with Azure AI Search"];
+            o.Description = S["Provides AI profiles using Azure OpenAI models with your data."];
         });
         services.AddDisplayDriver<AIProfile, AzureOpenAIProfileSearchAIDisplayDriver>();
         services.AddScoped<IModelHandler<AIProfile>, AzureAISearchAIProfileHandler>();
@@ -69,8 +91,15 @@ public sealed class AISearchStartup : StartupBase
 }
 
 [RequireFeatures(AIConstants.Feature.ConnectionManagement)]
-public sealed class ConnectionManagementStartup : StartupBase
+internal sealed class ConnectionManagementStartup : StartupBase
 {
+    internal readonly IStringLocalizer S;
+
+    public ConnectionManagementStartup(IStringLocalizer<ConnectionManagementStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IModelHandler<AIProviderConnection>, AzureOpenAIConnectionSettingsHandler>();
@@ -78,8 +107,8 @@ public sealed class ConnectionManagementStartup : StartupBase
         services.AddDisplayDriver<AIProviderConnection, AzureOpenAIConnectionDisplayDriver>();
         services.AddAIConnectionSource(AzureOpenAIConstants.ProviderName, o =>
         {
-            o.DisplayName = "Azure OpenAI";
-            o.Description = "Provides a way to Configure Azure OpenAI connections.";
+            o.DisplayName = S["Azure OpenAI"];
+            o.Description = S["Provides a way to Configure Azure OpenAI connections."];
         });
     }
 }
