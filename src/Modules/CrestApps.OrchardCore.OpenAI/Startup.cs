@@ -12,7 +12,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.OpenAI;
 
-internal sealed class Startup : StartupBase
+public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 

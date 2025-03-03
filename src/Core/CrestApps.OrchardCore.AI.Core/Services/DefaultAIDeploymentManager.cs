@@ -18,7 +18,8 @@ public sealed class DefaultAIDeploymentManager : NamedModelManager<AIDeployment>
     public async ValueTask<IEnumerable<AIDeployment>> GetAllAsync(string providerName, string connectionName)
     {
         var deployments = (await Store.GetAllAsync())
-            .Where(x => x.ProviderName == providerName && x.ConnectionName.Equals(connectionName, StringComparison.OrdinalIgnoreCase));
+            .Where(x => x.ProviderName == providerName &&
+            (x.ConnectionName.Equals(connectionName, StringComparison.OrdinalIgnoreCase) || string.Equals(x.ConnectionNameAlias ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase)));
 
         foreach (var deployment in deployments)
         {

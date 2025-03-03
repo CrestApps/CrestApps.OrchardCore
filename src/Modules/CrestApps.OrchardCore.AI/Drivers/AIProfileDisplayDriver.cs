@@ -78,7 +78,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                     model.ConnectionName = profile.ConnectionName;
                 }
 
-                model.ConnectionNames = provider.Connections.Select(x => new SelectListItem(x.Key, x.Key)).ToArray();
+                model.ConnectionNames = provider.Connections.Select(x => new SelectListItem(x.Value.TryGetValue("ConnectionNameAlias", out var a) ? a.ToString() : x.Key, x.Key)).ToArray();
             }
             else
             {

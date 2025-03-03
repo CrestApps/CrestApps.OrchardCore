@@ -7,7 +7,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Ollama;
 
-internal sealed class Startup : StartupBase
+public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 

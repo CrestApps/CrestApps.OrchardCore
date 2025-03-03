@@ -1,3 +1,4 @@
+using System.ClientModel;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -30,7 +31,22 @@ public sealed class OpenAICompletionClient : DeploymentAwareAICompletionClient
 
     protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, AICompletionContext context, string deploymentName)
     {
-        return new OpenAIClient(connection.GetApiKey())
-            .AsChatClient(connection.GetDefaultDeploymentName());
+        var endpoint = connection.GetEndpoint(false);
+
+        OpenAIClient client;
+
+        if (endpoint is null)
+        {
+            client = new OpenAIClient(connection.GetApiKey());
+        }
+        else
+        {
+            client = new OpenAIClient(new ApiKeyCredential(connection.GetApiKey()), new OpenAIClientOptions
+            {
+                Endpoint = endpoint,
+            });
+        }
+
+        return client.AsChatClient(connection.GetDefaultDeploymentName());
     }
 }

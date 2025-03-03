@@ -15,7 +15,7 @@ using OrchardCore.Recipes;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure;
 
-internal sealed class Startup : StartupBase
+public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
@@ -40,7 +40,7 @@ internal sealed class Startup : StartupBase
 }
 
 [RequireFeatures("OrchardCore.Recipes.Core")]
-internal sealed class RecipesStartup : StartupBase
+public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -49,7 +49,7 @@ internal sealed class RecipesStartup : StartupBase
 }
 
 [Feature(AzureOpenAIConstants.Feature.Standard)]
-internal sealed class StandardStartup : StartupBase
+public sealed class StandardStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
@@ -69,7 +69,7 @@ internal sealed class StandardStartup : StartupBase
 }
 
 [Feature(AzureOpenAIConstants.Feature.AISearch)]
-internal sealed class AISearchStartup : StartupBase
+public sealed class AISearchStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
@@ -91,7 +91,7 @@ internal sealed class AISearchStartup : StartupBase
 }
 
 [RequireFeatures(AIConstants.Feature.ConnectionManagement)]
-internal sealed class ConnectionManagementStartup : StartupBase
+public sealed class ConnectionManagementStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 

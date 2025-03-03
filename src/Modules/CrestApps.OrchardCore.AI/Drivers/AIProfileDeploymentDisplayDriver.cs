@@ -72,7 +72,7 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
-        if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
+        if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var _))
         {
             return null;
         }
