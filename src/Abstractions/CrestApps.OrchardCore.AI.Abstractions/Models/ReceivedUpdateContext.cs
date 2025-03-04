@@ -4,12 +4,12 @@ namespace CrestApps.OrchardCore.AI.Models;
 
 public sealed class ReceivedUpdateContext
 {
-    public ReceivedUpdateContext(StreamingChatCompletionUpdate update)
+    public ReceivedUpdateContext(ChatResponseUpdate update)
     {
         ArgumentNullException.ThrowIfNull(update);
 
         Update = update;
     }
 
-    public StreamingChatCompletionUpdate Update { get; }
+    public ChatResponseUpdate Update { get; }
 }

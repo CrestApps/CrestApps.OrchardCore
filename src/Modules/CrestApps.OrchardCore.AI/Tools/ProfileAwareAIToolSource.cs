@@ -61,7 +61,7 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
         private readonly ILogger _logger;
         private readonly AIProfile _profile;
 
-        public override AIFunctionMetadata Metadata { get; }
+        public override JsonElement JsonSchema { get; }
 
         public ProfileInvoker(
             IAICompletionService completionService,
@@ -73,9 +73,11 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
             _profile = profile;
             _logger = logger;
 
+            
             var funcMetadata = instance.As<InvokableToolMetadata>();
 
-            Metadata = new AIFunctionMetadata(instance.Id)
+
+                AIFunctionMetadata(instance.Id)
             {
                 Description = string.IsNullOrEmpty(funcMetadata.Description)
                 ? "Provides a way to call another model."

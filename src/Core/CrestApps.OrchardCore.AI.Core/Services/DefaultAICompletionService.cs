@@ -27,7 +27,7 @@ public sealed class DefaultAICompletionService : IAICompletionService
         _logger = logger;
     }
 
-    public async Task<ChatCompletion> CompleteAsync(string clientName, IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
+    public async Task<ChatResponse> CompleteAsync(string clientName, IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(clientName);
 
@@ -47,7 +47,7 @@ public sealed class DefaultAICompletionService : IAICompletionService
         return response;
     }
 
-    public async IAsyncEnumerable<StreamingChatCompletionUpdate> CompleteStreamingAsync(string clientName, IEnumerable<ChatMessage> messages, AICompletionContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<ChatResponseUpdate> CompleteStreamingAsync(string clientName, IEnumerable<ChatMessage> messages, AICompletionContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(clientName);
 
