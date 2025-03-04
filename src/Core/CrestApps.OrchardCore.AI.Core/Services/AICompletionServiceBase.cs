@@ -12,8 +12,13 @@ public abstract class AICompletionServiceBase
         ProviderOptions = providerOptions;
     }
 
-    protected virtual string GetDefaultConnectionName(AIProvider provider)
+    protected virtual string GetDefaultConnectionName(AIProvider provider, AIProfile profile)
     {
+        if (!string.IsNullOrEmpty(profile.ConnectionName))
+        {
+            return profile.ConnectionName;
+        }
+
         return provider.DefaultConnectionName;
     }
 
@@ -28,7 +33,7 @@ public abstract class AICompletionServiceBase
 
         if (ProviderOptions.Providers.TryGetValue(providerName, out var provider))
         {
-            var connectionName = GetDefaultConnectionName(provider);
+            var connectionName = GetDefaultConnectionName(provider, context.Profile);
 
             deploymentName = GetDefaultDeploymentName(provider);
 

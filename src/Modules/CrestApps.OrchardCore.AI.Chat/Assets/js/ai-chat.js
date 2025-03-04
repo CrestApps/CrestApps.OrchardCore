@@ -260,6 +260,15 @@ window.openAIChatManager = function () {
                                 this.processReferences(references, messageIndex);
                                 this.streamingFinished();
 
+                                let newMessage = {
+                                    role: "assistant",
+                                    content: "Our service is currently unavailable. Please try again later. We apologize for the inconvenience.",
+                                    htmlContent: "",
+                                };
+
+                                this.hideTypingIndicator();
+                                this.addMessage(newMessage);
+
                                 this.stream?.dispose();
                                 this.stream = null;
 

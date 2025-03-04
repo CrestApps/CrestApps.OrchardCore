@@ -7,7 +7,7 @@ using OrchardCore.Modules.Manifest;
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
     Description = "Manages AI chat profiles for Ollama services.",
-    Category = "Content Management",
+    Category = "Artificial Intelligence",
     Dependencies =
     [
         AIConstants.Feature.Area,

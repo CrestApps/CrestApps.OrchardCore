@@ -253,6 +253,13 @@ window.openAIChatManager = function () {
               var _this5$stream2;
               _this5.processReferences(references, messageIndex);
               _this5.streamingFinished();
+              var newMessage = {
+                role: "assistant",
+                content: "Our service is currently unavailable. Please try again later. We apologize for the inconvenience.",
+                htmlContent: ""
+              };
+              _this5.hideTypingIndicator();
+              _this5.addMessage(newMessage);
               (_this5$stream2 = _this5.stream) === null || _this5$stream2 === void 0 || _this5$stream2.dispose();
               _this5.stream = null;
               console.error("Stream error:", err);
