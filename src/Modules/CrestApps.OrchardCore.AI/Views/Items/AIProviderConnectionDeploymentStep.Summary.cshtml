@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.AI.Deployments.Steps
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProviderConnectionDeploymentStep>
+
+<h5>@T["AI Provider Connections"]</h5>
+
+@if (Model.Value.IncludeAll)
+{
+    <span class="badge text-bg-success">@T["All connections"]</span>
+}
+else if (Model.Value.ConnectionIds?.Length > 0)
+{
+    <span class="badge text-bg-warning">@T.Plural(Model.Value.ConnectionIds.Length, "1 selected connection.", "{0} selected connections.", Model.Value.ConnectionIds.Length)</span>
+}
+else
+{
+    <span class="badge text-bg-warning">@T["No selected connection."]</span>
+}

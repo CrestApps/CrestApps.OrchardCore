@@ -1,21 +1,22 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Recipes;
 
-public sealed class AIToolInstanceStep : NamedRecipeStepHandler
+internal sealed class AIToolInstanceStep : NamedRecipeStepHandler
 {
     public const string StepKey = "AIToolInstance";
 
-    private readonly IAIToolInstanceManager _manager;
+    private readonly IModelManager<AIToolInstance> _manager;
 
     internal readonly IStringLocalizer S;
 
     public AIToolInstanceStep(
-        IAIToolInstanceManager manager,
+        IModelManager<AIToolInstance> manager,
         IStringLocalizer<AIToolInstanceStep> stringLocalizer)
         : base(StepKey)
     {

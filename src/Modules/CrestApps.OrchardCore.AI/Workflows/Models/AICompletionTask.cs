@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.AI;
@@ -14,7 +15,7 @@ namespace CrestApps.OrchardCore.AI.Workflows.Models;
 
 public sealed class AICompletionTask : TaskActivity<AICompletionTask>
 {
-    private readonly IAIProfileManager _profileManager;
+    private readonly INamedModelManager<AIProfile> _profileManager;
     private readonly IAICompletionService _completionService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly ILogger _logger;
@@ -22,7 +23,7 @@ public sealed class AICompletionTask : TaskActivity<AICompletionTask>
     internal readonly IStringLocalizer S;
 
     public AICompletionTask(
-        IAIProfileManager profileManager,
+        INamedModelManager<AIProfile> profileManager,
         IAICompletionService completionService,
         ILiquidTemplateManager liquidTemplateManager,
         ILogger<AICompletionTask> logger,

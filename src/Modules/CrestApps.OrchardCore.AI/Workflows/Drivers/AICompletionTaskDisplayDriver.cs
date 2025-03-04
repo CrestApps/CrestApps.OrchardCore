@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.ViewModels;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -12,13 +14,13 @@ namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
 public sealed class AICompletionTaskDisplayDriver : ActivityDisplayDriver<AICompletionTask, AICompletionTaskViewModel>
 {
-    private readonly IAIProfileStore _profileStore;
+    private readonly INamedModelStore<AIProfile> _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
 
     internal readonly IStringLocalizer S;
 
     public AICompletionTaskDisplayDriver(
-        IAIProfileStore profileStore,
+        INamedModelStore<AIProfile> profileStore,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<AICompletionTaskDisplayDriver> stringLocalizer)
     {

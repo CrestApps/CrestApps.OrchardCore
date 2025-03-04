@@ -2,6 +2,9 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Core.Handlers;
+using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Liquid;
@@ -9,10 +12,10 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
-public sealed class AIProfileHandler : AIProfileHandlerBase
+public sealed class AIProfileHandler : ModelHandlerBase<AIProfile>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAIProfileStore _profileStore;
+    private readonly INamedModelStore<AIProfile> _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IClock _clock;
 
@@ -20,7 +23,7 @@ public sealed class AIProfileHandler : AIProfileHandlerBase
 
     public AIProfileHandler(
         IHttpContextAccessor httpContextAccessor,
-        IAIProfileStore profileStore,
+        INamedModelStore<AIProfile> profileStore,
         ILiquidTemplateManager liquidTemplateManager,
         IClock clock,
         IStringLocalizer<AIProfileHandler> stringLocalizer)
@@ -32,66 +35,66 @@ public sealed class AIProfileHandler : AIProfileHandlerBase
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingAIProfileContext context)
-        => PopulateAsync(context.Profile, context.Data, true);
+    public override Task InitializingAsync(InitializingContext<AIProfile> context)
+        => PopulateAsync(context.Model, context.Data, true);
 
-    public override Task UpdatingAsync(UpdatingAIProfileContext context)
-        => PopulateAsync(context.Profile, context.Data, false);
+    public override Task UpdatingAsync(UpdatingContext<AIProfile> context)
+        => PopulateAsync(context.Model, context.Data, false);
 
-    public override async Task ValidatingAsync(ValidatingAIProfileContext context)
+    public override async Task ValidatingAsync(ValidatingContext<AIProfile> context)
     {
-        if (string.IsNullOrWhiteSpace(context.Profile.Name))
+        if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
             context.Result.Fail(new ValidationResult(S["Profile Name is required."], [nameof(AIProfile.Name)]));
         }
         else
         {
-            var profile = await _profileStore.FindByNameAsync(context.Profile.Name);
+            var profile = await _profileStore.FindByNameAsync(context.Model.Name);
 
-            if (profile is not null && profile.Id != context.Profile.Id)
+            if (profile is not null && profile.Id != context.Model.Id)
             {
                 context.Result.Fail(new ValidationResult(S["A profile with this name already exists. The name must be unique."], [nameof(AIProfile.Name)]));
             }
         }
 
-        if (string.IsNullOrWhiteSpace(context.Profile.Source))
+        if (string.IsNullOrWhiteSpace(context.Model.Source))
         {
             context.Result.Fail(new ValidationResult(S["Source is required."], [nameof(AIProfile.Source)]));
         }
 
-        if (context.Profile.Type == AIProfileType.TemplatePrompt)
+        if (context.Model.Type == AIProfileType.TemplatePrompt)
         {
-            if (string.IsNullOrWhiteSpace(context.Profile.PromptTemplate))
+            if (string.IsNullOrWhiteSpace(context.Model.PromptTemplate))
             {
                 context.Result.Fail(new ValidationResult(S["Prompt template is required."], [nameof(AIProfile.PromptTemplate)]));
             }
-            else if (!_liquidTemplateManager.Validate(context.Profile.PromptTemplate, out var _))
+            else if (!_liquidTemplateManager.Validate(context.Model.PromptTemplate, out var _))
             {
                 context.Result.Fail(new ValidationResult(S["Invalid liquid template used for Prompt template."], [nameof(AIProfile.PromptTemplate)]));
             }
         }
     }
 
-    public override Task InitializedAsync(InitializedAIProfileContext context)
+    public override Task InitializedAsync(InitializedContext<AIProfile> context)
     {
-        context.Profile.CreatedUtc = _clock.UtcNow;
+        context.Model.CreatedUtc = _clock.UtcNow;
 
         var user = _httpContextAccessor.HttpContext?.User;
 
         if (user != null)
         {
-            context.Profile.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            context.Profile.Author = user.Identity.Name;
+            context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            context.Model.Author = user.Identity.Name;
         }
 
         return Task.CompletedTask;
     }
 
-    public override Task SavingAsync(SavingAIProfileContext context)
+    public override Task SavingAsync(SavingContext<AIProfile> context)
     {
-        if (string.IsNullOrWhiteSpace(context.Profile.DisplayText))
+        if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
         {
-            context.Profile.DisplayText = context.Profile.Name;
+            context.Model.DisplayText = context.Model.Name;
         }
 
         return Task.CompletedTask;

@@ -5,14 +5,12 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Navigation;
-using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 
@@ -22,11 +20,10 @@ public sealed class AdminController : Controller
     private readonly IAIProfileManager _profileManager;
     private readonly IAIChatSessionManager _sessionManager;
     private readonly IAuthorizationService _authorizationService;
-    private readonly ISession _session;
     private readonly IDisplayManager<AIChatSession> _sessionDisplayManager;
     private readonly IDisplayManager<AIChatSessionListOptions> _optionsDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -34,22 +31,20 @@ public sealed class AdminController : Controller
         IAIProfileManager profileManager,
         IAIChatSessionManager sessionManager,
         IAuthorizationService authorizationService,
-        ISession session,
         IDisplayManager<AIChatSession> sessionDisplayManager,
         IDisplayManager<AIChatSessionListOptions> optionsDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
-        IServiceProvider serviceProvider,
+        IOptions<AIOptions> aiOptions,
         IStringLocalizer<AdminController> stringLocalizer
         )
     {
         _profileManager = profileManager;
         _sessionManager = sessionManager;
         _authorizationService = authorizationService;
-        _session = session;
         _sessionDisplayManager = sessionDisplayManager;
         _optionsDisplayManager = optionsDisplayManager;
         _updateModelAccessor = updateModelAccessor;
-        _serviceProvider = serviceProvider;
+        _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
 
@@ -66,9 +61,7 @@ public sealed class AdminController : Controller
             return NotFound();
         }
 
-        var completionClient = _serviceProvider.GetKeyedService<IAICompletionClient>(profile.Source);
-
-        if (completionClient is null)
+        if (!_aiOptions.Clients.TryGetValue(profile.Source, out var clientOptions))
         {
             return NotFound();
         }

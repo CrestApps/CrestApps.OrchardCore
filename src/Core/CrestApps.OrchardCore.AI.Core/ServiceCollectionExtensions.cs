@@ -1,5 +1,8 @@
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,65 +14,60 @@ namespace CrestApps.OrchardCore.AI.Core;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddAIDeploymentServices(this IServiceCollection services)
-    {
-        services
-            .AddScoped<IAIDeploymentStore, DefaultAIDeploymentStore>()
-            .AddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>()
-            .AddScoped<IAIDeploymentHandler, AIDeploymentHandler>()
-            .AddPermissionProvider<AIDeploymentProvider>();
-
-        return services;
-    }
-
     public static IServiceCollection AddAICoreServices(this IServiceCollection services)
     {
         services
-            .AddScoped<IAIProfileStore, DefaultAIProfileStore>()
+            .AddCoreModelServices()
+            .AddScoped<INamedModelStore<AIProfile>, DefaultAIProfileStore>()
+            .AddScoped<AIProviderConnectionStore>()
+            .AddScoped<IModelStore<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
+            .AddScoped<INamedModelStore<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
             .AddScoped<IAICompletionService, DefaultAICompletionService>()
             .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
-            .AddScoped<IAIProfileManagerSession, DefaultAIProfileManagerSession>()
-            .AddScoped<IAIProfileHandler, AIProfileHandler>();
+            .AddScoped<IModelHandler<AIProfile>, AIProfileHandler>();
 
         services
             .AddPermissionProvider<AIPermissionsProvider>()
             .AddScoped<IAuthorizationHandler, AIProfileAuthenticationHandler>()
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.CollectionName));
 
+        services
+            .AddScoped<IModelHandler<AIToolInstance>, AIToolInstanceHandler>();
+
         return services;
     }
 
-    public static IServiceCollection AddAIProfile<TSource, TClient>(this IServiceCollection services, string implementationName)
-        where TSource : class, IAIProfileSource
+    public static IServiceCollection AddAIDeploymentServices(this IServiceCollection services)
+    {
+        services
+            .AddScoped<DefaultAIDeploymentStore>()
+            .AddScoped<IModelStore<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
+            .AddScoped<INamedModelStore<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
+            .AddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>()
+            .AddScoped<IModelHandler<AIDeployment>, AIDeploymentHandler>()
+            .AddPermissionProvider<AIDeploymentProvider>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddAIProfile<TClient>(this IServiceCollection services, string implementationName, string providerName, Action<AIProfileProviderEntry> configure = null)
         where TClient : class, IAICompletionClient
     {
         return services
-            .AddAIProfileSource<TSource>(implementationName)
+            .Configure<AIOptions>(o =>
+            {
+                o.AddProfileSource(implementationName, providerName, configure);
+            })
             .AddAICompletionClient<TClient>(implementationName);
     }
 
-    public static IServiceCollection AddAIProfileSource<TSource>(this IServiceCollection services, string sourceKey)
-         where TSource : class, IAIProfileSource
+    public static IServiceCollection AddAIDeploymentProvider(this IServiceCollection services, string providerName, Action<AIDeploymentProviderEntry> configure = null)
     {
-        ArgumentNullException.ThrowIfNull(sourceKey);
-
         services
-            .AddScoped<TSource>()
-            .AddScoped<IAIProfileSource>(sp => sp.GetService<TSource>())
-            .AddKeyedScoped<IAIProfileSource>(sourceKey, (sp, key) => sp.GetService<TSource>());
-
-        return services;
-    }
-
-    public static IServiceCollection AddAIDeploymentProvider<TProvider>(this IServiceCollection services, string providerKey)
-        where TProvider : class, IAIDeploymentProvider
-    {
-        ArgumentNullException.ThrowIfNull(providerKey);
-
-        services
-            .AddScoped<TProvider>()
-            .AddScoped<IAIDeploymentProvider>(sp => sp.GetService<TProvider>())
-            .AddKeyedScoped<IAIDeploymentProvider>(providerKey, (sp, key) => sp.GetService<TProvider>());
+            .Configure<AIOptions>(o =>
+            {
+                o.AddDeploymentProvider(providerName, configure);
+            });
 
         return services;
     }
@@ -77,11 +75,23 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAICompletionClient<TClient>(this IServiceCollection services, string clientName)
         where TClient : class, IAICompletionClient
     {
-        ArgumentNullException.ThrowIfNull(clientName);
+        services.Configure<AIOptions>(o =>
+        {
+            o.AddClient<TClient>(clientName);
+        });
 
         services.TryAddScoped<TClient>();
-        services.TryAddScoped<IAICompletionClient>(sp => sp.GetService<TClient>());
-        services.AddKeyedScoped<IAICompletionClient>(clientName, (sp, key) => sp.GetService<TClient>());
+        services.AddScoped<IAICompletionClient>(sp => sp.GetService<TClient>());
+
+        return services;
+    }
+
+    public static IServiceCollection AddAIConnectionSource(this IServiceCollection services, string providerName, Action<AIProviderConnectionOptionsEntry> configure = null)
+    {
+        services.Configure<AIOptions>(o =>
+        {
+            o.AddConnectionSource(providerName, configure);
+        });
 
         return services;
     }

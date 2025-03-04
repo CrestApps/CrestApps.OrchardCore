@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.Core.Models;
+using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -24,7 +26,7 @@ public sealed class ToolInstancesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly IAIToolInstanceManager _templateManager;
+    private readonly IModelManager<AIToolInstance> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIToolInstance> _instanceDisplayDriver;
@@ -35,7 +37,7 @@ public sealed class ToolInstancesController : Controller
     internal readonly IStringLocalizer S;
 
     public ToolInstancesController(
-        IAIToolInstanceManager instanceManager,
+        IModelManager<AIToolInstance> manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIToolInstance> instanceDisplayManager,
@@ -44,7 +46,7 @@ public sealed class ToolInstancesController : Controller
         IHtmlLocalizer<ToolInstancesController> htmlLocalizer,
         IStringLocalizer<ToolInstancesController> stringLocalizer)
     {
-        _templateManager = instanceManager;
+        _manager = manager;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _instanceDisplayDriver = instanceDisplayManager;
@@ -56,7 +58,7 @@ public sealed class ToolInstancesController : Controller
 
     [Admin("ai/tool/instances", "AIToolInstancesIndex")]
     public async Task<IActionResult> Index(
-        AIToolInstanceOptions options,
+        ModelOptions options,
         PagerParameters pagerParameters,
         [FromServices] IEnumerable<IAIToolSource> toolSources,
         [FromServices] IOptions<PagerOptions> pagerOptions,
@@ -69,7 +71,7 @@ public sealed class ToolInstancesController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var result = await _templateManager.PageAsync(pager.Page, pager.PageSize, new QueryContext
+        var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
             Name = options.Search,
         });
@@ -82,36 +84,36 @@ public sealed class ToolInstancesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var model = new ListToolInstancesViewModel
+        var viewModel = new ListModelViewModel<AIToolInstance>
         {
-            Instances = [],
+            Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             SourceNames = toolSources.Select(toolSource => toolSource.Name).Order(),
         };
 
-        foreach (var record in result.Records)
+        foreach (var model in result.Models)
         {
-            model.Instances.Add(new AIToolInstanceEntry
+            viewModel.Models.Add(new ModelEntry<AIToolInstance>
             {
-                Instance = record,
-                Shape = await _instanceDisplayDriver.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+                Model = model,
+                Shape = await _instanceDisplayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
             });
         }
 
-        model.Options.BulkActions =
+        viewModel.Options.BulkActions =
         [
-            new SelectListItem(S["Delete"], nameof(AIProfileAction.Remove)),
+            new SelectListItem(S["Delete"], nameof(ModelAction.Remove)),
         ];
 
-        return View(model);
+        return View(viewModel);
     }
 
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/tool/instances", "AIToolInstancesIndex")]
-    public ActionResult IndexFilterPOST(ListProfilesViewModel model)
+    public ActionResult IndexFilterPOST(ListModelViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -136,22 +138,15 @@ public sealed class ToolInstancesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var instance = await _templateManager.NewAsync(source);
+        var model = await _manager.NewAsync(source);
 
-        if (instance == null)
-        {
-            await _notifier.ErrorAsync(H["Invalid template source."]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        var model = new ToolInstanceViewModel
+        var viewModel = new ModelViewModel
         {
             DisplayName = toolSource.Name,
-            Editor = await _instanceDisplayDriver.BuildEditorAsync(instance, _updateModelAccessor.ModelUpdater, isNew: true),
+            Editor = await _instanceDisplayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
-        return View(model);
+        return View(viewModel);
     }
 
     [HttpPost]
@@ -173,31 +168,24 @@ public sealed class ToolInstancesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var instance = await _templateManager.NewAsync(source);
+        var model = await _manager.NewAsync(source);
 
-        if (instance == null)
+        var viewModel = new ModelViewModel
         {
-            await _notifier.ErrorAsync(H["Invalid template source."]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        var model = new ToolInstanceViewModel
-        {
-            DisplayName = instance.DisplayText,
-            Editor = await _instanceDisplayDriver.UpdateEditorAsync(instance, _updateModelAccessor.ModelUpdater, isNew: true),
+            DisplayName = model.DisplayText,
+            Editor = await _instanceDisplayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
         if (ModelState.IsValid)
         {
-            await _templateManager.SaveAsync(instance);
+            await _manager.SaveAsync(model);
 
             await _notifier.SuccessAsync(H["A new instance has been created successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        return View(model);
+        return View(viewModel);
     }
 
     [Admin("ai/tool/instances/edit/{id}", "AIToolInstanceEdit")]
@@ -208,20 +196,20 @@ public sealed class ToolInstancesController : Controller
             return Forbid();
         }
 
-        var instance = await _templateManager.FindByIdAsync(id);
+        var instance = await _manager.FindByIdAsync(id);
 
         if (instance == null)
         {
             return NotFound();
         }
 
-        var model = new ToolInstanceViewModel
+        var viewModel = new ModelViewModel
         {
             DisplayName = instance.DisplayText,
             Editor = await _instanceDisplayDriver.BuildEditorAsync(instance, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
-        return View(model);
+        return View(viewModel);
     }
 
     [HttpPost]
@@ -234,32 +222,32 @@ public sealed class ToolInstancesController : Controller
             return Forbid();
         }
 
-        var profile = await _templateManager.FindByIdAsync(id);
+        var model = await _manager.FindByIdAsync(id);
 
-        if (profile == null)
+        if (model == null)
         {
             return NotFound();
         }
 
         // Clone the instance to prevent modifying the original instance in the store.
-        var mutableInstance = profile.Clone();
+        var mutableModel = model.Clone();
 
-        var model = new ProfileViewModel
+        var viewModel = new ModelViewModel
         {
-            DisplayName = mutableInstance.DisplayText,
-            Editor = await _instanceDisplayDriver.UpdateEditorAsync(mutableInstance, _updateModelAccessor.ModelUpdater, isNew: false),
+            DisplayName = mutableModel.DisplayText,
+            Editor = await _instanceDisplayDriver.UpdateEditorAsync(mutableModel, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
         if (ModelState.IsValid)
         {
-            await _templateManager.SaveAsync(mutableInstance);
+            await _manager.SaveAsync(mutableModel);
 
             await _notifier.SuccessAsync(H["The instance has been updated successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        return View(model);
+        return View(viewModel);
     }
 
     [HttpPost]
@@ -271,19 +259,14 @@ public sealed class ToolInstancesController : Controller
             return Forbid();
         }
 
-        if (string.IsNullOrEmpty(id))
+        var model = await _manager.FindByIdAsync(id);
+
+        if (model == null)
         {
             return NotFound();
         }
 
-        var instance = await _templateManager.FindByIdAsync(id);
-
-        if (instance == null)
-        {
-            return NotFound();
-        }
-
-        if (await _templateManager.DeleteAsync(instance))
+        if (await _manager.DeleteAsync(model))
         {
             await _notifier.SuccessAsync(H["The instance has been deleted successfully."]);
         }
@@ -300,7 +283,7 @@ public sealed class ToolInstancesController : Controller
     [FormValueRequired("submit.BulkAction")]
     [Admin("ai/tool/instances", "AIToolInstancesIndex")]
 
-    public async Task<ActionResult> IndexPost(AIProfileOptions options, IEnumerable<string> itemIds)
+    public async Task<ActionResult> IndexPost(ModelOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIToolInstances))
         {
@@ -311,20 +294,20 @@ public sealed class ToolInstancesController : Controller
         {
             switch (options.BulkAction)
             {
-                case AIProfileAction.None:
+                case ModelAction.None:
                     break;
-                case AIProfileAction.Remove:
+                case ModelAction.Remove:
                     var counter = 0;
                     foreach (var id in itemIds)
                     {
-                        var instance = await _templateManager.FindByIdAsync(id);
+                        var model = await _manager.FindByIdAsync(id);
 
-                        if (instance == null)
+                        if (model == null)
                         {
                             continue;
                         }
 
-                        if (await _templateManager.DeleteAsync(instance))
+                        if (await _manager.DeleteAsync(model))
                         {
                             counter++;
                         }

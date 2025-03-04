@@ -1,12 +1,13 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.Core.Models;
+using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -22,24 +23,22 @@ public sealed class DeploymentsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly IAIDeploymentManager _deploymentManager;
+    private readonly INamedModelManager<AIDeployment> _deploymentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly AIOptions _aiOptions;
     private readonly IDisplayManager<AIDeployment> _deploymentDisplayManager;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly AIProviderOptions _connectionOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
     public DeploymentsController(
-        IAIDeploymentManager deploymentManager,
+        INamedModelManager<AIDeployment> deploymentManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
+        IOptions<AIOptions> aiOptions,
         IDisplayManager<AIDeployment> deploymentDisplayManager,
-        IServiceProvider serviceProvider,
-        IOptions<AIProviderOptions> connectionOptions,
         INotifier notifier,
         IHtmlLocalizer<DeploymentsController> htmlLocalizer,
         IStringLocalizer<DeploymentsController> stringLocalizer)
@@ -47,9 +46,8 @@ public sealed class DeploymentsController : Controller
         _deploymentManager = deploymentManager;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
+        _aiOptions = aiOptions.Value;
         _deploymentDisplayManager = deploymentDisplayManager;
-        _serviceProvider = serviceProvider;
-        _connectionOptions = connectionOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -57,9 +55,8 @@ public sealed class DeploymentsController : Controller
 
     [Admin("ai/deployments", "AIDeploymentsIndex")]
     public async Task<IActionResult> Index(
-        AIDeploymentOptions options,
+        ModelOptions options,
         PagerParameters pagerParameters,
-        [FromServices] IEnumerable<IAIDeploymentProvider> deploymentSources,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
     {
@@ -70,8 +67,9 @@ public sealed class DeploymentsController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var result = await _deploymentManager.PageQueriesAsync(pager.Page, pager.PageSize, new QueryContext
+        var result = await _deploymentManager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
+            Sorted = true,
             Name = options.Search,
         });
 
@@ -83,36 +81,36 @@ public sealed class DeploymentsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var model = new ListDeploymentsViewModel
+        var viewModel = new ListModelViewModel<AIDeployment>
         {
-            Deployments = [],
+            Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            ProviderNames = deploymentSources.Select(x => x.TechnicalName).Order(),
+            SourceNames = _aiOptions.Deployments.Select(x => x.Key).Order(),
         };
 
-        foreach (var record in result.Records)
+        foreach (var record in result.Models)
         {
-            model.Deployments.Add(new AIDeploymentEntry
+            viewModel.Models.Add(new ModelEntry<AIDeployment>
             {
-                Deployment = record,
+                Model = record,
                 Shape = await _deploymentDisplayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
             });
         }
 
-        model.Options.BulkActions =
+        viewModel.Options.BulkActions =
         [
-            new SelectListItem(S["Delete"], nameof(AIDeploymentAction.Remove)),
+            new SelectListItem(S["Delete"], nameof(ModelAction.Remove)),
         ];
 
-        return View(model);
+        return View(viewModel);
     }
 
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/deployments", "AIDeploymentsIndex")]
-    public ActionResult IndexFilterPOST(ListDeploymentsViewModel model)
+    public ActionResult IndexFilterPOST(ListModelViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -133,11 +131,9 @@ public sealed class DeploymentsController : Controller
             return Forbid();
         }
 
-        var provider = _serviceProvider.GetKeyedService<IAIDeploymentProvider>(providerName);
-
-        if (provider == null)
+        if (!_aiOptions.Deployments.TryGetValue(providerName, out var provider))
         {
-            await _notifier.ErrorAsync(H["Unable to find a provider with the name '{ProviderName}'.", providerName]);
+            await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -151,7 +147,7 @@ public sealed class DeploymentsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var model = new AIDeploymentViewModel
+        var model = new ModelViewModel
         {
             DisplayName = provider.DisplayName,
             Editor = await _deploymentDisplayManager.BuildEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -170,11 +166,9 @@ public sealed class DeploymentsController : Controller
             return Forbid();
         }
 
-        var provider = _serviceProvider.GetKeyedService<IAIDeploymentProvider>(providerName);
-
-        if (provider == null)
+        if (!_aiOptions.Deployments.TryGetValue(providerName, out var provider))
         {
-            await _notifier.ErrorAsync(H["Unable to find a deployment-source that can handle the source '{ProviderName}'.", providerName]);
+            await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -188,7 +182,7 @@ public sealed class DeploymentsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var model = new AIDeploymentViewModel
+        var model = new ModelViewModel
         {
             DisplayName = provider.DisplayName,
             Editor = await _deploymentDisplayManager.UpdateEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -221,7 +215,7 @@ public sealed class DeploymentsController : Controller
             return NotFound();
         }
 
-        var model = new AIDeploymentViewModel
+        var model = new ModelViewModel
         {
             DisplayName = deployment.Name,
             Editor = await _deploymentDisplayManager.BuildEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -250,7 +244,7 @@ public sealed class DeploymentsController : Controller
         // Clone the deployment to prevent modifying the original instance in the store.
         var mutableProfile = deployment.Clone();
 
-        var model = new AIDeploymentViewModel
+        var model = new ModelViewModel
         {
             DisplayName = mutableProfile.Name,
             Editor = await _deploymentDisplayManager.UpdateEditorAsync(mutableProfile, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -295,7 +289,7 @@ public sealed class DeploymentsController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
     [Admin("ai/deployments", "AIDeploymentsIndex")]
-    public async Task<ActionResult> IndexPost(AIDeploymentOptions options, IEnumerable<string> itemIds)
+    public async Task<ActionResult> IndexPost(ModelOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
         {
@@ -306,9 +300,9 @@ public sealed class DeploymentsController : Controller
         {
             switch (options.BulkAction)
             {
-                case AIDeploymentAction.None:
+                case ModelAction.None:
                     break;
-                case AIDeploymentAction.Remove:
+                case ModelAction.Remove:
                     var counter = 0;
                     foreach (var id in itemIds)
                     {

@@ -15,7 +15,7 @@ public sealed class AzureCognitiveServicesAccountServices
         _logger = logger;
     }
 
-    public async Task<CognitiveServicesAccountData> GetAsync(AIProviderConnection connection)
+    public async Task<CognitiveServicesAccountData> GetAsync(AIProviderConnectionEntry connection)
     {
         try
         {

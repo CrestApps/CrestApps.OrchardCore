@@ -1,8 +1,8 @@
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
@@ -13,27 +13,27 @@ using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
-public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
+internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 {
-    private readonly IAIProfileStore _profileStore;
+    private readonly INamedModelStore<AIProfile> _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly AIOptions _aiOptions;
     private readonly DefaultAIOptions _defaultAIOptions;
     private readonly AIProviderOptions _connectionOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileDisplayDriver(
-        IAIProfileStore profileStore,
+        INamedModelStore<AIProfile> profileStore,
         ILiquidTemplateManager liquidTemplateManager,
-        IServiceProvider serviceProvider,
+        IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> connectionOptions,
         IOptions<DefaultAIOptions> defaultAIOptions,
         IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
     {
         _profileStore = profileStore;
         _liquidTemplateManager = liquidTemplateManager;
-        _serviceProvider = serviceProvider;
+        _aiOptions = aiOptions.Value;
         _defaultAIOptions = defaultAIOptions.Value;
         _connectionOptions = connectionOptions.Value;
         S = stringLocalizer;
@@ -60,8 +60,10 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
         var connectionFieldResult = Initialize<EditConnectionProfileViewModel>("AIProfileConnection_Edit", model =>
         {
-            var profileSource = _serviceProvider.GetKeyedService<IAIProfileSource>(profile.Source);
-
+            if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
+            {
+                return;
+            }
             if (profileSource is not null && _connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
             {
                 if (provider.Connections.Count == 1)
@@ -76,7 +78,7 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                     model.ConnectionName = profile.ConnectionName;
                 }
 
-                model.ConnectionNames = provider.Connections.Select(x => new SelectListItem(x.Key, x.Key)).ToArray();
+                model.ConnectionNames = provider.Connections.Select(x => new SelectListItem(x.Value.TryGetValue("ConnectionNameAlias", out var a) ? a.ToString() : x.Key, x.Key)).ToArray();
             }
             else
             {
@@ -161,9 +163,7 @@ public sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
         if (!string.IsNullOrEmpty(connectionModel.ConnectionName))
         {
-            var profileSource = _serviceProvider.GetKeyedService<IAIProfileSource>(profile.Source);
-
-            if (profileSource is not null &&
+            if (_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource) &&
                 _connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider) &&
                 !provider.Connections.TryGetValue(connectionModel.ConnectionName, out _))
             {

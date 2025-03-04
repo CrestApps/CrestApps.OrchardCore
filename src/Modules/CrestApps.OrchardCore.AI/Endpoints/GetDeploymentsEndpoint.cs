@@ -40,7 +40,7 @@ internal static class GetDeploymentsEndpoint
             return TypedResults.BadRequest("Connection is required.");
         }
 
-        var deployments = await deploymentManager.GetAsync(providerName, connection);
+        var deployments = await deploymentManager.GetAllAsync(providerName, connection);
 
         return TypedResults.Ok(deployments.Select(x => new
         {

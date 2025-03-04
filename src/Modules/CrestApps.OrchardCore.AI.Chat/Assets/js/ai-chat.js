@@ -73,9 +73,10 @@ window.openAIChatManager = function () {
                     chatWidgetStateSession: null,
                     chatHistorySection: null,
                     widgetIsInitialized: false,
+                    isSteaming: false,
+                    stream: null,
                     messages: [],
-                    prompt: '',
-                    messageBuffers: {} // Holds partial messages
+                    prompt: ''
                 };
             },
             methods: {
@@ -84,75 +85,6 @@ window.openAIChatManager = function () {
                         .withUrl(config.signalRHubUrl)
                         .withAutomaticReconnect()
                         .build();
-
-                    this.connection.on("StartMessageStream", (messageId) => {
-                        this.hideTypingIndicator();
-
-                        if (!this.messageBuffers[messageId]) {
-                            let newMessage = {
-                                role: "assistant",
-                                content: "",
-                                htmlContent: "",
-                            };
-
-                            this.messages.push(newMessage);
-
-                            this.messageBuffers[messageId] = {
-                                content: "",
-                                messageIndex: this.messages.length - 1,
-                                references: {},
-                            };
-                        }
-                    });
-
-                    this.connection.on("CompleteMessageStream", (messageId) => {
-
-                        let buffer = this.messageBuffers[messageId];
-
-                        if (buffer.references && Object.keys(buffer.references).length) {
-                            processedContent = buffer.content.trim() + '<br><br>';
-
-                            for (const [key, value] of Object.entries(buffer.references)) {
-                                processedContent += `**${value.index}**. [${value.text}](${value.link})<br>`;
-
-                                buffer.references[key] = value;
-                            }
-
-                            let message = this.messages[buffer.messageIndex];
-                            message.content = processedContent;
-                            message.htmlContent = marked.parse(processedContent, { renderer });
-                        }
-
-                        delete this.messageBuffers[messageId];
-                    });
-
-                    this.connection.on("ReceiveMessageStream", (chunk, messageId) => {
-
-                        let buffer = this.messageBuffers[messageId];
-
-                        if (chunk.content) {
-
-                            let processedContent = chunk.content;
-                            if (chunk.references && typeof chunk.references === "object" && Object.keys(chunk.references).length) {
-
-                                for (const [key, value] of Object.entries(chunk.references)) {
-                                    processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
-
-                                    buffer.references[key] = value;
-                                }
-                            }
-                            // Append processed content to the buffer
-                            // if we have multiple references, add a comma to ensure we don't concatenate numbers.
-                            buffer.content += processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-                        }
-
-                        // Update the existing message
-                        let message = this.messages[buffer.messageIndex];
-                        message.content = buffer.content;
-                        message.htmlContent = marked.parse(buffer.content, { renderer });
-
-                        this.scrollToBottom();
-                    });
 
                     this.connection.on("LoadSession", (data) => {
                         this.initializeSession(data.sessionId, true);
@@ -250,12 +182,133 @@ window.openAIChatManager = function () {
                         content: trimmedPrompt
                     });
 
-                    this.connection.invoke("SendMessage", this.getProfileId(), trimmedPrompt, this.getSessionId(), null).catch(err => console.error(err));
-
+                    this.streamMessage(trimmedPrompt);
                     this.showTypingIndicator();
                     this.inputElement.value = '';
                     this.prompt = '';
-                    this.buttonElement.setAttribute('disabled', true);
+                },
+                streamMessage(trimmedPrompt) {
+
+                    if (this.stream) {
+                        this.stream.dispose();
+                        this.stream = null;
+                    }
+
+                    this.streamingStarted();
+
+                    var content = '';
+                    var references = {};
+
+                    var messageIndex = this.messages.length;
+
+                    this.stream = this.connection.stream("SendMessage", this.getProfileId(), trimmedPrompt, this.getSessionId(), null)
+                        .subscribe({
+                            next: (chunk) => {
+                                let message = this.messages[messageIndex];
+
+                                if (!message) {
+
+                                    this.hideTypingIndicator();
+
+                                    let newMessage = {
+                                        role: "assistant",
+                                        content: "",
+                                        htmlContent: "",
+                                    };
+
+                                    this.messages.push(newMessage);
+
+                                    message = newMessage;
+                                }
+
+                                if (chunk.references && typeof chunk.references === "object" && Object.keys(chunk.references).length) {
+
+                                    for (const [key, value] of Object.entries(chunk.references)) {
+                                        references[key] = value;
+                                    }
+                                }
+
+                                if (chunk.content) {
+
+                                    let processedContent = chunk.content;
+
+                                    for (const [key, value] of Object.entries(references)) {
+                                        processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
+                                    }
+
+                                    // Append processed content to the message.
+                                    // if we have multiple references, add a comma to ensure we don't concatenate numbers.
+                                    content += processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+                                }
+
+                                // Update the existing message
+                                message.content = content;
+                                message.htmlContent = marked.parse(content, { renderer });
+
+                                this.messages[messageIndex] = message;
+
+                                this.scrollToBottom();
+                            },
+                            complete: () => {
+                                this.processReferences(references, messageIndex);
+                                this.streamingFinished();
+
+                                this.stream?.dispose();
+                                this.stream = null;
+                            },
+                            error: (err) => {
+                                this.processReferences(references, messageIndex);
+                                this.streamingFinished();
+
+                                let newMessage = {
+                                    role: "assistant",
+                                    content: "Our service is currently unavailable. Please try again later. We apologize for the inconvenience.",
+                                    htmlContent: "",
+                                };
+
+                                this.hideTypingIndicator();
+                                this.addMessage(newMessage);
+
+                                this.stream?.dispose();
+                                this.stream = null;
+
+                                console.error("Stream error:", err);
+                            }
+                        });
+                },
+                processReferences(references, messageIndex) {
+                    console.log(references, messageIndex, Object.keys(references).length);
+
+                    if (Object.keys(references).length) {
+
+                        let message = this.messages[messageIndex];
+
+                        message.content = (message.content?.trim() + '<br><br>' || '');
+
+                        for (const [key, value] of Object.entries(references)) {
+                            message.content += `**${value.index}**. [${value.text}](${value.link})<br>`;
+                        }
+
+                        message.htmlContent = marked.parse(message.content, { renderer });
+
+                        this.messages[messageIndex] = message;
+
+                        this.scrollToBottom();
+                    }
+                },
+                streamingStarted() {
+                    var stopIcon = this.buttonElement.getAttribute('data-stop-icon');
+
+                    if (stopIcon) {
+                        this.buttonElement.innerHTML = stopIcon;
+                    }
+                },
+                streamingFinished() {
+                    var startIcon = this.buttonElement.getAttribute('data-start-icon');
+
+                    if (startIcon) {
+                        this.buttonElement.innerHTML = startIcon;
+                    }
                 },
                 generatePrompt(element) {
                     if (!element) {
@@ -274,7 +327,7 @@ window.openAIChatManager = function () {
                     }
 
                     this.showTypingIndicator();
-                    this.connection.invoke("SendMessage", profileId, null, sessionId, this.getProfileId()).catch(err => console.error(err));
+                    this.streamMessage(null);
                 },
                 createSessionUrl(baseUrl, param, value) {
 
@@ -321,8 +374,13 @@ window.openAIChatManager = function () {
                     this.placeholder = document.querySelector(config.placeholderElementSelector);
 
                     this.inputElement.addEventListener('keyup', event => {
+
+                        if (this.stream != null) {
+                            return;
+                        }
+
                         if (event.key === "Enter" && !event.shiftKey) {
-                            this.buttonElement.dispatchEvent(new Event('click'));
+                            this.buttonElement.click();
                         }
                     });
 
@@ -337,6 +395,16 @@ window.openAIChatManager = function () {
                     });
 
                     this.buttonElement.addEventListener('click', () => {
+
+                        if (this.stream != null) {
+                            this.stream.dispose();
+                            this.stream = null;
+
+                            this.streamingFinished();
+
+                            return;
+                        }
+
                         this.sendMessage();
                     });
 
@@ -519,6 +587,15 @@ window.openAIChatManager = function () {
                 this.startConnection();
                 if (config.widget) {
                     this.initializeWidget();
+                }
+            },
+            beforeUnmount() {
+                if (this.stream) {
+                    this.stream.dispose();
+                    this.stream = null;
+                }
+                if (this.connection) {
+                    this.connection.stop();
                 }
             },
             template: config.messageTemplate

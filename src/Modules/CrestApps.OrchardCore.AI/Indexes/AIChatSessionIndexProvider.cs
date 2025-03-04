@@ -6,7 +6,7 @@ using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.AI.Indexes;
 
-public sealed class AIChatSessionIndexProvider : IndexProvider<AIChatSession>
+internal sealed class AIChatSessionIndexProvider : IndexProvider<AIChatSession>
 {
     public AIChatSessionIndexProvider()
     {

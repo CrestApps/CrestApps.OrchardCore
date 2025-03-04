@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -16,7 +17,7 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AIProfilePart>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAIProfileStore _profileStore;
+    private readonly INamedModelStore<AIProfile> _profileStore;
     private readonly IAIChatSessionManager _chatSessionManager;
     private readonly PagerOptions _pagerOptions;
 
@@ -24,7 +25,7 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
 
     public AIChatProfilePartDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
-        IAIProfileStore profileStore,
+        INamedModelStore<AIProfile> profileStore,
         IAIChatSessionManager chatSessionManager,
         IOptions<PagerOptions> pagerOptions,
         IStringLocalizer<AIChatProfilePartDisplayDriver> stringLocalizer)

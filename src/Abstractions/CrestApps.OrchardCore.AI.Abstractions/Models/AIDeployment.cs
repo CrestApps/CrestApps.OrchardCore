@@ -1,17 +1,30 @@
 using System.Text.Json.Nodes;
-using OrchardCore.Entities;
+using System.Text.Json.Serialization;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public class AIDeployment : Entity
+public class AIDeployment : SourceModel, INameAwareModel
 {
-    public string Id { get; set; }
+    [JsonIgnore]
+    public string ProviderName
+    {
+        get => Source;
+        set => Source = value;
+    }
+
+    [JsonInclude]
+    [JsonPropertyName(nameof(ProviderName))]
+    private string _providerNameBackingField
+    {
+        set => Source = value;
+    }
 
     public string Name { get; set; }
 
-    public string ProviderName { get; set; }
-
     public string ConnectionName { get; set; }
+
+    public string ConnectionNameAlias { get; set; }
 
     public DateTime CreatedUtc { get; set; }
 
@@ -25,8 +38,9 @@ public class AIDeployment : Entity
         {
             Id = Id,
             Name = Name,
-            ProviderName = ProviderName,
+            Source = Source,
             ConnectionName = ConnectionName,
+            ConnectionNameAlias = ConnectionNameAlias,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,

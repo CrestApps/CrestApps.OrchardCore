@@ -1,25 +1,29 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Recipes;
 
-public sealed class AIDeploymentStep : NamedRecipeStepHandler
+internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 {
     public const string StepKey = "AIDeployment";
 
-    private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAIDeploymentManager _manager;
+    private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIDeploymentStep(
-        IAIDeploymentManager deploymentManager,
+        IAIDeploymentManager manager,
+        IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIDeploymentStep> stringLocalizer)
          : base(StepKey)
     {
-        _deploymentManager = deploymentManager;
+        _manager = manager;
+        _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
 
@@ -36,25 +40,22 @@ public sealed class AIDeploymentStep : NamedRecipeStepHandler
 
             if (!string.IsNullOrEmpty(id))
             {
-                deployment = await _deploymentManager.FindByIdAsync(id);
+                deployment = await _manager.FindByIdAsync(id);
             }
 
-            if (deployment is not null)
-            {
-                await _deploymentManager.UpdateAsync(deployment, token);
-            }
-            else
-            {
-                var providerName = token[nameof(AIDeployment.ProviderName)]?.GetValue<string>();
+            var sourceName = token[nameof(AIDeployment.ProviderName)]?.GetValue<string>();
+            var hasSource = !string.IsNullOrEmpty(sourceName);
 
-                if (string.IsNullOrEmpty(providerName))
+            if (deployment is null)
+            {
+                if (!hasSource)
                 {
-                    context.Errors.Add(S["Could not find provider name. The deployment will not be imported"]);
+                    context.Errors.Add(S["Could not find provider name. The deployment will not be imported."]);
 
                     continue;
                 }
 
-                var name = token[nameof(AIDeployment.Name)]?.GetValue<string>();
+                var name = token[nameof(AIDeployment.Name)]?.GetValue<string>()?.Trim();
 
                 if (string.IsNullOrEmpty(name))
                 {
@@ -63,28 +64,36 @@ public sealed class AIDeploymentStep : NamedRecipeStepHandler
                     continue;
                 }
 
-                deployment = await _deploymentManager.FindAsync(providerName, name);
-
-                if (deployment is null)
+                if (!string.IsNullOrEmpty(name))
                 {
-                    // If we get this far and deployment is still null, we need to create a new deployment
-
-                    deployment = await _deploymentManager.NewAsync(providerName, token);
-
-                    if (deployment == null)
-                    {
-                        context.Errors.Add(S["Unable to find a provider with the name '{ProviderName}'.", providerName]);
-
-                        continue;
-                    }
-                }
-                else
-                {
-                    await _deploymentManager.UpdateAsync(deployment, token);
+                    deployment = await _manager.GetAsync(name, sourceName);
                 }
             }
 
-            var validationResult = await _deploymentManager.ValidateAsync(deployment);
+            if (deployment is not null)
+            {
+                await _manager.UpdateAsync(deployment, token);
+            }
+            else
+            {
+                if (!hasSource)
+                {
+                    context.Errors.Add(S["Could not find provider name. The deployment will not be imported."]);
+
+                    continue;
+                }
+
+                if (!_aiOptions.Deployments.TryGetValue(sourceName, out _))
+                {
+                    context.Errors.Add(S["Unable to find a provider-source that can handle the source '{0}'.", sourceName]);
+
+                    return;
+                }
+
+                deployment = await _manager.NewAsync(sourceName, token);
+            }
+
+            var validationResult = await _manager.ValidateAsync(deployment);
 
             if (!validationResult.Succeeded)
             {
@@ -96,7 +105,7 @@ public sealed class AIDeploymentStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await _deploymentManager.SaveAsync(deployment);
+            await _manager.SaveAsync(deployment);
         }
     }
 

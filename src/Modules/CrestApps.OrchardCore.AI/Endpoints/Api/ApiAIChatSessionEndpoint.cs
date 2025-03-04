@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -21,7 +23,7 @@ internal static class ApiAIChatSessionEndpoint
 
     private static async Task<IResult> HandleAsync(
        IAuthorizationService authorizationService,
-       IAIProfileManager chatProfileManager,
+       INamedModelManager<AIProfile> profileManager,
        IAIChatSessionManager sessionManager,
        ILiquidTemplateManager liquidTemplateManager,
        IHttpContextAccessor httpContextAccessor,
@@ -39,7 +41,7 @@ internal static class ApiAIChatSessionEndpoint
             return TypedResults.NotFound();
         }
 
-        var profile = await chatProfileManager.FindByIdAsync(chatSession.ProfileId);
+        var profile = await profileManager.FindByIdAsync(chatSession.ProfileId);
 
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
         {

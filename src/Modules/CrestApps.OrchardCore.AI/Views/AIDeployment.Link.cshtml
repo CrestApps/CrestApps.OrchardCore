@@ -5,17 +5,21 @@
 @using Microsoft.Extensions.Options
 
 @inject IOptions<AIProviderOptions> Options
+@inject IOptions<AIOptions> AIOptions
 @{
     string providerName = Model.ProviderName;
-    var service = ViewContext.HttpContext.RequestServices.GetKeyedService<IAIDeploymentProvider>(providerName);
-    var hasConnections = Options.Value.Providers.TryGetValue(providerName, out var provider) && provider.Connections.Count > 0;
+
+    if (!AIOptions.Value.Deployments.TryGetValue(providerName, out var deploymentProvider))
+    {
+        return;
+    }
 }
 
 <div class="col">
     <div class="card h-100">
         <div class="card-body">
-            <h4>@(service?.DisplayName ?? providerName)</h4>
-            <p class="hint">@(service?.Description)</p>
+            <h4>@(deploymentProvider.DisplayName)</h4>
+            <p class="hint">@(deploymentProvider.Description)</p>
 
         </div>
 

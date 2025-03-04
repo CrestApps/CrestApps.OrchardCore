@@ -54,7 +54,62 @@ The **AI Chat Services** feature builds upon the **AI Services** feature by addi
 
 The **AI Chat WebAPI** feature extends the **AI Chat Services** feature by enabling a REST WebAPI endpoints to allow you to interact with the models.
 
----
+### AI Connection Management  
+
+The **AI Connection Management** feature enhances **AI Services** by providing a user interface to manage provider connections.  
+
+#### Setting Up a Connection  
+
+1. **Navigate to AI Settings**  
+   - Go to **"Artificial Intelligence"** in the admin menu.  
+   - Click **"Connections"** to configure a new connection.  
+
+2. **Add a New Connection**  
+   - Click **"Add Connection"**, select a provider, and enter the required details.  
+   - Example: Connecting to **Google Gemini**  
+     - Generate an **API Key** from [Google AI Studio](https://aistudio.google.com).  
+     - Enter the **Endpoint**:  
+       ```
+       https://generativelanguage.googleapis.com/v1beta/openai/
+       ```  
+     - Specify the **Model**, e.g., **gemini-2.0-flash**.  
+
+#### Creating AI Profiles  
+
+After setting up a connection, you can create **AI Profiles** to interact with the configured model.  
+
+#### Recipes
+
+You can add or update a connection using **recipes**. Below is a recipe for adding or updating a connection to the **DeepSeek** service:  
+
+```json
+{
+  "steps": [
+    {
+      "name": "AIProviderConnections",
+      "connections": [
+        {
+          "Source": "OpenAI",
+          "Name": "deepseek",
+          "IsDefault": false,
+          "DefaultDeploymentName": "deepseek-chat",
+          "DisplayText": "DeepSeek",
+          "Properties": {
+            "OpenAIConnectionMetadata": {
+              "Endpoint": "https://api.deepseek.com/v1",
+              "ApiKey": "<!-- DeepSeek API Key -->"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```  
+
+This recipe ensures that a **DeepSeek** connection is added or updated within the AI provider settings. Replace `<!-- DeepSeek API Key -->` with a valid API key to authenticate the connection.  
+
+If a connection with the same `Name` and `Source` already exists, the recipe updates its properties. Otherwise, it creates a new connection.
 
 ### Defining Chat Profiles Using Code
 
@@ -188,6 +243,7 @@ To create a custom tool source, implement the `IAIToolSource` interface. Below i
 public sealed class ProfileAwareAIToolSource : IAIToolSource
 {
     public const string ToolSource = "ProfileAware";
+
     private readonly ILogger<ProfileAwareAIToolSource> _logger;
     private readonly IAICompletionService _completionService;
     private readonly IAIProfileStore _profileStore;
@@ -320,33 +376,17 @@ Once the custom function is registered, you can add it to any AI profile. The cu
 
 ---
 
-### Implementing Custom AI Sources
+Here’s an improved version of your documentation with better structure, clarity, and consistency:  
 
-To integrate custom AI sources, implement the `IAIProfileSource` interface. Here's an example:
+---
 
-```csharp
-public sealed class CustomProfileSource : IAIProfileSource
-{
-    public const string ProviderTechnicalName = "ThirdPartyProviderName";
-    public const string ImplementationName = "Custom";
+## Adding Custom AI Profile Sources  
 
-    public CustomProfileSource(IStringLocalizer<CustomProfileSource> localizer)
-    {
-        DisplayName = localizer["Azure OpenAI"];
-        Description = localizer["Provides AI services using Azure OpenAI models."];
-    }
+To integrate custom AI sources, implement the `IAICompletionClient` interface or use the `NamedAICompletionClient` base class.  
 
-    public string TechnicalName => ImplementationName;
+### Implementing a Custom Completion Client  
 
-    public string ProviderName => ProviderTechnicalName;
-
-    public LocalizedString DisplayName { get; }
-
-    public LocalizedString Description { get; }
-}
-```
-
-You'll also need to register a custom completion client for the source. Below is an example implementation:
+Below is an example of a custom AI completion client that extends `NamedAICompletionClient`:  
 
 ```csharp
 public sealed class CustomCompletionClient : NamedAICompletionClient
@@ -356,7 +396,7 @@ public sealed class CustomCompletionClient : NamedAICompletionClient
        IDistributedCache distributedCache,
        IOptions<AIProviderOptions> providerOptions,
        IAIToolsService toolsService,
-       IOptions<DefaultAIOptions> defaultOptions,
+       IOptions<DefaultAIOptions> defaultOptions
     ) : base(CustomProfileSource.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService)
     {
     }
@@ -371,21 +411,60 @@ public sealed class CustomCompletionClient : NamedAICompletionClient
 }
 ```
 
-> **Note:** The `CustomCompletionClient` above inherits from `NamedAICompletionClient`. If the provider supports multiple deployments, you can instead inherit from `DeploymentAwareAICompletionClient`.
+> **Note:**  
+> The `CustomCompletionClient` class inherits from `NamedAICompletionClient`. If the provider supports multiple deployments, consider inheriting from `DeploymentAwareAICompletionClient` instead.  
 
-Finally, register the custom source and completion client in the `Startup` class:
+---
+
+### Registering the Custom Completion Client  
+
+Once you've implemented the custom client, register it as an AI profile source in `Startup` file:  
 
 ```csharp
-public sealed class StandardStartup : StartupBase
+public sealed class Startup : StartupBase
 {
+    private readonly IStringLocalizer _localizer;
+
+    public Startup(IStringLocalizer<Startup> localizer)
+    {
+        _localizer = localizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIProfile<CustomProfileSource, CustomCompletionClient>(CustomProfileSource.ImplementationName);
+        services.AddAIProfile<CustomCompletionClient>("CustomAIDefaultImplementation", "CustomAI", options =>
+        {
+            options.DisplayName = _localizer["CustomAI"];
+            options.Description = _localizer["Provides AI profiles using the CustomAI provider."];
+        });
     }
 }
 ```
 
-> **Important:** Ensure that both the profile source and the completion client share the same registration key.
+#### Supporting Multiple Deployments  
+
+If your custom AI provider supports multiple deployments or models, register a deployment provider as follows:  
+
+```csharp
+public sealed class Startup : StartupBase
+{
+    private readonly IStringLocalizer _localizer;
+
+    public Startup(IStringLocalizer<Startup> localizer)
+    {
+        _localizer = localizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAIDeploymentProvider("CustomAI", options =>
+        {
+            options.DisplayName = _localizer["CustomAI"];
+            options.Description = _localizer["CustomAI deployments."];
+        });
+    }
+}
+```
 
 ---
 

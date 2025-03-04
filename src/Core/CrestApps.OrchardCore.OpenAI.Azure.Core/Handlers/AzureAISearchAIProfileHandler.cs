@@ -1,15 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Core.Handlers;
+using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 
-public sealed class AzureAISearchAIProfileHandler : AIProfileHandlerBase
+public sealed class AzureAISearchAIProfileHandler : ModelHandlerBase<AIProfile>
 {
     internal readonly IStringLocalizer S;
 
@@ -18,20 +18,20 @@ public sealed class AzureAISearchAIProfileHandler : AIProfileHandlerBase
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingAIProfileContext context)
-        => PopulateAsync(context.Profile, context.Data);
+    public override Task InitializingAsync(InitializingContext<AIProfile> context)
+        => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingAIProfileContext context)
-        => PopulateAsync(context.Profile, context.Data);
+    public override Task UpdatingAsync(UpdatingContext<AIProfile> context)
+        => PopulateAsync(context.Model, context.Data);
 
-    public override Task ValidatedAsync(ValidatedAIProfileContext context)
+    public override Task ValidatedAsync(ValidatedContext<AIProfile> context)
     {
-        if (context.Profile?.Source != AzureAISearchProfileSource.ImplementationName)
+        if (context.Model?.Source != AzureOpenAIConstants.AISearchImplementationName)
         {
             return Task.CompletedTask;
         }
 
-        var metadata = context.Profile.As<AzureAIProfileAISearchMetadata>();
+        var metadata = context.Model.As<AzureAIProfileAISearchMetadata>();
 
         if (string.IsNullOrWhiteSpace(metadata.IndexName))
         {
@@ -43,7 +43,7 @@ public sealed class AzureAISearchAIProfileHandler : AIProfileHandlerBase
 
     private static Task PopulateAsync(AIProfile profile, JsonNode data)
     {
-        if (profile.Source != AzureAISearchProfileSource.ImplementationName)
+        if (profile.Source != AzureOpenAIConstants.AISearchImplementationName)
         {
             return Task.CompletedTask;
         }

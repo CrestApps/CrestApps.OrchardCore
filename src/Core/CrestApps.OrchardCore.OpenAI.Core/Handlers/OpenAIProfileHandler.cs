@@ -1,47 +1,28 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
-using Microsoft.AspNetCore.Http;
+using CrestApps.OrchardCore.Core.Handlers;
+using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
-using OrchardCore.Liquid;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 
-public sealed class OpenAIProfileHandler : AIProfileHandlerBase
+public sealed class OpenAIProfileHandler : ModelHandlerBase<AIProfile>
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAIProfileStore _profileStore;
-    private readonly IAIDeploymentStore _deploymentStore;
-    private readonly ILiquidTemplateManager _liquidTemplateManager;
-    private readonly IClock _clock;
-
     internal readonly IStringLocalizer S;
 
     public OpenAIProfileHandler(
-        IHttpContextAccessor httpContextAccessor,
-        IAIProfileStore profileStore,
-        IAIDeploymentStore deploymentStore,
-        ILiquidTemplateManager liquidTemplateManager,
-        IClock clock,
         IStringLocalizer<OpenAIProfileHandler> stringLocalizer)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _profileStore = profileStore;
-        _deploymentStore = deploymentStore;
-        _liquidTemplateManager = liquidTemplateManager;
-        _clock = clock;
         S = stringLocalizer;
     }
 
-    public override Task InitializingAsync(InitializingAIProfileContext context)
-        => PopulateAsync(context.Profile, context.Data);
+    public override Task InitializingAsync(InitializingContext<AIProfile> context)
+        => PopulateAsync(context.Model, context.Data);
 
-    public override Task UpdatingAsync(UpdatingAIProfileContext context)
-        => PopulateAsync(context.Profile, context.Data);
+    public override Task UpdatingAsync(UpdatingContext<AIProfile> context)
+        => PopulateAsync(context.Model, context.Data);
 
     private static Task PopulateAsync(AIProfile profile, JsonNode data)
     {

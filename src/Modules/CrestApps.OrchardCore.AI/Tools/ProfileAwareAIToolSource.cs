@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -9,18 +10,18 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Tools;
 
-public sealed class ProfileAwareAIToolSource : IAIToolSource
+internal sealed class ProfileAwareAIToolSource : IAIToolSource
 {
     public const string ToolSource = "ProfileAware";
 
     private readonly ILogger<ProfileAwareAIToolSource> _logger;
     private readonly IAICompletionService _completionService;
-    private readonly IAIProfileStore _profileStore;
+    private readonly INamedModelStore<AIProfile> _profileStore;
 
     public ProfileAwareAIToolSource(
         ILogger<ProfileAwareAIToolSource> logger,
         IAICompletionService completionService,
-        IAIProfileStore profileStore,
+        INamedModelStore<AIProfile> profileStore,
         IStringLocalizer<ProfileAwareAIToolSource> S)
     {
         _logger = logger;

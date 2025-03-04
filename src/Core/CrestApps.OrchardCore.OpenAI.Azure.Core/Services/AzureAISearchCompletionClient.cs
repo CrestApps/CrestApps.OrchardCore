@@ -1,14 +1,18 @@
+using System.ClientModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Azure.AI.OpenAI;
 using Azure.AI.OpenAI.Chat;
+using Azure.Identity;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Services;
+using CrestApps.OrchardCore.Services;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -24,7 +28,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
 {
     private static readonly AIProfileMetadata _defaultMetadata = new();
 
-    private readonly IAIDeploymentStore _deploymentStore;
+    private readonly INamedModelStore<AIDeployment> _deploymentStore;
     private readonly AzureAISearchIndexSettingsService _azureAISearchIndexSettingsService;
     private readonly IAIToolsService _toolsService;
     private readonly IAILinkGenerator _linkGenerator;
@@ -33,7 +37,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
     private readonly ILogger _logger;
 
     public AzureAISearchCompletionClient(
-        IAIDeploymentStore deploymentStore,
+        INamedModelStore<AIDeployment> deploymentStore,
         IOptions<AIProviderOptions> providerOptions,
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
         AzureAISearchIndexSettingsService azureAISearchIndexSettingsService,
@@ -53,7 +57,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
     }
 
     public string Name
-        => AzureAISearchProfileSource.ImplementationName;
+        => AzureOpenAIConstants.AISearchImplementationName;
 
     public async Task<Microsoft.Extensions.AI.ChatCompletion> CompleteAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
@@ -421,11 +425,24 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
         }
     }
 
-    private static AzureOpenAIClient GetChatClient(AIProviderConnection connection)
+    private static AzureOpenAIClient GetChatClient(AIProviderConnectionEntry connection)
     {
         var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
 
-        var azureClient = new AzureOpenAIClient(endpoint, connection.GetApiKeyCredential());
+        var authenticationTypeString = connection.GetStringValue("AuthenticationType");
+
+        if (string.IsNullOrEmpty(authenticationTypeString) ||
+            !Enum.TryParse<AzureAuthenticationType>(authenticationTypeString, true, out var authenticationType))
+        {
+            authenticationType = AzureAuthenticationType.Default;
+        }
+
+        var azureClient = authenticationType switch
+        {
+            AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey())),
+            AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential()),
+            _ => new AzureOpenAIClient(endpoint, new DefaultAzureCredential())
+        };
 
         return azureClient;
     }

@@ -8,5 +8,5 @@
 </span>
 
 <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Connection Name"]">
-    <i class="text-secondary me-1" aria-hidden="true"></i>@Model.Value.ConnectionName
+    <i class="text-secondary me-1" aria-hidden="true"></i>@(string.IsNullOrEmpty(Model.Value.ConnectionNameAlias) ? Model.Value.ConnectionName : Model.Value.ConnectionNameAlias)
 </span>

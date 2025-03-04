@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
@@ -9,22 +8,22 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
-public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
+internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IAIDeploymentManager _deploymentManager;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly AIOptions _aiOptions;
     private readonly AIProviderOptions _providerOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileDeploymentDisplayDriver(
         IAIDeploymentManager deploymentManager,
-        IServiceProvider serviceProvider,
+        IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> providerOptions,
         IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
-        _serviceProvider = serviceProvider;
+        _aiOptions = aiOptions.Value;
         _providerOptions = providerOptions.Value;
         S = stringLocalizer;
     }
@@ -33,9 +32,7 @@ public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
     {
         return Initialize<EditProfileDeploymentViewModel>("AIProfileDeployment_Edit", async model =>
         {
-            var profileSource = _serviceProvider.GetKeyedService<IAIProfileSource>(profile.Source);
-
-            if (profileSource is null)
+            if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
             {
                 return;
             }
@@ -50,7 +47,7 @@ public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
 
                 if (deployment is not null)
                 {
-                    model.Deployments = (await _deploymentManager.GetAsync(profileSource.ProviderName, deployment.ConnectionName))
+                    model.Deployments = (await _deploymentManager.GetAllAsync(profileSource.ProviderName, deployment.ConnectionName))
                     .Select(x => new SelectListItem(x.Name, x.Id));
                 }
             }
@@ -66,7 +63,7 @@ public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
 
                 if (!string.IsNullOrEmpty(connectionName))
                 {
-                    model.Deployments = (await _deploymentManager.GetAsync(profileSource.ProviderName, connectionName))
+                    model.Deployments = (await _deploymentManager.GetAllAsync(profileSource.ProviderName, connectionName))
                     .Select(x => new SelectListItem(x.Name, x.Id));
                 }
             }
@@ -75,9 +72,7 @@ public sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
-        var profileSource = _serviceProvider.GetKeyedService<IAIProfileSource>(profile.Source);
-
-        if (profileSource is null)
+        if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var _))
         {
             return null;
         }

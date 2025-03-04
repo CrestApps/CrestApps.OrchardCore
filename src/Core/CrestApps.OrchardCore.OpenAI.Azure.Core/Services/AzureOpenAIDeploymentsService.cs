@@ -14,7 +14,7 @@ public sealed class AzureOpenAIDeploymentsService
         _logger = logger;
     }
 
-    public async Task<IEnumerable<CognitiveServicesAccountDeploymentResource>> GetAllAsync(AIProviderConnection connection)
+    public async Task<IEnumerable<CognitiveServicesAccountDeploymentResource>> GetAllAsync(AIProviderConnectionEntry connection)
     {
         var client = new ArmClient(connection.GetCredential());
 

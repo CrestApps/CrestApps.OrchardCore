@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Ollama;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -9,7 +10,7 @@ using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Ollama.Services;
 
-public sealed class OllamaAIChatCompletionClient : NamedAICompletionClient
+internal sealed class OllamaAIChatCompletionClient : NamedAICompletionClient
 {
     public OllamaAIChatCompletionClient(
            ILoggerFactory loggerFactory,
@@ -17,14 +18,14 @@ public sealed class OllamaAIChatCompletionClient : NamedAICompletionClient
            IOptions<AIProviderOptions> providerOptions,
            IAIToolsService toolsService,
            IOptions<DefaultAIOptions> defaultOptions
-           ) : base(OllamaProfileSource.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService)
+           ) : base(OllamaConstants.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService)
     {
     }
 
     protected override string ProviderName
-        => OllamaProfileSource.ProviderTechnicalName;
+        => OllamaConstants.ProviderName;
 
-    protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string deploymentName)
+    protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, AICompletionContext context, string deploymentName)
     {
         var endpoint = new Uri(connection.GetStringValue("Endpoint"));
 

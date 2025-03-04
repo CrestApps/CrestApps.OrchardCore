@@ -13,6 +13,8 @@ public static class AIConstants
 
     public const string CollectionName = "AI";
 
+    public const string ConnectionProtectorName = "AIProviderConnection";
+
     public static class SystemMessages
     {
         public const string UseMarkdownSyntax = "- Provide a response using Markdown syntax.";
@@ -21,6 +23,8 @@ public static class AIConstants
     public static class Feature
     {
         public const string Area = "CrestApps.OrchardCore.AI";
+
+        public const string ConnectionManagement = "CrestApps.OrchardCore.AI.ConnectionManagement";
 
         public const string Deployments = "CrestApps.OrchardCore.AI.Deployments";
 

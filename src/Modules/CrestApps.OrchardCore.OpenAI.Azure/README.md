@@ -22,8 +22,9 @@ To configure the Azure OpenAI services, add the following section to your `appse
               "ClientId":"<!-- Your Azure Client ID -->",
               "ClientSecret":"<!-- Your Azure Client Secret -->",
               "SubscriptionId":"<!-- Your Azure Subscription ID -->",
-              "AccountName":"<!-- Your Azure Cognitive Account Name -->",
               "ResourceGroupName":"<!-- Your Azure Cognitive Resource Group -->",
+              "AccountName":"<!-- Your Azure Cognitive Account Name -->",
+              "AuthenticationType": "ApiKey",
               "ApiKey":"<!-- API Key to connect to your Azure AI instance -->",
               "DefaultDeploymentName":"<!-- Default deployment name -->"
             }
@@ -34,6 +35,8 @@ To configure the Azure OpenAI services, add the following section to your `appse
   }
 }
 ```
+
+Authentication Type in the connection can be `Default`, `ManagedIdentity` or `ApiKey`. When using `ApiKey` authentication type, `ApiKey` is required.
 
 ### Retrieving the Required Information from the Azure Portal
 
@@ -58,6 +61,8 @@ To configure the Azure OpenAI services, add the following section to your `appse
 3. Click **Show Keys** and copy one of the available keys.
 
 ### Recipes
+
+You c
 
 When using the Recipes feature, you can import all deployments from your Azure account with the following configuration:
 

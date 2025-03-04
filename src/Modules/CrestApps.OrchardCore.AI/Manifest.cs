@@ -62,3 +62,15 @@ using OrchardCore.Modules.Manifest;
         AIConstants.Feature.ChatCore,
     ]
 )]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.ConnectionManagement,
+    Name = "AI Connection Management",
+    Description = "Provides user interface to manage AI connections.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+        AIConstants.Feature.Deployments,
+    ]
+)]

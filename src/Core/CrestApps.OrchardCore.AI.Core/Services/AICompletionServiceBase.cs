@@ -12,8 +12,13 @@ public abstract class AICompletionServiceBase
         ProviderOptions = providerOptions;
     }
 
-    protected virtual string GetDefaultConnectionName(AIProvider provider)
+    protected virtual string GetDefaultConnectionName(AIProvider provider, AIProfile profile)
     {
+        if (!string.IsNullOrEmpty(profile.ConnectionName))
+        {
+            return profile.ConnectionName;
+        }
+
         return provider.DefaultConnectionName;
     }
 
@@ -22,13 +27,13 @@ public abstract class AICompletionServiceBase
         return provider.DefaultDeploymentName;
     }
 
-    protected async Task<(AIProviderConnection, string)> GetConnectionAsync(AICompletionContext context, string providerName)
+    protected async Task<(AIProviderConnectionEntry, string)> GetConnectionAsync(AICompletionContext context, string providerName)
     {
         string deploymentName = null;
 
         if (ProviderOptions.Providers.TryGetValue(providerName, out var provider))
         {
-            var connectionName = GetDefaultConnectionName(provider);
+            var connectionName = GetDefaultConnectionName(provider, context.Profile);
 
             deploymentName = GetDefaultDeploymentName(provider);
 

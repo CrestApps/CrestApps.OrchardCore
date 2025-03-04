@@ -1,10 +1,11 @@
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class AIPermissionsProvider : IPermissionProvider
+internal sealed class AIPermissionsProvider : IPermissionProvider
 {
     private readonly static IEnumerable<Permission> _allPermissions =
     [
@@ -12,9 +13,9 @@ public sealed class AIPermissionsProvider : IPermissionProvider
         AIPermissions.QueryAnyAIProfile,
     ];
 
-    private readonly IAIProfileStore _profileStore;
+    private readonly INamedModelStore<AIProfile> _profileStore;
 
-    public AIPermissionsProvider(IAIProfileStore profileStore)
+    public AIPermissionsProvider(INamedModelStore<AIProfile> profileStore)
     {
         _profileStore = profileStore;
     }

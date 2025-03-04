@@ -1,14 +1,16 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
+using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
-public sealed class AIToolInstanceDeploymentSource : DeploymentSourceBase<AIToolInstanceDeploymentStep>
+internal sealed class AIToolInstanceDeploymentSource : DeploymentSourceBase<AIToolInstanceDeploymentStep>
 {
-    private readonly IAIToolInstanceStore _store;
+    private readonly IModelStore<AIToolInstance> _store;
 
-    public AIToolInstanceDeploymentSource(IAIToolInstanceStore store)
+    public AIToolInstanceDeploymentSource(IModelStore<AIToolInstance> store)
     {
         _store = store;
     }
@@ -17,7 +19,7 @@ public sealed class AIToolInstanceDeploymentSource : DeploymentSourceBase<AITool
     {
         var instances = await _store.GetAllAsync();
 
-        var instancesData = new JsonArray();
+        var instanceObjects = new JsonArray();
 
         var instanceIds = step.IncludeAll
             ? []
@@ -30,7 +32,7 @@ public sealed class AIToolInstanceDeploymentSource : DeploymentSourceBase<AITool
                 continue;
             }
 
-            var instanceInfo = new JsonObject()
+            var instanceObject = new JsonObject()
             {
                 { "Id", instance.Id },
                 { "Source", instance.Source },
@@ -47,15 +49,15 @@ public sealed class AIToolInstanceDeploymentSource : DeploymentSourceBase<AITool
                 properties[property.Key] = property.Value.DeepClone();
             }
 
-            instanceInfo["Properties"] = properties;
+            instanceObject["Properties"] = properties;
 
-            instancesData.Add(instanceInfo);
+            instanceObjects.Add(instanceObject);
         }
 
         result.Steps.Add(new JsonObject
         {
             ["name"] = step.Name,
-            ["instances"] = instancesData,
+            ["instances"] = instanceObjects,
         });
     }
 }

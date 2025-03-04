@@ -15,18 +15,18 @@ public sealed class AIProvider
 
     public string DefaultDeploymentName { get; set; }
 
-    public IReadOnlyDictionary<string, AIProviderConnection> Connections { get; set; }
+    public IDictionary<string, AIProviderConnectionEntry> Connections { get; set; }
 }
 
 [JsonConverter(typeof(AIProviderConnectionConverter))]
-public sealed class AIProviderConnection : ReadOnlyDictionary<string, object>
+public sealed class AIProviderConnectionEntry : ReadOnlyDictionary<string, object>
 {
-    public AIProviderConnection(AIProviderConnection connection)
+    public AIProviderConnectionEntry(AIProviderConnectionEntry connection)
         : base(connection)
     {
     }
 
-    public AIProviderConnection(IDictionary<string, object> dictionary)
+    public AIProviderConnectionEntry(IDictionary<string, object> dictionary)
         : base(dictionary)
     {
     }

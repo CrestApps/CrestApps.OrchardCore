@@ -1,12 +1,12 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.Core.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -22,22 +22,22 @@ public sealed class ProfilesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly IAIProfileManager _profileManager;
+    private readonly INamedModelManager<AIProfile> _profileManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIProfile> _profileDisplayManager;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly AIOptions _aiOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
     public ProfilesController(
-        IAIProfileManager profileManager,
+        INamedModelManager<AIProfile> profileManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIProfile> profileDisplayManager,
-        IServiceProvider serviceProvider,
+        IOptions<AIOptions> aiOptions,
         INotifier notifier,
         IHtmlLocalizer<ProfilesController> htmlLocalizer,
         IStringLocalizer<ProfilesController> stringLocalizer)
@@ -46,7 +46,7 @@ public sealed class ProfilesController : Controller
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _profileDisplayManager = profileDisplayManager;
-        _serviceProvider = serviceProvider;
+        _aiOptions = aiOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -54,9 +54,8 @@ public sealed class ProfilesController : Controller
 
     [Admin("ai/profiles", "AIProfilesIndex")]
     public async Task<IActionResult> Index(
-        AIProfileOptions options,
+        ModelOptions options,
         PagerParameters pagerParameters,
-        [FromServices] IEnumerable<IAIProfileSource> profileSources,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
     {
@@ -81,36 +80,36 @@ public sealed class ProfilesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var model = new ListProfilesViewModel
+        var viewModel = new ListModelViewModel<AIProfile>
         {
-            Profiles = [],
+            Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            SourceNames = profileSources.Select(x => x.TechnicalName).Order(),
+            SourceNames = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
         };
 
-        foreach (var record in result.Records)
+        foreach (var model in result.Models)
         {
-            model.Profiles.Add(new AIProfileEntry
+            viewModel.Models.Add(new ModelEntry<AIProfile>
             {
-                Profile = record,
-                Shape = await _profileDisplayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+                Model = model,
+                Shape = await _profileDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
             });
         }
 
-        model.Options.BulkActions =
+        viewModel.Options.BulkActions =
         [
-            new SelectListItem(S["Delete"], nameof(AIProfileAction.Remove)),
+            new SelectListItem(S["Delete"], nameof(ModelAction.Remove)),
         ];
 
-        return View(model);
+        return View(viewModel);
     }
 
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/profiles", "AIProfilesIndex")]
-    public ActionResult IndexFilterPOST(ListProfilesViewModel model)
+    public ActionResult IndexFilterPOST(ListModelViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -126,9 +125,7 @@ public sealed class ProfilesController : Controller
             return Forbid();
         }
 
-        var provider = _serviceProvider.GetKeyedService<IAIProfileSource>(source);
-
-        if (provider == null)
+        if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
         {
             await _notifier.ErrorAsync(H["Unable to find a profile-source that can handle the source '{Source}'.", source]);
 
@@ -144,7 +141,7 @@ public sealed class ProfilesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var model = new ProfileViewModel
+        var model = new ModelViewModel
         {
             DisplayName = provider.DisplayName,
             Editor = await _profileDisplayManager.BuildEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -163,9 +160,7 @@ public sealed class ProfilesController : Controller
             return Forbid();
         }
 
-        var provider = _serviceProvider.GetKeyedService<IAIProfileSource>(source);
-
-        if (provider == null)
+        if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
         {
             await _notifier.ErrorAsync(H["Unable to find a profile-source that can handle the source '{Source}'.", source]);
 
@@ -181,7 +176,7 @@ public sealed class ProfilesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var model = new ProfileViewModel
+        var model = new ModelViewModel
         {
             DisplayName = provider.DisplayName,
             Editor = await _profileDisplayManager.UpdateEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -214,7 +209,7 @@ public sealed class ProfilesController : Controller
             return NotFound();
         }
 
-        var model = new ProfileViewModel
+        var model = new ModelViewModel
         {
             DisplayName = profile.Name,
             Editor = await _profileDisplayManager.BuildEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -243,7 +238,7 @@ public sealed class ProfilesController : Controller
         // Clone the profile to prevent modifying the original instance in the store.
         var mutableProfile = profile.Clone();
 
-        var model = new ProfileViewModel
+        var model = new ModelViewModel
         {
             DisplayName = mutableProfile.DisplayText,
             Editor = await _profileDisplayManager.UpdateEditorAsync(mutableProfile, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -268,11 +263,6 @@ public sealed class ProfilesController : Controller
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
             return Forbid();
-        }
-
-        if (string.IsNullOrEmpty(id))
-        {
-            return NotFound();
         }
 
         var profile = await _profileManager.FindByIdAsync(id);
@@ -308,7 +298,7 @@ public sealed class ProfilesController : Controller
     [FormValueRequired("submit.BulkAction")]
     [Admin("ai/profiles", "AIProfilesIndex")]
 
-    public async Task<ActionResult> IndexPost(AIProfileOptions options, IEnumerable<string> itemIds)
+    public async Task<ActionResult> IndexPost(ModelOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
@@ -319,9 +309,9 @@ public sealed class ProfilesController : Controller
         {
             switch (options.BulkAction)
             {
-                case AIProfileAction.None:
+                case ModelAction.None:
                     break;
-                case AIProfileAction.Remove:
+                case ModelAction.Remove:
                     var counter = 0;
                     foreach (var id in itemIds)
                     {

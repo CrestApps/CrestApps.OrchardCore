@@ -1,26 +1,28 @@
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 
-public sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
+internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 {
-    private readonly AIToolDefinitions _toolDefinitions;
-    private readonly IAIToolInstanceStore _toolInstanceStore;
+    private readonly AIToolDefinitionOptions _toolDefinitions;
+    private readonly IModelStore<AIToolInstance> _toolInstanceStore;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileToolsDisplayDriver(
-        AIToolDefinitions toolDefinitions,
-        IAIToolInstanceStore toolInstanceStore,
+        IOptions<AIToolDefinitionOptions> toolDefinitions,
+        IModelStore<AIToolInstance> toolInstanceStore,
         IStringLocalizer<AIProfileToolsDisplayDriver> stringLocalizer)
     {
-        _toolDefinitions = toolDefinitions;
+        _toolDefinitions = toolDefinitions.Value;
         _toolInstanceStore = toolInstanceStore;
         S = stringLocalizer;
     }

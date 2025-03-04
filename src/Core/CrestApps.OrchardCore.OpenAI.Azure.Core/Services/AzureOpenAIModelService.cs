@@ -21,7 +21,7 @@ public sealed class AzureOpenAIModelService
         _logger = logger;
     }
 
-    public async Task<IEnumerable<CognitiveServicesModel>> GetAsync(AIProviderConnection connection)
+    public async Task<IEnumerable<CognitiveServicesModel>> GetAsync(AIProviderConnectionEntry connection)
     {
         ArgumentNullException.ThrowIfNull(connection);
 
