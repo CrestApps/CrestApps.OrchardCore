@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
@@ -40,75 +41,15 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _completionService = completionService;
     }
 
-    public async Task SendMessage(string profileId, string prompt, string sessionId, string sessionProfileId = null)
+    public ChannelReader<CompletionPartialMessage> SendMessage(string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(profileId))
-        {
-            await Clients.Caller.ReceiveError($"{nameof(profileId)} is required.");
+        var channel = Channel.CreateUnbounded<CompletionPartialMessage>();
 
-            return;
-        }
+        // Avoid awaiting HandlePromptAsync to prevent blocking until all items are written,  
+        // ensuring the channel is returned to the client immediately.
+        _ = HandlePromptAsync(channel.Writer, profileId, prompt, sessionId, sessionProfileId, cancellationToken);
 
-        var profile = await _profileManager.FindByIdAsync(profileId);
-
-        if (profile is null)
-        {
-            await Clients.Caller.ReceiveError("Profile not found.");
-
-            return;
-        }
-
-        var httpContext = Context.GetHttpContext();
-
-        if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
-        {
-            await Clients.Caller.ReceiveError("You are not authorized to interact with the given profile.");
-
-            return;
-        }
-
-        if (profile.Type == AIProfileType.Utility)
-        {
-            if (string.IsNullOrWhiteSpace(prompt))
-            {
-                await Clients.Caller.ReceiveError($"{nameof(prompt)} is required.");
-
-                return;
-            }
-
-            await ProcessUtilityAsync(profile, prompt.Trim());
-
-            // We don't need to save the session for utility profiles.
-            return;
-        }
-
-        if (profile.Type == AIProfileType.TemplatePrompt)
-        {
-            if (string.IsNullOrWhiteSpace(sessionProfileId))
-            {
-                await Clients.Caller.ReceiveError($"{nameof(sessionProfileId)} is required.");
-
-                return;
-            }
-
-            var parentProfile = await _profileManager.FindByIdAsync(sessionProfileId);
-
-            if (parentProfile is null)
-            {
-                await Clients.Caller.ReceiveError($"Invalid value given to {nameof(sessionProfileId)}.");
-
-                return;
-            }
-
-            await ProcessGeneratedPromptAsync(profile, sessionId, parentProfile);
-        }
-        else
-        {
-            // At this point, we are dealing with a chat profile.
-            await ProcessChatPromptAsync(profile, sessionId, prompt.Trim());
-        }
-
-        await _session.SaveChangesAsync();
+        return channel.Reader;
     }
 
     public async Task LoadSession(string sessionId)
@@ -167,6 +108,89 @@ public class AIChatHub : Hub<IAIChatHubClient>
         });
     }
 
+    private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
+    {
+        Exception localException = null;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(profileId))
+            {
+                await Clients.Caller.ReceiveError($"{nameof(profileId)} is required.");
+
+                return;
+            }
+
+            var profile = await _profileManager.FindByIdAsync(profileId);
+
+            if (profile is null)
+            {
+                await Clients.Caller.ReceiveError("Profile not found.");
+
+                return;
+            }
+
+            var httpContext = Context.GetHttpContext();
+
+            if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+            {
+                await Clients.Caller.ReceiveError("You are not authorized to interact with the given profile.");
+
+                return;
+            }
+
+            if (profile.Type == AIProfileType.Utility)
+            {
+                if (string.IsNullOrWhiteSpace(prompt))
+                {
+                    await Clients.Caller.ReceiveError($"{nameof(prompt)} is required.");
+                    return;
+                }
+
+                await ProcessUtilityAsync(writer, profile, prompt.Trim(), cancellationToken);
+
+                // We don't need to save the session for utility profiles.
+                return;
+            }
+
+            if (profile.Type == AIProfileType.TemplatePrompt)
+            {
+                if (string.IsNullOrWhiteSpace(sessionProfileId))
+                {
+                    await Clients.Caller.ReceiveError($"{nameof(sessionProfileId)} is required.");
+
+                    return;
+                }
+
+                var parentProfile = await _profileManager.FindByIdAsync(sessionProfileId);
+
+                if (parentProfile is null)
+                {
+                    await Clients.Caller.ReceiveError($"Invalid value given to {nameof(sessionProfileId)}.");
+
+                    return;
+                }
+
+                await ProcessGeneratedPromptAsync(writer, profile, sessionId, parentProfile, cancellationToken);
+            }
+            else
+            {
+                // At this point, we are dealing with a chat profile.
+                await ProcessChatPromptAsync(writer, profile, sessionId, prompt.Trim(), cancellationToken);
+            }
+
+            await _session.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            localException = ex;
+        }
+        finally
+        {
+            writer.Complete(localException);
+        }
+    }
+
     private async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, string userPrompt)
     {
         if (!string.IsNullOrWhiteSpace(sessionId))
@@ -217,7 +241,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         return (chatSession, true);
     }
 
-    private async Task ProcessChatPromptAsync(AIProfile profile, string sessionId, string prompt)
+    private async Task ProcessChatPromptAsync(ChannelWriter<CompletionPartialMessage> writer, AIProfile profile, string sessionId, string prompt, CancellationToken cancellationToken)
     {
         (var chatSession, var isNew) = await GetSessionsAsync(_sessionManager, sessionId, profile, prompt);
 
@@ -248,12 +272,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
             UserMarkdownInResponse = true,
         };
 
-        await Clients.Caller.StartMessageStream(assistantMessage.Id);
-
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
 
-        await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, transcript, completionContext))
+        await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, transcript, completionContext, cancellationToken))
         {
             if (chunk.ChoiceIndex == 0)
             {
@@ -285,15 +307,14 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
                 var partialMessage = new CompletionPartialMessage
                 {
+                    MessageId = assistantMessage.Id,
                     Content = chunk.Text,
                     References = references,
                 };
 
-                await Clients.Caller.ReceiveMessageStream(partialMessage, assistantMessage.Id);
+                await writer.WriteAsync(partialMessage, cancellationToken);
             }
         }
-
-        await Clients.Caller.CompleteMessageStream(assistantMessage.Id);
 
         assistantMessage.Content = builder.ToString();
         assistantMessage.ContentItemIds = contentItemIds.ToList();
@@ -304,7 +325,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         await _sessionManager.SaveAsync(chatSession);
     }
 
-    private async Task ProcessGeneratedPromptAsync(AIProfile profile, string sessionId, AIProfile parentProfile)
+    private async Task ProcessGeneratedPromptAsync(ChannelWriter<CompletionPartialMessage> writer, AIProfile profile, string sessionId, AIProfile parentProfile, CancellationToken cancellationToken)
     {
         (var chatSession, _) = await GetSessionsAsync(_sessionManager, sessionId, parentProfile, userPrompt: profile.Name);
 
@@ -323,8 +344,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
             Title = profile.PromptSubject,
         };
 
-        await Clients.Caller.StartMessageStream(assistantMessage.Id);
-
         var completionContext = new AICompletionContext()
         {
             Profile = profile,
@@ -336,7 +355,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
 
-        await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, generatedPrompt)], completionContext))
+        await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, generatedPrompt)], completionContext, cancellationToken))
         {
             if (chunk.ChoiceIndex == 0)
             {
@@ -368,15 +387,14 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
                 var partialMessage = new CompletionPartialMessage
                 {
+                    MessageId = assistantMessage.Id,
                     Content = chunk.Text,
                     References = references,
                 };
 
-                await Clients.Caller.ReceiveMessageStream(partialMessage, assistantMessage.Id);
+                await writer.WriteAsync(partialMessage, cancellationToken);
             }
         }
-
-        await Clients.Caller.CompleteMessageStream(assistantMessage.Id);
 
         assistantMessage.Content = builder.ToString();
         assistantMessage.ContentItemIds = contentItemIds.ToList();
@@ -387,11 +405,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
         await _sessionManager.SaveAsync(chatSession);
     }
 
-    private async Task ProcessUtilityAsync(AIProfile profile, string prompt)
+    private async Task ProcessUtilityAsync(ChannelWriter<CompletionPartialMessage> writer, AIProfile profile, string prompt, CancellationToken cancellationToken)
     {
         var messageId = IdGenerator.GenerateId();
-
-        await Clients.Caller.StartMessageStream(messageId);
 
         var completionContext = new AICompletionContext
         {
@@ -401,7 +417,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         var references = new Dictionary<string, AICompletionReference>();
 
-        await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, prompt)], completionContext))
+        await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, prompt)], completionContext, cancellationToken))
         {
             if (chunk.ChoiceIndex == 0)
             {
@@ -423,14 +439,13 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
                 var partialMessage = new CompletionPartialMessage
                 {
+                    MessageId = messageId,
                     Content = chunk.Text,
                     References = references,
                 };
 
-                await Clients.Caller.ReceiveMessageStream(partialMessage, messageId);
+                await writer.WriteAsync(partialMessage, cancellationToken);
             }
         }
-
-        await Clients.Caller.CompleteMessageStream(messageId);
     }
 }
