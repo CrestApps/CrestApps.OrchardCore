@@ -42,25 +42,38 @@ Enhances user management with customizable display names and avatars. See the [U
 Provides services for all AI modules and provide the interface for managing AI profiles and AI Deployments. See the [AI Module README](src/Modules/CrestApps.OrchardCore.AI/README.md) for more details.  
 
 ### AI Chat Module
-Provides interface for interacting with AI models like **ChatGPT**. See the [AI Module README](src/Modules/CrestApps.OrchardCore.AI.Chat/README.md) for more details.  
+Provides interface for interacting with AI models like **ChatGPT**. See the [AI Chat Module README](src/Modules/CrestApps.OrchardCore.AI.Chat/README.md) for more details.  
 
 ### Azure AI Inference Module
-Extends the **AI Module** by integrating Azure AI Inference services. See the [OpenAI Module README](src/Modules/CrestApps.OrchardCore.AzureAIInference/README.md).  
+Extends the **AI Module** by integrating Azure AI Inference services. See the [Azure AI Inference Module README](src/Modules/CrestApps.OrchardCore.AzureAIInference/README.md).  
 
 ### Azure OpenAI Module
 Adds support for **Azure OpenAI** services within the **OpenAI Module**. See the [Azure OpenAI Module README](src/Modules/CrestApps.OrchardCore.OpenAI.Azure/README.md).  
 
-### DeepSeek Module
-Extends the **AI Module** by integrating DeepSeek services. See the [OpenAI Module README](src/Modules/CrestApps.OrchardCore.DeepSeek/README.md).  
-
 ### OpenAI Module
-Extends the **AI Module** by integrating OpenAI-powered services. See the [OpenAI Module README](src/Modules/CrestApps.OrchardCore.OpenAI/README.md).  
+Extends the **AI Module** by integrating OpenAI-powered services. You can connect to any provider that adheres to OpenAI standard. Here are few providers:
+
+- DeepSeek
+- Google Gemini
+- Together AI
+- vLLM
+- Cloudflare Workers AI 
+- LM Studio
+- KoboldCpp
+- text-gen-webui 
+- FastChat
+- LocalAI
+- llama-cpp-python
+- TensorRT-LLM
+- BerriAI/litellm
+
+See the [OpenAI Module README](src/Modules/CrestApps.OrchardCore.OpenAI/README.md) for more details.  
 
 ### Ollama Module
-Extends the **AI Module** by integrating any Ollama model. See the [OpenAI Module README](src/Modules/CrestApps.OrchardCore.Ollama/README.md).  
+Extends the **AI Module** by integrating any Ollama model. See the [Ollama Module README](src/Modules/CrestApps.OrchardCore.Ollama/README.md).  
 
 ### SignalR Module
-The **SignalR** module enables seamless integration of SignalR within Orchard Core. See the [Azure OpenAI Module README](src/Modules/CrestApps.OrchardCore.SignalR/README.md).  
+The **SignalR** module enables seamless integration of SignalR within Orchard Core. See the [SignalR Module README](src/Modules/CrestApps.OrchardCore.SignalR/README.md).  
 
 ### Resources Module
 Provides additional resources to accelerate development. See the [Resources Module README](src/Modules/CrestApps.OrchardCore.Resources/README.md).  

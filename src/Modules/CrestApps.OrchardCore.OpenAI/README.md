@@ -1,10 +1,12 @@
-## OpenAI Chat Feature
+## OpenAI Chat Feature  
 
-The **OpenAI AI Chat** feature enhances the **AI Services** functionality by integrating OpenAI's models. It provides a suite of services to interact with these models, enabling advanced AI capabilities.
+The **OpenAI AI Chat** feature enhances the **AI Services** functionality by integrating OpenAI-compatible models. It provides a suite of services to interact with these models, enabling advanced AI capabilities.  
 
-### Configuration
+### Configuration  
 
-To configure the OpenAI connection, add the following settings to the `appsettings.json` file:
+The **OpenAI AI Chat** feature allows you to connect to any AI provider that adheres to OpenAI API standards, such as **DeepSeek, Google Gemini, Together AI, vLLM, Cloudflare Workers AI, and more**.  
+
+To configure a connection, add the following settings to the `appsettings.json` file:  
 
 ```json
 {
@@ -16,7 +18,7 @@ To configure the OpenAI connection, add the following settings to the `appsettin
           "DefaultDeploymentName": "gpt-4o-mini",
           "Connections": {
             "openai-cloud": {
-              "ApiKey": "<!-- Your API Key Goes here -->",
+              "ApiKey": "<!-- Your API Key Goes Here -->",
               "DefaultDeploymentName": "gpt-4o-mini"
             }
           }
@@ -33,13 +35,33 @@ To configure the OpenAI connection, add the following settings to the `appsettin
 
 If the **AI Deployments** feature is enabled, you can create multiple deployments under the same connection. This allows different AI profiles to utilize different models while sharing the same connection.  
 
-### Configuring DeepSeek Connection
+### Configuring Other AI Providers  
 
-The **OpenAI AI Chat** feature enables interaction with any AI provider that adheres to OpenAI standards, including DeepSeek. You can configure the DeepSeek connection either through the configuration provider or via the UI using the **AI Connection Management** feature.
+The **OpenAI AI Chat** feature supports multiple AI providers that adhere to OpenAI API standards, such as:  
 
-#### Configuration Using Configuration Provider
+- **DeepSeek** ([Docs](https://platform.deepseek.com/usage))  
+- **Google Gemini** ([Docs](https://ai.google.dev/gemini-api/docs/openai))  
+- **Together AI** ([Docs](https://docs.together.ai/docs/openai-api-compatibility))  
+- **vLLM** ([Docs](https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html))  
+- **Cloudflare Workers AI** ([Docs](https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/))  
+- **LM Studio** ([Docs](https://github.com/xorbitsai/inference))  
+- **KoboldCpp** ([Docs](https://docs.continue.dev/customize/model-providers/openai))  
+- **text-gen-webui** ([Docs](https://docs.continue.dev/customize/model-providers/openai))  
+- **FastChat** ([Docs](https://docs.continue.dev/customize/model-providers/openai))  
+- **LocalAI** ([Docs](https://docs.continue.dev/customize/model-providers/openai))  
+- **llama-cpp-python** ([Docs](https://docs.continue.dev/customize/model-providers/openai))  
+- **TensorRT-LLM** ([Docs](https://docs.continue.dev/customize/model-providers/openai))  
+- **BerriAI/litellm** ([Docs](https://docs.continue.dev/customize/model-providers/openai))  
 
-To configure the DeepSeek connection using `appsettings.json` file, use the following example:
+---
+
+### Configuring a Provider Example: DeepSeek  
+
+You can configure the DeepSeek connection either through the configuration provider or via the UI using the **AI Connection Management** feature.  
+
+#### Configuration Using `appsettings.json`  
+
+To configure DeepSeek, add the following settings:  
 
 ```json
 {
@@ -63,11 +85,11 @@ To configure the DeepSeek connection using `appsettings.json` file, use the foll
 }
 ```
 
-- The `DefaultConnectionName` and `DefaultDeploymentName` under the `OpenAI` node are required only if you want to set the `deepseek` connection as the default OpenAI connection when AI profiles use the default setting.
+> The `DefaultConnectionName` and `DefaultDeploymentName` under the `OpenAI` node are required only if you want to set the `deepseek` connection as the default OpenAI connection when AI profiles use the default setting.  
 
-#### Configuration via AI Connection Management
+#### Configuration via AI Connection Management  
 
-If you are using the **AI Connection Management** feature, you can configure DeepSeek through the UI or by executing the following recipe:
+If you are using the **AI Connection Management** feature, you can configure DeepSeek through the UI or by executing the following recipe:  
 
 ```json
 {
@@ -93,6 +115,38 @@ If you are using the **AI Connection Management** feature, you can configure Dee
   ]
 }
 ```
+
+---
+
+### Configuring Other AI Providers  
+
+To connect to **Google Gemini**, **Together AI**, **vLLM**, or any other supported provider, modify the `Endpoint` and `ApiKey` fields accordingly. For example, configuring **Google Gemini** would look like this:  
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Providers": {
+        "OpenAI": {
+          "DefaultConnectionName": "google-gemini",
+          "DefaultDeploymentName": "gemini-pro",
+          "Connections": {
+            "google-gemini": {
+              "Endpoint": "https://generativelanguage.googleapis.com/v1",
+              "ApiKey": "<!-- Your Google Gemini API Key -->",
+              "DefaultDeploymentName": "gemini-pro"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+You can replace `Endpoint` with the appropriate URL for each provider.  
+
+---
 
 #### Configuring Multiple Models
 

@@ -4,7 +4,11 @@ The **Ollama AI Chat** allows developers to interact with any Ollama model seaml
 
 ### Running Ollama Locally  
 
-To run an Ollama model locally using this project:  
+Here’s the updated version of your line:  
+
+To run an Ollama model locally, you'll need a tool to manage Docker containers. **Docker Desktop** is one of the easiest ways to get started, but you may use other tools such as **Podman** or **Docker Engine on WSL 2**. Visit the official [documentation](https://docs.docker.com/desktop/setup/install/windows-install/) for instructions on how to install Docker Desktop.
+
+Next, do the following steps in the project:  
 
 1. Set `CrestApp.Aspire.HostApp` as your startup project.  
 2. Run the project to start the Aspire host, which sets up the necessary environment to connect to any Ollama model locally.  
