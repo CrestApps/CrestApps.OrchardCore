@@ -32,7 +32,7 @@ public sealed class Startup : StartupBase
         services.AddAIDeploymentProvider(OpenAIConstants.ProviderName, o =>
         {
             o.DisplayName = S["OpenAI"];
-            o.Description = S["OpenAI deployments."];
+            o.Description = S["OpenAI model deployments."];
         });
     }
 }
@@ -55,7 +55,7 @@ public sealed class ConnectionManagementStartup : StartupBase
         services.AddAIConnectionSource(OpenAIConstants.ProviderName, o =>
         {
             o.DisplayName = S["OpenAI"];
-            o.Description = S["Provides a way to Configure OpenAI-compatible connection for any provider."];
+            o.Description = S["Provides a way to configure OpenAI-compatible connection for any provider."];
         });
     }
 }

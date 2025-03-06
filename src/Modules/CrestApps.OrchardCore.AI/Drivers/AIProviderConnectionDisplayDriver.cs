@@ -64,6 +64,11 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
             connection.Name = model.Name;
         }
 
+        if (string.IsNullOrWhiteSpace(model.DisplayText))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The Display text is required."]);
+        }
+
         if (string.IsNullOrWhiteSpace(model.DefaultDeploymentName))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DefaultDeploymentName), S["Default deployment name is required."]);

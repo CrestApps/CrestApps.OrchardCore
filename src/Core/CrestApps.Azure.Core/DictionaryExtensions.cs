@@ -1,32 +1,22 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.Azure.Core.Models;
 
-namespace CrestApps.OrchardCore.AI.Core;
+namespace CrestApps.Azure.Core;
 
-public static class AIProviderConnectionExtensions
+public static class DictionaryExtensions
 {
-    public static string GetApiKey(this IDictionary<string, object> entry, bool throwException = true)
-        => entry.GetStringValue("ApiKey", throwException);
-
-    public static Uri GetEndpoint(this IDictionary<string, object> entry, bool throwException = true)
+    public static AzureAuthenticationType GetAzureAuthenticationType(this IDictionary<string, object> entry)
     {
-        var endpoint = entry.GetStringValue("Endpoint", throwException);
+        var authenticationTypeString = entry.GetStringValue("AuthenticationType");
 
-        Uri uri = null;
-
-        if (throwException)
+        if (string.IsNullOrEmpty(authenticationTypeString) ||
+            !Enum.TryParse<AzureAuthenticationType>(authenticationTypeString, true, out var authenticationType))
         {
-            uri = new Uri(endpoint);
-        }
-        else if (!string.IsNullOrEmpty(endpoint))
-        {
-            Uri.TryCreate(endpoint, UriKind.Absolute, out uri);
+            authenticationType = AzureAuthenticationType.Default;
         }
 
-        return uri;
+        return authenticationType;
     }
-
-    public static string GetDefaultDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
-        => entry.GetStringValue("DefaultDeploymentName", throwException);
 
     public static string GetStringValue(this IDictionary<string, object> entry, string key, bool throwException = false)
     {

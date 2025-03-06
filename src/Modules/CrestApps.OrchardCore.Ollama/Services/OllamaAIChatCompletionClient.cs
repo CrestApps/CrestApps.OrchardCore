@@ -27,8 +27,6 @@ internal sealed class OllamaAIChatCompletionClient : NamedAICompletionClient
 
     protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, AICompletionContext context, string deploymentName)
     {
-        var endpoint = new Uri(connection.GetStringValue("Endpoint"));
-
-        return new OllamaChatClient(endpoint, connection.GetDefaultDeploymentName());
+        return new OllamaChatClient(connection.GetEndpoint(), connection.GetDefaultDeploymentName());
     }
 }

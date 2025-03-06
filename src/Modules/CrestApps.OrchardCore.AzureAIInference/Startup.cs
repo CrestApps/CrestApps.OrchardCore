@@ -33,7 +33,7 @@ public sealed class Startup : StartupBase
             .AddAIDeploymentProvider(AzureAIInferenceConstants.ProviderName, o =>
             {
                 o.DisplayName = S["Azure AI Inference"];
-                o.Description = S["Azure AI Inference AI deployments."];
+                o.Description = S["Azure AI Inference model deployments."];
             });
     }
 }
@@ -56,7 +56,7 @@ public sealed class ConnectionManagementStartup : StartupBase
         services.AddAIConnectionSource(AzureAIInferenceConstants.ProviderName, o =>
         {
             o.DisplayName = S["Azure AI Inference"];
-            o.Description = S["Provides a way to Configure Azure AI Inference connections."];
+            o.Description = S["Provides a way to configure Azure AI Inference connections."];
         });
     }
 }

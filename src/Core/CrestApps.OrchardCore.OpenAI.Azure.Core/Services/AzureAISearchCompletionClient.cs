@@ -4,6 +4,7 @@ using System.Text.Json;
 using Azure.AI.OpenAI;
 using Azure.AI.OpenAI.Chat;
 using Azure.Identity;
+using CrestApps.Azure.Core;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -427,21 +428,14 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
 
     private static AzureOpenAIClient GetChatClient(AIProviderConnectionEntry connection)
     {
-        var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
+        var endpoint = connection.GetEndpoint();
 
-        var authenticationTypeString = connection.GetStringValue("AuthenticationType");
-
-        if (string.IsNullOrEmpty(authenticationTypeString) ||
-            !Enum.TryParse<AzureAuthenticationType>(authenticationTypeString, true, out var authenticationType))
-        {
-            authenticationType = AzureAuthenticationType.Default;
-        }
-
-        var azureClient = authenticationType switch
+        var azureClient = connection.GetAzureAuthenticationType() switch
         {
             AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey())),
             AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential()),
-            _ => new AzureOpenAIClient(endpoint, new DefaultAzureCredential())
+            AzureAuthenticationType.Default => new AzureOpenAIClient(endpoint, new DefaultAzureCredential()),
+            _ => throw new NotSupportedException("The provided authentication type is not supported.")
         };
 
         return azureClient;

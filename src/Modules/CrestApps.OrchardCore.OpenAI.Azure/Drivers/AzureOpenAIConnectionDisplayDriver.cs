@@ -38,6 +38,7 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
         {
             var metadata = connection.As<AzureOpenAIConnectionMetadata>();
 
+            model.Endpoint = metadata.Endpoint?.ToString();
             model.AuthenticationTypes =
             [
                 new (S["Default authentication"], nameof(AzureAuthenticationType.Default)),
@@ -63,6 +64,17 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
         var metadata = connection.As<AzureOpenAIConnectionMetadata>();
 
+        if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var uri))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["Endpoint is required field."]);
+        }
+        else
+        {
+            metadata.Endpoint = uri;
+        }
+
+        metadata.AuthenticationType = model.AuthenticationType;
+
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
 
         if (model.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(metadata.ApiKey) && !hasNewKey)
@@ -76,8 +88,6 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
             metadata.ApiKey = protector.Protect(model.ApiKey);
         }
-
-        metadata.AuthenticationType = model.AuthenticationType;
 
         connection.Put(metadata);
 
