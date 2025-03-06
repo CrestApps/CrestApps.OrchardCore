@@ -16,6 +16,7 @@ To configure the OpenAI connection, add the following settings to the `appsettin
           "DefaultDeploymentName": "Phi-3-medium-4k-instruct",
           "Connections": {
             "default": {
+              "Endpoint": "https://<!-- Your Azure Resource Name -->.services.ai.azure.com/models",
               "AuthenticationType": "ApiKey",
               "ApiKey": "<!-- Your GitHub Access Token goes here -->",
               "DefaultDeploymentName": "Phi-3-medium-4k-instruct"

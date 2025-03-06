@@ -8,6 +8,15 @@
 }
 
 <div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Endpoint" class="@Orchard.GetLabelClasses()">@T["Endpoint"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="url" asp-for="Endpoint" class="form-control" />
+        <span asp-validation-for="Endpoint" class="text-danger"></span>
+        <span class="hint">@T["The provider's API endpoint."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
     <label asp-for="AuthenticationType" class="@Orchard.GetLabelClasses()">@T["Authentication type"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select type="url" asp-for="AuthenticationType" asp-items="Model.AuthenticationTypes" class="form-select"></select>

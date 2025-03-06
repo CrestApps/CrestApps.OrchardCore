@@ -66,6 +66,13 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : ModelHandlerBase<AI
 
         var metadata = connection.As<AzureOpenAIConnectionMetadata>();
 
+        var endpoint = metadataNode[nameof(metadata.Endpoint)]?.GetValue<string>();
+
+        if (endpoint is not null && Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+        {
+            metadata.Endpoint = uri;
+        }
+
         metadata.AuthenticationType = metadataNode[nameof(metadata.AuthenticationType)]?.GetEnumValue<AzureAuthenticationType>()
             ?? AzureAuthenticationType.Default;
 

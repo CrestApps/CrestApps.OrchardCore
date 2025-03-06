@@ -5,13 +5,11 @@ using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 using CrestApps.OrchardCore.OpenAI.Azure.Handlers;
-using CrestApps.OrchardCore.OpenAI.Azure.Recipes;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
-using OrchardCore.Recipes;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure;
 
@@ -26,25 +24,12 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<AzureOpenAIModelService>();
-        services.AddScoped<AzureOpenAIDeploymentsService>();
-
         services
             .AddAIDeploymentProvider(AzureOpenAIConstants.ProviderName, o =>
             {
                 o.DisplayName = S["Azure OpenAI"];
                 o.Description = S["Azure OpenAI AI deployments."];
-            })
-            .AddScoped<AzureCognitiveServicesAccountServices>();
-    }
-}
-
-[RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class RecipesStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddRecipeExecutionStep<ImportAzureOpenAIDeploymentStep>();
+            });
     }
 }
 
@@ -108,7 +93,7 @@ public sealed class ConnectionManagementStartup : StartupBase
         services.AddAIConnectionSource(AzureOpenAIConstants.ProviderName, o =>
         {
             o.DisplayName = S["Azure OpenAI"];
-            o.Description = S["Provides a way to Configure Azure OpenAI connections."];
+            o.Description = S["Provides a way to configure Azure OpenAI connections."];
         });
     }
 }

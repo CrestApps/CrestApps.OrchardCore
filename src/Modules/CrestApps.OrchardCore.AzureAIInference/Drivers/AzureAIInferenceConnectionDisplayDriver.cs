@@ -37,6 +37,7 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
         {
             var metadata = connection.As<AzureAIInferenceConnectionMetadata>();
 
+            model.Endpoint = metadata.Endpoint?.ToString();
             model.AuthenticationTypes =
             [
                 new (S["Default authentication"], nameof(AzureAuthenticationType.Default)),
@@ -61,6 +62,15 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         var metadata = connection.As<AzureAIInferenceConnectionMetadata>();
+
+        if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var uri))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["Endpoint is required field."]);
+        }
+        else
+        {
+            metadata.Endpoint = uri;
+        }
 
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
 

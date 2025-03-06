@@ -1,8 +1,7 @@
-using System.ClientModel;
 using Azure;
 using Azure.AI.Inference;
-using Azure.Core;
 using Azure.Identity;
+using CrestApps.Azure.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -18,8 +17,6 @@ namespace CrestApps.OrchardCore.AzureAIInference.Services;
 
 public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompletionClient
 {
-    private readonly static Uri _endpoint = new("https://models.inference.ai.azure.com");
-
     public AzureAIInferenceCompletionClient(
         ILoggerFactory loggerFactory,
         IDistributedCache distributedCache,
@@ -36,19 +33,14 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
 
     protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, AICompletionContext context, string modelName)
     {
-        var authenticationTypeString = connection.GetStringValue("AuthenticationType");
+        var endpoint = connection.GetEndpoint();
 
-        if (string.IsNullOrEmpty(authenticationTypeString) ||
-            !Enum.TryParse<AzureAuthenticationType>(authenticationTypeString, true, out var authenticationType))
+        var client = connection.GetAzureAuthenticationType() switch
         {
-            authenticationType = AzureAuthenticationType.Default;
-        }
-
-        var client = authenticationType switch
-        {
-            AzureAuthenticationType.ApiKey => new ChatCompletionsClient(_endpoint, new AzureKeyCredential(connection.GetApiKey())),
-            AzureAuthenticationType.ManagedIdentity => new ChatCompletionsClient(_endpoint, new ManagedIdentityCredential()),
-            _ => new ChatCompletionsClient(_endpoint, new DefaultAzureCredential())
+            AzureAuthenticationType.ApiKey => new ChatCompletionsClient(endpoint, new AzureKeyCredential(connection.GetApiKey())),
+            AzureAuthenticationType.ManagedIdentity => new ChatCompletionsClient(endpoint, new ManagedIdentityCredential()),
+            AzureAuthenticationType.Default => new ChatCompletionsClient(endpoint, new DefaultAzureCredential()),
+            _ => throw new NotSupportedException("The provided authentication type is not supported.")
         };
 
         return client.AsChatClient(connection.GetDefaultDeploymentName());

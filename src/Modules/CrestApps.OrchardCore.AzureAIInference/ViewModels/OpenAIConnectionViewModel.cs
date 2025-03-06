@@ -6,6 +6,8 @@ namespace CrestApps.OrchardCore.AzureAIInference.ViewModels;
 
 public class AzureAIInferenceConnectionViewModel
 {
+    public string Endpoint { get; set; }
+
     public AzureAuthenticationType AuthenticationType { get; set; }
 
     public string ApiKey { get; set; }

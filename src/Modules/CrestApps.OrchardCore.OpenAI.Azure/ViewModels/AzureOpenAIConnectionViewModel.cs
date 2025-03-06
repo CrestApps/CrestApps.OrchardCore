@@ -8,6 +8,8 @@ public class AzureOpenAIConnectionViewModel
 {
     public AzureAuthenticationType AuthenticationType { get; set; }
 
+    public string Endpoint { get; set; }
+
     public string ApiKey { get; set; }
 
     [BindNever]

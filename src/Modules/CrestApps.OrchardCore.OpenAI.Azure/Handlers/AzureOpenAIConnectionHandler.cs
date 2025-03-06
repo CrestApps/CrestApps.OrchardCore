@@ -45,13 +45,14 @@ public sealed class AzureOpenAIConnectionHandler : IAIProviderConnectionHandler
 
         var metadata = context.Connection.As<AzureOpenAIConnectionMetadata>();
 
+        context.Values["Endpoint"] = metadata.Endpoint?.ToString();
+        context.Values["AuthenticationType"] = metadata.AuthenticationType.ToString();
+
         if (!string.IsNullOrEmpty(metadata.ApiKey))
         {
             var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
 
             context.Values["ApiKey"] = protector.Unprotect(metadata.ApiKey);
         }
-
-        context.Values["AuthenticationType"] = metadata.AuthenticationType.ToString();
     }
 }

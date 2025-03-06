@@ -1,6 +1,7 @@
 using System.ClientModel;
 using Azure.AI.OpenAI;
 using Azure.Identity;
+using CrestApps.Azure.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -32,21 +33,14 @@ public sealed class AzureOpenAICompletionClient : DeploymentAwareAICompletionCli
 
     protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, AICompletionContext context, string modelName)
     {
-        var endpoint = new Uri($"https://{connection.GetAccountName()}.openai.azure.com/");
+        var endpoint = connection.GetEndpoint();
 
-        var authenticationTypeString = connection.GetStringValue("AuthenticationType");
-
-        if (string.IsNullOrEmpty(authenticationTypeString) ||
-            !Enum.TryParse<AzureAuthenticationType>(authenticationTypeString, true, out var authenticationType))
-        {
-            authenticationType = AzureAuthenticationType.Default;
-        }
-
-        var azureClient = authenticationType switch
+        var azureClient = connection.GetAzureAuthenticationType() switch
         {
             AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey())),
             AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential()),
-            _ => new AzureOpenAIClient(endpoint, new DefaultAzureCredential())
+            AzureAuthenticationType.Default => new AzureOpenAIClient(endpoint, new DefaultAzureCredential()),
+            _ => throw new NotSupportedException("The provided authentication type is not supported.")
         };
 
         return azureClient.AsChatClient(modelName);
