@@ -42,7 +42,7 @@ Enhances user management with customizable display names and avatars. See the [U
 Provides services for all AI modules and provide the interface for managing AI profiles and AI Deployments. See the [AI Module README](src/Modules/CrestApps.OrchardCore.AI/README.md) for more details.  
 
 ### AI Chat Module
-Provides interface for interacting with AI models like **ChatGPT**. See the [AI Chat Module README](src/Modules/CrestApps.OrchardCore.AI.Chat/README.md) for more details.  
+Provides interface for interacting with AI Chat models like **ChatGPT** and others. See the [AI Chat Module README](src/Modules/CrestApps.OrchardCore.AI.Chat/README.md) for more details.  
 
 ### Azure AI Inference Module
 Extends the **AI Module** by integrating Azure AI Inference services. See the [Azure AI Inference Module README](src/Modules/CrestApps.OrchardCore.AzureAIInference/README.md).  
