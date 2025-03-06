@@ -59,7 +59,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
     public string Name
         => AzureOpenAIConstants.AISearchImplementationName;
 
-    public async Task<Microsoft.Extensions.AI.ChatCompletion> CompleteAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
+    public async Task<Microsoft.Extensions.AI.ChatResponse> CompleteAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -141,9 +141,9 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
                 choices.Add(new Microsoft.Extensions.AI.ChatMessage(role, choice.Text));
             }
 
-            var result = new Microsoft.Extensions.AI.ChatCompletion(choices)
+            var result = new Microsoft.Extensions.AI.ChatResponse(choices)
             {
-                CompletionId = data.Value.Id,
+                ResponseId = data.Value.Id,
                 CreatedAt = data.Value.CreatedAt,
                 ModelId = data.Value.Model,
                 FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(data.Value.FinishReason.ToString()),
@@ -203,7 +203,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
         return null;
     }
 
-    public async IAsyncEnumerable<Microsoft.Extensions.AI.StreamingChatCompletionUpdate> CompleteStreamingAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<Microsoft.Extensions.AI.ChatResponseUpdate> CompleteStreamingAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -270,10 +270,10 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
 
                 await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, await GetOptionsAsync(context), cancellationToken))
                 {
-                    var result = new Microsoft.Extensions.AI.StreamingChatCompletionUpdate
+                    var result = new Microsoft.Extensions.AI.ChatResponseUpdate
                     {
                         ChoiceIndex = 0,
-                        CompletionId = newUpdate.CompletionId,
+                        ResponseId = newUpdate.CompletionId,
                         CreatedAt = newUpdate.CreatedAt,
                         ModelId = newUpdate.Model,
                         Contents = newUpdate.ContentUpdate.Select(x => new Microsoft.Extensions.AI.TextContent(x.Text))
@@ -296,10 +296,10 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
             }
             else
             {
-                var result = new Microsoft.Extensions.AI.StreamingChatCompletionUpdate
+                var result = new Microsoft.Extensions.AI.ChatResponseUpdate
                 {
                     ChoiceIndex = 0,
-                    CompletionId = update.CompletionId,
+                    ResponseId = update.CompletionId,
                     CreatedAt = update.CreatedAt,
                     ModelId = update.Model,
                     Contents = update.ContentUpdate.Select(x => new Microsoft.Extensions.AI.TextContent(x.Text))

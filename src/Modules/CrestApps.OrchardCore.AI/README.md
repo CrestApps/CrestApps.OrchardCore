@@ -172,38 +172,70 @@ You can enhance the AI chat functionality by adding custom functions. To create 
 ```csharp
 public sealed class GetWeatherFunction : AIFunction
 {
-    public const string Name = "get_weather";
-    private const string LocationProperty = "Location";
-
-    public override AIFunctionMetadata Metadata { get; }
+    private const string _locationProperty = "Location";
+    public const string TheName = "get_weather";
 
     public GetWeatherFunction()
     {
-        Metadata = new AIFunctionMetadata(Name)
+        Name = TheName;
+        Description = "Retrieves weather information for a specified location.";
+
+        var metadata = new JsonObject()
         {
-            Description = "Retrieves weather information for a specified location.",
-            Parameters =
-            [
-                new AIFunctionParameterMetadata(LocationProperty)
+            {"type", "object"},
+            {"properties", new JsonObject()
                 {
-                    Description = "The geographic location for which the weather information is requested.",
-                    IsRequired = true,
-                    ParameterType = typeof(string),
+                    { _locationProperty, new JsonObject()
+                        {
+                            {"type", "string" },
+                            {"description", "The geographic location for which the weather information is requested." },
+                        }
+                    }
                 }
-            ],
-            ReturnParameter = new AIFunctionReturnParameterMetadata
-            {
-                Description = "The weather condition at the specified location.",
-                ParameterType = typeof(string),
+            },
+            {"required", new JsonArray(_locationProperty)},
+            {"return_type", new JsonObject()
+                {
+                    {"type", "string"},
+                    {"description", "The weather condition at the specified location."},
+                }
             },
         };
+
+        JsonSchema = JsonSerializer.Deserialize<JsonElement>(metadata);
     }
+
+    public override string Name { get; }
+
+    public override string Description { get; }
+
+    public override JsonElement JsonSchema { get; }
 
     protected override Task<object> InvokeCoreAsync(IEnumerable<KeyValuePair<string, object>> arguments, CancellationToken cancellationToken)
     {
-        var location = arguments.First(x => x.Key == LocationProperty).Value as string;
+        var prompt = arguments.First(x => x.Key == _locationProperty).Value;
+
+        string location = null;
+
+        if (prompt is JsonElement jsonElement)
+        {
+            location = jsonElement.GetString();
+        }
+        else if (prompt is JsonNode jsonNode)
+        {
+            location = jsonNode.ToJsonString();
+        }
+        else if (prompt is string str)
+        {
+            location = str;
+        }
+        else
+        {
+            location = prompt?.ToString();
+        }
+
         var weather = Random.Shared.NextDouble() > 0.5 ? $"It's sunny in {location}." : $"It's raining in {location}.";
-        
+
         return Task.FromResult<object>(weather);
     }
 }

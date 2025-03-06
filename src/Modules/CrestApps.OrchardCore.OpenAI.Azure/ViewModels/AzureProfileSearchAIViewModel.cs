@@ -15,8 +15,6 @@ public class AzureProfileSearchAIViewModel
     [Range(3, 20)]
     public int? TopNDocuments { get; set; }
 
-    public bool IncludeContentItemCitations { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> IndexNames { get; set; }
 }

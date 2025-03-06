@@ -34,7 +34,6 @@ public sealed class AzureOpenAIProfileSearchAIDisplayDriver : DisplayDriver<AIPr
             model.Strictness = metadata.Strictness;
             model.TopNDocuments = metadata.TopNDocuments;
             model.IndexName = metadata.IndexName;
-            model.IncludeContentItemCitations = metadata.IncludeContentItemCitations;
 
             model.IndexNames = (await _indexSettingsService.GetSettingsAsync())
             .Select(i => new SelectListItem(i.IndexName, i.IndexName));
@@ -57,7 +56,6 @@ public sealed class AzureOpenAIProfileSearchAIDisplayDriver : DisplayDriver<AIPr
             IndexName = model.IndexName,
             Strictness = model.Strictness,
             TopNDocuments = model.TopNDocuments,
-            IncludeContentItemCitations = model.IncludeContentItemCitations,
         });
 
         return Edit(profile, context);

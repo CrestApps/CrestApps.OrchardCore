@@ -67,7 +67,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
     {
     }
 
-    public async Task<ChatCompletion> CompleteAsync(IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
+    public async Task<ChatResponse> CompleteAsync(IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -104,7 +104,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
             var chatOptions = await GetChatOptionsAsync(context, metadata, deploymentName);
 
-            return await chatClient.CompleteAsync(prompts, chatOptions, cancellationToken);
+            return await chatClient.GetResponseAsync(prompts, chatOptions, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -114,7 +114,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         return null;
     }
 
-    public async IAsyncEnumerable<StreamingChatCompletionUpdate> CompleteStreamingAsync(IEnumerable<ChatMessage> messages, AICompletionContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<ChatResponseUpdate> CompleteStreamingAsync(IEnumerable<ChatMessage> messages, AICompletionContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
@@ -149,7 +149,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         var chatOptions = await GetChatOptionsAsync(context, metadata, deploymentName);
 
-        await foreach (var update in chatClient.CompleteStreamingAsync(prompts, chatOptions, cancellationToken))
+        await foreach (var update in chatClient.GetStreamingResponseAsync(prompts, chatOptions, cancellationToken))
         {
             yield return update;
         }

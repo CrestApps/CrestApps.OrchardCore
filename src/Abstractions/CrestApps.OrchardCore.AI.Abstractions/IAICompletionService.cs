@@ -13,7 +13,7 @@ public interface IAICompletionService
     /// <param name="messages">A collection of messages that are part of the chat conversation.</param>
     /// <param name="context">The context that may provide additional parameters or configurations for the chat request.</param>
     /// <returns>A task representing the asynchronous operation, with the completion response as the result.</returns>
-    Task<ChatCompletion> CompleteAsync(string clientName, IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default);
+    Task<ChatResponse> CompleteAsync(string clientName, IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Streams chat completion updates from the AI service in real time.
@@ -24,5 +24,5 @@ public interface IAICompletionService
     /// <param name="context">Additional context or parameters for configuring the AI request.</param>
     /// <param name="cancellationToken">A token to cancel the streaming operation if needed.</param>
     /// <returns>An asynchronous stream of chat completion updates, allowing real-time processing of AI responses.</returns>
-    IAsyncEnumerable<StreamingChatCompletionUpdate> CompleteStreamingAsync(string clientName, IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<ChatResponseUpdate> CompleteStreamingAsync(string clientName, IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default);
 }
