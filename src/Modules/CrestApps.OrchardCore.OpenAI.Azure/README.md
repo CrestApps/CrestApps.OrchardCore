@@ -36,42 +36,11 @@ Authentication Type in the connection can be `Default`, `ManagedIdentity` or `Ap
 ### Retrieving the Required Information from the Azure Portal
 
 #### Retrieving the API Key for Azure OpenAI
+
 1. In the **Azure Portal**, go to your **Azure OpenAI** instance.
 2. Navigate to **Resource Management** > **Keys and Endpoint**.
-3. Click **Show Keys** and copy one of the available keys.
-
-### Recipes
-
-You c
-
-When using the Recipes feature, you can import all deployments from your Azure account with the following configuration:
-
-```json
-{
-  "steps": [
-    {
-       "name": "ImportAzureOpenAIDeployment",
-       "ConnectionNames": "all"
-    }
-  ]
-}
-```
-
-Alternatively, to import deployments from specific connections like `us-west-connection` and `canada-east-connection`, use this configuration:
-
-```json
-{
-  "steps": [
-    {
-       "name": "ImportAzureOpenAIDeployment",
-       "ConnectionNames": [
-            "us-west-connection",
-            "canada-east-connection"
-       ]
-    }
-  ]
-}
-```
+3. Click on the copy button next to the Endpoint.
+4. Click on the copy button next to one of the two keys.
 
 ## Azure OpenAI Chat Feature
 
