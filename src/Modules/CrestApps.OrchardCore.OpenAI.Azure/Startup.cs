@@ -28,7 +28,7 @@ public sealed class Startup : StartupBase
             .AddAIDeploymentProvider(AzureOpenAIConstants.ProviderName, o =>
             {
                 o.DisplayName = S["Azure OpenAI"];
-                o.Description = S["Azure OpenAI AI deployments."];
+                o.Description = S["Azure OpenAI model deployments."];
             });
     }
 }

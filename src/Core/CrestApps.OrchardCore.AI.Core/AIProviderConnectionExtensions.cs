@@ -49,7 +49,7 @@ public static class AIProviderConnectionExtensions
 
             if (throwException && string.IsNullOrWhiteSpace(stringValue))
             {
-                throw new InvalidOperationException($"The '{key}' does not have a value in the Azure Connection entry.");
+                throw new InvalidOperationException($"The '{key}' does not have a value in the dictionary.");
             }
 
             return stringValue;
@@ -60,6 +60,6 @@ public static class AIProviderConnectionExtensions
             return null;
         }
 
-        throw new InvalidOperationException($"The '{key}' does not exists in the Azure Connection entry.");
+        throw new InvalidOperationException($"The '{key}' does not exists in the dictionary.");
     }
 }
