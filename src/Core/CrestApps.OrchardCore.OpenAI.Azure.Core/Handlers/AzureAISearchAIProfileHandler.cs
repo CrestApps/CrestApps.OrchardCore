@@ -78,13 +78,6 @@ public sealed class AzureAISearchAIProfileHandler : ModelHandlerBase<AIProfile>
             metadata.TopNDocuments = topNDocuments;
         }
 
-        var includeContentItemCitations = metadataNode[nameof(metadata.IncludeContentItemCitations)]?.GetValue<bool?>();
-
-        if (includeContentItemCitations.HasValue)
-        {
-            metadata.IncludeContentItemCitations = includeContentItemCitations.Value;
-        }
-
         profile.Put(metadata);
 
         return Task.CompletedTask;

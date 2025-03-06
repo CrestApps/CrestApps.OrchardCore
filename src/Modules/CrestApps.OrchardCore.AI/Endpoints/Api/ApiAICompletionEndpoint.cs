@@ -106,7 +106,7 @@ internal static class ApiAICompletionEndpoint
             (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, profile, completionService, userPrompt);
         }
 
-        ChatCompletion completion = null;
+        ChatResponse completion = null;
         AIChatSessionPrompt message = null;
         ChatMessage bestChoice = null;
 

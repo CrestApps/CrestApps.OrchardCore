@@ -21,6 +21,16 @@ public sealed class AIToolDefinitionOptions
             configure(entry);
         }
 
+        if (string.IsNullOrEmpty(entry.Title))
+        {
+            entry.Title = name;
+        }
+
+        if (string.IsNullOrEmpty(entry.Description))
+        {
+            entry.Description = name;
+        }
+
         _tools[name] = entry;
     }
 }

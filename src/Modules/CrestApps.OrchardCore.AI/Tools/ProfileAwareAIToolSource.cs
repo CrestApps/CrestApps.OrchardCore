@@ -61,8 +61,6 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
         private readonly ILogger _logger;
         private readonly AIProfile _profile;
 
-        public override JsonElement JsonSchema { get; }
-
         public ProfileInvoker(
             IAICompletionService completionService,
             AIToolInstance instance,
@@ -73,31 +71,43 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
             _profile = profile;
             _logger = logger;
 
-            
             var funcMetadata = instance.As<InvokableToolMetadata>();
 
-
-                AIFunctionMetadata(instance.Id)
-            {
-                Description = string.IsNullOrEmpty(funcMetadata.Description)
+            Name = instance.Id;
+            Description = string.IsNullOrEmpty(funcMetadata.Description)
                 ? "Provides a way to call another model."
-                : funcMetadata.Description,
-                Parameters =
-                [
-                    new AIFunctionParameterMetadata(PromptProperty)
+                : funcMetadata.Description;
+
+            var metadata = new JsonObject()
+            {
+                {"type", "object"},
+                {"properties", new JsonObject()
                     {
-                        Description = "The user's prompt.",
-                        IsRequired = true,
-                        ParameterType = typeof(string),
+                        { "prompt", new JsonObject()
+                            {
+                                {"type", "string" },
+                                {"description", "The user's prompt." },
+                            }
+                        }
                     }
-                ],
-                ReturnParameter = new AIFunctionReturnParameterMetadata
-                {
-                    Description = "The response by the model to the user's prompt",
-                    ParameterType = typeof(string),
+                },
+                {"required", new JsonArray("prompt")},
+                {"return_type", new JsonObject()
+                    {
+                        {"type", "string"},
+                        {"description", "The response to the user's prompt as a string."},
+                    }
                 },
             };
+
+            JsonSchema = JsonSerializer.Deserialize<JsonElement>(metadata);
         }
+
+        public override string Name { get; }
+
+        public override string Description { get; }
+
+        public override JsonElement JsonSchema { get; }
 
         protected override async Task<object> InvokeCoreAsync(IEnumerable<KeyValuePair<string, object>> arguments, CancellationToken cancellationToken)
         {
@@ -123,6 +133,10 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
                 else if (prompt is string str)
                 {
                     promptString = str;
+                }
+                else
+                {
+                    promptString = prompt?.ToString();
                 }
 
                 var context = new AICompletionContext
