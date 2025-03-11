@@ -1,18 +1,16 @@
-﻿using CrestApps.OrchardCore.Models;
-
-namespace CrestApps.OrchardCore.Services;
+﻿namespace CrestApps.OrchardCore.Services;
 
 public interface INamedSourceModelStore<T> : INamedModelStore<T>, ISourceModelStore<T>
     where T : INameAwareModel, ISourceAwareModel
 {
     /// <summary>
-    /// Asynchronously finds a model by its unique name and source.
+    /// Asynchronously retrieves a model by its unique name and source.
     /// </summary>
-    /// <param name="name">The unique name of the model. Must not be null or empty.</param>
-    /// <param name="source">The source of the model. Must not be null or empty.</param>
+    /// <param name="name">The unique name of the model. Must not be <c>null</c> or empty.</param>
+    /// <param name="source">The source of the model. Must not be <c>null</c> or empty.</param>
     /// <returns>
-    /// A ValueTask representing the asynchronous operation. The task result is the <see cref="T"/> if found,
-    /// or <c>null</c> if no model with the specified name exists in the store.
+    /// A <see cref="ValueTask{T}"/> representing the asynchronous operation.
+    /// The result is the model if found, or <c>null</c> if no model with the specified name and source exists in the store.
     /// </returns>
     ValueTask<T> GetAsync(string name, string source);
 }

@@ -1,17 +1,15 @@
-﻿using CrestApps.OrchardCore.Models;
-
-namespace CrestApps.OrchardCore.Services;
+﻿namespace CrestApps.OrchardCore.Services;
 
 public interface ISourceModelStore<T> : IModelStore<T>
     where T : ISourceAwareModel
 {
     /// <summary>
-    /// Asynchronously retrieves all models in the store with the given source.
+    /// Asynchronously retrieves all models associated with the specified source.
     /// </summary>
+    /// <param name="source">The source of the models. Must not be <c>null</c> or empty.</param>
     /// <returns>
-    /// <param name="source">The source of the model. Must not be null or empty.</param>
-    /// A ValueTask representing the asynchronous operation. The task result is an <see cref="IEnumerable{T}"/>
-    /// containing all models available in the store.
+    /// A <see cref="ValueTask{IEnumerable{T}}"/> representing the asynchronous operation.
+    /// The result is a collection of models associated with the given source.
     /// </returns>
     ValueTask<IEnumerable<T>> GetAsync(string source);
 }

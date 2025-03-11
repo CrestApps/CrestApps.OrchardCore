@@ -1,5 +1,4 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Services;
 
@@ -9,28 +8,31 @@ public interface ISourceModelManager<T> : IModelManager<T>
     /// <summary>
     /// Asynchronously creates a new model with the given source and optional additional data.
     /// </summary>
-    /// <param name="source">The source from which the model is created.</param>
-    /// <param name="data">Optional additional data associated with the profile. Defaults to null.</param>
-    /// <returns>A ValueTask that represents the asynchronous operation. The result is the newly created model.</returns>
+    /// <param name="source">The source from which the model is created. Must not be <c>null</c> or empty.</param>
+    /// <param name="data">Optional additional data associated with the model. Defaults to <c>null</c>.</param>
+    /// <returns>
+    /// A <see cref="ValueTask{T}"/> representing the asynchronous operation.
+    /// The result is the newly created model.
+    /// </returns>
     ValueTask<T> NewAsync(string source, JsonNode data = null);
 
     /// <summary>
-    /// Asynchronously retrieves all models in the store with the given source.
+    /// Asynchronously retrieves all models associated with the specified source.
     /// </summary>
+    /// <param name="source">The source of the models. Must not be <c>null</c> or empty.</param>
     /// <returns>
-    /// <param name="source">The source of the model. Must not be null or empty.</param>
-    /// A ValueTask representing the asynchronous operation. The task result is an <see cref="IEnumerable{T}"/>
-    /// containing all models available in the store.
+    /// A <see cref="ValueTask{IEnumerable{T}}"/> representing the asynchronous operation.
+    /// The result is a collection of models associated with the given source.
     /// </returns>
     ValueTask<IEnumerable<T>> GetAsync(string source);
 
     /// <summary>
-    /// Asynchronously retrieves a list of models for the specified provider.
+    /// Asynchronously retrieves all models associated with the specified source.
     /// </summary>
-    /// <param name="source">The name of the provider. Must not be null or empty.</param>
+    /// <param name="source">The unique identifier of the source. Must not be <c>null</c> or empty.</param>
     /// <returns>
-    /// A ValueTask that represents the asynchronous operation. The result is an <see cref="IEnumerable{T}"/>
-    /// containing the model deployments for the specified provider.
+    /// A <see cref="ValueTask{IEnumerable{T}}"/> representing the asynchronous operation.
+    /// The result is a collection of models associated with the specified source.
     /// </returns>
     ValueTask<IEnumerable<T>> FindBySourceAsync(string source);
 }
