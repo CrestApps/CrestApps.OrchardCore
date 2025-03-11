@@ -11,12 +11,12 @@ internal sealed class AIToolInstanceStep : NamedRecipeStepHandler
 {
     public const string StepKey = "AIToolInstance";
 
-    private readonly IModelManager<AIToolInstance> _manager;
+    private readonly ISourceModelManager<AIToolInstance> _manager;
 
     internal readonly IStringLocalizer S;
 
     public AIToolInstanceStep(
-        IModelManager<AIToolInstance> manager,
+        ISourceModelManager<AIToolInstance> manager,
         IStringLocalizer<AIToolInstanceStep> stringLocalizer)
         : base(StepKey)
     {
@@ -77,7 +77,7 @@ internal sealed class AIToolInstanceStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await _manager.SaveAsync(instance);
+            await _manager.CreateAsync(instance);
         }
     }
 

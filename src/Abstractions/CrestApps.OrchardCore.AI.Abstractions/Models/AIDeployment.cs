@@ -4,7 +4,7 @@ using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public class AIDeployment : SourceModel, INameAwareModel
+public class AIDeployment : SourceModel, INameAwareModel, ISourceAwareModel
 {
     [JsonIgnore]
     public string ProviderName

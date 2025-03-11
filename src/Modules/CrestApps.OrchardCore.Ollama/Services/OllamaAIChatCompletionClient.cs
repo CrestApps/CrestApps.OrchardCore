@@ -2,13 +2,12 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Ollama;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.OrchardCore.AI.Ollama.Services;
+namespace CrestApps.OrchardCore.Ollama.Services;
 
 internal sealed class OllamaAIChatCompletionClient : NamedAICompletionClient
 {

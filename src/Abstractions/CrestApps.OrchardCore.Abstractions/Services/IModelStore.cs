@@ -35,16 +35,6 @@ public interface IModelStore<T>
     ValueTask<IEnumerable<T>> GetAllAsync();
 
     /// <summary>
-    /// Asynchronously retrieves all models in the store with the given source.
-    /// </summary>
-    /// <returns>
-    /// <param name="source">The source of the model. Must not be null or empty.</param>
-    /// A ValueTask representing the asynchronous operation. The task result is an <see cref="IEnumerable{T}"/>
-    /// containing all models available in the store.
-    /// </returns>
-    ValueTask<IEnumerable<T>> GetAsync(string source);
-
-    /// <summary>
     /// Asynchronously retrieves a paged list of models based on the specified pagination and filtering parameters.
     /// </summary>
     /// <param name="page">The page number to retrieve, where the index is 1-based.</param>
@@ -58,11 +48,28 @@ public interface IModelStore<T>
         where TQuery : QueryContext;
 
     /// <summary>
-    /// Asynchronously saves or updates the specified model in the store.
+    /// Asynchronously creates the specified model in the store.
     /// </summary>
     /// <param name="model">The model to save or update. Must not be null.</param>
     /// <returns>
     /// A ValueTask representing the asynchronous operation. This method does not return any value.
     /// </returns>
-    ValueTask SaveAsync(T model);
+    ValueTask CreateAsync(T model);
+
+    /// <summary>
+    /// Asynchronously updates the specified model in the store.
+    /// </summary>
+    /// <param name="model">The model to save or update. Must not be null.</param>
+    /// <returns>
+    /// A ValueTask representing the asynchronous operation. This method does not return any value.
+    /// </returns>
+    ValueTask UpdateAsync(T model);
+
+    /// <summary>
+    /// Asynchronously saves the changes in the store.
+    /// </summary>
+    /// <returns>
+    /// A ValueTask representing the asynchronous operation. This method does not return any value.
+    /// </returns>
+    ValueTask SaveChangesAsync();
 }

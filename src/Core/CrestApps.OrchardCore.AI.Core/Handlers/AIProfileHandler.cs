@@ -90,7 +90,7 @@ public sealed class AIProfileHandler : ModelHandlerBase<AIProfile>
         return Task.CompletedTask;
     }
 
-    public override Task SavingAsync(SavingContext<AIProfile> context)
+    public override Task CreatingAsync(CreatingContext<AIProfile> context)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
         {
@@ -176,6 +176,11 @@ public sealed class AIProfileHandler : ModelHandlerBase<AIProfile>
             {
                 profile.Settings[pair.Key] = pair.Value.Clone();
             }
+        }
+
+        if (string.IsNullOrWhiteSpace(profile.DisplayText))
+        {
+            profile.DisplayText = profile.Name;
         }
 
         return Task.CompletedTask;

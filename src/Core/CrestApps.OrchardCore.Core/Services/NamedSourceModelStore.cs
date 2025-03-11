@@ -4,10 +4,10 @@ using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.Core.Services;
 
-public class NamedModelStore<T> : ModelStore<T>, INamedModelStore<T>
-    where T : Model, INameAwareModel
+public class NamedSourceModelStore<T> : SourceModelStore<T>, INamedSourceModelStore<T>, ISourceModelStore<T>
+    where T : Model, INameAwareModel, ISourceAwareModel
 {
-    public NamedModelStore(IDocumentManager<ModelDocument<T>> documentManager)
+    public NamedSourceModelStore(IDocumentManager<ModelDocument<T>> documentManager)
         : base(documentManager)
     {
     }
@@ -34,5 +34,22 @@ public class NamedModelStore<T> : ModelStore<T>, INamedModelStore<T>
         {
             throw new InvalidOperationException("There is already another model with the same name.");
         }
+    }
+
+    public async ValueTask<T> GetAsync(string name, string source)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(name);
+        ArgumentException.ThrowIfNullOrEmpty(source);
+
+        var document = await DocumentManager.GetOrCreateImmutableAsync();
+
+        var model = document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && x.Source.Equals(source, StringComparison.OrdinalIgnoreCase));
+
+        if (model is not null)
+        {
+            return model;
+        }
+
+        return null;
     }
 }

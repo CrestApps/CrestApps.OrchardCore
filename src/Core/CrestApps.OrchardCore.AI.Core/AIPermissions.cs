@@ -14,12 +14,12 @@ public static class AIPermissions
 
     public static readonly Permission QueryAnyAIProfile = new("QueryAnyAIProfile", "Query any AI profile");
 
-    private static readonly Permission _queryAIProfileTemplate = new("QueryAIProfiles_{0}", "Query AI profile - {0}", [QueryAnyAIProfile]);
+    private static readonly Permission _queryAIProfileTemplate = new("QueryAIProfile_{0}", "Query AI profile - {0}", [QueryAnyAIProfile]);
 
     /// <summary>
     /// Generates a permission dynamically for a content type.
     /// </summary>
-    public static Permission CreateDynamicPermission(string profileName)
+    public static Permission CreateProfilePermission(string profileName)
     {
         ArgumentException.ThrowIfNullOrEmpty(profileName);
 

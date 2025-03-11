@@ -1,11 +1,10 @@
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Ollama.Services;
-using CrestApps.OrchardCore.Ollama;
+using CrestApps.OrchardCore.Ollama.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.AI.Ollama;
+namespace CrestApps.OrchardCore.Ollama;
 
 public sealed class Startup : StartupBase
 {

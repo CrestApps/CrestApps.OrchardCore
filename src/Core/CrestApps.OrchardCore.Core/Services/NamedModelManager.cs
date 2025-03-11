@@ -5,9 +5,9 @@ using Microsoft.Extensions.Logging;
 namespace CrestApps.OrchardCore.Core.Services;
 
 public class NamedModelManager<T> : ModelManager<T>, INamedModelManager<T>
-    where T : SourceModel, INameAwareModel, new()
+    where T : Model, INameAwareModel, new()
 {
-    protected readonly INamedModelStore<T> NamedStore;
+    protected readonly INamedModelStore<T> NamedModelStore;
 
     public NamedModelManager(
         INamedModelStore<T> store,
@@ -15,7 +15,7 @@ public class NamedModelManager<T> : ModelManager<T>, INamedModelManager<T>
         ILogger<ModelManager<T>> logger)
         : base(store, handlers, logger)
     {
-        NamedStore = store;
+        NamedModelStore = store;
     }
 
     protected NamedModelManager(
@@ -24,24 +24,12 @@ public class NamedModelManager<T> : ModelManager<T>, INamedModelManager<T>
         ILogger logger)
     : base(store, handlers, logger)
     {
-        NamedStore = store;
+        NamedModelStore = store;
     }
 
     public async ValueTask<T> FindByNameAsync(string name)
     {
-        var model = await NamedStore.FindByNameAsync(name);
-
-        if (model is not null)
-        {
-            await LoadAsync(model);
-        }
-
-        return model;
-    }
-
-    public async ValueTask<T> GetAsync(string name, string source)
-    {
-        var model = await NamedStore.GetAsync(name, source);
+        var model = await NamedModelStore.FindByNameAsync(name);
 
         if (model is not null)
         {

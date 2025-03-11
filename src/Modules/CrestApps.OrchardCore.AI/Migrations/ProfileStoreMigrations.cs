@@ -28,7 +28,8 @@ internal sealed class ProfileStoreMigrations : DataMigration
         {
             try
             {
-                await _profilesStore.SaveAsync(profile);
+                await _profilesStore.UpdateAsync(profile);
+                await _profilesStore.SaveChangesAsync();
             }
             catch { }
         }

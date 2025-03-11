@@ -41,7 +41,7 @@ public sealed class AIProfileAuthenticationHandler : AuthorizationHandler<Permis
             return;
         }
 
-        var permission = AIPermissions.CreateDynamicPermission(profileName);
+        var permission = AIPermissions.CreateProfilePermission(profileName);
 
         _authorizationService ??= _serviceProvider.GetService<IAuthorizationService>();
 

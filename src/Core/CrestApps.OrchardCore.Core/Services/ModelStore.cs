@@ -6,7 +6,7 @@ using OrchardCore.Documents;
 namespace CrestApps.OrchardCore.Core.Services;
 
 public class ModelStore<T> : IModelStore<T>
-    where T : SourceModel
+    where T : Model
 {
     protected readonly IDocumentManager<ModelDocument<T>> DocumentManager;
 
@@ -38,10 +38,6 @@ public class ModelStore<T> : IModelStore<T>
         return removed;
     }
 
-    protected virtual void Deleting(T model, ModelDocument<T> document)
-    {
-    }
-
     public async ValueTask<T> FindByIdAsync(string id)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
@@ -54,24 +50,6 @@ public class ModelStore<T> : IModelStore<T>
         }
 
         return null;
-    }
-
-    public async ValueTask SaveAsync(T record)
-    {
-        ArgumentNullException.ThrowIfNull(record);
-
-        var document = await DocumentManager.GetOrCreateMutableAsync();
-
-        if (string.IsNullOrEmpty(record.Id))
-        {
-            record.Id = IdGenerator.GenerateId();
-        }
-
-        Saving(record, document);
-
-        document.Records[record.Id] = record;
-
-        await DocumentManager.UpdateAsync(document);
     }
 
     public async ValueTask<PageResult<T>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
@@ -95,11 +73,49 @@ public class ModelStore<T> : IModelStore<T>
         return document.Records.Values;
     }
 
-    public async ValueTask<IEnumerable<T>> GetAsync(string source)
+    public async ValueTask CreateAsync(T record)
     {
-        var document = await DocumentManager.GetOrCreateImmutableAsync();
+        ArgumentNullException.ThrowIfNull(record);
 
-        return document.Records.Values.Where(x => x.Source.Equals(source, StringComparison.OrdinalIgnoreCase));
+        var document = await DocumentManager.GetOrCreateMutableAsync();
+
+        if (string.IsNullOrEmpty(record.Id))
+        {
+            record.Id = IdGenerator.GenerateId();
+        }
+
+        Saving(record, document);
+
+        document.Records[record.Id] = record;
+
+        await DocumentManager.UpdateAsync(document);
+    }
+
+    public async ValueTask UpdateAsync(T record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+
+        var document = await DocumentManager.GetOrCreateMutableAsync();
+
+        if (string.IsNullOrEmpty(record.Id))
+        {
+            record.Id = IdGenerator.GenerateId();
+        }
+
+        Saving(record, document);
+
+        document.Records[record.Id] = record;
+
+        await DocumentManager.UpdateAsync(document);
+    }
+
+    public ValueTask SaveChangesAsync()
+    {
+        return ValueTask.CompletedTask;
+    }
+
+    protected virtual void Deleting(T model, ModelDocument<T> document)
+    {
     }
 
     protected virtual async ValueTask<IEnumerable<T>> LocateInstancesAsync(QueryContext context)
@@ -120,11 +136,6 @@ public class ModelStore<T> : IModelStore<T>
 
     protected virtual IEnumerable<T> GetSortable(QueryContext context, IEnumerable<T> records)
     {
-        if (!string.IsNullOrEmpty(context.Source))
-        {
-            records = records.Where(x => x.Source.Equals(context.Source, StringComparison.OrdinalIgnoreCase));
-        }
-
         if (!string.IsNullOrEmpty(context.Name))
         {
             records = records.Where(x => (x is INameAwareModel named && named.Name.Contains(context.Name, StringComparison.OrdinalIgnoreCase)) ||

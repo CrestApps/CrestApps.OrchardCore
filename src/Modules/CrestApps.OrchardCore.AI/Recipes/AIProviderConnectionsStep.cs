@@ -12,13 +12,13 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 {
     public const string StepKey = "AIProviderConnections";
 
-    private readonly INamedModelManager<AIProviderConnection> _manager;
+    private readonly INamedSourceModelManager<AIProviderConnection> _manager;
     private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIProviderConnectionsStep(
-        INamedModelManager<AIProviderConnection> manager,
+        INamedSourceModelManager<AIProviderConnection> manager,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIProfileStep> stringLocalizer)
         : base(StepKey)
@@ -99,7 +99,7 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await _manager.SaveAsync(connection);
+            await _manager.CreateAsync(connection);
         }
     }
 

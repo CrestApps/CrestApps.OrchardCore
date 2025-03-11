@@ -105,7 +105,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await _manager.SaveAsync(deployment);
+            await _manager.CreateAsync(deployment);
         }
     }
 

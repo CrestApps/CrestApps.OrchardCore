@@ -26,7 +26,7 @@ internal sealed class AIPermissionsProvider : IPermissionProvider
 
         foreach (var profile in await _profileStore.GetProfilesAsync(AIProfileType.Chat))
         {
-            permissions.Add(AIPermissions.CreateDynamicPermission(profile.Name));
+            permissions.Add(AIPermissions.CreateProfilePermission(profile.Name));
         }
 
         return permissions;

@@ -43,6 +43,7 @@ public static class ServiceCollectionExtensions
             .AddScoped<DefaultAIDeploymentStore>()
             .AddScoped<IModelStore<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
             .AddScoped<INamedModelStore<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
+            .AddScoped<INamedSourceModelStore<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
             .AddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>()
             .AddScoped<IModelHandler<AIDeployment>, AIDeploymentHandler>()
             .AddPermissionProvider<AIDeploymentProvider>();

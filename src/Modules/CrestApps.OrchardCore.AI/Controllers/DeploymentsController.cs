@@ -23,7 +23,7 @@ public sealed class DeploymentsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly INamedModelManager<AIDeployment> _deploymentManager;
+    private readonly INamedSourceModelManager<AIDeployment> _deploymentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly AIOptions _aiOptions;
@@ -34,7 +34,7 @@ public sealed class DeploymentsController : Controller
     internal readonly IStringLocalizer S;
 
     public DeploymentsController(
-        INamedModelManager<AIDeployment> deploymentManager,
+        INamedSourceModelManager<AIDeployment> deploymentManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IOptions<AIOptions> aiOptions,
@@ -190,7 +190,7 @@ public sealed class DeploymentsController : Controller
 
         if (ModelState.IsValid)
         {
-            await _deploymentManager.SaveAsync(deployment);
+            await _deploymentManager.CreateAsync(deployment);
 
             await _notifier.SuccessAsync(H["Deployment has been created successfully."]);
 
@@ -252,7 +252,7 @@ public sealed class DeploymentsController : Controller
 
         if (ModelState.IsValid)
         {
-            await _deploymentManager.SaveAsync(mutableProfile);
+            await _deploymentManager.UpdateAsync(mutableProfile);
 
             await _notifier.SuccessAsync(H["Deployment has been updated successfully."]);
 
