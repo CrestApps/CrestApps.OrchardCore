@@ -12,13 +12,13 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
 {
     public const string StepKey = "AIProfile";
 
-    private readonly INamedModelManager<AIProfile> _profileManager;
+    private readonly INamedSourceModelManager<AIProfile> _profileManager;
     private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileStep(
-        INamedModelManager<AIProfile> profileManager,
+        INamedSourceModelManager<AIProfile> profileManager,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIProfileStep> stringLocalizer)
         : base(StepKey)
@@ -91,7 +91,7 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await _profileManager.SaveAsync(profile);
+            await _profileManager.CreateAsync(profile);
         }
     }
 

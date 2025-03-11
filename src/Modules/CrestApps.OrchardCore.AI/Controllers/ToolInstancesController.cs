@@ -26,7 +26,7 @@ public sealed class ToolInstancesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly IModelManager<AIToolInstance> _manager;
+    private readonly ISourceModelManager<AIToolInstance> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIToolInstance> _instanceDisplayDriver;
@@ -37,7 +37,7 @@ public sealed class ToolInstancesController : Controller
     internal readonly IStringLocalizer S;
 
     public ToolInstancesController(
-        IModelManager<AIToolInstance> manager,
+        ISourceModelManager<AIToolInstance> manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIToolInstance> instanceDisplayManager,
@@ -178,7 +178,7 @@ public sealed class ToolInstancesController : Controller
 
         if (ModelState.IsValid)
         {
-            await _manager.SaveAsync(model);
+            await _manager.CreateAsync(model);
 
             await _notifier.SuccessAsync(H["A new instance has been created successfully."]);
 
@@ -240,7 +240,7 @@ public sealed class ToolInstancesController : Controller
 
         if (ModelState.IsValid)
         {
-            await _manager.SaveAsync(mutableModel);
+            await _manager.UpdateAsync(mutableModel);
 
             await _notifier.SuccessAsync(H["The instance has been updated successfully."]);
 

@@ -22,7 +22,7 @@ public sealed class ProfilesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly INamedModelManager<AIProfile> _profileManager;
+    private readonly INamedSourceModelManager<AIProfile> _profileManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIProfile> _profileDisplayManager;
@@ -33,7 +33,7 @@ public sealed class ProfilesController : Controller
     internal readonly IStringLocalizer S;
 
     public ProfilesController(
-        INamedModelManager<AIProfile> profileManager,
+        INamedSourceModelManager<AIProfile> profileManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIProfile> profileDisplayManager,
@@ -184,7 +184,7 @@ public sealed class ProfilesController : Controller
 
         if (ModelState.IsValid)
         {
-            await _profileManager.SaveAsync(profile);
+            await _profileManager.CreateAsync(profile);
 
             await _notifier.SuccessAsync(H["Profile has been created successfully."]);
 
@@ -246,7 +246,7 @@ public sealed class ProfilesController : Controller
 
         if (ModelState.IsValid)
         {
-            await _profileManager.SaveAsync(mutableProfile);
+            await _profileManager.UpdateAsync(mutableProfile);
 
             await _notifier.SuccessAsync(H["Profile has been updated successfully."]);
 

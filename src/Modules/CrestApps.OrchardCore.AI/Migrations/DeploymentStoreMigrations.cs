@@ -28,7 +28,8 @@ internal sealed class DeploymentStoreMigrations : DataMigration
         {
             try
             {
-                await _deploymentsStore.SaveAsync(deployment);
+                await _deploymentsStore.CreateAsync(deployment);
+                await _deploymentsStore.SaveChangesAsync();
             }
             catch { }
         }

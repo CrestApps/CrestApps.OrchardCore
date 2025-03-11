@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Models;
+namespace CrestApps.OrchardCore;
 
 public interface IDisplayTextAwareModel
 {

@@ -1,11 +1,11 @@
-﻿using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Models;
 using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class DefaultAIDeploymentStore : NamedModelStore<AIDeployment>
+public sealed class DefaultAIDeploymentStore : NamedSourceModelStore<AIDeployment>
 {
     public DefaultAIDeploymentStore(IDocumentManager<ModelDocument<AIDeployment>> documentManager)
         : base(documentManager)

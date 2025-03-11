@@ -1,14 +1,7 @@
-using OrchardCore.Entities;
-
 namespace CrestApps.OrchardCore.Models;
 
-public abstract class SourceModel : Entity
+public class SourceModel : Model, ISourceAwareModel
 {
-    /// <summary>
-    /// Gets or sets the unique identifier for the profile.
-    /// </summary>
-    public string Id { get; set; }
-
     /// <summary>
     /// Gets the name of the source for this profile.
     /// </summary>

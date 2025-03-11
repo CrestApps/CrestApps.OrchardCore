@@ -61,12 +61,12 @@ public interface IModelHandler<T>
     /// <summary>
     /// This method in invoked during model saving.
     /// </summary>
-    /// <param name="context">An instance of <see cref="SavingContext"/>.</param>
-    Task SavingAsync(SavingContext<T> context);
+    /// <param name="context">An instance of <see cref="CreatingContext"/>.</param>
+    Task CreatingAsync(CreatingContext<T> context);
 
     /// <summary>
     /// This method in invoked after the model was saved.
     /// </summary>
-    /// <param name="context">An instance of <see cref="SavedContext"/>.</param>
-    Task SavedAsync(SavedContext<T> context);
+    /// <param name="context">An instance of <see cref="CreatedContext"/>.</param>
+    Task CreatedAsync(CreatedContext<T> context);
 }

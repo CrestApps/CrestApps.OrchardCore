@@ -8,12 +8,11 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Core.Services;
 
 public class ModelManager<T> : IModelManager<T>
-    where T : SourceModel, new()
+    where T : Model, new()
 {
     protected readonly IModelStore<T> Store;
     protected readonly ILogger Logger;
-
-    private readonly IEnumerable<IModelHandler<T>> _handlers;
+    protected readonly IEnumerable<IModelHandler<T>> Handlers;
 
     public ModelManager(
         IModelStore<T> store,
@@ -21,7 +20,7 @@ public class ModelManager<T> : IModelManager<T>
         ILogger<ModelManager<T>> logger)
     {
         Store = store;
-        _handlers = handlers;
+        Handlers = handlers;
         Logger = logger;
     }
 
@@ -31,7 +30,7 @@ public class ModelManager<T> : IModelManager<T>
         ILogger logger)
     {
         Store = store;
-        _handlers = handlers;
+        Handlers = handlers;
         Logger = logger;
     }
 
@@ -40,7 +39,7 @@ public class ModelManager<T> : IModelManager<T>
         ArgumentNullException.ThrowIfNull(model);
 
         var deletingContext = new DeletingContext<T>(model);
-        await _handlers.InvokeAsync((handler, ctx) => handler.DeletingAsync(ctx), deletingContext, Logger);
+        await Handlers.InvokeAsync((handler, ctx) => handler.DeletingAsync(ctx), deletingContext, Logger);
 
         if (string.IsNullOrEmpty(model.Id))
         {
@@ -52,7 +51,7 @@ public class ModelManager<T> : IModelManager<T>
         await DeletedAsync(model);
 
         var deletedContext = new DeletedContext<T>(model);
-        await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, Logger);
+        await Handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, Logger);
 
         return removed;
     }
@@ -71,26 +70,20 @@ public class ModelManager<T> : IModelManager<T>
         return null;
     }
 
-    public async ValueTask<T> NewAsync(string source, JsonNode data = null)
+    public virtual async ValueTask<T> NewAsync(JsonNode data = null)
     {
-        ArgumentException.ThrowIfNullOrEmpty(source);
-
         var id = IdGenerator.GenerateId();
 
         var model = new T()
         {
             Id = id,
-            Source = source,
         };
 
         var initializingContext = new InitializingContext<T>(model, data);
-        await _handlers.InvokeAsync((handler, ctx) => handler.InitializingAsync(ctx), initializingContext, Logger);
+        await Handlers.InvokeAsync((handler, ctx) => handler.InitializingAsync(ctx), initializingContext, Logger);
 
         var initializedContext = new InitializedContext<T>(model);
-        await _handlers.InvokeAsync((handler, ctx) => handler.InitializedAsync(ctx), initializedContext, Logger);
-
-        // Set the source again after calling handlers to prevent handlers from updating the source during initialization.
-        model.Source = source;
+        await Handlers.InvokeAsync((handler, ctx) => handler.InitializedAsync(ctx), initializedContext, Logger);
 
         if (string.IsNullOrEmpty(model.Id))
         {
@@ -113,17 +106,18 @@ public class ModelManager<T> : IModelManager<T>
         return result;
     }
 
-    public async ValueTask SaveAsync(T model)
+    public async ValueTask CreateAsync(T model)
     {
         ArgumentNullException.ThrowIfNull(model);
 
-        var savingContext = new SavingContext<T>(model);
-        await _handlers.InvokeAsync((handler, ctx) => handler.SavingAsync(ctx), savingContext, Logger);
+        var creatingContext = new CreatingContext<T>(model);
+        await Handlers.InvokeAsync((handler, ctx) => handler.CreatingAsync(ctx), creatingContext, Logger);
 
-        await Store.SaveAsync(model);
+        await Store.CreateAsync(model);
+        await Store.SaveChangesAsync();
 
-        var savedContext = new SavedContext<T>(model);
-        await _handlers.InvokeAsync((handler, ctx) => handler.SavedAsync(ctx), savedContext, Logger);
+        var createdContext = new CreatedContext<T>(model);
+        await Handlers.InvokeAsync((handler, ctx) => handler.CreatedAsync(ctx), createdContext, Logger);
     }
 
     public async ValueTask UpdateAsync(T model, JsonNode data = null)
@@ -131,10 +125,13 @@ public class ModelManager<T> : IModelManager<T>
         ArgumentNullException.ThrowIfNull(model);
 
         var updatingContext = new UpdatingContext<T>(model, data);
-        await _handlers.InvokeAsync((handler, ctx) => handler.UpdatingAsync(ctx), updatingContext, Logger);
+        await Handlers.InvokeAsync((handler, ctx) => handler.UpdatingAsync(ctx), updatingContext, Logger);
+
+        await Store.UpdateAsync(model);
+        await Store.SaveChangesAsync();
 
         var updatedContext = new UpdatedContext<T>(model);
-        await _handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, Logger);
+        await Handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, Logger);
     }
 
     public async ValueTask<ValidationResultDetails> ValidateAsync(T model)
@@ -142,10 +139,10 @@ public class ModelManager<T> : IModelManager<T>
         ArgumentNullException.ThrowIfNull(model);
 
         var validatingContext = new ValidatingContext<T>(model);
-        await _handlers.InvokeAsync((handler, ctx) => handler.ValidatingAsync(ctx), validatingContext, Logger);
+        await Handlers.InvokeAsync((handler, ctx) => handler.ValidatingAsync(ctx), validatingContext, Logger);
 
         var validatedContext = new ValidatedContext<T>(model, validatingContext.Result);
-        await _handlers.InvokeAsync((handler, ctx) => handler.ValidatedAsync(ctx), validatedContext, Logger);
+        await Handlers.InvokeAsync((handler, ctx) => handler.ValidatedAsync(ctx), validatedContext, Logger);
 
         return validatingContext.Result;
     }
@@ -153,20 +150,6 @@ public class ModelManager<T> : IModelManager<T>
     public async ValueTask<IEnumerable<T>> GetAllAsync()
     {
         var models = await Store.GetAllAsync();
-
-        foreach (var model in models)
-        {
-            await LoadAsync(model);
-        }
-
-        return models;
-    }
-
-    public async ValueTask<IEnumerable<T>> FindBySourceAsync(string source)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(source);
-
-        var models = (await Store.GetAllAsync()).Where(x => x.Source == source);
 
         foreach (var model in models)
         {
@@ -185,18 +168,6 @@ public class ModelManager<T> : IModelManager<T>
     {
         var loadedContext = new LoadedContext<T>(model);
 
-        await _handlers.InvokeAsync((handler, context) => handler.LoadedAsync(context), loadedContext, Logger);
-    }
-
-    public async ValueTask<IEnumerable<T>> GetAsync(string source)
-    {
-        var models = await Store.GetAsync(source);
-
-        foreach (var model in models)
-        {
-            await LoadAsync(model);
-        }
-
-        return models;
+        await Handlers.InvokeAsync((handler, context) => handler.LoadedAsync(context), loadedContext, Logger);
     }
 }

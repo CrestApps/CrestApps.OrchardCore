@@ -26,7 +26,7 @@ public sealed class ProviderConnectionsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly IModelManager<AIProviderConnection> _manager;
+    private readonly INamedSourceModelManager<AIProviderConnection> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IShellReleaseManager _shellReleaseManager;
@@ -38,7 +38,7 @@ public sealed class ProviderConnectionsController : Controller
     internal readonly IStringLocalizer S;
 
     public ProviderConnectionsController(
-        IModelManager<AIProviderConnection> manager,
+        INamedSourceModelManager<AIProviderConnection> manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IShellReleaseManager shellReleaseManager,
@@ -179,7 +179,7 @@ public sealed class ProviderConnectionsController : Controller
         {
             _shellReleaseManager.RequestRelease();
 
-            await _manager.SaveAsync(model);
+            await _manager.CreateAsync(model);
             await _notifier.SuccessAsync(H["A new connection has been created successfully."]);
 
             return RedirectToAction(nameof(Index));
@@ -242,7 +242,7 @@ public sealed class ProviderConnectionsController : Controller
         {
             _shellReleaseManager.RequestRelease();
 
-            await _manager.SaveAsync(mutableInstance);
+            await _manager.UpdateAsync(mutableInstance);
 
             await _notifier.SuccessAsync(H["The connection has been updated successfully."]);
 

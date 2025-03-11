@@ -20,10 +20,10 @@ public abstract class ModelHandlerBase<T> : IModelHandler<T>
     public virtual Task LoadedAsync(LoadedContext<T> context)
         => Task.CompletedTask;
 
-    public virtual Task SavedAsync(SavedContext<T> context)
+    public virtual Task CreatedAsync(CreatedContext<T> context)
         => Task.CompletedTask;
 
-    public virtual Task SavingAsync(SavingContext<T> context)
+    public virtual Task CreatingAsync(CreatingContext<T> context)
         => Task.CompletedTask;
 
     public virtual Task UpdatedAsync(UpdatedContext<T> context)
