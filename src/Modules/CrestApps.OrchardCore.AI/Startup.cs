@@ -216,7 +216,7 @@ public sealed class ConnectionManagementStartup : StartupBase
         services.AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderConnectionsOptionsConfiguration>();
         services.AddDisplayDriver<AIProviderConnection, AIProviderConnectionDisplayDriver>();
         services.AddNavigationProvider<AIConnectionsAdminMenu>();
-        services.AddPermissionProvider<AIPermissionProvider>();
+        services.AddPermissionProvider<AIConnectionPermissionsProvider>();
     }
 }
 

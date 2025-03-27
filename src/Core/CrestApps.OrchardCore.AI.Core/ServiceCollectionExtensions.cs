@@ -27,7 +27,6 @@ public static class ServiceCollectionExtensions
             .AddScoped<IModelHandler<AIProfile>, AIProfileHandler>();
 
         services
-            .AddPermissionProvider<AIPermissionsProvider>()
             .AddScoped<IAuthorizationHandler, AIProfileAuthenticationHandler>()
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.CollectionName));
 

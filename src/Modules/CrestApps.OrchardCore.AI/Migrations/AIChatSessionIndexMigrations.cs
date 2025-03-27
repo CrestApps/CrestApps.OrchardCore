@@ -5,7 +5,7 @@ using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
 
-internal sealed class AIChatSessionIndexMigrations : DataMigration
+public sealed class AIChatSessionIndexMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {

@@ -4,7 +4,7 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Services;
 
-internal sealed class AIPermissionProvider : IPermissionProvider
+internal sealed class AIConnectionPermissionsProvider : IPermissionProvider
 {
     private readonly IEnumerable<Permission> _allPermissions =
     [
