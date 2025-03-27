@@ -4,7 +4,7 @@ using OrchardCore.Data.Migration;
 
 namespace CrestApps.OrchardCore.AI.Chat.Migrations;
 
-public sealed class AIChatMigrations : DataMigration
+internal sealed class AIChatMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
