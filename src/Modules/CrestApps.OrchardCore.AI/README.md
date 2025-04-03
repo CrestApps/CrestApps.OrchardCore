@@ -587,3 +587,9 @@ To avoid conflicts with other workflow tasks, it's recommended to prefix the **R
 ### Deployments with AI Chat
 
 The **AI Services** feature integrates with the **Deployments** module, allowing profiles to be deployed to various environments through Orchard Core's Deployment UI.
+
+---
+
+## Compatibility  
+
+This module is fully compatible with OrchardCore v2.1 and later. However, if you are using OrchardCore versions between `v2.1` and `3.0.0-preview-18562`, you must install the [CrestApps.OrchardCore.Resources module](../CrestApps.OrchardCore.Resources/README.md) module into your web project. Then, enable the `CrestApps.OrchardCore.Resources` feature to ensure all required resource dependencies are available.  

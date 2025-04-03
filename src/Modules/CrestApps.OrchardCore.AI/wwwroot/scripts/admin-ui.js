@@ -12,64 +12,64 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
 aiChatProfileAdmin = function () {
   var initialize = function initialize(selectedLabel) {
     var searchBox = document.getElementById('search-box');
-    var searchAlert = document.getElementById('list-alert');
     var filterElements = document.querySelectorAll('[data-filter-value]');
 
     // If the user press Enter, don't submit.
-    searchBox.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-      }
-    });
-    searchBox.addEventListener('keyup', function (e) {
-      var search = e.target.value.toLowerCase();
-      // On ESC, clear the search box and display all rules.
-      if (e.key == 'Escape' || search == '') {
-        searchAlert.classList.add('d-none');
-        searchBox.value = '';
-        for (var i = 0; i < filterElements.length; i++) {
-          filterElements[i].classList.remove("d-none");
-          filterElements[i].classList.remove("first-child-visible");
-          filterElements[i].classList.remove("last-child-visible");
+    if (searchBox) {
+      var searchAlert = document.getElementById('list-alert');
+      searchBox.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
         }
-        if (filterElements.length > 0) {
-          filterElements[0].classList.add('first-child-visible');
-          filterElements[filterElements.length - 1].classList.add('last-child-visible');
-        }
-      } else {
-        var visibleElements = [];
-        for (var _i = 0; _i < filterElements.length; _i++) {
-          var filter = filterElements[_i];
-          var text = filter.getAttribute('data-filter-value');
-          if (!text) {
-            filter.classList.add("d-none");
-            continue;
-          }
-          var found = text.indexOf(search) > -1;
-          if (found) {
-            filter.classList.remove("d-none");
-            filter.classList.remove("first-child-visible");
-            filter.classList.remove("last-child-visible");
-            visibleElements.push(filter);
-          } else {
-            filter.classList.add("d-none");
-          }
-        }
-        if (visibleElements.length > 0) {
-          visibleElements[0].classList.add('first-child-visible');
-          visibleElements[visibleElements.length - 1].classList.add('last-child-visible');
+      });
+      searchBox.addEventListener('keyup', function (e) {
+        var search = e.target.value.toLowerCase();
+        // On ESC, clear the search box and display all rules.
+        if (e.key == 'Escape' || search == '') {
           searchAlert.classList.add('d-none');
+          searchBox.value = '';
+          for (var i = 0; i < filterElements.length; i++) {
+            filterElements[i].classList.remove("d-none");
+            filterElements[i].classList.remove("first-child-visible");
+            filterElements[i].classList.remove("last-child-visible");
+          }
+          if (filterElements.length > 0) {
+            filterElements[0].classList.add('first-child-visible');
+            filterElements[filterElements.length - 1].classList.add('last-child-visible');
+          }
         } else {
-          searchAlert.classList.remove('d-none');
+          var visibleElements = [];
+          for (var _i = 0; _i < filterElements.length; _i++) {
+            var filter = filterElements[_i];
+            var text = filter.getAttribute('data-filter-value');
+            if (!text) {
+              filter.classList.add("d-none");
+              continue;
+            }
+            var found = text.indexOf(search) > -1;
+            if (found) {
+              filter.classList.remove("d-none");
+              filter.classList.remove("first-child-visible");
+              filter.classList.remove("last-child-visible");
+              visibleElements.push(filter);
+            } else {
+              filter.classList.add("d-none");
+            }
+          }
+          if (visibleElements.length > 0) {
+            visibleElements[0].classList.add('first-child-visible');
+            visibleElements[visibleElements.length - 1].classList.add('last-child-visible');
+            searchAlert.classList.add('d-none');
+          } else {
+            searchAlert.classList.remove('d-none');
+          }
         }
-      }
-    });
+      });
+    }
     var actions = document.getElementById('actions');
     var items = document.getElementById('items');
     var filters = document.querySelectorAll('.filter');
-    var selectAllCtrl = document.getElementById('select-all');
     var selectedItems = document.getElementById('selected-items');
-    var itemsCheckboxes = document.querySelectorAll("input[type='checkbox'][name='itemIds']");
     function displayActionsOrFilters() {
       // Select all checked checkboxes with name 'itemIds'
       var checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='itemIds']:checked");
@@ -94,40 +94,45 @@ aiChatProfileAdmin = function () {
     // Add click event listeners to each dropdown item
     dropdownItems.forEach(function (item) {
       // Check if the item has a data-action attribute
-      if (item.dataset.action) {
-        item.addEventListener("click", function () {
-          // Get all checked checkboxes
-          var checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='itemIds']:checked");
-
-          // Check if more than one checkbox is checked
-          if (checkedCheckboxes.length > 1) {
-            // Get data attributes from the clicked item
-            var actionData = Object.assign({}, item.dataset);
-            confirmDialog(_objectSpread(_objectSpread({}, actionData), {}, {
-              callback: function callback(r) {
-                if (r) {
-                  // Set the value of the BulkAction option
-                  document.querySelector("[name='Options.BulkAction']").value = actionData.action;
-                  // Trigger the submit action
-                  document.querySelector("[name='submit.BulkAction']").click();
-                }
-              }
-            }));
-          }
-        });
+      if (!item.dataset.action) {
+        return;
       }
-    });
-    selectAllCtrl.addEventListener("click", function () {
-      itemsCheckboxes.forEach(function (checkbox) {
-        if (checkbox !== selectAllCtrl) {
-          checkbox.checked = selectAllCtrl.checked; // Set the checked state of all checkboxes
+      item.addEventListener("click", function () {
+        // Get all checked checkboxes
+        var checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='itemIds']:checked");
+
+        // Check if more than one checkbox is checked
+        if (checkedCheckboxes.length > 1) {
+          // Get data attributes from the clicked item
+          var actionData = Object.assign({}, item.dataset);
+          confirmDialog(_objectSpread(_objectSpread({}, actionData), {}, {
+            callback: function callback(r) {
+              if (r) {
+                // Set the value of the BulkAction option
+                document.querySelector("[name='Options.BulkAction']").value = actionData.action;
+                // Trigger the submit action
+                document.querySelector("[name='submit.BulkAction']").click();
+              }
+            }
+          }));
         }
       });
-
-      // Update the selected items text
-      updateSelectedItemsText();
-      displayActionsOrFilters();
     });
+    var selectAllCtrl = document.getElementById('select-all');
+    var itemsCheckboxes = document.querySelectorAll("input[type='checkbox'][name='itemIds']");
+    if (selectAllCtrl) {
+      selectAllCtrl.addEventListener("click", function () {
+        itemsCheckboxes.forEach(function (checkbox) {
+          if (checkbox !== selectAllCtrl) {
+            checkbox.checked = selectAllCtrl.checked; // Set the checked state of all checkboxes
+          }
+        });
+
+        // Update the selected items text
+        updateSelectedItemsText();
+        displayActionsOrFilters();
+      });
+    }
 
     // Event listener for individual checkboxes
     itemsCheckboxes.forEach(function (checkbox) {
