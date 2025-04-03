@@ -588,8 +588,6 @@ To avoid conflicts with other workflow tasks, it's recommended to prefix the **R
 
 The **AI Services** feature integrates with the **Deployments** module, allowing profiles to be deployed to various environments through Orchard Core's Deployment UI.
 
-Here’s an improved version of your documentation with better clarity and readability:  
-
 ---
 
 ## Compatibility  
