@@ -19,10 +19,16 @@ public sealed class OpenAICompletionClient : DeploymentAwareAICompletionClient
        ILoggerFactory loggerFactory,
        IDistributedCache distributedCache,
        IOptions<AIProviderOptions> providerOptions,
-       IAIToolsService toolsService,
+       IEnumerable<IAICompletionServiceHandler> handlers,
        IOptions<DefaultAIOptions> defaultOptions,
        INamedModelStore<AIDeployment> deploymentStore
-       ) : base(OpenAIConstants.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
+       ) : base(OpenAIConstants.ImplementationName,
+           distributedCache,
+           loggerFactory,
+           providerOptions.Value,
+           defaultOptions.Value,
+           handlers,
+           deploymentStore)
     {
     }
 

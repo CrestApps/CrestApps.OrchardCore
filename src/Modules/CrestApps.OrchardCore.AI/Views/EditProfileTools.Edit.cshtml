@@ -4,10 +4,12 @@
 @using OrchardCore
 
 @model EditProfileToolsViewModel
+
 @{
     var hasTools = Model.Tools is not null && Model.Tools.Length > 0;
     var hasInstances = Model.Instances is not null && Model.Instances.Length > 0;
 }
+
 @if (!hasTools && !hasInstances)
 {
     return;

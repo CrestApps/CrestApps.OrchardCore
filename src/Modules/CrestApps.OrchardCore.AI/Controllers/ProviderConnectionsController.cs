@@ -87,7 +87,7 @@ public sealed class ProviderConnectionsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListModelViewModel<AIProviderConnection>
+        var viewModel = new ListSourceModelViewModel<AIProviderConnection>
         {
             Models = [],
             Options = options,
@@ -116,7 +116,7 @@ public sealed class ProviderConnectionsController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/provider/connections", "AIProviderConnectionsIndex")]
-    public ActionResult IndexFilterPOST(ListModelViewModel model)
+    public ActionResult IndexFilterPost(ListModelViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -153,7 +153,7 @@ public sealed class ProviderConnectionsController : Controller
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/provider/connection/create/{providerName}", "AIProviderConnectionCreate")]
-    public async Task<ActionResult> CreatePOST(string providerName)
+    public async Task<ActionResult> CreatePost(string providerName)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageProviderConnections))
         {
@@ -215,7 +215,7 @@ public sealed class ProviderConnectionsController : Controller
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/provider/connection/edit/{id}", "AIProviderConnectionEdit")]
-    public async Task<ActionResult> EditPOST(string id)
+    public async Task<ActionResult> EditPost(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageProviderConnections))
         {

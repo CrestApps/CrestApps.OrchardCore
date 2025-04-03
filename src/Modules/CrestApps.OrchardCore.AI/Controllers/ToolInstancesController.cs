@@ -84,7 +84,7 @@ public sealed class ToolInstancesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListModelViewModel<AIToolInstance>
+        var viewModel = new ListSourceModelViewModel<AIToolInstance>
         {
             Models = [],
             Options = options,
@@ -113,7 +113,7 @@ public sealed class ToolInstancesController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/tool/instances", "AIToolInstancesIndex")]
-    public ActionResult IndexFilterPOST(ListModelViewModel model)
+    public ActionResult IndexFilterPost(ListModelViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -152,7 +152,7 @@ public sealed class ToolInstancesController : Controller
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/tool/instances/create/{source}", "AIToolInstanceCreate")]
-    public async Task<ActionResult> CreatePOST(string source)
+    public async Task<ActionResult> CreatePost(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIToolInstances))
         {
@@ -215,7 +215,7 @@ public sealed class ToolInstancesController : Controller
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/tool/instances/edit/{id}", "AIToolInstanceEdit")]
-    public async Task<ActionResult> EditPOST(string id)
+    public async Task<ActionResult> EditPost(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIToolInstances))
         {

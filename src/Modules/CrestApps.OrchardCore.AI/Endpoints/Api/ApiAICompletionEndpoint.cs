@@ -117,7 +117,7 @@ internal static class ApiAICompletionEndpoint
                 Profile = profile,
             });
 
-            bestChoice = completion?.Choices?.FirstOrDefault();
+            bestChoice = completion?.Messages?.FirstOrDefault();
 
             message = new AIChatSessionPrompt
             {
@@ -149,7 +149,7 @@ internal static class ApiAICompletionEndpoint
                 Session = chatSession,
             });
 
-            bestChoice = completion?.Choices?.FirstOrDefault();
+            bestChoice = completion?.Messages?.FirstOrDefault();
 
             message = new AIChatSessionPrompt
             {
@@ -181,7 +181,7 @@ internal static class ApiAICompletionEndpoint
 
         return TypedResults.Ok(new AIChatResponse
         {
-            Success = completion?.Choices?.Any() ?? false,
+            Success = completion?.Messages?.Any() ?? false,
             Type = profile.Type.ToString(),
             SessionId = chatSession.SessionId,
             IsNew = isNew,
@@ -236,8 +236,8 @@ internal static class ApiAICompletionEndpoint
             var titleResponse = await completionService.CompleteAsync(profile.Source, transcription, context);
 
             // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
-            chatSession.Title = titleResponse.Choices.Any()
-                ? Str.Truncate(titleResponse.Choices.First().Text, 255)
+            chatSession.Title = titleResponse.Messages.Count > 0
+                ? Str.Truncate(titleResponse.Messages.First().Text, 255)
                 : Str.Truncate(userPrompt, 255);
         }
 
@@ -258,7 +258,7 @@ internal static class ApiAICompletionEndpoint
 
         var result = new AIChatResponse
         {
-            Success = completion.Choices.Any(),
+            Success = completion.Messages.Count > 0,
             Type = nameof(AIProfileType.Utility),
             Message = new AIChatResponseMessageDetailed(),
         };
@@ -271,7 +271,7 @@ internal static class ApiAICompletionEndpoint
             }
         }
 
-        result.Message.Content = completion.Choices.FirstOrDefault()?.Text ?? AIConstants.DefaultBlankMessage;
+        result.Message.Content = completion.Messages.FirstOrDefault()?.Text ?? AIConstants.DefaultBlankMessage;
 
         return TypedResults.Ok(result);
     }

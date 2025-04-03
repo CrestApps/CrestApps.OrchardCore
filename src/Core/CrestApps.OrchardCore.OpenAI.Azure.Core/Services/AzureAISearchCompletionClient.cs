@@ -9,14 +9,18 @@ using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Mcp.Core;
+using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Services;
 using CrestApps.OrchardCore.Services;
 using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ModelContextProtocol.Client;
 using OpenAI.Chat;
 using OrchardCore.Contents.Indexing;
 using OrchardCore.Entities;
@@ -31,18 +35,22 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
 
     private readonly INamedModelStore<AIDeployment> _deploymentStore;
     private readonly AzureAISearchIndexSettingsService _azureAISearchIndexSettingsService;
-    private readonly IAIToolsService _toolsService;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IAILinkGenerator _linkGenerator;
     private readonly DefaultAIOptions _defaultOptions;
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
     private readonly ILogger _logger;
+
+    private IAIToolsService _toolsService;
+    private IModelStore<McpConnection> _mcpConnectionsStore;
+    private Dictionary<string, McpConnection> _mcpConnections;
 
     public AzureAISearchCompletionClient(
         INamedModelStore<AIDeployment> deploymentStore,
         IOptions<AIProviderOptions> providerOptions,
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
         AzureAISearchIndexSettingsService azureAISearchIndexSettingsService,
-        IAIToolsService toolService,
+        IServiceProvider serviceProvider,
         IAILinkGenerator linkGenerator,
         IOptions<DefaultAIOptions> defaultOptions,
         ILogger<AzureOpenAICompletionClient> logger)
@@ -50,7 +58,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
     {
         _deploymentStore = deploymentStore;
         _azureAISearchIndexSettingsService = azureAISearchIndexSettingsService;
-        _toolsService = toolService;
+        _serviceProvider = serviceProvider;
         _linkGenerator = linkGenerator;
         _defaultOptions = defaultOptions.Value;
         _azureAISearchDefaultOptions = azureAISearchDefaultOptions.Value;
@@ -273,7 +281,6 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
                 {
                     var result = new Microsoft.Extensions.AI.ChatResponseUpdate
                     {
-                        ChoiceIndex = 0,
                         ResponseId = newUpdate.CompletionId,
                         CreatedAt = newUpdate.CreatedAt,
                         ModelId = newUpdate.Model,
@@ -299,7 +306,6 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
             {
                 var result = new Microsoft.Extensions.AI.ChatResponseUpdate
                 {
-                    ChoiceIndex = 0,
                     ResponseId = update.CompletionId,
                     CreatedAt = update.CreatedAt,
                     ModelId = update.Model,
@@ -366,6 +372,13 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
 
     private async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<ChatToolCall> tollCalls)
     {
+        _toolsService ??= _serviceProvider.GetService<IAIToolsService>();
+
+        if (_toolsService is null)
+        {
+            return;
+        }
+
         prompts.Add(ChatMessage.CreateAssistantMessage(tollCalls));
 
         foreach (var toolCall in tollCalls)
@@ -396,6 +409,13 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
 
     private async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<StreamingChatToolCallUpdate> tollCallsUpdate)
     {
+        _toolsService ??= _serviceProvider.GetService<IAIToolsService>();
+
+        if (_toolsService is null)
+        {
+            return;
+        }
+
         var tollCalls = tollCallsUpdate.Select(x => ChatToolCall.CreateFunctionToolCall(x.ToolCallId, x.FunctionName, x.FunctionArgumentsUpdate));
 
         prompts.Add(ChatMessage.CreateAssistantMessage(tollCalls));
@@ -502,10 +522,13 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
             MaxOutputTokenCount = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
         };
 
-        if (!context.DisableTools && context.Profile is not null &&
-            (context?.Profile.TryGet<AIProfileFunctionInvocationMetadata>(out var funcMetadata) ?? false))
+        var supportTools = !context.DisableTools && context.Profile is not null;
+
+        if (supportTools && context.Profile.TryGet<AIProfileFunctionInvocationMetadata>(out var funcMetadata))
         {
-            if (funcMetadata.Names is not null && funcMetadata.Names.Length > 0)
+            _toolsService ??= _serviceProvider.GetService<IAIToolsService>();
+
+            if (_toolsService is not null && funcMetadata.Names is not null && funcMetadata.Names.Length > 0)
             {
                 foreach (var name in funcMetadata.Names)
                 {
@@ -520,7 +543,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
                 }
             }
 
-            if (funcMetadata.InstanceIds is not null && funcMetadata.InstanceIds.Length > 0)
+            if (_toolsService is not null && funcMetadata.InstanceIds is not null && funcMetadata.InstanceIds.Length > 0)
             {
                 foreach (var instanceId in funcMetadata.InstanceIds)
                 {
@@ -536,7 +559,65 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
             }
         }
 
+        if (supportTools && context.Profile.TryGet<AIProfileMcpMetadata>(out var mcpMetadata) &&
+            mcpMetadata.ConnectionIds is not null &&
+            mcpMetadata.ConnectionIds.Length > 0)
+        {
+            (var hasConnections, var connections) = await GetMcpConnectionsAsync();
+
+            if (hasConnections)
+            {
+                var mcpTools = new Dictionary<string, IEnumerable<Microsoft.Extensions.AI.AITool>>();
+
+                foreach (var connectionId in mcpMetadata.ConnectionIds)
+                {
+                    if (!connections.TryGetValue(connectionId, out var connection))
+                    {
+                        continue;
+                    }
+
+                    if (!mcpTools.TryGetValue(connectionId, out var tools))
+                    {
+                        var client = await McpClientFactoryHelpers.CreateAsync(connection);
+
+                        tools = await client.ListToolsAsync();
+
+                        mcpTools[connectionId] = tools;
+                    }
+
+                    foreach (var tool in tools)
+                    {
+                        if (tool is not Microsoft.Extensions.AI.AIFunction toolFunction)
+                        {
+                            continue;
+                        }
+
+                        // Create the client, and get all functions...
+                        chatOptions.Tools.Add(toolFunction.ToChatTool());
+                    }
+                }
+            }
+        }
+
         return chatOptions;
+    }
+
+    private async Task<(bool, Dictionary<string, McpConnection>)> GetMcpConnectionsAsync()
+    {
+        var exists = _mcpConnections is not null;
+
+        if (_mcpConnections is null)
+        {
+            _mcpConnectionsStore ??= _serviceProvider.GetService<IModelStore<McpConnection>>();
+
+            if (_mcpConnectionsStore is not null)
+            {
+                _mcpConnections = (await _mcpConnectionsStore.GetAllAsync()).ToDictionary(x => x.Id);
+                exists = true;
+            }
+        }
+
+        return (exists, _mcpConnections ??= []);
     }
 
     protected override async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
