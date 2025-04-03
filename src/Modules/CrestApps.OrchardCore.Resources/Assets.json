@@ -22,6 +22,34 @@
   {
     "copy": true,
     "inputs": [
+      "node_modules/easymde/dist/easymde.min.js"
+    ],
+    "output": "wwwroot/vendors/easymde/js/easymde.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/easymde/dist/easymde.min.js"
+    ],
+    "output": "wwwroot/vendors/easymde/js/easymde.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/easymde/dist/easymde.min.css"
+    ],
+    "output": "wwwroot/vendors/easymde/css/easymde.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/easymde/dist/easymde.min.css"
+    ],
+    "output": "wwwroot/vendors/easymde/css/easymde.min.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
       "node_modules/@fortawesome/fontawesome-free/webfonts/*"
     ],
     "output": "wwwroot/vendors/fontawesome-free/webfonts/@"

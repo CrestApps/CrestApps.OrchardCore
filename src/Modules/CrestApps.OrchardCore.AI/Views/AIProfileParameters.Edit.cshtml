@@ -10,7 +10,7 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System description"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <div class="hint mb-1 mt-2">@T["The system message sets the AI's behavior and response style, guiding how it interacts in a conversation."]</div>
+        <div class="hint mb-1">@T["The system message sets the AI's behavior and response style, guiding how it interacts in a conversation."]</div>
         <textarea asp-for="SystemMessage" class="form-control content-preview-text" rows="5" disabled="@Model.IsSystemMessageLocked"></textarea>
     </div>
 </div>
@@ -77,9 +77,15 @@
 }
 
 <style asp-name="codemirror"></style>
-<style asp-name="mdecss" asp-src="~/OrchardCore.Markdown/Styles/mde.min.css" debug-src="~/OrchardCore.Markdown/Styles/mde.css"></style>
+<style asp-name="easymde"></style>
+<style at="Head">
+    .cm-editor-readonly {
+        background-color: var(--bs-secondary-bg, '#e9ecef') !important;
+    }
+</style>
 
-<script at="Foot">
+<script asp-name="easymde" at="Foot"></script>
+<script at="Foot" depends-on="easymde">
     document.addEventListener('DOMContentLoaded', function () {
         const isRtl = @(Orchard.IsRightToLeft() ? "true" : "false");
         const isDisabled = @(Model.IsSystemMessageLocked ? "true" : "false");
@@ -119,9 +125,3 @@
         }
     });
 </script>
-
-<style at="Foot">
-    .cm-editor-readonly {
-        background-color: var(--bs-secondary-bg, '#e9ecef') !important;
-    }
-</style>

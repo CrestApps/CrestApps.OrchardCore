@@ -36,6 +36,13 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
 
         var providerSettingsObject = JsonObject.Create(providerSettingsElements);
 
+        if (providerSettingsObject is null)
+        {
+            _logger.LogWarning("The 'providers' in 'CrestApps_AI:Providers' is invalid.");
+
+            return;
+        }
+
         foreach (var providerPair in providerSettingsObject)
         {
             var providerName = providerPair.Key;
