@@ -10,7 +10,7 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System description"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <div class="hint mt-2">@T["The system message sets the AI's behavior and response style, guiding how it interacts in a conversation."]</div>
+        <div class="hint mb-1">@T["The system message sets the AI's behavior and response style, guiding how it interacts in a conversation."]</div>
         <textarea asp-for="SystemMessage" class="form-control content-preview-text" rows="5" disabled="@Model.IsSystemMessageLocked"></textarea>
     </div>
 </div>
