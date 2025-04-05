@@ -16,9 +16,9 @@ public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClien
         ILoggerFactory loggerFactory,
         AIProviderOptions providerOptions,
         DefaultAIOptions defaultOptions,
-        IAIToolsService toolsService,
+        IEnumerable<IAICompletionServiceHandler> handlers,
         IModelStore<AIDeployment> deploymentStore)
-        : base(name, distributedCache, loggerFactory, providerOptions, defaultOptions, toolsService)
+        : base(name, distributedCache, loggerFactory, providerOptions, defaultOptions, handlers)
     {
         _store = deploymentStore;
     }

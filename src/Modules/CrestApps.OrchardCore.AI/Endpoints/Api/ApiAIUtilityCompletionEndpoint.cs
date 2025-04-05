@@ -67,7 +67,7 @@ internal static class ApiAIUtilityCompletionEndpoint
 
         var result = new AIChatResponse
         {
-            Success = completion.Choices.Any(),
+            Success = completion.Messages.Count > 0,
             Type = nameof(AIProfileType.Utility),
             Message = new AIChatResponseMessageDetailed(),
         };
@@ -80,7 +80,7 @@ internal static class ApiAIUtilityCompletionEndpoint
             }
         }
 
-        result.Message.Content = completion.Choices.FirstOrDefault()?.Text ?? AIConstants.DefaultBlankMessage;
+        result.Message.Content = completion.Messages.FirstOrDefault()?.Text ?? AIConstants.DefaultBlankMessage;
 
         return TypedResults.Ok(result);
     }

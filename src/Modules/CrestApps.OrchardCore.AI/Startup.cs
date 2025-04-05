@@ -184,6 +184,7 @@ public sealed class AIToolsStartup : StartupBase
         services.AddPermissionProvider<AIToolPermissionProvider>();
 
         services.AddAIToolSource<ProfileAwareAIToolSource>(ProfileAwareAIToolSource.ToolSource);
+        services.AddScoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>();
     }
 }
 

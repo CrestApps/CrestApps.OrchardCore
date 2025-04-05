@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.AI.ViewModels;
+namespace CrestApps.OrchardCore.AI.Core.Models;
 
 public class ToolEntry
 {

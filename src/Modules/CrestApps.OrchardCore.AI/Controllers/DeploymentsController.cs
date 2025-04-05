@@ -81,7 +81,7 @@ public sealed class DeploymentsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListModelViewModel<AIDeployment>
+        var viewModel = new ListSourceModelViewModel<AIDeployment>
         {
             Models = [],
             Options = options,
@@ -110,7 +110,7 @@ public sealed class DeploymentsController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/deployments", "AIDeploymentsIndex")]
-    public ActionResult IndexFilterPOST(ListModelViewModel model)
+    public ActionResult IndexFilterPost(ListModelViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -159,7 +159,7 @@ public sealed class DeploymentsController : Controller
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/deployment/create/{providerName}", "AIDeploymentsCreate")]
-    public async Task<ActionResult> CreatePOST(string providerName)
+    public async Task<ActionResult> CreatePost(string providerName)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
         {
@@ -227,7 +227,7 @@ public sealed class DeploymentsController : Controller
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/deployment/edit/{id}", "AIDeploymentsEdit")]
-    public async Task<ActionResult> EditPOST(string id)
+    public async Task<ActionResult> EditPost(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
         {

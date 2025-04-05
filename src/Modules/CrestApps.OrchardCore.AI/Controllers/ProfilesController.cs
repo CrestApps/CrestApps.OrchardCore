@@ -80,7 +80,7 @@ public sealed class ProfilesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListModelViewModel<AIProfile>
+        var viewModel = new ListSourceModelViewModel<AIProfile>
         {
             Models = [],
             Options = options,
@@ -109,7 +109,7 @@ public sealed class ProfilesController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/profiles", "AIProfilesIndex")]
-    public ActionResult IndexFilterPOST(ListModelViewModel model)
+    public ActionResult IndexFilterPost(ListModelViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -153,7 +153,7 @@ public sealed class ProfilesController : Controller
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/profile/create/{source}", "AIProfilesCreate")]
-    public async Task<ActionResult> CreatePOST(string source)
+    public async Task<ActionResult> CreatePost(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
@@ -221,7 +221,7 @@ public sealed class ProfilesController : Controller
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/profile/edit/{id}", "AIProfilesEdit")]
-    public async Task<ActionResult> EditPOST(string id)
+    public async Task<ActionResult> EditPost(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
