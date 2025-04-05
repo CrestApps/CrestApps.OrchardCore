@@ -7,7 +7,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
-namespace CrestApps.OrchardCore.AI.Drivers;
+namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
 
 internal sealed class McpConnectionDisplayDriver : DisplayDriver<McpConnection>
 {

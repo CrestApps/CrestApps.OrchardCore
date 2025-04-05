@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.AI.Core.Models;
 
-namespace CrestApps.OrchardCore.AI.ViewModels;
+namespace CrestApps.OrchardCore.AI.Mcp.ViewModels;
 
 public class EditProfileMcpConnectionsViewModel
 {

@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.AzureAIInference.Handlers;
+namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 
 internal sealed class McpConnectionHandler : ModelHandlerBase<McpConnection>
 {

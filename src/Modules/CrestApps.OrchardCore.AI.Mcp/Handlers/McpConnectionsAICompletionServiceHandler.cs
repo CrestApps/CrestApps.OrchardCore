@@ -5,7 +5,7 @@ using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using OrchardCore.Entities;
 
-namespace CrestApps.OrchardCore.AzureAIInference.Handlers;
+namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 
 public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServiceHandler
 {
