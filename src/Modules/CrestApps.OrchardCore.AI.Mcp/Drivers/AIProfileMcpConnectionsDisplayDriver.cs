@@ -9,7 +9,7 @@ using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
-internal class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIProfile>
+internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IModelStore<McpConnection> _store;
 
