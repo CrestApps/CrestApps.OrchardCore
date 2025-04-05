@@ -8,7 +8,7 @@
     <!-- Miscellaneous Packages -->
     <PackageVersion Include="NuGet.Versioning" Version="6.13.2" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.1.1" />
-    <PackageVersion Include="ModelContextProtocol" Version="0.1.0-preview.4" />
+    <PackageVersion Include="ModelContextProtocol" Version="0.1.0-preview.6" />
   </ItemGroup>
   <ItemGroup>
     <!-- OrchardCore Packages -->

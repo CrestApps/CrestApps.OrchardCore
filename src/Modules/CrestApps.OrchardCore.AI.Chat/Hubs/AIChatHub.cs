@@ -313,11 +313,14 @@ public class AIChatHub : Hub<IAIChatHubClient>
             await writer.WriteAsync(partialMessage, cancellationToken);
         }
 
-        assistantMessage.Content = builder.ToString();
-        assistantMessage.ContentItemIds = contentItemIds.ToList();
-        assistantMessage.References = references;
+        if (builder.Length > 0)
+        {
+            assistantMessage.Content = builder.ToString();
+            assistantMessage.ContentItemIds = contentItemIds.ToList();
+            assistantMessage.References = references;
 
-        chatSession.Prompts.Add(assistantMessage);
+            chatSession.Prompts.Add(assistantMessage);
+        }
 
         await _sessionManager.SaveAsync(chatSession);
     }

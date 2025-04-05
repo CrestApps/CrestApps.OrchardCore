@@ -1,4 +1,5 @@
 @using CrestApps.OrchardCore.AI.Mcp.ViewModels
+@using ModelContextProtocol.Protocol.Transport
 @using OrchardCore
 
 @model McpConnectionFieldsViewModel
@@ -11,3 +12,99 @@
         <span class="hint">@T["The display text for the connection."]</span>
     </div>
 </div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="TransportType" class="@Orchard.GetLabelClasses()">@T["Transport type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select type="text" asp-for="TransportType" class="form-select" asp-items="Model.TransportTypes">
+        </select>
+        <span asp-validation-for="TransportType" class="text-danger"></span>
+        <span class="hint">@T["The display text for the connection."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("transport-type", "transport-type-" + TransportTypes.StdIo, Model.TransportType == TransportTypes.StdIo ? "show" : string.Empty)">
+    <label asp-for="Location" class="@Orchard.GetLabelClasses()">@T["Location"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" asp-for="Location" class="form-control" />
+        <span asp-validation-for="Location" class="text-danger"></span>
+        <span class="hint">@T["The display text for the connection."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="TransportOptions" class="@Orchard.GetLabelClasses()">@T["Transport options"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <div class="form-control">
+            <div id="@Html.IdFor(x => x.TransportOptions)_editor" asp-for="Filters" style="min-height: 180px;" dir="@Orchard.CultureDir()" data-schema="@Model.Schema"></div>
+        </div>
+        <textarea asp-for="TransportOptions" hidden></textarea>
+        <span class="hint">@T["An object of options to pass to the server."]</span>
+        <span asp-validation-for="TransportOptions" class="text-danger"></span>
+    </div>
+</div>
+
+<script at="Foot" asp-name="monaco"></script>
+<script at="Foot" asp-name="transport-options-editor" depends-on="monaco">
+    document.addEventListener('DOMContentLoaded', function() {
+
+        const transportTypeElement = document.getElementById('@Html.IdFor(x => x.TransportType)');
+
+        transportTypeElement.addEventListener('change', function (e) {
+            let value = e.target.value;
+            let className = 'transport-type-' + value;
+            let elements = document.querySelectorAll('.transport-type');
+
+            for (let i = 0; i < elements.length; i++) {
+                var element = elements[i];
+
+                if (element.classList.contains(className)) {
+                    element.classList.remove('d-none');
+                } else {
+                    element.classList.add('d-none');
+                }
+            }
+        });
+
+        require(['vs/editor/editor.main'], function () {
+
+            var html = document.documentElement;
+            const mutationObserver = new MutationObserver(setTheme);
+            mutationObserver.observe(html, { attributes: true });
+
+            function setTheme() {
+                var theme = html.dataset.bsTheme;
+                if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    monaco.editor.setTheme('vs-dark')
+                } else {
+                    monaco.editor.setTheme('vs')
+                }
+            }
+
+            setTheme();
+
+            var modelUri = monaco.Uri.parse("x://crestapps.orchardcore.ai.mcp.transportoptions.json");
+            var editor = document.getElementById('@Html.IdFor(x => x.TransportOptions)_editor');
+            var textArea = document.getElementById('@Html.IdFor(x => x.TransportOptions)');
+            var schema = JSON.parse(editor.dataset.schema)
+            var model = monaco.editor.createModel(textArea.value, "json", modelUri);
+
+            monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+                validate: true,
+                schemas: [{
+                    uri: "x://orchardcore.tenants.featureprofiles.schema.json",
+                    fileMatch: [modelUri.toString()],
+                    schema: schema
+                }]
+            });
+
+            var editor = monaco.editor.create(editor, {
+                model: model
+            });
+
+            window.addEventListener("submit", function () {
+                textArea.value = editor.getValue();
+            });
+        });
+    });
+</script>

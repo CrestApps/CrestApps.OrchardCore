@@ -20,7 +20,7 @@ window.openAIChatManager = function () {
                             <div v-html="message.htmlContent || message.content"></div>
                         </div>
                     </div>
-                    <div class="d-flex justify-content-center message-buttons-container" v-if="message.role !== 'indicator'">
+                    <div class="d-flex justify-content-center message-buttons-container" v-if="!isIndicator(message)">
                         <button class="ms-2 btn btn-sm btn-outline-secondary button-message-toolbox" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
                             <i class="fa-solid fa-copy fa-lg"></i>
                         </button>
@@ -98,7 +98,7 @@ window.openAIChatManager = function () {
                     });
 
                     this.connection.on("ReceiveError", (error) => {
-                        console.log("SignalR Error: ", error);
+                        console.error("SignalR Error: ", error);
                     });
 
                     try {
@@ -170,6 +170,9 @@ window.openAIChatManager = function () {
                 fireEvent(event) {
                     document.dispatchEvent(event);
                 },
+                isIndicator(message) {
+                    return message.role === 'indicator';
+                },
                 sendMessage() {
                     let trimmedPrompt = this.prompt.trim();
 
@@ -183,7 +186,6 @@ window.openAIChatManager = function () {
                     });
 
                     this.streamMessage(trimmedPrompt);
-                    this.showTypingIndicator();
                     this.inputElement.value = '';
                     this.prompt = '';
                 },
@@ -195,10 +197,12 @@ window.openAIChatManager = function () {
                     }
 
                     this.streamingStarted();
+                    this.showTypingIndicator();
 
                     var content = '';
                     var references = {};
 
+                    // Get the index after showing typing indicator.
                     var messageIndex = this.messages.length;
 
                     this.stream = this.connection.stream("SendMessage", this.getProfileId(), trimmedPrompt, this.getSessionId(), null)
@@ -207,9 +211,9 @@ window.openAIChatManager = function () {
                                 let message = this.messages[messageIndex];
 
                                 if (!message) {
-
                                     this.hideTypingIndicator();
-
+                                    // Re-assign the index after hiding the typing indicator.
+                                    messageIndex = this.messages.length;
                                     let newMessage = {
                                         role: "assistant",
                                         content: "",
@@ -253,6 +257,13 @@ window.openAIChatManager = function () {
                                 this.processReferences(references, messageIndex);
                                 this.streamingFinished();
 
+                                if (!this.messages[messageIndex].content) {
+                                    // Blank message received.
+                                    this.hideTypingIndicator();
+                                    this.addMessage(this.getServiceDownMessage());
+                                    console.log('blank message');
+                                }
+
                                 this.stream?.dispose();
                                 this.stream = null;
                             },
@@ -260,14 +271,8 @@ window.openAIChatManager = function () {
                                 this.processReferences(references, messageIndex);
                                 this.streamingFinished();
 
-                                let newMessage = {
-                                    role: "assistant",
-                                    content: "Our service is currently unavailable. Please try again later. We apologize for the inconvenience.",
-                                    htmlContent: "",
-                                };
-
                                 this.hideTypingIndicator();
-                                this.addMessage(newMessage);
+                                this.addMessage(this.getServiceDownMessage());
 
                                 this.stream?.dispose();
                                 this.stream = null;
@@ -276,8 +281,16 @@ window.openAIChatManager = function () {
                             }
                         });
                 },
+                getServiceDownMessage() {
+                    let newMessage = {
+                        role: "assistant",
+                        content: "Our service is currently unavailable. Please try again later. We apologize for the inconvenience.",
+                        htmlContent: "",
+                    };
+
+                    return newMessage;
+                },
                 processReferences(references, messageIndex) {
-                    console.log(references, messageIndex, Object.keys(references).length);
 
                     if (Object.keys(references).length) {
 
@@ -345,7 +358,10 @@ window.openAIChatManager = function () {
                     });
                 },
                 hideTypingIndicator() {
+                    const originalLength = this.messages.length;
                     this.messages = this.messages.filter(msg => msg.role !== 'indicator');
+                    const removedCount = originalLength - this.messages.length;
+                    return removedCount;
                 },
                 scrollToBottom() {
                     setTimeout(() => {

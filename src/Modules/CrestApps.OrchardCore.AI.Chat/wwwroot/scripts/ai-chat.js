@@ -21,7 +21,7 @@ window.openAIChatManager = function () {
     return "<a href=\"".concat(data.href, "\" target=\"_blank\" rel=\"noopener noreferrer\">").concat(data.text, "</a>");
   };
   var defaultConfig = {
-    messageTemplate: "\n            <div class=\"list-group\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                    <div class=\"d-flex align-items-center\">\n                        <div class=\"p-2\">\n                            <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'\"></i>\n                        </div>\n                        <div class=\"p-2 lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent || message.content\"></div>\n                        </div>\n                    </div>\n                    <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"message.role !== 'indicator'\">\n                        <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                            <i class=\"fa-solid fa-copy fa-lg\"></i>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
+    messageTemplate: "\n            <div class=\"list-group\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                    <div class=\"d-flex align-items-center\">\n                        <div class=\"p-2\">\n                            <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'\"></i>\n                        </div>\n                        <div class=\"p-2 lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent || message.content\"></div>\n                        </div>\n                    </div>\n                    <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"!isIndicator(message)\">\n                        <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                            <i class=\"fa-solid fa-copy fa-lg\"></i>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
     indicatorTemplate: "<div class=\"spinner-grow spinner-grow-sm\" role=\"status\"><span class=\"visually-hidden\">Loading...</span></div>"
   };
   var initialize = function initialize(instanceConfig) {
@@ -82,7 +82,7 @@ window.openAIChatManager = function () {
                     });
                   });
                   _this.connection.on("ReceiveError", function (error) {
-                    console.log("SignalR Error: ", error);
+                    console.error("SignalR Error: ", error);
                   });
                   _context.prev = 3;
                   _context.next = 6;
@@ -175,6 +175,9 @@ window.openAIChatManager = function () {
         fireEvent: function fireEvent(event) {
           document.dispatchEvent(event);
         },
+        isIndicator: function isIndicator(message) {
+          return message.role === 'indicator';
+        },
         sendMessage: function sendMessage() {
           var trimmedPrompt = this.prompt.trim();
           if (!trimmedPrompt) {
@@ -185,7 +188,6 @@ window.openAIChatManager = function () {
             content: trimmedPrompt
           });
           this.streamMessage(trimmedPrompt);
-          this.showTypingIndicator();
           this.inputElement.value = '';
           this.prompt = '';
         },
@@ -196,14 +198,19 @@ window.openAIChatManager = function () {
             this.stream = null;
           }
           this.streamingStarted();
+          this.showTypingIndicator();
           var content = '';
           var references = {};
+
+          // Get the index after showing typing indicator.
           var messageIndex = this.messages.length;
           this.stream = this.connection.stream("SendMessage", this.getProfileId(), trimmedPrompt, this.getSessionId(), null).subscribe({
             next: function next(chunk) {
               var message = _this5.messages[messageIndex];
               if (!message) {
                 _this5.hideTypingIndicator();
+                // Re-assign the index after hiding the typing indicator.
+                messageIndex = _this5.messages.length;
                 var newMessage = {
                   role: "assistant",
                   content: "",
@@ -246,6 +253,12 @@ window.openAIChatManager = function () {
               var _this5$stream;
               _this5.processReferences(references, messageIndex);
               _this5.streamingFinished();
+              if (!_this5.messages[messageIndex].content) {
+                // Blank message received.
+                _this5.hideTypingIndicator();
+                _this5.addMessage(_this5.getServiceDownMessage());
+                console.log('blank message');
+              }
               (_this5$stream = _this5.stream) === null || _this5$stream === void 0 || _this5$stream.dispose();
               _this5.stream = null;
             },
@@ -253,21 +266,23 @@ window.openAIChatManager = function () {
               var _this5$stream2;
               _this5.processReferences(references, messageIndex);
               _this5.streamingFinished();
-              var newMessage = {
-                role: "assistant",
-                content: "Our service is currently unavailable. Please try again later. We apologize for the inconvenience.",
-                htmlContent: ""
-              };
               _this5.hideTypingIndicator();
-              _this5.addMessage(newMessage);
+              _this5.addMessage(_this5.getServiceDownMessage());
               (_this5$stream2 = _this5.stream) === null || _this5$stream2 === void 0 || _this5$stream2.dispose();
               _this5.stream = null;
               console.error("Stream error:", err);
             }
           });
         },
+        getServiceDownMessage: function getServiceDownMessage() {
+          var newMessage = {
+            role: "assistant",
+            content: "Our service is currently unavailable. Please try again later. We apologize for the inconvenience.",
+            htmlContent: ""
+          };
+          return newMessage;
+        },
         processReferences: function processReferences(references, messageIndex) {
-          console.log(references, messageIndex, Object.keys(references).length);
           if (Object.keys(references).length) {
             var _message$content;
             var message = this.messages[messageIndex];
@@ -324,9 +339,12 @@ window.openAIChatManager = function () {
           });
         },
         hideTypingIndicator: function hideTypingIndicator() {
+          var originalLength = this.messages.length;
           this.messages = this.messages.filter(function (msg) {
             return msg.role !== 'indicator';
           });
+          var removedCount = originalLength - this.messages.length;
+          return removedCount;
         },
         scrollToBottom: function scrollToBottom() {
           var _this6 = this;

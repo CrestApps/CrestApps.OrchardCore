@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
-using ModelContextProtocol.Client;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AzureAIInference.Handlers;
@@ -11,10 +10,14 @@ namespace CrestApps.OrchardCore.AzureAIInference.Handlers;
 public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServiceHandler
 {
     private readonly IModelStore<McpConnection> _store;
+    private readonly McpService _mcpService;
 
-    public McpConnectionsAICompletionServiceHandler(IModelStore<McpConnection> store)
+    public McpConnectionsAICompletionServiceHandler(
+        IModelStore<McpConnection> store,
+        McpService mcpService)
     {
         _store = store;
+        _mcpService = mcpService;
     }
 
     public async Task ConfigureAsync(CompletionServiceConfigureContext context)
@@ -31,7 +34,8 @@ public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServ
             return;
         }
 
-        var connections = (await _store.GetAllAsync()).ToDictionary(x => x.Id);
+        var connections = (await _store.GetAllAsync())
+            .ToDictionary(x => x.Id);
 
         if (connections.Count == 0)
         {
@@ -47,9 +51,7 @@ public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServ
                 continue;
             }
 
-            var client = await McpClientFactoryHelpers.CreateAsync(connection);
-
-            foreach (var tool in await client.ListToolsAsync())
+            foreach (var tool in await _mcpService.GetToolsAsync(connection))
             {
                 context.ChatOptions.Tools.Add(tool);
             }
