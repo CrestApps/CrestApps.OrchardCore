@@ -62,11 +62,14 @@ internal sealed class McpConnectionHandler : ModelHandlerBase<McpConnection>
             connection.DisplayText = displayText;
         }
 
-        var metadataNode = data["Properties"]?.AsObject();
+        var properties = data["Properties"]?.AsObject();
 
-        if (metadataNode is not null)
+        if (properties is not null)
         {
-            connection.Properties = metadataNode.Clone();
+            foreach (var property in properties)
+            {
+                connection.Properties[property.Key] = property.Value.DeepClone();
+            }
         }
 
         return Task.CompletedTask;

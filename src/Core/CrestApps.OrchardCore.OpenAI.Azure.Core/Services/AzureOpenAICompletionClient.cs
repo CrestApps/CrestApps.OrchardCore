@@ -50,6 +50,8 @@ public sealed class AzureOpenAICompletionClient : DeploymentAwareAICompletionCli
             _ => throw new NotSupportedException("The provided authentication type is not supported.")
         };
 
-        return azureClient.AsChatClient(modelName);
+        return azureClient
+            .GetChatClient(modelName)
+            .AsIChatClient();
     }
 }

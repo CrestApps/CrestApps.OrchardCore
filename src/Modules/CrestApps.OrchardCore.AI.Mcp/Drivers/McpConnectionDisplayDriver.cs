@@ -1,8 +1,8 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.Extensions.Localization;
-using ModelContextProtocol.Protocol.Transport;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
@@ -44,8 +44,8 @@ internal sealed class McpConnectionDisplayDriver : DisplayDriver<McpConnection>
 
             model.TransportTypes =
             [
-                new(S["Standard IO transport"], TransportTypes.StdIo),
-                new(S["Server side events transport"], TransportTypes.Sse),
+                new(S["Standard IO transport"], McpConstants.TransportTypes.StdIo),
+                new(S["Server side events transport"], McpConstants.TransportTypes.Sse),
             ];
 
             model.Schema =
@@ -77,12 +77,12 @@ internal sealed class McpConnectionDisplayDriver : DisplayDriver<McpConnection>
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.TransportType), S["The Transport Type is required."]);
         }
-        else if (model.TransportType != TransportTypes.StdIo && model.TransportType != TransportTypes.Sse)
+        else if (model.TransportType != McpConstants.TransportTypes.StdIo && model.TransportType != McpConstants.TransportTypes.Sse)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.TransportType), S["Unsupported Transport Type."]);
         }
 
-        if (model.TransportType == TransportTypes.StdIo && string.IsNullOrEmpty(model.Location))
+        if (model.TransportType == McpConstants.TransportTypes.StdIo && string.IsNullOrEmpty(model.Location))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Location), S["The Location is required when using StdIo transport type."]);
         }

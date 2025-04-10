@@ -8,7 +8,8 @@
     <!-- Miscellaneous Packages -->
     <PackageVersion Include="NuGet.Versioning" Version="6.13.2" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.1.1" />
-    <PackageVersion Include="ModelContextProtocol" Version="0.1.0-preview.6" />
+    <PackageVersion Include="ModelContextProtocol" Version="0.1.0-preview.7" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.1.0-preview.7" />
   </ItemGroup>
   <ItemGroup>
     <!-- OrchardCore Packages -->
@@ -52,11 +53,11 @@
     <PackageVersion Include="Azure.ResourceManager.CognitiveServices" Version="1.4.0" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Core" Version="1.2.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI" Version="9.3.0-preview.1.25161.3" />
-    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.3.0-preview.1.25161.3" />
-    <PackageVersion Include="Microsoft.Extensions.AI.Ollama" Version="9.3.0-preview.1.25161.3" />
-    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.3.0-preview.1.25161.3" />
-    <PackageVersion Include="Microsoft.Extensions.AI.AzureAIInference" Version="9.3.0-preview.1.25161.3" />
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="9.4.0-preview.1.25207.5" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.4.0-preview.1.25207.5" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Ollama" Version="9.4.0-preview.1.25207.5" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.4.0-preview.1.25207.5" />
+    <PackageVersion Include="Microsoft.Extensions.AI.AzureAIInference" Version="9.4.0-preview.1.25207.5" />
   </ItemGroup>
   <ItemGroup>
     <!-- Testing Packages -->
@@ -66,9 +67,9 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Aspire Packages -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.1.0" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="9.1.0" />
-    <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="9.1.1-beta.169" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.2.0" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="9.2.0" />
+    <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="9.3.0" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
     <!-- .Net9 Packages -->

@@ -1,0 +1,5 @@
+# Model Context Protocol (MCP)
+
+The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) is an open protocol that enables seamless integration between LLM applications and external data sources and tools. Whether you're building an AI-powered IDE, enhancing a chat interface, or creating custom AI workflows, MCP provides a standardized way to connect LLMs with the context they need.
+
+The **Model Context Protocol (MCP)** feature enables seamless connectivity to any MCP-compatible server, allowing you to integrate dynamic AI profiles directly into your applications. By leveraging MCP, your AI models gain access to structured context and real-time data, empowering them to behave like intelligent agents capable of performing actual tasks autonomously on your behalf. This protocol unlocks advanced capabilities such as contextual reasoning, memory, multi-step workflows, and personalized decision-making. With MCP, you can extend your AI models beyond simple prompt responses, turning them into powerful tools that interact with systems, retrieve information, and carry out complex operations in a reliable and scalable way.

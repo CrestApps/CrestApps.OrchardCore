@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using Microsoft.Extensions.AI;
-using ModelContextProtocol;
 using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol.Transport;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Core;
 
@@ -17,13 +17,23 @@ public class McpService
 
         if (!_clients.TryGetValue(connection.Id, out var client))
         {
-            client = await McpClientFactory.CreateAsync(new McpServerConfig()
+            IClientTransport transport = connection.TransportType switch
             {
-                Id = connection.Id,
-                Name = connection.DisplayText,
-                TransportType = connection.TransportType,
-                TransportOptions = connection.TransportOptions,
-            });
+                McpConstants.TransportTypes.StdIo => new StdioClientTransport(new StdioClientTransportOptions()
+                {
+                    Name = connection.DisplayText,
+                    Command = "npx",
+                    EnvironmentVariables = connection.TransportOptions,
+                }),
+                McpConstants.TransportTypes.Sse => new SseClientTransport(new SseClientTransportOptions()
+                {
+                    Name = connection.DisplayText,
+                    Endpoint = new Uri(connection.Location),
+                }),
+                _ => throw new InvalidOperationException("Not supported transport type"),
+            };
+
+            client = await McpClientFactory.CreateAsync(transport);
 
             _clients[connection.Id] = client;
         }

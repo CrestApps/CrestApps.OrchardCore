@@ -109,7 +109,7 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
 
         public override JsonElement JsonSchema { get; }
 
-        protected override async Task<object> InvokeCoreAsync(IEnumerable<KeyValuePair<string, object>> arguments, CancellationToken cancellationToken)
+        protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
         {
             if (_profile is null)
             {

@@ -53,6 +53,8 @@ public sealed class OpenAICompletionClient : DeploymentAwareAICompletionClient
             });
         }
 
-        return client.AsChatClient(connection.GetDefaultDeploymentName());
+        return client
+            .GetChatClient(connection.GetDefaultDeploymentName())
+            .AsIChatClient();
     }
 }

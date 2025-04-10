@@ -16,7 +16,7 @@ public sealed class DefaultAIOptions
 
     public int PastMessagesCount = 10;
 
-    public int? MaximumIterationsPerRequest { get; set; } = 1;
+    public int MaximumIterationsPerRequest { get; set; } = 1;
 
     public bool EnableOpenTelemetry { get; set; }
 

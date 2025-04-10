@@ -395,7 +395,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
                 continue;
             }
 
-            var arguments = toolCall.FunctionArguments.ToObjectFromJson<Dictionary<string, object>>();
+            var arguments = toolCall.FunctionArguments.ToObjectFromJson<Microsoft.Extensions.AI.AIFunctionArguments>();
 
             var result = await function.InvokeAsync(arguments);
 
@@ -434,7 +434,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
                 continue;
             }
 
-            var arguments = toolCall.FunctionArgumentsUpdate.ToObjectFromJson<Dictionary<string, object>>();
+            var arguments = toolCall.FunctionArgumentsUpdate.ToObjectFromJson<Microsoft.Extensions.AI.AIFunctionArguments>();
 
             var result = await function.InvokeAsync(arguments);
 

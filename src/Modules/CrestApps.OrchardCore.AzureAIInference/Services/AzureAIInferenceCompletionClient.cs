@@ -50,6 +50,6 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
             _ => throw new NotSupportedException("The provided authentication type is not supported.")
         };
 
-        return client.AsChatClient(connection.GetDefaultDeploymentName());
+        return client.AsIChatClient(connection.GetDefaultDeploymentName());
     }
 }

@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.AI.Mcp.Core
 @using CrestApps.OrchardCore.AI.Mcp.ViewModels
 @using ModelContextProtocol.Protocol.Transport
 @using OrchardCore
@@ -23,7 +24,7 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses("transport-type", "transport-type-" + TransportTypes.StdIo, Model.TransportType == TransportTypes.StdIo ? "show" : string.Empty)">
+<div class="@Orchard.GetWrapperClasses("transport-type", "transport-type-" + McpConstants.TransportTypes.StdIo, Model.TransportType == McpConstants.TransportTypes.StdIo ? "show" : string.Empty)">
     <label asp-for="Location" class="@Orchard.GetLabelClasses()">@T["Location"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="text" asp-for="Location" class="form-control" />
