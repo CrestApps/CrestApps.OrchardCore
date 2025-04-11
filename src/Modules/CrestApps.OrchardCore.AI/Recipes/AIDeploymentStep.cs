@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -29,7 +30,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
-        var model = context.Step.ToObject<OpenAIModelDeploymentStepModel>();
+        var model = context.Step.ToObject<AIModelDeploymentStepModel>();
         var tokens = model.Deployments.Cast<JsonObject>() ?? [];
 
         foreach (var token in tokens)
@@ -109,7 +110,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
         }
     }
 
-    private sealed class OpenAIModelDeploymentStepModel
+    private sealed class AIModelDeploymentStepModel
     {
         public JsonArray Deployments { get; set; }
     }

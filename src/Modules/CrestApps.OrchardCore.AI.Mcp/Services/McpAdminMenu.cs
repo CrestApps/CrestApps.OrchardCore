@@ -4,11 +4,11 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Services;
 
-internal sealed class AIMcpAdminMenu : AdminNavigationProvider
+internal sealed class McpAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
-    public AIMcpAdminMenu(IStringLocalizer<AIMcpAdminMenu> stringLocalizer)
+    public McpAdminMenu(IStringLocalizer<McpAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
     }

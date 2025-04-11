@@ -1,0 +1,74 @@
+@using CrestApps.OrchardCore.AI.Mcp.Core
+@using CrestApps.OrchardCore.AI.Mcp.ViewModels
+@using ModelContextProtocol.Protocol.Transport
+@using OrchardCore
+
+@model StdioConnectionFieldsViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Command" class="@Orchard.GetLabelClasses()">@T["Command"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" asp-for="Command" class="form-control" />
+        <span asp-validation-for="Command" class="text-danger"></span>
+        <span class="hint">@T["The command to invoke to connect to the server."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Arguments" class="@Orchard.GetLabelClasses()">@T["Command arguments"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <div class="form-control">
+            <div id="@Html.IdFor(x => x.Arguments)_editor" asp-for="Filters" style="min-height: 180px;" dir="@Orchard.CultureDir()" data-schema="@Model.Schema"></div>
+        </div>
+        <textarea asp-for="Arguments" hidden></textarea>
+        <span class="hint">@T["An array of arguments to pass to the server."]</span>
+        <span asp-validation-for="Arguments" class="text-danger"></span>
+    </div>
+</div>
+
+<script at="Foot" asp-name="monaco"></script>
+<script at="Foot" asp-name="transport-options-editor" depends-on="monaco">
+    document.addEventListener('DOMContentLoaded', function() {
+
+        require(['vs/editor/editor.main'], function () {
+
+            var html = document.documentElement;
+            const mutationObserver = new MutationObserver(setTheme);
+            mutationObserver.observe(html, { attributes: true });
+
+            function setTheme() {
+                var theme = html.dataset.bsTheme;
+                if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    monaco.editor.setTheme('vs-dark')
+                } else {
+                    monaco.editor.setTheme('vs')
+                }
+            }
+
+            setTheme();
+
+            var modelUri = monaco.Uri.parse("x://crestapps.orchardcore.ai.mcp.arguments.json");
+            var editor = document.getElementById('@Html.IdFor(x => x.Arguments)_editor');
+            var textArea = document.getElementById('@Html.IdFor(x => x.Arguments)');
+            var schema = JSON.parse(editor.dataset.schema)
+            var model = monaco.editor.createModel(textArea.value, "json", modelUri);
+
+            monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+                validate: true,
+                schemas: [{
+                    uri: "x://orchardcore.tenants.arguments.schema.json",
+                    fileMatch: [modelUri.toString()],
+                    schema: schema
+                }]
+            });
+
+            var editor = monaco.editor.create(editor, {
+                model: model
+            });
+
+            window.addEventListener("submit", function () {
+                textArea.value = editor.getValue();
+            });
+        });
+    });
+</script>

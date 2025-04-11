@@ -1,8 +1,11 @@
 @using System.Globalization
 @using CrestApps.OrchardCore.AI.Mcp.Core.Models
+@using Microsoft.Extensions.Options
 @using OrchardCore.DisplayManagement.Views
 
 @model ShapeViewModel<McpConnection>
+
+@inject IOptions<McpClientAIOptions> Options
 
 @{
     var createdAt = Model.Value.CreatedUtc.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
@@ -11,6 +14,20 @@
 <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: Model.Value.CreatedUtc, Format: "g"))">
     <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
     <time datetime="@createdAt">@await DisplayAsync(await New.Timespan(Utc: Model.Value.CreatedUtc))</time>
+</span>
+
+<span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Connection type"]">
+
+    <i class="text-secondary me-1" aria-hidden="true"></i>
+
+    @if (Options.Value.TransportTypes.TryGetValue(Model.Value.Source, out var type))
+    {
+        @type.DisplayName
+    }
+    else
+    {
+        @Model.Value.Source
+    }
 </span>
 
 @if (!string.IsNullOrEmpty(Model.Value.Author))

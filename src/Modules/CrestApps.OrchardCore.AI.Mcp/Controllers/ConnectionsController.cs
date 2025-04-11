@@ -24,22 +24,22 @@ public sealed class ConnectionsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly IModelManager<McpConnection> _manager;
+    private readonly ISourceModelManager<McpConnection> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<McpConnection> _displayDriver;
-    private readonly AIOptions _aiOptions;
+    private readonly McpClientAIOptions _mcpClientOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
     public ConnectionsController(
-        IModelManager<McpConnection> manager,
+        ISourceModelManager<McpConnection> manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<McpConnection> instanceDisplayManager,
-        IOptions<AIOptions> aiOptions,
+        IOptions<McpClientAIOptions> mcpClientOptions,
         INotifier notifier,
         IHtmlLocalizer<ConnectionsController> htmlLocalizer,
         IStringLocalizer<ConnectionsController> stringLocalizer)
@@ -48,7 +48,7 @@ public sealed class ConnectionsController : Controller
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _displayDriver = instanceDisplayManager;
-        _aiOptions = aiOptions.Value;
+        _mcpClientOptions = mcpClientOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -82,11 +82,12 @@ public sealed class ConnectionsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListModelViewModel<ModelEntry<McpConnection>>
+        var viewModel = new ListSourceModelViewModel<McpConnection>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            SourceNames = _mcpClientOptions.TransportTypes.Select(x => x.Key).Order(),
         };
 
         foreach (var model in result.Models)
@@ -118,19 +119,26 @@ public sealed class ConnectionsController : Controller
         });
     }
 
-    [Admin("ai/mcp/connection/create", "AIMCPConnectionCreate")]
-    public async Task<ActionResult> Create()
+    [Admin("ai/mcp/connection/create/{source}", "AIMCPConnectionCreate")]
+    public async Task<ActionResult> Create(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, McpPermissions.ManageMcpConnections))
         {
             return Forbid();
         }
 
-        var model = await _manager.NewAsync();
+        if (!_mcpClientOptions.TransportTypes.TryGetValue(source, out var type))
+        {
+            await _notifier.ErrorAsync(H["Unable to find a source with the name '{0}'.", source]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        var model = await _manager.NewAsync(source);
 
         var viewModel = new ModelViewModel
         {
-            DisplayName = S["Model Context Protocol"],
+            DisplayName = type.DisplayName,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -139,15 +147,22 @@ public sealed class ConnectionsController : Controller
 
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("ai/mcp/connection/create", "AIMcpConnectionCreate")]
-    public async Task<ActionResult> CreatePost()
+    [Admin("ai/mcp/connection/create/{source}", "AIMcpConnectionCreate")]
+    public async Task<ActionResult> CreatePost(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, McpPermissions.ManageMcpConnections))
         {
             return Forbid();
         }
 
-        var model = await _manager.NewAsync();
+        if (!_mcpClientOptions.TransportTypes.TryGetValue(source, out var type))
+        {
+            await _notifier.ErrorAsync(H["Unable to find a source with the name '{0}'.", source]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        var model = await _manager.NewAsync(source);
 
         var viewModel = new ModelViewModel
         {

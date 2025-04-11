@@ -8,8 +8,13 @@ namespace CrestApps.OrchardCore.AI.Mcp.Core;
 public class McpService
 {
     private readonly Dictionary<string, IMcpClient> _clients = [];
-
     private readonly Dictionary<string, IEnumerable<AITool>> _tools = [];
+    private readonly IEnumerable<IMcpClientTransportProvider> _providers;
+
+    public McpService(IEnumerable<IMcpClientTransportProvider> providers)
+    {
+        _providers = providers;
+    }
 
     public async Task<IMcpClient> GetOrCreateClientAsync(McpConnection connection)
     {
@@ -17,21 +22,22 @@ public class McpService
 
         if (!_clients.TryGetValue(connection.Id, out var client))
         {
-            IClientTransport transport = connection.TransportType switch
+            IClientTransport transport = null;
+
+            foreach (var provider in _providers)
             {
-                McpConstants.TransportTypes.StdIo => new StdioClientTransport(new StdioClientTransportOptions()
+                if (!provider.CanHandle(connection))
                 {
-                    Name = connection.DisplayText,
-                    Command = "npx",
-                    EnvironmentVariables = connection.TransportOptions,
-                }),
-                McpConstants.TransportTypes.Sse => new SseClientTransport(new SseClientTransportOptions()
-                {
-                    Name = connection.DisplayText,
-                    Endpoint = new Uri(connection.Location),
-                }),
-                _ => throw new InvalidOperationException("Not supported transport type"),
-            };
+                    continue;
+                }
+
+                transport = provider.Get(connection);
+            }
+
+            if (transport is null)
+            {
+                throw new InvalidOperationException($"Unable to find an implementation of '{nameof(IMcpClientTransportProvider)}' that supports the connection. Not supported transport type.");
+            }
 
             client = await McpClientFactory.CreateAsync(transport);
 

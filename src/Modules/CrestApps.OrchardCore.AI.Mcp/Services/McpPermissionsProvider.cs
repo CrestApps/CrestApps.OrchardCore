@@ -4,7 +4,7 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Services;
 
-internal sealed class AIMcpPermissionsProvider : IPermissionProvider
+internal sealed class McpPermissionsProvider : IPermissionProvider
 {
     private readonly IEnumerable<Permission> _allPermissions =
     [
