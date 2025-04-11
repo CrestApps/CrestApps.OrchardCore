@@ -24,12 +24,11 @@ public sealed class McpServerToolsAICompletionServiceHandler : IAICompletionServ
 
         context.ChatOptions.Tools ??= [];
 
+        var inputStream = new MemoryStream();
+        var outputStream = new MemoryStream();
+
         // TODO, create in-memory transport.
-        var transport = new SseClientTransport(new SseClientTransportOptions()
-        {
-            Name = "test",
-            Endpoint = new Uri("https://localhost/test"),
-        });
+        var transport = new StreamClientTransport(inputStream, outputStream);
 
         var client = await McpClientFactory.CreateAsync(transport);
 
