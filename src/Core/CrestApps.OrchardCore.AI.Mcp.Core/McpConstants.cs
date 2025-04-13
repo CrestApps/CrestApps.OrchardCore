@@ -6,6 +6,8 @@ public static class McpConstants
     {
         public const string Area = "CrestApps.OrchardCore.AI.Mcp";
 
+        public const string Stdio = "CrestApps.OrchardCore.AI.Mcp.Stdio";
+
         public const string Server = "CrestApps.OrchardCore.AI.Mcp.Server";
     }
 

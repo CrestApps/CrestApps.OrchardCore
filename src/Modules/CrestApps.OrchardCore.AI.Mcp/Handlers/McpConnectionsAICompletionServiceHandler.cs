@@ -2,17 +2,18 @@ using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
+using ModelContextProtocol.Client;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 
 public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServiceHandler
 {
-    private readonly IModelStore<McpConnection> _store;
+    private readonly ISourceModelStore<McpConnection> _store;
     private readonly McpService _mcpService;
 
     public McpConnectionsAICompletionServiceHandler(
-        IModelStore<McpConnection> store,
+        ISourceModelStore<McpConnection> store,
         McpService mcpService)
     {
         _store = store;
@@ -50,7 +51,14 @@ public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServ
                 continue;
             }
 
-            foreach (var tool in await _mcpService.GetToolsAsync(connection))
+            var client = await _mcpService.GetOrCreateClientAsync(connection);
+
+            if (client is null)
+            {
+                continue;
+            }
+
+            foreach (var tool in await client.ListToolsAsync())
             {
                 context.ChatOptions.Tools.Add(tool);
             }

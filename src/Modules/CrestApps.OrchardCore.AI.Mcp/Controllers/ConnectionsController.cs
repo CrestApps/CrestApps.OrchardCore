@@ -127,18 +127,18 @@ public sealed class ConnectionsController : Controller
             return Forbid();
         }
 
-        if (!_mcpClientOptions.TransportTypes.TryGetValue(source, out var type))
+        if (!_mcpClientOptions.TransportTypes.TryGetValue(source, out var entry))
         {
             await _notifier.ErrorAsync(H["Unable to find a source with the name '{0}'.", source]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        var model = await _manager.NewAsync(source);
+        var model = await _manager.NewAsync(entry.Type);
 
         var viewModel = new ModelViewModel
         {
-            DisplayName = type.DisplayName,
+            DisplayName = entry.DisplayName,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -155,14 +155,14 @@ public sealed class ConnectionsController : Controller
             return Forbid();
         }
 
-        if (!_mcpClientOptions.TransportTypes.TryGetValue(source, out var type))
+        if (!_mcpClientOptions.TransportTypes.TryGetValue(source, out var entry))
         {
             await _notifier.ErrorAsync(H["Unable to find a source with the name '{0}'.", source]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        var model = await _manager.NewAsync(source);
+        var model = await _manager.NewAsync(entry.Type);
 
         var viewModel = new ModelViewModel
         {

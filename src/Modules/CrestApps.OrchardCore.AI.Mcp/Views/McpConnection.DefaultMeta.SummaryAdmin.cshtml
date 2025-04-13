@@ -20,9 +20,9 @@
 
     <i class="text-secondary me-1" aria-hidden="true"></i>
 
-    @if (Options.Value.TransportTypes.TryGetValue(Model.Value.Source, out var type))
+    @if (Options.Value.TransportTypes.TryGetValue(Model.Value.Source, out var entry))
     {
-        @type.DisplayName
+        @entry.DisplayName
     }
     else
     {

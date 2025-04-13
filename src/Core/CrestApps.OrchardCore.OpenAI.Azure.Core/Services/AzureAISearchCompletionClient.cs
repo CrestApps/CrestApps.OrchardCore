@@ -20,6 +20,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ModelContextProtocol.Client;
 using OpenAI.Chat;
 using OrchardCore.Contents.Indexing;
 using OrchardCore.Entities;
@@ -601,7 +602,14 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
                             continue;
                         }
 
-                        foreach (var tool in await _mcpService.GetToolsAsync(connection))
+                        var client = await _mcpService.GetOrCreateClientAsync(connection);
+
+                        if (client is null)
+                        {
+                            continue;
+                        }
+
+                        foreach (var tool in await client.ListToolsAsync())
                         {
                             if (tool is not Microsoft.Extensions.AI.AIFunction function)
                             {

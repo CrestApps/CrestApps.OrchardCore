@@ -33,23 +33,13 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>();
+        services.AddScoped<IAICompletionServiceHandler, McpConnectionsAICompletionServiceHandler>();
+        services.AddScoped<McpService>();
         services.AddNavigationProvider<McpAdminMenu>();
         services.AddPermissionProvider<McpPermissionsProvider>();
         services.AddScoped<IModelHandler<McpConnection>, McpConnectionHandler>();
         services.AddDisplayDriver<McpConnection, McpConnectionDisplayDriver>();
-
-        // Register StdIO transport type.
-        services
-            .AddScoped<IMcpClientTransportProvider, StdioClientTransportProvider>()
-            .AddDisplayDriver<McpConnection, StdioMcpConnectionDisplayDriver>()
-            .Configure<McpClientAIOptions>(options =>
-            {
-                options.AddTransportType(McpConstants.TransportTypes.StdIo, (entity) =>
-                {
-                    entity.DisplayName = S["Standard Input/Output"];
-                    entity.Description = S["Uses standard input/output streams to communicate with a locally running model process. Ideal for local subprocess integration."];
-                });
-            });
 
         // Register SSE transport type.
         services
@@ -66,13 +56,29 @@ public sealed class Startup : StartupBase
     }
 }
 
-[Feature(AIConstants.Feature.AITools)]
-public sealed class ToolsStartup : StartupBase
+[Feature(McpConstants.Feature.Stdio)]
+public sealed class StdIoStartup : StartupBase
 {
+    internal readonly IStringLocalizer S;
+
+    public StdIoStartup(IStringLocalizer<Startup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>();
-        services.AddScoped<IAICompletionServiceHandler, McpConnectionsAICompletionServiceHandler>();
+        services
+            .AddScoped<IMcpClientTransportProvider, StdioClientTransportProvider>()
+            .AddDisplayDriver<McpConnection, StdioMcpConnectionDisplayDriver>()
+            .Configure<McpClientAIOptions>(options =>
+            {
+                options.AddTransportType(McpConstants.TransportTypes.StdIo, (entity) =>
+                {
+                    entity.DisplayName = S["Standard Input/Output"];
+                    entity.Description = S["Uses standard input/output streams to communicate with a locally running model process. Ideal for local subprocess integration."];
+                });
+            });
     }
 }
 

@@ -57,7 +57,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
     protected virtual bool SupportFunctionInvocation(AICompletionContext context, string modelName)
     {
-        return !context.DisableTools && _defaultOptions.EnableFunctionInvocation;
+        return !context.DisableTools;
     }
 
     protected virtual void ConfigureLogger(LoggingChatClient client)

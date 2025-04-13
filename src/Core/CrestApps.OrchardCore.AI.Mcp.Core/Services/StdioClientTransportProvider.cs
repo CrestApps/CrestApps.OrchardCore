@@ -8,7 +8,7 @@ public sealed class StdioClientTransportProvider : IMcpClientTransportProvider
 {
     public bool CanHandle(McpConnection connection)
     {
-        return connection.Source == McpConstants.TransportTypes.Sse;
+        return connection.Source == McpConstants.TransportTypes.StdIo;
     }
 
     public IClientTransport Get(McpConnection connection)
