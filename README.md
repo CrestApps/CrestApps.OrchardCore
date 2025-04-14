@@ -72,6 +72,9 @@ See the [OpenAI Module README](src/Modules/CrestApps.OrchardCore.OpenAI/README.m
 ### Ollama Module
 Extends the **AI Module** by integrating any Ollama model. See the [Ollama Module README](src/Modules/CrestApps.OrchardCore.Ollama/README.md).  
 
+### Model Context Protocol (MCP) Module
+Enhances the **AI Module** by adding support for connecting to any MCP server, whether hosted locally or remotely. For more details, see the [MCP Module README](src/Modules/CrestApps.OrchardCore.AI.Mcp/README.md).
+
 ### SignalR Module
 The **SignalR** module enables seamless integration of SignalR within Orchard Core. See the [SignalR Module README](src/Modules/CrestApps.OrchardCore.SignalR/README.md).  
 
