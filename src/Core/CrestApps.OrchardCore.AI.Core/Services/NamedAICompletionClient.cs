@@ -5,6 +5,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
@@ -14,10 +15,10 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
     public const string DefaultLogCategory = "AICompletionService";
 
-    private readonly IAIToolsService _toolsService;
-    private readonly DefaultAIOptions _defaultOptions;
     private readonly IDistributedCache _distributedCache;
     private readonly ILoggerFactory _loggerFactory;
+    private readonly IEnumerable<IAICompletionServiceHandler> _handlers;
+    private readonly DefaultAIOptions _defaultOptions;
     private readonly ILogger _logger;
 
     public NamedAICompletionClient(
@@ -26,16 +27,16 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         ILoggerFactory loggerFactory,
         AIProviderOptions providerOptions,
         DefaultAIOptions defaultOptions,
-        IAIToolsService toolsService)
+        IEnumerable<IAICompletionServiceHandler> handlers)
         : base(providerOptions)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;
         _distributedCache = distributedCache;
         _loggerFactory = loggerFactory;
-        _toolsService = toolsService;
         _defaultOptions = defaultOptions;
         _logger = loggerFactory.CreateLogger(DefaultLogCategory);
+        _handlers = handlers;
     }
 
     public string Name { get; }
@@ -56,7 +57,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
     protected virtual bool SupportFunctionInvocation(AICompletionContext context, string modelName)
     {
-        return !context.DisableTools && _defaultOptions.EnableFunctionInvocation;
+        return !context.DisableTools;
     }
 
     protected virtual void ConfigureLogger(LoggingChatClient client)
@@ -166,44 +167,15 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             MaxOutputTokens = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
         };
 
-        if (SupportFunctionInvocation(context, deploymentName) && (context?.Profile.TryGet<AIProfileFunctionInvocationMetadata>(out var funcMetadata) ?? false))
+        var supportFunctions = SupportFunctionInvocation(context, deploymentName);
+
+        var configureContext = new CompletionServiceConfigureContext(chatOptions, context.Profile, supportFunctions);
+
+        await _handlers.InvokeAsync((handler, ctx) => handler.ConfigureAsync(ctx), configureContext, _logger);
+
+        if (!supportFunctions || (chatOptions.Tools is not null && chatOptions.Tools.Count == 0))
         {
-            chatOptions.Tools = [];
-
-            if (funcMetadata.Names is not null && funcMetadata.Names.Length > 0)
-            {
-                foreach (var name in funcMetadata.Names)
-                {
-                    var tool = await _toolsService.GetByNameAsync(name);
-
-                    if (tool is null)
-                    {
-                        continue;
-                    }
-
-                    chatOptions.Tools.Add(tool);
-                }
-            }
-
-            if (funcMetadata.InstanceIds is not null && funcMetadata.InstanceIds.Length > 0)
-            {
-                foreach (var instanceId in funcMetadata.InstanceIds)
-                {
-                    var tool = await _toolsService.GetByInstanceIdAsync(instanceId);
-
-                    if (tool is null)
-                    {
-                        continue;
-                    }
-
-                    chatOptions.Tools.Add(tool);
-                }
-            }
-
-            if (chatOptions.Tools.Count == 0)
-            {
-                chatOptions.Tools = null;
-            }
+            chatOptions.Tools = null;
         }
 
         ConfigureChatOptions(chatOptions, deploymentName);

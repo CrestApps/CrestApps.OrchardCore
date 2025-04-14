@@ -99,7 +99,7 @@ public sealed class AICompletionTask : TaskActivity<AICompletionTask>
                 UserMarkdownInResponse = IncludeHtmlResponse,
             });
 
-            var bestChoice = completion.Choices.FirstOrDefault();
+            var bestChoice = completion.Messages.FirstOrDefault();
 
             if (string.IsNullOrEmpty(bestChoice?.Text))
             {

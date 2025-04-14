@@ -228,8 +228,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
             ], context);
 
             // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
-            chatSession.Title = titleResponse.Choices.Any()
-                ? Str.Truncate(titleResponse.Choices.First().Text, 255)
+            chatSession.Title = titleResponse.Messages.Count > 0
+                ? Str.Truncate(titleResponse.Messages.First().Text, 255)
                 : Str.Truncate(userPrompt, 255);
         }
 
@@ -277,50 +277,50 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, transcript, completionContext, cancellationToken))
         {
-            if (chunk.ChoiceIndex == 0)
+            if (chunk.AdditionalProperties is not null)
             {
-                if (chunk.AdditionalProperties is not null)
+                if (chunk.AdditionalProperties.TryGetValue<IList<string>>("ContentItemIds", out var ids))
                 {
-                    if (chunk.AdditionalProperties.TryGetValue<IList<string>>("ContentItemIds", out var ids))
+                    foreach (var id in ids)
                     {
-                        foreach (var id in ids)
-                        {
-                            contentItemIds.Add(id);
-                        }
-                    }
-
-                    if (chunk.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
-                    {
-                        foreach (var (key, value) in referenceItems)
-                        {
-                            references[key] = value;
-                        }
+                        contentItemIds.Add(id);
                     }
                 }
 
-                if (string.IsNullOrEmpty(chunk.Text))
+                if (chunk.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
                 {
-                    continue;
+                    foreach (var (key, value) in referenceItems)
+                    {
+                        references[key] = value;
+                    }
                 }
-
-                builder.Append(chunk.Text);
-
-                var partialMessage = new CompletionPartialMessage
-                {
-                    MessageId = assistantMessage.Id,
-                    Content = chunk.Text,
-                    References = references,
-                };
-
-                await writer.WriteAsync(partialMessage, cancellationToken);
             }
+
+            if (string.IsNullOrEmpty(chunk.Text))
+            {
+                continue;
+            }
+
+            builder.Append(chunk.Text);
+
+            var partialMessage = new CompletionPartialMessage
+            {
+                MessageId = assistantMessage.Id,
+                Content = chunk.Text,
+                References = references,
+            };
+
+            await writer.WriteAsync(partialMessage, cancellationToken);
         }
 
-        assistantMessage.Content = builder.ToString();
-        assistantMessage.ContentItemIds = contentItemIds.ToList();
-        assistantMessage.References = references;
+        if (builder.Length > 0)
+        {
+            assistantMessage.Content = builder.ToString();
+            assistantMessage.ContentItemIds = contentItemIds.ToList();
+            assistantMessage.References = references;
 
-        chatSession.Prompts.Add(assistantMessage);
+            chatSession.Prompts.Add(assistantMessage);
+        }
 
         await _sessionManager.SaveAsync(chatSession);
     }
@@ -357,43 +357,40 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, generatedPrompt)], completionContext, cancellationToken))
         {
-            if (chunk.ChoiceIndex == 0)
+            if (chunk.AdditionalProperties is not null)
             {
-                if (chunk.AdditionalProperties is not null)
+                if (chunk.AdditionalProperties.TryGetValue<IList<string>>("ContentItemIds", out var ids))
                 {
-                    if (chunk.AdditionalProperties.TryGetValue<IList<string>>("ContentItemIds", out var ids))
+                    foreach (var id in ids)
                     {
-                        foreach (var id in ids)
-                        {
-                            contentItemIds.Add(id);
-                        }
-                    }
-
-                    if (chunk.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
-                    {
-                        foreach (var (key, value) in referenceItems)
-                        {
-                            references[key] = value;
-                        }
+                        contentItemIds.Add(id);
                     }
                 }
 
-                if (string.IsNullOrEmpty(chunk.Text))
+                if (chunk.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
                 {
-                    continue;
+                    foreach (var (key, value) in referenceItems)
+                    {
+                        references[key] = value;
+                    }
                 }
-
-                builder.Append(chunk.Text);
-
-                var partialMessage = new CompletionPartialMessage
-                {
-                    MessageId = assistantMessage.Id,
-                    Content = chunk.Text,
-                    References = references,
-                };
-
-                await writer.WriteAsync(partialMessage, cancellationToken);
             }
+
+            if (string.IsNullOrEmpty(chunk.Text))
+            {
+                continue;
+            }
+
+            builder.Append(chunk.Text);
+
+            var partialMessage = new CompletionPartialMessage
+            {
+                MessageId = assistantMessage.Id,
+                Content = chunk.Text,
+                References = references,
+            };
+
+            await writer.WriteAsync(partialMessage, cancellationToken);
         }
 
         assistantMessage.Content = builder.ToString();
@@ -419,33 +416,30 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, prompt)], completionContext, cancellationToken))
         {
-            if (chunk.ChoiceIndex == 0)
+            if (chunk.AdditionalProperties is not null)
             {
-                if (chunk.AdditionalProperties is not null)
+                if (chunk.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
                 {
-                    if (chunk.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
+                    foreach (var (key, value) in referenceItems)
                     {
-                        foreach (var (key, value) in referenceItems)
-                        {
-                            references[key] = value;
-                        }
+                        references[key] = value;
                     }
                 }
-
-                if (string.IsNullOrEmpty(chunk.Text))
-                {
-                    continue;
-                }
-
-                var partialMessage = new CompletionPartialMessage
-                {
-                    MessageId = messageId,
-                    Content = chunk.Text,
-                    References = references,
-                };
-
-                await writer.WriteAsync(partialMessage, cancellationToken);
             }
+
+            if (string.IsNullOrEmpty(chunk.Text))
+            {
+                continue;
+            }
+
+            var partialMessage = new CompletionPartialMessage
+            {
+                MessageId = messageId,
+                Content = chunk.Text,
+                References = references,
+            };
+
+            await writer.WriteAsync(partialMessage, cancellationToken);
         }
     }
 }

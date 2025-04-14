@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Localization;
 
-namespace CrestApps.OrchardCore.AI;
+namespace CrestApps.OrchardCore.AI.Core;
 
 public sealed class AIOptions
 {

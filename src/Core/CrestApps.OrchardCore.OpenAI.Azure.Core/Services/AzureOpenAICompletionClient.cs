@@ -2,6 +2,7 @@ using System.ClientModel;
 using Azure.AI.OpenAI;
 using Azure.Identity;
 using CrestApps.Azure.Core;
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -21,10 +22,16 @@ public sealed class AzureOpenAICompletionClient : DeploymentAwareAICompletionCli
        ILoggerFactory loggerFactory,
        IDistributedCache distributedCache,
        IOptions<AIProviderOptions> providerOptions,
-       IAIToolsService toolsService,
+       IEnumerable<IAICompletionServiceHandler> handlers,
        IOptions<DefaultAIOptions> defaultOptions,
        INamedModelStore<AIDeployment> deploymentStore
-       ) : base(AzureOpenAIConstants.StandardImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
+       ) : base(AzureOpenAIConstants.StandardImplementationName,
+           distributedCache,
+           loggerFactory,
+           providerOptions.Value,
+           defaultOptions.Value,
+           handlers,
+           deploymentStore)
     {
     }
 
@@ -43,6 +50,8 @@ public sealed class AzureOpenAICompletionClient : DeploymentAwareAICompletionCli
             _ => throw new NotSupportedException("The provided authentication type is not supported.")
         };
 
-        return azureClient.AsChatClient(modelName);
+        return azureClient
+            .GetChatClient(modelName)
+            .AsIChatClient();
     }
 }

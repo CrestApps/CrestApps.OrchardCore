@@ -2,6 +2,7 @@ using Azure;
 using Azure.AI.Inference;
 using Azure.Identity;
 using CrestApps.Azure.Core;
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -21,10 +22,16 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
         ILoggerFactory loggerFactory,
         IDistributedCache distributedCache,
         IOptions<AIProviderOptions> providerOptions,
-        IAIToolsService toolsService,
+        IEnumerable<IAICompletionServiceHandler> handlers,
         IOptions<DefaultAIOptions> defaultOptions,
         INamedModelStore<AIDeployment> deploymentStore
-        ) : base(AzureAIInferenceConstants.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService, deploymentStore)
+        ) : base(AzureAIInferenceConstants.ImplementationName,
+            distributedCache,
+            loggerFactory,
+            providerOptions.Value,
+            defaultOptions.Value,
+            handlers,
+            deploymentStore)
     {
     }
 
@@ -43,6 +50,6 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
             _ => throw new NotSupportedException("The provided authentication type is not supported.")
         };
 
-        return client.AsChatClient(connection.GetDefaultDeploymentName());
+        return client.AsIChatClient(connection.GetDefaultDeploymentName());
     }
 }

@@ -171,11 +171,6 @@ public sealed class AIToolsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.PostConfigure<DefaultAIOptions>(options =>
-        {
-            options.EnableFunctionInvocation = true;
-        });
-
         services.AddDisplayDriver<AIToolInstance, InvokableToolMetadataDisplayDriver>();
         services.AddDisplayDriver<AIToolInstance, AIProfileToolMetadataDisplayDriver>();
         services.AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>();
@@ -184,6 +179,7 @@ public sealed class AIToolsStartup : StartupBase
         services.AddPermissionProvider<AIToolPermissionProvider>();
 
         services.AddAIToolSource<ProfileAwareAIToolSource>(ProfileAwareAIToolSource.ToolSource);
+        services.AddScoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>();
     }
 }
 
