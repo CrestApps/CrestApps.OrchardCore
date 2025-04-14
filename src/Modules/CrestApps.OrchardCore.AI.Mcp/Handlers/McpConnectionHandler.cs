@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.Core.Handlers;
@@ -46,12 +47,14 @@ internal sealed class McpConnectionHandler : ModelHandlerBase<McpConnection>
     {
         if (isNew)
         {
+            connection.CreatedUtc = _clock.UtcNow;
+
             var user = _httpContextAccessor.HttpContext?.User;
 
             if (user is not null)
             {
                 connection.Author = user.Identity.Name;
-                connection.CreatedUtc = _clock.UtcNow;
+                connection.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             }
         }
 
