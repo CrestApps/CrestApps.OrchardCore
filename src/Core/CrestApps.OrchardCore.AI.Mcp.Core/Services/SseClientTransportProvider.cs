@@ -7,10 +7,8 @@ namespace CrestApps.OrchardCore.AI.Mcp.Core.Services;
 public sealed class SseClientTransportProvider : IMcpClientTransportProvider
 {
     public bool CanHandle(McpConnection connection)
-    {
-        return connection.Source == McpConstants.TransportTypes.Sse;
-    }
-
+        => connection.Source == McpConstants.TransportTypes.Sse;
+    
     public IClientTransport Get(McpConnection connection)
     {
         var metadata = connection.As<SseMcpConnectionMetadata>();

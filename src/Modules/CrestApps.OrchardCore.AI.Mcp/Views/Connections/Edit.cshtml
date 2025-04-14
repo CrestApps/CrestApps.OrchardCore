@@ -6,7 +6,7 @@
     <h1>@RenderTitleSegments(T["Edit '{0}' Connection", Model.DisplayName])</h1>
 </zone>
 
-<form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["providerName"]" enctype="multipart/form-data" class="no-multisubmit">
+<form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["source"]" enctype="multipart/form-data" class="no-multisubmit">
     @Html.ValidationSummary()
     @await DisplayAsync(Model.Editor)
 

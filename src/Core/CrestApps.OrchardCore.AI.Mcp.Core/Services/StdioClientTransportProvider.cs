@@ -7,10 +7,8 @@ namespace CrestApps.OrchardCore.AI.Mcp.Core.Services;
 public sealed class StdioClientTransportProvider : IMcpClientTransportProvider
 {
     public bool CanHandle(McpConnection connection)
-    {
-        return connection.Source == McpConstants.TransportTypes.StdIo;
-    }
-
+        => connection.Source == McpConstants.TransportTypes.StdIo;
+    
     public IClientTransport Get(McpConnection connection)
     {
         var metadata = connection.As<StdioMcpConnectionMetadata>();

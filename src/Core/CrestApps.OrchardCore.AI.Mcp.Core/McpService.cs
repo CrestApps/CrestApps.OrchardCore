@@ -5,7 +5,7 @@ using ModelContextProtocol.Protocol.Transport;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Core;
 
-public class McpService
+public sealed class McpService
 {
     private readonly Dictionary<string, IMcpClient> _clients = [];
     private readonly IEnumerable<IMcpClientTransportProvider> _providers;

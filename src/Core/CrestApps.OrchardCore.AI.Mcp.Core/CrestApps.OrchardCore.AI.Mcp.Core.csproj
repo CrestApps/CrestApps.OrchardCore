@@ -10,16 +10,13 @@
     <PackageTags>$(PackageTags) AI MCP ModelContextProtocol</PackageTags>
   </PropertyGroup>
 
-
   <ItemGroup>
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
     <PackageReference Include="ModelContextProtocol" />
   </ItemGroup>
 
-
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
   </ItemGroup>
-
 
 </Project>
