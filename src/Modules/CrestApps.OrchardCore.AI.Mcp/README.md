@@ -133,7 +133,7 @@ Prefer configuration through code? Here's how to define the same connection usin
 
 ---
 
-### Here is a Screen cast of the Admin Chat User Interface
+### Admin Chat UI with Time MCP Server Integration (MCP Demonstration)
 
 ![Screen cast of the admin chat](../../../docs/images/mcp-integration.gif)
 
