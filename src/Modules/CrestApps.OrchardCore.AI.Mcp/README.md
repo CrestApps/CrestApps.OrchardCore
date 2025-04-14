@@ -57,11 +57,12 @@ For detailed instructions, [click here to learn how to create an AI Profile](../
 
 ---
 
-#### 📦 Explore More MCP Containers
+#### 📦 Explore More MCP Servers (For Reference)
 
-For more available MCP server Docker containers, visit the [MCP section on Docker Hub](https://hub.docker.com/search?q=mcp).
-
-Got it! Here's the corrected and polished version with the examples in the right order **and** accurate transport descriptions:
+- Discover additional MCP server Docker containers on the [MCP section of Docker Hub](https://hub.docker.com/search?q=mcp).
+- Explore MCP servers on [MCP.so](https://mcp.so/).
+- Check out [Glama.ai's MCP Servers page](https://glama.ai/mcp/servers) for further options.
+- Visit [MCPServers.org](https://mcpservers.org/) for more resources.
 
 ---
 
