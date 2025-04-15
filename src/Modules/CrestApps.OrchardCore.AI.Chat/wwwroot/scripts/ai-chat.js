@@ -204,10 +204,15 @@ window.openAIChatManager = function () {
 
           // Get the index after showing typing indicator.
           var messageIndex = this.messages.length;
-          this.stream = this.connection.stream("SendMessage", this.getProfileId(), trimmedPrompt, this.getSessionId(), null).subscribe({
+          var currentSessionId = this.getSessionId();
+          this.stream = this.connection.stream("SendMessage", this.getProfileId(), trimmedPrompt, currentSessionId, null).subscribe({
             next: function next(chunk) {
               var message = _this5.messages[messageIndex];
               if (!message) {
+                console.log(chunk, currentSessionId);
+                if (chunk.sessionId && !currentSessionId) {
+                  _this5.setSessionId(chunk.sessionId);
+                }
                 _this5.hideTypingIndicator();
                 // Re-assign the index after hiding the typing indicator.
                 messageIndex = _this5.messages.length;
@@ -358,8 +363,11 @@ window.openAIChatManager = function () {
         getProfileId: function getProfileId() {
           return this.inputElement.getAttribute('data-profile-id');
         },
+        setSessionId: function setSessionId(sessionId) {
+          this.inputElement.setAttribute('data-session-id', sessionId || '');
+        },
         resetSession: function resetSession() {
-          this.inputElement.setAttribute('data-session-id', '');
+          this.setSessionId('');
           this.isSessionStarted = false;
           if (this.widgetIsInitialized) {
             localStorage.removeItem(this.chatWidgetStateSession);
@@ -442,7 +450,7 @@ window.openAIChatManager = function () {
               sessionId: sessionId
             }
           }));
-          this.inputElement.setAttribute('data-session-id', sessionId);
+          this.setSessionId(sessionId);
           this.isSessionStarted = true;
           if (this.widgetIsInitialized) {
             localStorage.setItem(this.chatWidgetStateSession, sessionId);

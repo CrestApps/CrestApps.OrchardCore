@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 using OrchardCore.Entities;
 
@@ -11,13 +12,16 @@ public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServ
 {
     private readonly ISourceModelStore<McpConnection> _store;
     private readonly McpService _mcpService;
+    private readonly ILogger _logger;
 
     public McpConnectionsAICompletionServiceHandler(
         ISourceModelStore<McpConnection> store,
-        McpService mcpService)
+        McpService mcpService,
+        ILogger<McpConnectionsAICompletionServiceHandler> logger)
     {
         _store = store;
         _mcpService = mcpService;
+        _logger = logger;
     }
 
     public async Task ConfigureAsync(CompletionServiceConfigureContext context)
@@ -51,16 +55,23 @@ public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServ
                 continue;
             }
 
-            var client = await _mcpService.GetOrCreateClientAsync(connection);
-
-            if (client is null)
+            try
             {
-                continue;
+                var client = await _mcpService.GetOrCreateClientAsync(connection);
+
+                if (client is null)
+                {
+                    continue;
+                }
+
+                foreach (var tool in await client.ListToolsAsync())
+                {
+                    context.ChatOptions.Tools.Add(tool);
+                }
             }
-
-            foreach (var tool in await client.ListToolsAsync())
+            catch (Exception ex)
             {
-                context.ChatOptions.Tools.Add(tool);
+                _logger.LogError(ex, "Unable to get the tools from the connection Id '{ConnectionId}' and Name: '{ConnectionName}'", connection.Id, connection.DisplayText);
             }
         }
     }

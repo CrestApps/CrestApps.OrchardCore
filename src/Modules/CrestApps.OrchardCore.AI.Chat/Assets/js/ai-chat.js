@@ -204,13 +204,19 @@ window.openAIChatManager = function () {
 
                     // Get the index after showing typing indicator.
                     var messageIndex = this.messages.length;
+                    var currentSessionId = this.getSessionId();
 
-                    this.stream = this.connection.stream("SendMessage", this.getProfileId(), trimmedPrompt, this.getSessionId(), null)
+                    this.stream = this.connection.stream("SendMessage", this.getProfileId(), trimmedPrompt, currentSessionId, null)
                         .subscribe({
                             next: (chunk) => {
                                 let message = this.messages[messageIndex];
 
                                 if (!message) {
+
+                                    if (chunk.sessionId && !currentSessionId) {
+                                        this.setSessionId(chunk.sessionId);
+                                    }
+
                                     this.hideTypingIndicator();
                                     // Re-assign the index after hiding the typing indicator.
                                     messageIndex = this.messages.length;
@@ -374,8 +380,11 @@ window.openAIChatManager = function () {
                 getProfileId() {
                     return this.inputElement.getAttribute('data-profile-id');
                 },
+                setSessionId(sessionId) {
+                    this.inputElement.setAttribute('data-session-id', sessionId || '');
+                },
                 resetSession() {
-                    this.inputElement.setAttribute('data-session-id', '');
+                    this.setSessionId('');
                     this.isSessionStarted = false;
                     if (this.widgetIsInitialized) {
                         localStorage.removeItem(this.chatWidgetStateSession);
@@ -471,7 +480,7 @@ window.openAIChatManager = function () {
                         return
                     }
                     this.fireEvent(new CustomEvent("initializingSessionOpenAIChat", { detail: { sessionId: sessionId } }))
-                    this.inputElement.setAttribute('data-session-id', sessionId);
+                    this.setSessionId(sessionId);
                     this.isSessionStarted = true;
 
                     if (this.widgetIsInitialized) {
