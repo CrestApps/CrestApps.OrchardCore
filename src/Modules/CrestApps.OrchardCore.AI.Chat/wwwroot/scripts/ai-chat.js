@@ -209,7 +209,6 @@ window.openAIChatManager = function () {
             next: function next(chunk) {
               var message = _this5.messages[messageIndex];
               if (!message) {
-                console.log(chunk, currentSessionId);
                 if (chunk.sessionId && !currentSessionId) {
                   _this5.setSessionId(chunk.sessionId);
                 }
@@ -553,11 +552,24 @@ window.openAIChatManager = function () {
         }
       },
       mounted: function mounted() {
-        this.initializeApp();
-        this.startConnection();
-        if (config.widget) {
-          this.initializeWidget();
-        }
+        var _this9 = this;
+        _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+          return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+            while (1) switch (_context2.prev = _context2.next) {
+              case 0:
+                _context2.next = 2;
+                return _this9.startConnection();
+              case 2:
+                _this9.initializeApp();
+                if (config.widget) {
+                  _this9.initializeWidget();
+                }
+              case 4:
+              case "end":
+                return _context2.stop();
+            }
+          }, _callee2);
+        }))();
       },
       beforeUnmount: function beforeUnmount() {
         if (this.stream) {

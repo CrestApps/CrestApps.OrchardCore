@@ -608,11 +608,13 @@ window.openAIChatManager = function () {
                 }
             },
             mounted() {
-                this.initializeApp();
-                this.startConnection();
-                if (config.widget) {
-                    this.initializeWidget();
-                }
+                (async () => {
+                    await this.startConnection();
+                    this.initializeApp();
+                    if (config.widget) {
+                        this.initializeWidget();
+                    }
+                })();
             },
             beforeUnmount() {
                 if (this.stream) {
