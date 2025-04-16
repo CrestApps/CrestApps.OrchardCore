@@ -21,6 +21,7 @@
     <PackageVersion Include="OrchardCore.ContentManagement.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentTypes" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentTypes.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Contents.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Contents" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Data.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.DisplayManagement" Version="$(OrchardCoreVersion)" />
@@ -39,6 +40,7 @@
     <PackageVersion Include="OrchardCore.Users.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Users.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Deployment.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheAdmin" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheAgencyTheme" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheBlogTheme" Version="$(OrchardCoreVersion)" />

@@ -27,6 +27,7 @@
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
     <PackageReference Include="OrchardCore.Deployment.Abstractions" />
+    <PackageReference Include="OrchardCore.Contents.Core" />
   </ItemGroup>
 
   <ItemGroup>
