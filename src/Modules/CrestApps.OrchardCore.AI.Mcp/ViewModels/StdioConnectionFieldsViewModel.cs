@@ -8,6 +8,13 @@ public class StdioConnectionFieldsViewModel
 
     public string Arguments { get; set; }
 
+    public string WorkingDirectory { get; set; }
+
+    public string EnvironmentVariables { get; set; }
+
     [BindNever]
-    public string Schema { get; set; }
+    public string EnvironmentVariablesSchema { get; set; }
+
+    [BindNever]
+    public string ArgumentsSchema { get; set; }
 }

@@ -305,6 +305,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             var partialMessage = new CompletionPartialMessage
             {
+                SessionId = chatSession.SessionId,
                 MessageId = assistantMessage.Id,
                 Content = chunk.Text,
                 References = references,
@@ -385,6 +386,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             var partialMessage = new CompletionPartialMessage
             {
+                SessionId = sessionId,
                 MessageId = assistantMessage.Id,
                 Content = chunk.Text,
                 References = references,

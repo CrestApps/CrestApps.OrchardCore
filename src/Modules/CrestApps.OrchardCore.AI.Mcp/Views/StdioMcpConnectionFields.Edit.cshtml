@@ -18,56 +18,87 @@
     <label asp-for="Arguments" class="@Orchard.GetLabelClasses()">@T["Command arguments"]</label>
     <div class="@Orchard.GetEndClasses()">
         <div class="form-control">
-            <div id="@Html.IdFor(x => x.Arguments)_editor" asp-for="Filters" style="min-height: 180px;" dir="@Orchard.CultureDir()" data-schema="@Model.Schema"></div>
+            <div id="@Html.IdFor(x => x.Arguments)_editor" asp-for="Arguments" style="min-height: 100px;" dir="@Orchard.CultureDir()" data-schema="@Model.ArgumentsSchema"></div>
         </div>
         <textarea asp-for="Arguments" hidden></textarea>
-        <span class="hint">@T["An array of arguments to pass to the server."]</span>
+        <span class="hint">@T["If applicable, specify a JSON array (e.g., {0}) to send to the server.", """[ "arg1" ]"""]</span>
         <span asp-validation-for="Arguments" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="WorkingDirectory" class="@Orchard.GetLabelClasses()">@T["Working directory"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" asp-for="WorkingDirectory" class="form-control" />
+        <span asp-validation-for="WorkingDirectory" class="text-danger"></span>
+        <span class="hint">@T["If applicable, specify the working directory."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="EnvironmentVariables" class="@Orchard.GetLabelClasses()">@T["Environment variables"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <div class="form-control">
+            <div id="@Html.IdFor(x => x.EnvironmentVariables)_editor" asp-for="EnvironmentVariables" style="min-height: 100px;" dir="@Orchard.CultureDir()" data-schema="@Model.EnvironmentVariablesSchema"></div>
+        </div>
+        <textarea asp-for="EnvironmentVariables" hidden></textarea>
+        <span class="hint">@T["If applicable, specify a JSON object (e.g., {0}) to send key-value pairs to the server.", """{ "key": "value" }"""]</span>
+        <span asp-validation-for="EnvironmentVariables" class="text-danger"></span>
     </div>
 </div>
 
 <script at="Foot" asp-name="monaco"></script>
 <script at="Foot" asp-name="transport-options-editor" depends-on="monaco">
-    document.addEventListener('DOMContentLoaded', function() {
-
+    document.addEventListener('DOMContentLoaded', function () {
         require(['vs/editor/editor.main'], function () {
-
-            var html = document.documentElement;
-            const mutationObserver = new MutationObserver(setTheme);
-            mutationObserver.observe(html, { attributes: true });
+            const html = document.documentElement;
 
             function setTheme() {
-                var theme = html.dataset.bsTheme;
-                if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                    monaco.editor.setTheme('vs-dark')
-                } else {
-                    monaco.editor.setTheme('vs')
-                }
+                const theme = html.dataset.bsTheme;
+                const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                monaco.editor.setTheme(isDark ? 'vs-dark' : 'vs');
             }
 
+            new MutationObserver(setTheme).observe(html, { attributes: true });
             setTheme();
 
-            var modelUri = monaco.Uri.parse("x://crestapps.orchardcore.ai.mcp.arguments.json");
-            var editor = document.getElementById('@Html.IdFor(x => x.Arguments)_editor');
-            var textArea = document.getElementById('@Html.IdFor(x => x.Arguments)');
-            var schema = JSON.parse(editor.dataset.schema)
-            var model = monaco.editor.createModel(textArea.value, "json", modelUri);
+            const editors = [
+                {
+                    id: '@Html.IdFor(x => x.Arguments)',
+                    uri: 'x://crestapps.orchardcore.ai.mcp.Arguments.json',
+                    schemaUri: 'x://orchardcore.tenants.Arguments.schema.json'
+                },
+                {
+                    id: '@Html.IdFor(x => x.EnvironmentVariables)',
+                    uri: 'x://crestapps.orchardcore.ai.mcp.EnvironmentVariables.json',
+                    schemaUri: 'x://orchardcore.tenants.EnvironmentVariables.schema.json'
+                }
+            ];
 
-            monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-                validate: true,
-                schemas: [{
-                    uri: "x://orchardcore.tenants.arguments.schema.json",
-                    fileMatch: [modelUri.toString()],
-                    schema: schema
-                }]
-            });
+            editors.forEach(({ id, uri, schemaUri }) => {
+                const editorEl = document.getElementById(`${id}_editor`);
+                const textArea = document.getElementById(id);
+                const schema = JSON.parse(editorEl.dataset.schema);
+                const modelUri = monaco.Uri.parse(uri);
 
-            var editor = monaco.editor.create(editor, {
-                model: model
-            });
+                const model = monaco.editor.createModel(textArea.value, "json", modelUri);
 
-            window.addEventListener("submit", function () {
-                textArea.value = editor.getValue();
+                monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+                    validate: true,
+                    schemas: [{
+                        uri: schemaUri,
+                        fileMatch: [modelUri.toString()],
+                        schema: schema
+                    }]
+                });
+
+                const editor = monaco.editor.create(editorEl, {
+                    model: model
+                });
+
+                window.addEventListener("submit", () => {
+                    textArea.value = editor.getValue();
+                });
             });
         });
     });
