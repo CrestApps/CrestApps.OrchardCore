@@ -1,10 +1,11 @@
-using Microsoft.Extensions.AI;
 using System.Text.Json;
-using OrchardCore.Json;
-using OrchardCore.Recipes.Services;
-using OrchardCore.Environment.Shell;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Extensions.Features;
+using OrchardCore.Environment.Shell;
+using OrchardCore.Json;
 using OrchardCore.Recipes.Models;
+using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Tools.Recipes;
 
@@ -14,13 +15,18 @@ public sealed class GetStartupRecipesOrchardCoreTool : AIFunction
 
     private readonly DocumentJsonSerializerOptions _options;
     private readonly IEnumerable<IRecipeHarvester> _recipeHarvesters;
+    private readonly ShellSettings _shellSettings;
     private readonly IShellFeaturesManager _shellFeaturesManager;
 
     public GetStartupRecipesOrchardCoreTool(
         IEnumerable<IRecipeHarvester> recipeHarvesters,
+        ShellSettings shellSettings,
+        IOptions<DocumentJsonSerializerOptions> options,
         IShellFeaturesManager shellFeaturesManager)
     {
         _recipeHarvesters = recipeHarvesters;
+        _shellSettings = shellSettings;
+        _options = options.Value;
         _shellFeaturesManager = shellFeaturesManager;
 
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
@@ -40,6 +46,11 @@ public sealed class GetStartupRecipesOrchardCoreTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
+        if (!_shellSettings.IsDefaultShell())
+        {
+            return "This function is not supported in this tenant. It can only be used in the default tenant.";
+        }
+
         var features = await _shellFeaturesManager.GetAvailableFeaturesAsync();
         var recipes = await GetRecipesAsync(features);
 

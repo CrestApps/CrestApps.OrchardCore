@@ -4,11 +4,11 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
-public sealed class FunctionInvocationAICompletionServiceHandler : IAICompletionServiceHandler
+public sealed class FunctionInstancesAICompletionServiceHandler : IAICompletionServiceHandler
 {
     private readonly IAIToolsService _toolsService;
 
-    public FunctionInvocationAICompletionServiceHandler(IAIToolsService toolsService)
+    public FunctionInstancesAICompletionServiceHandler(IAIToolsService toolsService)
     {
         _toolsService = toolsService;
     }
@@ -16,17 +16,18 @@ public sealed class FunctionInvocationAICompletionServiceHandler : IAICompletion
     public async Task ConfigureAsync(CompletionServiceConfigureContext context)
     {
         if (!context.IsFunctionInvocationSupported ||
-            !context.Profile.TryGet<AIProfileFunctionInvocationMetadata>(out var metadata) ||
-            metadata.Names is null || metadata.Names.Length == 0)
+            !context.Profile.TryGet<AIProfileFunctionInstancesMetadata>(out var metadata) ||
+            metadata.InstanceIds is null ||
+            metadata.InstanceIds.Length == 0)
         {
             return;
         }
 
         context.ChatOptions.Tools ??= [];
 
-        foreach (var name in metadata.Names)
+        foreach (var instanceId in metadata.InstanceIds)
         {
-            var tool = await _toolsService.GetByNameAsync(name);
+            var tool = await _toolsService.GetByInstanceIdAsync(instanceId);
 
             if (tool is null)
             {

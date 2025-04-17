@@ -34,6 +34,7 @@ public sealed class CreateOrUpdateContentOrchardCoreTool : AIFunction
         _contentDefinitionManager = contentDefinitionManager;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
             """
             {
@@ -143,13 +144,13 @@ public sealed class CreateOrUpdateContentOrchardCoreTool : AIFunction
         {
             await _contentManager.SaveDraftAsync(contentItem);
 
-            return "A draft content item was successfully saved";
+            return "A draft content item was successfully saved. The new content can be viewed at ";
         }
         else
         {
             await _contentManager.PublishAsync(contentItem);
 
-            return "A content item was successfully published";
+            return "A content item was successfully published. The new content can be viewed at ";
         }
     }
 }

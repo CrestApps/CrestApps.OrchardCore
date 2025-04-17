@@ -41,6 +41,8 @@
     <PackageVersion Include="OrchardCore.Users.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Tenants" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Features" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheAdmin" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheAgencyTheme" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheBlogTheme" Version="$(OrchardCoreVersion)" />

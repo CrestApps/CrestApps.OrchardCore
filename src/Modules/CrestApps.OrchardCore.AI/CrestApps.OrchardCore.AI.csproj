@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
@@ -28,6 +28,8 @@
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
     <PackageReference Include="OrchardCore.Deployment.Abstractions" />
     <PackageReference Include="OrchardCore.Contents.Core" />
+    <PackageReference Include="OrchardCore.Tenants" />
+    <PackageReference Include="OrchardCore.Features" />
   </ItemGroup>
 
   <ItemGroup>

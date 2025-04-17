@@ -560,10 +560,13 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
                     continue;
                 }
             }
+        }
 
-            if (_toolsService is not null && funcMetadata.InstanceIds is not null && funcMetadata.InstanceIds.Length > 0)
+        if (profile.TryGet<AIProfileFunctionInstancesMetadata>(out var instancesMetadata))
+        {
+            if (_toolsService is not null && instancesMetadata.InstanceIds is not null && instancesMetadata.InstanceIds.Length > 0)
             {
-                foreach (var instanceId in funcMetadata.InstanceIds)
+                foreach (var instanceId in instancesMetadata.InstanceIds)
                 {
                     var tool = await _toolsService.GetByInstanceIdAsync(instanceId);
 

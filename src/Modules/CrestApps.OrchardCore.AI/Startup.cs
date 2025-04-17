@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.AI.Migrations;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Recipes;
 using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.AI.Tools.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
@@ -56,6 +57,12 @@ public sealed class Startup : StartupBase
         services
             .AddScoped<IAIToolsService, DefaultAIToolsService>()
             .AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderOptionsConfiguration>();
+
+        // Add tools core functionality.
+        services
+            .AddDisplayDriver<AIProfile, AIProfileToolsDisplayDriver>()
+            .AddScoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>();
+
 
 #pragma warning disable CS0618 // Type or member is obsolete
         services.AddDataMigration<ProfileStoreMigrations>();

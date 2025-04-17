@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Json;
@@ -18,9 +19,11 @@ public sealed class GetNonStartupRecipesOrchardCoreTool : AIFunction
 
     public GetNonStartupRecipesOrchardCoreTool(
         IEnumerable<IRecipeHarvester> recipeHarvesters,
+        IOptions<DocumentJsonSerializerOptions> options,
         IShellFeaturesManager shellFeaturesManager)
     {
         _recipeHarvesters = recipeHarvesters;
+        _options = options.Value;
         _shellFeaturesManager = shellFeaturesManager;
 
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
