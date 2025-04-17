@@ -154,65 +154,60 @@
 
 <script asp-name="OpenAIChatApp" at="Foot"></script>
 <script at="Foot" depends-on="OpenAIChatApp">
-
-    document.addEventListener('DOMContentLoaded', () => {
-
-        openAIChatManager.initialize({
-            signalRHubUrl: '@hubLink',
-            appElementSelector: '#@chatAppHtmlId',
-            chatContainerElementSelector: '#@chatContainerHtmlId',
-            inputElementSelector: '#@userPromptHtmlId',
-            sendButtonElementSelector: '#@buttonHtmlId',
-            placeholderElementSelector: '#@placeholderHtmlId',
-            messages: [],
-            messageTemplate: `
-                <div class="list-group">
-                    <div v-for="(message, index) in messages" :key="index" class="list-group-item p-1">
-                        <div class="d-flex justify-content-between">
-                            <div></div>
-                            <div>
-                                <i :class="message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'"></i>
-                            </div>
-                            <div class="text-end">
-                                <div class="message-buttons-container pe-2" v-if="message.role !== 'indicator'">
-                                    <div class="ms-2 button-message-toolbox" @@click="copyResponse(message.content)" title="@T["Click here to copy response to clipboard."]">
-                                        <i class="fa-solid fa-copy fa-lg text-secondary"></i>
-                                    </div>
+    openAIChatManager.initialize({
+        signalRHubUrl: '@hubLink',
+        appElementSelector: '#@chatAppHtmlId',
+        chatContainerElementSelector: '#@chatContainerHtmlId',
+        inputElementSelector: '#@userPromptHtmlId',
+        sendButtonElementSelector: '#@buttonHtmlId',
+        placeholderElementSelector: '#@placeholderHtmlId',
+        messages: [],
+        messageTemplate: `
+            <div class="list-group">
+                <div v-for="(message, index) in messages" :key="index" class="list-group-item p-1">
+                    <div class="d-flex justify-content-between">
+                        <div></div>
+                        <div>
+                            <i :class="message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'"></i>
+                        </div>
+                        <div class="text-end">
+                            <div class="message-buttons-container pe-2" v-if="!isIndicator(message)">
+                                <div class="ms-2 button-message-toolbox" @@click="copyResponse(message.content)" title="@T["Click here to copy response to clipboard."]">
+                                    <i class="fa-solid fa-copy fa-lg text-secondary"></i>
                                 </div>
                             </div>
                         </div>
-                        <div class="py-2 px-1 lh-base">
-                            <h4 v-if="message.title">{{ message.title }}</h4>
-                            <div v-html="message.htmlContent || message.content"></div>
-                        </div>
                     </div>
+                    <div class="py-2 px-1 lh-base">
+                        <h4 v-if="message.title">{{ message.title }}</h4>
+                        <div v-html="message.htmlContent || message.content"></div>
+                    </div>
+                </div>
 
-                </div>
-            `,
-            indicatorTemplate: `
-                <div class="spinner-grow spinner-grow-sm text-center text-dark" role="status">
-                    <span class="visually-hidden">@T["Loading..."]</span>
-                </div>
-                <div class="spinner-grow spinner-grow-sm text-center text-secondary" role="status">
-                    <span class="visually-hidden">@T["Loading..."]</span>
-                </div>
-                <div class="spinner-grow spinner-grow-sm text-center text-light" role="status">
-                    <span class="visually-hidden">@T["Loading..."]</span>
-                </div>
-            `,
-            widget: {
-                showChatButton: '#@chatWidgetButton',
-                newChatButton: '#@newChatButton',
-                chatWidgetContainer: '#@chatWidgetContainer',
-                chatHistorySection: '#@chatWidgetHistoryList',
-                closeHistoryButton: '#@closeChatHistoryButton',
-                closeChatButton: '#@closeChatButton',
-                showHistoryButton: '#@showHistoryButton',
-                chatWidgetStateName: '@chatWidgetStateName'
-            }
-        });
+            </div>
+        `,
+        indicatorTemplate: `
+            <div class="spinner-grow spinner-grow-sm text-center text-dark" role="status">
+                <span class="visually-hidden">@T["Loading..."]</span>
+            </div>
+            <div class="spinner-grow spinner-grow-sm text-center text-secondary" role="status">
+                <span class="visually-hidden">@T["Loading..."]</span>
+            </div>
+            <div class="spinner-grow spinner-grow-sm text-center text-light" role="status">
+                <span class="visually-hidden">@T["Loading..."]</span>
+            </div>
+        `,
+        widget: {
+            showChatButton: '#@chatWidgetButton',
+            newChatButton: '#@newChatButton',
+            chatWidgetContainer: '#@chatWidgetContainer',
+            chatHistorySection: '#@chatWidgetHistoryList',
+            closeHistoryButton: '#@closeChatHistoryButton',
+            closeChatButton: '#@closeChatButton',
+            showHistoryButton: '#@showHistoryButton',
+            chatWidgetStateName: '@chatWidgetStateName'
+        }
     });
-
 </script>
 
 <style at="Head">

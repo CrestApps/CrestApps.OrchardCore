@@ -8,5 +8,7 @@ public class CompletionPartialMessage
 
     public string Content { get; set; }
 
+    public string SessionId { get; set; }
+
     public Dictionary<string, AICompletionReference> References { get; set; }
 }
