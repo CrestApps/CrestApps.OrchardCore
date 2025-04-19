@@ -71,16 +71,8 @@ public sealed class GetFeatureTool : AIFunction
             return $"Unable to find a feature with the ID: {featureId}.";
         }
 
-        return JsonSerializer.Serialize(new
-        {
-            feature.Name,
-            feature.Id,
-            feature.Category,
-            IsEnabled = _shellFeaturesManager.IsFeatureEnabledAsync(feature.Id),
-            feature.IsAlwaysEnabled,
-            feature.DefaultTenantOnly,
-            feature.EnabledByDependencyOnly,
-            feature.Dependencies,
-        });
+        var isEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(feature.Id);
+
+        return JsonSerializer.Serialize(feature.AsAIObject(isEnabled));
     }
 }

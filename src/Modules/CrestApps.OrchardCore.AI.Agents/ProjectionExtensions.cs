@@ -1,3 +1,4 @@
+using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Agents;
@@ -18,6 +19,21 @@ internal static class ProjectionExtensions
             TablePrefix = shellSettings["TablePrefix"],
             Schema = shellSettings["Schema"],
             Status = shellSettings.State.ToString(),
+        };
+    }
+
+    public static object AsAIObject(this IFeatureInfo feature, bool isEnable)
+    {
+        return new
+        {
+            feature.Name,
+            feature.Id,
+            feature.Category,
+            IsEnabled = isEnable,
+            feature.IsAlwaysEnabled,
+            feature.DefaultTenantOnly,
+            feature.EnabledByDependencyOnly,
+            feature.Dependencies,
         };
     }
 }

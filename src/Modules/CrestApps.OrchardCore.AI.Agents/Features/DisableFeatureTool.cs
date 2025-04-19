@@ -82,16 +82,6 @@ internal sealed class DisableFeatureTool : AIFunction
 
         await _shellFeaturesManager.DisableFeaturesAsync(features, true);
 
-        return $"The feature(s) were disabled successfully. {JsonSerializer.Serialize(features.Select(feature => new
-        {
-            feature.Name,
-            feature.Id,
-            feature.Category,
-            IsEnabled = false,
-            feature.IsAlwaysEnabled,
-            feature.DefaultTenantOnly,
-            feature.EnabledByDependencyOnly,
-            feature.Dependencies
-        }))}";
+        return $"The feature(s) were disabled successfully. {JsonSerializer.Serialize(features.Select(feature => feature.AsAIObject(false)))}";
     }
 }

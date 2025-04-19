@@ -57,16 +57,6 @@ public sealed class ListFeaturesTool : AIFunction
             .Select(x => x.Id)
             .ToHashSet();
 
-        return JsonSerializer.Serialize(features.Select(feature => new
-        {
-            feature.Name,
-            feature.Id,
-            feature.Category,
-            IsEnabled = enabledFeatureIds.Contains(feature.Id),
-            feature.IsAlwaysEnabled,
-            feature.DefaultTenantOnly,
-            feature.EnabledByDependencyOnly,
-            feature.Dependencies,
-        }));
+        return JsonSerializer.Serialize(features.Select(feature => feature.AsAIObject(enabledFeatureIds.Contains(feature.Id))));
     }
 }

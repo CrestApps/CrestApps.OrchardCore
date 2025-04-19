@@ -82,16 +82,6 @@ public sealed class EnableFeatureTool : AIFunction
 
         await _shellFeaturesManager.EnableFeaturesAsync(features, true);
 
-        return $"The feature(s) were enabled successfully. {JsonSerializer.Serialize(features.Select(feature => new
-        {
-            feature.Name,
-            feature.Id,
-            feature.Category,
-            IsEnabled = true,
-            feature.IsAlwaysEnabled,
-            feature.DefaultTenantOnly,
-            feature.EnabledByDependencyOnly,
-            feature.Dependencies
-        }))}";
+        return $"The feature(s) were enabled successfully. {JsonSerializer.Serialize(features.Select(feature => feature.AsAIObject(true)))}";
     }
 }
