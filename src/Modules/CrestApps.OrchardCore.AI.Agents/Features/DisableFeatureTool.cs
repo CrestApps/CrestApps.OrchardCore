@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -61,22 +62,18 @@ internal sealed class DisableFeatureTool : AIFunction
             return "The current user does not have permission to manage features.";
         }
 
-        if (!arguments.TryGetValue("featureIds", out var featureIdsArg))
+        if (!arguments.TryGetFirst<HashSet<string>>("featureIds", out var featureIds))
         {
             return "Unable to find a featureIds argument in the function arguments.";
         }
 
-        var featureIds = ToolHelpers.GetStringValues(featureIdsArg);
-
-        if (!featureIds.Any())
+        if (featureIds.Count == 0)
         {
             return "The featureIds argument is required.";
         }
 
-        var ids = featureIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
         var features = (await _shellFeaturesManager.GetAvailableFeaturesAsync())
-            .Where(feature => ids.Contains(feature.Id) && !feature.EnabledByDependencyOnly && !feature.IsTheme());
+            .Where(feature => featureIds.Contains(feature.Id) && !feature.EnabledByDependencyOnly && !feature.IsTheme());
 
         if (!features.Any())
         {

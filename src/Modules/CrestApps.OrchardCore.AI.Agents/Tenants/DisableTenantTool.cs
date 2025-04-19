@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -60,16 +61,9 @@ public sealed class DisableTenantTool : AIFunction
             return "This function is not supported in this tenant. It can only be used in the default tenant.";
         }
 
-        if (!arguments.TryGetValue("name", out var nameArg))
+        if (!arguments.TryGetFirstString("name", out var name))
         {
             return "Unable to find a name argument in the function arguments.";
-        }
-
-        var name = ToolHelpers.GetStringValue(nameArg);
-
-        if (string.IsNullOrEmpty(name))
-        {
-            return "The name argument is required.";
         }
 
         if (!_shellHost.TryGetSettings(name, out var tenantSettings))

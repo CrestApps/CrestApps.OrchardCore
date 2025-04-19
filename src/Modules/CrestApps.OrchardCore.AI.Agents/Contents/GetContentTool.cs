@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -55,20 +56,9 @@ public sealed class GetContentTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!arguments.TryGetValue("contentItemId", out var data))
+        if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {
             return "Unable to find a contentItemId argument in the function arguments.";
-        }
-
-        string contentItemId;
-
-        if (data is JsonElement jsonElement)
-        {
-            contentItemId = jsonElement.GetString();
-        }
-        else
-        {
-            contentItemId = data.ToString();
         }
 
         var contentItem = await _contentManager.GetAsync(contentItemId);

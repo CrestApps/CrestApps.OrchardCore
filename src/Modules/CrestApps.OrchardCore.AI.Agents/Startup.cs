@@ -14,8 +14,21 @@ namespace CrestApps.OrchardCore.AI.Agents;
 [Feature(AIConstants.Feature.Agents)]
 public sealed class Startup : StartupBase
 {
+    internal readonly IStringLocalizer S;
+
+    public Startup(IStringLocalizer<Startup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddAITool<ListTimeZoneTool>(ListTimeZoneTool.TheName, (o) =>
+        {
+            o.Title = S["List system Time Zones"];
+            o.Description = S["Retrieves a list of the available time zones in the system."];
+            o.Category = S["System"];
+        });
     }
 }
 
@@ -128,6 +141,13 @@ public sealed class TenantsToolsStartup : StartupBase
             o.Description = S["Reloads the configuration and state of an existing tenant."];
             o.Category = S["Tenants Management"];
         });
+
+        services.AddAITool<SetupTenantTool>(SetupTenantTool.TheName, (o) =>
+        {
+            o.Title = S["Setup Tenant"];
+            o.Description = S["Sets up new tenants."];
+            o.Category = S["Tenants Management"];
+        });
     }
 }
 
@@ -202,7 +222,7 @@ public sealed class ContentsToolsStartup : StartupBase
         services.AddAITool<GetContentItemLinkTool>(GetContentItemLinkTool.TheName, (o) =>
         {
             o.Title = S["Retrieve a Link for a Content Item"];
-            o.Description = S["Retrieves a link for a content type."];
+            o.Description = S["Retrieves a link for a content item."];
             o.Category = S["Content Management"];
         });
     }

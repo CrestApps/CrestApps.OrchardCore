@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -69,7 +70,7 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        if (!arguments.TryGetValue("recipeName", out var data))
+        if (!arguments.TryGetFirstString("recipeName", out var recipeName))
         {
             return "Unable to find a recipeName argument in the function arguments.";
         }
@@ -77,15 +78,6 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageRecipes))
         {
             return "You do not have permission to execute a recipe.";
-        }
-
-        var recipeName = data is JsonElement jsonElement
-            ? jsonElement.GetString()
-            : data?.ToString();
-
-        if (string.IsNullOrEmpty(recipeName))
-        {
-            return "No value was given as the recipeName argument.";
         }
 
         var features = await _shellFeaturesManager.GetAvailableFeaturesAsync();

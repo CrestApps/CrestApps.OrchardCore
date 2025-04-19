@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -57,16 +58,9 @@ public sealed class FeaturesSearchTool : AIFunction
             return "The current user does not have permission to manage features.";
         }
 
-        if (!arguments.TryGetValue("name", out var nameArg))
+        if (!arguments.TryGetFirstString("name", out var name))
         {
             return "Unable to find a name argument in the function arguments.";
-        }
-
-        var name = ToolHelpers.GetStringValue(nameArg);
-
-        if (string.IsNullOrEmpty(name))
-        {
-            return "The name is argument is required.";
         }
 
         var features = (await _shellFeaturesManager.GetAvailableFeaturesAsync())

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
@@ -49,25 +50,9 @@ public sealed class GetContentItemSchemaTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!arguments.TryGetValue("contentType", out var data))
+        if (!arguments.TryGetFirstString("contentType", out var contentType))
         {
             return "Unable to find a contentType argument in the function arguments.";
-        }
-
-        string contentType;
-
-        if (data is JsonElement jsonElement)
-        {
-            contentType = jsonElement.GetString();
-        }
-        else
-        {
-            contentType = data.ToString();
-        }
-
-        if (string.IsNullOrEmpty(contentType))
-        {
-            return "Invalid contentType argument.";
         }
 
         if (await _contentDefinitionManager.GetTypeDefinitionAsync(contentType) is null)

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
@@ -56,28 +57,12 @@ public sealed class GetContentItemLinkTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!arguments.TryGetValue("contentItemId", out var data))
+        if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {
             return ValueTask.FromResult<object>("Unable to find a contentItemId argument in the function arguments.");
         }
 
-        string contentItemId;
-
-        if (data is JsonElement jsonElement)
-        {
-            contentItemId = jsonElement.GetString();
-        }
-        else
-        {
-            contentItemId = data.ToString();
-        }
-
-        var type = "display";
-
-        if (arguments.TryGetValue("type", out var typeData))
-        {
-            type = ToolHelpers.GetStringValue(typeData);
-        }
+        var type = arguments.GetValueOrDefault("type", "display");
 
         var routeValues = type switch
         {

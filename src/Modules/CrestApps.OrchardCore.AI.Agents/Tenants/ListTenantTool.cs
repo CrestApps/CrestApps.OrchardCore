@@ -47,18 +47,6 @@ public sealed class ListTenantTool : AIFunction
 
         var shells = _shellHost.GetAllSettings();
 
-        return JsonSerializer.Serialize(shells.Select(s => new
-        {
-            s.Name,
-            Description = s["Description"],
-            DatabaseProvider = s["DatabaseProvider"],
-            RecipeName = s["RecipeName"],
-            s.RequestUrlHost,
-            s.RequestUrlPrefix,
-            Category = s["Category"],
-            TablePrefix = s["TablePrefix"],
-            Schema = s["Schema"],
-            Status = s.State.ToString(),
-        }));
+        return JsonSerializer.Serialize(shells.Select(x => x.AsAIObject()));
     }
 }

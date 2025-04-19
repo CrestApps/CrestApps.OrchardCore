@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Settings;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -65,23 +66,14 @@ public sealed class CreateOrUpdateContentTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!arguments.TryGetValue("contentItem", out var data))
+        if (!arguments.TryGetFirstString("contentItem", out var json))
         {
             return "Unable to find a contentItemId argument in the function arguments.";
         }
 
-        var isDraft = arguments.TryGetValue("isDraft", out var isDraftData) &&
-            (isDraftData is bool isDraftBool || isDraftData is JsonElement isDraftJsonElement && isDraftJsonElement.GetBoolean());
-
-        string json;
-
-        if (data is JsonElement jsonElement)
+        if (!arguments.TryGetFirst<bool>("isDraft", out var isDraft))
         {
-            json = jsonElement.GetString();
-        }
-        else
-        {
-            json = data.ToString();
+            isDraft = false;
         }
 
         var model = JsonSerializer.Deserialize<ContentItem>(json, JsonSerializerOptions);

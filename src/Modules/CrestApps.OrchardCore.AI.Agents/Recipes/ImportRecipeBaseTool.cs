@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.FileProviders;
 using OrchardCore.Deployment;
@@ -36,7 +37,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!arguments.TryGetValue("recipe", out var recipe))
+        if (!arguments.TryGetFirstString("recipe", out var recipe))
         {
             return ValueTask.FromResult<object>(MissingArgument());
         }
@@ -49,16 +50,10 @@ public abstract class ImportRecipeBaseTool : AIFunction
         return $"Unable to find a '{name}' argument in the arguments parameter.";
     }
 
-    protected async ValueTask<object> ProcessRecipeAsync(object recipe, CancellationToken cancellationToken)
+    protected async ValueTask<object> ProcessRecipeAsync(string json, CancellationToken cancellationToken)
     {
         var tempArchiveName = PathExtensions.GetTempFileName() + ".json";
         var tempArchiveFolder = PathExtensions.GetTempFileName();
-
-        var json = recipe switch
-        {
-            JsonElement jsonElement => jsonElement.ToString(),
-            _ => recipe.ToString(),
-        };
 
         try
         {

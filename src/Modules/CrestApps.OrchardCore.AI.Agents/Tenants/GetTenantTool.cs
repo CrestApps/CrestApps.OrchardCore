@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -52,16 +53,9 @@ public sealed class GetTenantTool : AIFunction
             return "The current user does not have permission to manage tenants.";
         }
 
-        if (!arguments.TryGetValue("name", out var nameArg))
+        if (!arguments.TryGetFirstString("name", out var name))
         {
             return "Unable to find a name argument in the function arguments.";
-        }
-
-        var name = ToolHelpers.GetStringValue(nameArg);
-
-        if (string.IsNullOrEmpty(name))
-        {
-            return "The name argument is required.";
         }
 
         if (!_shellHost.TryGetSettings(name, out var tenantSettings))
@@ -69,18 +63,6 @@ public sealed class GetTenantTool : AIFunction
             return "The given tenant does not exists.";
         }
 
-        return JsonSerializer.Serialize(new
-        {
-            tenantSettings.Name,
-            Description = tenantSettings["Description"],
-            DatabaseProvider = tenantSettings["DatabaseProvider"],
-            RecipeName = tenantSettings["RecipeName"],
-            tenantSettings.RequestUrlHost,
-            tenantSettings.RequestUrlPrefix,
-            Category = tenantSettings["Category"],
-            TablePrefix = tenantSettings["TablePrefix"],
-            Schema = tenantSettings["Schema"],
-            Status = tenantSettings.State.ToString(),
-        });
+        return JsonSerializer.Serialize(tenantSettings.AsAIObject());
     }
 }

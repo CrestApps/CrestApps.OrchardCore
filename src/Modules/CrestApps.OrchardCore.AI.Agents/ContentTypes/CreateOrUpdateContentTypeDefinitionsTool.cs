@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Agents.Recipes;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -31,7 +32,7 @@ public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseT
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!arguments.TryGetValue("recipe", out var recipe))
+        if (!arguments.TryGetFirstString("recipe", out var recipe))
         {
             return MissingArgument();
         }

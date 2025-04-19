@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -78,7 +79,7 @@ public sealed class SearchForContentsTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!arguments.TryGetValue("term", out var data))
+        if (!arguments.TryGetFirstString("term", out var term))
         {
             return "Unable to find a term argument in the function arguments.";
         }
@@ -88,34 +89,11 @@ public sealed class SearchForContentsTool : AIFunction
             return "You do not have permission to list content items.";
         }
 
-        var page = 1;
-
-        if (arguments.TryGetValue("pageNumber", out var pageNumberArg))
-        {
-            if (pageNumberArg is JsonElement pageNumberArgElement)
-            {
-                page = pageNumberArgElement.GetInt32();
-            }
-            else if (int.TryParse(pageNumberArg.ToString(), out var pageNumberArgInt))
-            {
-                page = pageNumberArgInt;
-            }
-        }
+        var page = arguments.GetValueOrDefault("pageNumber", 1);
 
         if (page < 1)
         {
             page = 1;
-        }
-
-        string term;
-
-        if (data is JsonElement jsonElement)
-        {
-            term = jsonElement.GetString();
-        }
-        else
-        {
-            term = data.ToString();
         }
 
         var startingIndex = (page - 1) * _pagerOptions.PageSize;

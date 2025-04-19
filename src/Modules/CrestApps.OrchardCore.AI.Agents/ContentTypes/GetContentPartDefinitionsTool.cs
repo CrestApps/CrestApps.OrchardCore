@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -28,13 +29,13 @@ public sealed class GetContentPartDefinitionsTool : AIFunction
             {
                 "type": "object",
                 "properties": {
-                    "contentPart": {
+                    "name": {
                         "type": "string",
-                        "description": "The content part to get the definitions for."
+                        "description": "The name of the content part to get the definitions for."
                     }
                 },
                 "additionalProperties": false,
-                "required": ["contentPart"]
+                "required": ["name"]
             }
             """, JsonSerializerOptions);
     }
@@ -49,20 +50,9 @@ public sealed class GetContentPartDefinitionsTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!arguments.TryGetValue("contentPart", out var data))
+        if (!arguments.TryGetFirstString("name", out var name))
         {
             return "Unable to find a contentPart argument in the function arguments.";
-        }
-
-        string contentPart;
-
-        if (data is JsonElement jsonElement)
-        {
-            contentPart = jsonElement.GetString();
-        }
-        else
-        {
-            contentPart = data.ToString();
         }
 
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ViewContentTypes))
@@ -70,11 +60,11 @@ public sealed class GetContentPartDefinitionsTool : AIFunction
             return "You do not have permission to view content types.";
         }
 
-        var definition = await _contentDefinitionManager.GetPartDefinitionAsync(contentPart);
+        var definition = await _contentDefinitionManager.GetPartDefinitionAsync(name);
 
         if (definition is null)
         {
-            return $"Unable to find a part definition that match the ContentPart: {contentPart}";
+            return $"Unable to find a part definition that match the ContentPart: {name}";
         }
 
         return JsonSerializer.Serialize(definition, JsonHelpers.ContentDefinitionSerializerOptions);

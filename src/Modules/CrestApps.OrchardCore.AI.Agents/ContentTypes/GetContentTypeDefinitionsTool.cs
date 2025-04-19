@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -28,13 +29,13 @@ public sealed class GetContentTypeDefinitionsTool : AIFunction
             {
                 "type": "object",
                 "properties": {
-                    "contentType": {
+                    "name": {
                         "type": "string",
-                        "description": "The content type to get the definitions for."
+                        "description": "The name of the content type to get the definitions for."
                     }
                 },
                 "additionalProperties": false,
-                "required": ["contentType"]
+                "required": ["name"]
             }
             """, JsonSerializerOptions);
     }
@@ -49,20 +50,9 @@ public sealed class GetContentTypeDefinitionsTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!arguments.TryGetValue("contentType", out var data))
+        if (!arguments.TryGetFirstString("name", out var name))
         {
             return "Unable to find a contentType argument in the function arguments.";
-        }
-
-        string contentType;
-
-        if (data is JsonElement jsonElement)
-        {
-            contentType = jsonElement.GetString();
-        }
-        else
-        {
-            contentType = data.ToString();
         }
 
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ViewContentTypes))
@@ -70,11 +60,11 @@ public sealed class GetContentTypeDefinitionsTool : AIFunction
             return "You do not have permission to view content types.";
         }
 
-        var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentType);
+        var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(name);
 
         if (definition is null)
         {
-            return $"Unable to find a type definition that match the ContentType: {contentType}";
+            return $"Unable to find a type definition that match the ContentType: {name}";
         }
 
         return JsonSerializer.Serialize(definition, JsonHelpers.ContentDefinitionSerializerOptions);
