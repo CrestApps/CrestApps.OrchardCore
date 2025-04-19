@@ -43,6 +43,10 @@ Provides services for all AI modules and provide the interface for managing AI p
 #### AI Chat Module
 Provides interface for interacting with AI chat models like **ChatGPT** and others. See the [AI Chat Module README](src/Modules/CrestApps.OrchardCore.AI.Chat/README.md) for more details.  
 
+#### AI Agents Module
+Enhances the **AI Module** by providing AI Agents to perform tasks on your site. For more details, see the [AI Module README](src/Modules/CrestApps.OrchardCore.AI.Agents/README.md).
+
+
 #### Model Context Protocol (MCP) Module
 Enhances the **AI Module** by adding support for connecting to any MCP server, whether hosted locally or remotely. For more details, see the [MCP Module README](src/Modules/CrestApps.OrchardCore.AI.Mcp/README.md).
 

@@ -59,9 +59,32 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIToolsService, DefaultAIToolsService>()
             .AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderOptionsConfiguration>();
 
+        // Add tools core functionality.
+        services
+            .AddDisplayDriver<AIProfile, AIProfileToolsDisplayDriver>()
+            .AddScoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>();
+
+
 #pragma warning disable CS0618 // Type or member is obsolete
         services.AddDataMigration<ProfileStoreMigrations>();
 #pragma warning restore CS0618 // Type or member is obsolete
+    }
+}
+
+[Feature(AIConstants.Feature.AITools)]
+public sealed class ToolsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<AIProfile, AIProfileToolInstancesDisplayDriver>();
+        services.AddDisplayDriver<AIToolInstance, InvokableToolMetadataDisplayDriver>();
+        services.AddDisplayDriver<AIToolInstance, AIProfileToolMetadataDisplayDriver>();
+        services.AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>();
+        services.AddNavigationProvider<AIToolInstancesAdminMenu>();
+        services.AddPermissionProvider<AIToolPermissionProvider>();
+
+        services.AddAIToolSource<ProfileAwareAIToolSource>(ProfileAwareAIToolSource.ToolSource);
+        services.AddScoped<IAICompletionServiceHandler, FunctionInstancesAICompletionServiceHandler>();
     }
 }
 
@@ -124,6 +147,24 @@ public sealed class ApiChatStartup : StartupBase
     }
 }
 
+[RequireFeatures(AIConstants.Feature.AITools, "OrchardCore.Recipes.Core")]
+public sealed class RecipesToolsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<AIToolInstanceStep>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.AITools, "OrchardCore.Deployment")]
+public sealed class ToolOCDeploymentStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<AIToolInstanceDeploymentSource, AIToolInstanceDeploymentStep, AIToolInstanceDeploymentStepDisplayDriver>();
+    }
+}
+
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class RecipesStartup : StartupBase
 {
@@ -163,43 +204,6 @@ public sealed class DeploymentRecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<AIDeploymentStep>();
-    }
-}
-
-[Feature(AIConstants.Feature.AITools)]
-public sealed class AIToolsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDisplayDriver<AIToolInstance, InvokableToolMetadataDisplayDriver>();
-        services.AddDisplayDriver<AIToolInstance, AIProfileToolMetadataDisplayDriver>();
-        services.AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>();
-        services.AddDisplayDriver<AIProfile, AIProfileToolsDisplayDriver>();
-        services.AddNavigationProvider<AIToolInstancesAdminMenu>();
-        services.AddPermissionProvider<AIToolPermissionProvider>();
-
-        services.AddAIToolSource<ProfileAwareAIToolSource>(ProfileAwareAIToolSource.ToolSource);
-        services.AddScoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>();
-    }
-}
-
-[Feature(AIConstants.Feature.AITools)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class ToolRecipesStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddRecipeExecutionStep<AIToolInstanceStep>();
-    }
-}
-
-[Feature(AIConstants.Feature.AITools)]
-[RequireFeatures("OrchardCore.Deployment")]
-public sealed class ToolOCDeploymentStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDeployment<AIToolInstanceDeploymentSource, AIToolInstanceDeploymentStep, AIToolInstanceDeploymentStepDisplayDriver>();
     }
 }
 

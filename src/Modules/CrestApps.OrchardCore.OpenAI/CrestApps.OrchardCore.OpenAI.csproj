@@ -38,8 +38,8 @@
 
   <ItemGroup>
     <!-- 
-      Ensure this module directly depends on the required packages so that when someone installs it, 
-      they won't need to manually include the AI and SignalR packages. 
+      Ensure this module directly depends on the required package so that when someone installs it, 
+      they won't need to manually include the AI. 
       This guarantees the module functions correctly and resolves the feature dependency.
     -->
     <ProjectReference Include="..\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />

@@ -78,29 +78,23 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
                 ? "Provides a way to call another model."
                 : funcMetadata.Description;
 
-            var metadata = new JsonObject()
-            {
-                {"type", "object"},
-                {"properties", new JsonObject()
-                    {
-                        { "prompt", new JsonObject()
-                            {
-                                {"type", "string" },
-                                {"description", "The user's prompt." },
-                            }
-                        }
+            JsonSchema = JsonSerializer.Deserialize<JsonElement>(
+                """
+                {
+                  "type": "object",
+                  "properties": {
+                    "prompt": {
+                      "type": "string",
+                      "description": "The user's prompt."
                     }
-                },
-                {"required", new JsonArray("prompt")},
-                {"return_type", new JsonObject()
-                    {
-                        {"type", "string"},
-                        {"description", "The response to the user's prompt as a string."},
-                    }
-                },
-            };
-
-            JsonSchema = JsonSerializer.Deserialize<JsonElement>(metadata);
+                  },
+                  "required": ["prompt"],
+                  "return_type": {
+                    "type": "string",
+                    "description": "The response to the user's prompt as a string."
+                  }
+                }
+                """, JsonSerializerOptions);
         }
 
         public override string Name { get; }
