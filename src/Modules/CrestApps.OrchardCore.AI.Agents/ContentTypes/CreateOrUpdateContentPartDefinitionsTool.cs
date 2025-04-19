@@ -1,0 +1,46 @@
+using CrestApps.OrchardCore.AI.Agents.Recipes;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.AI;
+using OrchardCore.Deployment;
+
+namespace CrestApps.OrchardCore.AI.Agents.ContentTypes;
+
+public sealed class CreateOrUpdateContentPartDefinitionsTool : ImportRecipeBaseTool
+{
+    public const string TheName = "applyContentPartDefinitionFromRecipe";
+
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAuthorizationService _authorizationService;
+
+    public CreateOrUpdateContentPartDefinitionsTool(
+        IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers,
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService)
+        : base(deploymentTargetHandlers)
+    {
+        _httpContextAccessor = httpContextAccessor;
+        _authorizationService = authorizationService;
+    }
+
+    public override string Name => TheName;
+
+    public override string Description => "Creates or updates a content part definition using the configuration provided in a recipe.";
+
+    protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+
+        if (!arguments.TryGetValue("recipe", out var recipe))
+        {
+            return MissingArgument();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.EditContentTypes))
+        {
+            return "You do not have permission to edit content types.";
+        }
+
+        return await ProcessRecipeAsync(recipe, cancellationToken);
+    }
+}

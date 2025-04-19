@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.AI.Migrations;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Recipes;
 using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.AI.Tools;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
@@ -67,6 +68,23 @@ public sealed class Startup : StartupBase
 #pragma warning disable CS0618 // Type or member is obsolete
         services.AddDataMigration<ProfileStoreMigrations>();
 #pragma warning restore CS0618 // Type or member is obsolete
+    }
+}
+
+[Feature(AIConstants.Feature.AITools)]
+public sealed class ToolsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<AIProfile, AIProfileToolInstancesDisplayDriver>();
+        services.AddDisplayDriver<AIToolInstance, InvokableToolMetadataDisplayDriver>();
+        services.AddDisplayDriver<AIToolInstance, AIProfileToolMetadataDisplayDriver>();
+        services.AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>();
+        services.AddNavigationProvider<AIToolInstancesAdminMenu>();
+        services.AddPermissionProvider<AIToolPermissionProvider>();
+
+        services.AddAIToolSource<ProfileAwareAIToolSource>(ProfileAwareAIToolSource.ToolSource);
+        services.AddScoped<IAICompletionServiceHandler, FunctionInstancesAICompletionServiceHandler>();
     }
 }
 
@@ -126,6 +144,24 @@ public sealed class ApiChatStartup : StartupBase
             .AddApiAIChatSessionEndpoint()
             .AddApiAIUtilityCompletionEndpoint<ApiChatStartup>()
             .AddApiAICompletionEndpoint<ApiChatStartup>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.AITools, "OrchardCore.Recipes.Core")]
+public sealed class RecipesToolsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<AIToolInstanceStep>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.AITools, "OrchardCore.Deployment")]
+public sealed class ToolOCDeploymentStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<AIToolInstanceDeploymentSource, AIToolInstanceDeploymentStep, AIToolInstanceDeploymentStepDisplayDriver>();
     }
 }
 
