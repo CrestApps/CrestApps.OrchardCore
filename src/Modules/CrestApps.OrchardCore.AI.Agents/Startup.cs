@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Agents.Communications;
 using CrestApps.OrchardCore.AI.Agents.Contents;
 using CrestApps.OrchardCore.AI.Agents.ContentTypes;
 using CrestApps.OrchardCore.AI.Agents.Features;
@@ -33,11 +34,11 @@ public sealed class Startup : StartupBase
 }
 
 [RequireFeatures(AIConstants.Feature.Agents, "OrchardCore.Recipes.Core")]
-public sealed class RecipesToolsStartup : StartupBase
+public sealed class RecipesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
-    public RecipesToolsStartup(IStringLocalizer<Startup> stringLocalizer)
+    public RecipesStartup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -75,11 +76,11 @@ public sealed class RecipesToolsStartup : StartupBase
 }
 
 [RequireFeatures(AIConstants.Feature.Agents, "OrchardCore.Tenants")]
-public sealed class TenantsToolsStartup : StartupBase
+public sealed class TenantsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
-    public TenantsToolsStartup(IStringLocalizer<Startup> stringLocalizer)
+    public TenantsStartup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -152,11 +153,11 @@ public sealed class TenantsToolsStartup : StartupBase
 }
 
 [RequireFeatures(AIConstants.Feature.Agents, "OrchardCore.Contents")]
-public sealed class ContentsToolsStartup : StartupBase
+public sealed class ContentsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
-    public ContentsToolsStartup(IStringLocalizer<ContentsToolsStartup> stringLocalizer)
+    public ContentsStartup(IStringLocalizer<ContentsStartup> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -229,11 +230,11 @@ public sealed class ContentsToolsStartup : StartupBase
 }
 
 [RequireFeatures(AIConstants.Feature.Agents, "OrchardCore.ContentTypes", "OrchardCore.Recipes.Core")]
-public sealed class ContentTypesRecipesToolsStartup : StartupBase
+public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
-    public ContentTypesRecipesToolsStartup(IStringLocalizer<ContentTypesToolsStartup> stringLocalizer)
+    public ContentDefinitionRecipesToolsStartup(IStringLocalizer<ContentDefinitionsStartup> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -257,11 +258,11 @@ public sealed class ContentTypesRecipesToolsStartup : StartupBase
 }
 
 [RequireFeatures(AIConstants.Feature.Agents, "OrchardCore.ContentTypes")]
-public sealed class ContentTypesToolsStartup : StartupBase
+public sealed class ContentDefinitionsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
-    public ContentTypesToolsStartup(IStringLocalizer<ContentTypesToolsStartup> stringLocalizer)
+    public ContentDefinitionsStartup(IStringLocalizer<ContentDefinitionsStartup> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -285,11 +286,11 @@ public sealed class ContentTypesToolsStartup : StartupBase
 }
 
 [RequireFeatures(AIConstants.Feature.Agents, "OrchardCore.Features")]
-public sealed class FeaturesToolsStartup : StartupBase
+public sealed class FeaturesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
-    public FeaturesToolsStartup(IStringLocalizer<ContentTypesToolsStartup> stringLocalizer)
+    public FeaturesStartup(IStringLocalizer<ContentDefinitionsStartup> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -330,6 +331,90 @@ public sealed class FeaturesToolsStartup : StartupBase
             o.Description = S["Retrieves info about a feature."];
             o.Category = S["Features Management"];
         });
+    }
+
+    [RequireFeatures(AIConstants.Feature.Agents, "OrchardCore.Notifications")]
+    public sealed class NotificationsStartup : StartupBase
+    {
+        internal readonly IStringLocalizer S;
+
+        public NotificationsStartup(IStringLocalizer<ContentDefinitionsStartup> stringLocalizer)
+        {
+            S = stringLocalizer;
+        }
+
+        public override void ConfigureServices(IServiceCollection services)
+        {
+            services.AddAITool<SendNotificationTool>(SendNotificationTool.TheName, (o) =>
+            {
+                o.Title = S["Notify Users"];
+                o.Description = S["Sends a notification message to a user."];
+                o.Category = S["Communications"];
+            });
+        }
+    }
+
+    [RequireFeatures(AIConstants.Feature.Agents, "OrchardCore.Email")]
+    public sealed class EmailStartup : StartupBase
+    {
+        internal readonly IStringLocalizer S;
+
+        public EmailStartup(IStringLocalizer<ContentDefinitionsStartup> stringLocalizer)
+        {
+            S = stringLocalizer;
+        }
+
+        public override void ConfigureServices(IServiceCollection services)
+        {
+            services.AddAITool<SendEmailTool>(SendEmailTool.TheName, (o) =>
+            {
+                o.Title = S["Send Emails"];
+                o.Description = S["Sends a email message on the behalf of the logged user."];
+                o.Category = S["Communications"];
+            });
+        }
+    }
+
+    [RequireFeatures(AIConstants.Feature.Agents, "OrchardCore.Sms")]
+    public sealed class SmsStartup : StartupBase
+    {
+        internal readonly IStringLocalizer S;
+
+        public SmsStartup(IStringLocalizer<ContentDefinitionsStartup> stringLocalizer)
+        {
+            S = stringLocalizer;
+        }
+
+        public override void ConfigureServices(IServiceCollection services)
+        {
+            services.AddAITool<SendSmsTool>(SendSmsTool.TheName, (o) =>
+            {
+                o.Title = S["Send SMS message"];
+                o.Description = S["Sends a SMS message to a user."];
+                o.Category = S["Communications"];
+            });
+        }
+    }
+
+    [RequireFeatures(AIConstants.Feature.Agents, "OrchardCore.Users")]
+    public sealed class UsersStartup : StartupBase
+    {
+        internal readonly IStringLocalizer S;
+
+        public UsersStartup(IStringLocalizer<ContentDefinitionsStartup> stringLocalizer)
+        {
+            S = stringLocalizer;
+        }
+
+        public override void ConfigureServices(IServiceCollection services)
+        {
+            services.AddAITool<GetUserTool>(GetUserTool.TheName, (o) =>
+            {
+                o.Title = S["Get User Info"];
+                o.Description = S["Gets information about a user."];
+                o.Category = S["Users Management"];
+            });
+        }
     }
 }
 

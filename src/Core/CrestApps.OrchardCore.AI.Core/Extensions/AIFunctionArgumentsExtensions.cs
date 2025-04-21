@@ -15,7 +15,7 @@ public static class AIFunctionArgumentsExtensions
         return arguments.TryGetValue(key, out value) && value is not null;
     }
 
-    public static T GetValueOrDefault<T>(this AIFunctionArguments arguments, string key, T fallbackValue = default)
+    public static T GetFirstValueOrDefault<T>(this AIFunctionArguments arguments, string key, T fallbackValue = default)
     {
         if (arguments.TryGetFirst<T>(key, out var value))
         {

@@ -89,7 +89,7 @@ public sealed class SearchForContentsTool : AIFunction
             return "You do not have permission to list content items.";
         }
 
-        var page = arguments.GetValueOrDefault("pageNumber", 1);
+        var page = arguments.GetFirstValueOrDefault("pageNumber", 1);
 
         if (page < 1)
         {

@@ -1,5 +1,6 @@
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.AI.Agents;
 
@@ -34,6 +35,25 @@ internal static class ProjectionExtensions
             feature.DefaultTenantOnly,
             feature.EnabledByDependencyOnly,
             feature.Dependencies,
+        };
+    }
+
+    public static object AsAIObject(this User user)
+    {
+        return new
+        {
+            user.UserId,
+            user.UserName,
+            user.NormalizedUserName,
+            user.RoleNames,
+            user.IsEnabled,
+            IsLockedOut = user.IsLockoutEnabled,
+            user.Email,
+            user.NormalizedEmail,
+            user.EmailConfirmed,
+            user.PhoneNumber,
+            user.PhoneNumberConfirmed,
+            user.TwoFactorEnabled,
         };
     }
 }

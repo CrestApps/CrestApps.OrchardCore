@@ -178,7 +178,7 @@ public sealed class SetupTenantTool : AIFunction
             return $"The email is invalid.";
         }
 
-        var recipeName = arguments.GetValueOrDefault("recipeName", tenantSettings["RecipeName"]);
+        var recipeName = arguments.GetFirstValueOrDefault("recipeName", tenantSettings["RecipeName"]);
 
         if (string.IsNullOrEmpty(recipeName))
         {
@@ -192,30 +192,30 @@ public sealed class SetupTenantTool : AIFunction
             return "The recipe name is invalid.";
         }
 
-        var databaseProvider = arguments.GetValueOrDefault("databaseProvider", tenantSettings["DatabaseProvider"]);
+        var databaseProvider = arguments.GetFirstValueOrDefault("databaseProvider", tenantSettings["DatabaseProvider"]);
 
         if (string.IsNullOrEmpty(databaseProvider))
         {
             return "The databaseProvider argument is required.";
         }
 
-        var requestUrlHost = arguments.GetValueOrDefault("requestUrlHost", tenantSettings.RequestUrlHost);
-        var requestUrlPrefix = arguments.GetValueOrDefault("requestUrlPrefix", tenantSettings.RequestUrlPrefix);
+        var requestUrlHost = arguments.GetFirstValueOrDefault("requestUrlHost", tenantSettings.RequestUrlHost);
+        var requestUrlPrefix = arguments.GetFirstValueOrDefault("requestUrlPrefix", tenantSettings.RequestUrlPrefix);
 
         if (string.IsNullOrEmpty(requestUrlPrefix) && string.IsNullOrEmpty(requestUrlHost))
         {
             return "The requestUrlHost or requestUrlPrefix argument must be provided.";
         }
 
-        tenantSettings["ConnectionString"] = arguments.GetValueOrDefault("connectionString", tenantSettings["ConnectionString"]);
+        tenantSettings["ConnectionString"] = arguments.GetFirstValueOrDefault("connectionString", tenantSettings["ConnectionString"]);
 
-        tenantSettings["Category"] = arguments.GetValueOrDefault("category", tenantSettings["Category"]);
+        tenantSettings["Category"] = arguments.GetFirstValueOrDefault("category", tenantSettings["Category"]);
 
-        tenantSettings["Description"] = arguments.GetValueOrDefault("description", tenantSettings["Description"]);
+        tenantSettings["Description"] = arguments.GetFirstValueOrDefault("description", tenantSettings["Description"]);
 
-        tenantSettings["TablePrefix"] = arguments.GetValueOrDefault("tablePrefix", tenantSettings["TablePrefix"]);
+        tenantSettings["TablePrefix"] = arguments.GetFirstValueOrDefault("tablePrefix", tenantSettings["TablePrefix"]);
 
-        tenantSettings["Schema"] = arguments.GetValueOrDefault("schema", tenantSettings["Schema"]);
+        tenantSettings["Schema"] = arguments.GetFirstValueOrDefault("schema", tenantSettings["Schema"]);
 
         string timeZoneId = null;
 
@@ -240,7 +240,7 @@ public sealed class SetupTenantTool : AIFunction
             Recipe = recipe,
             Properties = new Dictionary<string, object>
             {
-                { SetupConstants.SiteName, arguments.GetValueOrDefault("title", tenantSettings.Name) },
+                { SetupConstants.SiteName, arguments.GetFirstValueOrDefault("title", tenantSettings.Name) },
                 { SetupConstants.AdminUsername, username },
                 { SetupConstants.AdminEmail, email },
                 { SetupConstants.AdminPassword, password },

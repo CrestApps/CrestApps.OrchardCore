@@ -62,7 +62,7 @@ public sealed class GetContentItemLinkTool : AIFunction
             return ValueTask.FromResult<object>("Unable to find a contentItemId argument in the function arguments.");
         }
 
-        var type = arguments.GetValueOrDefault("type", "display");
+        var type = arguments.GetFirstValueOrDefault("type", "display");
 
         var routeValues = type switch
         {
