@@ -23,21 +23,21 @@ public sealed class GetContentItemLinkTool : AIFunction
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
             """
             {
-                "type": "object",
-                "properties": {
-                    "contentItemId": {
-                        "type": "string",
-                        "description": "The string representation of the content item's ContentItemId."
-                    },
-                    "type": {
-                        "type": "string",
-                        "description": "The type of link to generate.",
-                        "enum": ["display", "edit"],
-                        "default": "display"
-                    }
+              "type": "object",
+              "properties": {
+                "contentItemId": {
+                  "type": "string",
+                  "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
                 },
-                "additionalProperties": false,
-                "required": ["contentItemId"]
+                "type": {
+                  "type": "string",
+                  "description": "Specifies the type of link to generate.",
+                  "enum": ["display", "edit"],
+                  "default": "display"
+                }
+              },
+              "required": ["contentItemId"],
+              "additionalProperties": false
             }
             """, JsonSerializerOptions);
     }

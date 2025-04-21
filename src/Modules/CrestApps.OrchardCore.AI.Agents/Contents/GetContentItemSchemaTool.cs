@@ -27,15 +27,15 @@ public sealed class GetContentItemSchemaTool : AIFunction
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
             """
             {
-                "type": "object",
-                "properties": {
-                    "contentType": {
-                        "type": "string",
-                        "description": "Generates a sample Orchard Core content item JSON structure for the specified content type."
-                    }
-                },
-                "additionalProperties": false,
-                "required": ["contentType"]
+              "type": "object",
+              "properties": {
+                "contentType": {
+                  "type": "string",
+                  "description": "The name of the Orchard Core content type to generate a sample JSON structure for."
+                }
+              },
+              "required": ["contentType"],
+              "additionalProperties": false
             }
             """, JsonSerializerOptions);
     }

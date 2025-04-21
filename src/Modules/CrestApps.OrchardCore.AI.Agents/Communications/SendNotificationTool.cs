@@ -32,27 +32,27 @@ public sealed class SendNotificationTool : AIFunction
               "properties": {
                 "userId": {
                   "type": "string",
-                  "description": "A userId to notify."
+                  "description": "The unique identifier of the user to notify. This should be a valid user ID from your system."
                 },
                 "subject": {
                   "type": "string",
-                  "description": "The notification subject to send."
+                  "description": "The subject line of the notification. This appears as the title or headline of the message."
                 },
                 "summary": {
                   "type": "string",
-                  "description": "The notification summary to send which can contain HTML for the UI."
+                  "description": "A short summary of the notification content. May include limited HTML for styling in the UI. Keep it concise and informative."
                 },
                 "textBody": {
                   "type": "string",
-                  "description": "The text body of the notification to send. This should not contain any HTML"
+                  "description": "The plain text version of the notification body. Should contain no HTML and be suitable for text-only clients."
                 },
                 "htmlBody": {
                   "type": "string",
-                  "description": "The HTML body of the notification to send. This is typically the same as textBody value formatted in HTML."
+                  "description": "The HTML version of the notification body. This can include formatting, links, and other HTML content for rich display."
                 }
               },
-              "additionalProperties": false,
-              "required": ["userId", "subject", "summary"]
+              "required": ["userId", "subject", "summary"],
+              "additionalProperties": false
             }
             """, JsonSerializerOptions);
     }

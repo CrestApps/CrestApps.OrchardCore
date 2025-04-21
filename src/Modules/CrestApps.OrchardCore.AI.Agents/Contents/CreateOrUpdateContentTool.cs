@@ -39,19 +39,19 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
             """
             {
-                "type": "object",
-                "properties": {
-                    "contentItem": {
-                        "type": "string",
-                        "description": "JSON string representation of the content item to create or update. To update existing content item, the ContentItemId must be set."
-                    },
-                    "isDraft": {
-                        "type": "boolean",
-                        "description": "Should the content item be a draft only? When false, the content item will be published immediately."
-                    }
+              "type": "object",
+              "properties": {
+                "contentItem": {
+                  "type": "string",
+                  "description": "A JSON string representing the content item to create or update. To perform an update, the object must include a valid 'ContentItemId'."
                 },
-                "additionalProperties": false,
-                "required": ["contentItem", "isDraft"]
+                "isDraft": {
+                  "type": "boolean",
+                  "description": "Indicates whether the content item should be saved as a draft. If set to false, the item will be published immediately."
+                }
+              },
+              "required": ["contentItem", "isDraft"],
+              "additionalProperties": false
             }
             """, JsonSerializerOptions);
     }

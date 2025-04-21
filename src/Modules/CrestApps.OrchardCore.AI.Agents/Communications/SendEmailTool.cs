@@ -69,9 +69,9 @@ public sealed class SendEmailTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        if (!arguments.TryGetFirstString("from", out var from))
+        if (!arguments.TryGetFirstString("to", out var to))
         {
-            return "Unable to find a from argument in the function arguments.";
+            return "Unable to find a to argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirstString("subject", out var subject))
@@ -105,6 +105,7 @@ public sealed class SendEmailTool : AIFunction
 
         var message = new MailMessage
         {
+            To = to,
             Subject = subject,
             Body = body,
             Sender = email,

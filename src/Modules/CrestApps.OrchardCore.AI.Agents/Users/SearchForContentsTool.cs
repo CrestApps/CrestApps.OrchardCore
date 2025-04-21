@@ -4,41 +4,37 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
-using OrchardCore.ContentManagement;
-using OrchardCore.Contents;
-using OrchardCore.Contents.Services;
-using OrchardCore.Contents.ViewModels;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Json;
 using OrchardCore.Navigation;
+using OrchardCore.Users;
+using OrchardCore.Users.Services;
+using OrchardCore.Users.ViewModels;
 
-namespace CrestApps.OrchardCore.AI.Agents.Contents;
+namespace CrestApps.OrchardCore.AI.Agents.Users;
 
-public sealed class SearchForContentsTool : AIFunction
+public sealed class SearchForUsersTool : AIFunction
 {
-    public const string TheName = "searchForContentItems";
+    public const string TheName = "searchForUsers";
 
-    private readonly IContentManager _contentManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IContentsAdminListQueryService _contentsAdminListQueryService;
+    private readonly IUsersAdminListQueryService _usersAdminListQueryService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly DocumentJsonSerializerOptions _options;
     private readonly PagerOptions _pagerOptions;
 
-    public SearchForContentsTool(
-        IContentManager contentManager,
+    public SearchForUsersTool(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IContentsAdminListQueryService contentsAdminListQueryService,
+        IUsersAdminListQueryService usersAdminListQueryService,
         IUpdateModelAccessor updateModelAccessor,
         IOptions<DocumentJsonSerializerOptions> options,
         IOptions<PagerOptions> pagerOptions)
     {
-        _contentManager = contentManager;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _contentsAdminListQueryService = contentsAdminListQueryService;
+        _usersAdminListQueryService = usersAdminListQueryService;
         _updateModelAccessor = updateModelAccessor;
         _pagerOptions = pagerOptions.Value;
         _options = options.Value;
@@ -66,7 +62,7 @@ public sealed class SearchForContentsTool : AIFunction
 
     public override string Name => TheName;
 
-    public override string Description => "Search for content items that match the given query along with a way to paginate the results.";
+    public override string Description => "Search for users that match the given query along with a way to paginate the results.";
 
     public override JsonElement JsonSchema { get; }
 
@@ -79,9 +75,9 @@ public sealed class SearchForContentsTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.ListContent))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.ListUsers))
         {
-            return "You do not have permission to list content items.";
+            return "You do not have permission to list users.";
         }
 
         if (!arguments.TryGetFirstString("term", out var term))
@@ -98,7 +94,7 @@ public sealed class SearchForContentsTool : AIFunction
 
         var startingIndex = (page - 1) * _pagerOptions.PageSize;
 
-        var query = await _contentsAdminListQueryService.QueryAsync(new ContentOptionsViewModel()
+        var query = await _usersAdminListQueryService.QueryAsync(new UserIndexOptions()
         {
             SearchText = term,
             OriginalSearchText = term,
@@ -109,14 +105,14 @@ public sealed class SearchForContentsTool : AIFunction
 
         var contentItems = await query.Skip(startingIndex)
             .Take(_pagerOptions.PageSize)
-            .ListAsync(_contentManager);
+            .ListAsync();
 
         return
         $$"""
             {
-                "contentItems": {{JsonSerializer.Serialize(contentItems, _options.SerializerOptions)}},
+                "users": {{JsonSerializer.Serialize(contentItems, _options.SerializerOptions)}},
                 "pageSize": {{_pagerOptions.PageSize}},
-                "contentItemsCount": {{contentItemsCount}},
+                "usersCount": {{contentItemsCount}},
                 "totalPages": {{Math.Ceiling((double)contentItemsCount / _pagerOptions.PageSize)}},
                 "pageSize": {{_pagerOptions.PageSize}},
             }

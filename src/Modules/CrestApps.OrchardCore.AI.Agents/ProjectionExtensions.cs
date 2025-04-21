@@ -1,5 +1,6 @@
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Recipes.Models;
 using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.AI.Agents;
@@ -54,6 +55,21 @@ internal static class ProjectionExtensions
             user.PhoneNumber,
             user.PhoneNumberConfirmed,
             user.TwoFactorEnabled,
+        };
+    }
+
+    public static object AsAIObject(this RecipeDescriptor recipe)
+    {
+        return new
+        {
+            recipe.Name,
+            recipe.DisplayName,
+            recipe.Description,
+            recipe.IsSetupRecipe,
+            recipe.Author,
+            recipe.Version,
+            recipe.Categories,
+            recipe.Tags,
         };
     }
 }

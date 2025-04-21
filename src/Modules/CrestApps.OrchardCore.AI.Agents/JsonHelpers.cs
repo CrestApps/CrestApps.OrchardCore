@@ -9,4 +9,9 @@ internal static class JsonHelpers
     {
         ReferenceHandler = ReferenceHandler.Preserve,
     };
+
+    public static JsonSerializerOptions RecipeSerializerOptions = new(JOptions.Default)
+    {
+        PropertyNameCaseInsensitive = true,
+    };
 }

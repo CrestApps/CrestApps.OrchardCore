@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.Agents.Features;
 using CrestApps.OrchardCore.AI.Agents.Recipes;
 using CrestApps.OrchardCore.AI.Agents.System;
 using CrestApps.OrchardCore.AI.Agents.Tenants;
+using CrestApps.OrchardCore.AI.Agents.Users;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -413,6 +414,34 @@ public sealed class FeaturesStartup : StartupBase
                 o.Title = S["Get User Info"];
                 o.Description = S["Gets information about a user."];
                 o.Category = S["Users Management"];
+            });
+
+            services.AddAITool<SearchForUsersTool>(SearchForUsersTool.TheName, (o) =>
+            {
+                o.Title = S["Search Users"];
+                o.Description = S["Search the system for users."];
+                o.Category = S["Users Management"];
+            });
+        }
+    }
+
+    [RequireFeatures(AIConstants.Feature.Agents, "OrchardCore.Roles")]
+    public sealed class RolesStartup : StartupBase
+    {
+        internal readonly IStringLocalizer S;
+
+        public RolesStartup(IStringLocalizer<ContentDefinitionsStartup> stringLocalizer)
+        {
+            S = stringLocalizer;
+        }
+
+        public override void ConfigureServices(IServiceCollection services)
+        {
+            services.AddAITool<GetRoleTool>(GetRoleTool.TheName, (o) =>
+            {
+                o.Title = S["Get User Info"];
+                o.Description = S["Gets information about a role."];
+                o.Category = S["Roles Management"];
             });
         }
     }

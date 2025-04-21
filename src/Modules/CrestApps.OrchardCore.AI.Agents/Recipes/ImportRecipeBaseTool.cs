@@ -1,5 +1,5 @@
-using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.FileProviders;
@@ -19,15 +19,15 @@ public abstract class ImportRecipeBaseTool : AIFunction
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
             """
             {
-                "type": "object",
-                "properties": {
-                    "recipe": {
-                        "type": "string",
-                        "description": "A JSON object representing an OrchardCore recipe"
-                    }
-                },
-                "additionalProperties": false,
-                "required": ["recipe"]
+              "type": "object",
+              "properties": {
+                "recipe": {
+                  "type": "string",
+                  "description": "A JSON string representing an Orchard Core recipe."
+                }
+              },
+              "required": ["recipe"],
+              "additionalProperties": false
             }
             """, JsonSerializerOptions);
         _deploymentTargetHandlers = deploymentTargetHandlers;
@@ -52,6 +52,16 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
     protected async ValueTask<object> ProcessRecipeAsync(string json, CancellationToken cancellationToken)
     {
+        var data = JsonSerializer.Deserialize<JsonObject>(json, JsonHelpers.RecipeSerializerOptions);
+
+        if (!data.ContainsKey("steps"))
+        {
+            data = new JsonObject
+            {
+                ["steps"] = new JsonArray(data)
+            };
+        }
+
         var tempArchiveName = PathExtensions.GetTempFileName() + ".json";
         var tempArchiveFolder = PathExtensions.GetTempFileName();
 
@@ -59,9 +69,8 @@ public abstract class ImportRecipeBaseTool : AIFunction
         {
             using (var stream = new FileStream(tempArchiveName, FileMode.Create))
             {
-                var bytes = Encoding.UTF8.GetBytes(json);
-
-                await stream.WriteAsync(bytes, cancellationToken);
+                using var writer = new Utf8JsonWriter(stream);
+                data.WriteTo(writer);
             }
 
             Directory.CreateDirectory(tempArchiveFolder);

@@ -27,15 +27,15 @@ public sealed class GetContentPartDefinitionsTool : AIFunction
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
             """
             {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "description": "The name of the content part to get the definitions for."
-                    }
-                },
-                "additionalProperties": false,
-                "required": ["name"]
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "The name of the content part for which to retrieve the definitions."
+                }
+              },
+              "required": ["name"],
+              "additionalProperties": false
             }
             """, JsonSerializerOptions);
     }
@@ -50,14 +50,14 @@ public sealed class GetContentPartDefinitionsTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!arguments.TryGetFirstString("name", out var name))
-        {
-            return "Unable to find a contentPart argument in the function arguments.";
-        }
-
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ViewContentTypes))
         {
             return "You do not have permission to view content types.";
+        }
+
+        if (!arguments.TryGetFirstString("name", out var name))
+        {
+            return "Unable to find a contentPart argument in the function arguments.";
         }
 
         var definition = await _contentDefinitionManager.GetPartDefinitionAsync(name);

@@ -28,15 +28,15 @@ public sealed class CloneContentTool : AIFunction
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
             """
             {
-                "type": "object",
-                "properties": {
-                    "contentItemId": {
-                        "type": "string",
-                        "description": "The string representation of the content item's ContentItemId."
-                    }
-                },
-                "additionalProperties": false,
-                "required": ["contentItemId"]
+              "type": "object",
+              "properties": {
+                "contentItemId": {
+                  "type": "string",
+                  "description": "The unique identifier (ContentItemId) of the content item, represented as a string."
+                }
+              },
+              "required": ["contentItemId"],
+              "additionalProperties": false
             }
             """, JsonSerializerOptions);
     }
@@ -51,6 +51,11 @@ public sealed class CloneContentTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.CloneContent))
+        {
+            return "You do not have permission to clone content items.";
+        }
+
         if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {
             return "Unable to find a contentItemId argument in the function arguments.";
@@ -61,11 +66,6 @@ public sealed class CloneContentTool : AIFunction
         if (contentItem is null)
         {
             return $"Unable to find a content item that match the ContentItemId: {contentItemId}";
-        }
-
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.CloneContent))
-        {
-            return "You do not have permission to clone content items.";
         }
 
         var clone = await _contentManager.CloneAsync(contentItem);

@@ -2,10 +2,8 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Json;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
@@ -15,7 +13,6 @@ public sealed class ListStartupRecipesTool : AIFunction
 {
     public const string TheName = "listStartupRecipes";
 
-    private readonly DocumentJsonSerializerOptions _options;
     private readonly IEnumerable<IRecipeHarvester> _recipeHarvesters;
     private readonly ShellSettings _shellSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -27,14 +24,12 @@ public sealed class ListStartupRecipesTool : AIFunction
         ShellSettings shellSettings,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IOptions<DocumentJsonSerializerOptions> options,
         IShellFeaturesManager shellFeaturesManager)
     {
         _recipeHarvesters = recipeHarvesters;
         _shellSettings = shellSettings;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _options = options.Value;
         _shellFeaturesManager = shellFeaturesManager;
 
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
@@ -67,12 +62,7 @@ public sealed class ListStartupRecipesTool : AIFunction
         var features = await _shellFeaturesManager.GetAvailableFeaturesAsync();
         var recipes = await GetRecipesAsync(features);
 
-        return JsonSerializer.Serialize(recipes.Select(x => new
-        {
-            x.Name,
-            x.DisplayName,
-            x.Description,
-        }), _options.SerializerOptions);
+        return JsonSerializer.Serialize(recipes.Select(x => x.AsAIObject()));
     }
 
     private async Task<IEnumerable<RecipeDescriptor>> GetRecipesAsync(IEnumerable<IFeatureInfo> features)

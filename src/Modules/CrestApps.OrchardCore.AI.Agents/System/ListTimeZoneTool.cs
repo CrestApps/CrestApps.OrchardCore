@@ -16,7 +16,6 @@ public sealed class ListTimeZoneTool : AIFunction
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
             """
             {
-                "type": "object",
                 "additionalProperties": false,
                 "required": []
             }

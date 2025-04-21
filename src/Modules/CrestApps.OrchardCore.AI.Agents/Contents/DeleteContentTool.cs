@@ -27,16 +27,17 @@ public sealed class DeleteContentTool : AIFunction
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
             """
             {
-                "type": "object",
-                "properties": {
-                    "contentItemId": {
-                        "type": "string",
-                        "description": "The string representation of the content item's ContentItemId."
-                    }
-                },
-                "additionalProperties": false,
-                "required": ["contentItemId"]
+              "type": "object",
+              "properties": {
+                "contentItemId": {
+                  "type": "string",
+                  "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
+                }
+              },
+              "required": ["contentItemId"],
+              "additionalProperties": false
             }
+            
             """, JsonSerializerOptions);
     }
 
@@ -50,6 +51,11 @@ public sealed class DeleteContentTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.CloneContent))
+        {
+            return "You do not have permission to delete content items.";
+        }
+
         if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {
             return "Unable to find a contentItemId argument in the function arguments.";
@@ -60,11 +66,6 @@ public sealed class DeleteContentTool : AIFunction
         if (contentItem is null)
         {
             return $"Unable to find a content item that match the ContentItemId: {contentItemId}";
-        }
-
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.CloneContent))
-        {
-            return "You do not have permission to delete content items.";
         }
 
         await _contentManager.RemoveAsync(contentItem);

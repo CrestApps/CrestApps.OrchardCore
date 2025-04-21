@@ -26,6 +26,7 @@
     <PackageReference Include="OrchardCore.Sms.Abstractions" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />
     <PackageReference Include="OrchardCore.Notifications.Core" />
+    <PackageReference Include="OrchardCore.Deployment.Core" />
   </ItemGroup>
 
   <ItemGroup>

@@ -49,15 +49,15 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
             """
             {
-                "type": "object",
-                "properties": {
-                    "recipeName": {
-                        "type": "string",
-                        "description": "The name of the non-startup recipe to execute."
-                    }
-                },
-                "additionalProperties": false,
-                "required": ["recipeName"]
+              "type": "object",
+              "properties": {
+                "recipeName": {
+                  "type": "string",
+                  "description": "The name of the non-startup recipe to execute."
+                }
+              },
+              "required": ["recipeName"],
+              "additionalProperties": false
             }
             """, JsonSerializerOptions);
     }

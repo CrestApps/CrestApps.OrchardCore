@@ -32,14 +32,14 @@ public sealed class CreateOrUpdateContentPartDefinitionsTool : ImportRecipeBaseT
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!arguments.TryGetFirstString("recipe", out var recipe))
-        {
-            return MissingArgument();
-        }
-
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.EditContentTypes))
         {
             return "You do not have permission to edit content types.";
+        }
+
+        if (!arguments.TryGetFirstString("recipe", out var recipe))
+        {
+            return MissingArgument();
         }
 
         return await ProcessRecipeAsync(recipe, cancellationToken);
