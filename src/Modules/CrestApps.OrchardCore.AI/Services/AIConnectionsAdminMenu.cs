@@ -17,7 +17,7 @@ public sealed class AIConnectionsAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Artificial Intelligence"], ai => ai
-                .Add(S["Connections"], S["Connections"].PrefixPosition(), connections => connections
+                .Add(S["Provider Connections"], S["Provider Connections"].PrefixPosition(), connections => connections
                     .AddClass("openai-connections")
                     .Id("openaiConnection")
                     .Action("Index", "ProviderConnections", AIConstants.Feature.Area)
