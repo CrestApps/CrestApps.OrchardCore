@@ -62,7 +62,7 @@ The **AI Connection Management** feature enhances **AI Services** by providing a
 
 1. **Navigate to AI Settings**  
    - Go to **"Artificial Intelligence"** in the admin menu.  
-   - Click **"Connections"** to configure a new connection.  
+   - Click **"Provider Connections"** to configure a new connection.  
 
 2. **Add a New Connection**  
    - Click **"Add Connection"**, select a provider, and enter the required details.  
