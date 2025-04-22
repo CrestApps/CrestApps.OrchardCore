@@ -30,8 +30,9 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
         {
             var metadata = connection.As<StdioMcpConnectionMetadata>();
             model.Command = metadata.Command;
+            model.WorkingDirectory = metadata.WorkingDirectory;
 
-            if (metadata.Arguments is not null)
+            if (metadata.Arguments is not null && metadata.Arguments.Length > 0)
             {
                 model.Arguments = JsonSerializer.Serialize(metadata.Arguments, McpJOptions.SchemaSerializerOptions);
             }
@@ -40,12 +41,32 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
                 model.Arguments = "[]";
             }
 
-            model.Schema =
+            if (metadata.EnvironmentVariables is not null)
+            {
+                model.EnvironmentVariables = JsonSerializer.Serialize(metadata.EnvironmentVariables, McpJOptions.SchemaSerializerOptions);
+            }
+            else
+            {
+                model.EnvironmentVariables = "{}";
+            }
+
+            model.ArgumentsSchema =
             """
             {
               "$schema": "http://json-schema.org/draft-04/schema#",
               "type": "array",
               "items": {
+                "type": "string"
+              }
+            }
+            """;
+
+            model.EnvironmentVariablesSchema =
+            """
+            {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "additionalProperties": {
                 "type": "string"
               }
             }
@@ -65,12 +86,12 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        string[] arguments = null;
-
         if (string.IsNullOrWhiteSpace(model.Command))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Command), S["Command is required."]);
         }
+
+        string[] arguments = null;
 
         if (!string.IsNullOrWhiteSpace(model.Arguments))
         {
@@ -80,7 +101,21 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
             }
             catch
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Arguments), S["Invalid arguments headers format."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Arguments), S["Invalid arguments format."]);
+            }
+        }
+
+        Dictionary<string, string> environmentVariables = null;
+
+        if (!string.IsNullOrWhiteSpace(model.EnvironmentVariables))
+        {
+            try
+            {
+                environmentVariables = JsonSerializer.Deserialize<Dictionary<string, string>>(model.EnvironmentVariables);
+            }
+            catch
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.EnvironmentVariables), S["Invalid environment variables format."]);
             }
         }
 
@@ -88,6 +123,8 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
         {
             metadata.Command = model.Command;
             metadata.Arguments = arguments ?? [];
+            metadata.WorkingDirectory = model.WorkingDirectory;
+            metadata.EnvironmentVariables = environmentVariables ?? [];
         });
 
         return Edit(connection, context);

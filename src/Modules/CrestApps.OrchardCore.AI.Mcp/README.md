@@ -133,6 +133,12 @@ Prefer configuration through code? Here's how to define the same connection usin
 
 ---
 
+### Admin Chat UI with Time MCP Server Integration (MCP Demonstration)
+
+![Screen cast of the admin chat](../../../docs/images/mcp-integration.gif)
+
+---
+
 ## 🔍 Explore More MCP Servers
 
 Looking for more MCP-compatible tools? Explore these resources:

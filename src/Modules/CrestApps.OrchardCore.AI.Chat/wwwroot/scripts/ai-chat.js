@@ -204,10 +204,14 @@ window.openAIChatManager = function () {
 
           // Get the index after showing typing indicator.
           var messageIndex = this.messages.length;
-          this.stream = this.connection.stream("SendMessage", this.getProfileId(), trimmedPrompt, this.getSessionId(), null).subscribe({
+          var currentSessionId = this.getSessionId();
+          this.stream = this.connection.stream("SendMessage", this.getProfileId(), trimmedPrompt, currentSessionId, null).subscribe({
             next: function next(chunk) {
               var message = _this5.messages[messageIndex];
               if (!message) {
+                if (chunk.sessionId && !currentSessionId) {
+                  _this5.setSessionId(chunk.sessionId);
+                }
                 _this5.hideTypingIndicator();
                 // Re-assign the index after hiding the typing indicator.
                 messageIndex = _this5.messages.length;
@@ -358,8 +362,11 @@ window.openAIChatManager = function () {
         getProfileId: function getProfileId() {
           return this.inputElement.getAttribute('data-profile-id');
         },
+        setSessionId: function setSessionId(sessionId) {
+          this.inputElement.setAttribute('data-session-id', sessionId || '');
+        },
         resetSession: function resetSession() {
-          this.inputElement.setAttribute('data-session-id', '');
+          this.setSessionId('');
           this.isSessionStarted = false;
           if (this.widgetIsInitialized) {
             localStorage.removeItem(this.chatWidgetStateSession);
@@ -442,7 +449,7 @@ window.openAIChatManager = function () {
               sessionId: sessionId
             }
           }));
-          this.inputElement.setAttribute('data-session-id', sessionId);
+          this.setSessionId(sessionId);
           this.isSessionStarted = true;
           if (this.widgetIsInitialized) {
             localStorage.setItem(this.chatWidgetStateSession, sessionId);
@@ -545,11 +552,24 @@ window.openAIChatManager = function () {
         }
       },
       mounted: function mounted() {
-        this.initializeApp();
-        this.startConnection();
-        if (config.widget) {
-          this.initializeWidget();
-        }
+        var _this9 = this;
+        _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+          return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+            while (1) switch (_context2.prev = _context2.next) {
+              case 0:
+                _context2.next = 2;
+                return _this9.startConnection();
+              case 2:
+                _this9.initializeApp();
+                if (config.widget) {
+                  _this9.initializeWidget();
+                }
+              case 4:
+              case "end":
+                return _context2.stop();
+            }
+          }, _callee2);
+        }))();
       },
       beforeUnmount: function beforeUnmount() {
         if (this.stream) {

@@ -7,7 +7,6 @@ namespace CrestApps.OrchardCore.AI.Mcp.Core;
 
 public sealed class McpService
 {
-    private readonly Dictionary<string, IMcpClient> _clients = [];
     private readonly IEnumerable<IMcpClientTransportProvider> _providers;
     private readonly ILogger _logger;
 
@@ -23,32 +22,25 @@ public sealed class McpService
     {
         ArgumentNullException.ThrowIfNull(connection);
 
-        if (!_clients.TryGetValue(connection.Id, out var client))
+        IClientTransport transport = null;
+
+        foreach (var provider in _providers)
         {
-            IClientTransport transport = null;
-
-            foreach (var provider in _providers)
+            if (!provider.CanHandle(connection))
             {
-                if (!provider.CanHandle(connection))
-                {
-                    continue;
-                }
-
-                transport = provider.Get(connection);
+                continue;
             }
 
-            if (transport is null)
-            {
-                _logger.LogWarning("Unable to find an implementation of '{TypeName}' that supports the connection. Not supported transport type.", nameof(IMcpClientTransportProvider));
-
-                return null;
-            }
-
-            client = await McpClientFactory.CreateAsync(transport);
-
-            _clients[connection.Id] = client;
+            transport = provider.Get(connection);
         }
 
-        return client;
+        if (transport is null)
+        {
+            _logger.LogWarning("Unable to find an implementation of '{TypeName}' that supports the connection. Not supported transport type.", nameof(IMcpClientTransportProvider));
+
+            return null;
+        }
+
+        return await McpClientFactory.CreateAsync(transport);
     }
 }

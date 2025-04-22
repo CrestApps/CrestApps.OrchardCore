@@ -8,7 +8,7 @@ public sealed class StdioClientTransportProvider : IMcpClientTransportProvider
 {
     public bool CanHandle(McpConnection connection)
         => connection.Source == McpConstants.TransportTypes.StdIo;
-    
+
     public IClientTransport Get(McpConnection connection)
     {
         var metadata = connection.As<StdioMcpConnectionMetadata>();
@@ -18,6 +18,8 @@ public sealed class StdioClientTransportProvider : IMcpClientTransportProvider
             Name = connection.DisplayText,
             Command = metadata.Command,
             Arguments = metadata.Arguments,
+            WorkingDirectory = metadata.WorkingDirectory,
+            EnvironmentVariables = metadata.EnvironmentVariables,
         });
 
         return transport;
