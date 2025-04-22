@@ -4,18 +4,23 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.FileProviders;
 using OrchardCore.Deployment;
+using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.AI.Agents.Recipes;
 
 public abstract class ImportRecipeBaseTool : AIFunction
 {
     private readonly IEnumerable<IDeploymentTargetHandler> _deploymentTargetHandlers;
+    private readonly DocumentJsonSerializerOptions _options;
 
     public override JsonElement JsonSchema { get; }
 
-    protected ImportRecipeBaseTool(IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers)
+    protected ImportRecipeBaseTool(
+        IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers,
+        DocumentJsonSerializerOptions options)
     {
-
+        _deploymentTargetHandlers = deploymentTargetHandlers;
+        _options = options;
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
             """
             {
@@ -30,7 +35,6 @@ public abstract class ImportRecipeBaseTool : AIFunction
               "additionalProperties": false
             }
             """, JsonSerializerOptions);
-        _deploymentTargetHandlers = deploymentTargetHandlers;
     }
 
     protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
@@ -70,7 +74,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
             using (var stream = new FileStream(tempArchiveName, FileMode.Create))
             {
                 using var writer = new Utf8JsonWriter(stream);
-                data.WriteTo(writer);
+                data.WriteTo(writer, _options.SerializerOptions);
             }
 
             Directory.CreateDirectory(tempArchiveFolder);

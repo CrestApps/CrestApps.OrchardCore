@@ -7,15 +7,15 @@ using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agents.ContentTypes;
 
-public sealed class GetContentTypeDefinitionsTool : AIFunction
+public sealed class RemoveContentPartDefinitionsTool : AIFunction
 {
-    public const string TheName = "getContentTypeDefinition";
+    public const string TheName = "removeContentPartDefinition";
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
-    public GetContentTypeDefinitionsTool(
+    public RemoveContentPartDefinitionsTool(
         IContentDefinitionManager contentDefinitionManager,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)
@@ -31,7 +31,7 @@ public sealed class GetContentTypeDefinitionsTool : AIFunction
               "properties": {
                 "name": {
                   "type": "string",
-                  "description": "The name of the content type for which to retrieve the definitions."
+                  "description": "The name of the content part for which to remove the definitions."
                 }
               },
               "required": ["name"],
@@ -42,7 +42,7 @@ public sealed class GetContentTypeDefinitionsTool : AIFunction
 
     public override string Name => TheName;
 
-    public override string Description => "Retrieves the content type definition for a given content type.";
+    public override string Description => "Removes the content part definition for a given content part.";
 
     public override JsonElement JsonSchema { get; }
 
@@ -50,9 +50,9 @@ public sealed class GetContentTypeDefinitionsTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ViewContentTypes))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.EditContentTypes))
         {
-            return "You do not have permission to view content types.";
+            return "You do not have permission to edit content definitions.";
         }
 
         if (!arguments.TryGetFirstString("name", out var name))
@@ -60,13 +60,15 @@ public sealed class GetContentTypeDefinitionsTool : AIFunction
             return "Unable to find a name argument in the function arguments.";
         }
 
-        var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(name);
+        var definition = await _contentDefinitionManager.GetPartDefinitionAsync(name);
 
         if (definition is null)
         {
             return $"Unable to find a type definition that match the name: {name}";
         }
 
-        return JsonSerializer.Serialize(definition, JsonHelpers.ContentDefinitionSerializerOptions);
+        await _contentDefinitionManager.DeletePartDefinitionAsync(name);
+
+        return $"The content part {name} was removed successfully";
     }
 }

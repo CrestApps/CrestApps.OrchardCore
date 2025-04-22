@@ -57,14 +57,14 @@ public sealed class GetContentPartDefinitionsTool : AIFunction
 
         if (!arguments.TryGetFirstString("name", out var name))
         {
-            return "Unable to find a contentPart argument in the function arguments.";
+            return "Unable to find a name argument in the function arguments.";
         }
 
         var definition = await _contentDefinitionManager.GetPartDefinitionAsync(name);
 
         if (definition is null)
         {
-            return $"Unable to find a part definition that match the ContentPart: {name}";
+            return $"Unable to find a part definition that match the name: {name}";
         }
 
         return JsonSerializer.Serialize(definition, JsonHelpers.ContentDefinitionSerializerOptions);

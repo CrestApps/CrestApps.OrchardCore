@@ -98,9 +98,9 @@ public sealed class SendEmailTool : AIFunction
 
         var email = await _userManager.GetEmailAsync(user);
 
-        if (!string.IsNullOrEmpty(email))
+        if (string.IsNullOrEmpty(email))
         {
-            return "You do no have an email on file.";
+            return "You do no have an email on associated with the user.";
         }
 
         var message = new MailMessage

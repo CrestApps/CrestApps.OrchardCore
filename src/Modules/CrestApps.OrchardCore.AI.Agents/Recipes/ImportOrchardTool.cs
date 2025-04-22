@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Options;
 using OrchardCore.Deployment;
+using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.AI.Agents.Recipes;
 
@@ -6,8 +8,10 @@ public sealed class ImportOrchardTool : ImportRecipeBaseTool
 {
     public const string TheName = "importOrchardCoreRecipe";
 
-    public ImportOrchardTool(IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers)
-        : base(deploymentTargetHandlers)
+    public ImportOrchardTool(
+        IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers,
+        IOptions<DocumentJsonSerializerOptions> options)
+        : base(deploymentTargetHandlers, options.Value)
     {
     }
 

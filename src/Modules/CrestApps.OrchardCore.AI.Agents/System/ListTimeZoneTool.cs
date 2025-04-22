@@ -7,6 +7,7 @@ namespace CrestApps.OrchardCore.AI.Agents.System;
 public sealed class ListTimeZoneTool : AIFunction
 {
     public const string TheName = "listTimeZones";
+
     private readonly IClock _clock;
 
     public ListTimeZoneTool(IClock clock)

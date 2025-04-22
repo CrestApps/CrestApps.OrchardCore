@@ -8,8 +8,11 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Json;
 using OrchardCore.Navigation;
 using OrchardCore.Users;
+using OrchardCore.Users.Models;
 using OrchardCore.Users.Services;
 using OrchardCore.Users.ViewModels;
+using YesSql.Filters.Query;
+using YesSql.Filters.Query.Services;
 
 namespace CrestApps.OrchardCore.AI.Agents.Users;
 
@@ -99,6 +102,7 @@ public sealed class SearchForUsersTool : AIFunction
             SearchText = term,
             OriginalSearchText = term,
             StartIndex = startingIndex,
+            FilterResult = new QueryFilterResult<User>(new Dictionary<string, QueryTermOption<User>>()),
         }, _updateModelAccessor.ModelUpdater);
 
         var contentItemsCount = await query.CountAsync();
