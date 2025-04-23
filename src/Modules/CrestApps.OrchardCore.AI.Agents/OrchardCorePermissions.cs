@@ -17,5 +17,7 @@ internal static class OrchardCorePermissions
 
     public static readonly Permission EditContentTypes = new("EditContentTypes", "Edit content types.", isSecurityCritical: true);
 
-    public static readonly Permission ManageRecipes = new Permission("ManageRecipes", "Manage Recipes", isSecurityCritical: true);
+    public static readonly Permission ManageRecipes = new("ManageRecipes", "Manage Recipes", isSecurityCritical: true);
+
+    public static readonly Permission ManageWorkflows = new("ManageWorkflows", "Manage workflows", isSecurityCritical: true);
 }

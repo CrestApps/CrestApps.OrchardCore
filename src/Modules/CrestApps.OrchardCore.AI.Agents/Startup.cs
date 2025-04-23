@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.AI.Agents.Recipes;
 using CrestApps.OrchardCore.AI.Agents.System;
 using CrestApps.OrchardCore.AI.Agents.Tenants;
 using CrestApps.OrchardCore.AI.Agents.Users;
+using CrestApps.OrchardCore.AI.Agents.Workflows;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -457,6 +458,41 @@ public sealed class RolesStartup : StartupBase
             o.Title = S["Get Role Info"];
             o.Description = S["Gets information about a role."];
             o.Category = S["Roles Management"];
+        });
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.Agents, "OrchardCore.Workflows")]
+public sealed class WorkflowsStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public WorkflowsStartup(IStringLocalizer<WorkflowsStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAITool<GetWorkflowTypesTool>(GetWorkflowTypesTool.TheName, (o) =>
+        {
+            o.Title = S["Get Workflow Type Info"];
+            o.Description = S["Gets information about a workflow type."];
+            o.Category = S["Workflow Management"];
+        });
+
+        services.AddAITool<ListWorkflowTypesTool>(ListWorkflowTypesTool.TheName, (o) =>
+        {
+            o.Title = S["List Workflow Type"];
+            o.Description = S["List information about a workflow types."];
+            o.Category = S["Workflow Management"];
+        });
+
+        services.AddAITool<CreateOrUpdateWorkflowTool>(CreateOrUpdateWorkflowTool.TheName, (o) =>
+        {
+            o.Title = S["Create Workflows"];
+            o.Description = S["Create or update information a workflow."];
+            o.Category = S["Workflow Management"];
         });
     }
 }
