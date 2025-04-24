@@ -128,7 +128,6 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
             : [];
 
         var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
-
         try
         {
             var data = await chatClient.CompleteChatAsync(prompts, chatOptions, cancellationToken);
@@ -279,7 +278,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
 
         Dictionary<string, object> linkContext = null;
 
-        ChatCompletionOptions subSequanceContext = null;
+        ChatCompletionOptions subSequenceContext = null;
 
         await foreach (var update in chatClient.CompleteChatStreamingAsync(prompts, chatOptions, cancellationToken))
         {
@@ -288,9 +287,9 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
                 await ProcessToolCallsAsync(prompts, update.ToolCallUpdates);
 
                 // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
-                subSequanceContext ??= GetOptions(context, functions);
+                subSequenceContext ??= GetOptions(context, functions);
 
-                await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, subSequanceContext, cancellationToken))
+                await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, subSequenceContext, cancellationToken))
                 {
                     var result = new Microsoft.Extensions.AI.ChatResponseUpdate
                     {
@@ -476,7 +475,11 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
 
         var chatOptions = GetOptions(context, functions);
 
-        var indexSettings = await _azureAISearchIndexSettingsService.GetAsync(metadata.IndexName);
+        // In OC v3, the `GetAsync` method was changed to accepts an Id instead of a name.
+        // Until we drop support for OC v2, we need to first call `GetSettingsAsync` and find index by name.
+        var settings = await _azureAISearchIndexSettingsService.GetSettingsAsync();
+
+        var indexSettings = settings.FirstOrDefault(x => x.IndexName == metadata.IndexName);
 
         if (indexSettings == null
             || string.IsNullOrEmpty(indexSettings.IndexFullName)
@@ -486,17 +489,15 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
         }
 
         var keyField = indexSettings.IndexMappings?.FirstOrDefault(x => x.IsKey);
-
 #pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         chatOptions.AddDataSource(new AzureSearchChatDataSource()
         {
             Endpoint = new Uri(_azureAISearchDefaultOptions.Endpoint),
             IndexName = indexSettings.IndexFullName,
-
             Authentication = DataSourceAuthentication.FromApiKey(_azureAISearchDefaultOptions.Credential.Key),
             Strictness = metadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
             TopNDocuments = metadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
-            QueryType = "simple",
+            QueryType = DataSourceQueryType.Simple,
             InScope = true,
             SemanticConfiguration = "default",
             OutputContexts = DataSourceOutputContexts.Citations,
@@ -531,6 +532,11 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
         foreach (var function in functions)
         {
             chatOptions.Tools.Add(function.ToChatTool());
+        }
+
+        if (chatOptions.Tools.Count > 0)
+        {
+            chatOptions.ToolChoice = ChatToolChoice.CreateAutoChoice();
         }
 
         return chatOptions;

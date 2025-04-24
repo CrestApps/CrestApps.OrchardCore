@@ -24,13 +24,20 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
+    public override async Task<IDisplayResult> EditAsync(AIProfile profile, BuildEditorContext context)
     {
-        return Initialize<EditProfileMcpConnectionsViewModel>("EditProfileMcpConnection_Edit", async model =>
+        var connections = await _store.GetAllAsync();
+
+        if (!connections.Any())
+        {
+            return null;
+        }
+
+        return Initialize<EditProfileMcpConnectionsViewModel>("EditProfileMcpConnection_Edit", model =>
         {
             var mcpMetadata = profile.As<AIProfileMcpMetadata>();
 
-            model.Connections = (await _store.GetAllAsync())
+            model.Connections = connections
             .Select(entry => new ToolEntry
             {
                 Id = entry.Id,
@@ -44,6 +51,13 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
+        var connections = await _store.GetAllAsync();
+
+        if (!connections.Any())
+        {
+            return null;
+        }
+
         var model = new EditProfileMcpConnectionsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
@@ -58,8 +72,6 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
         }
         else
         {
-            var connections = await _store.GetAllAsync();
-
             metadata.ConnectionIds = connections.Select(x => x.Id)
                 .Intersect(ids)
                 .ToArray();

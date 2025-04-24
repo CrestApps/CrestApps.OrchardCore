@@ -23,16 +23,20 @@ internal sealed class AIProfileToolInstancesDisplayDriver : DisplayDriver<AIProf
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
+    public override async Task<IDisplayResult> EditAsync(AIProfile profile, BuildEditorContext context)
     {
-        return Initialize<EditProfileToolInstancesViewModel>("EditProfileToolInstances_Edit", async model =>
+        var instances = await _toolInstanceStore.GetAllAsync();
+
+        if (!instances.Any())
+        {
+            return null;
+        }
+
+        return Initialize<EditProfileToolInstancesViewModel>("EditProfileToolInstances_Edit", model =>
         {
             var toolMetadata = profile.As<AIProfileFunctionInstancesMetadata>();
 
-            var instances = await _toolInstanceStore.GetAllAsync();
-
-            model.Instances = instances
-            .Select(instance => new ToolEntry
+            model.Instances = instances.Select(instance => new ToolEntry
             {
                 Id = instance.Id,
                 DisplayText = instance.DisplayText,
@@ -46,6 +50,13 @@ internal sealed class AIProfileToolInstancesDisplayDriver : DisplayDriver<AIProf
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
+        var instances = await _toolInstanceStore.GetAllAsync();
+
+        if (!instances.Any())
+        {
+            return null;
+        }
+
         var model = new EditProfileToolInstancesViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);

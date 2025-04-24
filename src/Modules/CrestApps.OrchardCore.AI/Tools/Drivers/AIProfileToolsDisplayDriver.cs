@@ -25,6 +25,11 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
     {
+        if (_toolDefinitions.Tools.Count == 0)
+        {
+            return null;
+        }
+
         return Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
         {
             var metadata = profile.As<AIProfileFunctionInvocationMetadata>();
@@ -45,11 +50,16 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
+        if (_toolDefinitions.Tools.Count == 0)
+        {
+            return null;
+        }
+
         var model = new EditProfileToolsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var selectedToolKeys = model.Tools.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.Id).ToArray();
+        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.Id).ToArray();
 
         var metadata = new AIProfileFunctionInvocationMetadata();
 
