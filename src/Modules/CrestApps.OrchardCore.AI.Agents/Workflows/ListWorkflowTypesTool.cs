@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.AI.Agents.Workflows;
 
 public sealed class ListWorkflowTypesTool : AIFunction
 {
-    public const string TheName = "listWorkflowTypesFeature";
+    public const string TheName = "listWorkflowTypes";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;

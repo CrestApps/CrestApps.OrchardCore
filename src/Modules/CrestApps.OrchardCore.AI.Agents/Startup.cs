@@ -494,5 +494,12 @@ public sealed class WorkflowsStartup : StartupBase
             o.Description = S["Create or update information a workflow."];
             o.Category = S["Workflow Management"];
         });
+
+        services.AddAITool<ListWorkflowActivitiesTool>(ListWorkflowActivitiesTool.TheName, (o) =>
+        {
+            o.Title = S["List Workflow Activities"];
+            o.Description = S["List all available tasks and activities a workflow."];
+            o.Category = S["Workflow Management"];
+        });
     }
 }

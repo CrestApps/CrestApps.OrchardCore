@@ -95,6 +95,6 @@ internal sealed class GetRoleTool : AIFunction
             return JsonSerializer.Serialize(r);
         }
 
-        return JsonSerializer.Serialize(role.RoleName);
+        return JsonSerializer.Serialize(role);
     }
 }

@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.AI.Agents.Workflows;
 
 public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
 {
-    public const string TheName = "CreateWorkflowFromRecipe";
+    public const string TheName = "createOrUpdateWorkflow";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
