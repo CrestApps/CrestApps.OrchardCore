@@ -298,6 +298,20 @@ public sealed class ContentDefinitionsStartup : StartupBase
             o.Description = S["Removes the content part definition."];
             o.Category = S["Content Definitions"];
         });
+
+        services.AddAITool<ListContentPartDefinitionsTool>(ListContentPartDefinitionsTool.TheName, (o) =>
+        {
+            o.Title = S["List Available Content Parts Definitions"];
+            o.Description = S["Provides a list of available content parts definitions."];
+            o.Category = S["Content Definitions"];
+        });
+
+        services.AddAITool<ListContentFieldsTool>(ListContentFieldsTool.TheName, (o) =>
+        {
+            o.Title = S["List Available Content Fields"];
+            o.Description = S["Provides a list of available content fields."];
+            o.Category = S["Content Definitions"];
+        });
     }
 }
 
