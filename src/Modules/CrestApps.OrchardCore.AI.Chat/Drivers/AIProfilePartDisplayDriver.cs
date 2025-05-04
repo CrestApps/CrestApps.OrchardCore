@@ -12,7 +12,7 @@ using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Navigation;
 
-namespace CrestApps.OrchardCore.AI.Drivers;
+namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
 public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AIProfilePart>
 {

@@ -79,7 +79,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Mc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Mcp.Core", "src\Core\CrestApps.OrchardCore.AI.Mcp.Core\CrestApps.OrchardCore.AI.Mcp.Core.csproj", "{A49E8890-01E5-4891-8420-6DDD2E51C178}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Agents", "src\Modules\CrestApps.OrchardCore.AI.Agents\CrestApps.OrchardCore.AI.Agents.csproj", "{4D04A46D-E7F5-FDF9-DC9D-CECB23D1A606}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Agent", "src\Modules\CrestApps.OrchardCore.AI.Agent\CrestApps.OrchardCore.AI.Agent.csproj", "{39BF35EF-8CA6-ED33-905D-33347EE3D9EC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -191,10 +191,10 @@ Global
 		{A49E8890-01E5-4891-8420-6DDD2E51C178}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A49E8890-01E5-4891-8420-6DDD2E51C178}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A49E8890-01E5-4891-8420-6DDD2E51C178}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4D04A46D-E7F5-FDF9-DC9D-CECB23D1A606}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4D04A46D-E7F5-FDF9-DC9D-CECB23D1A606}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4D04A46D-E7F5-FDF9-DC9D-CECB23D1A606}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4D04A46D-E7F5-FDF9-DC9D-CECB23D1A606}.Release|Any CPU.Build.0 = Release|Any CPU
+		{39BF35EF-8CA6-ED33-905D-33347EE3D9EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39BF35EF-8CA6-ED33-905D-33347EE3D9EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39BF35EF-8CA6-ED33-905D-33347EE3D9EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39BF35EF-8CA6-ED33-905D-33347EE3D9EC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -226,7 +226,7 @@ Global
 		{8BB36191-F041-43ED-B6FA-1C6302ED7F5B} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
 		{3ED9AAF7-BCFB-4456-A2FB-1A290C5C6240} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{A49E8890-01E5-4891-8420-6DDD2E51C178} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
-		{4D04A46D-E7F5-FDF9-DC9D-CECB23D1A606} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{39BF35EF-8CA6-ED33-905D-33347EE3D9EC} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0E9F9B00-7078-4EA8-87A9-0B2E74375F1E}
