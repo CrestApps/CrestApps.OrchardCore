@@ -372,10 +372,10 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
                     }
 
                     result.AdditionalProperties = new Microsoft.Extensions.AI.AdditionalPropertiesDictionary
-                        {
-                            {"ContentItemIds", contentItemIds },
-                            {"References", references },
-                        };
+                    {
+                        {"ContentItemIds", contentItemIds },
+                        {"References", references },
+                    };
                 }
 
                 yield return result;
