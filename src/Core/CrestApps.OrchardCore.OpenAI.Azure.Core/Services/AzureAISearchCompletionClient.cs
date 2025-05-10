@@ -279,7 +279,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
 
         Dictionary<string, object> linkContext = null;
 
-        ChatCompletionOptions subSequanceContext = null;
+        ChatCompletionOptions subSequenceContext = null;
 
         await foreach (var update in chatClient.CompleteChatStreamingAsync(prompts, chatOptions, cancellationToken))
         {
@@ -288,9 +288,9 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
                 await ProcessToolCallsAsync(prompts, update.ToolCallUpdates);
 
                 // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
-                subSequanceContext ??= GetOptions(context, functions);
+                subSequenceContext ??= GetOptions(context, functions);
 
-                await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, subSequanceContext, cancellationToken))
+                await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, subSequenceContext, cancellationToken))
                 {
                     var result = new Microsoft.Extensions.AI.ChatResponseUpdate
                     {
@@ -492,20 +492,20 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
         {
             Endpoint = new Uri(_azureAISearchDefaultOptions.Endpoint),
             IndexName = indexSettings.IndexFullName,
-
             Authentication = DataSourceAuthentication.FromApiKey(_azureAISearchDefaultOptions.Credential.Key),
             Strictness = metadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
             TopNDocuments = metadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
-            QueryType = "simple",
+            QueryType = DataSourceQueryType.Simple,
             InScope = true,
             SemanticConfiguration = "default",
             OutputContexts = DataSourceOutputContexts.Citations,
+            Filter = null,
             FieldMappings = new DataSourceFieldMappings()
             {
                 TitleFieldName = GetBestTitleField(keyField),
                 FilePathFieldName = keyField?.AzureFieldKey,
                 ContentFieldSeparator = Environment.NewLine,
-            }
+            },
         });
 #pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
