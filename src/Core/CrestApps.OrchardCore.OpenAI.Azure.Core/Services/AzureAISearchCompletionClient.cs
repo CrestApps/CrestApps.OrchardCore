@@ -128,7 +128,6 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
             : [];
 
         var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
-
         try
         {
             var data = await chatClient.CompleteChatAsync(prompts, chatOptions, cancellationToken);
@@ -476,7 +475,11 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
 
         var chatOptions = GetOptions(context, functions);
 
-        var indexSettings = await _azureAISearchIndexSettingsService.GetAsync(metadata.IndexName);
+        // In OC v3, the `GetAsync` method was changed to accepts an Id instead of a name.
+        // Until we drop support for OC v2, we need to first call `GetSettingsAsync` and find index by name.
+        var settings = await _azureAISearchIndexSettingsService.GetSettingsAsync();
+
+        var indexSettings = settings.FirstOrDefault(x => x.IndexName == metadata.IndexName);
 
         if (indexSettings == null
             || string.IsNullOrEmpty(indexSettings.IndexFullName)
@@ -486,7 +489,6 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
         }
 
         var keyField = indexSettings.IndexMappings?.FirstOrDefault(x => x.IsKey);
-
 #pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         chatOptions.AddDataSource(new AzureSearchChatDataSource()
         {
@@ -533,6 +535,11 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
             chatOptions.Tools.Add(function.ToChatTool());
         }
 
+        if (chatOptions.Tools.Count > 0)
+        {
+            chatOptions.ToolChoice = ChatToolChoice.CreateAutoChoice();
+        }
+
         return chatOptions;
     }
 
@@ -560,10 +567,13 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
                     continue;
                 }
             }
+        }
 
-            if (_toolsService is not null && funcMetadata.InstanceIds is not null && funcMetadata.InstanceIds.Length > 0)
+        if (profile.TryGet<AIProfileFunctionInstancesMetadata>(out var instancesMetadata))
+        {
+            if (_toolsService is not null && instancesMetadata.InstanceIds is not null && instancesMetadata.InstanceIds.Length > 0)
             {
-                foreach (var instanceId in funcMetadata.InstanceIds)
+                foreach (var instanceId in instancesMetadata.InstanceIds)
                 {
                     var tool = await _toolsService.GetByInstanceIdAsync(instanceId);
 

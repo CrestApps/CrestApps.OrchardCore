@@ -1,10 +1,10 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.OrchardCore.AI.Mcp.Deployments.Steps;
 using CrestApps.OrchardCore.Services;
 using OrchardCore.Deployment;
 
-namespace CrestApps.OrchardCore.AI.Deployments.Sources;
+namespace CrestApps.OrchardCore.AI.Mcp.Deployments.Sources;
 
 internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpConnectionDeploymentStep>
 {

@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
@@ -13,58 +12,54 @@ namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
-    private readonly IModelStore<AIToolInstance> _toolInstanceStore;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileToolsDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
-        IModelStore<AIToolInstance> toolInstanceStore,
         IStringLocalizer<AIProfileToolsDisplayDriver> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
-        _toolInstanceStore = toolInstanceStore;
         S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
     {
-        return Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", async model =>
+        if (_toolDefinitions.Tools.Count == 0)
         {
-            var toolMetadata = profile.As<AIProfileFunctionInvocationMetadata>();
+            return null;
+        }
+
+        return Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
+        {
+            var metadata = profile.As<AIProfileFunctionInvocationMetadata>();
 
             model.Tools = _toolDefinitions.Tools
-            .Select(entry => new ToolEntry
+            .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
+            .OrderBy(group => group.Key)
+            .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
             {
                 Id = entry.Key,
                 DisplayText = entry.Value.Title,
                 Description = entry.Value.Description,
-                IsSelected = toolMetadata.Names?.Contains(entry.Key) ?? false,
-            }).OrderBy(entry => entry.DisplayText)
-            .ToArray();
+                IsSelected = metadata.Names?.Contains(entry.Key) ?? false,
+            }).OrderBy(entry => entry.DisplayText).ToArray());
 
-            var instances = await _toolInstanceStore.GetAllAsync();
-
-            model.Instances = instances
-            .Select(instance => new ToolEntry
-            {
-                Id = instance.Id,
-                DisplayText = instance.DisplayText,
-                Description = instance.As<InvokableToolMetadata>()?.Description,
-                IsSelected = toolMetadata.InstanceIds?.Contains(instance.Id) ?? false,
-            }).OrderBy(entry => entry.DisplayText)
-            .ToArray();
-
-        }).Location("Content:8");
+        }).Location("Content:8#Capabilities:5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
+        if (_toolDefinitions.Tools.Count == 0)
+        {
+            return null;
+        }
+
         var model = new EditProfileToolsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var selectedToolKeys = model.Tools?.Where(x => x.IsSelected).Select(x => x.Id).ToArray();
+        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.Id).ToArray();
 
         var metadata = new AIProfileFunctionInvocationMetadata();
 
@@ -78,8 +73,6 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
                 .Intersect(selectedToolKeys)
                 .ToArray();
         }
-
-        metadata.InstanceIds = model.Instances?.Where(x => x.IsSelected).Select(x => x.Id).ToArray() ?? [];
 
         profile.Put(metadata);
 

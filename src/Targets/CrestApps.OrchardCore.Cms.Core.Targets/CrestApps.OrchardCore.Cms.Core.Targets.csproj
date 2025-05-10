@@ -12,7 +12,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Agent\CrestApps.OrchardCore.AI.Agent.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat\CrestApps.OrchardCore.AI.Chat.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Mcp\CrestApps.OrchardCore.AI.Mcp.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AzureAIInference\CrestApps.OrchardCore.AzureAIInference.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Ollama\CrestApps.OrchardCore.Ollama.csproj" PrivateAssets="none" />

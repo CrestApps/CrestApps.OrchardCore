@@ -16,41 +16,25 @@ public sealed class FunctionInvocationAICompletionServiceHandler : IAICompletion
     public async Task ConfigureAsync(CompletionServiceConfigureContext context)
     {
         if (!context.IsFunctionInvocationSupported ||
-            !(context?.Profile.TryGet<AIProfileFunctionInvocationMetadata>(out var funcMetadata) ?? false))
+            !context.Profile.TryGet<AIProfileFunctionInvocationMetadata>(out var metadata) ||
+            metadata.Names is null || metadata.Names.Length == 0)
         {
             return;
         }
 
         context.ChatOptions.Tools ??= [];
 
-        if (funcMetadata.Names is not null && funcMetadata.Names.Length > 0)
+        foreach (var name in metadata.Names)
         {
-            foreach (var name in funcMetadata.Names)
+            var tool = await _toolsService.GetByNameAsync(name);
+
+            if (tool is null)
             {
-                var tool = await _toolsService.GetByNameAsync(name);
-
-                if (tool is null)
-                {
-                    continue;
-                }
-
-                context.ChatOptions.Tools.Add(tool);
+                continue;
             }
-        }
 
-        if (funcMetadata.InstanceIds is not null && funcMetadata.InstanceIds.Length > 0)
-        {
-            foreach (var instanceId in funcMetadata.InstanceIds)
-            {
-                var tool = await _toolsService.GetByInstanceIdAsync(instanceId);
-
-                if (tool is null)
-                {
-                    continue;
-                }
-
-                context.ChatOptions.Tools.Add(tool);
-            }
+            context.ChatOptions.Tools.Add(tool);
         }
     }
 }
+

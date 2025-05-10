@@ -8,7 +8,7 @@
     <!-- Miscellaneous Packages -->
     <PackageVersion Include="NuGet.Versioning" Version="6.13.2" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.1.1" />
-    <PackageVersion Include="ModelContextProtocol" Version="0.1.0-preview.8" />
+    <PackageVersion Include="ModelContextProtocol" Version="0.1.0-preview.10" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.1.0-preview.7" />
   </ItemGroup>
   <ItemGroup>
@@ -21,12 +21,14 @@
     <PackageVersion Include="OrchardCore.ContentManagement.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentTypes" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentTypes.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Contents.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Contents" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Data.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.DisplayManagement" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.DisplayManagement.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Infrastructure.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Workflows.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Workflows" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Liquid" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Liquid.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Logging.NLog" Version="$(OrchardCoreVersion)" />
@@ -37,12 +39,20 @@
     <PackageVersion Include="OrchardCore.ResourceManagement" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Search.AzureAI.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Users.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Setup.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Users.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Deployment.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Tenants" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Features" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Email.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Sms.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Notifications.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheAdmin" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheAgencyTheme" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheBlogTheme" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheComingSoonTheme" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Lists" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheTheme" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="SafeMode" Version="$(OrchardCoreVersion)" />
   </ItemGroup>

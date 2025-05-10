@@ -35,13 +35,16 @@ To get started with any module, refer to its respective `README.md` file for det
 ## Available Modules
 You can install individual modules into your web project as needed, or install the `CrestApps.OrchardCore.Cms.Core.Targets` package to include all modules at once.
 
-### Artificial Intelligence (AI) Modules
+### Artificial Intelligence Suite
 
 #### AI Module
 Provides services for all AI modules and provide the interface for managing AI profiles and AI Deployments. See the [AI Module README](src/Modules/CrestApps.OrchardCore.AI/README.md) for more details.  
 
 #### AI Chat Module
 Provides interface for interacting with AI chat models like **ChatGPT** and others. See the [AI Chat Module README](src/Modules/CrestApps.OrchardCore.AI.Chat/README.md) for more details.  
+
+#### Orchard Core AI Agent Module
+Enhances the **AI Module** by providing AI Agents to perform tasks on your Orchard Core site. For more details, see the [Orchard Core AI Agent Module README](src/Modules/CrestApps.OrchardCore.AI.Agent/README.md).
 
 #### Model Context Protocol (MCP) Module
 Enhances the **AI Module** by adding support for connecting to any MCP server, whether hosted locally or remotely. For more details, see the [MCP Module README](src/Modules/CrestApps.OrchardCore.AI.Mcp/README.md).

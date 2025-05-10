@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.OrchardCore.AI.Deployments.ViewModels;
+namespace CrestApps.OrchardCore.AI.Mcp.Deployments.ViewModels;
 
 public class McpConnectionStepViewModel
 {
