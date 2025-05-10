@@ -1,0 +1,31 @@
+@using CrestApps.OrchardCore.AI.Core
+@using Microsoft.Extensions.Options
+
+@inject IOptions<AIOptions> AIOptions
+@{
+    string providerName = Model.ProviderName;
+    string type = Model.Type;
+
+    if (!AIOptions.Value.DataSources.TryGetValue(new AIDataSourceKey(providerName, type), out var service))
+    {
+        return;
+    }
+}
+
+<div class="col">
+    <div class="card h-100">
+        <div class="card-body">
+            <h4>@(service.DisplayName)</h4>
+            <p class="hint">@(service.Description)</p>
+
+        </div>
+
+        <div class="card-footer text-muted text-sm-end">
+            <a class="btn btn-primary btn-sm"
+               asp-route-action="Create"
+               asp-route-controller="DataSources"
+               asp-route-providerName="@providerName">@T["Add"]</a>
+        </div>
+
+    </div>
+</div>

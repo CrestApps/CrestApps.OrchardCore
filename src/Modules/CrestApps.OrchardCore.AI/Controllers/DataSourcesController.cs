@@ -1,8 +1,7 @@
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -19,55 +18,55 @@ using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Controllers;
 
-public sealed class DeploymentsController : Controller
+public sealed class DataSourcesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly INamedSourceModelManager<AIDeployment> _deploymentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly IAIDataSourceManager _dataSourceManager;
     private readonly AIOptions _aiOptions;
-    private readonly IDisplayManager<AIDeployment> _deploymentDisplayManager;
+    private readonly IDisplayManager<AIDataSource> _displayManager;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
-    public DeploymentsController(
-        INamedSourceModelManager<AIDeployment> deploymentManager,
+    public DataSourcesController(
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
+        IAIDataSourceManager dataSourceManager,
+        IDisplayManager<AIDataSource> displayManager,
         IOptions<AIOptions> aiOptions,
-        IDisplayManager<AIDeployment> deploymentDisplayManager,
         INotifier notifier,
-        IHtmlLocalizer<DeploymentsController> htmlLocalizer,
-        IStringLocalizer<DeploymentsController> stringLocalizer)
+        IHtmlLocalizer<DataSourcesController> htmlLocalizer,
+        IStringLocalizer<DataSourcesController> stringLocalizer)
     {
-        _deploymentManager = deploymentManager;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
+        _dataSourceManager = dataSourceManager;
+        _displayManager = displayManager;
         _aiOptions = aiOptions.Value;
-        _deploymentDisplayManager = deploymentDisplayManager;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
 
-    [Admin("ai/deployments", "AIDeploymentsIndex")]
+    [Admin("ai/data-sources", "AIDataSourcesIndex")]
     public async Task<IActionResult> Index(
         ModelOptions options,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
         {
             return Forbid();
         }
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var result = await _deploymentManager.PageAsync(pager.Page, pager.PageSize, new QueryContext
+        var result = await _dataSourceManager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
             Sorted = true,
             Name = options.Search,
@@ -81,20 +80,20 @@ public sealed class DeploymentsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceModelEntryViewModel<AIDeployment>
+        var viewModel = new ListSourceModelEntryViewModel<AIDataSource, AIDataSourceKey>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            Sources = _aiOptions.Deployments.Select(x => x.Key).Order(),
+            Sources = _aiOptions.DataSources.Select(x => x.Key).OrderBy(x => x.ProviderName).ThenBy(x => x.Type),
         };
 
         foreach (var record in result.Models)
         {
-            viewModel.Models.Add(new ModelEntry<AIDeployment>
+            viewModel.Models.Add(new ModelEntry<AIDataSource>
             {
                 Model = record,
-                Shape = await _deploymentDisplayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+                Shape = await _displayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
             });
         }
 
@@ -109,7 +108,7 @@ public sealed class DeploymentsController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
-    [Admin("ai/deployments", "AIDeploymentsIndex")]
+    [Admin("ai/data-sources", "AIDataSourcesIndex")]
     public ActionResult IndexFilterPost(ListModelViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
@@ -118,34 +117,34 @@ public sealed class DeploymentsController : Controller
         });
     }
 
-    [Admin("ai/deployment/create/{providerName}", "AIDeploymentsCreate")]
-    public async Task<ActionResult> Create(string providerName)
+    [Admin("ai/data-source/create/{providerName}/{type}", "AIDataSourceCreate")]
+    public async Task<ActionResult> Create(string providerName, string type)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
         {
             return Forbid();
         }
 
-        if (!_aiOptions.Deployments.TryGetValue(providerName, out var provider))
+        if (!_aiOptions.DataSources.TryGetValue(new AIDataSourceKey(providerName, type), out var service))
         {
-            await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
+            await _notifier.ErrorAsync(H["Unable to find a provider named '{0}' with the type '{1}'.", providerName, type]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        var deployment = await _deploymentManager.NewAsync(providerName);
+        var dataSource = await _dataSourceManager.NewAsync(providerName, type);
 
-        if (deployment == null)
+        if (dataSource == null)
         {
-            await _notifier.ErrorAsync(H["Invalid provider."]);
+            await _notifier.ErrorAsync(H["Invalid provider or type."]);
 
             return RedirectToAction(nameof(Index));
         }
 
         var model = new ModelViewModel
         {
-            DisplayName = provider.DisplayName,
-            Editor = await _deploymentDisplayManager.BuildEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
+            DisplayName = service.DisplayName,
+            Editor = await _displayManager.BuildEditorAsync(dataSource, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
         return View(model);
@@ -153,22 +152,22 @@ public sealed class DeploymentsController : Controller
 
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("ai/deployment/create/{providerName}", "AIDeploymentsCreate")]
-    public async Task<ActionResult> CreatePost(string providerName)
+    [Admin("ai/data-source/create/{providerName}/{type}", "AIDataSourceCreate")]
+    public async Task<ActionResult> CreatePost(string providerName, string type)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
         {
             return Forbid();
         }
 
-        if (!_aiOptions.Deployments.TryGetValue(providerName, out var provider))
+        if (!_aiOptions.Deployments.TryGetValue(providerName, out var service))
         {
             await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        var deployment = await _deploymentManager.NewAsync(providerName);
+        var deployment = await _dataSourceManager.NewAsync(providerName, type);
 
         if (deployment == null)
         {
@@ -179,15 +178,15 @@ public sealed class DeploymentsController : Controller
 
         var model = new ModelViewModel
         {
-            DisplayName = provider.DisplayName,
-            Editor = await _deploymentDisplayManager.UpdateEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
+            DisplayName = service.DisplayName,
+            Editor = await _displayManager.UpdateEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
         if (ModelState.IsValid)
         {
-            await _deploymentManager.CreateAsync(deployment);
+            await _dataSourceManager.CreateAsync(deployment);
 
-            await _notifier.SuccessAsync(H["Deployment has been created successfully."]);
+            await _notifier.SuccessAsync(H["Data source has been created successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -195,15 +194,15 @@ public sealed class DeploymentsController : Controller
         return View(model);
     }
 
-    [Admin("ai/deployment/edit/{id}", "AIDeploymentsEdit")]
+    [Admin("ai/data-source/edit/{id}", "AIDataSourceEdit")]
     public async Task<ActionResult> Edit(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
         {
             return Forbid();
         }
 
-        var deployment = await _deploymentManager.FindByIdAsync(id);
+        var deployment = await _dataSourceManager.FindByIdAsync(id);
 
         if (deployment == null)
         {
@@ -212,8 +211,8 @@ public sealed class DeploymentsController : Controller
 
         var model = new ModelViewModel
         {
-            DisplayName = deployment.Name,
-            Editor = await _deploymentDisplayManager.BuildEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: false),
+            DisplayName = deployment.DisplayText,
+            Editor = await _displayManager.BuildEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
         return View(model);
@@ -221,15 +220,15 @@ public sealed class DeploymentsController : Controller
 
     [HttpPost]
     [ActionName(nameof(Edit))]
-    [Admin("ai/deployment/edit/{id}", "AIDeploymentsEdit")]
+    [Admin("ai/data-source/edit/{id}", "AIDataSourceEdit")]
     public async Task<ActionResult> EditPost(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
         {
             return Forbid();
         }
 
-        var deployment = await _deploymentManager.FindByIdAsync(id);
+        var deployment = await _dataSourceManager.FindByIdAsync(id);
 
         if (deployment == null)
         {
@@ -241,15 +240,15 @@ public sealed class DeploymentsController : Controller
 
         var model = new ModelViewModel
         {
-            DisplayName = mutableProfile.Name,
-            Editor = await _deploymentDisplayManager.UpdateEditorAsync(mutableProfile, _updateModelAccessor.ModelUpdater, isNew: false),
+            DisplayName = mutableProfile.DisplayText,
+            Editor = await _displayManager.UpdateEditorAsync(mutableProfile, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
         if (ModelState.IsValid)
         {
-            await _deploymentManager.UpdateAsync(mutableProfile);
+            await _dataSourceManager.UpdateAsync(mutableProfile);
 
-            await _notifier.SuccessAsync(H["Deployment has been updated successfully."]);
+            await _notifier.SuccessAsync(H["Data source has been updated successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -258,7 +257,7 @@ public sealed class DeploymentsController : Controller
     }
 
     [HttpPost]
-    [Admin("ai/deployment/delete/{id}", "AIDeploymentsDelete")]
+    [Admin("ai/data-source/delete/{id}", "AIDataSourceDelete")]
     public async Task<IActionResult> Delete(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
@@ -266,16 +265,16 @@ public sealed class DeploymentsController : Controller
             return Forbid();
         }
 
-        var deployment = await _deploymentManager.FindByIdAsync(id);
+        var deployment = await _dataSourceManager.FindByIdAsync(id);
 
         if (deployment == null)
         {
             return NotFound();
         }
 
-        await _deploymentManager.DeleteAsync(deployment);
+        await _dataSourceManager.DeleteAsync(deployment);
 
-        await _notifier.SuccessAsync(H["Deployment has been deleted successfully."]);
+        await _notifier.SuccessAsync(H["Data source has been deleted successfully."]);
 
         return RedirectToAction(nameof(Index));
     }
@@ -283,10 +282,10 @@ public sealed class DeploymentsController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
-    [Admin("ai/deployments", "AIDeploymentsIndex")]
+    [Admin("ai/data-sources", "AIDataSourcesIndex")]
     public async Task<ActionResult> IndexPost(ModelOptions options, IEnumerable<string> itemIds)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
         {
             return Forbid();
         }
@@ -301,25 +300,25 @@ public sealed class DeploymentsController : Controller
                     var counter = 0;
                     foreach (var id in itemIds)
                     {
-                        var deployment = await _deploymentManager.FindByIdAsync(id);
+                        var dataSource = await _dataSourceManager.FindByIdAsync(id);
 
-                        if (deployment == null)
+                        if (dataSource == null)
                         {
                             continue;
                         }
 
-                        if (await _deploymentManager.DeleteAsync(deployment))
+                        if (await _dataSourceManager.DeleteAsync(dataSource))
                         {
                             counter++;
                         }
                     }
                     if (counter == 0)
                     {
-                        await _notifier.WarningAsync(H["No deployments were removed."]);
+                        await _notifier.WarningAsync(H["No data sources were removed."]);
                     }
                     else
                     {
-                        await _notifier.SuccessAsync(H.Plural(counter, "1 deployment has been removed successfully.", "{0} deployments have been removed successfully."));
+                        await _notifier.SuccessAsync(H.Plural(counter, "1 data source has been removed successfully.", "{0} data sources have been removed successfully."));
                     }
                     break;
                 default:

@@ -8,7 +8,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
-using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Core;
 

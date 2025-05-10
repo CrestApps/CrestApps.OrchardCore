@@ -17,6 +17,7 @@ using CrestApps.OrchardCore.AI.Tools;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.Services;
 using Fluid;
@@ -71,7 +72,7 @@ public sealed class Startup : StartupBase
     }
 }
 
-[Feature(AIConstants.Feature.AITools)]
+[Feature(AIConstants.Feature.Tools)]
 public sealed class ToolsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -111,6 +112,21 @@ public sealed class DeploymentsStartup : StartupBase
     }
 }
 
+[Feature(AIConstants.Feature.DataSources)]
+public sealed class DataSourceStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IAIDataSourceStore, DefaultAIDataSourceStore>()
+            .AddScoped<IAIDataSourceManager, DefaultAIDataSourceManager>();
+
+        services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
+        services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
+        services.AddNavigationProvider<AIDataProviderAdminMenu>();
+    }
+}
+
 [Feature(AIConstants.Feature.Deployments)]
 [RequireFeatures(AIConstants.Feature.ChatCore)]
 public sealed class ChatDeploymentsStartup : StartupBase
@@ -147,7 +163,7 @@ public sealed class ApiChatStartup : StartupBase
     }
 }
 
-[RequireFeatures(AIConstants.Feature.AITools, "OrchardCore.Recipes.Core")]
+[RequireFeatures(AIConstants.Feature.Tools, "OrchardCore.Recipes.Core")]
 public sealed class RecipesToolsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -156,7 +172,7 @@ public sealed class RecipesToolsStartup : StartupBase
     }
 }
 
-[RequireFeatures(AIConstants.Feature.AITools, "OrchardCore.Deployment")]
+[RequireFeatures(AIConstants.Feature.Tools, "OrchardCore.Deployment")]
 public sealed class ToolOCDeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

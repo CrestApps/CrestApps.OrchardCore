@@ -1,6 +1,9 @@
-namespace CrestApps.OrchardCore.Services;
+using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.Services;
 
-public interface IModelStore<T> : IReadModelStore<T>
+namespace CrestApps.OrchardCore.AI;
+
+public interface IAIDataSourceStore : IReadModelStore<AIDataSource>
 {
     /// <summary>
     /// Asynchronously deletes the specified model from the store.
@@ -10,7 +13,7 @@ public interface IModelStore<T> : IReadModelStore<T>
     /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation.
     /// The result is <c>true</c> if the deletion was successful, <c>false</c> if the model does not exist or could not be deleted.
     /// </returns>
-    ValueTask<bool> DeleteAsync(T model);
+    ValueTask<bool> DeleteAsync(AIDataSource model);
 
     /// <summary>
     /// Asynchronously creates the specified model in the store.
@@ -19,7 +22,7 @@ public interface IModelStore<T> : IReadModelStore<T>
     /// <returns>
     /// A <see cref="ValueTask"/> representing the asynchronous operation. No result is returned.
     /// </returns>
-    ValueTask CreateAsync(T model);
+    ValueTask CreateAsync(AIDataSource model);
 
     /// <summary>
     /// Asynchronously updates the specified model in the store.
@@ -28,7 +31,7 @@ public interface IModelStore<T> : IReadModelStore<T>
     /// <returns>
     /// A <see cref="ValueTask"/> representing the asynchronous operation. No result is returned.
     /// </returns>
-    ValueTask UpdateAsync(T model);
+    ValueTask UpdateAsync(AIDataSource model);
 
     /// <summary>
     /// Asynchronously saves all pending changes in the store.
@@ -37,4 +40,5 @@ public interface IModelStore<T> : IReadModelStore<T>
     /// A <see cref="ValueTask"/> representing the asynchronous operation. No result is returned.
     /// </returns>
     ValueTask SaveChangesAsync();
+    ValueTask<IEnumerable<AIDataSource>> GetAsync(string providerName, string type);
 }

@@ -1,14 +1,14 @@
-using CrestApps.OrchardCore.AI.Core;
+﻿using CrestApps.OrchardCore.AI.Core;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Services;
 
-internal sealed class AIToolPermissionProvider : IPermissionProvider
+internal sealed class AIDataSourcesPermissionProvider : IPermissionProvider
 {
     private readonly IEnumerable<Permission> _allPermissions =
     [
-        AIPermissions.ManageAIToolInstances,
+        AIPermissions.ManageAIDataSources,
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()

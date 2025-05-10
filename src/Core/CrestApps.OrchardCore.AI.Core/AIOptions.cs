@@ -12,6 +12,8 @@ public sealed class AIOptions
 
     private readonly Dictionary<string, AIProviderConnectionOptionsEntry> _connectionSources = new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly Dictionary<AIDataSourceKey, AIDataSourceOptionsEntry> _dataSources = new(AIDataSourceKeyComparer.Instance);
+
     public IReadOnlyDictionary<string, Type> Clients
         => _clients;
 
@@ -23,6 +25,9 @@ public sealed class AIOptions
 
     public IReadOnlyDictionary<string, AIProviderConnectionOptionsEntry> ConnectionSources
         => _connectionSources;
+
+    public IReadOnlyDictionary<AIDataSourceKey, AIDataSourceOptionsEntry> DataSources
+        => _dataSources;
 
     internal void AddClient<TClient>(string name)
         where TClient : class, IAICompletionClient
@@ -97,39 +102,29 @@ public sealed class AIOptions
 
         _connectionSources[providerName] = entry;
     }
-}
 
-public sealed class AIDeploymentProviderEntry
-{
-    public LocalizedString DisplayName { get; set; }
-
-    public LocalizedString Description { get; set; }
-}
-
-public sealed class AIProfileProviderEntry
-{
-    public AIProfileProviderEntry(string providerName)
+    public void AddDataSource(string providerName, string type, Action<AIDataSourceOptionsEntry> configure = null)
     {
-        ProviderName = providerName;
+        ArgumentException.ThrowIfNullOrEmpty(providerName);
+        ArgumentException.ThrowIfNullOrEmpty(type);
+
+        var key = new AIDataSourceKey(providerName, type);
+
+        if (!_dataSources.TryGetValue(key, out var entry))
+        {
+            entry = new AIDataSourceOptionsEntry(key);
+        }
+
+        if (configure != null)
+        {
+            configure(entry);
+        }
+
+        if (string.IsNullOrEmpty(entry.DisplayName))
+        {
+            entry.DisplayName = new LocalizedString(providerName, providerName);
+        }
+
+        _dataSources[key] = entry;
     }
-
-    public string ProviderName { get; }
-
-    public LocalizedString DisplayName { get; set; }
-
-    public LocalizedString Description { get; set; }
-}
-
-public sealed class AIProviderConnectionOptionsEntry
-{
-    public AIProviderConnectionOptionsEntry(string providerName)
-    {
-        ProviderName = providerName;
-    }
-
-    public string ProviderName { get; }
-
-    public LocalizedString DisplayName { get; set; }
-
-    public LocalizedString Description { get; set; }
 }

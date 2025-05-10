@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
 
-@model ListSourceModelViewModel<AIToolInstance>
+@model ListSourceModelEntryViewModel<AIToolInstance>
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["AI Tool Instances"])</h1></zone>
 
@@ -106,14 +106,14 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                @if (!Model.SourceNames.Any())
+                @if (!Model.Sources.Any())
                 {
                     <p class="p-3 mb-2 bg-warning text-white">@T["No available Tool sources at the moment."]</p>
                 }
                 else
                 {
                     <div class="row row-cols-1 row-cols-md-3 g-2">
-                        @foreach (var source in Model.SourceNames)
+                        @foreach (var source in Model.Sources)
                         {
                             IShape shape = await New.AIToolInstance_Link(Source: source);
                             shape.Metadata.Alternates.Add("AIToolInstance_Link__" + source);

@@ -82,12 +82,12 @@ public sealed class ConnectionsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceModelViewModel<McpConnection>
+        var viewModel = new ListSourceModelEntryViewModel<McpConnection>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            SourceNames = _mcpClientOptions.TransportTypes.Select(x => x.Key).Order(),
+            Sources = _mcpClientOptions.TransportTypes.Select(x => x.Key).Order(),
         };
 
         foreach (var model in result.Models)

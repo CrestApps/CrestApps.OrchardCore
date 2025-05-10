@@ -1,12 +1,14 @@
-@using CrestApps.OrchardCore.AI.Mcp.Core.Models
-@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.Models
 @using CrestApps.OrchardCore.Core.Models
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
 
-@model ListSourceModelEntryViewModel<McpConnection>
+@model ListSourceModelEntryViewModel<AIDataSource, AIDataSourceKey>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["MCP Connections"])</h1></zone>
+<zone Name="Title" Entry>
+    <h1>@RenderTitleSegments(T["AI Data Sources"])</h1>
+</zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
 <form asp-action="Index" method="post" class="no-multisubmit">
@@ -24,7 +26,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalAddConnection">@T["Add Connection"]</button>
+                    <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalAddDeployment">@T["Deploy model"]</button>
                 </div>
             </div>
         </div>
@@ -70,7 +72,7 @@
             </li>
             @foreach (var entry in Model.Models)
             {
-                <li class="list-group-item item d-flex justify-content-between align-items-center" data-filter-value="@entry.Model.DisplayText?.ToLowerInvariant()">
+                <li class="list-group-item item d-flex justify-content-between align-items-center" data-filter-value="@entry.Model.DisplayText.ToLowerInvariant()">
                     <div class="d-flex flex-row">
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input" value="@entry.Model.Id" name="itemIds" id="itemIds-@entry.Model.Id">
@@ -87,7 +89,7 @@
         else
         {
             <li class="list-group-item list-group-item-info text-center ignore-elements">
-                @T["<strong>Nothing here!</strong> There are no connections at the moment."]
+                @T["<strong>Nothing here!</strong> There are no deployments at the moment."]
             </li>
         }
     </ul>
@@ -95,29 +97,29 @@
     <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
         @T["Your search returned no results."]
     </div>
-
 </form>
 
 <!-- Modal -->
-<div class="modal fade" id="modalAddConnection" tabindex="-1" role="dialog" aria-labelledby="available-rule-types-title" aria-hidden="true">
+<div class="modal fade" id="modalAddDeployment" tabindex="-1" role="dialog" aria-labelledby="available-rule-types-title" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="available-rule-types-title">@T["Available Sources"]</h5>
+                <h5 class="modal-title" id="available-rule-types-title">@T["Available Providers"]</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 @if (!Model.Sources.Any())
                 {
-                    <p class="p-3 mb-2 bg-warning text-white">@T["No available sources at the moment."]</p>
+                    <p class="p-3 mb-2 bg-warning text-white">@T["You need to enable a feature which provides an AI source."]</p>
                 }
                 else
                 {
                     <div class="row row-cols-1 row-cols-md-3 g-2">
                         @foreach (var source in Model.Sources)
                         {
-                            IShape shape = await New.McpConnection_Link(Source: source);
-                            shape.Metadata.Alternates.Add("McpConnection_Link__" + source);
+                            IShape shape = await New.AIDeployment_Link(ProviderName: source.ProviderName, Type: source.Type);
+                            shape.Metadata.Alternates.Add($"AIDataSource_Link__{source.ProviderName}");
+                            shape.Metadata.Alternates.Add($"AIDataSource_Link__{source.ProviderName}__{source.Type}");
 
                             @await DisplayAsync(shape)
                         }
