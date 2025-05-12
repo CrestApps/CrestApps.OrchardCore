@@ -6,20 +6,20 @@ using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.Core.Services;
 
-public class DefaultAIDataSourceStore : IAIDataSourceStore
+public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
 {
-    protected readonly IDocumentManager<ModelDocument<AIDataSource>> DocumentManager;
+    private readonly IDocumentManager<ModelDocument<AIDataSource>> _documentManager;
 
     public DefaultAIDataSourceStore(IDocumentManager<ModelDocument<AIDataSource>> documentManager)
     {
-        DocumentManager = documentManager;
+        _documentManager = documentManager;
     }
 
     public async ValueTask<bool> DeleteAsync(AIDataSource model)
     {
         ArgumentNullException.ThrowIfNull(model);
 
-        var document = await DocumentManager.GetOrCreateMutableAsync();
+        var document = await _documentManager.GetOrCreateMutableAsync();
 
         if (!document.Records.TryGetValue(model.Id, out var existingInstance))
         {
@@ -30,7 +30,7 @@ public class DefaultAIDataSourceStore : IAIDataSourceStore
 
         if (removed)
         {
-            await DocumentManager.UpdateAsync(document);
+            await _documentManager.UpdateAsync(document);
         }
 
         return removed;
@@ -40,7 +40,7 @@ public class DefaultAIDataSourceStore : IAIDataSourceStore
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
 
-        var document = await DocumentManager.GetOrCreateImmutableAsync();
+        var document = await _documentManager.GetOrCreateImmutableAsync();
 
         if (document.Records.TryGetValue(id, out var record))
         {
@@ -54,7 +54,7 @@ public class DefaultAIDataSourceStore : IAIDataSourceStore
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
 
-        var document = await DocumentManager.GetOrCreateImmutableAsync();
+        var document = await _documentManager.GetOrCreateImmutableAsync();
 
         return document.Records.Values.Where(x => x.ProfileSource.Equals(providerName, StringComparison.OrdinalIgnoreCase));
     }
@@ -64,7 +64,7 @@ public class DefaultAIDataSourceStore : IAIDataSourceStore
         ArgumentException.ThrowIfNullOrEmpty(providerName);
         ArgumentException.ThrowIfNullOrEmpty(type);
 
-        var document = await DocumentManager.GetOrCreateImmutableAsync();
+        var document = await _documentManager.GetOrCreateImmutableAsync();
 
         return document.Records.Values.Where(x => x.ProfileSource.Equals(providerName, StringComparison.OrdinalIgnoreCase) && x.Type.Equals(type, StringComparison.OrdinalIgnoreCase));
     }
@@ -85,7 +85,7 @@ public class DefaultAIDataSourceStore : IAIDataSourceStore
 
     public async ValueTask<IEnumerable<AIDataSource>> GetAllAsync()
     {
-        var document = await DocumentManager.GetOrCreateImmutableAsync();
+        var document = await _documentManager.GetOrCreateImmutableAsync();
 
         return document.Records.Values;
     }
@@ -94,7 +94,7 @@ public class DefaultAIDataSourceStore : IAIDataSourceStore
     {
         ArgumentNullException.ThrowIfNull(record);
 
-        var document = await DocumentManager.GetOrCreateMutableAsync();
+        var document = await _documentManager.GetOrCreateMutableAsync();
 
         if (string.IsNullOrEmpty(record.Id))
         {
@@ -103,14 +103,14 @@ public class DefaultAIDataSourceStore : IAIDataSourceStore
 
         document.Records[record.Id] = record;
 
-        await DocumentManager.UpdateAsync(document);
+        await _documentManager.UpdateAsync(document);
     }
 
     public async ValueTask UpdateAsync(AIDataSource record)
     {
         ArgumentNullException.ThrowIfNull(record);
 
-        var document = await DocumentManager.GetOrCreateMutableAsync();
+        var document = await _documentManager.GetOrCreateMutableAsync();
 
         if (string.IsNullOrEmpty(record.Id))
         {
@@ -119,7 +119,7 @@ public class DefaultAIDataSourceStore : IAIDataSourceStore
 
         document.Records[record.Id] = record;
 
-        await DocumentManager.UpdateAsync(document);
+        await _documentManager.UpdateAsync(document);
     }
 
     public ValueTask SaveChangesAsync()
@@ -127,9 +127,9 @@ public class DefaultAIDataSourceStore : IAIDataSourceStore
         return ValueTask.CompletedTask;
     }
 
-    protected virtual async ValueTask<IEnumerable<AIDataSource>> LocateInstancesAsync(QueryContext context)
+    private async ValueTask<IEnumerable<AIDataSource>> LocateInstancesAsync(QueryContext context)
     {
-        var document = await DocumentManager.GetOrCreateImmutableAsync();
+        var document = await _documentManager.GetOrCreateImmutableAsync();
 
         if (context == null)
         {
@@ -143,7 +143,7 @@ public class DefaultAIDataSourceStore : IAIDataSourceStore
         return records;
     }
 
-    protected virtual IEnumerable<AIDataSource> GetSortable(QueryContext context, IEnumerable<AIDataSource> records)
+    private IEnumerable<AIDataSource> GetSortable(QueryContext context, IEnumerable<AIDataSource> records)
     {
         if (!string.IsNullOrEmpty(context.Name))
         {

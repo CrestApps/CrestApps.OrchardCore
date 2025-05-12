@@ -8,7 +8,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public class DefaultAIDataSourceManager : IAIDataSourceManager
+public sealed class DefaultAIDataSourceManager : IAIDataSourceManager
 {
     private readonly IAIDataSourceStore _store;
     private readonly IEnumerable<IModelHandler<AIDataSource>> _handlers;
@@ -58,7 +58,7 @@ public class DefaultAIDataSourceManager : IAIDataSourceManager
         return null;
     }
 
-    public virtual async ValueTask<AIDataSource> NewAsync(string providerName, string type, JsonNode data = null)
+    public async ValueTask<AIDataSource> NewAsync(string providerName, string type, JsonNode data = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
         ArgumentException.ThrowIfNullOrEmpty(type);
