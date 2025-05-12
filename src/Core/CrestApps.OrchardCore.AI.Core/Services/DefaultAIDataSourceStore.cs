@@ -143,7 +143,7 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
         return records;
     }
 
-    private IEnumerable<AIDataSource> GetSortable(QueryContext context, IEnumerable<AIDataSource> records)
+    private static IEnumerable<AIDataSource> GetSortable(QueryContext context, IEnumerable<AIDataSource> records)
     {
         if (!string.IsNullOrEmpty(context.Name))
         {
