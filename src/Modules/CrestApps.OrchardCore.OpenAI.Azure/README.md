@@ -87,9 +87,34 @@ When using Recipes, you can define an Azure AI profile with the following step:
 }
 ```
 
-### **Azure OpenAI with Your Data Feature**
+---
 
-The **Azure OpenAI with Your Data** feature extends **AI Data Source Management** feature and enables the Azure OpenAI service to work with custom data stored across various data stores. This feature is automatically enabled when required by dependent features and cannot be manually turned on or off.
+### Azure OpenAI – Bring Your Own Data Feature
+
+The **Azure OpenAI – Bring Your Own Data** feature builds on the **AI Data Source Management** system, enabling the Azure OpenAI service to interact with your custom data stored in various data repositories. This feature is automatically activated when required by dependent services and cannot be enabled or disabled manually.
+
+---
+
+#### Registering a Custom Data Source
+
+To register a new data source, configure the following service:
+
+```csharp
+services.AddAIDataSource(AzureOpenAIConstants.AISearchImplementationName, "azure_search", o =>
+{
+    o.DisplayName = S["Azure OpenAI with Azure AI Search"];
+    o.Description = S["Enables AI models to use Azure AI Search as a data source for your data."];
+});
+```
+
+---
+
+#### Implementing the Data Source Handler
+
+Finally, implement the `IAzureOpenAIDataSourceHandler` interface to integrate your data source into the chat configuration options.
+You can refer to the `AzureAISearchOpenAIDataSourceHandler` class in the repository as an example implementation.
+
+---
 
 ### **Azure AI Search-Powered Data Source Feature**
 

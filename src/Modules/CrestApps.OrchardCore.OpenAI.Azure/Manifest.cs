@@ -36,7 +36,7 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = AzureOpenAIConstants.Feature.DataSources,
-    Name = "Azure OpenAI with Your Data",
+    Name = "Azure OpenAI – Bring Your Own Data",
     Description = "Provides you a way to connect your Azure OpenAI with defined data sources.",
     Category = "Artificial Intelligence",
     Dependencies =
