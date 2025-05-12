@@ -12,7 +12,7 @@ public static class AIPermissions
 
     public static readonly Permission ManageAIDeployments = new("ManageAIDeployments", "Manage AI deployments");
 
-    public static readonly Permission ManageAIDataSources = new("ManageAIDataSources", "Manage AI data-sources");
+    public static readonly Permission ManageAIDataSources = new("ManageAIDataSources", "Manage AI data sources");
 
     public static readonly Permission QueryAnyAIProfile = new("QueryAnyAIProfile", "Query any AI profile");
 

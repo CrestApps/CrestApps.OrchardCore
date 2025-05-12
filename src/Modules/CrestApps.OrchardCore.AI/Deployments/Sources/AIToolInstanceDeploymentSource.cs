@@ -40,16 +40,8 @@ internal sealed class AIToolInstanceDeploymentSource : DeploymentSourceBase<AITo
                 { "CreatedUtc", instance.CreatedUtc },
                 { "OwnerId", instance.OwnerId },
                 { "Author", instance.Author },
+                { "Properties", instance.Properties?.DeepClone() },
             };
-
-            var properties = new JsonObject();
-
-            foreach (var property in instance.Properties)
-            {
-                properties[property.Key] = property.Value.DeepClone();
-            }
-
-            instanceObject["Properties"] = properties;
 
             instanceObjects.Add(instanceObject);
         }

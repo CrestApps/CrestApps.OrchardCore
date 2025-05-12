@@ -52,16 +52,8 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
                 { "CreatedUtc", connection.CreatedUtc },
                 { "OwnerId", connection.OwnerId },
                 { "Author", connection.Author },
+                { "Properties", connection.Properties?.DeepClone() },
             };
-
-            var properties = new JsonObject();
-
-            foreach (var property in connection.Properties)
-            {
-                properties[property.Key] = property.Value.DeepClone();
-            }
-
-            connectionObject["Properties"] = properties;
 
             var exportingContext = new ExportingAIProviderConnectionContext(connection, connectionObject);
 

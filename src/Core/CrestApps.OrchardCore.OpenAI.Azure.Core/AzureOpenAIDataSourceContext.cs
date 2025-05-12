@@ -2,7 +2,14 @@ using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core;
 
-public class AzureOpenAIDataSourceContext
+public sealed class AzureOpenAIDataSourceContext
 {
-    public AIProfile Profile { get; set; }
+    public readonly AIProfile Profile;
+
+    public AzureOpenAIDataSourceContext(AIProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        Profile = profile;
+    }
 }

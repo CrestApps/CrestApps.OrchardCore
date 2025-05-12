@@ -472,10 +472,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
             return chatOptions;
         }
 
-        var dataSourceContext = new AzureOpenAIDataSourceContext()
-        {
-            Profile = context.Profile,
-        };
+        var dataSourceContext = new AzureOpenAIDataSourceContext(context.Profile);
 
         foreach (var handler in _azureOpenAIDataSourceHandlers)
         {

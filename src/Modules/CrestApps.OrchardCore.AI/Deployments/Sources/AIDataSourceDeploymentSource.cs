@@ -39,16 +39,8 @@ internal sealed class AIDataSourceDeploymentSource : DeploymentSourceBase<AIData
                 { "CreatedUtc", dataSource.CreatedUtc },
                 { "OwnerId", dataSource.OwnerId },
                 { "Author", dataSource.Author },
+                { "Properties", dataSource.Properties?.DeepClone() },
             };
-
-            var properties = new JsonObject();
-
-            foreach (var property in dataSource.Properties)
-            {
-                properties[property.Key] = property.Value.DeepClone();
-            }
-
-            sourceObject["Properties"] = properties;
 
             sourceObjects.Add(sourceObject);
         }

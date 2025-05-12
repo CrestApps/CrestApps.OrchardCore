@@ -41,7 +41,7 @@ public sealed class AIDataSourceHandler : ModelHandlerBase<AIDataSource>
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
         {
-            context.Result.Fail(new ValidationResult(S["Data-source display-text is required."], [nameof(AIDataSource.DisplayText)]));
+            context.Result.Fail(new ValidationResult(S["Data source display-text is required."], [nameof(AIDataSource.DisplayText)]));
         }
 
         var hasProfileSource = !string.IsNullOrWhiteSpace(context.Model.ProfileSource);
@@ -49,12 +49,12 @@ public sealed class AIDataSourceHandler : ModelHandlerBase<AIDataSource>
 
         if (!hasProfileSource)
         {
-            context.Result.Fail(new ValidationResult(S["Data-source profile-source is required."], [nameof(AIDataSource.ProfileSource)]));
+            context.Result.Fail(new ValidationResult(S["Data source profile-source is required."], [nameof(AIDataSource.ProfileSource)]));
         }
 
         if (!hasType)
         {
-            context.Result.Fail(new ValidationResult(S["Data-source type is required."], [nameof(AIDataSource.Type)]));
+            context.Result.Fail(new ValidationResult(S["Data source type is required."], [nameof(AIDataSource.Type)]));
         }
 
         if (hasProfileSource && hasType && !_aiOptions.DataSources.TryGetValue(new AIDataSourceKey(context.Model.ProfileSource, context.Model.Type), out _))
