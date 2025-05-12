@@ -40,5 +40,19 @@ public interface IAIDataSourceStore : IReadModelStore<AIDataSource>
     /// A <see cref="ValueTask"/> representing the asynchronous operation. No result is returned.
     /// </returns>
     ValueTask SaveChangesAsync();
+
+    /// <summary>
+    /// Asynchronously finds data sources by the given provider-name.
+    /// </summary>
+    /// <param name="providerName"></param>
+    /// <returns></returns>
+    ValueTask<IEnumerable<AIDataSource>> GetAsync(string providerName);
+
+    /// <summary>
+    /// Asynchronously finds data sources by the given provider-name and type.
+    /// </summary>
+    /// <param name="providerName"></param>
+    /// <param name="type"></param>
+    /// <returns></returns>
     ValueTask<IEnumerable<AIDataSource>> GetAsync(string providerName, string type);
 }

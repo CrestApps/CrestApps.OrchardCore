@@ -30,20 +30,22 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
     {
         return Initialize<EditAIDataSourceViewModel>("AIDataSourceFields_Edit", model =>
         {
-            model.Name = dataSource.DisplayText;
+            model.DisplayText = dataSource.DisplayText;
         }).Location("Content:1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
-        var model = new EditDeploymentViewModel();
+        var model = new EditAIDataSourceViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrEmpty(dataSource.DisplayText))
+        if (string.IsNullOrEmpty(model.DisplayText))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["The title is required field."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The title is required field."]);
         }
+
+        dataSource.DisplayText = model.DisplayText;
 
         return Edit(dataSource, context);
     }

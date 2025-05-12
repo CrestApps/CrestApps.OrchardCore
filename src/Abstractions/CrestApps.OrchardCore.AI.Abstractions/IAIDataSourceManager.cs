@@ -20,14 +20,14 @@ public interface IAIDataSourceManager : IReadModelManager<AIDataSource>
     /// <summary>
     /// Asynchronously creates a new model with optional additional data.
     /// </summary>
-    /// <param name="providerName">The provider name this model belongs to.</param>
+    /// <param name="profileSource">The provider name this model belongs to.</param>
     /// <param name="type">The type of the data source.</param>
     /// <param name="data">Optional additional data associated with the model. Defaults to <c>null</c>.</param>
     /// <returns>
     /// A <see cref="ValueTask{TResult}"/> that represents the asynchronous operation.
     /// The result is the newly created model.
     /// </returns>
-    ValueTask<AIDataSource> NewAsync(string providerName, string type, JsonNode data = null);
+    ValueTask<AIDataSource> NewAsync(string profileSource, string type, JsonNode data = null);
 
     /// <summary>
     /// Asynchronously creates the given model.
@@ -61,10 +61,10 @@ public interface IAIDataSourceManager : IReadModelManager<AIDataSource>
     /// <summary>
     /// Asynchronously retrieves all models associated with the specified source.
     /// </summary>
-    /// <param name="source">The source of the models. Must not be <c>null</c> or empty.</param>
+    /// <param name="profileSource">The source of the models. Must not be <c>null</c> or empty.</param>
     /// <returns>
     /// A <see cref="ValueTask{IEnumerable{T}}"/> representing the asynchronous operation.
     /// The result is a collection of models associated with the given source.
     /// </returns>
-    ValueTask<IEnumerable<AIDataSource>> GetAsync(string providerName, string type);
+    ValueTask<IEnumerable<AIDataSource>> GetAsync(string profileSource, string type);
 }

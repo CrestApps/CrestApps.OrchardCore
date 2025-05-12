@@ -68,7 +68,7 @@ public class DefaultAIDataSourceManager : IAIDataSourceManager
         var model = new AIDataSource()
         {
             Id = id,
-            ProviderName = providerName,
+            ProfileSource = providerName,
             Type = type,
         };
 

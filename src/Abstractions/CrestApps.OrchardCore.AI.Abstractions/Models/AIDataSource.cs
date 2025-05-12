@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.AI.Core.Models;
 
 public sealed class AIDataSource : Model, IDisplayTextAwareModel
 {
-    public string ProviderName { get; set; }
+    public string ProfileSource { get; set; }
 
     public string Type { get; set; }
 
@@ -23,7 +23,7 @@ public sealed class AIDataSource : Model, IDisplayTextAwareModel
         {
             Id = Id,
             DisplayText = DisplayText,
-            ProviderName = ProviderName,
+            ProfileSource = ProfileSource,
             Type = Type,
             CreatedUtc = CreatedUtc,
             Author = Author,

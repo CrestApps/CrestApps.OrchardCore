@@ -1,7 +1,9 @@
 using CrestApps.OrchardCore.AI.Core.Handlers;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.AI;
@@ -48,6 +50,16 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddAIDataSourceServices(this IServiceCollection services)
+    {
+        services
+            .AddScoped<IAIDataSourceStore, DefaultAIDataSourceStore>()
+            .AddScoped<IAIDataSourceManager, DefaultAIDataSourceManager>()
+            .AddScoped<IModelHandler<AIDataSource>, AIDataSourceHandler>();
+
+        return services;
+    }
+
     public static IServiceCollection AddAIProfile<TClient>(this IServiceCollection services, string implementationName, string providerName, Action<AIProfileProviderEntry> configure = null)
         where TClient : class, IAICompletionClient
     {
@@ -90,6 +102,17 @@ public static class ServiceCollectionExtensions
         {
             o.AddConnectionSource(providerName, configure);
         });
+
+        return services;
+    }
+
+    public static IServiceCollection AddAIDataSource(this IServiceCollection services, string profileSource, string type, Action<AIDataSourceOptionsEntry> configure = null)
+    {
+        services
+            .Configure<AIOptions>(o =>
+            {
+                o.AddDataSource(profileSource, type, configure);
+            });
 
         return services;
     }

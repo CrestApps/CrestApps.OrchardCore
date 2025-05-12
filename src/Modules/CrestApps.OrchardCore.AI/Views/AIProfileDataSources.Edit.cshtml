@@ -1,0 +1,15 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
+
+@model EditProfileDataSourcesViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DataSourceId" class="@Orchard.GetLabelClasses()">@T["Data source"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select">
+            <option value="">@T["Select a data-source"]</option>
+        </select>
+        <span asp-validation-for="DataSourceId" class="text-danger"></span>
+        <span class="hint">@T["The data-source where your data is stored."]</span>
+    </div>
+</div>

@@ -6,11 +6,11 @@ public sealed class AIDataSourceOptionsEntry
 {
     public AIDataSourceOptionsEntry(AIDataSourceKey key)
     {
-        ProviderName = key.ProviderName;
+        ProfileSource = key.ProfileSource;
         Type = key.Type;
     }
 
-    public string ProviderName { get; }
+    public string ProfileSource { get; }
 
     public string Type { get; }
 

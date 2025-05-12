@@ -19,5 +19,7 @@ public static class AzureOpenAIConstants
         public const string Standard = "CrestApps.OrchardCore.OpenAI.Azure.Standard";
 
         public const string AISearch = "CrestApps.OrchardCore.OpenAI.Azure.AISearch";
+
+        public const string DataSources = "CrestApps.OrchardCore.OpenAI.Azure.DataSources";
     }
 }

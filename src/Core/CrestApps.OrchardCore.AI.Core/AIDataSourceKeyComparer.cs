@@ -6,14 +6,14 @@ public sealed class AIDataSourceKeyComparer : IEqualityComparer<AIDataSourceKey>
 
     public bool Equals(AIDataSourceKey x, AIDataSourceKey y)
     {
-        return string.Equals(x.ProviderName, y.ProviderName, StringComparison.OrdinalIgnoreCase)
+        return string.Equals(x.ProfileSource, y.ProfileSource, StringComparison.OrdinalIgnoreCase)
             && string.Equals(x.Type, y.Type, StringComparison.OrdinalIgnoreCase);
     }
 
     public int GetHashCode(AIDataSourceKey obj)
     {
         return HashCode.Combine(
-            StringComparer.OrdinalIgnoreCase.GetHashCode(obj.ProviderName),
+            StringComparer.OrdinalIgnoreCase.GetHashCode(obj.ProfileSource),
             StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Type)
         );
     }

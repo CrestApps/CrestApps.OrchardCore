@@ -50,6 +50,15 @@ public class DefaultAIDataSourceStore : IAIDataSourceStore
         return null;
     }
 
+    public async ValueTask<IEnumerable<AIDataSource>> GetAsync(string providerName)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(providerName);
+
+        var document = await DocumentManager.GetOrCreateImmutableAsync();
+
+        return document.Records.Values.Where(x => x.ProfileSource.Equals(providerName, StringComparison.OrdinalIgnoreCase));
+    }
+
     public async ValueTask<IEnumerable<AIDataSource>> GetAsync(string providerName, string type)
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
@@ -57,7 +66,7 @@ public class DefaultAIDataSourceStore : IAIDataSourceStore
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
-        return document.Records.Values.Where(x => x.ProviderName.Equals(providerName, StringComparison.OrdinalIgnoreCase) && x.Type.Equals(type, StringComparison.OrdinalIgnoreCase));
+        return document.Records.Values.Where(x => x.ProfileSource.Equals(providerName, StringComparison.OrdinalIgnoreCase) && x.Type.Equals(type, StringComparison.OrdinalIgnoreCase));
     }
 
     public async ValueTask<PageResult<AIDataSource>> PageAsync<TQuery>(int page, int pageSize, TQuery context)

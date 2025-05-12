@@ -13,11 +13,13 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Controllers;
 
+[Feature(AIConstants.Feature.DataSources)]
 public sealed class DataSourcesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
@@ -85,7 +87,9 @@ public sealed class DataSourcesController : Controller
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            Sources = _aiOptions.DataSources.Select(x => x.Key).OrderBy(x => x.ProviderName).ThenBy(x => x.Type),
+            Sources = _aiOptions.DataSources.Select(x => x.Key)
+            .OrderBy(x => x.ProfileSource)
+            .ThenBy(x => x.Type),
         };
 
         foreach (var record in result.Models)
@@ -117,26 +121,26 @@ public sealed class DataSourcesController : Controller
         });
     }
 
-    [Admin("ai/data-source/create/{providerName}/{type}", "AIDataSourceCreate")]
-    public async Task<ActionResult> Create(string providerName, string type)
+    [Admin("ai/data-source/create/{source}/{type}", "AIDataSourceCreate")]
+    public async Task<ActionResult> Create(string source, string type)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
         {
             return Forbid();
         }
 
-        if (!_aiOptions.DataSources.TryGetValue(new AIDataSourceKey(providerName, type), out var service))
+        if (!_aiOptions.DataSources.TryGetValue(new AIDataSourceKey(source, type), out var service))
         {
-            await _notifier.ErrorAsync(H["Unable to find a provider named '{0}' with the type '{1}'.", providerName, type]);
+            await _notifier.ErrorAsync(H["Unable to find a profile-source named '{0}' with the type '{1}'.", source, type]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        var dataSource = await _dataSourceManager.NewAsync(providerName, type);
+        var dataSource = await _dataSourceManager.NewAsync(source, type);
 
         if (dataSource == null)
         {
-            await _notifier.ErrorAsync(H["Invalid provider or type."]);
+            await _notifier.ErrorAsync(H["Invalid profile-source or type."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -152,26 +156,26 @@ public sealed class DataSourcesController : Controller
 
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("ai/data-source/create/{providerName}/{type}", "AIDataSourceCreate")]
-    public async Task<ActionResult> CreatePost(string providerName, string type)
+    [Admin("ai/data-source/create/{source}/{type}", "AIDataSourceCreate")]
+    public async Task<ActionResult> CreatePost(string source, string type)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
         {
             return Forbid();
         }
 
-        if (!_aiOptions.Deployments.TryGetValue(providerName, out var service))
+        if (!_aiOptions.DataSources.TryGetValue(new AIDataSourceKey(source, type), out var service))
         {
-            await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
+            await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", source]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        var deployment = await _dataSourceManager.NewAsync(providerName, type);
+        var deployment = await _dataSourceManager.NewAsync(source, type);
 
         if (deployment == null)
         {
-            await _notifier.ErrorAsync(H["Invalid provider."]);
+            await _notifier.ErrorAsync(H["Invalid profile-source or type."]);
 
             return RedirectToAction(nameof(Index));
         }

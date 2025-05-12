@@ -5,16 +5,16 @@ namespace CrestApps.OrchardCore.AI.Core;
 public readonly record struct AIDataSourceKey
 {
     [SetsRequiredMembers]
-    public AIDataSourceKey(string providerName, string type)
+    public AIDataSourceKey(string profileSource, string type)
     {
-        ArgumentException.ThrowIfNullOrEmpty(providerName);
+        ArgumentException.ThrowIfNullOrEmpty(profileSource);
         ArgumentException.ThrowIfNullOrEmpty(type);
 
-        ProviderName = providerName;
+        ProfileSource = profileSource;
         Type = type;
     }
 
-    public required string ProviderName { get; init; }
+    public required string ProfileSource { get; init; }
 
     public required string Type { get; init; }
 }

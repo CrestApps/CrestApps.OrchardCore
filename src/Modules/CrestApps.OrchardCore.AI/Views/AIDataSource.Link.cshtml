@@ -2,11 +2,11 @@
 @using Microsoft.Extensions.Options
 
 @inject IOptions<AIOptions> AIOptions
-@{
-    string providerName = Model.ProviderName;
-    string type = Model.Type;
 
-    if (!AIOptions.Value.DataSources.TryGetValue(new AIDataSourceKey(providerName, type), out var service))
+@{
+    AIDataSourceKey key = Model.DataSourceKey;
+
+    if (!AIOptions.Value.DataSources.TryGetValue(key, out var service))
     {
         return;
     }
@@ -24,7 +24,8 @@
             <a class="btn btn-primary btn-sm"
                asp-route-action="Create"
                asp-route-controller="DataSources"
-               asp-route-providerName="@providerName">@T["Add"]</a>
+               asp-route-source="@key.ProfileSource"
+               asp-route-type="@key.Type">@T["Add"]</a>
         </div>
 
     </div>

@@ -103,12 +103,12 @@ public sealed class AIOptions
         _connectionSources[providerName] = entry;
     }
 
-    public void AddDataSource(string providerName, string type, Action<AIDataSourceOptionsEntry> configure = null)
+    public void AddDataSource(string profileSource, string type, Action<AIDataSourceOptionsEntry> configure = null)
     {
-        ArgumentException.ThrowIfNullOrEmpty(providerName);
+        ArgumentException.ThrowIfNullOrEmpty(profileSource);
         ArgumentException.ThrowIfNullOrEmpty(type);
 
-        var key = new AIDataSourceKey(providerName, type);
+        var key = new AIDataSourceKey(profileSource, type);
 
         if (!_dataSources.TryGetValue(key, out var entry))
         {
@@ -122,7 +122,7 @@ public sealed class AIOptions
 
         if (string.IsNullOrEmpty(entry.DisplayName))
         {
-            entry.DisplayName = new LocalizedString(providerName, providerName);
+            entry.DisplayName = new LocalizedString(profileSource, profileSource);
         }
 
         _dataSources[key] = entry;

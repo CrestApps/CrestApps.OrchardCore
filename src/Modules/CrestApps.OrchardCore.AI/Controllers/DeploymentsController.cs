@@ -14,11 +14,13 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Controllers;
 
+[Feature(AIConstants.Feature.Deployments)]
 public sealed class DeploymentsController : Controller
 {
     private const string _optionsSearch = "Options.Search";

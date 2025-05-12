@@ -17,7 +17,6 @@ using CrestApps.OrchardCore.AI.Tools;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
-using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.Services;
 using Fluid;
@@ -117,13 +116,11 @@ public sealed class DataSourceStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services
-            .AddScoped<IAIDataSourceStore, DefaultAIDataSourceStore>()
-            .AddScoped<IAIDataSourceManager, DefaultAIDataSourceManager>();
-
+        services.AddAIDataSourceServices();
         services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
         services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
         services.AddNavigationProvider<AIDataProviderAdminMenu>();
+        services.AddDisplayDriver<AIProfile, AIProfileDataSourceDisplayDriver>();
     }
 }
 
