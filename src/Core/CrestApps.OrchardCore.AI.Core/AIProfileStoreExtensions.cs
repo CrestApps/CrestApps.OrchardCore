@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 
-namespace CrestApps.OrchardCore.AI;
+namespace CrestApps.OrchardCore.AI.Core;
 
 public static class AIProfileStoreExtensions
 {

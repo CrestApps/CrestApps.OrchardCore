@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;

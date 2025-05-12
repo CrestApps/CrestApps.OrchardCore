@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Azure.Core.Models;
+namespace CrestApps.Azure.Core.Models;
 
 public class AzureConnectionMetadata
 {

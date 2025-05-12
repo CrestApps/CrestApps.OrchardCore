@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Documents;
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.OpenAI.Core.Services;
+namespace CrestApps.OrchardCore.AI.Core.Services;
 
 public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOptions<AIProviderOptions>
 {

@@ -43,7 +43,8 @@ internal sealed class AIToolInstanceDeploymentStepDisplayDriver : DisplayDriver<
                 Id = x.Id,
                 DisplayText = x.DisplayText,
                 IsSelected = step.InstanceIds?.Contains(x.Id) ?? false
-            }).ToArray();
+            }).OrderBy(x => x.DisplayText)
+            .ToArray();
         }).Location("Content");
     }
 

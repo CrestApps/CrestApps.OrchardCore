@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
 using Microsoft.AspNetCore.Http;
@@ -80,27 +80,34 @@ public sealed class AIDataSourceHandler : ModelHandlerBase<AIDataSource>
         return Task.CompletedTask;
     }
 
-    private static Task PopulateAsync(AIDataSource deployment, JsonNode data)
+    private static Task PopulateAsync(AIDataSource dataSource, JsonNode data)
     {
         var displayText = data[nameof(AIDataSource.DisplayText)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(displayText))
         {
-            deployment.DisplayText = displayText;
+            dataSource.DisplayText = displayText;
         }
 
         var profileSource = data[nameof(AIDataSource.ProfileSource)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(profileSource))
         {
-            deployment.ProfileSource = profileSource;
+            dataSource.ProfileSource = profileSource;
         }
 
         var type = data[nameof(AIDataSource.Type)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(type))
         {
-            deployment.Type = type;
+            dataSource.Type = type;
+        }
+
+        var properties = data[nameof(AIDataSource.Properties)]?.AsObject();
+
+        if (properties != null)
+        {
+            dataSource.Properties = properties.Clone();
         }
 
         return Task.CompletedTask;

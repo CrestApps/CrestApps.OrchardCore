@@ -69,10 +69,7 @@ internal sealed class McpConnectionHandler : ModelHandlerBase<McpConnection>
 
         if (properties is not null)
         {
-            foreach (var property in properties)
-            {
-                connection.Properties[property.Key] = property.Value.DeepClone();
-            }
+            connection.Properties = properties.Clone();
         }
 
         return Task.CompletedTask;

@@ -103,6 +103,13 @@ public sealed class AIToolInstanceHandler : ModelHandlerBase<AIToolInstance>
             instance.CreatedUtc = createdUtc.Value;
         }
 
+        var properties = data[nameof(AIToolInstance.Properties)]?.AsObject();
+
+        if (properties != null)
+        {
+            instance.Properties = properties.Clone();
+        }
+
         return Task.CompletedTask;
     }
 }

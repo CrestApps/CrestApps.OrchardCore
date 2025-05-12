@@ -118,6 +118,13 @@ public sealed class AIDeploymentHandler : ModelHandlerBase<AIDeployment>
             deployment.ConnectionName = provider.DefaultConnectionName;
         }
 
+        var properties = data[nameof(AIDeployment.Properties)]?.AsObject();
+
+        if (properties != null)
+        {
+            deployment.Properties = properties.Clone();
+        }
+
         return Task.CompletedTask;
     }
 }

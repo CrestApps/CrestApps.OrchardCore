@@ -1,4 +1,5 @@
 using System.ClientModel;
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -11,7 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAI;
 
-namespace CrestApps.OrchardCore.AI.OpenAI.Services;
+namespace CrestApps.OrchardCore.OpenAI.Core.Services;
 
 public sealed class OpenAICompletionClient : DeploymentAwareAICompletionClient
 {

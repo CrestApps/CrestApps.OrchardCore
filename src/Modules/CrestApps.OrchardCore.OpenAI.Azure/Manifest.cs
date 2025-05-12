@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using OrchardCore.Modules.Manifest;
@@ -35,7 +36,7 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = AzureOpenAIConstants.Feature.DataSources,
-    Name = "Azure OpenAI Chat with Your Data",
+    Name = "Azure OpenAI with Your Data",
     Description = "Provides you a way to connect your Azure OpenAI with defined data sources.",
     Category = "Artificial Intelligence",
     Dependencies =
@@ -48,7 +49,7 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = AzureOpenAIConstants.Feature.AISearch,
-    Name = "Azure OpenAI Chat with Azure AI Search Data Source",
+    Name = "Azure AI Search-Powered Data Source",
     Description = "Enables integration with OpenAI and Azure AI Search data via the Azure service provider.",
     Category = "Artificial Intelligence",
     Dependencies =

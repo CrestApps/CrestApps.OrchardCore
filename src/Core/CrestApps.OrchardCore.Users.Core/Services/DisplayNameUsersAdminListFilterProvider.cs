@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Users.Core.Indexes;
-using CrestApps.OrchardCore.Users.Models;
+using CrestApps.OrchardCore.Users.Core.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Settings;

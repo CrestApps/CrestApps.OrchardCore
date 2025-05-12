@@ -1,10 +1,9 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Models;
 using OrchardCore;
 using OrchardCore.Documents;
 
-namespace CrestApps.OrchardCore.Core.Services;
+namespace CrestApps.OrchardCore.AI.Core.Services;
 
 public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
 {

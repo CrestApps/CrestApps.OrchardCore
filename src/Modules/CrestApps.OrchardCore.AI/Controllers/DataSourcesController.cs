@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Models;
 using Microsoft.AspNetCore.Authorization;

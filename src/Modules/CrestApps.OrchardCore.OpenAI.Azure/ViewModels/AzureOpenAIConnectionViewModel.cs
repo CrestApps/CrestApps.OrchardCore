@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Azure.Core.Models;
+using CrestApps.Azure.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 

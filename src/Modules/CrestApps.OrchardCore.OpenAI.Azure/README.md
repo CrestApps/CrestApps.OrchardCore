@@ -87,9 +87,13 @@ When using Recipes, you can define an Azure AI profile with the following step:
 }
 ```
 
-## Azure OpenAI Chat with Your Data Feature
+### **Azure OpenAI with Your Data Feature**
 
-The **Azure OpenAI Chat with Your Data** feature allows the use of Azure OpenAI services on custom data stored in an Azure AI Search index to create AI Chat Profiles. Activating this module will automatically enable the **Azure AI Search** feature in OrchardCore. To link your AI chat to a search index, go to `Search` > `Indexing` > `Azure AI Indices` and add your index.
+The **Azure OpenAI with Your Data** feature extends **AI Data Source Management** feature and enables the Azure OpenAI service to work with custom data stored across various data stores. This feature is automatically enabled when required by dependent features and cannot be manually turned on or off.
+
+### **Azure AI Search-Powered Data Source Feature**
+
+The **Azure AI Search-Powered Data Source** feature extends **Azure OpenAI with Your Data** by allowing you to define an Azure AI Search index as a data source. This enables your model to access and interact with data stored in Azure AI Search during inference.
 
 ### Recipes
 
@@ -123,12 +127,10 @@ When using Recipes, you can create an Azure AI profile with custom data from Azu
                   "MaxTokens":null,
                   "PastMessagesCount":null
               },
-              "AzureAIProfileAISearchMetadata":
+              "AIProfileDataSourceMetadata":
               {
-                  "IndexName": "<!-- The index name for search -->",
-                  "IncludeContentItemCitations": true,
-                  "Strictness":null,
-                  "TopNDocuments":null
+                  "DataSourceId": "<!-- The ID of the data-source -->",
+                  "DataSourceType": "<!-- The type of the data-source (e.g., 'azure_search') -->"
               }
           }
         }

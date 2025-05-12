@@ -1,5 +1,5 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Services;
 

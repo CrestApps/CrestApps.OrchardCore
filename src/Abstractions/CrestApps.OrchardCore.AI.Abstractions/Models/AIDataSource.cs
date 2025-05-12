@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Models;
 
-namespace CrestApps.OrchardCore.AI.Core.Models;
+namespace CrestApps.OrchardCore.AI.Models;
 
 public sealed class AIDataSource : Model, IDisplayTextAwareModel
 {

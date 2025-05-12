@@ -1,4 +1,4 @@
-namespace OrchardCore.Modules.Manifest;
+namespace CrestApps.OrchardCore;
 
 public static class CrestAppsManifestConstants
 {
