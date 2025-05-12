@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using OrchardCore.Modules.Manifest;

@@ -5,9 +5,11 @@ using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 using CrestApps.OrchardCore.OpenAI.Azure.Handlers;
+using CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 
@@ -53,6 +55,26 @@ public sealed class StandardStartup : StartupBase
     }
 }
 
+[Feature(AzureOpenAIConstants.Feature.DataSources)]
+public sealed class DataSourcesStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public DataSourcesStartup(IStringLocalizer<DataSourcesStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAIProfile<AzureAISearchCompletionClient>(AzureOpenAIConstants.AISearchImplementationName, AzureOpenAIConstants.ProviderName, o =>
+        {
+            o.DisplayName = S["Azure OpenAI with Your Data"];
+            o.Description = S["Provides AI profiles using Azure OpenAI models with your data."];
+        });
+    }
+}
+
 [Feature(AzureOpenAIConstants.Feature.AISearch)]
 public sealed class AISearchStartup : StartupBase
 {
@@ -65,13 +87,20 @@ public sealed class AISearchStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIProfile<AzureAISearchCompletionClient>(AzureOpenAIConstants.AISearchImplementationName, AzureOpenAIConstants.ProviderName, o =>
-        {
-            o.DisplayName = S["Azure OpenAI with Azure AI Search"];
-            o.Description = S["Provides AI profiles using Azure OpenAI models with your data."];
-        });
-        services.AddDisplayDriver<AIProfile, AzureOpenAIProfileSearchAIDisplayDriver>();
+        services.AddDisplayDriver<AIDataSource, AzureOpenAISearchADataSourceDisplayDriver>();
         services.AddScoped<IModelHandler<AIProfile>, AzureAISearchAIProfileHandler>();
+
+#pragma warning disable CS0618 // Type or member is obsolete
+        services.AddDataMigration<DataSourceMigrations>();
+#pragma warning restore CS0618 // Type or member is obsolete
+
+        services
+            .AddScoped<IAzureOpenAIDataSourceHandler, AzureAISearchOpenAIDataSourceHandler>()
+            .AddAIDataSource(AzureOpenAIConstants.AISearchImplementationName, "azure_search", o =>
+            {
+                o.DisplayName = S["Azure OpenAI with Azure AI Search"];
+                o.Description = S["Enables AI models to use Azure AI Search as a data source for your data."];
+            });
     }
 }
 

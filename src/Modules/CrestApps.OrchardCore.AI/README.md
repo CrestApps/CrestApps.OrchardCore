@@ -111,6 +111,37 @@ This recipe ensures that a **DeepSeek** connection is added or updated within th
 
 If a connection with the same `Name` and `Source` already exists, the recipe updates its properties. Otherwise, it creates a new connection.
 
+### AI Data Source Management 
+
+The **AI Data Source Management** feature enhances **AI Services** by offering a user-friendly interface for managing data sources accessible to AI models. To add data sources, you must first enable at least one feature that supplies a data source. For instance, the **Azure AI Search-Powered Data Source** feature provides access to data stored in Azure AI Search, enabling AI-powered conversational capabilities with that data.
+
+#### Creating Data Source via Recipe
+
+You can add or update data-source using recipe. Here is an example or creating a data-source
+
+
+```
+{
+  "steps": [
+    {
+      "name": "AIDataSource",
+      "DataSources": [
+        {
+          "ProfileSource": "AzureAISearch",
+          "Type": "azure_search",
+          "DisplayText": "Articles (Azure AI Search)",
+          "Properties": {
+            "AzureAIProfileAISearchMetadata": {
+              "IndexName": "articles"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
 ### Defining Chat Profiles Using Code
 
 To define chat profiles programmatically, create a migration class. Here's an example demonstrating how to create a new chat profile:
@@ -391,10 +422,6 @@ After registering, navigate to **Artificial Intelligence** in the admin menu. Yo
 ### Configuring AI Profiles with Custom Functions
 
 Once the custom function is registered, you can add it to any AI profile. The custom function will be available in the list of functions when creating or editing a profile, and you can enable or disable it as needed.
-
----
-
-Here’s an improved version of your documentation with better structure, clarity, and consistency:  
 
 ---
 

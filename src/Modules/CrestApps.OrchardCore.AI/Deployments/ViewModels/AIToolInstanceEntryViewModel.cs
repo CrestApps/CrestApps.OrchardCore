@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.AI.Deployments.ViewModels;
+namespace CrestApps.OrchardCore.AI.Deployments.ViewModels;
 
 public class AIToolInstanceEntryViewModel
 {

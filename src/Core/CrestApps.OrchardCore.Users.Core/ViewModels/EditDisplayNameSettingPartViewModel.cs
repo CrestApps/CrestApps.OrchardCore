@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Users.Models;
+using CrestApps.OrchardCore.Users.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 

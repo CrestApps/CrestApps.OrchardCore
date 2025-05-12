@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using CrestApps.Support.Json;
 
-namespace CrestApps.OrchardCore.Users.Models;
+namespace CrestApps.OrchardCore.Users.Core.Models;
 
 public sealed class DisplayNameSettings
 {

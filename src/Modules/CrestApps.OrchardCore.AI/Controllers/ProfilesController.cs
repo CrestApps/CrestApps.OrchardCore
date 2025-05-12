@@ -80,12 +80,12 @@ public sealed class ProfilesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceModelViewModel<AIProfile>
+        var viewModel = new ListSourceModelEntryViewModel<AIProfile>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            SourceNames = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
+            Sources = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
         };
 
         foreach (var model in result.Models)

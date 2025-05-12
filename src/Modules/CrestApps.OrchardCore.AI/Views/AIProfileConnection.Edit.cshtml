@@ -3,7 +3,7 @@
 
 @model EditConnectionProfileViewModel
 
-@if (Model.ConnectionNames.Count > 1)
+@if (Model.ConnectionNames?.Count > 1)
 {
     <div class="@Orchard.GetWrapperClasses()">
         <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection name"]</label>

@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.AI.OpenAI.Services;
 using CrestApps.OrchardCore.OpenAI.Core;
+using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Drivers;
 using CrestApps.OrchardCore.OpenAI.Handlers;
 using CrestApps.OrchardCore.Services;

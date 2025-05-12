@@ -5,6 +5,7 @@ using Azure.AI.OpenAI;
 using Azure.AI.OpenAI.Chat;
 using Azure.Identity;
 using CrestApps.Azure.Core;
+using CrestApps.Azure.Core.Models;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -12,9 +13,6 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Azure.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Services;
 using CrestApps.OrchardCore.Services;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,10 +20,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Client;
 using OpenAI.Chat;
-using OrchardCore.Contents.Indexing;
 using OrchardCore.Entities;
-using OrchardCore.Search.AzureAI.Models;
-using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
@@ -34,11 +29,10 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
     private static readonly AIProfileMetadata _defaultMetadata = new();
 
     private readonly INamedModelStore<AIDeployment> _deploymentStore;
-    private readonly AzureAISearchIndexSettingsService _azureAISearchIndexSettingsService;
     private readonly IServiceProvider _serviceProvider;
     private readonly IAILinkGenerator _linkGenerator;
+    private readonly IEnumerable<IAzureOpenAIDataSourceHandler> _azureOpenAIDataSourceHandlers;
     private readonly DefaultAIOptions _defaultOptions;
-    private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
     private readonly ILogger _logger;
 
     private IAIToolsService _toolsService;
@@ -48,20 +42,18 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
     public AzureAISearchCompletionClient(
         INamedModelStore<AIDeployment> deploymentStore,
         IOptions<AIProviderOptions> providerOptions,
-        IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
-        AzureAISearchIndexSettingsService azureAISearchIndexSettingsService,
         IServiceProvider serviceProvider,
         IAILinkGenerator linkGenerator,
+        IEnumerable<IAzureOpenAIDataSourceHandler> azureOpenAIDataSourceHandlers,
         IOptions<DefaultAIOptions> defaultOptions,
         ILogger<AzureOpenAICompletionClient> logger)
         : base(providerOptions.Value)
     {
         _deploymentStore = deploymentStore;
-        _azureAISearchIndexSettingsService = azureAISearchIndexSettingsService;
         _serviceProvider = serviceProvider;
         _linkGenerator = linkGenerator;
+        _azureOpenAIDataSourceHandlers = azureOpenAIDataSourceHandlers;
         _defaultOptions = defaultOptions.Value;
-        _azureAISearchDefaultOptions = azureAISearchDefaultOptions.Value;
         _logger = logger;
     }
 
@@ -468,48 +460,29 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
 
     private async Task<ChatCompletionOptions> GetOptionsWithDataSourceAsync(AICompletionContext context, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
     {
-        if (context.Profile is null || !context.Profile.TryGet<AzureAIProfileAISearchMetadata>(out var metadata))
+        if (context.Profile is null)
         {
             throw new InvalidOperationException();
         }
 
         var chatOptions = GetOptions(context, functions);
 
-        // In OC v3, the `GetAsync` method was changed to accepts an Id instead of a name.
-        // Until we drop support for OC v2, we need to first call `GetSettingsAsync` and find index by name.
-        var settings = await _azureAISearchIndexSettingsService.GetSettingsAsync();
-
-        var indexSettings = settings.FirstOrDefault(x => x.IndexName == metadata.IndexName);
-
-        if (indexSettings == null
-            || string.IsNullOrEmpty(indexSettings.IndexFullName)
-            || !_azureAISearchDefaultOptions.ConfigurationExists())
+        if (!context.Profile.TryGet<AIProfileDataSourceMetadata>(out var dataSourceMetadata) || string.IsNullOrEmpty(dataSourceMetadata.DataSourceType))
         {
             return chatOptions;
         }
 
-        var keyField = indexSettings.IndexMappings?.FirstOrDefault(x => x.IsKey);
-#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        chatOptions.AddDataSource(new AzureSearchChatDataSource()
+        var dataSourceContext = new AzureOpenAIDataSourceContext(context.Profile);
+
+        foreach (var handler in _azureOpenAIDataSourceHandlers)
         {
-            Endpoint = new Uri(_azureAISearchDefaultOptions.Endpoint),
-            IndexName = indexSettings.IndexFullName,
-            Authentication = DataSourceAuthentication.FromApiKey(_azureAISearchDefaultOptions.Credential.Key),
-            Strictness = metadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = metadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
-            QueryType = DataSourceQueryType.Simple,
-            InScope = true,
-            SemanticConfiguration = "default",
-            OutputContexts = DataSourceOutputContexts.Citations,
-            Filter = null,
-            FieldMappings = new DataSourceFieldMappings()
+            if (!handler.CanHandle(dataSourceMetadata.DataSourceType))
             {
-                TitleFieldName = GetBestTitleField(keyField),
-                FilePathFieldName = keyField?.AzureFieldKey,
-                ContentFieldSeparator = Environment.NewLine,
-            },
-        });
-#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+                continue;
+            }
+
+            await handler.ConfigureSourceAsync(chatOptions, dataSourceContext);
+        }
 
         return chatOptions;
     }
@@ -643,16 +616,6 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
         if (!string.IsNullOrEmpty(content.Profile.DeploymentId))
         {
             return await _deploymentStore.FindByIdAsync(content.Profile.DeploymentId);
-        }
-
-        return null;
-    }
-
-    private static string GetBestTitleField(AzureAISearchIndexMap keyField)
-    {
-        if (keyField == null || keyField.AzureFieldKey == IndexingConstants.ContentItemIdKey)
-        {
-            return AzureAISearchIndexManager.DisplayTextAnalyzedKey;
         }
 
         return null;

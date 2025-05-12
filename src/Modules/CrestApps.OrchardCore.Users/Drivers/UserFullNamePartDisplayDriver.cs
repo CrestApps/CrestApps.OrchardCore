@@ -1,5 +1,5 @@
+using CrestApps.OrchardCore.Users.Core.Models;
 using CrestApps.OrchardCore.Users.Core.ViewModels;
-using CrestApps.OrchardCore.Users.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;

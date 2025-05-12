@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Users.Models;
+using CrestApps.OrchardCore.Users.Core.Models;
 using CrestApps.Support;
 using Fluid;
 using Fluid.Values;

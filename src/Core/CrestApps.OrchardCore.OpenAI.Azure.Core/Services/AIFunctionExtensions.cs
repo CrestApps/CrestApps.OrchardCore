@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.AI;
 using OpenAI.Chat;
 
-namespace CrestApps.OrchardCore.OpenAI.Services;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
 internal static class AIFunctionExtensions
 {

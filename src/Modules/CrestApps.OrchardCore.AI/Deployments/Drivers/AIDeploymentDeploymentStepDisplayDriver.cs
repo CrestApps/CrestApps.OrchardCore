@@ -39,7 +39,7 @@ internal sealed class AIDeploymentDeploymentStepDisplayDriver : DisplayDriver<De
         {
             model.IncludeAll = step.IncludeAll;
             model.DeploymentNames = step.DeploymentNames;
-            model.AllDeploymentName = (await _deploymentStore.GetAllAsync()).Select(d => d.Name).ToArray();
+            model.AllDeploymentName = (await _deploymentStore.GetAllAsync()).Select(d => d.Name).Order().ToArray();
         }).Location("Content");
     }
 

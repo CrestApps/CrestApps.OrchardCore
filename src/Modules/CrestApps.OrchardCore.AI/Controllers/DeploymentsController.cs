@@ -14,11 +14,13 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Controllers;
 
+[Feature(AIConstants.Feature.Deployments)]
 public sealed class DeploymentsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
@@ -81,12 +83,12 @@ public sealed class DeploymentsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceModelViewModel<AIDeployment>
+        var viewModel = new ListSourceModelEntryViewModel<AIDeployment>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            SourceNames = _aiOptions.Deployments.Select(x => x.Key).Order(),
+            Sources = _aiOptions.Deployments.Select(x => x.Key).Order(),
         };
 
         foreach (var record in result.Models)
@@ -121,11 +123,6 @@ public sealed class DeploymentsController : Controller
     [Admin("ai/deployment/create/{providerName}", "AIDeploymentsCreate")]
     public async Task<ActionResult> Create(string providerName)
     {
-        if (string.IsNullOrEmpty(providerName))
-        {
-            return NotFound();
-        }
-
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
         {
             return Forbid();

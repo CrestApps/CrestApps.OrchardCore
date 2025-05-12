@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules.Manifest;
 
@@ -28,9 +29,20 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = AIConstants.Feature.AITools,
+    Id = AIConstants.Feature.Tools,
     Name = "AI Tool Management",
     Description = "Provides a way to manage AI Tool instances.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.DataSources,
+    Name = "AI Data Source Management",
+    Description = "Provides a way to manage AI data sources.",
     Category = "Artificial Intelligence",
     Dependencies =
     [

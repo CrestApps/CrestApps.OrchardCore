@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(

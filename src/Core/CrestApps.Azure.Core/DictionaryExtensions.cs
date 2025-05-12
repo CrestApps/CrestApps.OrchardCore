@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.Azure.Core.Models;
+using CrestApps.Azure.Core.Models;
 
 namespace CrestApps.Azure.Core;
 

@@ -6,14 +6,11 @@
     <h1>@RenderTitleSegments(T["Edit '{0}' deployment", Model.DisplayName])</h1>
 </zone>
 
-<form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["providerName"]" enctype="multipart/form-data" class="no-multisubmit">
+<form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["Id"]" enctype="multipart/form-data" class="no-multisubmit">
     @Html.ValidationSummary()
     @await DisplayAsync(Model.Editor)
 
     <button class="btn btn-primary" type="submit">@T["Save"]</button>
 
-    <a class="btn btn-secondary cancel"
-       role="button"
-       asp-route-action="Index"
-       asp-route-controller="Deployments">@T["Cancel"]</a>
+    <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
 </form>

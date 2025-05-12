@@ -46,30 +46,14 @@ internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfile
                 { "CreatedUtc", profile.CreatedUtc },
                 { "OwnerId", profile.OwnerId },
                 { "Author", profile.Author },
+                { "Settings", profile.Settings?.DeepClone() },
+                { "Properties", profile.Properties?.DeepClone() },
             };
 
             if (profile.TitleType.HasValue)
             {
                 profileInfo.Add("TitleType", profile.TitleType.Value.ToString());
             }
-
-            var properties = new JsonObject();
-
-            foreach (var property in profile.Properties)
-            {
-                properties[property.Key] = property.Value.DeepClone();
-            }
-
-            profileInfo["Properties"] = properties;
-
-            var settings = new JsonObject();
-
-            foreach (var pair in profile.Settings)
-            {
-                settings[pair.Key] = pair.Value.DeepClone();
-            }
-
-            profileInfo["Settings"] = settings;
 
             profilesData.Add(profileInfo);
         }

@@ -8,7 +8,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
-using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Core;
 
@@ -45,6 +44,16 @@ public static class ServiceCollectionExtensions
             .AddScoped<INamedSourceModelStore<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
             .AddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>()
             .AddScoped<IModelHandler<AIDeployment>, AIDeploymentHandler>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddAIDataSourceServices(this IServiceCollection services)
+    {
+        services
+            .AddScoped<IAIDataSourceStore, DefaultAIDataSourceStore>()
+            .AddScoped<IAIDataSourceManager, DefaultAIDataSourceManager>()
+            .AddScoped<IModelHandler<AIDataSource>, AIDataSourceHandler>();
 
         return services;
     }
@@ -91,6 +100,17 @@ public static class ServiceCollectionExtensions
         {
             o.AddConnectionSource(providerName, configure);
         });
+
+        return services;
+    }
+
+    public static IServiceCollection AddAIDataSource(this IServiceCollection services, string profileSource, string type, Action<AIDataSourceOptionsEntry> configure = null)
+    {
+        services
+            .Configure<AIOptions>(o =>
+            {
+                o.AddDataSource(profileSource, type, configure);
+            });
 
         return services;
     }

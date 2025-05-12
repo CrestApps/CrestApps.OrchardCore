@@ -148,6 +148,13 @@ public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderCon
             connection.CreatedUtc = createdUtc.Value;
         }
 
+        var properties = data[nameof(AIDeployment.Properties)]?.AsObject();
+
+        if (properties != null)
+        {
+            connection.Properties = properties.Clone();
+        }
+
         return Task.CompletedTask;
     }
 }

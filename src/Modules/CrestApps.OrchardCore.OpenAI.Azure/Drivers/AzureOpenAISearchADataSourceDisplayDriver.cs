@@ -10,26 +10,26 @@ using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 
-public sealed class AzureOpenAIProfileSearchAIDisplayDriver : DisplayDriver<AIProfile>
+public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AIDataSource>
 {
     private readonly AzureAISearchIndexSettingsService _indexSettingsService;
 
-    public AzureOpenAIProfileSearchAIDisplayDriver(
+    public AzureOpenAISearchADataSourceDisplayDriver(
         AzureAISearchIndexSettingsService indexSettingsService)
     {
         _indexSettingsService = indexSettingsService;
     }
 
-    public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
+    public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
-        if (profile.Source is null || profile.Source != AzureOpenAIConstants.AISearchImplementationName)
+        if (dataSource.ProfileSource != AzureOpenAIConstants.AISearchImplementationName)
         {
             return null;
         }
 
         return Initialize<AzureProfileSearchAIViewModel>("AzureOpenAIProfileSearchAI_Edit", async model =>
         {
-            var metadata = profile.As<AzureAIProfileAISearchMetadata>();
+            var metadata = dataSource.As<AzureAIProfileAISearchMetadata>();
 
             model.Strictness = metadata.Strictness;
             model.TopNDocuments = metadata.TopNDocuments;
@@ -40,9 +40,9 @@ public sealed class AzureOpenAIProfileSearchAIDisplayDriver : DisplayDriver<AIPr
         }).Location("Content:3");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
-        if (profile.Source is null || profile.Source != AzureOpenAIConstants.AISearchImplementationName)
+        if (dataSource.ProfileSource != AzureOpenAIConstants.AISearchImplementationName)
         {
             return null;
         }
@@ -51,13 +51,14 @@ public sealed class AzureOpenAIProfileSearchAIDisplayDriver : DisplayDriver<AIPr
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        profile.Put(new AzureAIProfileAISearchMetadata
+        dataSource.Put(new AzureAIProfileAISearchMetadata
         {
             IndexName = model.IndexName,
             Strictness = model.Strictness,
             TopNDocuments = model.TopNDocuments,
         });
 
-        return Edit(profile, context);
+        return Edit(dataSource, context);
     }
 }
+

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.SignalR.Core;
 using OrchardCore.Modules.Manifest;
 

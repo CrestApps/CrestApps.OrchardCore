@@ -21,7 +21,7 @@ using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Controllers;
 
-[Feature(AIConstants.Feature.AITools)]
+[Feature(AIConstants.Feature.Tools)]
 public sealed class ToolInstancesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
@@ -84,12 +84,12 @@ public sealed class ToolInstancesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceModelViewModel<AIToolInstance>
+        var viewModel = new ListSourceModelEntryViewModel<AIToolInstance>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            SourceNames = toolSources.Select(toolSource => toolSource.Name).Order(),
+            Sources = toolSources.Select(toolSource => toolSource.Name).Order(),
         };
 
         foreach (var model in result.Models)

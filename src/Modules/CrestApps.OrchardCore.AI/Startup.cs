@@ -17,7 +17,6 @@ using CrestApps.OrchardCore.AI.Tools;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
-using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.Services;
 using Fluid;
 using Microsoft.AspNetCore.Builder;
@@ -71,22 +70,74 @@ public sealed class Startup : StartupBase
     }
 }
 
-[Feature(AIConstants.Feature.AITools)]
-public sealed class ToolsStartup : StartupBase
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class RecipesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDisplayDriver<AIProfile, AIProfileToolInstancesDisplayDriver>();
-        services.AddDisplayDriver<AIToolInstance, InvokableToolMetadataDisplayDriver>();
-        services.AddDisplayDriver<AIToolInstance, AIProfileToolMetadataDisplayDriver>();
-        services.AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>();
-        services.AddNavigationProvider<AIToolInstancesAdminMenu>();
-        services.AddPermissionProvider<AIToolPermissionProvider>();
-
-        services.AddAIToolSource<ProfileAwareAIToolSource>(ProfileAwareAIToolSource.ToolSource);
-        services.AddScoped<IAICompletionServiceHandler, FunctionInstancesAICompletionServiceHandler>();
+        services.AddRecipeExecutionStep<AIProfileStep>();
     }
 }
+
+[RequireFeatures("OrchardCore.Workflows")]
+public sealed class WorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<TemplateOptions>(o =>
+        {
+            o.MemberAccessStrategy.Register<AIResponseMessage>();
+        });
+        services.AddActivity<AICompletionTask, AICompletionTaskDisplayDriver>();
+    }
+}
+
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class OCDeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<AIProfileDeploymentSource, AIProfileDeploymentStep, AIProfileDeploymentStepDisplayDriver>();
+        services.AddDeployment<AIDeploymentDeploymentSource, AIDeploymentDeploymentStep, AIDeploymentDeploymentStepDisplayDriver>();
+    }
+}
+
+# region Data Sources Feature
+
+[Feature(AIConstants.Feature.DataSources)]
+public sealed class DataSourceStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAIDataSourceServices();
+        services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
+        services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
+        services.AddNavigationProvider<AIDataProviderAdminMenu>();
+        services.AddDisplayDriver<AIProfile, AIProfileDataSourceDisplayDriver>();
+    }
+}
+
+[Feature(AIConstants.Feature.DataSources)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class DataSourcesRecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<AIDataSourceStep>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.DataSources, "OrchardCore.Deployment")]
+public sealed class DataSourcesOCDeploymentStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<AIDataSourceDeploymentSource, AIDataSourceDeploymentStep, AIDataSourceDeploymentStepDisplayDriver>();
+    }
+}
+#endregion
+
+#region Deployments Feature
 
 [Feature(AIConstants.Feature.Deployments)]
 public sealed class DeploymentsStartup : StartupBase
@@ -123,6 +174,17 @@ public sealed class ChatDeploymentsStartup : StartupBase
     }
 }
 
+[Feature(AIConstants.Feature.Deployments)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class DeploymentRecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<AIDeploymentStep>();
+    }
+}
+#endregion
+
 [Feature(AIConstants.Feature.ChatCore)]
 public sealed class ChatCoreStartup : StartupBase
 {
@@ -147,7 +209,26 @@ public sealed class ApiChatStartup : StartupBase
     }
 }
 
-[RequireFeatures(AIConstants.Feature.AITools, "OrchardCore.Recipes.Core")]
+#region Tools Feature
+
+[Feature(AIConstants.Feature.Tools)]
+public sealed class ToolsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<AIProfile, AIProfileToolInstancesDisplayDriver>();
+        services.AddDisplayDriver<AIToolInstance, InvokableToolMetadataDisplayDriver>();
+        services.AddDisplayDriver<AIToolInstance, AIProfileToolMetadataDisplayDriver>();
+        services.AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>();
+        services.AddNavigationProvider<AIToolInstancesAdminMenu>();
+        services.AddPermissionProvider<AIToolPermissionProvider>();
+
+        services.AddAIToolSource<ProfileAwareAIToolSource>(ProfileAwareAIToolSource.ToolSource);
+        services.AddScoped<IAICompletionServiceHandler, FunctionInstancesAICompletionServiceHandler>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.Tools, "OrchardCore.Recipes.Core")]
 public sealed class RecipesToolsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -156,7 +237,7 @@ public sealed class RecipesToolsStartup : StartupBase
     }
 }
 
-[RequireFeatures(AIConstants.Feature.AITools, "OrchardCore.Deployment")]
+[RequireFeatures(AIConstants.Feature.Tools, "OrchardCore.Deployment")]
 public sealed class ToolOCDeploymentStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -164,48 +245,9 @@ public sealed class ToolOCDeploymentStartup : StartupBase
         services.AddDeployment<AIToolInstanceDeploymentSource, AIToolInstanceDeploymentStep, AIToolInstanceDeploymentStepDisplayDriver>();
     }
 }
+#endregion
 
-[RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class RecipesStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddRecipeExecutionStep<AIProfileStep>();
-    }
-}
-
-[RequireFeatures("OrchardCore.Workflows")]
-public sealed class WorkflowsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.Configure<TemplateOptions>(o =>
-        {
-            o.MemberAccessStrategy.Register<AIResponseMessage>();
-        });
-        services.AddActivity<AICompletionTask, AICompletionTaskDisplayDriver>();
-    }
-}
-
-[RequireFeatures("OrchardCore.Deployment")]
-public sealed class OCDeploymentsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDeployment<AIProfileDeploymentSource, AIProfileDeploymentStep, AIProfileDeploymentStepDisplayDriver>();
-        services.AddDeployment<AIDeploymentDeploymentSource, AIDeploymentDeploymentStep, AIDeploymentDeploymentStepDisplayDriver>();
-    }
-}
-
-[Feature(AIConstants.Feature.Deployments)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class DeploymentRecipesStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddRecipeExecutionStep<AIDeploymentStep>();
-    }
-}
+#region Connection Management Feature
 
 [Feature(AIConstants.Feature.ConnectionManagement)]
 public sealed class ConnectionManagementStartup : StartupBase
@@ -239,3 +281,4 @@ public sealed class ConnectionManagementOCDeploymentsStartup : StartupBase
         services.AddDeployment<AIProviderConnectionDeploymentSource, AIProviderConnectionDeploymentStep, AIProviderConnectionDeploymentStepDisplayDriver>();
     }
 }
+#endregion

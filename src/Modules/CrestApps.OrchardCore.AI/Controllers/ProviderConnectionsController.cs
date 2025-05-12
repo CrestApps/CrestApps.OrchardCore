@@ -87,12 +87,12 @@ public sealed class ProviderConnectionsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceModelViewModel<AIProviderConnection>
+        var viewModel = new ListSourceModelEntryViewModel<AIProviderConnection>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            SourceNames = _aiOptions.ConnectionSources.Keys.Order(),
+            Sources = _aiOptions.ConnectionSources.Keys.Order(),
         };
 
         foreach (var model in result.Models)

@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.AI.Deployments.Steps
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIDataSourceDeploymentStep>
+
+<h5>@T["AI Data Sources"]</h5>
+
+@if (Model.Value.IncludeAll)
+{
+    <span class="badge text-bg-success">@T["All Data Sources"]</span>
+}
+else if (Model.Value.SourceIds?.Length > 0)
+{
+    <span class="badge text-bg-warning">@T.Plural(Model.Value.SourceIds.Length, "1 selected data source.", "{0} selected data sources.", Model.Value.SourceIds.Length)</span>
+}
+else
+{
+    <span class="badge text-bg-warning">@T["No selected data sources."]</span>
+}

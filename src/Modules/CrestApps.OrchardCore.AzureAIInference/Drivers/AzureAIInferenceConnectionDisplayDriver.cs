@@ -1,6 +1,6 @@
+using CrestApps.Azure.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Azure.Core.Models;
 using CrestApps.OrchardCore.AzureAIInference.Models;
 using CrestApps.OrchardCore.AzureAIInference.ViewModels;
 using Microsoft.AspNetCore.DataProtection;

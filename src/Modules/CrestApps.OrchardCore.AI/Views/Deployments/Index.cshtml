@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
 
-@model ListSourceModelViewModel<AIDeployment>
+@model ListSourceModelEntryViewModel<AIDeployment>
 
 <zone Name="Title">
     <h1>@RenderTitleSegments(T["AI Deployments"])</h1>
@@ -107,14 +107,14 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                @if (!Model.SourceNames.Any())
+                @if (!Model.Sources.Any())
                 {
                     <p class="p-3 mb-2 bg-warning text-white">@T["You need to enable a feature which provides an AI source."]</p>
                 }
                 else
                 {
                     <div class="row row-cols-1 row-cols-md-3 g-2">
-                        @foreach (var providerName in Model.SourceNames)
+                        @foreach (var providerName in Model.Sources)
                         {
                             IShape shape = await New.AIDeployment_Link(ProviderName: providerName);
                             shape.Metadata.Alternates.Add("AIDeployment_Link__" + providerName);
