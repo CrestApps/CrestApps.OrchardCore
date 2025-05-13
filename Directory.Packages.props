@@ -48,11 +48,12 @@
     <PackageVersion Include="OrchardCore.Email.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Sms.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Notifications.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Search.Elasticsearch.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Lists" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheAdmin" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheAgencyTheme" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheBlogTheme" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheComingSoonTheme" Version="$(OrchardCoreVersion)" />
-    <PackageVersion Include="OrchardCore.Lists" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="TheTheme" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="SafeMode" Version="$(OrchardCoreVersion)" />
   </ItemGroup>

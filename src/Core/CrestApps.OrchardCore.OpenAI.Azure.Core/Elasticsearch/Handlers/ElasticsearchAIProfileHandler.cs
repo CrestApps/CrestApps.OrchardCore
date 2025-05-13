@@ -6,13 +6,13 @@ using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 
-namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch.Handlers;
 
-public sealed class AzureAISearchAIProfileHandler : ModelHandlerBase<AIProfile>
+public sealed class ElasticsearchAIProfileHandler : ModelHandlerBase<AIProfile>
 {
     internal readonly IStringLocalizer S;
 
-    public AzureAISearchAIProfileHandler(IStringLocalizer<AzureAISearchAIProfileHandler> stringLocalizer)
+    public ElasticsearchAIProfileHandler(IStringLocalizer<ElasticsearchAIProfileHandler> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -24,7 +24,7 @@ public sealed class AzureAISearchAIProfileHandler : ModelHandlerBase<AIProfile>
             return Task.CompletedTask;
         }
 
-        var metadata = context.Model.As<AzureAIProfileAISearchMetadata>();
+        var metadata = context.Model.As<AzureAIProfileElasticsearchMetadata>();
 
         if (string.IsNullOrWhiteSpace(metadata.IndexName))
         {

@@ -58,3 +58,15 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Search.AzureAI",
     ]
 )]
+
+[assembly: Feature(
+    Id = AzureOpenAIConstants.Feature.Elasticsearch,
+    Name = "Elasticsearch-Powered Data Source",
+    Description = "Enables integration with OpenAI and Elasticsearch data via the Azure service provider.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AzureOpenAIConstants.Feature.DataSources,
+        "OrchardCore.Search.Elasticsearch",
+    ]
+)]
