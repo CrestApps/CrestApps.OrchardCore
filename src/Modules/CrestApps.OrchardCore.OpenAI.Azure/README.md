@@ -156,7 +156,7 @@ To configure via `appsettings.json`:
 }
 ```
 
-Alternatively, use `AuthenticationType: "api_key"` and provide only the `ApiKey`.
+Alternatively, use `AuthenticationType: "encoded_api_key"` and provide only the `encoded` value.
 
 #### Registering a Custom Data Source
 

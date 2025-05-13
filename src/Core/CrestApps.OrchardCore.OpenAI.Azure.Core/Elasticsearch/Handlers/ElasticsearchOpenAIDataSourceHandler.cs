@@ -98,7 +98,7 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
         }
         else if (hasKey)
         {
-            credentials = DataSourceAuthentication.FromApiKey(_elasticsearchOptions.ApiKey);
+            credentials = DataSourceAuthentication.FromEncodedApiKey(_elasticsearchOptions.ApiKey);
         }
 
         options.AddDataSource(new ElasticsearchChatDataSource()
