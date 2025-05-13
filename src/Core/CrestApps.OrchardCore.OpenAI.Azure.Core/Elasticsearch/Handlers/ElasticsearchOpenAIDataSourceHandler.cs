@@ -10,13 +10,14 @@ using OrchardCore.Contents.Indexing;
 using OrchardCore.Documents;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Search.AzureAI.Services;
 using OrchardCore.Search.Elasticsearch.Core.Models;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch.Handlers;
 
 public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourceHandler
 {
+    private const string _titleFieldName = IndexingConstants.DisplayTextKey + ".keyword";
+
     private readonly IDocumentManager<ElasticIndexSettingsDocument> _documentManager;
     private readonly ShellSettings _shellSettings;
     private readonly ElasticsearchServerOptions _elasticsearchOptions;
@@ -85,11 +86,26 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
         }
 
 #pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
+        DataSourceAuthentication credentials = null;
+
+        var hasKey = !string.IsNullOrEmpty(_elasticsearchOptions.ApiKey);
+
+        if (_elasticsearchOptions.AuthenticationType is not null &&
+            string.Equals("key_and_key_id", _elasticsearchOptions.AuthenticationType, StringComparison.OrdinalIgnoreCase))
+        {
+            credentials = DataSourceAuthentication.FromKeyAndKeyId(_elasticsearchOptions.ApiKey, _elasticsearchOptions.ApiKeyId);
+        }
+        else if (hasKey)
+        {
+            credentials = DataSourceAuthentication.FromApiKey(_elasticsearchOptions.ApiKey);
+        }
+
         options.AddDataSource(new ElasticsearchChatDataSource()
         {
             Endpoint = uri,
             IndexName = GetFullIndexNameInternal(indexSettings.IndexName),
-            Authentication = DataSourceAuthentication.FromUsernameAndPassword(_elasticsearchOptions.Username, _elasticsearchOptions.Password),
+            Authentication = credentials,
             Strictness = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
             TopNDocuments = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
             QueryType = DataSourceQueryType.Simple,
@@ -97,7 +113,7 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
             OutputContexts = DataSourceOutputContexts.Citations,
             FieldMappings = new DataSourceFieldMappings()
             {
-                TitleFieldName = AzureAISearchIndexManager.DisplayTextAnalyzedKey,
+                TitleFieldName = _titleFieldName,
                 FilePathFieldName = IndexingConstants.ContentItemIdKey,
                 ContentFieldSeparator = Environment.NewLine,
             },
@@ -114,7 +130,6 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
     /// <exception cref="ArgumentException"></exception>
     private static (string, Uri) ParseCloudId(string cloudId)
     {
-        const string exceptionSuffix = "should be a string in the form of cluster_name:base_64_data";
         if (string.IsNullOrWhiteSpace(cloudId))
         {
             throw new ArgumentException($"Parameter {nameof(cloudId)} was null or empty but {exceptionSuffix}", nameof(cloudId));
@@ -155,6 +170,8 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
 
         return (clusterName, new Uri($"https://{elasticsearchUuid}.{domainName}"));
     }
+
+    private const string exceptionSuffix = "should be a string in the form of cluster_name:base_64_data";
 
     /// <summary>
     /// The following code was copied from https://github.com/OrchardCMS/OrchardCore/blob/5f2ccbdca769f1038e05b5fe432095bc6bd6d5a5/src/OrchardCore/OrchardCore.Search.Elasticsearch.Core/Services/ElasticsearchIndexManager.cs#L662-L682

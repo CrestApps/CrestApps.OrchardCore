@@ -46,10 +46,17 @@ public sealed class ElasticsearchServerOptions
     /// </summary>
     public string IndexPrefix { get; set; }
 
+    public string AuthenticationType { get; set; }
+
+    public string ApiKeyId { get; set; }
+
+    public string ApiKey { get; set; }
+
     /// <summary>
     /// Whether the configuration section exists.
     /// </summary>
     private bool _fileConfigurationExists { get; set; }
+
 
     public void SetFileConfigurationExists(bool fileConfigurationExists)
         => _fileConfigurationExists = fileConfigurationExists;

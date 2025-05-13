@@ -2,26 +2,26 @@
 
 ## Azure OpenAI Services Integration
 
-The **Azure OpenAI Services** feature (`CrestApps.OrchardCore.OpenAI.Azure`) is designed to seamlessly integrate with Azure OpenAI. This module is managed via dependencies, enabling or disabling it automatically based on demand.
+The Azure OpenAI Services feature (`CrestApps.OrchardCore.OpenAI.Azure`) integrates seamlessly with Azure OpenAI. This module is dependency-driven, meaning it automatically enables or disables itself based on usage requirements.
 
 ### Configuration
 
-To configure the Azure OpenAI services, add the following section to your `appsettings.json` file:
+Add the following section to your `appsettings.json` to configure Azure OpenAI:
 
 ```json
 {
-  "OrchardCore":{
-    "CrestApps_AI":{
-      "Providers":{
-        "Azure":{
-          "DefaultConnectionName":"<!-- Default connection name -->",
-          "DefaultDeploymentName":"<!-- Default deployment name -->",
-          "Connections":{
-            "<!-- Unique connection name, recommended to match your Azure AccountName -->":{
-              "Endpoint":"https://<!-- Your Azure Resource Name -->.openai.azure.com/",
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Providers": {
+        "Azure": {
+          "DefaultConnectionName": "<!-- Default connection name -->",
+          "DefaultDeploymentName": "<!-- Default deployment name -->",
+          "Connections": {
+            "<!-- Unique connection name, ideally your Azure AccountName -->": {
+              "Endpoint": "https://<!-- Your Azure Resource Name -->.openai.azure.com/",
               "AuthenticationType": "ApiKey",
-              "ApiKey":"<!-- API Key to connect to your Azure AI instance -->",
-              "DefaultDeploymentName":"<!-- Default deployment name -->"
+              "ApiKey": "<!-- API Key for your Azure AI instance -->",
+              "DefaultDeploymentName": "<!-- Default deployment name -->"
             }
           }
         }
@@ -31,54 +31,52 @@ To configure the Azure OpenAI services, add the following section to your `appse
 }
 ```
 
-Authentication Type in the connection can be `Default`, `ManagedIdentity` or `ApiKey`. When using `ApiKey` authentication type, `ApiKey` is required.
+Valid values for `AuthenticationType` are: `Default`, `ManagedIdentity`, or `ApiKey`. If using `ApiKey`, the `ApiKey` field is required.
 
-### Retrieving the Required Information from the Azure Portal
+### How to Retrieve Azure OpenAI Credentials
 
-#### Retrieving the API Key for Azure OpenAI
+#### Get the API Key and Endpoint
 
-1. In the **Azure Portal**, go to your **Azure OpenAI** instance.
-2. Navigate to **Resource Management** > **Keys and Endpoint**.
-3. Click on the copy button next to the Endpoint.
-4. Click on the copy button next to one of the two keys.
+1. Open the Azure Portal and navigate to your Azure OpenAI instance.
+2. Go to **Resource Management** > **Keys and Endpoint**.
+3. Copy the **Endpoint**.
+4. Copy one of the two available **API keys**.
 
 ## Azure OpenAI Chat Feature
 
-The **Azure OpenAI Chat** feature enables the creation of AI Profiles using Azure OpenAI services.
+This feature allows the creation of AI profiles using Azure OpenAI chat capabilities.
 
-### Recipes
+### Recipe Configuration
 
-When using Recipes, you can define an Azure AI profile with the following step:
+Define an AI profile with the following step in your recipe:
 
 ```json
 {
-  "steps":[
+  "steps": [
     {
-      "name":"AIProfile",
-      "profiles":[
+      "name": "AIProfile",
+      "profiles": [
         {
-          "Source":"Azure",
-          "Name":"ExampleProfile",
+          "Source": "Azure",
+          "Name": "ExampleProfile",
           "DisplayText": "Example Profile",
           "WelcomeMessage": "What do you want to know?",
           "FunctionNames": [],
           "Type": "Chat",
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
-          "ConnectionName":"<!-- The connection name for the deployment (leave blank for default) -->",
-          "DeploymentId":"<!-- The deployment ID (leave blank for default) -->",
-          "Properties": 
-          {
-              "AIProfileMetadata": 
-              {
-                  "SystemMessage":"You are an AI assistant that helps people find information.",
-                  "Temperature":null,
-                  "TopP":null,
-                  "FrequencyPenalty":null,
-                  "PresencePenalty":null,
-                  "MaxTokens":null,
-                  "PastMessagesCount":null
-              }
+          "ConnectionName": "<!-- Connection name (optional) -->",
+          "DeploymentId": "<!-- Deployment ID (optional) -->",
+          "Properties": {
+            "AIProfileMetadata": {
+              "SystemMessage": "You are an AI assistant that helps people find information.",
+              "Temperature": null,
+              "TopP": null,
+              "FrequencyPenalty": null,
+              "PresencePenalty": null,
+              "MaxTokens": null,
+              "PastMessagesCount": null
+            }
           }
         }
       ]
@@ -87,17 +85,82 @@ When using Recipes, you can define an Azure AI profile with the following step:
 }
 ```
 
----
+## Azure OpenAI – Bring Your Own Data
 
-### Azure OpenAI – Bring Your Own Data Feature
+This feature builds on the **AI Data Source Management** system, enabling Azure OpenAI to interact with your own data repositories. It is automatically activated by dependent features and cannot be manually enabled or disabled.
 
-The **Azure OpenAI – Bring Your Own Data** feature builds on the **AI Data Source Management** system, enabling the Azure OpenAI service to interact with your custom data stored in various data repositories. This feature is automatically activated when required by dependent services and cannot be enabled or disabled manually.
+## Azure AI Search-Powered Data Source
 
----
+This feature extends the **Bring Your Own Data** capability by enabling integration with Azure AI Search. It allows your models to query and use indexed content during inference.
+
+## Elasticsearch-Powered Data Source
+
+This feature also extends **Bring Your Own Data**, allowing models to use Elasticsearch as a queryable data source during inference.
+
+### Configuration
+
+This feature depends on the `OrchardCore.Search.Elasticsearch` module. Refer to the [official documentation](https://docs.orchardcore.net/en/latest/reference/modules/Elasticsearch/#elasticsearch-configuration) to configure Elasticsearch.
+
+In addition to the basic configuration, you must generate an API key using Kibana (if security is enabled on your cluster) for the chat client to access Elasticsearch indexes.
+
+#### Creating an API Key via Kibana
+
+1. **Log in to Kibana**
+
+   * Open Kibana in your browser.
+   * Sign in using an account with permission to manage API keys.
+
+2. **Navigate to API Key Management**
+
+   * Go to **Management** > **Stack Management**.
+   * Under **Security**, click on **API Keys**.
+
+3. **Create a New API Key**
+
+   * Click **Create API key**.
+   * Fill in the form:
+
+     * Name: `search-service-key` (or any descriptive name)
+     * Expiration: Optional (e.g., `1d` for one day)
+     * Privileges: Optional role descriptors for access control
+
+4. **Copy and Format the API Key**
+
+   * Once created, Kibana displays the key in Base64.
+   * Change the format to **JSON** to get the `id` and `api_key`. Example:
+
+```json
+{
+  "id": "<!-- Key ID -->",
+  "name": "<!-- Key Name -->",
+  "api_key": "<!-- Key -->",
+  "encoded": "<!-- Base64 encoded ID + Key -->"
+}
+```
+
+Use `id` and `api_key` values in your configuration.
+
+#### AppSettings Example
+
+To configure via `appsettings.json`:
+
+```json
+{
+  "OrchardCore": {
+    "OrchardCore_Elasticsearch": {
+      "AuthenticationType": "key_and_key_id",
+      "ApiKeyId": "<!-- Key ID -->",
+      "ApiKey": "<!-- Key -->"
+    }
+  }
+}
+```
+
+Alternatively, use `AuthenticationType: "api_key"` and provide only the `ApiKey`.
 
 #### Registering a Custom Data Source
 
-To register a new data source, configure the following service:
+Register a new data source using the following code:
 
 ```csharp
 services.AddAIDataSource(AzureOpenAIConstants.AISearchImplementationName, "azure_search", o =>
@@ -107,56 +170,44 @@ services.AddAIDataSource(AzureOpenAIConstants.AISearchImplementationName, "azure
 });
 ```
 
----
-
 #### Implementing the Data Source Handler
 
-Finally, implement the `IAzureOpenAIDataSourceHandler` interface to integrate your data source into the chat configuration options.
-You can refer to the `AzureAISearchOpenAIDataSourceHandler` class in the repository as an example implementation.
+Implement the `IAzureOpenAIDataSourceHandler` interface to wire your data source into the chat system. You can reference `AzureAISearchOpenAIDataSourceHandler` in the source code as an example.
 
----
+## Azure AI Search-Powered Data Source Recipe Example
 
-### **Azure AI Search-Powered Data Source Feature**
-
-The **Azure AI Search-Powered Data Source** feature extends **Azure OpenAI with Your Data** by allowing you to define an Azure AI Search index as a data source. This enables your model to access and interact with data stored in Azure AI Search during inference.
-
-### Recipes
-
-When using Recipes, you can create an Azure AI profile with custom data from Azure AI Search by following this recipe step:
+To define a profile that uses Azure AI Search as a custom data source, use this recipe structure:
 
 ```json
 {
-  "steps":[
+  "steps": [
     {
-      "name":"AIProfile",
-      "profiles":[
+      "name": "AIProfile",
+      "profiles": [
         {
-          "Source":"AzureAISearch",
-          "Name":"ExampleProfile",
+          "Source": "AzureAISearch",
+          "Name": "ExampleProfile",
           "DisplayText": "Example Profile",
           "WelcomeMessage": "What do you want to know?",
           "FunctionNames": [],
           "Type": "Chat",
           "TitleType": "InitialPrompt",
-          "ConnectionName":"<!-- Connection name for the deployment (leave blank for default) -->",
-          "DeploymentId":"<!-- Deployment ID (leave blank for default) -->",
-          "Properties": 
-          {
-              "AIProfileMetadata": 
-              {
-                  "SystemMessage":"You are an AI assistant that helps people find information.",
-                  "Temperature":null,
-                  "TopP":null,
-                  "FrequencyPenalty":null,
-                  "PresencePenalty":null,
-                  "MaxTokens":null,
-                  "PastMessagesCount":null
-              },
-              "AIProfileDataSourceMetadata":
-              {
-                  "DataSourceId": "<!-- The ID of the data-source -->",
-                  "DataSourceType": "<!-- The type of the data-source (e.g., 'azure_search') -->"
-              }
+          "ConnectionName": "<!-- Connection name (optional) -->",
+          "DeploymentId": "<!-- Deployment ID (optional) -->",
+          "Properties": {
+            "AIProfileMetadata": {
+              "SystemMessage": "You are an AI assistant that helps people find information.",
+              "Temperature": null,
+              "TopP": null,
+              "FrequencyPenalty": null,
+              "PresencePenalty": null,
+              "MaxTokens": null,
+              "PastMessagesCount": null
+            },
+            "AIProfileDataSourceMetadata": {
+              "DataSourceId": "<!-- Data source ID -->",
+              "DataSourceType": "<!-- Data source type, e.g., 'azure_search' -->"
+            }
           }
         }
       ]

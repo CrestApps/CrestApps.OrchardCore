@@ -446,7 +446,6 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
     private static AzureOpenAIClient GetChatClient(AIProviderConnectionEntry connection)
     {
         var endpoint = connection.GetEndpoint();
-
         var azureClient = connection.GetAzureAuthenticationType() switch
         {
             AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey())),
