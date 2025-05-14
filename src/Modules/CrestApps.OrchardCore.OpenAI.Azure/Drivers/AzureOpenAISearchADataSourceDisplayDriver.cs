@@ -63,4 +63,3 @@ public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AI
         return Edit(dataSource, context);
     }
 }
-

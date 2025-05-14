@@ -147,10 +147,10 @@ To define a Azure AI Search-Powered data-source, use this recipe structure:
         {
           "ProfileSource": "AzureOpenAIOwnData",
           "Type": "azure_search",
-          "DisplayText": "Articles in Azure AI Search",
+          "DisplayText": "<!-- Display name for the data-source -->",
           "Properties": {
             "AzureAIProfileAISearchMetadata": {
-              "IndexName": "articles",
+              "IndexName": "<!-- Azure Search AI Index Name -->",
               "Strictness": 3,
               "TopNDocuments": 5
             }
@@ -180,10 +180,10 @@ To define an Elasticsearch-Powered data-source, use this recipe structure:
         {
           "ProfileSource": "AzureOpenAIOwnData",
           "Type": "elasticsearch",
-          "DisplayText": "Articles in Elasticsearch",
+          "DisplayText": "<!-- Display name for the data-source -->",
           "Properties": {
             "AzureAIProfileElasticsearchMetadata": {
-              "IndexName": "articles",
+              "IndexName": "<!-- Elasticsearch Index Name -->",
               "Strictness": 3,
               "TopNDocuments": 5
             }
@@ -295,10 +295,10 @@ To define an Elasticsearch-Powered data-source, use this recipe structure:
         {
           "ProfileSource": "AzureOpenAIOwnData",
           "Type": "mongo_db",
-          "DisplayText": "Articles in Mongo DB",
+          "DisplayText": "<!-- Display name for the data-source -->",
           "Properties": {
             "AzureAIProfileMongoDBMetadata": {
-              "IndexName": "articles",
+              "IndexName": "<!-- Mongo DB Index Name -->",
               "Strictness": 3,
               "TopNDocuments": 5,
               "EndpointName": "<!-- Mongo DB endpoint name -->",
