@@ -27,46 +27,76 @@ internal sealed class DataSourceMigrations : DataMigration
         if (_shellSettings.IsInitializing())
         {
             // If the tenant is not created, nothing to migrate.
-            return 1;
+            return 2;
         }
 
         ShellScope.AddDeferredTask(async scope =>
         {
             var profileManager = scope.ServiceProvider.GetRequiredService<INamedModelManager<AIProfile>>();
             var dataSourceManager = scope.ServiceProvider.GetRequiredService<IAIDataSourceManager>();
-            // get all profiles.
+
             var profiles = await profileManager.GetAllAsync();
 
             foreach (var profile in profiles)
             {
-                if (!profile.TryGet<AzureAIProfileAISearchMetadata>(out var metadata))
+                if (profile.Source != "AzureAISearch")
                 {
                     continue;
                 }
 
-                if (string.IsNullOrEmpty(metadata.IndexName))
+                profile.Source = AzureOpenAIConstants.AzureOpenAIOwnData;
+
+                if (profile.TryGet<AzureAIProfileAISearchMetadata>(out var metadata) && !string.IsNullOrEmpty(metadata.IndexName))
                 {
-                    continue;
+                    var dataSource = await dataSourceManager.NewAsync(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.AzureAISearch);
+
+                    dataSource.DisplayText = $"Azure OpenAI - {metadata.IndexName}";
+                    dataSource.Put(metadata);
+
+                    await dataSourceManager.CreateAsync(dataSource);
+
+                    profile.Alter<AIProfileDataSourceMetadata>(m =>
+                    {
+                        m.DataSourceId = dataSource.Id;
+                        m.DataSourceType = dataSource.Type;
+                    });
                 }
-
-                var dataSource = await dataSourceManager.NewAsync(AzureOpenAIConstants.AISearchImplementationName, "azure_search");
-
-                dataSource.DisplayText = $"Azure OpenAI - {metadata.IndexName}";
-                dataSource.Put(metadata);
-
-                await dataSourceManager.CreateAsync(dataSource);
-
-                profile.Alter<AIProfileDataSourceMetadata>(m =>
-                {
-                    m.DataSourceId = dataSource.Id;
-                    m.DataSourceType = dataSource.Type;
-                });
 
                 await profileManager.UpdateAsync(profile);
             }
-
         });
 
-        return 1;
+        return 2;
+    }
+
+    public int UpdateFrom1()
+    {
+        if (_shellSettings.IsInitializing())
+        {
+            // If the tenant is not created, nothing to migrate.
+            return 2;
+        }
+
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var profileManager = scope.ServiceProvider.GetRequiredService<INamedModelManager<AIProfile>>();
+            var dataSourceManager = scope.ServiceProvider.GetRequiredService<IAIDataSourceManager>();
+
+            var profiles = await profileManager.GetAllAsync();
+
+            foreach (var profile in profiles)
+            {
+                if (profile.Source != "AzureAISearch")
+                {
+                    continue;
+                }
+
+                profile.Source = AzureOpenAIConstants.AzureOpenAIOwnData;
+
+                await profileManager.UpdateAsync(profile);
+            }
+        });
+
+        return 2;
     }
 }

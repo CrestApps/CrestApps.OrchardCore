@@ -8,12 +8,15 @@ var ollama = builder.AddOllama("Ollama", 11434)
 
 ollama.AddModel(OllamaModelName);
 
+var mongo = builder.AddMongoDB("mongodb", 27017)
+    .AddDatabase("mongodb");
+
 var redis = builder.AddRedis("Redis");
 
 builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("OrchardCoreCMS")
     .WithReference(redis)
     .WithReference(ollama)
-    .WaitFor(ollama)
+    .WithReference(mongo)
     .WaitFor(redis)
     .WithHttpsEndpoint(5001)
     .WithEnvironment((options) =>

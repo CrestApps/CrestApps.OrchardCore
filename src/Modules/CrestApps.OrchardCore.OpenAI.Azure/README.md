@@ -89,18 +89,111 @@ Define an AI profile with the following step in your recipe:
 
 This feature builds on the **AI Data Source Management** system, enabling Azure OpenAI to interact with your own data repositories. It is automatically activated by dependent features and cannot be manually enabled or disabled.
 
+### AI Profile with Data Source Recipe Example
+
+To define a profile that uses a data-source, use this recipe structure:
+
+```json
+{
+  "steps": [
+    {
+      "name": "AIProfile",
+      "profiles": [
+        {
+          "Source": "AzureOpenAIOwnData",
+          "Name": "ExampleProfile",
+          "DisplayText": "Example Profile",
+          "WelcomeMessage": "What do you want to know?",
+          "FunctionNames": [],
+          "Type": "Chat",
+          "TitleType": "InitialPrompt",
+          "ConnectionName": "<!-- Connection name (optional) -->",
+          "DeploymentId": "<!-- Deployment ID (optional) -->",
+          "Properties": {
+            "AIProfileMetadata": {
+              "SystemMessage": "You are an AI assistant that helps people find information.",
+              "Temperature": null,
+              "TopP": null,
+              "FrequencyPenalty": null,
+              "PresencePenalty": null,
+              "MaxTokens": null,
+              "PastMessagesCount": null
+            },
+            "AIProfileDataSourceMetadata": {
+              "DataSourceId": "<!-- Data source ID -->",
+              "DataSourceType": "<!-- Data source type, e.g., 'azure_search' -->"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
 ## Azure AI Search-Powered Data Source
 
 This feature extends the **Bring Your Own Data** capability by enabling integration with Azure AI Search. It allows your models to use Azure AI Search as a source for the data.
 
-Here's an improved version of your documentation with clearer structure, improved grammar, consistent formatting, and simplified phrasing—**without changing the meaning**:
+### Azure AI Search-Powered Data Source Recipe Example
 
+To define a Azure AI Search-Powered data-source, use this recipe structure:
+
+```
+{
+  "steps": [
+    {
+      "name": "AIDataSource",
+      "DataSources": [
+        {
+          "ProfileSource": "AzureOpenAIOwnData",
+          "Type": "azure_search",
+          "DisplayText": "<!-- Display name for the data-source -->",
+          "Properties": {
+            "AzureAIProfileAISearchMetadata": {
+              "IndexName": "<!-- Azure Search AI Index Name -->",
+              "Strictness": 3,
+              "TopNDocuments": 5
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
 ---
 
 ## Elasticsearch-Powered Data Source
 
 This feature extends the **Bring Your Own Data** capability by enabling integration with **Elasticsearch**, allowing your models to use Elasticsearch as a data source.
 
+### Elasticsearch-Powered Data Source Recipe Example
+
+To define an Elasticsearch-Powered data-source, use this recipe structure:
+
+```
+{
+  "steps": [
+    {
+      "name": "AIDataSource",
+      "DataSources": [
+        {
+          "ProfileSource": "AzureOpenAIOwnData",
+          "Type": "elasticsearch",
+          "DisplayText": "<!-- Display name for the data-source -->",
+          "Properties": {
+            "AzureAIProfileElasticsearchMetadata": {
+              "IndexName": "<!-- Elasticsearch Index Name -->",
+              "Strictness": 3,
+              "TopNDocuments": 5
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
 ---
 
 ### Configuration
@@ -185,7 +278,47 @@ Then configure `appsettings.json` like this:
 }
 ```
 
-#### Registering a Custom Data Source
+## MongoDB-Powered Data Source
+
+This feature extends the **Bring Your Own Data** capability by enabling integration with **Mongo DB**, allowing your models to use Mongo DB as a data source.
+
+### Elasticsearch-Powered Data Source Recipe Example
+
+To define an Elasticsearch-Powered data-source, use this recipe structure:
+
+```
+{
+  "steps": [
+    {
+      "name": "AIDataSource",
+      "DataSources": [
+        {
+          "ProfileSource": "AzureOpenAIOwnData",
+          "Type": "mongo_db",
+          "DisplayText": "<!-- Display name for the data-source -->",
+          "Properties": {
+            "AzureAIProfileMongoDBMetadata": {
+              "IndexName": "<!-- Mongo DB Index Name -->",
+              "Strictness": 3,
+              "TopNDocuments": 5,
+              "EndpointName": "<!-- Mongo DB endpoint name -->",
+              "AppName": "<!-- Mongo DB application name -->",
+              "CollectionName": "<!-- Mongo DB collection name -->",
+              "Authentication": {
+                  "Type": "username_and_password",
+                  "Username": "<!-- Mongo DB username -->",
+                  "Password": "<!-- Mongo DB password -->"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Registering a Custom Data Source
 
 Register a new data source using the following code:
 
@@ -197,48 +330,7 @@ services.AddAIDataSource(AzureOpenAIConstants.AISearchImplementationName, "azure
 });
 ```
 
-#### Implementing the Data Source Handler
+## Implementing the Data Source Handler
 
 Implement the `IAzureOpenAIDataSourceHandler` interface to wire your data source into the chat system. You can reference `AzureAISearchOpenAIDataSourceHandler` in the source code as an example.
 
-## AI Profile with Data Source Recipe Example
-
-To define a profile that uses a data-source, use this recipe structure:
-
-```json
-{
-  "steps": [
-    {
-      "name": "AIProfile",
-      "profiles": [
-        {
-          "Source": "AzureAISearch",
-          "Name": "ExampleProfile",
-          "DisplayText": "Example Profile",
-          "WelcomeMessage": "What do you want to know?",
-          "FunctionNames": [],
-          "Type": "Chat",
-          "TitleType": "InitialPrompt",
-          "ConnectionName": "<!-- Connection name (optional) -->",
-          "DeploymentId": "<!-- Deployment ID (optional) -->",
-          "Properties": {
-            "AIProfileMetadata": {
-              "SystemMessage": "You are an AI assistant that helps people find information.",
-              "Temperature": null,
-              "TopP": null,
-              "FrequencyPenalty": null,
-              "PresencePenalty": null,
-              "MaxTokens": null,
-              "PastMessagesCount": null
-            },
-            "AIProfileDataSourceMetadata": {
-              "DataSourceId": "<!-- Data source ID -->",
-              "DataSourceType": "<!-- Data source type, e.g., 'azure_search' -->"
-            }
-          }
-        }
-      ]
-    }
-  ]
-}
-```

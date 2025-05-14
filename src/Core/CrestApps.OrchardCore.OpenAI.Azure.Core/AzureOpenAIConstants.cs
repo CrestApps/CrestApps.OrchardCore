@@ -10,7 +10,9 @@ public static class AzureOpenAIConstants
 
     public const string StandardImplementationName = "Azure";
 
-    public const string AISearchImplementationName = "AzureAISearch";
+    public const string AzureOpenAIOwnData = "AzureOpenAIOwnData";
+
+    public const string MongoDataProtectionPurpose = "MongoDBDataProtection";
 
     public static class Feature
     {
@@ -18,11 +20,13 @@ public static class AzureOpenAIConstants
 
         public const string Standard = "CrestApps.OrchardCore.OpenAI.Azure.Standard";
 
+        public const string DataSources = "CrestApps.OrchardCore.OpenAI.Azure.DataSources";
+
         public const string AISearch = "CrestApps.OrchardCore.OpenAI.Azure.AISearch";
 
         public const string Elasticsearch = "CrestApps.OrchardCore.OpenAI.Azure.Elasticsearch";
 
-        public const string DataSources = "CrestApps.OrchardCore.OpenAI.Azure.DataSources";
+        public const string MongoDB = "CrestApps.OrchardCore.OpenAI.Azure.MongoDB";
     }
 
     public static class DataSourceTypes
@@ -30,5 +34,7 @@ public static class AzureOpenAIConstants
         public const string AzureAISearch = "azure_search";
 
         public const string Elasticsearch = "elasticsearch";
+
+        public const string MongoDB = "mongo_db";
     }
 }

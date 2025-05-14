@@ -58,81 +58,6 @@ public sealed class StandardStartup : StartupBase
     }
 }
 
-[Feature(AzureOpenAIConstants.Feature.DataSources)]
-public sealed class DataSourcesStartup : StartupBase
-{
-    internal readonly IStringLocalizer S;
-
-    public DataSourcesStartup(IStringLocalizer<DataSourcesStartup> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddAIProfile<AzureAISearchCompletionClient>(AzureOpenAIConstants.AISearchImplementationName, AzureOpenAIConstants.ProviderName, o =>
-        {
-            o.DisplayName = S["Azure OpenAI with Your Data"];
-            o.Description = S["Provides AI profiles using Azure OpenAI models with your data."];
-        });
-    }
-}
-
-[Feature(AzureOpenAIConstants.Feature.AISearch)]
-public sealed class AISearchStartup : StartupBase
-{
-    internal readonly IStringLocalizer S;
-
-    public AISearchStartup(IStringLocalizer<AISearchStartup> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDisplayDriver<AIDataSource, AzureOpenAISearchADataSourceDisplayDriver>();
-        services.AddScoped<IModelHandler<AIProfile>, AzureAISearchAIProfileHandler>();
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        services.AddDataMigration<DataSourceMigrations>();
-#pragma warning restore CS0618 // Type or member is obsolete
-
-        services
-            .AddScoped<IAzureOpenAIDataSourceHandler, AzureAISearchOpenAIDataSourceHandler>()
-            .AddAIDataSource(AzureOpenAIConstants.AISearchImplementationName, AzureOpenAIConstants.DataSourceTypes.AzureAISearch, o =>
-            {
-                o.DisplayName = S["Azure OpenAI with Azure AI Search"];
-                o.Description = S["Enables AI models to use Azure AI Search as a data source for your data."];
-            });
-    }
-}
-
-[Feature(AzureOpenAIConstants.Feature.Elasticsearch)]
-public sealed class ElasticsearchStartup : StartupBase
-{
-    internal readonly IStringLocalizer S;
-
-    public ElasticsearchStartup(IStringLocalizer<ElasticsearchStartup> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDisplayDriver<AIDataSource, AzureOpenAIElasticsearchDataSourceDisplayDriver>();
-        services.AddScoped<IModelHandler<AIProfile>, ElasticsearchAIProfileHandler>();
-        services.AddTransient<IConfigureOptions<ElasticsearchServerOptions>, ElasticsearchServerOptionsConfigurations>();
-
-        services
-            .AddScoped<IAzureOpenAIDataSourceHandler, ElasticsearchOpenAIDataSourceHandler>()
-            .AddAIDataSource(AzureOpenAIConstants.AISearchImplementationName, AzureOpenAIConstants.DataSourceTypes.Elasticsearch, o =>
-            {
-                o.DisplayName = S["Azure OpenAI with Elasticsearch"];
-                o.Description = S["Enables AI models to use Elasticsearch as a data source for your data."];
-            });
-    }
-}
-
 [RequireFeatures(AIConstants.Feature.ConnectionManagement)]
 public sealed class ConnectionManagementStartup : StartupBase
 {
@@ -155,3 +80,106 @@ public sealed class ConnectionManagementStartup : StartupBase
         });
     }
 }
+
+#region Data Sources Features
+
+[Feature(AzureOpenAIConstants.Feature.DataSources)]
+public sealed class DataSourcesStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public DataSourcesStartup(IStringLocalizer<DataSourcesStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAIProfile<AzureAISearchCompletionClient>(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.ProviderName, o =>
+        {
+            o.DisplayName = S["Azure OpenAI with Your Data"];
+            o.Description = S["Provides AI profiles using Azure OpenAI models with your data."];
+        });
+    }
+}
+
+[Feature(AzureOpenAIConstants.Feature.AISearch)]
+public sealed class AISearchStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public AISearchStartup(IStringLocalizer<AISearchStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<AIDataSource, AzureOpenAISearchADataSourceDisplayDriver>();
+        services.AddScoped<IModelHandler<AIDataSource>, AzureAISearchAIDataSourceHandler>();
+
+#pragma warning disable CS0618 // Type or member is obsolete
+        services.AddDataMigration<DataSourceMigrations>();
+#pragma warning restore CS0618 // Type or member is obsolete
+
+        services
+            .AddScoped<IAzureOpenAIDataSourceHandler, AzureAISearchOpenAIDataSourceHandler>()
+            .AddAIDataSource(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.AzureAISearch, o =>
+            {
+                o.DisplayName = S["Azure OpenAI with Azure AI Search"];
+                o.Description = S["Enables AI models to use Azure AI Search as a data source for your data."];
+            });
+    }
+}
+
+[Feature(AzureOpenAIConstants.Feature.Elasticsearch)]
+public sealed class ElasticsearchStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public ElasticsearchStartup(IStringLocalizer<ElasticsearchStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<AIDataSource, AzureOpenAIElasticsearchDataSourceDisplayDriver>();
+        services.AddScoped<IModelHandler<AIDataSource>, ElasticsearchAIDataSourceHandler>();
+        services.AddTransient<IConfigureOptions<ElasticsearchServerOptions>, ElasticsearchServerOptionsConfigurations>();
+
+        services
+            .AddScoped<IAzureOpenAIDataSourceHandler, ElasticsearchOpenAIDataSourceHandler>()
+            .AddAIDataSource(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.Elasticsearch, o =>
+            {
+                o.DisplayName = S["Azure OpenAI with Elasticsearch"];
+                o.Description = S["Enables AI models to use Elasticsearch as a data source for your data."];
+            });
+    }
+}
+
+[Feature(AzureOpenAIConstants.Feature.MongoDB)]
+public sealed class MongoDBStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public MongoDBStartup(IStringLocalizer<MongoDBStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<AIDataSource, AzureOpenAIMongoDBDataSourceDisplayDriver>();
+        services.AddScoped<IModelHandler<AIDataSource>, MongoDbAIProfileHandler>();
+
+        services
+            .AddScoped<IAzureOpenAIDataSourceHandler, MongoDBOpenAIDataSourceHandler>()
+            .AddAIDataSource(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.MongoDB, o =>
+            {
+                o.DisplayName = S["Azure OpenAI with Mongo DB"];
+                o.Description = S["Enables AI models to use Mongo DB as a data source for your data."];
+            });
+    }
+}
+#endregion
