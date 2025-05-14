@@ -20,6 +20,15 @@ public static class AzureOpenAIConstants
 
         public const string AISearch = "CrestApps.OrchardCore.OpenAI.Azure.AISearch";
 
+        public const string Elasticsearch = "CrestApps.OrchardCore.OpenAI.Azure.Elasticsearch";
+
         public const string DataSources = "CrestApps.OrchardCore.OpenAI.Azure.DataSources";
+    }
+
+    public static class DataSourceTypes
+    {
+        public const string AzureAISearch = "azure_search";
+
+        public const string Elasticsearch = "elasticsearch";
     }
 }

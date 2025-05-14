@@ -10,11 +10,11 @@ using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 
-public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AIDataSource>
+public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 {
     private readonly AzureAISearchIndexSettingsService _indexSettingsService;
 
-    public AzureOpenAISearchADataSourceDisplayDriver(
+    public AzureOpenAIElasticsearchDataSourceDisplayDriver(
         AzureAISearchIndexSettingsService indexSettingsService)
     {
         _indexSettingsService = indexSettingsService;
@@ -22,14 +22,14 @@ public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AI
 
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
-        if (dataSource.ProfileSource != AzureOpenAIConstants.AISearchImplementationName || dataSource.Type != AzureOpenAIConstants.DataSourceTypes.AzureAISearch)
+        if (dataSource.ProfileSource != AzureOpenAIConstants.AISearchImplementationName || dataSource.Type != AzureOpenAIConstants.DataSourceTypes.Elasticsearch)
         {
             return null;
         }
 
-        return Initialize<AzureProfileSearchAIViewModel>("AzureOpenAIProfileSearchAI_Edit", async model =>
+        return Initialize<AzureProfileElasticsearchViewModel>("AzureOpenAIProfileElasticsearch_Edit", async model =>
         {
-            var metadata = dataSource.As<AzureAIProfileAISearchMetadata>();
+            var metadata = dataSource.As<AzureAIProfileElasticsearchMetadata>();
 
             model.Strictness = metadata.Strictness;
             model.TopNDocuments = metadata.TopNDocuments;
@@ -42,16 +42,16 @@ public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AI
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
-        if (dataSource.ProfileSource != AzureOpenAIConstants.AISearchImplementationName || dataSource.Type != AzureOpenAIConstants.DataSourceTypes.AzureAISearch)
+        if (dataSource.ProfileSource != AzureOpenAIConstants.AISearchImplementationName || dataSource.Type != AzureOpenAIConstants.DataSourceTypes.Elasticsearch)
         {
             return null;
         }
 
-        var model = new AzureProfileSearchAIViewModel();
+        var model = new AzureProfileElasticsearchViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        dataSource.Put(new AzureAIProfileAISearchMetadata
+        dataSource.Put(new AzureAIProfileElasticsearchMetadata
         {
             IndexName = model.IndexName,
             Strictness = model.Strictness,

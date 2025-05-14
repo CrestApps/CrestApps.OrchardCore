@@ -16,10 +16,11 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
     public const string DefaultLogCategory = "AICompletionService";
 
     private readonly IDistributedCache _distributedCache;
-    private readonly ILoggerFactory _loggerFactory;
     private readonly IEnumerable<IAICompletionServiceHandler> _handlers;
     private readonly DefaultAIOptions _defaultOptions;
-    private readonly ILogger _logger;
+
+    protected readonly ILogger Logger;
+    protected readonly ILoggerFactory LoggerFactory;
 
     public NamedAICompletionClient(
         string name,
@@ -33,9 +34,9 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;
         _distributedCache = distributedCache;
-        _loggerFactory = loggerFactory;
+        LoggerFactory = loggerFactory;
         _defaultOptions = defaultOptions;
-        _logger = loggerFactory.CreateLogger(DefaultLogCategory);
+        Logger = loggerFactory.CreateLogger(DefaultLogCategory);
         _handlers = handlers;
     }
 
@@ -77,7 +78,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         if (connection is null)
         {
-            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
+            Logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
 
             return null;
         }
@@ -109,7 +110,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while chatting with the {Name} service.", Name);
+            Logger.LogError(ex, "An error occurred while chatting with the {Name} service.", Name);
         }
 
         return null;
@@ -124,7 +125,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         if (connection is null)
         {
-            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
+            Logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
 
             yield break;
         }
@@ -171,7 +172,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         var configureContext = new CompletionServiceConfigureContext(chatOptions, context.Profile, supportFunctions);
 
-        await _handlers.InvokeAsync((handler, ctx) => handler.ConfigureAsync(ctx), configureContext, _logger);
+        await _handlers.InvokeAsync((handler, ctx) => handler.ConfigureAsync(ctx), configureContext, Logger);
 
         if (!supportFunctions || (chatOptions.Tools is not null && chatOptions.Tools.Count == 0))
         {
@@ -189,11 +190,11 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         var builder = new ChatClientBuilder(client);
 
-        builder.UseLogging(_loggerFactory, ConfigureLogger);
+        builder.UseLogging(LoggerFactory, ConfigureLogger);
 
         if (SupportFunctionInvocation(context, modelName))
         {
-            builder.UseFunctionInvocation(_loggerFactory, ConfigureFunctionInvocation);
+            builder.UseFunctionInvocation(LoggerFactory, ConfigureFunctionInvocation);
         }
 
         if (_defaultOptions.EnableDistributedCaching && context.UseCaching && metadata.UseCaching)
@@ -203,7 +204,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         if (_defaultOptions.EnableOpenTelemetry)
         {
-            builder.UseOpenTelemetry(_loggerFactory, sourceName: DefaultLogCategory, ConfigureOpenTelemetry);
+            builder.UseOpenTelemetry(LoggerFactory, sourceName: DefaultLogCategory, ConfigureOpenTelemetry);
         }
 
         return builder.Build();

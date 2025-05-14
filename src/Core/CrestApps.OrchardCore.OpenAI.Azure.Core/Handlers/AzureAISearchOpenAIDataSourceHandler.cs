@@ -29,7 +29,7 @@ public sealed class AzureAISearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
     }
 
     public bool CanHandle(string type)
-        => string.Equals(type, "azure_search", StringComparison.Ordinal);
+        => string.Equals(type, AzureOpenAIConstants.DataSourceTypes.AzureAISearch, StringComparison.Ordinal);
 
     public async ValueTask ConfigureSourceAsync(ChatCompletionOptions options, AzureOpenAIDataSourceContext context)
     {

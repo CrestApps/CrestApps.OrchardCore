@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
@@ -9,6 +11,7 @@ using CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -96,10 +99,36 @@ public sealed class AISearchStartup : StartupBase
 
         services
             .AddScoped<IAzureOpenAIDataSourceHandler, AzureAISearchOpenAIDataSourceHandler>()
-            .AddAIDataSource(AzureOpenAIConstants.AISearchImplementationName, "azure_search", o =>
+            .AddAIDataSource(AzureOpenAIConstants.AISearchImplementationName, AzureOpenAIConstants.DataSourceTypes.AzureAISearch, o =>
             {
                 o.DisplayName = S["Azure OpenAI with Azure AI Search"];
                 o.Description = S["Enables AI models to use Azure AI Search as a data source for your data."];
+            });
+    }
+}
+
+[Feature(AzureOpenAIConstants.Feature.Elasticsearch)]
+public sealed class ElasticsearchStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public ElasticsearchStartup(IStringLocalizer<ElasticsearchStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<AIDataSource, AzureOpenAIElasticsearchDataSourceDisplayDriver>();
+        services.AddScoped<IModelHandler<AIProfile>, ElasticsearchAIProfileHandler>();
+        services.AddTransient<IConfigureOptions<ElasticsearchServerOptions>, ElasticsearchServerOptionsConfigurations>();
+
+        services
+            .AddScoped<IAzureOpenAIDataSourceHandler, ElasticsearchOpenAIDataSourceHandler>()
+            .AddAIDataSource(AzureOpenAIConstants.AISearchImplementationName, AzureOpenAIConstants.DataSourceTypes.Elasticsearch, o =>
+            {
+                o.DisplayName = S["Azure OpenAI with Elasticsearch"];
+                o.Description = S["Enables AI models to use Elasticsearch as a data source for your data."];
             });
     }
 }
