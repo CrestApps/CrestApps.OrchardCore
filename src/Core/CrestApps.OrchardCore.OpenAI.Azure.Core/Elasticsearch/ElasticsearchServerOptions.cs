@@ -19,7 +19,7 @@ public sealed class ElasticsearchServerOptions
     /// <summary>
     /// The server connection type.
     /// </summary>
-    public ElasticsearchType ConnectionType { get; set; }
+    public string ConnectionType { get; set; }
 
     /// <summary>
     /// The Elasticsearch cloud service CloudId.
