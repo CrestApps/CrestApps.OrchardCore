@@ -20,7 +20,7 @@ public sealed class DefaultAIDataSourceManager : IAIDataSourceManager
         ILogger<DefaultAIDataSourceManager> logger)
     {
         _store = store;
-        _handlers = handlers;
+        _handlers = handlers.Reverse();
         _logger = logger;
     }
 

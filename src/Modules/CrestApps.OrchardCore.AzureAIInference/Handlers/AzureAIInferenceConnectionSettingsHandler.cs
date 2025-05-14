@@ -56,7 +56,7 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : ModelHandlerBa
             return Task.CompletedTask;
         }
 
-        var metadataNode = data["Properties"]?[nameof(AzureAIInferenceConnectionMetadata)]?.AsObject();
+        var metadataNode = data[nameof(AIProviderConnection.Properties)]?[nameof(AzureAIInferenceConnectionMetadata)]?.AsObject();
 
         if (metadataNode == null || metadataNode.Count == 0)
         {

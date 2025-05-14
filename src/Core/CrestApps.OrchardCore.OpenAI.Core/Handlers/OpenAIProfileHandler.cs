@@ -26,13 +26,6 @@ public sealed class OpenAIProfileHandler : ModelHandlerBase<AIProfile>
 
     private static Task PopulateAsync(AIProfile profile, JsonNode data)
     {
-        var metadataNode = data["Properties"]?[nameof(AIProfileMetadata)]?.AsObject();
-
-        if (metadataNode == null || metadataNode.Count == 0)
-        {
-            return Task.CompletedTask;
-        }
-
         var metadata = profile.As<AIProfileMetadata>();
 
         var settings = profile.GetSettings<AIProfileSettings>();
@@ -44,59 +37,10 @@ public sealed class OpenAIProfileHandler : ModelHandlerBase<AIProfile>
             if (!string.IsNullOrEmpty(systemMessage))
             {
                 metadata.SystemMessage = systemMessage;
+
+                profile.Put(metadata);
             }
         }
-
-        var temperature = metadataNode[nameof(metadata.Temperature)]?.GetValue<float?>();
-
-        if (temperature.HasValue)
-        {
-            metadata.Temperature = temperature;
-        }
-
-        var topP = metadataNode[nameof(metadata.TopP)]?.GetValue<float?>();
-
-        if (topP.HasValue)
-        {
-            metadata.TopP = topP;
-        }
-
-        var frequencyPenalty = metadataNode[nameof(metadata.FrequencyPenalty)]?.GetValue<float?>();
-
-        if (frequencyPenalty.HasValue)
-        {
-            metadata.FrequencyPenalty = frequencyPenalty;
-        }
-
-        var presencePenalty = metadataNode[nameof(metadata.PresencePenalty)]?.GetValue<float?>();
-
-        if (frequencyPenalty.HasValue)
-        {
-            metadata.PresencePenalty = presencePenalty;
-        }
-
-        var maxTokens = metadataNode[nameof(metadata.MaxTokens)]?.GetValue<int?>();
-
-        if (frequencyPenalty.HasValue)
-        {
-            metadata.MaxTokens = maxTokens;
-        }
-
-        var pastMessagesCount = metadataNode[nameof(metadata.PastMessagesCount)]?.GetValue<int?>();
-
-        if (pastMessagesCount.HasValue)
-        {
-            metadata.PastMessagesCount = pastMessagesCount;
-        }
-
-        var useCaching = metadataNode[nameof(metadata.UseCaching)]?.GetValue<bool?>();
-
-        if (useCaching.HasValue)
-        {
-            metadata.UseCaching = useCaching.Value;
-        }
-
-        profile.Put(metadata);
 
         return Task.CompletedTask;
     }
