@@ -22,7 +22,8 @@ public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AI
 
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
-        if (dataSource.ProfileSource != AzureOpenAIConstants.AISearchImplementationName || dataSource.Type != AzureOpenAIConstants.DataSourceTypes.AzureAISearch)
+        if (dataSource.ProfileSource != AzureOpenAIConstants.AzureOpenAIOwnData ||
+            dataSource.Type != AzureOpenAIConstants.DataSourceTypes.AzureAISearch)
         {
             return null;
         }
@@ -42,7 +43,8 @@ public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AI
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
-        if (dataSource.ProfileSource != AzureOpenAIConstants.AISearchImplementationName || dataSource.Type != AzureOpenAIConstants.DataSourceTypes.AzureAISearch)
+        if (dataSource.ProfileSource != AzureOpenAIConstants.AzureOpenAIOwnData ||
+            dataSource.Type != AzureOpenAIConstants.DataSourceTypes.AzureAISearch)
         {
             return null;
         }
@@ -61,3 +63,4 @@ public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AI
         return Edit(dataSource, context);
     }
 }
+

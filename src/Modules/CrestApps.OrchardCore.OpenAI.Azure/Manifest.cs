@@ -70,3 +70,14 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Search.Elasticsearch",
     ]
 )]
+
+[assembly: Feature(
+    Id = AzureOpenAIConstants.Feature.MongoDB,
+    Name = "MongoDB-Powered Data Source",
+    Description = "Enables integration with OpenAI and MongoDB data via the Azure service provider.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AzureOpenAIConstants.Feature.DataSources,
+    ]
+)]
