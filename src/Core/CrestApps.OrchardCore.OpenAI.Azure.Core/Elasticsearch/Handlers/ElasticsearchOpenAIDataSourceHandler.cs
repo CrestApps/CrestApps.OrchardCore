@@ -77,7 +77,7 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
 
         if (!string.IsNullOrWhiteSpace(_elasticsearchOptions.CloudId))
         {
-            (var _, uri) = ParseCloudId(_elasticsearchOptions.CloudId);
+            (_, uri) = ParseCloudId(_elasticsearchOptions.CloudId);
         }
         else
         {
