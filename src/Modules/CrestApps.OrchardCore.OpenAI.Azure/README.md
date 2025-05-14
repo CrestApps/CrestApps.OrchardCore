@@ -91,43 +91,76 @@ This feature builds on the **AI Data Source Management** system, enabling Azure 
 
 ## Azure AI Search-Powered Data Source
 
-This feature extends the **Bring Your Own Data** capability by enabling integration with Azure AI Search. It allows your models to query and use indexed content during inference.
+This feature extends the **Bring Your Own Data** capability by enabling integration with Azure AI Search. It allows your models to use Azure AI Search as a source for the data.
+
+Here's an improved version of your documentation with clearer structure, improved grammar, consistent formatting, and simplified phrasing—**without changing the meaning**:
+
+---
 
 ## Elasticsearch-Powered Data Source
 
-This feature also extends **Bring Your Own Data**, allowing models to use Elasticsearch as a queryable data source during inference.
+This feature extends the **Bring Your Own Data** capability by enabling integration with **Elasticsearch**, allowing your models to use Elasticsearch as a data source.
+
+---
 
 ### Configuration
 
-This feature depends on the `OrchardCore.Search.Elasticsearch` module. Refer to the [official documentation](https://docs.orchardcore.net/en/latest/reference/modules/Elasticsearch/#elasticsearch-configuration) to configure Elasticsearch.
+This functionality relies on the `OrchardCore.Search.Elasticsearch` module. Refer to the [official Orchard Core documentation](https://docs.orchardcore.net/en/latest/reference/modules/Elasticsearch/#elasticsearch-configuration) for basic Elasticsearch configuration.
 
-In addition to the basic configuration, you must generate an API key using Kibana (if security is enabled on your cluster) for the chat client to access Elasticsearch indexes.
+If your Elasticsearch cluster has security enabled, you’ll also need to generate an **API key** via Kibana to allow the chat client to access Elasticsearch indexes.
 
-#### Creating an API Key via Kibana
+---
 
-1. **Log in to Kibana**
+### Generating an API Key in Kibana
 
-   * Open Kibana in your browser.
-   * Sign in using an account with permission to manage API keys.
+#### 1. Log in to Kibana
 
-2. **Navigate to API Key Management**
+* Open Kibana in your browser.
+* Sign in using an account with permission to manage API keys.
 
-   * Go to **Management** > **Stack Management**.
-   * Under **Security**, click on **API Keys**.
+#### 2. Navigate to API Key Management
 
-3. **Create a New API Key**
+* Go to **Management** > **Stack Management**.
+* Under **Security**, select **API Keys**.
 
-   * Click **Create API key**.
-   * Fill in the form:
+#### 3. Create a New API Key
 
-     * Name: `search-service-key` (or any descriptive name)
-     * Expiration: Optional (e.g., `1d` for one day)
-     * Privileges: Optional role descriptors for access control
+* Click **Create API key**.
+* Fill in the form:
 
-4. **Copy and Format the API Key**
+  * **Name**: e.g., `search-service-key`
+  * **Expiration**: Optional (e.g., `1d` for one day)
+  * **Privileges**: Optional role descriptors for access control
 
-   * Once created, Kibana displays the key in Base64.
-   * Change the format to **JSON** to get the `id` and `api_key`. Example:
+#### 4. Copy and Format the API Key
+
+* After creation, Kibana will display the key in **Base64** format.
+
+You can use this key in one of two ways:
+
+##### Option 1: Using `encoded_api_key`
+
+Use the Base64-encoded key directly by setting `AuthenticationType` to `encoded_api_key`. For example, in your `appsettings.json`:
+
+```json
+{
+  "OrchardCore": {
+    "OrchardCore_Elasticsearch": {
+      "AuthenticationType": "encoded_api_key",
+      "EncodedApiKey": "<!-- Base64 encoded key -->"
+    }
+  }
+}
+```
+
+##### Option 2: Using `key_and_key_id`
+
+You can also use the `key_and_key_id` authentication type, which requires both the API key ID and the key itself.
+
+To obtain these:
+
+* In Kibana, click the dropdown next to the created API key and switch the view from **Base64** to **JSON**.
+* You will see details like:
 
 ```json
 {
@@ -138,25 +171,19 @@ In addition to the basic configuration, you must generate an API key using Kiban
 }
 ```
 
-Use `id` and `api_key` values in your configuration.
-
-#### AppSettings Example
-
-To configure via `appsettings.json`:
+Then configure `appsettings.json` like this:
 
 ```json
 {
   "OrchardCore": {
     "OrchardCore_Elasticsearch": {
       "AuthenticationType": "key_and_key_id",
-      "ApiKeyId": "<!-- Key ID -->",
-      "ApiKey": "<!-- Key -->"
+      "KeyId": "<!-- Key ID -->",
+      "Key": "<!-- Key -->"
     }
   }
 }
 ```
-
-Alternatively, use `AuthenticationType: "encoded_api_key"` and provide only the `encoded` value.
 
 #### Registering a Custom Data Source
 
@@ -174,9 +201,9 @@ services.AddAIDataSource(AzureOpenAIConstants.AISearchImplementationName, "azure
 
 Implement the `IAzureOpenAIDataSourceHandler` interface to wire your data source into the chat system. You can reference `AzureAISearchOpenAIDataSourceHandler` in the source code as an example.
 
-## Azure AI Search-Powered Data Source Recipe Example
+## AI Profile with Data Source Recipe Example
 
-To define a profile that uses Azure AI Search as a custom data source, use this recipe structure:
+To define a profile that uses a data-source, use this recipe structure:
 
 ```json
 {

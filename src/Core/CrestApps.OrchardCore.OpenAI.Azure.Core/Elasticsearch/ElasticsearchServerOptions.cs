@@ -46,17 +46,31 @@ public sealed class ElasticsearchServerOptions
     /// </summary>
     public string IndexPrefix { get; set; }
 
+    /// <summary>
+    /// The authentication-type used by the data-source.
+    /// Supports: `encoded_api_key` and `key_and_key_id`.
+    /// </summary>
     public string AuthenticationType { get; set; }
 
-    public string ApiKeyId { get; set; }
+    /// <summary>
+    /// When using `key_and_key_id` authentication-type, this is the key-id.
+    /// </summary>
+    public string KeyId { get; set; }
 
-    public string ApiKey { get; set; }
+    /// <summary>
+    /// When using `key_and_key_id` authentication-type, this is the key.
+    /// </summary>
+    public string Key { get; set; }
+
+    /// <summary>
+    /// When using `encoded_api_key` authentication-type, this is the encoded key.
+    /// </summary>
+    public string EncodedApiKey { get; set; }
 
     /// <summary>
     /// Whether the configuration section exists.
     /// </summary>
     private bool _fileConfigurationExists { get; set; }
-
 
     public void SetFileConfigurationExists(bool fileConfigurationExists)
         => _fileConfigurationExists = fileConfigurationExists;

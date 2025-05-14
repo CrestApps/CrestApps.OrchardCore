@@ -77,8 +77,7 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
 
         if (!string.IsNullOrWhiteSpace(_elasticsearchOptions.CloudId))
         {
-            (var _, var host) = ParseCloudId(_elasticsearchOptions.CloudId);
-            uri = host;
+            (var _, uri) = ParseCloudId(_elasticsearchOptions.CloudId);
         }
         else
         {
@@ -89,16 +88,16 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
 
         DataSourceAuthentication credentials = null;
 
-        var hasKey = !string.IsNullOrEmpty(_elasticsearchOptions.ApiKey);
-
-        if (_elasticsearchOptions.AuthenticationType is not null &&
-            string.Equals("key_and_key_id", _elasticsearchOptions.AuthenticationType, StringComparison.OrdinalIgnoreCase))
+        if (_elasticsearchOptions.AuthenticationType is not null)
         {
-            credentials = DataSourceAuthentication.FromKeyAndKeyId(_elasticsearchOptions.ApiKey, _elasticsearchOptions.ApiKeyId);
-        }
-        else if (hasKey)
-        {
-            credentials = DataSourceAuthentication.FromEncodedApiKey(_elasticsearchOptions.ApiKey);
+            if (string.Equals("key_and_key_id", _elasticsearchOptions.AuthenticationType, StringComparison.OrdinalIgnoreCase))
+            {
+                credentials = DataSourceAuthentication.FromKeyAndKeyId(_elasticsearchOptions.Key, _elasticsearchOptions.KeyId);
+            }
+            else if (string.Equals("encoded_api_key", _elasticsearchOptions.AuthenticationType, StringComparison.OrdinalIgnoreCase))
+            {
+                credentials = DataSourceAuthentication.FromEncodedApiKey(_elasticsearchOptions.EncodedApiKey);
+            }
         }
 
         options.AddDataSource(new ElasticsearchChatDataSource()
