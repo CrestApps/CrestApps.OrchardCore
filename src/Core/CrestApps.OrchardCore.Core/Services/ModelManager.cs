@@ -30,7 +30,7 @@ public class ModelManager<T> : IModelManager<T>
         ILogger logger)
     {
         Store = store;
-        Handlers = handlers;
+        Handlers = handlers.Reverse();
         Logger = logger;
     }
 
