@@ -57,7 +57,7 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : ModelHandlerBase<AI
             return Task.CompletedTask;
         }
 
-        var metadataNode = data["Properties"]?[nameof(AzureOpenAIConnectionMetadata)]?.AsObject();
+        var metadataNode = data[nameof(AIProviderConnection.Properties)]?[nameof(AzureOpenAIConnectionMetadata)]?.AsObject();
 
         if (metadataNode == null || metadataNode.Count == 0)
         {

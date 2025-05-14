@@ -61,7 +61,7 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : ModelHandlerBase
             return Task.CompletedTask;
         }
 
-        var metadataNode = data["Properties"]?[nameof(OpenAIConnectionMetadata)]?.AsObject();
+        var metadataNode = data[nameof(AIProviderConnection.Properties)]?[nameof(OpenAIConnectionMetadata)]?.AsObject();
 
         if (metadataNode == null || metadataNode.Count == 0)
         {

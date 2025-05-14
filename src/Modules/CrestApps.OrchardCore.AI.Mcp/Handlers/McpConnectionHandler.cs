@@ -65,7 +65,7 @@ internal sealed class McpConnectionHandler : ModelHandlerBase<McpConnection>
             connection.DisplayText = displayText;
         }
 
-        var properties = data["Properties"]?.AsObject();
+        var properties = data[nameof(McpConnection.Properties)]?.AsObject();
 
         if (properties is not null)
         {
