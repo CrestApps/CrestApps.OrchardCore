@@ -80,11 +80,23 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.AppName), S["The app name is required."]);
         }
 
+        if (string.IsNullOrWhiteSpace(model.Username))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Username), S["The username is required."]);
+        }
+
         var metadata = dataSource.As<AzureAIProfileMongoDBMetadata>();
 
         metadata.Authentication ??= new AzureAIProfileMongoDBAuthenticationType();
 
-        if (!string.IsNullOrWhiteSpace(model.Password))
+        var hasNewPassword = !string.IsNullOrWhiteSpace(model.Password);
+
+        if (!hasNewPassword && string.IsNullOrWhiteSpace(metadata.Authentication?.Password))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Password), S["The password is required."]);
+        }
+
+        if (hasNewPassword)
         {
             var protector = _dataProtectionProvider.CreateProtector(AzureOpenAIConstants.MongoDataProtectionPurpose);
 
