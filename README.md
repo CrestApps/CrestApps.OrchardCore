@@ -85,6 +85,12 @@ Enhances user management with customizable display names and avatars. See the [U
 #### SignalR Module
 The **SignalR** module enables seamless integration of SignalR within Orchard Core. See the [SignalR Module README](src/Modules/CrestApps.OrchardCore.SignalR/README.md).  
 
+#### Enhanced Roles Module
+Extends the Orchard Core Roles module with additional reusable components. See the [Roles Module README](src/Modules/CrestApps.OrchardCore.Roles/README.md) for details.  
+
+#### Content Access Control Module
+Enables you to restrict content items based on user roles. See the [Content Access Control Module README](src/Modules/CrestApps.OrchardCore.ContentAccessControl/README.md) for details.  
+
 #### Resources Module
 Provides additional resources to accelerate development. See the [Resources Module README](src/Modules/CrestApps.OrchardCore.Resources/README.md).  
 
