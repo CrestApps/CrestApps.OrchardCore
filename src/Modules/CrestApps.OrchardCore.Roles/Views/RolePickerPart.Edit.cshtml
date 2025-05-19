@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.Roles.ViewModels
+@using OrchardCore
+
+@model RolePickerViewModel
+
+<div class="@Orchard.GetWrapperClasses()" asp-validation-class-for="Roles">
+    <label asp-for="Roles" class="@Orchard.GetLabelClasses()">@Model.DisplayName</label>
+    <div class="@Orchard.GetEndClasses()">
+        @if (Model.Settings.AllowSelectMultiple)
+        {
+            @await Component.InvokeAsync("SelectRoles", new
+                {
+                    selectedRoles = Model.Roles,
+                    htmlName = Html.NameFor(m => m.Roles),
+                    exclude = Model.Settings.ExcludedRoles,
+                })
+        }
+        else
+        {
+            <select asp-for="Roles" asp-items="Model.AvailableRoles" class="form-select"></select>
+        }
+
+        <span asp-validation-for="Roles"></span>
+
+        @if (!string.IsNullOrEmpty(Model.Settings?.Hint))
+        {
+            <span class="hint">@Model.Settings.Hint</span>
+        }
+    </div>
+</div>
