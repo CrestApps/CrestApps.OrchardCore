@@ -1,8 +1,6 @@
-using OrchardCore.ContentManagement;
-
 namespace CrestApps.OrchardCore.Roles.Core.Models;
 
-public sealed class RolePickerPartSettings : ContentPart
+public sealed class RolePickerPartSettings
 {
     public bool Required { get; set; }
 
