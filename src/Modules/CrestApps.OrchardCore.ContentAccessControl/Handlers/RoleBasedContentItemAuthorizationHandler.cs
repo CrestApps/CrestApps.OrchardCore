@@ -65,7 +65,7 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
         {
             var settings = partDefinition.GetSettings<RolePickerPartContentAccessControlSettings>();
 
-            if (!settings.RestrictContent)
+            if (!settings.IsContentRestricted)
             {
                 continue;
             }

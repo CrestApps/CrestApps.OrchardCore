@@ -21,7 +21,7 @@ internal sealed class CustomContentTypeMigrations : DataMigration
                 .WithDisplayName("Limit access to selected roles")
                 .WithSettings(new RolePickerPartContentAccessControlSettings
                 {
-                    RestrictContent = true,
+                    IsContentRestricted = true,
                 })
                 .WithSettings(new RolePickerPartSettings
                 {
