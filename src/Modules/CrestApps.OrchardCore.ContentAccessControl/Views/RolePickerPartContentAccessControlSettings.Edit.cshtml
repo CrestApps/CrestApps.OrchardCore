@@ -3,10 +3,10 @@
 
 @model RolePickerPartContentAccessControlSettingsViewModel
 
-<div class="mb-3" asp-validation-class-for="RestrictContent">
+<div class="mb-3" asp-validation-class-for="IsContentRestricted">
     <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="RestrictContent" />
-        <label class="form-check-label" asp-for="RestrictContent">@T["Restrict content?"]</label>
+        <input type="checkbox" class="form-check-input" asp-for="IsContentRestricted" />
+        <label class="form-check-label" asp-for="IsContentRestricted">@T["Restrict content?"]</label>
         <span class="hint dashed">@T["When checked, only users in the selected roles will be allowed to access this content."]</span>
     </div>
 </div>

@@ -15,7 +15,7 @@ internal sealed class RolePickerPartContentAccessControlSettingsDisplayDriver : 
         {
             var settings = contentTypePartDefinition.GetSettings<RolePickerPartContentAccessControlSettings>();
 
-            model.RestrictContent = settings.IsContentRestricted;
+            model.IsContentRestricted = settings.IsContentRestricted;
         }).Location("Content:6");
     }
 
@@ -28,7 +28,7 @@ internal sealed class RolePickerPartContentAccessControlSettingsDisplayDriver : 
         context.Builder.WithSettings(
             new RolePickerPartContentAccessControlSettings
             {
-                IsContentRestricted = model.RestrictContent,
+                IsContentRestricted = model.IsContentRestricted,
             });
 
         return Edit(contentTypePartDefinition, context);
