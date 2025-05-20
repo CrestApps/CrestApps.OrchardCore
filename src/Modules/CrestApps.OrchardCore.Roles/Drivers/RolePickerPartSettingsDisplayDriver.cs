@@ -19,18 +19,14 @@ internal sealed class RolePickerPartSettingsDisplayDriver : ContentTypePartDefin
             model.Required = settings.Required;
             model.AllowSelectMultiple = settings.AllowSelectMultiple;
             model.ExcludedRoles = settings.ExcludedRoles;
-        }).Location("Content");
+        }).Location("Content:5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)
     {
         var model = new RolePickerPartSettingsViewModel();
 
-        await context.Updater.TryUpdateModelAsync(model, Prefix,
-            m => m.Hint,
-            m => m.Required,
-            m => m.AllowSelectMultiple,
-            m => m.ExcludedRoles);
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         context.Builder.WithSettings(
             new RolePickerPartSettings

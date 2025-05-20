@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
@@ -9,6 +9,7 @@
       Enables you to control access to your content by assigning specific roles, ensuring only authorized users can view content items.
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS Content Access Control</PackageTags>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
   </PropertyGroup>
 
   <ItemGroup>

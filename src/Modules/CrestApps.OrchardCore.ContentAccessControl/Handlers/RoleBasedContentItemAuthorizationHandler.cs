@@ -1,6 +1,9 @@
 using CrestApps.OrchardCore.Roles.Core.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Contents;
 using OrchardCore.Security;
 
@@ -8,43 +11,101 @@ namespace CrestApps.OrchardCore.ContentAccessControl.Handlers;
 
 public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
-    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
+    private readonly IServiceProvider _serviceProvider;
+
+    public RoleBasedContentItemAuthorizationHandler(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+    }
+
+    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
     {
         if (context.HasSucceeded)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         var user = context?.User;
 
         if (user == null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        if (context.Resource == null ||
-            (requirement.Permission != CommonPermissions.ViewContent && requirement.Permission != CommonPermissions.ViewOwnContent))
+        if (context.Resource == null || requirement.Permission != CommonPermissions.ViewContent)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         var contentItem = context.Resource as ContentItem;
 
-        if (!contentItem.TryGet<RolePickerPart>(out var part) || part.RoleNames.Length == 0)
+        if (contentItem == null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        foreach (var roleName in part.RoleNames)
+        var contentDefinitionManager = _serviceProvider.GetService<IContentDefinitionManager>();
+
+        if (contentDefinitionManager is null)
+        {
+            return;
+        }
+
+        var definition = await contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
+
+        if (definition is null)
+        {
+            return;
+        }
+
+        var roleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // RolePickerPart is reusable by default. Look in the content type definition for the part. 
+        foreach (var partDefinition in definition.Parts)
+        {
+            var settings = partDefinition.GetSettings<RolePickerPartContentAccessControlSettings>();
+
+            if (!settings.RestrictContent)
+            {
+                continue;
+            }
+
+            if (partDefinition.IsNamedPart())
+            {
+                var rolePickerPart = contentItem.Get<RolePickerPart>(partDefinition.Name);
+
+                if (rolePickerPart?.RoleNames is null)
+                {
+                    continue;
+                }
+
+                foreach (var roleName in rolePickerPart.RoleNames)
+                {
+                    roleNames.Add(roleName);
+                }
+            }
+            else
+            {
+                if (!contentItem.TryGet<RolePickerPart>(out var rolePickerPart) || rolePickerPart.RoleNames is null)
+                {
+                    continue;
+                }
+
+                foreach (var roleName in rolePickerPart.RoleNames)
+                {
+                    roleNames.Add(roleName);
+                }
+            }
+        }
+
+        foreach (var roleName in roleNames)
         {
             if (user.IsInRole(roleName))
             {
                 context.Succeed(requirement);
 
-                return Task.CompletedTask;
+                return;
             }
         }
-
-        return Task.CompletedTask;
     }
 }
