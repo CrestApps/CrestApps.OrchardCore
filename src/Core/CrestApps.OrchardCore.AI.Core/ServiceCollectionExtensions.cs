@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
     {
         services
             .AddCoreModelServices()
+            .AddScoped<IAIClientFactory, DefaultAIClientFactory>()
             .AddScoped<INamedModelStore<AIProfile>, DefaultAIProfileStore>()
             .AddScoped<AIProviderConnectionStore>()
             .AddScoped<IModelStore<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())

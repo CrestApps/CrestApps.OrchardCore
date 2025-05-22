@@ -29,6 +29,7 @@ Before utilizing any AI features, ensure the necessary settings are configured. 
         "<!-- Provider name goes here -->": {
           "DefaultConnectionName": "<!-- The default connection name -->",
           "DefaultDeploymentName": "<!-- The default deployment name -->",
+          "DefaultEmbeddingDeploymentName": "<!-- The default embedding deployment name if you want to use Embedding services -->"
           "Connections": {
             "<!-- Connection name goes here -->": {
               "DefaultDeploymentName": "<!-- The default deployment name for this connection -->"
@@ -41,6 +42,12 @@ Before utilizing any AI features, ensure the necessary settings are configured. 
   }
 }
 ```
+
+### Microsoft.AI.Extensions
+
+The AI module is built on top of [Microsoft.Extensions.AI](https://www.nuget.org/packages/Microsoft.Extensions.AI), making it easy to integrate AI services into your application. We provide the `IAIClientFactory` service, which allows you to easily create standard services such as `IChatClient` and `IEmbeddingGenerator` for any of your configured providers and connections.
+
+Simply inject `IAIClientFactory` into your service and use the `CreateChatClientAsync` or `CreateEmbeddingGeneratorAsync` methods to obtain the required client.
 
 ### AI Deployments Feature
 
@@ -437,12 +444,19 @@ Below is an example of a custom AI completion client that extends `NamedAIComple
 public sealed class CustomCompletionClient : NamedAICompletionClient
 {
     public CustomCompletionClient(
-       ILoggerFactory loggerFactory,
-       IDistributedCache distributedCache,
-       IOptions<AIProviderOptions> providerOptions,
-       IAIToolsService toolsService,
-       IOptions<DefaultAIOptions> defaultOptions
-    ) : base(CustomProfileSource.ImplementationName, distributedCache, loggerFactory, providerOptions.Value, defaultOptions.Value, toolsService)
+           IAIClientFactory aIClientFactory,
+           ILoggerFactory loggerFactory,
+           IDistributedCache distributedCache,
+           IOptions<AIProviderOptions> providerOptions,
+           IEnumerable<IAICompletionServiceHandler> handlers,
+           IOptions<DefaultAIOptions> defaultOptions
+           ) : base(
+               CustomProfileSource.ImplementationName,
+               aIClientFactory, distributedCache,
+               loggerFactory,
+               providerOptions.Value,
+               defaultOptions.Value,
+               handlers)
     {
     }
 
@@ -459,29 +473,27 @@ public sealed class CustomCompletionClient : NamedAICompletionClient
 > **Note:**  
 > The `CustomCompletionClient` class inherits from `NamedAICompletionClient`. If the provider supports multiple deployments, consider inheriting from `DeploymentAwareAICompletionClient` instead.  
 
----
+Next, you'll need to implement `IAIClientProvider` interface. You may look at the codebase for an implementation example. Finally, register the services
 
-### Registering the Custom Completion Client  
-
-Once you've implemented the custom client, register it as an AI profile source in `Startup` file:  
-
-```csharp
+```
 public sealed class Startup : StartupBase
 {
-    private readonly IStringLocalizer _localizer;
+    internal readonly IStringLocalizer S;
 
-    public Startup(IStringLocalizer<Startup> localizer)
+    public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
-        _localizer = localizer;
+        S = stringLocalizer;
     }
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIProfile<CustomCompletionClient>("CustomAIDefaultImplementation", "CustomAI", options =>
-        {
-            options.DisplayName = _localizer["CustomAI"];
-            options.Description = _localizer["Provides AI profiles using the CustomAI provider."];
-        });
+        services
+            .AddScoped<IAIClientProvider, CustomAIClientProvider>()
+            .AddAIProfile<CustomCompletionClient>(CustomProfileSource.ImplementationName, CustomProfileSource.ProviderName, o =>
+            {
+                o.DisplayName = S["Custom Profile Provider"];
+                o.Description = S["Provides AI profiles using custom source."];
+            });
     }
 }
 ```

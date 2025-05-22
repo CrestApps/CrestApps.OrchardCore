@@ -27,33 +27,6 @@ public abstract class AICompletionServiceBase
         return provider.DefaultDeploymentName;
     }
 
-    protected async Task<(AIProviderConnectionEntry, string)> GetConnectionAsync(AICompletionContext context, string providerName)
-    {
-        string deploymentName = null;
-
-        if (ProviderOptions.Providers.TryGetValue(providerName, out var provider))
-        {
-            var connectionName = GetDefaultConnectionName(provider, context.Profile);
-
-            deploymentName = GetDefaultDeploymentName(provider);
-
-            var deployment = await GetDeploymentAsync(context);
-
-            if (deployment is not null)
-            {
-                connectionName = deployment.ConnectionName;
-                deploymentName = deployment.Name;
-            }
-
-            if (!string.IsNullOrEmpty(connectionName) && provider.Connections.TryGetValue(connectionName, out var connectionProperties))
-            {
-                return new(connectionProperties, deploymentName);
-            }
-        }
-
-        return new(null, deploymentName);
-    }
-
     protected static int GetTotalMessagesToSkip(int totalMessages, int pastMessageCount)
     {
         if (pastMessageCount > 0 && totalMessages > pastMessageCount)
