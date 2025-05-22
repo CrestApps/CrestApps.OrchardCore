@@ -6,7 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
-    <PackageVersion Include="Aspire.Hosting.MongoDB" Version="9.3.0" />
     <PackageVersion Include="NuGet.Versioning" Version="6.13.2" />
     <PackageVersion Include="OllamaSharp" Version="5.1.18" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.1.1" />
