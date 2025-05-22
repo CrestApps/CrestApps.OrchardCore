@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OllamaSharp;
 
 namespace CrestApps.OrchardCore.Ollama.Services;
 
