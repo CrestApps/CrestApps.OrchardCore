@@ -7,7 +7,8 @@ namespace CrestApps.OrchardCore.Ollama.Services;
 
 public sealed class OllamaAIClientProvider : AIClientProviderBase
 {
-    protected override string ProviderName { get; } = OllamaConstants.ProviderName;
+    protected override string GetProviderName()
+        => OllamaConstants.ProviderName;
 
     protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, string deploymentName)
     {

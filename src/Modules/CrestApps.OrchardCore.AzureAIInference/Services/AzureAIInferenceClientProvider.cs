@@ -12,7 +12,8 @@ namespace CrestApps.OrchardCore.AzureAIInference.Services;
 
 public sealed class AzureAIInferenceClientProvider : AIClientProviderBase
 {
-    protected override string ProviderName { get; } = AzureAIInferenceConstants.ProviderName;
+    protected override string GetProviderName()
+        => AzureAIInferenceConstants.ProviderName;
 
     protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, string deploymentName)
     {

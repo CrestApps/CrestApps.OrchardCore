@@ -6,15 +6,13 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public abstract class AIClientProviderBase : IAIClientProvider
 {
     public bool CanHandle(string providerName)
-        => string.Equals(ProviderName, providerName, StringComparison.OrdinalIgnoreCase);
-
-    protected abstract string ProviderName { get; }
+        => string.Equals(GetProviderName(), providerName, StringComparison.OrdinalIgnoreCase);
 
     public ValueTask<IChatClient> GetChatClientAsync(AIProviderConnectionEntry connection, string deploymentName = null)
     {
         if (string.IsNullOrEmpty(deploymentName))
         {
-            deploymentName = connection.GetDefaultDeploymentName();
+            deploymentName = connection.GetDefaultDeploymentName(false);
         }
 
         if (string.IsNullOrEmpty(deploymentName))
@@ -29,7 +27,7 @@ public abstract class AIClientProviderBase : IAIClientProvider
     {
         if (string.IsNullOrEmpty(deploymentName))
         {
-            deploymentName = connection.GetDefaultEmbeddingDeploymentName();
+            deploymentName = connection.GetDefaultEmbeddingDeploymentName(false);
         }
 
         if (string.IsNullOrEmpty(deploymentName))
@@ -39,6 +37,8 @@ public abstract class AIClientProviderBase : IAIClientProvider
 
         return ValueTask.FromResult(GetEmbeddingGenerator(connection, deploymentName));
     }
+
+    protected abstract string GetProviderName();
 
     protected abstract IChatClient GetChatClient(AIProviderConnectionEntry connection, string deploymentName);
 
