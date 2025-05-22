@@ -37,3 +37,7 @@ To configure the Ollama connection, add the following settings to the `appsettin
   }
 }
 ```
+
+### Aspire
+
+If you are running this project using Aspire, Ollama will be automatically configured for you without needing to manually set the `appsettings.json` file.
