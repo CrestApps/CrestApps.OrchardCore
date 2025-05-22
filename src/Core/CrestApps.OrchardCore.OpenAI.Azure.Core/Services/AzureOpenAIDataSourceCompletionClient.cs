@@ -24,7 +24,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAICompletionClient
+public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceBase, IAICompletionClient
 {
     private static readonly AIProfileMetadata _defaultMetadata = new();
 
@@ -39,7 +39,7 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
     private McpService _mcpService;
     private IModelStore<McpConnection> _mcpConnectionsStore;
 
-    public AzureAISearchCompletionClient(
+    public AzureOpenAIDataSourceCompletionClient(
         INamedModelStore<AIDeployment> deploymentStore,
         IOptions<AIProviderOptions> providerOptions,
         IServiceProvider serviceProvider,
@@ -618,5 +618,32 @@ public sealed class AzureAISearchCompletionClient : AICompletionServiceBase, IAI
         }
 
         return null;
+    }
+
+    private async Task<(AIProviderConnectionEntry, string)> GetConnectionAsync(AICompletionContext context, string providerName)
+    {
+        string deploymentName = null;
+
+        if (ProviderOptions.Providers.TryGetValue(providerName, out var provider))
+        {
+            var connectionName = GetDefaultConnectionName(provider, context.Profile);
+
+            deploymentName = GetDefaultDeploymentName(provider);
+
+            var deployment = await GetDeploymentAsync(context);
+
+            if (deployment is not null)
+            {
+                connectionName = deployment.ConnectionName;
+                deploymentName = deployment.Name;
+            }
+
+            if (!string.IsNullOrEmpty(connectionName) && provider.Connections.TryGetValue(connectionName, out var connectionProperties))
+            {
+                return new(connectionProperties, deploymentName);
+            }
+        }
+
+        return new(null, deploymentName);
     }
 }

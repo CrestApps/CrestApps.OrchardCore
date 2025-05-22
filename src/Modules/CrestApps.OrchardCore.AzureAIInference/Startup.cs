@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AzureAIInference.Drivers;
@@ -23,6 +24,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
+            .AddScoped<IAIClientProvider, AzureAIInferenceClientProvider>()
             .AddAIProfile<AzureAIInferenceCompletionClient>(AzureAIInferenceConstants.ImplementationName, AzureAIInferenceConstants.ProviderName, o =>
             {
                 o.DisplayName = S["Azure AI Inference (GitHub Models)"];

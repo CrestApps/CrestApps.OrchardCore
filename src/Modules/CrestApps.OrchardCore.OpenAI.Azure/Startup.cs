@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
@@ -30,6 +31,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
+            .AddScoped<IAIClientProvider, AzureOpenAIClientProvider>()
             .AddAIDeploymentProvider(AzureOpenAIConstants.ProviderName, o =>
             {
                 o.DisplayName = S["Azure OpenAI"];
@@ -95,7 +97,7 @@ public sealed class DataSourcesStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIProfile<AzureAISearchCompletionClient>(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.ProviderName, o =>
+        services.AddAIProfile<AzureOpenAIDataSourceCompletionClient>(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.ProviderName, o =>
         {
             o.DisplayName = S["Azure OpenAI with Your Data"];
             o.Description = S["Provides AI profiles using Azure OpenAI models with your data."];

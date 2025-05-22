@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Ollama.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +18,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IAIClientProvider, OllamaAIClientProvider>();
         services.AddAIProfile<OllamaAIChatCompletionClient>(OllamaConstants.ImplementationName, OllamaConstants.ProviderName, o =>
         {
             o.DisplayName = S["Ollama AI Chat"];

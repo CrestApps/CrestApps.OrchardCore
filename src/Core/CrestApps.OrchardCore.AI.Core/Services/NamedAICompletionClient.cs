@@ -15,6 +15,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
     public const string DefaultLogCategory = "AICompletionService";
 
+    private readonly IAIClientFactory _aIClientFactory;
     private readonly IDistributedCache _distributedCache;
     private readonly IEnumerable<IAICompletionServiceHandler> _handlers;
     private readonly DefaultAIOptions _defaultOptions;
@@ -24,6 +25,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
     public NamedAICompletionClient(
         string name,
+        IAIClientFactory aIClientFactory,
         IDistributedCache distributedCache,
         ILoggerFactory loggerFactory,
         AIProviderOptions providerOptions,
@@ -33,6 +35,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;
+        _aIClientFactory = aIClientFactory;
         _distributedCache = distributedCache;
         LoggerFactory = loggerFactory;
         _defaultOptions = defaultOptions;
@@ -43,9 +46,6 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
     public string Name { get; }
 
     protected abstract string ProviderName { get; }
-
-    protected abstract IChatClient GetChatClient(AIProviderConnectionEntry connection, AICompletionContext context, string modelName);
-
 
     protected virtual void ConfigureChatOptions(ChatOptions options, string modelName)
     {
@@ -74,9 +74,22 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
 
-        (var connection, var deploymentName) = await GetConnectionAsync(context, ProviderName);
+        if (!ProviderOptions.Providers.TryGetValue(ProviderName, out var provider))
+        {
+            throw new ArgumentException($"Provider '{ProviderName}' not found.");
+        }
 
-        if (connection is null)
+        var connectionName = GetDefaultConnectionName(provider, context.Profile);
+        var deploymentName = GetDefaultDeploymentName(provider);
+
+        if (string.IsNullOrEmpty(connectionName))
+        {
+            Logger.LogWarning("Unable to chat. Unable to find the connection name associated with the profile with id '{ProfileId}' or a default DefaultConnectionName.", context.Profile?.Id);
+
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(deploymentName))
         {
             Logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
 
@@ -102,7 +115,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         try
         {
-            var chatClient = BuildClient(connection, context, metadata, deploymentName);
+            var chatClient = await BuildClientAsync(connectionName, context, metadata, deploymentName);
 
             var chatOptions = await GetChatOptionsAsync(context, metadata, deploymentName);
 
@@ -121,9 +134,22 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
 
-        (var connection, var deploymentName) = await GetConnectionAsync(context, ProviderName);
+        if (!ProviderOptions.Providers.TryGetValue(ProviderName, out var provider))
+        {
+            throw new ArgumentException($"Provider '{ProviderName}' not found.");
+        }
 
-        if (connection is null)
+        var connectionName = GetDefaultConnectionName(provider, context.Profile);
+        var deploymentName = GetDefaultDeploymentName(provider);
+
+        if (string.IsNullOrEmpty(connectionName))
+        {
+            Logger.LogWarning("Unable to chat. Unable to find the connection name associated with the profile with id '{ProfileId}' or a default DefaultConnectionName.", context.Profile?.Id);
+
+            yield break;
+        }
+
+        if (string.IsNullOrEmpty(deploymentName))
         {
             Logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
 
@@ -147,7 +173,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         }.Concat(chatMessages.Skip(skip).Take(pastMessageCount))
         .ToList();
 
-        var chatClient = BuildClient(connection, context, metadata, deploymentName);
+        var chatClient = await BuildClientAsync(connectionName, context, metadata, deploymentName);
 
         var chatOptions = await GetChatOptionsAsync(context, metadata, deploymentName);
 
@@ -184,9 +210,9 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         return chatOptions;
     }
 
-    private IChatClient BuildClient(AIProviderConnectionEntry connection, AICompletionContext context, AIProfileMetadata metadata, string modelName)
+    private async ValueTask<IChatClient> BuildClientAsync(string connectionName, AICompletionContext context, AIProfileMetadata metadata, string modelName)
     {
-        var client = GetChatClient(connection, context, modelName);
+        var client = await _aIClientFactory.CreateChatClientAsync(ProviderName, connectionName, modelName);
 
         var builder = new ChatClientBuilder(client);
 

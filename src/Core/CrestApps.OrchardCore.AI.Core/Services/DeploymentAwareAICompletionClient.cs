@@ -12,13 +12,21 @@ public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClien
 
     public DeploymentAwareAICompletionClient(
         string name,
+        IAIClientFactory aIClientFactory,
         IDistributedCache distributedCache,
         ILoggerFactory loggerFactory,
         AIProviderOptions providerOptions,
         DefaultAIOptions defaultOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
         IModelStore<AIDeployment> deploymentStore)
-        : base(name, distributedCache, loggerFactory, providerOptions, defaultOptions, handlers)
+        : base(
+            name,
+            aIClientFactory,
+            distributedCache,
+            loggerFactory,
+            providerOptions,
+            defaultOptions,
+            handlers)
     {
         _store = deploymentStore;
     }
