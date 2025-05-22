@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
-using ModelContextProtocol.Protocol.Transport;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Core;
 

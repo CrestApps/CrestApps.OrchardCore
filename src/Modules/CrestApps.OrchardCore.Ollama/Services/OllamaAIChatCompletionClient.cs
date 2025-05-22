@@ -7,6 +7,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OllamaSharp;
 
 namespace CrestApps.OrchardCore.Ollama.Services;
 
@@ -27,6 +28,6 @@ internal sealed class OllamaAIChatCompletionClient : NamedAICompletionClient
 
     protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, AICompletionContext context, string deploymentName)
     {
-        return new OllamaChatClient(connection.GetEndpoint(), connection.GetDefaultDeploymentName());
+        return new OllamaApiClient(connection.GetEndpoint(), connection.GetDefaultDeploymentName());
     }
 }

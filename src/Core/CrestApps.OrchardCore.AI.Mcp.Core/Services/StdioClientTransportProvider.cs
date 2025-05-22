@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using ModelContextProtocol.Protocol.Transport;
+using ModelContextProtocol.Client;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Core.Services;
