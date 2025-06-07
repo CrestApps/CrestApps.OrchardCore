@@ -5,14 +5,14 @@ using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class DefaultAIDeploymentStore : NamedSourceModelStore<AIDeployment>
+public sealed class DefaultAIDeploymentStore : NamedSourceCatalog<AIDeployment>
 {
-    public DefaultAIDeploymentStore(IDocumentManager<ModelDocument<AIDeployment>> documentManager)
+    public DefaultAIDeploymentStore(IDocumentManager<DictionaryDocument<AIDeployment>> documentManager)
         : base(documentManager)
     {
     }
 
-    protected override void Saving(AIDeployment deployment, ModelDocument<AIDeployment> document)
+    protected override void Saving(AIDeployment deployment, DictionaryDocument<AIDeployment> document)
     {
         if (document.Records.Values.Any(x => x.ProviderName == deployment.ProviderName && x.ConnectionName == deployment.ConnectionName && x.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase) && x.Id != deployment.Id))
         {

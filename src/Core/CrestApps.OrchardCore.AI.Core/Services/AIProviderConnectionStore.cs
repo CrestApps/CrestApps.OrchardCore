@@ -1,18 +1,18 @@
-﻿using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Models;
 using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class AIProviderConnectionStore : NamedModelStore<AIProviderConnection>
+public sealed class AIProviderConnectionStore : NamedCatalog<AIProviderConnection>
 {
-    public AIProviderConnectionStore(IDocumentManager<ModelDocument<AIProviderConnection>> documentManager)
+    public AIProviderConnectionStore(IDocumentManager<DictionaryDocument<AIProviderConnection>> documentManager)
         : base(documentManager)
     {
     }
 
-    protected override void Saving(AIProviderConnection record, ModelDocument<AIProviderConnection> document)
+    protected override void Saving(AIProviderConnection record, DictionaryDocument<AIProviderConnection> document)
     {
         base.Saving(record, document);
 

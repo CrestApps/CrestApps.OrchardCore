@@ -22,7 +22,7 @@ public sealed class ProfilesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly INamedSourceModelManager<AIProfile> _profileManager;
+    private readonly INamedSourceCatalogManager<AIProfile> _profileManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIProfile> _profileDisplayManager;
@@ -33,7 +33,7 @@ public sealed class ProfilesController : Controller
     internal readonly IStringLocalizer S;
 
     public ProfilesController(
-        INamedSourceModelManager<AIProfile> profileManager,
+        INamedSourceCatalogManager<AIProfile> profileManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIProfile> profileDisplayManager,
@@ -54,7 +54,7 @@ public sealed class ProfilesController : Controller
 
     [Admin("ai/profiles", "AIProfilesIndex")]
     public async Task<IActionResult> Index(
-        ModelOptions options,
+        CatalogEntryOptions options,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
@@ -80,7 +80,7 @@ public sealed class ProfilesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceModelEntryViewModel<AIProfile>
+        var viewModel = new ListSourceCatalogEntryViewModel<AIProfile>
         {
             Models = [],
             Options = options,
@@ -88,9 +88,9 @@ public sealed class ProfilesController : Controller
             Sources = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
         };
 
-        foreach (var model in result.Models)
+        foreach (var model in result.Entries)
         {
-            viewModel.Models.Add(new ModelEntry<AIProfile>
+            viewModel.Models.Add(new CatalogEntryViewModel<AIProfile>
             {
                 Model = model,
                 Shape = await _profileDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
@@ -99,7 +99,7 @@ public sealed class ProfilesController : Controller
 
         viewModel.Options.BulkActions =
         [
-            new SelectListItem(S["Delete"], nameof(ModelAction.Remove)),
+            new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
         ];
 
         return View(viewModel);
@@ -109,7 +109,7 @@ public sealed class ProfilesController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/profiles", "AIProfilesIndex")]
-    public ActionResult IndexFilterPost(ListModelViewModel model)
+    public ActionResult IndexFilterPost(ListCatalogEntryViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -141,7 +141,7 @@ public sealed class ProfilesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var model = new ModelViewModel
+        var model = new EditCatalogEntryViewModel
         {
             DisplayName = provider.DisplayName,
             Editor = await _profileDisplayManager.BuildEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -176,7 +176,7 @@ public sealed class ProfilesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var model = new ModelViewModel
+        var model = new EditCatalogEntryViewModel
         {
             DisplayName = provider.DisplayName,
             Editor = await _profileDisplayManager.UpdateEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -209,7 +209,7 @@ public sealed class ProfilesController : Controller
             return NotFound();
         }
 
-        var model = new ModelViewModel
+        var model = new EditCatalogEntryViewModel
         {
             DisplayName = profile.Name,
             Editor = await _profileDisplayManager.BuildEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -238,7 +238,7 @@ public sealed class ProfilesController : Controller
         // Clone the profile to prevent modifying the original instance in the store.
         var mutableProfile = profile.Clone();
 
-        var model = new ModelViewModel
+        var model = new EditCatalogEntryViewModel
         {
             DisplayName = mutableProfile.DisplayText,
             Editor = await _profileDisplayManager.UpdateEditorAsync(mutableProfile, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -298,7 +298,7 @@ public sealed class ProfilesController : Controller
     [FormValueRequired("submit.BulkAction")]
     [Admin("ai/profiles", "AIProfilesIndex")]
 
-    public async Task<ActionResult> IndexPost(ModelOptions options, IEnumerable<string> itemIds)
+    public async Task<ActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
@@ -309,9 +309,9 @@ public sealed class ProfilesController : Controller
         {
             switch (options.BulkAction)
             {
-                case ModelAction.None:
+                case CatalogEntryAction.None:
                     break;
-                case ModelAction.Remove:
+                case CatalogEntryAction.Remove:
                     var counter = 0;
                     foreach (var id in itemIds)
                     {

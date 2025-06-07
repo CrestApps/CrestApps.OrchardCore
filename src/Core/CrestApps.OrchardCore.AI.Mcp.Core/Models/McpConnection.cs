@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Core.Models;
 
-public sealed class McpConnection : SourceModel, IDisplayTextAwareModel
+public sealed class McpConnection : SourceCatalogEntry, IDisplayTextAwareModel
 {
     public string DisplayText { get; set; }
 

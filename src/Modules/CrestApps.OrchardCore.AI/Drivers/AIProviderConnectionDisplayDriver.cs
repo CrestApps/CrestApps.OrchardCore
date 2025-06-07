@@ -10,15 +10,15 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProviderConnection>
 {
-    private readonly INamedModelStore<AIProviderConnection> _store;
+    private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
 
     internal readonly IStringLocalizer S;
 
     public AIProviderConnectionDisplayDriver(
-        INamedModelStore<AIProviderConnection> store,
+        INamedCatalog<AIProviderConnection> connectionsCatalog,
         IStringLocalizer<AIProviderConnectionDisplayDriver> stringLocalizer)
     {
-        _store = store;
+        _connectionsCatalog = connectionsCatalog;
         S = stringLocalizer;
     }
 
@@ -56,7 +56,7 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Name is required."]);
             }
-            else if (await _store.FindByNameAsync(model.Name) is not null)
+            else if (await _connectionsCatalog.FindByNameAsync(model.Name) is not null)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["Another connection with the same name exists."]);
             }

@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.Services;
 
-public interface INamedSourceModelManager<T> : INamedModelManager<T>, ISourceModelManager<T>
+public interface INamedSourceCatalogManager<T> : INamedCatalogManager<T>, ISourceCatalogManager<T>
     where T : INameAwareModel, ISourceAwareModel
 {
     /// <summary>

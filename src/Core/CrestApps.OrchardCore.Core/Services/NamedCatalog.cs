@@ -4,10 +4,10 @@ using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.Core.Services;
 
-public class NamedModelStore<T> : ModelStore<T>, INamedModelStore<T>
-    where T : Model, INameAwareModel
+public class NamedCatalog<T> : Catalog<T>, INamedCatalog<T>
+    where T : CatalogEntry, INameAwareModel
 {
-    public NamedModelStore(IDocumentManager<ModelDocument<T>> documentManager)
+    public NamedCatalog(IDocumentManager<DictionaryDocument<T>> documentManager)
         : base(documentManager)
     {
     }
@@ -21,7 +21,7 @@ public class NamedModelStore<T> : ModelStore<T>, INamedModelStore<T>
         return document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 
-    protected override void Saving(T record, ModelDocument<T> document)
+    protected override void Saving(T record, DictionaryDocument<T> document)
     {
         if (document.Records.Values.Any(x => x.Name.Equals(record.Name, StringComparison.OrdinalIgnoreCase) && x.Id != record.Id))
         {

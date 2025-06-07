@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI;
 
-public interface IAIProfileManager : INamedModelManager<AIProfile>
+public interface IAIProfileManager : INamedCatalogManager<AIProfile>
 {
     /// <summary>
     /// Asynchronously retrieves a collection of AI chat profiles of the specified type.

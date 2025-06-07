@@ -9,7 +9,7 @@
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.OrchardCore.Services
 
-@inject INamedModelStore<AIProfile> ProfileStore
+@inject INamedCatalog<AIProfile> ProfileCatalog
 @inject IAuthorizationService AuthorizationService
 @inject ShellSettings ShellSettings
 @inject HubRouteManager HubRouteManager
@@ -23,7 +23,7 @@
         return;
     }
 
-    var profile = await ProfileStore.FindByIdAsync(part.ProfileId);
+    var profile = await ProfileCatalog.FindByIdAsync(part.ProfileId);
 
     if (profile == null)
     {
@@ -37,7 +37,7 @@
 
     var hubLink = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
     var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
-    var promptGeneratedProfiles = await ProfileStore.GetAsync(AIProfileType.TemplatePrompt);
+    var promptGeneratedProfiles = await ProfileCatalog.GetAsync(AIProfileType.TemplatePrompt);
 
     var baseId = $"Widget_{contentItem.ContentItemId}";
     var chatAppHtmlId = $"{baseId}_ChatApp";

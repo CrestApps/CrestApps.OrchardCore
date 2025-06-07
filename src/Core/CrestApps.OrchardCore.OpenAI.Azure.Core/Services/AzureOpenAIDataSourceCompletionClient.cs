@@ -28,7 +28,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 {
     private static readonly AIProfileMetadata _defaultMetadata = new();
 
-    private readonly INamedModelStore<AIDeployment> _deploymentStore;
+    private readonly INamedCatalog<AIDeployment> _deploymentStore;
     private readonly IServiceProvider _serviceProvider;
     private readonly IAILinkGenerator _linkGenerator;
     private readonly IEnumerable<IAzureOpenAIDataSourceHandler> _azureOpenAIDataSourceHandlers;
@@ -37,10 +37,10 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
     private IAIToolsService _toolsService;
     private McpService _mcpService;
-    private IModelStore<McpConnection> _mcpConnectionsStore;
+    private ICatalog<McpConnection> _mcpConnectionsStore;
 
     public AzureOpenAIDataSourceCompletionClient(
-        INamedModelStore<AIDeployment> deploymentStore,
+        INamedCatalog<AIDeployment> deploymentStore,
         IOptions<AIProviderOptions> providerOptions,
         IServiceProvider serviceProvider,
         IAILinkGenerator linkGenerator,
@@ -566,7 +566,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
             mcpMetadata.ConnectionIds.Length > 0)
         {
             // Lazily load MCP services in case the MCP feature is disabled.
-            _mcpConnectionsStore ??= _serviceProvider.GetService<IModelStore<McpConnection>>();
+            _mcpConnectionsStore ??= _serviceProvider.GetService<ICatalog<McpConnection>>();
 
             if (_mcpConnectionsStore is not null)
             {

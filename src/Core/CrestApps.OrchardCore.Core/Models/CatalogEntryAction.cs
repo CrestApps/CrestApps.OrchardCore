@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.Core.Models;
 
-public enum ModelAction
+public enum CatalogEntryAction
 {
     None,
     Remove,

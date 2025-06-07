@@ -12,12 +12,12 @@ namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
 
 internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIProfile>
 {
-    private readonly IModelStore<McpConnection> _store;
+    private readonly ICatalog<McpConnection> _store;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileMcpConnectionsDisplayDriver(
-        IModelStore<McpConnection> store,
+        ICatalog<McpConnection> store,
         IStringLocalizer<AIProfileMcpConnectionsDisplayDriver> stringLocalizer)
     {
         _store = store;

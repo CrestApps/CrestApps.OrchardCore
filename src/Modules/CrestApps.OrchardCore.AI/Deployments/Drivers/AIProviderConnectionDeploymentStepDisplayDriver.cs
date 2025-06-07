@@ -12,15 +12,15 @@ namespace CrestApps.OrchardCore.AI.Deployments.Drivers;
 
 internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, AIProviderConnectionDeploymentStep>
 {
-    private readonly INamedModelStore<AIProviderConnection> _store;
+    private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
 
     internal readonly IStringLocalizer S;
 
     public AIProviderConnectionDeploymentStepDisplayDriver(
-        INamedModelStore<AIProviderConnection> store,
+        INamedCatalog<AIProviderConnection> connectionsCatalog,
         IStringLocalizer<AIProviderConnectionDeploymentStepDisplayDriver> stringLocalizer)
     {
-        _store = store;
+        _connectionsCatalog = connectionsCatalog;
         S = stringLocalizer;
     }
 
@@ -38,7 +38,7 @@ internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayD
         return Initialize<AIProviderConnectionDeploymentStepViewModel>("AIProviderConnectionDeploymentStep_Fields_Edit", async model =>
         {
             model.IncludeAll = step.IncludeAll;
-            model.Connections = (await _store.GetAllAsync()).Select(x => new AIProviderConnectionEntryViewModel
+            model.Connections = (await _connectionsCatalog.GetAllAsync()).Select(x => new AIProviderConnectionEntryViewModel
             {
                 Id = x.Id,
                 DisplayText = x.DisplayText,

@@ -25,7 +25,7 @@ public sealed class DeploymentsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly INamedSourceModelManager<AIDeployment> _deploymentManager;
+    private readonly INamedSourceCatalogManager<AIDeployment> _deploymentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly AIOptions _aiOptions;
@@ -36,7 +36,7 @@ public sealed class DeploymentsController : Controller
     internal readonly IStringLocalizer S;
 
     public DeploymentsController(
-        INamedSourceModelManager<AIDeployment> deploymentManager,
+        INamedSourceCatalogManager<AIDeployment> deploymentManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IOptions<AIOptions> aiOptions,
@@ -57,7 +57,7 @@ public sealed class DeploymentsController : Controller
 
     [Admin("ai/deployments", "AIDeploymentsIndex")]
     public async Task<IActionResult> Index(
-        ModelOptions options,
+        CatalogEntryOptions options,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
@@ -83,7 +83,7 @@ public sealed class DeploymentsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceModelEntryViewModel<AIDeployment>
+        var viewModel = new ListSourceCatalogEntryViewModel<AIDeployment>
         {
             Models = [],
             Options = options,
@@ -91,9 +91,9 @@ public sealed class DeploymentsController : Controller
             Sources = _aiOptions.Deployments.Select(x => x.Key).Order(),
         };
 
-        foreach (var record in result.Models)
+        foreach (var record in result.Entries)
         {
-            viewModel.Models.Add(new ModelEntry<AIDeployment>
+            viewModel.Models.Add(new CatalogEntryViewModel<AIDeployment>
             {
                 Model = record,
                 Shape = await _deploymentDisplayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
@@ -102,7 +102,7 @@ public sealed class DeploymentsController : Controller
 
         viewModel.Options.BulkActions =
         [
-            new SelectListItem(S["Delete"], nameof(ModelAction.Remove)),
+            new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
         ];
 
         return View(viewModel);
@@ -112,7 +112,7 @@ public sealed class DeploymentsController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/deployments", "AIDeploymentsIndex")]
-    public ActionResult IndexFilterPost(ListModelViewModel model)
+    public ActionResult IndexFilterPost(ListCatalogEntryViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -144,7 +144,7 @@ public sealed class DeploymentsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var model = new ModelViewModel
+        var model = new EditCatalogEntryViewModel
         {
             DisplayName = provider.DisplayName,
             Editor = await _deploymentDisplayManager.BuildEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -179,7 +179,7 @@ public sealed class DeploymentsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var model = new ModelViewModel
+        var model = new EditCatalogEntryViewModel
         {
             DisplayName = provider.DisplayName,
             Editor = await _deploymentDisplayManager.UpdateEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -212,7 +212,7 @@ public sealed class DeploymentsController : Controller
             return NotFound();
         }
 
-        var model = new ModelViewModel
+        var model = new EditCatalogEntryViewModel
         {
             DisplayName = deployment.Name,
             Editor = await _deploymentDisplayManager.BuildEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -241,7 +241,7 @@ public sealed class DeploymentsController : Controller
         // Clone the deployment to prevent modifying the original instance in the store.
         var mutableProfile = deployment.Clone();
 
-        var model = new ModelViewModel
+        var model = new EditCatalogEntryViewModel
         {
             DisplayName = mutableProfile.Name,
             Editor = await _deploymentDisplayManager.UpdateEditorAsync(mutableProfile, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -286,7 +286,7 @@ public sealed class DeploymentsController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
     [Admin("ai/deployments", "AIDeploymentsIndex")]
-    public async Task<ActionResult> IndexPost(ModelOptions options, IEnumerable<string> itemIds)
+    public async Task<ActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
         {
@@ -297,9 +297,9 @@ public sealed class DeploymentsController : Controller
         {
             switch (options.BulkAction)
             {
-                case ModelAction.None:
+                case CatalogEntryAction.None:
                     break;
-                case ModelAction.Remove:
+                case CatalogEntryAction.Remove:
                     var counter = 0;
                     foreach (var id in itemIds)
                     {

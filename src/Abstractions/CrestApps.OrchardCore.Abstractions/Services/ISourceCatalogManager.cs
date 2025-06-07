@@ -2,7 +2,7 @@ using System.Text.Json.Nodes;
 
 namespace CrestApps.OrchardCore.Services;
 
-public interface ISourceModelManager<T> : IModelManager<T>
+public interface ISourceCatalogManager<T> : ICatalogManager<T>
     where T : ISourceAwareModel
 {
     /// <summary>

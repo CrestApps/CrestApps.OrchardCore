@@ -169,7 +169,7 @@ public sealed class ChatDeploymentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddTransient<IModelHandler<AIProfile>, AIDeploymentProfileHandler>()
+            .AddTransient<ICatalogEntryHandler<AIProfile>, AIDeploymentProfileHandler>()
             .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>();
     }
 }
@@ -254,7 +254,7 @@ public sealed class ConnectionManagementStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IModelHandler<AIProviderConnection>, AIProviderConnectionHandler>();
+        services.AddScoped<ICatalogEntryHandler<AIProviderConnection>, AIProviderConnectionHandler>();
         services.AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderConnectionsOptionsConfiguration>();
         services.AddDisplayDriver<AIProviderConnection, AIProviderConnectionDisplayDriver>();
         services.AddNavigationProvider<AIConnectionsAdminMenu>();

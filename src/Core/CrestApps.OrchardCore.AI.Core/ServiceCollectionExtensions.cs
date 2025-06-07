@@ -18,20 +18,20 @@ public static class ServiceCollectionExtensions
         services
             .AddCoreModelServices()
             .AddScoped<IAIClientFactory, DefaultAIClientFactory>()
-            .AddScoped<INamedModelStore<AIProfile>, DefaultAIProfileStore>()
+            .AddScoped<INamedCatalog<AIProfile>, DefaultAIProfileStore>()
             .AddScoped<AIProviderConnectionStore>()
-            .AddScoped<IModelStore<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
-            .AddScoped<INamedModelStore<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
+            .AddScoped<ICatalog<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
+            .AddScoped<INamedCatalog<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
             .AddScoped<IAICompletionService, DefaultAICompletionService>()
             .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
-            .AddScoped<IModelHandler<AIProfile>, AIProfileHandler>();
+            .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileHandler>();
 
         services
             .AddScoped<IAuthorizationHandler, AIProfileAuthenticationHandler>()
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.CollectionName));
 
         services
-            .AddScoped<IModelHandler<AIToolInstance>, AIToolInstanceHandler>();
+            .AddScoped<ICatalogEntryHandler<AIToolInstance>, AIToolInstanceHandler>();
 
         return services;
     }
@@ -40,11 +40,11 @@ public static class ServiceCollectionExtensions
     {
         services
             .AddScoped<DefaultAIDeploymentStore>()
-            .AddScoped<IModelStore<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
-            .AddScoped<INamedModelStore<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
-            .AddScoped<INamedSourceModelStore<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
+            .AddScoped<ICatalog<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
+            .AddScoped<INamedCatalog<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
+            .AddScoped<INamedSourceCatalog<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
             .AddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>()
-            .AddScoped<IModelHandler<AIDeployment>, AIDeploymentHandler>();
+            .AddScoped<ICatalogEntryHandler<AIDeployment>, AIDeploymentHandler>();
 
         return services;
     }
@@ -54,7 +54,7 @@ public static class ServiceCollectionExtensions
         services
             .AddScoped<IAIDataSourceStore, DefaultAIDataSourceStore>()
             .AddScoped<IAIDataSourceManager, DefaultAIDataSourceManager>()
-            .AddScoped<IModelHandler<AIDataSource>, AIDataSourceHandler>();
+            .AddScoped<ICatalogEntryHandler<AIDataSource>, AIDataSourceHandler>();
 
         return services;
     }

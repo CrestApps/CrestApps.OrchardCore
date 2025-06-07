@@ -5,11 +5,11 @@ using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class DefaultAIDeploymentManager : NamedSourceModelManager<AIDeployment>, IAIDeploymentManager
+public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment>, IAIDeploymentManager
 {
     public DefaultAIDeploymentManager(
-        INamedSourceModelStore<AIDeployment> deploymentStore,
-        IEnumerable<IModelHandler<AIDeployment>> handlers,
+        INamedSourceCatalog<AIDeployment> deploymentStore,
+        IEnumerable<ICatalogEntryHandler<AIDeployment>> handlers,
         ILogger<DefaultAIDeploymentManager> logger)
         : base(deploymentStore, handlers, logger)
     {
@@ -17,7 +17,7 @@ public sealed class DefaultAIDeploymentManager : NamedSourceModelManager<AIDeplo
 
     public async ValueTask<IEnumerable<AIDeployment>> GetAllAsync(string providerName, string connectionName)
     {
-        var deployments = (await Store.GetAllAsync())
+        var deployments = (await Catalog.GetAllAsync())
             .Where(x => x.ProviderName == providerName &&
             (x.ConnectionName.Equals(connectionName, StringComparison.OrdinalIgnoreCase) || string.Equals(x.ConnectionNameAlias ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase)));
 

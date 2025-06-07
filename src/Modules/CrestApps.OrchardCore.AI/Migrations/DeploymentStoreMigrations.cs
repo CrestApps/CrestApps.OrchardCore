@@ -9,14 +9,14 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 [Obsolete("This class will be removed before the v1 is released.")]
 internal sealed class DeploymentStoreMigrations : DataMigration
 {
-    private readonly INamedModelStore<AIDeployment> _deploymentsStore;
+    private readonly INamedCatalog<AIDeployment> _deploymentCatalog;
     private readonly IDocumentManager<AIDeploymentDocument> _deploymentDocument;
 
     public DeploymentStoreMigrations(
-        INamedModelStore<AIDeployment> deploymentsStore,
+        INamedCatalog<AIDeployment> deploymentCatalog,
         IDocumentManager<AIDeploymentDocument> deploymentDocument)
     {
-        _deploymentsStore = deploymentsStore;
+        _deploymentCatalog = deploymentCatalog;
         _deploymentDocument = deploymentDocument;
     }
 
@@ -28,8 +28,8 @@ internal sealed class DeploymentStoreMigrations : DataMigration
         {
             try
             {
-                await _deploymentsStore.CreateAsync(deployment);
-                await _deploymentsStore.SaveChangesAsync();
+                await _deploymentCatalog.CreateAsync(deployment);
+                await _deploymentCatalog.SaveChangesAsync();
             }
             catch { }
         }

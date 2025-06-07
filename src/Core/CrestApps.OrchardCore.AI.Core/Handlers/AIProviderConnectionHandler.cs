@@ -16,7 +16,7 @@ public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderCon
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AIOptions _aiOptions;
-    private readonly INamedModelStore<AIProviderConnection> _store;
+    private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -24,13 +24,13 @@ public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderCon
     public AIProviderConnectionHandler(
         IHttpContextAccessor httpContextAccessor,
         IOptions<AIOptions> aiOptions,
-        INamedModelStore<AIProviderConnection> store,
+        INamedCatalog<AIProviderConnection> connectionsCatalog,
         IClock clock,
         IStringLocalizer<AIProviderConnectionHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _aiOptions = aiOptions.Value;
-        _store = store;
+        _connectionsCatalog = connectionsCatalog;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -49,7 +49,7 @@ public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderCon
         }
         else
         {
-            var connection = await _store.FindByNameAsync(context.Model.Name);
+            var connection = await _connectionsCatalog.FindByNameAsync(context.Model.Name);
 
             if (connection is not null && connection.Id != context.Model.Id)
             {

@@ -72,7 +72,7 @@ public sealed class ConnectionManagementStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IModelHandler<AIProviderConnection>, AzureOpenAIConnectionSettingsHandler>();
+        services.AddScoped<ICatalogEntryHandler<AIProviderConnection>, AzureOpenAIConnectionSettingsHandler>();
         services.AddTransient<IAIProviderConnectionHandler, AzureOpenAIConnectionHandler>();
         services.AddDisplayDriver<AIProviderConnection, AzureOpenAIConnectionDisplayDriver>();
         services.AddAIConnectionSource(AzureOpenAIConstants.ProviderName, o =>
@@ -118,7 +118,7 @@ public sealed class AISearchStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<AIDataSource, AzureOpenAISearchADataSourceDisplayDriver>();
-        services.AddScoped<IModelHandler<AIDataSource>, AzureAISearchAIDataSourceHandler>();
+        services.AddScoped<ICatalogEntryHandler<AIDataSource>, AzureAISearchAIDataSourceHandler>();
 
 #pragma warning disable CS0618 // Type or member is obsolete
         services.AddDataMigration<DataSourceMigrations>();
@@ -147,7 +147,7 @@ public sealed class ElasticsearchStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<AIDataSource, AzureOpenAIElasticsearchDataSourceDisplayDriver>();
-        services.AddScoped<IModelHandler<AIDataSource>, ElasticsearchAIDataSourceHandler>();
+        services.AddScoped<ICatalogEntryHandler<AIDataSource>, ElasticsearchAIDataSourceHandler>();
         services.AddTransient<IConfigureOptions<ElasticsearchServerOptions>, ElasticsearchServerOptionsConfigurations>();
 
         services
@@ -173,7 +173,7 @@ public sealed class MongoDBStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<AIDataSource, AzureOpenAIMongoDBDataSourceDisplayDriver>();
-        services.AddScoped<IModelHandler<AIDataSource>, MongoDbAIProfileHandler>();
+        services.AddScoped<ICatalogEntryHandler<AIDataSource>, MongoDbAIProfileHandler>();
 
         services
             .AddScoped<IAzureOpenAIDataSourceHandler, MongoDBOpenAIDataSourceHandler>()

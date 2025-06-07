@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public sealed class AIToolInstance : SourceModel, IDisplayTextAwareModel
+public sealed class AIToolInstance : SourceCatalogEntry, IDisplayTextAwareModel
 {
     public string DisplayText { get; set; }
 

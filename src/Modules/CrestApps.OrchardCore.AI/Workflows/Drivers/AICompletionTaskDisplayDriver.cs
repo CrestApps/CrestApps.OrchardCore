@@ -14,17 +14,17 @@ namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
 public sealed class AICompletionTaskDisplayDriver : ActivityDisplayDriver<AICompletionTask, AICompletionTaskViewModel>
 {
-    private readonly INamedModelStore<AIProfile> _profileStore;
+    private readonly INamedCatalog<AIProfile> _profilesCatalog;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
 
     internal readonly IStringLocalizer S;
 
     public AICompletionTaskDisplayDriver(
-        INamedModelStore<AIProfile> profileStore,
+        INamedCatalog<AIProfile> profilesCatalog,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<AICompletionTaskDisplayDriver> stringLocalizer)
     {
-        _profileStore = profileStore;
+        _profilesCatalog = profilesCatalog;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
     }
@@ -35,7 +35,7 @@ public sealed class AICompletionTaskDisplayDriver : ActivityDisplayDriver<AIComp
         model.PromptTemplate = activity.PromptTemplate;
         model.ResultPropertyName = activity.ResultPropertyName;
 
-        model.Profiles = (await _profileStore.GetAllAsync())
+        model.Profiles = (await _profilesCatalog.GetAllAsync())
             .Select(profile => new SelectListItem(profile.DisplayText, profile.Id));
     }
 
@@ -51,7 +51,7 @@ public sealed class AICompletionTaskDisplayDriver : ActivityDisplayDriver<AIComp
         }
         else
         {
-            var profile = await _profileStore.FindByIdAsync(model.ProfileId);
+            var profile = await _profilesCatalog.FindByIdAsync(model.ProfileId);
 
             if (profile is null)
             {

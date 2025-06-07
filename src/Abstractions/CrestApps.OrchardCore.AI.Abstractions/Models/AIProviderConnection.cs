@@ -4,7 +4,7 @@ using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public sealed class AIProviderConnection : SourceModel, INameAwareModel, IDisplayTextAwareModel
+public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, IDisplayTextAwareModel
 {
     public string Name { get; set; }
 

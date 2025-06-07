@@ -11,12 +11,12 @@ namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 
 internal sealed class AIProfileToolInstancesDisplayDriver : DisplayDriver<AIProfile>
 {
-    private readonly IModelStore<AIToolInstance> _toolInstanceStore;
+    private readonly ICatalog<AIToolInstance> _toolInstanceStore;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileToolInstancesDisplayDriver(
-        IModelStore<AIToolInstance> toolInstanceStore,
+        ICatalog<AIToolInstance> toolInstanceStore,
         IStringLocalizer<AIProfileToolsDisplayDriver> stringLocalizer)
     {
         _toolInstanceStore = toolInstanceStore;

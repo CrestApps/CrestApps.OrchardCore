@@ -18,7 +18,7 @@ public sealed class OpenAICompletionClient : DeploymentAwareAICompletionClient
         IOptions<AIProviderOptions> providerOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
         IOptions<DefaultAIOptions> defaultOptions,
-        INamedModelStore<AIDeployment> deploymentStore
+        INamedCatalog<AIDeployment> deploymentStore
         ) : base(
             OpenAIConstants.ImplementationName,
             aIClientFactory,

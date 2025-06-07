@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Services;
 
-public interface IModelHandler<T>
+public interface ICatalogEntryHandler<T>
 {
     /// <summary>
     /// This method in invoked during model initializing.

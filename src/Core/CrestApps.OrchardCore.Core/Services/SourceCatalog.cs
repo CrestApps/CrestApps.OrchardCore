@@ -1,15 +1,15 @@
-﻿using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Services;
 using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.Core.Services;
 
-public class SourceModelStore<T> : ModelStore<T>, ISourceModelStore<T>
-    where T : Model, ISourceAwareModel
+public class SourceCatalog<T> : Catalog<T>, ISourceCatalog<T>
+    where T : CatalogEntry, ISourceAwareModel
 {
-    private readonly IDocumentManager<ModelDocument<T>> _documentManager;
+    private readonly IDocumentManager<DictionaryDocument<T>> _documentManager;
 
-    public SourceModelStore(IDocumentManager<ModelDocument<T>> documentManager)
+    public SourceCatalog(IDocumentManager<DictionaryDocument<T>> documentManager)
         : base(documentManager)
     {
         _documentManager = documentManager;

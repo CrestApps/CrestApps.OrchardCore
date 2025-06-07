@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public sealed class AIDataSource : Model, IDisplayTextAwareModel
+public sealed class AIDataSource : CatalogEntry, IDisplayTextAwareModel
 {
     public string ProfileSource { get; set; }
 

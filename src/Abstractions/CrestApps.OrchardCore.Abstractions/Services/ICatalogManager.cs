@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Services;
 
-public interface IModelManager<T> : IReadModelManager<T>
+public interface ICatalogManager<T> : IReadCatalogManager<T>
 {
     /// <summary>
     /// Asynchronously deletes the specified model.

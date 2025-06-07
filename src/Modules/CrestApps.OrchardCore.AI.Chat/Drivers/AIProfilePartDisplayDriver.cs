@@ -18,7 +18,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AIProfilePart>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly INamedModelStore<AIProfile> _profileStore;
+    private readonly INamedCatalog<AIProfile> _profilesCatalog;
     private readonly IAIChatSessionManager _chatSessionManager;
     private readonly PagerOptions _pagerOptions;
 
@@ -26,13 +26,13 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
 
     public AIChatProfilePartDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
-        INamedModelStore<AIProfile> profileStore,
+        INamedCatalog<AIProfile> profilesCatalog,
         IAIChatSessionManager chatSessionManager,
         IOptions<PagerOptions> pagerOptions,
         IStringLocalizer<AIChatProfilePartDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
-        _profileStore = profileStore;
+        _profilesCatalog = profilesCatalog;
         _chatSessionManager = chatSessionManager;
         _pagerOptions = pagerOptions.Value;
         S = stringLocalizer;
@@ -53,7 +53,7 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
             return null;
         }
 
-        var profile = await _profileStore.FindByIdAsync(part.ProfileId);
+        var profile = await _profilesCatalog.FindByIdAsync(part.ProfileId);
 
         if (profile == null)
         {
@@ -86,7 +86,7 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
 
             model.MaxHistoryAllowed = _pagerOptions.MaxPageSize;
 
-            var profiles = await _profileStore.GetProfilesAsync(AIProfileType.Chat);
+            var profiles = await _profilesCatalog.GetProfilesAsync(AIProfileType.Chat);
 
             model.Profiles = profiles.Select(profile => new SelectListItem(profile.DisplayText, profile.Id));
 
@@ -103,7 +103,7 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProfileId), S["The Profile is required."]);
         }
-        else if (await _profileStore.FindByIdAsync(model.ProfileId) == null)
+        else if (await _profilesCatalog.FindByIdAsync(model.ProfileId) == null)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProfileId), S["The Profile is invalid."]);
         }

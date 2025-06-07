@@ -8,9 +8,9 @@ namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
 internal sealed class AIToolInstanceDeploymentSource : DeploymentSourceBase<AIToolInstanceDeploymentStep>
 {
-    private readonly IModelStore<AIToolInstance> _store;
+    private readonly ICatalog<AIToolInstance> _store;
 
-    public AIToolInstanceDeploymentSource(IModelStore<AIToolInstance> store)
+    public AIToolInstanceDeploymentSource(ICatalog<AIToolInstance> store)
     {
         _store = store;
     }
