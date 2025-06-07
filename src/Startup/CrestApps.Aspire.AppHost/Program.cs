@@ -1,13 +1,13 @@
 var builder = DistributedApplication.CreateBuilder(args);
-const string elasticsearchSecret = "crestapps123";
+const string elasticsearchSecret = "CrestApps!2023";
 
-const string OllamaModelName = "deepseek-v2:16b";
+const string ollamaModelName = "deepseek-v2:16b";
 
 var ollama = builder.AddOllama("Ollama")
     .WithDataVolume()
     .WithGPUSupport();
 
-ollama.AddModel(OllamaModelName);
+ollama.AddModel(ollamaModelName);
 
 var password = builder.AddParameter("Password", elasticsearchSecret, secret: true);
 
@@ -40,11 +40,11 @@ builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("OrchardCoreCMS")
 
         // Configure the AI connection.
         options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__Ollama__DefaultConnectionName", "Default");
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__Ollama__DefaultDeploymentName", OllamaModelName);
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__Ollama__DefaultDeploymentName", ollamaModelName);
 
         // Here we are using a connection names 'Default', you can also add other connections if needed.
         options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__Ollama__Connections__Default__Endpoint", ollama.GetEndpoint("http").Url);
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__Ollama__Connections__Default__DefaultDeploymentName", OllamaModelName);
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__Ollama__Connections__Default__DefaultDeploymentName", ollamaModelName);
     });
 
 var app = builder.Build();
