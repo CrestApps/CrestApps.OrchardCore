@@ -10,7 +10,7 @@ public class CatalogEntryOptions<TOptions>
     public TOptions BulkAction { get; set; }
 
     [BindNever]
-    public List<SelectListItem> BulkActions { get; set; }
+    public IList<SelectListItem> BulkActions { get; set; }
 }
 
 public class CatalogEntryOptions : CatalogEntryOptions<CatalogEntryAction>;

@@ -15,20 +15,20 @@ public class Catalog<T> : ICatalog<T>
         DocumentManager = documentManager;
     }
 
-    public async ValueTask<bool> DeleteAsync(T model)
+    public async ValueTask<bool> DeleteAsync(T entry)
     {
-        ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(entry);
 
         var document = await DocumentManager.GetOrCreateMutableAsync();
 
-        if (!document.Records.TryGetValue(model.Id, out var existingInstance))
+        if (!document.Records.TryGetValue(entry.Id, out var existingInstance))
         {
             return false;
         }
 
-        Deleting(model, document);
+        Deleting(entry, document);
 
-        var removed = document.Records.Remove(model.Id);
+        var removed = document.Records.Remove(entry.Id);
 
         if (removed)
         {
@@ -62,7 +62,7 @@ public class Catalog<T> : ICatalog<T>
         return new PageResult<T>
         {
             Count = records.Count(),
-            Models = records.Skip(skip).Take(pageSize).ToArray()
+            Entries = records.Skip(skip).Take(pageSize).ToArray()
         };
     }
 

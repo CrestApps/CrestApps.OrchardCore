@@ -17,7 +17,7 @@ public sealed class DefaultAIProfileManager : NamedCatalogManager<AIProfile>, IA
 
     public async ValueTask<IEnumerable<AIProfile>> GetAsync(AIProfileType type)
     {
-        var profiles = await Store.GetAsync(type);
+        var profiles = await Catalog.GetAsync(type);
 
         foreach (var profile in profiles)
         {

@@ -10,15 +10,15 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
 public sealed class AIDeploymentProfileHandler : ModelHandlerBase<AIProfile>
 {
-    private readonly INamedCatalog<AIDeployment> _deploymentStore;
+    private readonly INamedCatalog<AIDeployment> _deploymentsCatalog;
 
     internal readonly IStringLocalizer S;
 
     public AIDeploymentProfileHandler(
-        INamedCatalog<AIDeployment> deploymentStore,
+        INamedCatalog<AIDeployment> deploymentsCatalog,
         IStringLocalizer<AIProfileHandler> stringLocalizer)
     {
-        _deploymentStore = deploymentStore;
+        _deploymentsCatalog = deploymentsCatalog;
         S = stringLocalizer;
     }
 
@@ -30,7 +30,7 @@ public sealed class AIDeploymentProfileHandler : ModelHandlerBase<AIProfile>
 
     public override async Task ValidatingAsync(ValidatingContext<AIProfile> context)
     {
-        if (!string.IsNullOrEmpty(context.Model.DeploymentId) && await _deploymentStore.FindByIdAsync(context.Model.DeploymentId) is null)
+        if (!string.IsNullOrEmpty(context.Model.DeploymentId) && await _deploymentsCatalog.FindByIdAsync(context.Model.DeploymentId) is null)
         {
             context.Result.Fail(new ValidationResult(S["Invalid DeploymentId provided."], [nameof(AIProfile.DeploymentId)]));
         }

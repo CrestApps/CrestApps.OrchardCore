@@ -92,7 +92,7 @@ public sealed class ToolInstancesController : Controller
             Sources = toolSources.Select(toolSource => toolSource.Name).Order(),
         };
 
-        foreach (var model in result.Models)
+        foreach (var model in result.Entries)
         {
             viewModel.Models.Add(new CatalogEntryViewModel<AIToolInstance>
             {

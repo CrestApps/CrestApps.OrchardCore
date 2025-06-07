@@ -90,7 +90,7 @@ public sealed class ConnectionsController : Controller
             Sources = _mcpClientOptions.TransportTypes.Select(x => x.Key).Order(),
         };
 
-        foreach (var model in result.Models)
+        foreach (var model in result.Entries)
         {
             viewModel.Models.Add(new CatalogEntryViewModel<McpConnection>
             {

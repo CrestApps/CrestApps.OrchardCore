@@ -88,7 +88,7 @@ public sealed class ProfilesController : Controller
             Sources = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
         };
 
-        foreach (var model in result.Models)
+        foreach (var model in result.Entries)
         {
             viewModel.Models.Add(new CatalogEntryViewModel<AIProfile>
             {

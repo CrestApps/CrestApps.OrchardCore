@@ -92,7 +92,7 @@ public sealed class DataSourcesController : Controller
             .ThenBy(x => x.Type),
         };
 
-        foreach (var record in result.Models)
+        foreach (var record in result.Entries)
         {
             viewModel.Models.Add(new CatalogEntryViewModel<AIDataSource>
             {

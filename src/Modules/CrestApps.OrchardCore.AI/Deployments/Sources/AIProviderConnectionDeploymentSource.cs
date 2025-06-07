@@ -10,23 +10,23 @@ namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
 internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBase<AIProviderConnectionDeploymentStep>
 {
-    private readonly INamedCatalog<AIProviderConnection> _store;
+    private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
     private readonly IEnumerable<IAIProviderConnectionHandler> _handlers;
     private readonly ILogger _logger;
 
     public AIProviderConnectionDeploymentSource(
-        INamedCatalog<AIProviderConnection> store,
+        INamedCatalog<AIProviderConnection> connectionsCatalog,
         IEnumerable<IAIProviderConnectionHandler> handlers,
         ILogger<AIProviderConnectionDeploymentSource> logger)
     {
-        _store = store;
+        _connectionsCatalog = connectionsCatalog;
         _handlers = handlers;
         _logger = logger;
     }
 
     protected override async Task ProcessAsync(AIProviderConnectionDeploymentStep step, DeploymentPlanResult result)
     {
-        var connections = await _store.GetAllAsync();
+        var connections = await _connectionsCatalog.GetAllAsync();
 
         var connectionObjects = new JsonArray();
 

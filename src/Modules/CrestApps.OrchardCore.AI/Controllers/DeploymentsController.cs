@@ -91,7 +91,7 @@ public sealed class DeploymentsController : Controller
             Sources = _aiOptions.Deployments.Select(x => x.Key).Order(),
         };
 
-        foreach (var record in result.Models)
+        foreach (var record in result.Entries)
         {
             viewModel.Models.Add(new CatalogEntryViewModel<AIDeployment>
             {

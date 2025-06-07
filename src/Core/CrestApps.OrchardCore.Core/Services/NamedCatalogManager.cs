@@ -7,35 +7,35 @@ namespace CrestApps.OrchardCore.Core.Services;
 public class NamedCatalogManager<T> : CatalogManager<T>, INamedCatalogManager<T>
     where T : CatalogEntry, INameAwareModel, new()
 {
-    protected readonly INamedCatalog<T> NamedModelStore;
+    protected readonly INamedCatalog<T> NamedCatalog;
 
     public NamedCatalogManager(
-        INamedCatalog<T> store,
+        INamedCatalog<T> catalog,
         IEnumerable<ICatalogEntryHandler<T>> handlers,
         ILogger<CatalogManager<T>> logger)
-        : base(store, handlers, logger)
+        : base(catalog, handlers, logger)
     {
-        NamedModelStore = store;
+        NamedCatalog = catalog;
     }
 
     protected NamedCatalogManager(
-        INamedCatalog<T> store,
+        INamedCatalog<T> catalog,
         IEnumerable<ICatalogEntryHandler<T>> handlers,
         ILogger logger)
-    : base(store, handlers, logger)
+        : base(catalog, handlers, logger)
     {
-        NamedModelStore = store;
+        NamedCatalog = catalog;
     }
 
     public async ValueTask<T> FindByNameAsync(string name)
     {
-        var model = await NamedModelStore.FindByNameAsync(name);
+        var entry = await NamedCatalog.FindByNameAsync(name);
 
-        if (model is not null)
+        if (entry is not null)
         {
-            await LoadAsync(model);
+            await LoadAsync(entry);
         }
 
-        return model;
+        return entry;
     }
 }

@@ -20,25 +20,25 @@ public class NamedSourceCatalogManager<T> : SourceCatalogManager<T>, INamedCatal
 
     public async ValueTask<T> FindByNameAsync(string name)
     {
-        var model = await NamedSourceModelStore.FindByNameAsync(name);
+        var entry = await NamedSourceModelStore.FindByNameAsync(name);
 
-        if (model is not null)
+        if (entry is not null)
         {
-            await LoadAsync(model);
+            await LoadAsync(entry);
         }
 
-        return model;
+        return entry;
     }
 
     public async ValueTask<T> GetAsync(string name, string source)
     {
-        var model = await NamedSourceModelStore.GetAsync(name, source);
+        var entry = await NamedSourceModelStore.GetAsync(name, source);
 
-        if (model is not null)
+        if (entry is not null)
         {
-            await LoadAsync(model);
+            await LoadAsync(entry);
         }
 
-        return model;
+        return entry;
     }
 }

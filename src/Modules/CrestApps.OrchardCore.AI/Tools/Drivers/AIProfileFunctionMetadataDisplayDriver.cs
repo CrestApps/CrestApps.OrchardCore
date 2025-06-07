@@ -12,15 +12,15 @@ namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 
 public sealed class AIProfileToolMetadataDisplayDriver : DisplayDriver<AIToolInstance>
 {
-    private readonly INamedCatalog<AIProfile> _profileStore;
+    private readonly INamedCatalog<AIProfile> _profilesCatalog;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileToolMetadataDisplayDriver(
-        INamedCatalog<AIProfile> profileStore,
+        INamedCatalog<AIProfile> profileCatalog,
         IStringLocalizer<AIProfileToolMetadataDisplayDriver> stringLocalizer)
     {
-        _profileStore = profileStore;
+        _profilesCatalog = profileCatalog;
         S = stringLocalizer;
     }
 
@@ -37,7 +37,7 @@ public sealed class AIProfileToolMetadataDisplayDriver : DisplayDriver<AIToolIns
 
             model.ProfileId = metadata.ProfileId;
 
-            model.Profiles = (await _profileStore.GetAllAsync())
+            model.Profiles = (await _profilesCatalog.GetAllAsync())
             .Select(profile => new SelectListItem(profile.DisplayText, profile.Id));
         }).Location("Content:5");
     }
@@ -57,7 +57,7 @@ public sealed class AIProfileToolMetadataDisplayDriver : DisplayDriver<AIToolIns
         {
             context.Updater.ModelState.AddModelError(nameof(model.ProfileId), S["The Profile field is required."]);
         }
-        else if (await _profileStore.FindByIdAsync(model.ProfileId) == null)
+        else if (await _profilesCatalog.FindByIdAsync(model.ProfileId) == null)
         {
             context.Updater.ModelState.AddModelError(nameof(model.ProfileId), S["The selected Profile does not exist."]);
         }

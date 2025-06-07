@@ -10,41 +10,41 @@ namespace CrestApps.OrchardCore.Core.Services;
 public class SourceCatalogManager<T> : CatalogManager<T>, ISourceCatalogManager<T>
     where T : CatalogEntry, ISourceAwareModel, new()
 {
-    protected readonly ISourceCatalog<T> SourceModelStore;
+    protected readonly ISourceCatalog<T> SourceCatalog;
 
     public SourceCatalogManager(
-        ISourceCatalog<T> store,
+        ISourceCatalog<T> sourceCatalog,
         IEnumerable<ICatalogEntryHandler<T>> handlers,
         ILogger<CatalogManager<T>> logger)
-        : base(store, handlers, logger)
+        : base(sourceCatalog, handlers, logger)
     {
-        SourceModelStore = store;
+        SourceCatalog = sourceCatalog;
     }
 
     public async ValueTask<IEnumerable<T>> FindBySourceAsync(string source)
     {
         ArgumentException.ThrowIfNullOrEmpty(source);
 
-        var models = (await Store.GetAllAsync()).Where(x => x.Source == source);
+        var entries = (await Catalog.GetAllAsync()).Where(x => x.Source == source);
 
-        foreach (var model in models)
+        foreach (var entry in entries)
         {
-            await LoadAsync(model);
+            await LoadAsync(entry);
         }
 
-        return models;
+        return entries;
     }
 
     public async ValueTask<IEnumerable<T>> GetAsync(string source)
     {
-        var models = await SourceModelStore.GetAsync(source);
+        var entries = await SourceCatalog.GetAsync(source);
 
-        foreach (var model in models)
+        foreach (var entry in entries)
         {
-            await LoadAsync(model);
+            await LoadAsync(entry);
         }
 
-        return models;
+        return entries;
     }
 
     public async ValueTask<T> NewAsync(string source, JsonNode data = null)
@@ -53,26 +53,26 @@ public class SourceCatalogManager<T> : CatalogManager<T>, ISourceCatalogManager<
 
         var id = IdGenerator.GenerateId();
 
-        var model = new T()
+        var entry = new T()
         {
             Id = id,
             Source = source,
         };
 
-        var initializingContext = new InitializingContext<T>(model, data);
+        var initializingContext = new InitializingContext<T>(entry, data);
         await Handlers.InvokeAsync((handler, ctx) => handler.InitializingAsync(ctx), initializingContext, Logger);
 
-        var initializedContext = new InitializedContext<T>(model);
+        var initializedContext = new InitializedContext<T>(entry);
         await Handlers.InvokeAsync((handler, ctx) => handler.InitializedAsync(ctx), initializedContext, Logger);
 
-        if (string.IsNullOrEmpty(model.Id))
+        if (string.IsNullOrEmpty(entry.Id))
         {
-            model.Id = id;
+            entry.Id = id;
         }
 
-        model.Source = source;
+        entry.Source = source;
 
-        return model;
+        return entry;
     }
 
     public override ValueTask<T> NewAsync(JsonNode data = null)

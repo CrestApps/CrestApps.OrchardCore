@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 [Obsolete("This class will be removed before the v1 is released.")]
 internal sealed class ProfileStoreMigrations : DataMigration
 {
-    private readonly INamedCatalog<AIProfile> _profilesStore;
+    private readonly INamedCatalog<AIProfile> _profilesCatalog;
     private readonly IStore _store;
     private readonly IDbConnectionAccessor _dbConnectionAccessor;
     private readonly ShellSettings _shellSettings;
@@ -22,14 +22,14 @@ internal sealed class ProfileStoreMigrations : DataMigration
     private readonly IDocumentManager<AIProfileDocument> _profileDocument;
 
     public ProfileStoreMigrations(
-        INamedCatalog<AIProfile> profilesStore,
+        INamedCatalog<AIProfile> profilesCatalog,
         IStore store,
         IDbConnectionAccessor dbConnectionAccessor,
         ShellSettings shellSettings,
         ILogger<ProfileStoreMigrations> logger,
         IDocumentManager<AIProfileDocument> profileDocument)
     {
-        _profilesStore = profilesStore;
+        _profilesCatalog = profilesCatalog;
         _store = store;
         _dbConnectionAccessor = dbConnectionAccessor;
         _shellSettings = shellSettings;
@@ -45,8 +45,8 @@ internal sealed class ProfileStoreMigrations : DataMigration
         {
             try
             {
-                await _profilesStore.UpdateAsync(profile);
-                await _profilesStore.SaveChangesAsync();
+                await _profilesCatalog.UpdateAsync(profile);
+                await _profilesCatalog.SaveChangesAsync();
             }
             catch { }
         }

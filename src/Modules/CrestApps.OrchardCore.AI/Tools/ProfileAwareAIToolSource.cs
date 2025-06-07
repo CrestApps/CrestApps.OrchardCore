@@ -16,17 +16,17 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
 
     private readonly ILogger<ProfileAwareAIToolSource> _logger;
     private readonly IAICompletionService _completionService;
-    private readonly INamedCatalog<AIProfile> _profileStore;
+    private readonly INamedCatalog<AIProfile> _profilesCatalog;
 
     public ProfileAwareAIToolSource(
         ILogger<ProfileAwareAIToolSource> logger,
         IAICompletionService completionService,
-        INamedCatalog<AIProfile> profileStore,
+        INamedCatalog<AIProfile> profilesCatalog,
         IStringLocalizer<ProfileAwareAIToolSource> S)
     {
         _logger = logger;
         _completionService = completionService;
-        _profileStore = profileStore;
+        _profilesCatalog = profilesCatalog;
         DisplayName = S["Profile Invoker"];
         Description = S["Provides a function that calls other profile."];
     }
@@ -48,7 +48,7 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
             return new ProfileInvoker(_completionService, instance, profile: null, _logger);
         }
 
-        var profile = await _profileStore.FindByIdAsync(metadata.ProfileId);
+        var profile = await _profilesCatalog.FindByIdAsync(metadata.ProfileId);
 
         return new ProfileInvoker(_completionService, instance, profile, _logger);
     }

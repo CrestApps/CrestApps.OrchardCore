@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 {
-    private readonly INamedCatalog<AIProfile> _profileStore;
+    private readonly INamedCatalog<AIProfile> _profilesCatalog;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly AIOptions _aiOptions;
     private readonly DefaultAIOptions _defaultAIOptions;
@@ -25,14 +25,14 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     internal readonly IStringLocalizer S;
 
     public AIProfileDisplayDriver(
-        INamedCatalog<AIProfile> profileStore,
+        INamedCatalog<AIProfile> profilesCatalog,
         ILiquidTemplateManager liquidTemplateManager,
         IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> connectionOptions,
         IOptions<DefaultAIOptions> defaultAIOptions,
         IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
     {
-        _profileStore = profileStore;
+        _profilesCatalog = profilesCatalog;
         _liquidTemplateManager = liquidTemplateManager;
         _aiOptions = aiOptions.Value;
         _defaultAIOptions = defaultAIOptions.Value;
@@ -149,7 +149,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(mainFieldsModel.Name), S["Name is required."]);
             }
-            else if (await _profileStore.FindByNameAsync(name) is not null)
+            else if (await _profilesCatalog.FindByNameAsync(name) is not null)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(mainFieldsModel.Name), S["A profile with this name already exists. The name must be unique."]);
             }

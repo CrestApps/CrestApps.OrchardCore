@@ -91,7 +91,7 @@ public sealed class DefaultAIDataSourceManager : IAIDataSourceManager
     {
         var result = await _store.PageAsync(page, pageSize, context);
 
-        foreach (var model in result.Models)
+        foreach (var model in result.Entries)
         {
             await LoadAsync(model);
         }

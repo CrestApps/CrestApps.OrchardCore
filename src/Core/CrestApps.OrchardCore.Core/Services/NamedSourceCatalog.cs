@@ -18,14 +18,7 @@ public class NamedSourceCatalog<T> : SourceCatalog<T>, INamedSourceCatalog<T>, I
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
-        var model = document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-
-        if (model is not null)
-        {
-            return model;
-        }
-
-        return null;
+        return document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 
     protected override void Saving(T record, DictionaryDocument<T> document)
@@ -43,13 +36,6 @@ public class NamedSourceCatalog<T> : SourceCatalog<T>, INamedSourceCatalog<T>, I
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
-        var model = document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && x.Source.Equals(source, StringComparison.OrdinalIgnoreCase));
-
-        if (model is not null)
-        {
-            return model;
-        }
-
-        return null;
+        return document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && x.Source.Equals(source, StringComparison.OrdinalIgnoreCase));
     }
 }

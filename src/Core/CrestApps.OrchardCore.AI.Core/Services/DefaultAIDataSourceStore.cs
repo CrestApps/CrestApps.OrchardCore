@@ -78,7 +78,7 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
         return new PageResult<AIDataSource>
         {
             Count = records.Count(),
-            Models = records.Skip(skip).Take(pageSize).ToArray()
+            Entries = records.Skip(skip).Take(pageSize).ToArray()
         };
     }
 

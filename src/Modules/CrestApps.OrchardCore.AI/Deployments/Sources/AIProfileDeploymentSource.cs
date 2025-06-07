@@ -8,17 +8,16 @@ namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
 internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfileDeploymentStep>
 {
-    private readonly INamedCatalog<AIProfile> _profileStore;
+    private readonly INamedCatalog<AIProfile> _profilesCatalog;
 
-    public AIProfileDeploymentSource(
-        INamedCatalog<AIProfile> profileStore)
+    public AIProfileDeploymentSource(INamedCatalog<AIProfile> profilesCatalog)
     {
-        _profileStore = profileStore;
+        _profilesCatalog = profilesCatalog;
     }
 
     protected override async Task ProcessAsync(AIProfileDeploymentStep step, DeploymentPlanResult result)
     {
-        var profiles = await _profileStore.GetAllAsync();
+        var profiles = await _profilesCatalog.GetAllAsync();
 
         var profilesData = new JsonArray();
 

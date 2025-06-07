@@ -10,16 +10,16 @@ namespace CrestApps.OrchardCore.Core.Services;
 public class CatalogManager<T> : ICatalogManager<T>
     where T : CatalogEntry, new()
 {
-    protected readonly ICatalog<T> Store;
+    protected readonly ICatalog<T> Catalog;
     protected readonly ILogger Logger;
     protected readonly IEnumerable<ICatalogEntryHandler<T>> Handlers;
 
     public CatalogManager(
-        ICatalog<T> store,
+        ICatalog<T> catalog,
         IEnumerable<ICatalogEntryHandler<T>> handlers,
         ILogger<CatalogManager<T>> logger)
     {
-        Store = store;
+        Catalog = catalog;
         Handlers = handlers;
         Logger = logger;
     }
@@ -29,28 +29,28 @@ public class CatalogManager<T> : ICatalogManager<T>
         IEnumerable<ICatalogEntryHandler<T>> handlers,
         ILogger logger)
     {
-        Store = store;
+        Catalog = store;
         Handlers = handlers.Reverse();
         Logger = logger;
     }
 
-    public async ValueTask<bool> DeleteAsync(T model)
+    public async ValueTask<bool> DeleteAsync(T entry)
     {
-        ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(entry);
 
-        var deletingContext = new DeletingContext<T>(model);
+        var deletingContext = new DeletingContext<T>(entry);
         await Handlers.InvokeAsync((handler, ctx) => handler.DeletingAsync(ctx), deletingContext, Logger);
 
-        if (string.IsNullOrEmpty(model.Id))
+        if (string.IsNullOrEmpty(entry.Id))
         {
             return false;
         }
 
-        var removed = await Store.DeleteAsync(model);
+        var removed = await Catalog.DeleteAsync(entry);
 
-        await DeletedAsync(model);
+        await DeletedAsync(entry);
 
-        var deletedContext = new DeletedContext<T>(model);
+        var deletedContext = new DeletedContext<T>(entry);
         await Handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, Logger);
 
         return removed;
@@ -58,13 +58,13 @@ public class CatalogManager<T> : ICatalogManager<T>
 
     public async ValueTask<T> FindByIdAsync(string id)
     {
-        var model = await Store.FindByIdAsync(id);
+        var entry = await Catalog.FindByIdAsync(id);
 
-        if (model is not null)
+        if (entry is not null)
         {
-            await LoadAsync(model);
+            await LoadAsync(entry);
 
-            return model;
+            return entry;
         }
 
         return null;
@@ -74,74 +74,74 @@ public class CatalogManager<T> : ICatalogManager<T>
     {
         var id = IdGenerator.GenerateId();
 
-        var model = new T()
+        var entry = new T()
         {
             Id = id,
         };
 
-        var initializingContext = new InitializingContext<T>(model, data);
+        var initializingContext = new InitializingContext<T>(entry, data);
         await Handlers.InvokeAsync((handler, ctx) => handler.InitializingAsync(ctx), initializingContext, Logger);
 
-        var initializedContext = new InitializedContext<T>(model);
+        var initializedContext = new InitializedContext<T>(entry);
         await Handlers.InvokeAsync((handler, ctx) => handler.InitializedAsync(ctx), initializedContext, Logger);
 
-        if (string.IsNullOrEmpty(model.Id))
+        if (string.IsNullOrEmpty(entry.Id))
         {
-            model.Id = id;
+            entry.Id = id;
         }
 
-        return model;
+        return entry;
     }
 
     public async ValueTask<PageResult<T>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
         where TQuery : QueryContext
     {
-        var result = await Store.PageAsync(page, pageSize, context);
+        var result = await Catalog.PageAsync(page, pageSize, context);
 
-        foreach (var model in result.Models)
+        foreach (var entry in result.Entries)
         {
-            await LoadAsync(model);
+            await LoadAsync(entry);
         }
 
         return result;
     }
 
-    public async ValueTask CreateAsync(T model)
+    public async ValueTask CreateAsync(T entry)
     {
-        ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(entry);
 
-        var creatingContext = new CreatingContext<T>(model);
+        var creatingContext = new CreatingContext<T>(entry);
         await Handlers.InvokeAsync((handler, ctx) => handler.CreatingAsync(ctx), creatingContext, Logger);
 
-        await Store.CreateAsync(model);
-        await Store.SaveChangesAsync();
+        await Catalog.CreateAsync(entry);
+        await Catalog.SaveChangesAsync();
 
-        var createdContext = new CreatedContext<T>(model);
+        var createdContext = new CreatedContext<T>(entry);
         await Handlers.InvokeAsync((handler, ctx) => handler.CreatedAsync(ctx), createdContext, Logger);
     }
 
-    public async ValueTask UpdateAsync(T model, JsonNode data = null)
+    public async ValueTask UpdateAsync(T entry, JsonNode data = null)
     {
-        ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(entry);
 
-        var updatingContext = new UpdatingContext<T>(model, data);
+        var updatingContext = new UpdatingContext<T>(entry, data);
         await Handlers.InvokeAsync((handler, ctx) => handler.UpdatingAsync(ctx), updatingContext, Logger);
 
-        await Store.UpdateAsync(model);
-        await Store.SaveChangesAsync();
+        await Catalog.UpdateAsync(entry);
+        await Catalog.SaveChangesAsync();
 
-        var updatedContext = new UpdatedContext<T>(model);
+        var updatedContext = new UpdatedContext<T>(entry);
         await Handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, Logger);
     }
 
-    public async ValueTask<ValidationResultDetails> ValidateAsync(T model)
+    public async ValueTask<ValidationResultDetails> ValidateAsync(T entry)
     {
-        ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(entry);
 
-        var validatingContext = new ValidatingContext<T>(model);
+        var validatingContext = new ValidatingContext<T>(entry);
         await Handlers.InvokeAsync((handler, ctx) => handler.ValidatingAsync(ctx), validatingContext, Logger);
 
-        var validatedContext = new ValidatedContext<T>(model, validatingContext.Result);
+        var validatedContext = new ValidatedContext<T>(entry, validatingContext.Result);
         await Handlers.InvokeAsync((handler, ctx) => handler.ValidatedAsync(ctx), validatedContext, Logger);
 
         return validatingContext.Result;
@@ -149,7 +149,7 @@ public class CatalogManager<T> : ICatalogManager<T>
 
     public async ValueTask<IEnumerable<T>> GetAllAsync()
     {
-        var models = await Store.GetAllAsync();
+        var models = await Catalog.GetAllAsync();
 
         foreach (var model in models)
         {
@@ -159,14 +159,14 @@ public class CatalogManager<T> : ICatalogManager<T>
         return models;
     }
 
-    protected virtual ValueTask DeletedAsync(T model)
+    protected virtual ValueTask DeletedAsync(T entry)
     {
         return ValueTask.CompletedTask;
     }
 
-    protected virtual async Task LoadAsync(T model)
+    protected virtual async Task LoadAsync(T entry)
     {
-        var loadedContext = new LoadedContext<T>(model);
+        var loadedContext = new LoadedContext<T>(entry);
 
         await Handlers.InvokeAsync((handler, context) => handler.LoadedAsync(context), loadedContext, Logger);
     }

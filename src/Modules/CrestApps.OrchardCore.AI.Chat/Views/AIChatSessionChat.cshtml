@@ -16,7 +16,7 @@
 
 @inject IUpdateModelAccessor UpdateModelAccessor
 @inject IDisplayManager<AIChatSessionPrompt> DisplayManager
-@inject INamedCatalog<AIProfile> ProfileStore
+@inject INamedCatalog<AIProfile> ProfilesCatalog
 @inject HubRouteManager HubRouteManager
 @{
     var baseId = Html.IdForModel();
@@ -26,7 +26,7 @@
     var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
 
-    var promptGeneratedProfiles = await ProfileStore.GetAsync(AIProfileType.TemplatePrompt);
+    var promptGeneratedProfiles = await ProfilesCatalog.GetAsync(AIProfileType.TemplatePrompt);
 }
 
 <div class="mb-3 mx-3 p-3 overflow-y-auto h-100 rounded-2 border bg-theme" id="@chatContainerHtmlId">

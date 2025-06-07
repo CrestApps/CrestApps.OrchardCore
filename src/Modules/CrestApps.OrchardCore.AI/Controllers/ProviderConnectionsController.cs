@@ -95,7 +95,7 @@ public sealed class ProviderConnectionsController : Controller
             Sources = _aiOptions.ConnectionSources.Keys.Order(),
         };
 
-        foreach (var model in result.Models)
+        foreach (var model in result.Entries)
         {
             viewModel.Models.Add(new CatalogEntryViewModel<AIProviderConnection>
             {

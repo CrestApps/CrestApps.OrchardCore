@@ -17,7 +17,7 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
 
     public async ValueTask<IEnumerable<AIDeployment>> GetAllAsync(string providerName, string connectionName)
     {
-        var deployments = (await Store.GetAllAsync())
+        var deployments = (await Catalog.GetAllAsync())
             .Where(x => x.ProviderName == providerName &&
             (x.ConnectionName.Equals(connectionName, StringComparison.OrdinalIgnoreCase) || string.Equals(x.ConnectionNameAlias ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase)));
 
