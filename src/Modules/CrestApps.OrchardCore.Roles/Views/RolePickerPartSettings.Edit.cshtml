@@ -1,0 +1,37 @@
+@using CrestApps.OrchardCore.Roles.ViewModels
+
+@model RolePickerPartSettingsViewModel
+
+<div class="mb-3" asp-validation-class-for="ExcludedRoles">
+    <label asp-for="ExcludedRoles" class="form-label">@T["Exclude roles"]</label>
+    @await Component.InvokeAsync("SelectRoles",
+            new
+            {
+                selectedRoles = Model.ExcludedRoles,
+                htmlName = Html.NameFor(m => m.ExcludedRoles),
+            })
+    <span asp-validation-for="ExcludedRoles"></span>
+    <span class="hint">@T["Select the roles you want to exclude from the user's available options. Leave this blank to allow users to select any role."]</span>
+</div>
+
+<div class="mb-3" asp-validation-class-for="Required">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="Required" />
+        <label class="form-check-label" asp-for="Required">@T["Required?"]</label>
+        <span class="hint dashed">@T["Require the user to select a role."]</span>
+    </div>
+</div>
+
+<div class="mb-3" asp-validation-class-for="AllowSelectMultiple">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="AllowSelectMultiple" />
+        <label class="form-check-label" asp-for="AllowSelectMultiple">@T["Allow multiple?"]</label>
+        <span class="hint dashed">@T["Enable this option to allow users to select more than one role."]</span>
+    </div>
+</div>
+
+<div class="mb-3" asp-validation-class-for="Hint">
+    <input type="text" class="form-control" asp-for="Hint" />
+    <label class="form-check-label" asp-for="Hint">@T["Hint"]</label>
+    <span class="hint dashed">@T["Enter help text to display in the role picker."]</span>
+</div>

@@ -1,0 +1,8 @@
+@if (Model.Header is not null)
+{
+    <div class="container-fluid mb-3">
+        @await DisplayAsync(Model.Header)
+    </div>
+}
+
+@await DisplayAsync(Model.Content)

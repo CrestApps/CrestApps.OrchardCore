@@ -1,6 +1,6 @@
 using OrchardCore.Security.Permissions;
 
-namespace CrestApps.OrchardCore.Users;
+namespace CrestApps.OrchardCore.Users.Core;
 
 public class UserPermissions
 {

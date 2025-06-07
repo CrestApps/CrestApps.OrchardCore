@@ -1,0 +1,14 @@
+[
+  {
+    "inputs": [
+      "Assets/js/ai-chat.js"
+    ],
+    "output": "wwwroot/scripts/ai-chat.js"
+  },
+  {
+    "inputs": [
+      "./node_modules/marked/marked.min.js"
+    ],
+    "output": "wwwroot/scripts/marked.js"
+  }
+]

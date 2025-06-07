@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <Folder Include="wwwroot\" />
-    <Folder Include="Localization\" />
   </ItemGroup>
 
   <!-- Watcher include and excludes -->
@@ -28,6 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Targets\CrestApps.OrchardCore.Cms.Core.Targets\CrestApps.OrchardCore.Cms.Core.Targets.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Products\CrestApps.OrchardCore.Products.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Stripe\CrestApps.OrchardCore.Stripe.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Subscriptions\CrestApps.OrchardCore.Subscriptions.csproj" />

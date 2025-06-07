@@ -1,6 +1,6 @@
 using OrchardCore.ContentManagement;
 
-namespace CrestApps.OrchardCore.Users.Models;
+namespace CrestApps.OrchardCore.Users.Core.Models;
 
 public sealed class UserFullNamePart : ContentPart
 {

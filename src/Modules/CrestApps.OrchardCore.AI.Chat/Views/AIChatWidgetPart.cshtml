@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+
+@model DisplayAIChatWidgetViewModel
+
+<ul class="list-group">
+    @foreach (var session in Model.Sessions)
+    {
+        <li class="list-group-item list-group-item-action chat-session-history-item lh-base" data-session-id="@session.SessionId">@session.Title</li>
+    }
+</ul>

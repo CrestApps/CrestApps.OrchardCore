@@ -1,0 +1,52 @@
+@using CrestApps.Azure.Core.Models
+@using CrestApps.OrchardCore.OpenAI.Azure.ViewModels
+@using OrchardCore
+
+@model AzureOpenAIConnectionViewModel
+@{
+    var apiKeyWrapperId = Html.IdFor(m => m.ApiKey) + "_wrapper";
+}
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Endpoint" class="@Orchard.GetLabelClasses()">@T["Endpoint"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="url" asp-for="Endpoint" class="form-control" />
+        <span asp-validation-for="Endpoint" class="text-danger"></span>
+        <span class="hint">@T["The provider's API endpoint."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="AuthenticationType" class="@Orchard.GetLabelClasses()">@T["Authentication type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select type="url" asp-for="AuthenticationType" asp-items="Model.AuthenticationTypes" class="form-select"></select>
+        <span asp-validation-for="AuthenticationType" class="text-danger"></span>
+        <span class="hint">@T["The authentication type to use."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses(Model.AuthenticationType == AzureAuthenticationType.ApiKey ? string.Empty : "d-none")" id="@apiKeyWrapperId">
+    <label asp-for="ApiKey" class="@Orchard.GetLabelClasses()">@T["API key"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="ApiKey" class="form-control" autocomplete="new-password" placeholder="@(Model.HasApiKey ? T["A key is securely stored. Provider a new one to replace it or leave it blank."] : T["The API key"])" />
+        <span asp-validation-for="ApiKey" class="text-danger"></span>
+        <span class="hint">@T["The provider's API key."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+
+        const menuElement = document.getElementById('@Html.IdFor(m => m.AuthenticationType)');
+        const apiKeyWrapper = document.getElementById('@apiKeyWrapperId');
+
+        menuElement.addEventListener('change', (e) => {
+
+            if (e.target.value == '@nameof(AzureAuthenticationType.ApiKey)'){
+                apiKeyWrapper.classList.remove('d-none');
+            } else {
+                apiKeyWrapper.classList.add('d-none');
+            }
+        });
+    });
+</script>
