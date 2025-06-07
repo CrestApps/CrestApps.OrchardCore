@@ -52,7 +52,7 @@ public sealed class ConnectionManagementStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IModelHandler<AIProviderConnection>, AzureAIInferenceConnectionSettingsHandler>();
+        services.AddScoped<ICatalogEntryHandler<AIProviderConnection>, AzureAIInferenceConnectionSettingsHandler>();
         services.AddTransient<IAIProviderConnectionHandler, AzureAIInferenceConnectionHandler>();
         services.AddDisplayDriver<AIProviderConnection, AzureAIInferenceConnectionDisplayDriver>();
         services.AddAIConnectionSource(AzureAIInferenceConstants.ProviderName, o =>

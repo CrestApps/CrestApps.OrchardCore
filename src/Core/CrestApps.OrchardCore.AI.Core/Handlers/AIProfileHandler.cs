@@ -15,7 +15,7 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 public sealed class AIProfileHandler : ModelHandlerBase<AIProfile>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly INamedModelStore<AIProfile> _profileStore;
+    private readonly INamedCatalog<AIProfile> _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IClock _clock;
 
@@ -23,7 +23,7 @@ public sealed class AIProfileHandler : ModelHandlerBase<AIProfile>
 
     public AIProfileHandler(
         IHttpContextAccessor httpContextAccessor,
-        INamedModelStore<AIProfile> profileStore,
+        INamedCatalog<AIProfile> profileStore,
         ILiquidTemplateManager liquidTemplateManager,
         IClock clock,
         IStringLocalizer<AIProfileHandler> stringLocalizer)

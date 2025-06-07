@@ -38,7 +38,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<McpService>();
         services.AddNavigationProvider<McpAdminMenu>();
         services.AddPermissionProvider<McpPermissionsProvider>();
-        services.AddScoped<IModelHandler<McpConnection>, McpConnectionHandler>();
+        services.AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>();
         services.AddDisplayDriver<McpConnection, McpConnectionDisplayDriver>();
 
         // Register SSE transport type.

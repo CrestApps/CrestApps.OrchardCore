@@ -7,15 +7,15 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Core.Services;
 
-public class SourceModelManager<T> : ModelManager<T>, ISourceModelManager<T>
-    where T : Model, ISourceAwareModel, new()
+public class SourceCatalogManager<T> : CatalogManager<T>, ISourceCatalogManager<T>
+    where T : CatalogEntry, ISourceAwareModel, new()
 {
-    protected readonly ISourceModelStore<T> SourceModelStore;
+    protected readonly ISourceCatalog<T> SourceModelStore;
 
-    public SourceModelManager(
-        ISourceModelStore<T> store,
-        IEnumerable<IModelHandler<T>> handlers,
-        ILogger<ModelManager<T>> logger)
+    public SourceCatalogManager(
+        ISourceCatalog<T> store,
+        IEnumerable<ICatalogEntryHandler<T>> handlers,
+        ILogger<CatalogManager<T>> logger)
         : base(store, handlers, logger)
     {
         SourceModelStore = store;

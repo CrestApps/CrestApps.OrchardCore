@@ -14,9 +14,9 @@ internal sealed class AIPermissionsProvider : IPermissionProvider
         AIPermissions.QueryAnyAIProfile,
     ];
 
-    private readonly INamedModelStore<AIProfile> _profileStore;
+    private readonly INamedCatalog<AIProfile> _profileStore;
 
-    public AIPermissionsProvider(INamedModelStore<AIProfile> profileStore)
+    public AIPermissionsProvider(INamedCatalog<AIProfile> profileStore)
     {
         _profileStore = profileStore;
     }

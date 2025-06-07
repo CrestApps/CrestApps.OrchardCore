@@ -56,7 +56,7 @@ public sealed class DataSourcesController : Controller
 
     [Admin("ai/data-sources", "AIDataSourcesIndex")]
     public async Task<IActionResult> Index(
-        ModelOptions options,
+        CatalogEntryOptions options,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
@@ -94,7 +94,7 @@ public sealed class DataSourcesController : Controller
 
         foreach (var record in result.Models)
         {
-            viewModel.Models.Add(new ModelEntry<AIDataSource>
+            viewModel.Models.Add(new CatalogEntryViewModel<AIDataSource>
             {
                 Model = record,
                 Shape = await _displayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
@@ -103,7 +103,7 @@ public sealed class DataSourcesController : Controller
 
         viewModel.Options.BulkActions =
         [
-            new SelectListItem(S["Delete"], nameof(ModelAction.Remove)),
+            new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
         ];
 
         return View(viewModel);
@@ -113,7 +113,7 @@ public sealed class DataSourcesController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/data-sources", "AIDataSourcesIndex")]
-    public ActionResult IndexFilterPost(ListModelViewModel model)
+    public ActionResult IndexFilterPost(ListCatalogEntryViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -145,7 +145,7 @@ public sealed class DataSourcesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var model = new ModelViewModel
+        var model = new EditCatalogEntryViewModel
         {
             DisplayName = service.DisplayName,
             Editor = await _displayManager.BuildEditorAsync(dataSource, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -180,7 +180,7 @@ public sealed class DataSourcesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var model = new ModelViewModel
+        var model = new EditCatalogEntryViewModel
         {
             DisplayName = service.DisplayName,
             Editor = await _displayManager.UpdateEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -213,7 +213,7 @@ public sealed class DataSourcesController : Controller
             return NotFound();
         }
 
-        var model = new ModelViewModel
+        var model = new EditCatalogEntryViewModel
         {
             DisplayName = deployment.DisplayText,
             Editor = await _displayManager.BuildEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -242,7 +242,7 @@ public sealed class DataSourcesController : Controller
         // Clone the deployment to prevent modifying the original instance in the store.
         var mutableProfile = deployment.Clone();
 
-        var model = new ModelViewModel
+        var model = new EditCatalogEntryViewModel
         {
             DisplayName = mutableProfile.DisplayText,
             Editor = await _displayManager.UpdateEditorAsync(mutableProfile, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -287,7 +287,7 @@ public sealed class DataSourcesController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
     [Admin("ai/data-sources", "AIDataSourcesIndex")]
-    public async Task<ActionResult> IndexPost(ModelOptions options, IEnumerable<string> itemIds)
+    public async Task<ActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
         {
@@ -298,9 +298,9 @@ public sealed class DataSourcesController : Controller
         {
             switch (options.BulkAction)
             {
-                case ModelAction.None:
+                case CatalogEntryAction.None:
                     break;
-                case ModelAction.Remove:
+                case CatalogEntryAction.Remove:
                     var counter = 0;
                     foreach (var id in itemIds)
                     {

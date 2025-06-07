@@ -4,23 +4,23 @@ using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Core.Services;
 
-public class NamedModelManager<T> : ModelManager<T>, INamedModelManager<T>
-    where T : Model, INameAwareModel, new()
+public class NamedCatalogManager<T> : CatalogManager<T>, INamedCatalogManager<T>
+    where T : CatalogEntry, INameAwareModel, new()
 {
-    protected readonly INamedModelStore<T> NamedModelStore;
+    protected readonly INamedCatalog<T> NamedModelStore;
 
-    public NamedModelManager(
-        INamedModelStore<T> store,
-        IEnumerable<IModelHandler<T>> handlers,
-        ILogger<ModelManager<T>> logger)
+    public NamedCatalogManager(
+        INamedCatalog<T> store,
+        IEnumerable<ICatalogEntryHandler<T>> handlers,
+        ILogger<CatalogManager<T>> logger)
         : base(store, handlers, logger)
     {
         NamedModelStore = store;
     }
 
-    protected NamedModelManager(
-        INamedModelStore<T> store,
-        IEnumerable<IModelHandler<T>> handlers,
+    protected NamedCatalogManager(
+        INamedCatalog<T> store,
+        IEnumerable<ICatalogEntryHandler<T>> handlers,
         ILogger logger)
     : base(store, handlers, logger)
     {

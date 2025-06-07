@@ -10,12 +10,12 @@ namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
 internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBase<AIProviderConnectionDeploymentStep>
 {
-    private readonly INamedModelStore<AIProviderConnection> _store;
+    private readonly INamedCatalog<AIProviderConnection> _store;
     private readonly IEnumerable<IAIProviderConnectionHandler> _handlers;
     private readonly ILogger _logger;
 
     public AIProviderConnectionDeploymentSource(
-        INamedModelStore<AIProviderConnection> store,
+        INamedCatalog<AIProviderConnection> store,
         IEnumerable<IAIProviderConnectionHandler> handlers,
         ILogger<AIProviderConnectionDeploymentSource> logger)
     {

@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.Core.Models;
 
-public class ModelEntry<T>
+public class CatalogEntryViewModel<T>
 {
     public T Model { get; set; }
 

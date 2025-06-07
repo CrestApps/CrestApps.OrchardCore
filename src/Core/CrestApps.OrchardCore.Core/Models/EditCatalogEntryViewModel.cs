@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.Core.Models;
 
-public class ModelViewModel
+public class EditCatalogEntryViewModel
 {
     public string DisplayName { get; set; }
 

@@ -12,12 +12,12 @@ namespace CrestApps.OrchardCore.AI.Deployments.Drivers;
 
 internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, AIProviderConnectionDeploymentStep>
 {
-    private readonly INamedModelStore<AIProviderConnection> _store;
+    private readonly INamedCatalog<AIProviderConnection> _store;
 
     internal readonly IStringLocalizer S;
 
     public AIProviderConnectionDeploymentStepDisplayDriver(
-        INamedModelStore<AIProviderConnection> store,
+        INamedCatalog<AIProviderConnection> store,
         IStringLocalizer<AIProviderConnectionDeploymentStepDisplayDriver> stringLocalizer)
     {
         _store = store;

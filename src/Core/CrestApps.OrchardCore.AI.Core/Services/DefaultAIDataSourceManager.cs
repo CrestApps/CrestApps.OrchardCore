@@ -11,12 +11,12 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIDataSourceManager : IAIDataSourceManager
 {
     private readonly IAIDataSourceStore _store;
-    private readonly IEnumerable<IModelHandler<AIDataSource>> _handlers;
+    private readonly IEnumerable<ICatalogEntryHandler<AIDataSource>> _handlers;
     private readonly ILogger _logger;
 
     public DefaultAIDataSourceManager(
         IAIDataSourceStore store,
-        IEnumerable<IModelHandler<AIDataSource>> handlers,
+        IEnumerable<ICatalogEntryHandler<AIDataSource>> handlers,
         ILogger<DefaultAIDataSourceManager> logger)
     {
         _store = store;

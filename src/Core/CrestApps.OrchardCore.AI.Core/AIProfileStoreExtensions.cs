@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.AI.Core;
 
 public static class AIProfileStoreExtensions
 {
-    public static async ValueTask<IEnumerable<AIProfile>> GetProfilesAsync(this INamedModelStore<AIProfile> store, AIProfileType type)
+    public static async ValueTask<IEnumerable<AIProfile>> GetProfilesAsync(this INamedCatalog<AIProfile> store, AIProfileType type)
     {
         var profiles = await store.GetAllAsync();
 

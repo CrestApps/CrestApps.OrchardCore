@@ -18,7 +18,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AIProfilePart>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly INamedModelStore<AIProfile> _profileStore;
+    private readonly INamedCatalog<AIProfile> _profileStore;
     private readonly IAIChatSessionManager _chatSessionManager;
     private readonly PagerOptions _pagerOptions;
 
@@ -26,7 +26,7 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
 
     public AIChatProfilePartDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
-        INamedModelStore<AIProfile> profileStore,
+        INamedCatalog<AIProfile> profileStore,
         IAIChatSessionManager chatSessionManager,
         IOptions<PagerOptions> pagerOptions,
         IStringLocalizer<AIChatProfilePartDisplayDriver> stringLocalizer)

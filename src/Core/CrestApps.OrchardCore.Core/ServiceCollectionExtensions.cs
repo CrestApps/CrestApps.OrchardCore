@@ -10,10 +10,10 @@ public static class ServiceCollectionExtensions
     {
         services
             .AddCoreModelStores()
-            .AddScoped(typeof(IModelManager<>), typeof(ModelManager<>))
-            .AddScoped(typeof(INamedModelManager<>), typeof(NamedModelManager<>))
-            .AddScoped(typeof(ISourceModelManager<>), typeof(SourceModelManager<>))
-            .AddScoped(typeof(INamedSourceModelManager<>), typeof(NamedSourceModelManager<>));
+            .AddScoped(typeof(ICatalogManager<>), typeof(CatalogManager<>))
+            .AddScoped(typeof(INamedCatalogManager<>), typeof(NamedCatalogManager<>))
+            .AddScoped(typeof(ISourceCatalogManager<>), typeof(SourceCatalogManager<>))
+            .AddScoped(typeof(INamedSourceCatalogManager<>), typeof(NamedSourceCatalogManager<>));
 
         return services;
     }
@@ -21,10 +21,10 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddCoreModelStores(this IServiceCollection services)
     {
         services
-            .AddScoped(typeof(IModelStore<>), typeof(ModelStore<>))
-            .AddScoped(typeof(INamedModelStore<>), typeof(NamedModelStore<>))
-            .AddScoped(typeof(ISourceModelStore<>), typeof(SourceModelStore<>))
-            .AddScoped(typeof(INamedSourceModelStore<>), typeof(NamedSourceModelStore<>));
+            .AddScoped(typeof(ICatalog<>), typeof(Catalog<>))
+            .AddScoped(typeof(INamedCatalog<>), typeof(NamedCatalog<>))
+            .AddScoped(typeof(ISourceCatalog<>), typeof(SourceCatalog<>))
+            .AddScoped(typeof(INamedSourceCatalog<>), typeof(NamedSourceCatalog<>));
 
         return services;
     }

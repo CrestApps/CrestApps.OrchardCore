@@ -10,12 +10,12 @@ public sealed class DefaultAIToolsService : IAIToolsService
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly IServiceProvider _serviceProvider;
-    private readonly IModelStore<AIToolInstance> _toolInstanceStore;
+    private readonly ICatalog<AIToolInstance> _toolInstanceStore;
 
     public DefaultAIToolsService(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IServiceProvider serviceProvider,
-        IModelStore<AIToolInstance> aIToolInstanceStore)
+        ICatalog<AIToolInstance> aIToolInstanceStore)
     {
         _toolDefinitions = toolDefinitions.Value;
         _serviceProvider = serviceProvider;

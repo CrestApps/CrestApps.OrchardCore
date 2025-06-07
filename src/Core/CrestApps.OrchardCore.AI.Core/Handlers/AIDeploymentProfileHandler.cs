@@ -10,12 +10,12 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
 public sealed class AIDeploymentProfileHandler : ModelHandlerBase<AIProfile>
 {
-    private readonly INamedModelStore<AIDeployment> _deploymentStore;
+    private readonly INamedCatalog<AIDeployment> _deploymentStore;
 
     internal readonly IStringLocalizer S;
 
     public AIDeploymentProfileHandler(
-        INamedModelStore<AIDeployment> deploymentStore,
+        INamedCatalog<AIDeployment> deploymentStore,
         IStringLocalizer<AIProfileHandler> stringLocalizer)
     {
         _deploymentStore = deploymentStore;

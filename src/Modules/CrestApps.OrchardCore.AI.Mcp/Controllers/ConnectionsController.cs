@@ -24,7 +24,7 @@ public sealed class ConnectionsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly ISourceModelManager<McpConnection> _manager;
+    private readonly ISourceCatalogManager<McpConnection> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<McpConnection> _displayDriver;
@@ -35,7 +35,7 @@ public sealed class ConnectionsController : Controller
     internal readonly IStringLocalizer S;
 
     public ConnectionsController(
-        ISourceModelManager<McpConnection> manager,
+        ISourceCatalogManager<McpConnection> manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<McpConnection> instanceDisplayManager,
@@ -56,7 +56,7 @@ public sealed class ConnectionsController : Controller
 
     [Admin("ai/mcp/connections", "AIMCPConnectionsIndex")]
     public async Task<IActionResult> Index(
-        ModelOptions options,
+        CatalogEntryOptions options,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
@@ -82,7 +82,7 @@ public sealed class ConnectionsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceModelEntryViewModel<McpConnection>
+        var viewModel = new ListSourceCatalogEntryViewModel<McpConnection>
         {
             Models = [],
             Options = options,
@@ -92,7 +92,7 @@ public sealed class ConnectionsController : Controller
 
         foreach (var model in result.Models)
         {
-            viewModel.Models.Add(new ModelEntry<McpConnection>
+            viewModel.Models.Add(new CatalogEntryViewModel<McpConnection>
             {
                 Model = model,
                 Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
@@ -101,7 +101,7 @@ public sealed class ConnectionsController : Controller
 
         viewModel.Options.BulkActions =
         [
-            new SelectListItem(S["Delete"], nameof(ModelAction.Remove)),
+            new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
         ];
 
         return View(viewModel);
@@ -111,7 +111,7 @@ public sealed class ConnectionsController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/mcp/connections", "AIMcpConnectionsIndex")]
-    public ActionResult IndexFilterPost(ListModelViewModel model)
+    public ActionResult IndexFilterPost(ListCatalogEntryViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -136,7 +136,7 @@ public sealed class ConnectionsController : Controller
 
         var model = await _manager.NewAsync(entry.Type);
 
-        var viewModel = new ModelViewModel
+        var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = entry.DisplayName,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -164,7 +164,7 @@ public sealed class ConnectionsController : Controller
 
         var model = await _manager.NewAsync(entry.Type);
 
-        var viewModel = new ModelViewModel
+        var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = model.DisplayText,
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -196,7 +196,7 @@ public sealed class ConnectionsController : Controller
             return NotFound();
         }
 
-        var viewModel = new ModelViewModel
+        var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = model.DisplayText,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -225,7 +225,7 @@ public sealed class ConnectionsController : Controller
         // Clone the instance to prevent modifying the original instance in the store.
         var mutableInstance = model.Clone();
 
-        var viewModel = new ModelViewModel
+        var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = mutableInstance.DisplayText,
             Editor = await _displayDriver.UpdateEditorAsync(mutableInstance, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -276,7 +276,7 @@ public sealed class ConnectionsController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
     [Admin("ai/mcp/connections", "AIMCPConnectionsIndex")]
-    public async Task<ActionResult> IndexPost(ModelOptions options, IEnumerable<string> itemIds)
+    public async Task<ActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIToolInstances))
         {
@@ -287,9 +287,9 @@ public sealed class ConnectionsController : Controller
         {
             switch (options.BulkAction)
             {
-                case ModelAction.None:
+                case CatalogEntryAction.None:
                     break;
-                case ModelAction.Remove:
+                case CatalogEntryAction.Remove:
                     var counter = 0;
                     foreach (var id in itemIds)
                     {

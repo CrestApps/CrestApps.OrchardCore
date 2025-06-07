@@ -11,13 +11,13 @@ namespace CrestApps.OrchardCore.AI.Chat.Services;
 
 public sealed class ChatAdminMenu : AdminNavigationProvider
 {
-    private readonly INamedModelStore<AIProfile> _profileStore;
+    private readonly INamedCatalog<AIProfile> _profileStore;
     private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
     public ChatAdminMenu(
-        INamedModelStore<AIProfile> profileStore,
+        INamedCatalog<AIProfile> profileStore,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<ChatAdminMenu> stringLocalizer)
     {

@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public sealed class AIProfile : SourceModel, INameAwareModel, IDisplayTextAwareModel
+public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTextAwareModel
 {
     /// <summary>
     /// Gets or sets the technical name of the profile.

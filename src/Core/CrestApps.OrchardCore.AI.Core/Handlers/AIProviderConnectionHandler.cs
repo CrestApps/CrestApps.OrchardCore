@@ -16,7 +16,7 @@ public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderCon
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AIOptions _aiOptions;
-    private readonly INamedModelStore<AIProviderConnection> _store;
+    private readonly INamedCatalog<AIProviderConnection> _store;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -24,7 +24,7 @@ public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderCon
     public AIProviderConnectionHandler(
         IHttpContextAccessor httpContextAccessor,
         IOptions<AIOptions> aiOptions,
-        INamedModelStore<AIProviderConnection> store,
+        INamedCatalog<AIProviderConnection> store,
         IClock clock,
         IStringLocalizer<AIProviderConnectionHandler> stringLocalizer)
     {

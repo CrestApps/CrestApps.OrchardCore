@@ -5,11 +5,11 @@ using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class DefaultAIDeploymentManager : NamedSourceModelManager<AIDeployment>, IAIDeploymentManager
+public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment>, IAIDeploymentManager
 {
     public DefaultAIDeploymentManager(
-        INamedSourceModelStore<AIDeployment> deploymentStore,
-        IEnumerable<IModelHandler<AIDeployment>> handlers,
+        INamedSourceCatalog<AIDeployment> deploymentStore,
+        IEnumerable<ICatalogEntryHandler<AIDeployment>> handlers,
         ILogger<DefaultAIDeploymentManager> logger)
         : base(deploymentStore, handlers, logger)
     {

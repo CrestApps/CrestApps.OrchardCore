@@ -32,7 +32,7 @@ internal sealed class DataSourceMigrations : DataMigration
 
         ShellScope.AddDeferredTask(async scope =>
         {
-            var profileManager = scope.ServiceProvider.GetRequiredService<INamedModelManager<AIProfile>>();
+            var profileManager = scope.ServiceProvider.GetRequiredService<INamedCatalogManager<AIProfile>>();
             var dataSourceManager = scope.ServiceProvider.GetRequiredService<IAIDataSourceManager>();
 
             var profiles = await profileManager.GetAllAsync();
@@ -79,7 +79,7 @@ internal sealed class DataSourceMigrations : DataMigration
 
         ShellScope.AddDeferredTask(async scope =>
         {
-            var profileManager = scope.ServiceProvider.GetRequiredService<INamedModelManager<AIProfile>>();
+            var profileManager = scope.ServiceProvider.GetRequiredService<INamedCatalogManager<AIProfile>>();
             var dataSourceManager = scope.ServiceProvider.GetRequiredService<IAIDataSourceManager>();
 
             var profiles = await profileManager.GetAllAsync();

@@ -7,26 +7,26 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Core.Services;
 
-public class ModelManager<T> : IModelManager<T>
-    where T : Model, new()
+public class CatalogManager<T> : ICatalogManager<T>
+    where T : CatalogEntry, new()
 {
-    protected readonly IModelStore<T> Store;
+    protected readonly ICatalog<T> Store;
     protected readonly ILogger Logger;
-    protected readonly IEnumerable<IModelHandler<T>> Handlers;
+    protected readonly IEnumerable<ICatalogEntryHandler<T>> Handlers;
 
-    public ModelManager(
-        IModelStore<T> store,
-        IEnumerable<IModelHandler<T>> handlers,
-        ILogger<ModelManager<T>> logger)
+    public CatalogManager(
+        ICatalog<T> store,
+        IEnumerable<ICatalogEntryHandler<T>> handlers,
+        ILogger<CatalogManager<T>> logger)
     {
         Store = store;
         Handlers = handlers;
         Logger = logger;
     }
 
-    protected ModelManager(
-        IModelStore<T> store,
-        IEnumerable<IModelHandler<T>> handlers,
+    protected CatalogManager(
+        ICatalog<T> store,
+        IEnumerable<ICatalogEntryHandler<T>> handlers,
         ILogger logger)
     {
         Store = store;

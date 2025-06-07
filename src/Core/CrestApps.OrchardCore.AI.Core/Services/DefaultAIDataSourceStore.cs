@@ -7,9 +7,9 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 
 public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
 {
-    private readonly IDocumentManager<ModelDocument<AIDataSource>> _documentManager;
+    private readonly IDocumentManager<DictionaryDocument<AIDataSource>> _documentManager;
 
-    public DefaultAIDataSourceStore(IDocumentManager<ModelDocument<AIDataSource>> documentManager)
+    public DefaultAIDataSourceStore(IDocumentManager<DictionaryDocument<AIDataSource>> documentManager)
     {
         _documentManager = documentManager;
     }

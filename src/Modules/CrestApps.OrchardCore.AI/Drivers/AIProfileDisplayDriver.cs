@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 {
-    private readonly INamedModelStore<AIProfile> _profileStore;
+    private readonly INamedCatalog<AIProfile> _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly AIOptions _aiOptions;
     private readonly DefaultAIOptions _defaultAIOptions;
@@ -25,7 +25,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     internal readonly IStringLocalizer S;
 
     public AIProfileDisplayDriver(
-        INamedModelStore<AIProfile> profileStore,
+        INamedCatalog<AIProfile> profileStore,
         ILiquidTemplateManager liquidTemplateManager,
         IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> connectionOptions,

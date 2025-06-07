@@ -14,13 +14,13 @@ namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
 public sealed class AICompletionTaskDisplayDriver : ActivityDisplayDriver<AICompletionTask, AICompletionTaskViewModel>
 {
-    private readonly INamedModelStore<AIProfile> _profileStore;
+    private readonly INamedCatalog<AIProfile> _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
 
     internal readonly IStringLocalizer S;
 
     public AICompletionTaskDisplayDriver(
-        INamedModelStore<AIProfile> profileStore,
+        INamedCatalog<AIProfile> profileStore,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<AICompletionTaskDisplayDriver> stringLocalizer)
     {

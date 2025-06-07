@@ -1,8 +1,8 @@
-﻿using OrchardCore.Entities;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Models;
 
-public class Model : Entity
+public class CatalogEntry : Entity
 {
     /// <summary>
     /// Gets or sets the unique identifier for the profile.

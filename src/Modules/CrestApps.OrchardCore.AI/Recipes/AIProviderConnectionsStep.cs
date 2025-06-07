@@ -13,13 +13,13 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 {
     public const string StepKey = "AIProviderConnections";
 
-    private readonly INamedSourceModelManager<AIProviderConnection> _manager;
+    private readonly INamedSourceCatalogManager<AIProviderConnection> _manager;
     private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIProviderConnectionsStep(
-        INamedSourceModelManager<AIProviderConnection> manager,
+        INamedSourceCatalogManager<AIProviderConnection> manager,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIProfileStep> stringLocalizer)
         : base(StepKey)

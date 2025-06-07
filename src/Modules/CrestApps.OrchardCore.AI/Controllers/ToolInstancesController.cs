@@ -26,7 +26,7 @@ public sealed class ToolInstancesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly ISourceModelManager<AIToolInstance> _manager;
+    private readonly ISourceCatalogManager<AIToolInstance> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIToolInstance> _instanceDisplayDriver;
@@ -37,7 +37,7 @@ public sealed class ToolInstancesController : Controller
     internal readonly IStringLocalizer S;
 
     public ToolInstancesController(
-        ISourceModelManager<AIToolInstance> manager,
+        ISourceCatalogManager<AIToolInstance> manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIToolInstance> instanceDisplayManager,
@@ -58,7 +58,7 @@ public sealed class ToolInstancesController : Controller
 
     [Admin("ai/tool/instances", "AIToolInstancesIndex")]
     public async Task<IActionResult> Index(
-        ModelOptions options,
+        CatalogEntryOptions options,
         PagerParameters pagerParameters,
         [FromServices] IEnumerable<IAIToolSource> toolSources,
         [FromServices] IOptions<PagerOptions> pagerOptions,
@@ -84,7 +84,7 @@ public sealed class ToolInstancesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceModelEntryViewModel<AIToolInstance>
+        var viewModel = new ListSourceCatalogEntryViewModel<AIToolInstance>
         {
             Models = [],
             Options = options,
@@ -94,7 +94,7 @@ public sealed class ToolInstancesController : Controller
 
         foreach (var model in result.Models)
         {
-            viewModel.Models.Add(new ModelEntry<AIToolInstance>
+            viewModel.Models.Add(new CatalogEntryViewModel<AIToolInstance>
             {
                 Model = model,
                 Shape = await _instanceDisplayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
@@ -103,7 +103,7 @@ public sealed class ToolInstancesController : Controller
 
         viewModel.Options.BulkActions =
         [
-            new SelectListItem(S["Delete"], nameof(ModelAction.Remove)),
+            new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
         ];
 
         return View(viewModel);
@@ -113,7 +113,7 @@ public sealed class ToolInstancesController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/tool/instances", "AIToolInstancesIndex")]
-    public ActionResult IndexFilterPost(ListModelViewModel model)
+    public ActionResult IndexFilterPost(ListCatalogEntryViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -140,7 +140,7 @@ public sealed class ToolInstancesController : Controller
 
         var model = await _manager.NewAsync(source);
 
-        var viewModel = new ModelViewModel
+        var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = toolSource.Name,
             Editor = await _instanceDisplayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -170,7 +170,7 @@ public sealed class ToolInstancesController : Controller
 
         var model = await _manager.NewAsync(source);
 
-        var viewModel = new ModelViewModel
+        var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = model.DisplayText,
             Editor = await _instanceDisplayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -203,7 +203,7 @@ public sealed class ToolInstancesController : Controller
             return NotFound();
         }
 
-        var viewModel = new ModelViewModel
+        var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = instance.DisplayText,
             Editor = await _instanceDisplayDriver.BuildEditorAsync(instance, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -232,7 +232,7 @@ public sealed class ToolInstancesController : Controller
         // Clone the instance to prevent modifying the original instance in the store.
         var mutableModel = model.Clone();
 
-        var viewModel = new ModelViewModel
+        var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = mutableModel.DisplayText,
             Editor = await _instanceDisplayDriver.UpdateEditorAsync(mutableModel, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -283,7 +283,7 @@ public sealed class ToolInstancesController : Controller
     [FormValueRequired("submit.BulkAction")]
     [Admin("ai/tool/instances", "AIToolInstancesIndex")]
 
-    public async Task<ActionResult> IndexPost(ModelOptions options, IEnumerable<string> itemIds)
+    public async Task<ActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIToolInstances))
         {
@@ -294,9 +294,9 @@ public sealed class ToolInstancesController : Controller
         {
             switch (options.BulkAction)
             {
-                case ModelAction.None:
+                case CatalogEntryAction.None:
                     break;
-                case ModelAction.Remove:
+                case CatalogEntryAction.Remove:
                     var counter = 0;
                     foreach (var id in itemIds)
                     {

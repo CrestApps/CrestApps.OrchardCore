@@ -8,9 +8,9 @@ namespace CrestApps.OrchardCore.AI.Mcp.Deployments.Sources;
 
 internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpConnectionDeploymentStep>
 {
-    private readonly ISourceModelStore<McpConnection> _store;
+    private readonly ISourceCatalog<McpConnection> _store;
 
-    public McpConnectionDeploymentSource(ISourceModelStore<McpConnection> store)
+    public McpConnectionDeploymentSource(ISourceCatalog<McpConnection> store)
     {
         _store = store;
     }

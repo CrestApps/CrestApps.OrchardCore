@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.Core.Models;
 
-public class ModelOptions<TOptions>
+public class CatalogEntryOptions<TOptions>
 {
     public string Search { get; set; }
 
@@ -13,4 +13,4 @@ public class ModelOptions<TOptions>
     public List<SelectListItem> BulkActions { get; set; }
 }
 
-public class ModelOptions : ModelOptions<ModelAction>;
+public class CatalogEntryOptions : CatalogEntryOptions<CatalogEntryAction>;

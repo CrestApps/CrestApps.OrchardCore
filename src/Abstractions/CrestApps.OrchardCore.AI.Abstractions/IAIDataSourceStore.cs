@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI;
 
-public interface IAIDataSourceStore : IReadModelStore<AIDataSource>
+public interface IAIDataSourceStore : IReadCatalog<AIDataSource>
 {
     /// <summary>
     /// Asynchronously deletes the specified model from the store.

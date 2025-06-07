@@ -12,13 +12,13 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
 {
     public const string StepKey = "McpConnection";
 
-    private readonly ISourceModelManager<McpConnection> _manager;
+    private readonly ISourceCatalogManager<McpConnection> _manager;
     private readonly McpClientAIOptions _mcpClientOptions;
 
     internal readonly IStringLocalizer S;
 
     public McpConnectionStep(
-        ISourceModelManager<McpConnection> manager,
+        ISourceCatalogManager<McpConnection> manager,
         IOptions<McpClientAIOptions> mcpClientOptions,
         IStringLocalizer<McpConnectionStep> stringLocalizer)
          : base(StepKey)

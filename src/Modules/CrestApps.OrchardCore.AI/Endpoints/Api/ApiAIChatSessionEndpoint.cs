@@ -23,7 +23,7 @@ internal static class ApiAIChatSessionEndpoint
 
     private static async Task<IResult> HandleAsync(
        IAuthorizationService authorizationService,
-       INamedModelManager<AIProfile> profileManager,
+       INamedCatalogManager<AIProfile> profileManager,
        IAIChatSessionManager sessionManager,
        ILiquidTemplateManager liquidTemplateManager,
        IHttpContextAccessor httpContextAccessor,

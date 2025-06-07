@@ -18,7 +18,7 @@ public sealed class AzureOpenAICompletionClient : DeploymentAwareAICompletionCli
         IOptions<AIProviderOptions> providerOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
         IOptions<DefaultAIOptions> defaultOptions,
-        INamedModelStore<AIDeployment> deploymentStore
+        INamedCatalog<AIDeployment> deploymentStore
         ) : base(
             AzureOpenAIConstants.StandardImplementationName,
             aIClientFactory,

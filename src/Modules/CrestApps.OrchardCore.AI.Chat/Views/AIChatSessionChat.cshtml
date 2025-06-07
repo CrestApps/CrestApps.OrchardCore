@@ -16,7 +16,7 @@
 
 @inject IUpdateModelAccessor UpdateModelAccessor
 @inject IDisplayManager<AIChatSessionPrompt> DisplayManager
-@inject INamedModelStore<AIProfile> ProfileStore
+@inject INamedCatalog<AIProfile> ProfileStore
 @inject HubRouteManager HubRouteManager
 @{
     var baseId = Html.IdForModel();

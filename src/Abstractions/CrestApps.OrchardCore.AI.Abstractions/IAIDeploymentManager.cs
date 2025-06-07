@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI;
 
-public interface IAIDeploymentManager : INamedSourceModelManager<AIDeployment>
+public interface IAIDeploymentManager : INamedSourceCatalogManager<AIDeployment>
 {
     /// <summary>
     /// Asynchronously retrieves a list of model deployments for the specified provider and connection name.

@@ -9,13 +9,13 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 
 public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOptions<AIProviderOptions>
 {
-    private readonly IDocumentManager<ModelDocument<AIProviderConnection>> _documentManager;
+    private readonly IDocumentManager<DictionaryDocument<AIProviderConnection>> _documentManager;
     private readonly IEnumerable<IAIProviderConnectionHandler> _handlers;
 
     private readonly ILogger _logger;
 
     public AIProviderConnectionsOptionsConfiguration(
-        IDocumentManager<ModelDocument<AIProviderConnection>> documentManager,
+        IDocumentManager<DictionaryDocument<AIProviderConnection>> documentManager,
         IEnumerable<IAIProviderConnectionHandler> handlers,
         ILogger<AIProviderConnectionsOptionsConfiguration> logger)
     {

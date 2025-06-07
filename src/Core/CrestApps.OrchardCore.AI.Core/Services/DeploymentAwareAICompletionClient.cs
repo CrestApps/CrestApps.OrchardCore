@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 
 public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClient
 {
-    private readonly IModelStore<AIDeployment> _store;
+    private readonly ICatalog<AIDeployment> _store;
 
     public DeploymentAwareAICompletionClient(
         string name,
@@ -18,7 +18,7 @@ public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClien
         AIProviderOptions providerOptions,
         DefaultAIOptions defaultOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
-        IModelStore<AIDeployment> deploymentStore)
+        ICatalog<AIDeployment> deploymentStore)
         : base(
             name,
             aIClientFactory,

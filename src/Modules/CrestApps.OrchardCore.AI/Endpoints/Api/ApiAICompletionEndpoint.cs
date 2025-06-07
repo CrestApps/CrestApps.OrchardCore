@@ -31,7 +31,7 @@ internal static class ApiAICompletionEndpoint
 
     private static async Task<IResult> HandleAsync<T>(
        IAuthorizationService authorizationService,
-       INamedModelManager<AIProfile> chatProfileManager,
+       INamedCatalogManager<AIProfile> chatProfileManager,
        IAIChatSessionManager sessionManager,
        ILiquidTemplateManager liquidTemplateManager,
        IHttpContextAccessor httpContextAccessor,

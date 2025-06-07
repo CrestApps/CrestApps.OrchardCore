@@ -5,11 +5,11 @@ using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class DefaultAIProfileManager : NamedModelManager<AIProfile>, IAIProfileManager
+public sealed class DefaultAIProfileManager : NamedCatalogManager<AIProfile>, IAIProfileManager
 {
     public DefaultAIProfileManager(
-        INamedModelStore<AIProfile> profileStore,
-        IEnumerable<IModelHandler<AIProfile>> handlers,
+        INamedCatalog<AIProfile> profileStore,
+        IEnumerable<ICatalogEntryHandler<AIProfile>> handlers,
         ILogger<DefaultAIProfileManager> logger)
         : base(profileStore, handlers, logger)
     {

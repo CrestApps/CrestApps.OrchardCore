@@ -26,7 +26,7 @@ public sealed class ProviderConnectionsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly INamedSourceModelManager<AIProviderConnection> _manager;
+    private readonly INamedSourceCatalogManager<AIProviderConnection> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IShellReleaseManager _shellReleaseManager;
@@ -38,7 +38,7 @@ public sealed class ProviderConnectionsController : Controller
     internal readonly IStringLocalizer S;
 
     public ProviderConnectionsController(
-        INamedSourceModelManager<AIProviderConnection> manager,
+        INamedSourceCatalogManager<AIProviderConnection> manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IShellReleaseManager shellReleaseManager,
@@ -61,7 +61,7 @@ public sealed class ProviderConnectionsController : Controller
 
     [Admin("ai/provider/connections", "AIProviderConnectionsIndex")]
     public async Task<IActionResult> Index(
-        ModelOptions options,
+        CatalogEntryOptions options,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
@@ -87,7 +87,7 @@ public sealed class ProviderConnectionsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceModelEntryViewModel<AIProviderConnection>
+        var viewModel = new ListSourceCatalogEntryViewModel<AIProviderConnection>
         {
             Models = [],
             Options = options,
@@ -97,7 +97,7 @@ public sealed class ProviderConnectionsController : Controller
 
         foreach (var model in result.Models)
         {
-            viewModel.Models.Add(new ModelEntry<AIProviderConnection>
+            viewModel.Models.Add(new CatalogEntryViewModel<AIProviderConnection>
             {
                 Model = model,
                 Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
@@ -106,7 +106,7 @@ public sealed class ProviderConnectionsController : Controller
 
         viewModel.Options.BulkActions =
         [
-            new SelectListItem(S["Delete"], nameof(ModelAction.Remove)),
+            new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
         ];
 
         return View(viewModel);
@@ -116,7 +116,7 @@ public sealed class ProviderConnectionsController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/provider/connections", "AIProviderConnectionsIndex")]
-    public ActionResult IndexFilterPost(ListModelViewModel model)
+    public ActionResult IndexFilterPost(ListCatalogEntryViewModel model)
     {
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
@@ -141,7 +141,7 @@ public sealed class ProviderConnectionsController : Controller
 
         var model = await _manager.NewAsync(providerName);
 
-        var viewModel = new ModelViewModel
+        var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = connectionSource.DisplayName,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -169,7 +169,7 @@ public sealed class ProviderConnectionsController : Controller
 
         var model = await _manager.NewAsync(providerName);
 
-        var viewModel = new ModelViewModel
+        var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = model.DisplayText,
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
@@ -203,7 +203,7 @@ public sealed class ProviderConnectionsController : Controller
             return NotFound();
         }
 
-        var viewModel = new ModelViewModel
+        var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = model.DisplayText,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -232,7 +232,7 @@ public sealed class ProviderConnectionsController : Controller
         // Clone the instance to prevent modifying the original instance in the store.
         var mutableInstance = model.Clone();
 
-        var viewModel = new ModelViewModel
+        var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = mutableInstance.DisplayText,
             Editor = await _displayDriver.UpdateEditorAsync(mutableInstance, _updateModelAccessor.ModelUpdater, isNew: false),
@@ -287,7 +287,7 @@ public sealed class ProviderConnectionsController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
     [Admin("ai/provider/connections", "AIProviderConnectionsIndex")]
-    public async Task<ActionResult> IndexPost(ModelOptions options, IEnumerable<string> itemIds)
+    public async Task<ActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIToolInstances))
         {
@@ -298,9 +298,9 @@ public sealed class ProviderConnectionsController : Controller
         {
             switch (options.BulkAction)
             {
-                case ModelAction.None:
+                case CatalogEntryAction.None:
                     break;
-                case ModelAction.Remove:
+                case CatalogEntryAction.Remove:
                     var counter = 0;
                     foreach (var id in itemIds)
                     {

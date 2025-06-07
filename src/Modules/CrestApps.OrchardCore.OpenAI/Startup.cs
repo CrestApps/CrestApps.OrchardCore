@@ -51,7 +51,7 @@ public sealed class ConnectionManagementStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IModelHandler<AIProviderConnection>, OpenAIProviderConnectionSettingsHandler>();
+        services.AddScoped<ICatalogEntryHandler<AIProviderConnection>, OpenAIProviderConnectionSettingsHandler>();
         services.AddTransient<IAIProviderConnectionHandler, OpenAIProviderConnectionHandler>();
         services.AddDisplayDriver<AIProviderConnection, OpenAIProviderConnectionDisplayDriver>();
         services.AddAIConnectionSource(OpenAIConstants.ProviderName, o =>

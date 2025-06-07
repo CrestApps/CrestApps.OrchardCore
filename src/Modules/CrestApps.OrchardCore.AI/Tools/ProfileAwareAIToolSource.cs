@@ -16,12 +16,12 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
 
     private readonly ILogger<ProfileAwareAIToolSource> _logger;
     private readonly IAICompletionService _completionService;
-    private readonly INamedModelStore<AIProfile> _profileStore;
+    private readonly INamedCatalog<AIProfile> _profileStore;
 
     public ProfileAwareAIToolSource(
         ILogger<ProfileAwareAIToolSource> logger,
         IAICompletionService completionService,
-        INamedModelStore<AIProfile> profileStore,
+        INamedCatalog<AIProfile> profileStore,
         IStringLocalizer<ProfileAwareAIToolSource> S)
     {
         _logger = logger;

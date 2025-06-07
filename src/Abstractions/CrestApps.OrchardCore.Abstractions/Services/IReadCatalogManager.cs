@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Services;
 
-public interface IReadModelManager<T>
+public interface IReadCatalogManager<T>
 {
     /// <summary>
     /// Asynchronously retrieves a model by its unique identifier.

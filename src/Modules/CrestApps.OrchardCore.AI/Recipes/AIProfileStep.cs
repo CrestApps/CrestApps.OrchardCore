@@ -13,13 +13,13 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
 {
     public const string StepKey = "AIProfile";
 
-    private readonly INamedSourceModelManager<AIProfile> _profileManager;
+    private readonly INamedSourceCatalogManager<AIProfile> _profileManager;
     private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileStep(
-        INamedSourceModelManager<AIProfile> profileManager,
+        INamedSourceCatalogManager<AIProfile> profileManager,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIProfileStep> stringLocalizer)
         : base(StepKey)

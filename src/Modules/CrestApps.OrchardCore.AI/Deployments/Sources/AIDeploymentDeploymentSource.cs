@@ -8,9 +8,9 @@ namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 
 internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDeploymentDeploymentStep>
 {
-    private readonly INamedModelStore<AIProfile> _deploymentStore;
+    private readonly INamedCatalog<AIProfile> _deploymentStore;
 
-    public AIDeploymentDeploymentSource(INamedModelStore<AIProfile> deploymentStore)
+    public AIDeploymentDeploymentSource(INamedCatalog<AIProfile> deploymentStore)
     {
         _deploymentStore = deploymentStore;
     }

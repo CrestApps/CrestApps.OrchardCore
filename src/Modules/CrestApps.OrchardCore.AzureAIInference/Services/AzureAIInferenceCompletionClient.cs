@@ -18,7 +18,7 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
         IOptions<AIProviderOptions> providerOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
         IOptions<DefaultAIOptions> defaultOptions,
-        INamedModelStore<AIDeployment> deploymentStore
+        INamedCatalog<AIDeployment> deploymentStore
         ) : base(
             AzureAIInferenceConstants.ImplementationName,
             aIClientFactory,

@@ -5,14 +5,14 @@ using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class DefaultAIProfileStore : NamedModelStore<AIProfile>
+public sealed class DefaultAIProfileStore : NamedCatalog<AIProfile>
 {
-    public DefaultAIProfileStore(IDocumentManager<ModelDocument<AIProfile>> documentManager)
+    public DefaultAIProfileStore(IDocumentManager<DictionaryDocument<AIProfile>> documentManager)
         : base(documentManager)
     {
     }
 
-    protected override void Deleting(AIProfile profile, ModelDocument<AIProfile> document)
+    protected override void Deleting(AIProfile profile, DictionaryDocument<AIProfile> document)
     {
         var settings = profile.GetSettings<AIProfileSettings>();
 

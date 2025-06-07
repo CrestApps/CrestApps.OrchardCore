@@ -5,12 +5,12 @@ using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.Core.Services;
 
-public class ModelStore<T> : IModelStore<T>
-    where T : Model
+public class Catalog<T> : ICatalog<T>
+    where T : CatalogEntry
 {
-    protected readonly IDocumentManager<ModelDocument<T>> DocumentManager;
+    protected readonly IDocumentManager<DictionaryDocument<T>> DocumentManager;
 
-    public ModelStore(IDocumentManager<ModelDocument<T>> documentManager)
+    public Catalog(IDocumentManager<DictionaryDocument<T>> documentManager)
     {
         DocumentManager = documentManager;
     }
@@ -114,7 +114,7 @@ public class ModelStore<T> : IModelStore<T>
         return ValueTask.CompletedTask;
     }
 
-    protected virtual void Deleting(T model, ModelDocument<T> document)
+    protected virtual void Deleting(T model, DictionaryDocument<T> document)
     {
     }
 
@@ -151,7 +151,7 @@ public class ModelStore<T> : IModelStore<T>
         return records;
     }
 
-    protected virtual void Saving(T record, ModelDocument<T> document)
+    protected virtual void Saving(T record, DictionaryDocument<T> document)
     {
     }
 }
