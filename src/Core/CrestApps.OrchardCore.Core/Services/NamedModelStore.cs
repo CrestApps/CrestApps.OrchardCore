@@ -18,14 +18,7 @@ public class NamedModelStore<T> : ModelStore<T>, INamedModelStore<T>
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
-        var model = document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-
-        if (model is not null)
-        {
-            return model;
-        }
-
-        return null;
+        return document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 
     protected override void Saving(T record, ModelDocument<T> document)

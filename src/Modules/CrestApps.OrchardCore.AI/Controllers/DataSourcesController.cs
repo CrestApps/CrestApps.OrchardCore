@@ -97,7 +97,7 @@ public sealed class DataSourcesController : Controller
             viewModel.Models.Add(new ModelEntry<AIDataSource>
             {
                 Model = record,
-                Shape = await _displayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+                Shape = await _displayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
             });
         }
 
@@ -264,7 +264,7 @@ public sealed class DataSourcesController : Controller
     [Admin("ai/data-source/delete/{id}", "AIDataSourceDelete")]
     public async Task<IActionResult> Delete(string id)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDeployments))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
         {
             return Forbid();
         }
