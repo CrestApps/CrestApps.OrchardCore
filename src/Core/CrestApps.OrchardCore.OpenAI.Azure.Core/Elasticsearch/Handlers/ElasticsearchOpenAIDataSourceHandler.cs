@@ -90,13 +90,13 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
 
         if (_elasticsearchOptions.AuthenticationType is not null)
         {
-            if (string.Equals("key_and_key_id", _elasticsearchOptions.AuthenticationType, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals("KeyIdAndKey", _elasticsearchOptions.AuthenticationType, StringComparison.OrdinalIgnoreCase))
             {
                 credentials = DataSourceAuthentication.FromKeyAndKeyId(_elasticsearchOptions.Key, _elasticsearchOptions.KeyId);
             }
-            else if (string.Equals("encoded_api_key", _elasticsearchOptions.AuthenticationType, StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals("Base64ApiKey", _elasticsearchOptions.AuthenticationType, StringComparison.OrdinalIgnoreCase))
             {
-                credentials = DataSourceAuthentication.FromEncodedApiKey(_elasticsearchOptions.EncodedApiKey);
+                credentials = DataSourceAuthentication.FromEncodedApiKey(_elasticsearchOptions.Base64ApiKey);
             }
         }
 
