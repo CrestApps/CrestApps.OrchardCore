@@ -7,7 +7,7 @@ using System.Security.Claims;
 using YesSql;
 using YesSql.Filters.Query;
 
-namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
+namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 
 public sealed class DefaultSubscriptionAdminListFilterProvider : ISubscriptionAdminListFilterProvider
 {

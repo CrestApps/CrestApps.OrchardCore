@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using YesSql.Filters.Query;
 
-namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
+namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 
 public class ListSubscriptionOptions
 {

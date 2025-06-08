@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Stripe.Core;
+using CrestApps.OrchardCore.Stripe.Models;
 using CrestApps.OrchardCore.Stripe.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;

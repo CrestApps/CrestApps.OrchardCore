@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.Stripe.Core;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 
-namespace CrestApps.OrchardCore.Stripe;
+namespace CrestApps.OrchardCore.Stripe.Services;
 
 public sealed class StripePermissionsProvider : IPermissionProvider
 {

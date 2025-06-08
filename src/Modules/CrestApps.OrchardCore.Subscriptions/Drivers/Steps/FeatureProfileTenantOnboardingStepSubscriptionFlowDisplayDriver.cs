@@ -7,7 +7,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Json;
 
-namespace CrestApps.OrchardCore.Subscriptions.Drivers;
+namespace CrestApps.OrchardCore.Subscriptions.Drivers.Steps;
 
 public sealed partial class FeatureProfileTenantOnboardingStepSubscriptionFlowDisplayDriver : SubscriptionFlowDisplayDriver
 {

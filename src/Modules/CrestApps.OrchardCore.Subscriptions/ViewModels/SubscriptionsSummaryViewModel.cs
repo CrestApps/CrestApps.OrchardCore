@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
+namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
 
 public class SubscriptionsSummaryViewModel
 {
@@ -9,5 +9,6 @@ public class SubscriptionsSummaryViewModel
     public string ServicePlanTitle { get; set; }
 
     public string SessionId { get; set; }
-    public bool IsActive { get; internal set; }
+
+    public bool IsActive { get; set; }
 }

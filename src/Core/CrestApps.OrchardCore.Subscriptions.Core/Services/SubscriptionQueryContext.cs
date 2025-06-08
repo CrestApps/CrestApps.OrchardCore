@@ -1,7 +1,7 @@
-﻿using YesSql;
+using YesSql;
 using YesSql.Filters.Query.Services;
 
-namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
+namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 
 public class SubscriptionQueryContext : QueryExecutionContext<SubscriptionSession>
 {

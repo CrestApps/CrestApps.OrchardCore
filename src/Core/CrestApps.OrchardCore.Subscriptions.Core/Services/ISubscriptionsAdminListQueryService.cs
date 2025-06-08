@@ -1,6 +1,6 @@
-﻿using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.DisplayManagement.ModelBinding;
 
-namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
+namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 
 public interface ISubscriptionsAdminListQueryService
 {

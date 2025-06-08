@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
-using CrestApps.OrchardCore.Subscriptions.ViewModels;
+using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 

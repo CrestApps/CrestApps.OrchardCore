@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
@@ -325,7 +324,4 @@ public sealed class SubscriptionsController : Controller
     private async Task<ContentItem> GetSubscriptionVersion(string versionContentItemId)
         => await _session.Query<ContentItem, SubscriptionsContentItemIndex>(index => index.ContentItemVersionId == versionContentItemId)
         .FirstOrDefaultAsync();
-
-    private string CurrentUserId()
-        => User.FindFirstValue(ClaimTypes.NameIdentifier);
 }

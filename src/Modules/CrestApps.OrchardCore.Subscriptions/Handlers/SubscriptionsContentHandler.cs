@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using OrchardCore.ContentManagement.Handlers;
 
-namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
+namespace CrestApps.OrchardCore.Subscriptions.Handlers;
 
 public sealed class SubscriptionsContentHandler : ContentHandlerBase
 {

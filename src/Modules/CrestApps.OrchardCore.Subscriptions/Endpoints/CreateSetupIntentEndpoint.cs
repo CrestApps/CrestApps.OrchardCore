@@ -17,7 +17,7 @@ using OrchardCore.Json;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
 
-namespace CrestApps.OrchardCore.Stripe.Endpoints;
+namespace CrestApps.OrchardCore.Subscriptions.Endpoints;
 
 public static class CreateSetupIntentEndpoint
 {
