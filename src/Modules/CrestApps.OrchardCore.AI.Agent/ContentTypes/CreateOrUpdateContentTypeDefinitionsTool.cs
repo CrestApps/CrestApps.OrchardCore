@@ -45,6 +45,6 @@ public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseT
             return MissingArgument();
         }
 
-        return await ProcessRecipeAsync(recipe, cancellationToken);
+        return await ProcessRecipeAsync(recipe);
     }
 }
