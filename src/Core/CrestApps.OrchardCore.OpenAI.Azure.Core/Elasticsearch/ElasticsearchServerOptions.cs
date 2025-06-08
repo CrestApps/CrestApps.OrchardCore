@@ -48,24 +48,24 @@ public sealed class ElasticsearchServerOptions
 
     /// <summary>
     /// The authentication-type used by the data-source.
-    /// Supports: `encoded_api_key` and `key_and_key_id`.
+    /// Supports: `Base64ApiKey` and `KeyIdAndKey`.
     /// </summary>
     public string AuthenticationType { get; set; }
 
     /// <summary>
-    /// When using `key_and_key_id` authentication-type, this is the key-id.
+    /// Required when using `KeyIdAndKey` authentication type, this is the key-id.
     /// </summary>
     public string KeyId { get; set; }
 
     /// <summary>
-    /// When using `key_and_key_id` authentication-type, this is the key.
+    /// Required when using `KeyIdAndKey` authentication type, this is the key.
     /// </summary>
     public string Key { get; set; }
 
     /// <summary>
-    /// When using `encoded_api_key` authentication-type, this is the encoded key.
+    /// Required when using `Base64ApiKey` authentication type, this is the encoded key.
     /// </summary>
-    public string EncodedApiKey { get; set; }
+    public string Base64ApiKey { get; set; }
 
     /// <summary>
     /// Whether the configuration section exists.

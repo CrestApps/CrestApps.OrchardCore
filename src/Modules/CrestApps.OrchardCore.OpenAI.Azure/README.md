@@ -231,24 +231,24 @@ If your Elasticsearch cluster has security enabled, you’ll also need to genera
 
 You can use this key in one of two ways:
 
-##### Option 1: Using `encoded_api_key`
+##### Option 1: Using `Base64ApiKey`
 
-Use the Base64-encoded key directly by setting `AuthenticationType` to `encoded_api_key`. For example, in your `appsettings.json`:
+Use the Base64-encoded key directly by setting `AuthenticationType` to `Base64ApiKey`. For example, in your `appsettings.json`:
 
 ```json
 {
   "OrchardCore": {
     "OrchardCore_Elasticsearch": {
-      "AuthenticationType": "encoded_api_key",
-      "EncodedApiKey": "<!-- Base64 encoded key -->"
+      "AuthenticationType": "Base64ApiKey",
+      "Base64ApiKey": "<!-- Base64 encoded key -->"
     }
   }
 }
 ```
 
-##### Option 2: Using `key_and_key_id`
+##### Option 2: Using `KeyIdAndKey`
 
-You can also use the `key_and_key_id` authentication type, which requires both the API key ID and the key itself.
+You can also use the `KeyIdAndKey` authentication type, which requires both the API key ID and the key itself.
 
 To obtain these:
 
@@ -270,7 +270,7 @@ Then configure `appsettings.json` like this:
 {
   "OrchardCore": {
     "OrchardCore_Elasticsearch": {
-      "AuthenticationType": "key_and_key_id",
+      "AuthenticationType": "KeyIdAndKey",
       "KeyId": "<!-- Key ID -->",
       "Key": "<!-- Key -->"
     }
