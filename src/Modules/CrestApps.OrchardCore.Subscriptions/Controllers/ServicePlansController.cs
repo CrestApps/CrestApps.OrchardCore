@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.Subscriptions.Core;
+using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Extensions;
 using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
