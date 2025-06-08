@@ -1,0 +1,27 @@
+@using CrestApps.OrchardCore.AI.Deployments.Steps
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIDeploymentDeploymentStep>
+
+@{
+    var includeAll = Model.Value.IncludeAll;
+    var deploymentNames = Model.Value.DeploymentNames;
+}
+
+<h5>@T["AI Deployments"]</h5>
+
+@if (includeAll)
+{
+    <span class="badge text-bg-success">@T["All AI deployments"]</span>
+}
+else if (deploymentNames?.Length > 0)
+{
+    foreach (var deploymentName in deploymentNames)
+    {
+        <span class="badge ta-badge">@deploymentName</span>
+    }
+}
+else
+{
+    <span class="badge text-bg-warning">@T["No AI deployment selected."]</span>
+}

@@ -1,13 +1,14 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using System.Security.Claims;
 using YesSql;
 using YesSql.Filters.Query;
 
-namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
+namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 
 public sealed class DefaultSubscriptionAdminListFilterProvider : ISubscriptionAdminListFilterProvider
 {

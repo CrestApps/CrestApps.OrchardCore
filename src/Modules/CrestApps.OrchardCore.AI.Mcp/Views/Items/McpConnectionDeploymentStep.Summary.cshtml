@@ -1,0 +1,27 @@
+@using CrestApps.OrchardCore.AI.Deployments.Steps
+@using CrestApps.OrchardCore.AI.Mcp.ViewModels
+@using OrchardCore.DisplayManagement.Views
+
+@model DisplayMcpConnectionDeploymentStepViewModel
+
+@{
+    var includeAll = Model.IncludeAll;
+}
+
+<h5>@T["MCP Connections"]</h5>
+
+@if (includeAll)
+{
+    <span class="badge text-bg-success">@T["All MCP connections"]</span>
+}
+else if (Model.Names is not null && Model.Names.Any())
+{
+    foreach (var name in Model.Names)
+    {
+        <span class="badge ta-badge">@name</span>
+    }
+}
+else
+{
+    <span class="badge text-bg-warning">@T["No MCP connections selected."]</span>
+}

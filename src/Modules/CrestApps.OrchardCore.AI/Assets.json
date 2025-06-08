@@ -1,0 +1,8 @@
+[
+  {
+    "inputs": [
+      "Assets/js/admin-ui.js"
+    ],
+    "output": "wwwroot/scripts/admin-ui.js"
+  }
+]

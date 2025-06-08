@@ -1,0 +1,8 @@
+[
+  {
+    "inputs": [
+      "node_modules/@microsoft/signalr/dist/browser/signalr.js"
+    ],
+    "output": "wwwroot/scripts/signalr.js"
+  }
+]

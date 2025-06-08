@@ -7,7 +7,7 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.Users.Recipes;
 
-public sealed class UpdateUserRecipeStepHandler : IRecipeStepHandler
+public sealed class UpdateUserRecipeStepHandler : NamedRecipeStepHandler
 {
     private const int DefaultBatchSize = 250;
 
@@ -16,17 +16,13 @@ public sealed class UpdateUserRecipeStepHandler : IRecipeStepHandler
     private readonly ISession _session;
 
     public UpdateUserRecipeStepHandler(ISession session)
+        : base("IndexUsers")
     {
         _session = session;
     }
 
-    public async Task ExecuteAsync(RecipeExecutionContext context)
+    protected override async Task HandleAsync(RecipeExecutionContext context)
     {
-        if (!string.Equals(context.Name, "IndexUsers", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
         var step = context.Step.ToObject<UpdateUserRecipeStepModel>();
 
         if (step.BatchSize.HasValue && step.BatchSize.Value > 0)

@@ -1,7 +1,8 @@
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using OrchardCore.DisplayManagement.ModelBinding;
 using YesSql;
 
-namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
+namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 
 public sealed class DefaultSubscriptionsAdminListQueryService : ISubscriptionsAdminListQueryService
 {

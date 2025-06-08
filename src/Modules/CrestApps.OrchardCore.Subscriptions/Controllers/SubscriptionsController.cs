@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
@@ -6,10 +5,7 @@ using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Logging;
-using OrchardCore;
 using OrchardCore.ContentManagement;
-using OrchardCore.ContentManagement.Display;
-using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
@@ -20,13 +16,10 @@ namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
 public sealed class SubscriptionsController : Controller
 {
-    private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<SubscriptionFlow> _subscriptionFlowDisplayManager;
     private readonly IEnumerable<ISubscriptionHandler> _subscriptionHandlers;
     private readonly ILogger<SubscriptionsController> _logger;
-    private readonly IClientIPAddressAccessor _clientIPAddressAccessor;
     private readonly ISubscriptionSessionStore _subscriptionSessionStore;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
@@ -35,26 +28,20 @@ public sealed class SubscriptionsController : Controller
     internal readonly IHtmlLocalizer H;
 
     public SubscriptionsController(
-        IContentDefinitionManager contentDefinitionManager,
-        IContentItemDisplayManager contentItemDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<SubscriptionFlow> subscriptionFlowDisplayManager,
         IEnumerable<ISubscriptionHandler> subscriptionHandlers,
         ILogger<SubscriptionsController> logger,
-        IClientIPAddressAccessor clientIPAddressAccessor,
         ISubscriptionSessionStore subscriptionSessionStore,
         INotifier notifier,
         IClock clock,
         ISession session,
         IHtmlLocalizer<SubscriptionsController> htmlLocalizer)
     {
-        _contentDefinitionManager = contentDefinitionManager;
-        _contentItemDisplayManager = contentItemDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _subscriptionFlowDisplayManager = subscriptionFlowDisplayManager;
         _subscriptionHandlers = subscriptionHandlers;
         _logger = logger;
-        _clientIPAddressAccessor = clientIPAddressAccessor;
         _subscriptionSessionStore = subscriptionSessionStore;
         _notifier = notifier;
         _clock = clock;
@@ -337,7 +324,4 @@ public sealed class SubscriptionsController : Controller
     private async Task<ContentItem> GetSubscriptionVersion(string versionContentItemId)
         => await _session.Query<ContentItem, SubscriptionsContentItemIndex>(index => index.ContentItemVersionId == versionContentItemId)
         .FirstOrDefaultAsync();
-
-    private string CurrentUserId()
-        => User.FindFirstValue(ClaimTypes.NameIdentifier);
 }

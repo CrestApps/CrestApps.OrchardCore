@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Products.Core;
 using OrchardCore.Modules.Manifest;
 

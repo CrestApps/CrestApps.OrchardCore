@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Stripe.Core;
+namespace CrestApps.OrchardCore.Stripe.Models;
 
 public sealed class StripeSettings
 {

@@ -1,6 +1,6 @@
-﻿using YesSql.Filters.Query;
+using YesSql.Filters.Query;
 
-namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
+namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 
 public interface ISubscriptionAdminListFilterProvider
 {

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Drivers;
+using CrestApps.OrchardCore.Stripe.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Settings;

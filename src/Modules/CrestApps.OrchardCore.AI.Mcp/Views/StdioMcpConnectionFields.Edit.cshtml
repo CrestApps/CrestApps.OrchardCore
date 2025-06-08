@@ -1,0 +1,104 @@
+@using CrestApps.OrchardCore.AI.Mcp.Core
+@using CrestApps.OrchardCore.AI.Mcp.ViewModels
+@using OrchardCore
+
+@model StdioConnectionFieldsViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Command" class="@Orchard.GetLabelClasses()">@T["Command"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" asp-for="Command" class="form-control" />
+        <span asp-validation-for="Command" class="text-danger"></span>
+        <span class="hint">@T["The command to invoke to connect to the server."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Arguments" class="@Orchard.GetLabelClasses()">@T["Command arguments"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <div class="form-control">
+            <div id="@Html.IdFor(x => x.Arguments)_editor" asp-for="Arguments" style="min-height: 100px;" dir="@Orchard.CultureDir()" data-schema="@Model.ArgumentsSchema"></div>
+        </div>
+        <textarea asp-for="Arguments" hidden></textarea>
+        <span class="hint">@T["If applicable, specify a JSON array (e.g., {0}) to send to the server.", """[ "arg1" ]"""]</span>
+        <span asp-validation-for="Arguments" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="WorkingDirectory" class="@Orchard.GetLabelClasses()">@T["Working directory"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" asp-for="WorkingDirectory" class="form-control" />
+        <span asp-validation-for="WorkingDirectory" class="text-danger"></span>
+        <span class="hint">@T["If applicable, specify the working directory."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="EnvironmentVariables" class="@Orchard.GetLabelClasses()">@T["Environment variables"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <div class="form-control">
+            <div id="@Html.IdFor(x => x.EnvironmentVariables)_editor" asp-for="EnvironmentVariables" style="min-height: 100px;" dir="@Orchard.CultureDir()" data-schema="@Model.EnvironmentVariablesSchema"></div>
+        </div>
+        <textarea asp-for="EnvironmentVariables" hidden></textarea>
+        <span class="hint">@T["If applicable, specify a JSON object (e.g., {0}) to send key-value pairs to the server.", """{ "key": "value" }"""]</span>
+        <span asp-validation-for="EnvironmentVariables" class="text-danger"></span>
+    </div>
+</div>
+
+<script at="Foot" asp-name="monaco"></script>
+<script at="Foot" asp-name="transport-options-editor" depends-on="monaco">
+    document.addEventListener('DOMContentLoaded', function () {
+        require(['vs/editor/editor.main'], function () {
+            const html = document.documentElement;
+
+            function setTheme() {
+                const theme = html.dataset.bsTheme;
+                const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                monaco.editor.setTheme(isDark ? 'vs-dark' : 'vs');
+            }
+
+            new MutationObserver(setTheme).observe(html, { attributes: true });
+            setTheme();
+
+            const editors = [
+                {
+                    id: '@Html.IdFor(x => x.Arguments)',
+                    uri: 'x://crestapps.orchardcore.ai.mcp.Arguments.json',
+                    schemaUri: 'x://orchardcore.tenants.Arguments.schema.json'
+                },
+                {
+                    id: '@Html.IdFor(x => x.EnvironmentVariables)',
+                    uri: 'x://crestapps.orchardcore.ai.mcp.EnvironmentVariables.json',
+                    schemaUri: 'x://orchardcore.tenants.EnvironmentVariables.schema.json'
+                }
+            ];
+
+            editors.forEach(({ id, uri, schemaUri }) => {
+                const editorEl = document.getElementById(`${id}_editor`);
+                const textArea = document.getElementById(id);
+                const schema = JSON.parse(editorEl.dataset.schema);
+                const modelUri = monaco.Uri.parse(uri);
+
+                const model = monaco.editor.createModel(textArea.value, "json", modelUri);
+
+                monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+                    validate: true,
+                    schemas: [{
+                        uri: schemaUri,
+                        fileMatch: [modelUri.toString()],
+                        schema: schema
+                    }]
+                });
+
+                const editor = monaco.editor.create(editorEl, {
+                    model: model
+                });
+
+                window.addEventListener("submit", () => {
+                    textArea.value = editor.getValue();
+                });
+            });
+        });
+    });
+</script>

@@ -1,4 +1,4 @@
-﻿using OrchardCore.DisplayManagement.Views;
+using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
 

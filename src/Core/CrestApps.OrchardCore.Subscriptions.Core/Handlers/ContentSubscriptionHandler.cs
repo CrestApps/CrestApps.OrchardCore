@@ -4,9 +4,7 @@ using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
-using OrchardCore.ContentManagement.Display;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
@@ -16,8 +14,6 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
     public const string ContentPrefix = "Content-";
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly IContentItemDisplayManager _contentItemDisplayManager;
-    private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
     private readonly IContentManager _contentManager;
 
@@ -25,15 +21,11 @@ public sealed class ContentSubscriptionHandler : SubscriptionHandlerBase
 
     public ContentSubscriptionHandler(
         IContentDefinitionManager contentDefinitionManager,
-        IContentItemDisplayManager contentItemDisplayManager,
-        IUpdateModelAccessor updateModelAccessor,
         IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions,
         IContentManager contentManager,
         IStringLocalizer<ContentSubscriptionHandler> stringLocalizer)
     {
         _contentDefinitionManager = contentDefinitionManager;
-        _contentItemDisplayManager = contentItemDisplayManager;
-        _updateModelAccessor = updateModelAccessor;
         _documentJsonSerializerOptions = documentJsonSerializerOptions.Value;
         _contentManager = contentManager;
         S = stringLocalizer;

@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
 
 namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
 

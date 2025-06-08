@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps Azure Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services project for Azure project.
+    </Description>
+    <PackageTags>$(PackageTags) Azure</PackageTags>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore SignalR Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services project for the SignalR module.
+    </Description>
+    <PackageTags>$(PackageTags) SignalR</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Core" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\CrestApps.Support\CrestApps.Support.csproj" />
+  </ItemGroup>
+</Project>

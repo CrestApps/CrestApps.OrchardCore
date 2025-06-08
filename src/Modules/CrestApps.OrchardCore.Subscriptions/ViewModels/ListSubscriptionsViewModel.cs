@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
 
