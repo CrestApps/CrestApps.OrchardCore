@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
-namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
+namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 
 public class SubscriptionFlowNavigation
 {
