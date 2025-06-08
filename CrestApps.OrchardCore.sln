@@ -87,6 +87,24 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Roles
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Roles.Core", "src\Core\CrestApps.OrchardCore.Roles.Core\CrestApps.OrchardCore.Roles.Core.csproj", "{0ECE7076-8981-492F-97BB-1EC4CCF89B9F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Payments.Abstractions", "src\Abstractions\CrestApps.OrchardCore.Payments.Abstractions\CrestApps.OrchardCore.Payments.Abstractions.csproj", "{E85EA2AC-AA17-6C7D-F825-272A812D6BD4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Subscriptions.Abstractions", "src\Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions.csproj", "{FDD12DAF-2419-22BC-8450-5CFE22840CED}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Payments.Core", "src\Core\CrestApps.OrchardCore.Payments.Core\CrestApps.OrchardCore.Payments.Core.csproj", "{FADBA423-F612-25EA-4ABF-C1D75A9F9A72}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Products.Core", "src\Core\CrestApps.OrchardCore.Products.Core\CrestApps.OrchardCore.Products.Core.csproj", "{483E2F89-0635-FC0F-FCF6-652674617251}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Stripe.Core", "src\Core\CrestApps.OrchardCore.Stripe.Core\CrestApps.OrchardCore.Stripe.Core.csproj", "{66F95461-D9E2-9786-90C4-48E81258E2DA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Subscriptions.Core", "src\Core\CrestApps.OrchardCore.Subscriptions.Core\CrestApps.OrchardCore.Subscriptions.Core.csproj", "{6F62740D-0735-5314-75A9-37EF94255E91}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Products", "src\Modules\CrestApps.OrchardCore.Products\CrestApps.OrchardCore.Products.csproj", "{46047055-2789-70F2-FF8F-0539F4279C6C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Stripe", "src\Modules\CrestApps.OrchardCore.Stripe\CrestApps.OrchardCore.Stripe.csproj", "{1D647BAE-9B07-5082-DB91-687BD5B5B970}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Subscriptions", "src\Modules\CrestApps.OrchardCore.Subscriptions\CrestApps.OrchardCore.Subscriptions.csproj", "{B7312414-B00F-81C8-E0ED-6CA4F09B42A1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -213,6 +231,42 @@ Global
 		{0ECE7076-8981-492F-97BB-1EC4CCF89B9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0ECE7076-8981-492F-97BB-1EC4CCF89B9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0ECE7076-8981-492F-97BB-1EC4CCF89B9F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E85EA2AC-AA17-6C7D-F825-272A812D6BD4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E85EA2AC-AA17-6C7D-F825-272A812D6BD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E85EA2AC-AA17-6C7D-F825-272A812D6BD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E85EA2AC-AA17-6C7D-F825-272A812D6BD4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FDD12DAF-2419-22BC-8450-5CFE22840CED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FDD12DAF-2419-22BC-8450-5CFE22840CED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FDD12DAF-2419-22BC-8450-5CFE22840CED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FDD12DAF-2419-22BC-8450-5CFE22840CED}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FADBA423-F612-25EA-4ABF-C1D75A9F9A72}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FADBA423-F612-25EA-4ABF-C1D75A9F9A72}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FADBA423-F612-25EA-4ABF-C1D75A9F9A72}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FADBA423-F612-25EA-4ABF-C1D75A9F9A72}.Release|Any CPU.Build.0 = Release|Any CPU
+		{483E2F89-0635-FC0F-FCF6-652674617251}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{483E2F89-0635-FC0F-FCF6-652674617251}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{483E2F89-0635-FC0F-FCF6-652674617251}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{483E2F89-0635-FC0F-FCF6-652674617251}.Release|Any CPU.Build.0 = Release|Any CPU
+		{66F95461-D9E2-9786-90C4-48E81258E2DA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{66F95461-D9E2-9786-90C4-48E81258E2DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{66F95461-D9E2-9786-90C4-48E81258E2DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{66F95461-D9E2-9786-90C4-48E81258E2DA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F62740D-0735-5314-75A9-37EF94255E91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F62740D-0735-5314-75A9-37EF94255E91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F62740D-0735-5314-75A9-37EF94255E91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F62740D-0735-5314-75A9-37EF94255E91}.Release|Any CPU.Build.0 = Release|Any CPU
+		{46047055-2789-70F2-FF8F-0539F4279C6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{46047055-2789-70F2-FF8F-0539F4279C6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{46047055-2789-70F2-FF8F-0539F4279C6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{46047055-2789-70F2-FF8F-0539F4279C6C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D647BAE-9B07-5082-DB91-687BD5B5B970}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D647BAE-9B07-5082-DB91-687BD5B5B970}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D647BAE-9B07-5082-DB91-687BD5B5B970}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D647BAE-9B07-5082-DB91-687BD5B5B970}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B7312414-B00F-81C8-E0ED-6CA4F09B42A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B7312414-B00F-81C8-E0ED-6CA4F09B42A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B7312414-B00F-81C8-E0ED-6CA4F09B42A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B7312414-B00F-81C8-E0ED-6CA4F09B42A1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -248,6 +302,15 @@ Global
 		{7A00967E-E049-42E6-A60D-D12BF892BEF3} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{828C71FC-D3FC-4791-B870-F6951E0F9BAF} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{0ECE7076-8981-492F-97BB-1EC4CCF89B9F} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
+		{E85EA2AC-AA17-6C7D-F825-272A812D6BD4} = {94189A7B-38B7-4331-B711-E5DCCEAFE737}
+		{FDD12DAF-2419-22BC-8450-5CFE22840CED} = {94189A7B-38B7-4331-B711-E5DCCEAFE737}
+		{FADBA423-F612-25EA-4ABF-C1D75A9F9A72} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
+		{483E2F89-0635-FC0F-FCF6-652674617251} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
+		{66F95461-D9E2-9786-90C4-48E81258E2DA} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
+		{6F62740D-0735-5314-75A9-37EF94255E91} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
+		{46047055-2789-70F2-FF8F-0539F4279C6C} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{1D647BAE-9B07-5082-DB91-687BD5B5B970} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{B7312414-B00F-81C8-E0ED-6CA4F09B42A1} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0E9F9B00-7078-4EA8-87A9-0B2E74375F1E}

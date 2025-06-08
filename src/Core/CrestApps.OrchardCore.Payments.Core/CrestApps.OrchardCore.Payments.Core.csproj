@@ -12,11 +12,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CrestApps.OrchardCore.Payments.Abstractions\CrestApps.OrchardCore.Payments.Abstractions.csproj" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Payments.Abstractions\CrestApps.OrchardCore.Payments.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

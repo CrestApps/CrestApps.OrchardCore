@@ -32,12 +32,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Payments.Abstractions\CrestApps.OrchardCore.Payments.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Payments.Abstractions\CrestApps.OrchardCore.Payments.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Products.Core\CrestApps.OrchardCore.Products.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Stripe.Core\CrestApps.OrchardCore.Stripe.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Subscriptions.Core\CrestApps.OrchardCore.Subscriptions.Core.csproj" />
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

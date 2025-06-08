@@ -16,12 +16,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Moq" />
+  </ItemGroup>
+
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.Subscriptions.Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
