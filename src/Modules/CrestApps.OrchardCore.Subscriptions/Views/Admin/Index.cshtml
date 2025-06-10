@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model ListSubscriptionsViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Subscriptions"])</h1></zone>
+
+<form asp-action="Index" asp-controller="Admin" method="post" id="items-form" autocomplete="off">
+    @await DisplayAsync(Model)
+</form>

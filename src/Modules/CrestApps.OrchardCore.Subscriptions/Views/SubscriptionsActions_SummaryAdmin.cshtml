@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionViewModel
+
+<a asp-action="Edit" asp-controller="Admin" asp-route-id="@Model.Subscription.SessionId" asp-route-area="CrestApps.OrchardCore.Subscriptions" asp-route-returnUrl="@FullRequestPath" class="btn btn-sm btn-primary">
+    @T["Edit"]
+</a>
