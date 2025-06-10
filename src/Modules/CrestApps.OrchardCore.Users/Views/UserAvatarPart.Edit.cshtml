@@ -63,8 +63,8 @@
     <partial name="~/Areas/OrchardCore.Media/Views/Shared/MediaFieldEditLocalization.cshtml" />
 </div>
 
-<script asp-name="media" at="Foot"></script>
-<script at="Foot" depends-on="media">
+<script asp-name="media2" at="Foot"></script>
+<script at="Foot" depends-on="media2">
     initializeMediaApplication(false, '@Url.Action("MediaApplication", "Admin", new { area = "OrchardCore.Media", extensions = string.Join(',', Model.AllowedExtensions) })', '@Context.Request.PathBase.ToString()');
 
     initializeMediaField(
