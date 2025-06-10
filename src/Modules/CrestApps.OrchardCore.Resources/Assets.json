@@ -53,5 +53,19 @@
       "node_modules/@fortawesome/fontawesome-free/webfonts/*"
     ],
     "output": "wwwroot/vendors/fontawesome-free/webfonts/@"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/vuejs/dist/*.js"
+    ],
+    "output": "wwwroot/vendors/vue-2.6.14/@"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/vuedraggable/dist/*"
+    ],
+    "output": "wwwroot/vendors/vue-draggable-2.24.3/@"
   }
 ]
