@@ -152,7 +152,8 @@ public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderCon
 
         if (properties != null)
         {
-            connection.Properties = properties.Clone();
+            connection.Properties ??= [];
+            connection.Properties.Merge(properties);
         }
 
         return Task.CompletedTask;

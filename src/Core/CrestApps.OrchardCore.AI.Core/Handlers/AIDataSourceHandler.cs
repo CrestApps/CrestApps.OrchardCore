@@ -107,7 +107,8 @@ public sealed class AIDataSourceHandler : ModelHandlerBase<AIDataSource>
 
         if (properties != null)
         {
-            dataSource.Properties = properties.Clone();
+            dataSource.Properties ??= [];
+            dataSource.Properties.Merge(properties);
         }
 
         return Task.CompletedTask;
