@@ -122,7 +122,8 @@ public sealed class AIDeploymentHandler : ModelHandlerBase<AIDeployment>
 
         if (properties != null)
         {
-            deployment.Properties = properties.Clone();
+            deployment.Properties ??= [];
+            deployment.Properties.Merge(properties);
         }
 
         return Task.CompletedTask;

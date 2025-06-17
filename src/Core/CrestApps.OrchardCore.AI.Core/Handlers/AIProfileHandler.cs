@@ -165,17 +165,15 @@ public sealed class AIProfileHandler : ModelHandlerBase<AIProfile>
 
         if (properties != null)
         {
-            profile.Properties = properties.Clone();
+            profile.Properties ??= [];
+            profile.Properties.Merge(properties);
         }
 
         var settings = data[nameof(AIProfile.Settings)]?.AsObject();
 
         if (settings != null)
         {
-            foreach (var pair in settings)
-            {
-                profile.Settings[pair.Key] = pair.Value.Clone();
-            }
+            profile.Settings.Merge(settings);
         }
 
         if (string.IsNullOrWhiteSpace(profile.DisplayText))

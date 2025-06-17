@@ -69,7 +69,8 @@ internal sealed class McpConnectionHandler : ModelHandlerBase<McpConnection>
 
         if (properties is not null)
         {
-            connection.Properties = properties.Clone();
+            connection.Properties ??= [];
+            connection.Properties.Merge(properties);
         }
 
         return Task.CompletedTask;
