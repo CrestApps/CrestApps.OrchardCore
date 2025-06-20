@@ -78,7 +78,7 @@ public sealed class SearchForUsersTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.ListUsers))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, UsersPermissions.ListUsers))
         {
             return "You do not have permission to list users.";
         }

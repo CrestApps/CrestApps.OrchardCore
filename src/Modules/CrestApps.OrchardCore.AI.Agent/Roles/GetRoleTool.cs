@@ -58,7 +58,7 @@ internal sealed class GetRoleTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.ManageRoles))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, RolesPermissions.ManageRoles))
         {
             return "The current user does not have permission to manage roles.";
         }

@@ -35,7 +35,7 @@ public sealed class ApplySystemSettingsTool : ImportRecipeBaseTool
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.Import))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, DeploymentPermissions.Import))
         {
             return "You do not have permission to import recipes.";
         }
