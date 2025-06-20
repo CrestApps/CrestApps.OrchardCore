@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore;
+namespace CrestApps.OrchardCore;
 
 public interface ISourceAwareModel
 {

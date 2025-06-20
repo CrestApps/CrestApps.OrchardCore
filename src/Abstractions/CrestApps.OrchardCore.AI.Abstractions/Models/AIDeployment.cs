@@ -15,7 +15,9 @@ public class AIDeployment : SourceCatalogEntry, INameAwareModel, ISourceAwareMod
 
     [JsonInclude]
     [JsonPropertyName(nameof(ProviderName))]
+#pragma warning disable IDE0051 // Remove unused private members
     private string _providerNameBackingField
+#pragma warning restore IDE0051 // Remove unused private members
     {
         set => Source = value;
     }
