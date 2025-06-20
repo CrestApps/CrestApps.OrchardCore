@@ -8,9 +8,9 @@ using Microsoft.Extensions.Options;
 using OpenAI.Chat;
 using OrchardCore.Contents.Indexing;
 using OrchardCore.Entities;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Indexing;
 using OrchardCore.Search.Elasticsearch;
+using OrchardCore.Search.Elasticsearch.Core.Models;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch.Handlers;
 
@@ -19,20 +19,17 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
     private const string _titleFieldName = ContentIndexingConstants.DisplayTextKey + ".keyword";
 
     private readonly IIndexProfileStore _indexProfileStore;
-    private readonly ShellSettings _shellSettings;
-    private readonly ElasticsearchServerOptions _elasticsearchOptions;
+    private readonly ElasticsearchConnectionOptions _elasticsearchOptions;
     private readonly ILogger _logger;
     private readonly IAIDataSourceManager _aIDataSourceManager;
 
     public ElasticsearchOpenAIDataSourceHandler(
         IIndexProfileStore indexProfileStore,
-        IOptions<ElasticsearchServerOptions> elasticsearchOptions,
-        ShellSettings shellSettings,
+        IOptions<ElasticsearchConnectionOptions> elasticsearchOptions,
         ILogger<ElasticsearchOpenAIDataSourceHandler> logger,
         IAIDataSourceManager aIDataSourceManager)
     {
         _indexProfileStore = indexProfileStore;
-        _shellSettings = shellSettings;
         _elasticsearchOptions = elasticsearchOptions.Value;
         _logger = logger;
         _aIDataSourceManager = aIDataSourceManager;
@@ -86,18 +83,19 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
 
 #pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
-        DataSourceAuthentication credentials = null;
+        DataSourceAuthentication credentials;
 
-        if (_elasticsearchOptions.AuthenticationType is not null)
+        if (_elasticsearchOptions.AuthenticationType == ElasticsearchAuthenticationType.KeyIdAndKey)
         {
-            if (string.Equals("KeyIdAndKey", _elasticsearchOptions.AuthenticationType, StringComparison.OrdinalIgnoreCase))
-            {
-                credentials = DataSourceAuthentication.FromKeyAndKeyId(_elasticsearchOptions.Key, _elasticsearchOptions.KeyId);
-            }
-            else if (string.Equals("Base64ApiKey", _elasticsearchOptions.AuthenticationType, StringComparison.OrdinalIgnoreCase))
-            {
-                credentials = DataSourceAuthentication.FromEncodedApiKey(_elasticsearchOptions.Base64ApiKey);
-            }
+            credentials = DataSourceAuthentication.FromKeyAndKeyId(_elasticsearchOptions.Key, _elasticsearchOptions.KeyId);
+        }
+        else if (_elasticsearchOptions.AuthenticationType == ElasticsearchAuthenticationType.Base64ApiKey)
+        {
+            credentials = DataSourceAuthentication.FromEncodedApiKey(_elasticsearchOptions.Base64ApiKey);
+        }
+        else
+        {
+            throw new InvalidOperationException($"The '{_elasticsearchOptions.AuthenticationType}' is not supported as Authentication type for Elasticsearch AI Data Source. Only '{ElasticsearchAuthenticationType.KeyIdAndKey}' and '{ElasticsearchAuthenticationType.Base64ApiKey}' are supported.");
         }
 
         options.AddDataSource(new ElasticsearchChatDataSource()
