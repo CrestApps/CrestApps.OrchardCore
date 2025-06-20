@@ -6,18 +6,18 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
-using OrchardCore.Search.AzureAI.Services;
+using OrchardCore.Indexing;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 
 public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AIDataSource>
 {
-    private readonly AzureAISearchIndexSettingsService _indexSettingsService;
+    private readonly IIndexProfileStore _indexProfileStore;
 
     public AzureOpenAISearchADataSourceDisplayDriver(
-        AzureAISearchIndexSettingsService indexSettingsService)
+        IIndexProfileStore indexProfileStore)
     {
-        _indexSettingsService = indexSettingsService;
+        _indexProfileStore = indexProfileStore;
     }
 
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
@@ -36,8 +36,10 @@ public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AI
             model.TopNDocuments = metadata.TopNDocuments;
             model.IndexName = metadata.IndexName;
 
-            model.IndexNames = (await _indexSettingsService.GetSettingsAsync())
-            .Select(i => new SelectListItem(i.IndexName, i.IndexName));
+            model.IndexNames = (await _indexProfileStore.GetByProviderAsync(AzureOpenAIConstants.ProviderName))
+                .Select(i => new SelectListItem(i.Name, i.IndexName))
+                .OrderBy(x => x.Text);
+
         }).Location("Content:3");
     }
 

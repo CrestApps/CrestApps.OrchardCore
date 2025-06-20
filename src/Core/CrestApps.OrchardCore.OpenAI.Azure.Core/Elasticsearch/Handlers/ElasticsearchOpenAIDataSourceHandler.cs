@@ -7,31 +7,31 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
 using OrchardCore.Contents.Indexing;
-using OrchardCore.Documents;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Search.Elasticsearch.Core.Models;
+using OrchardCore.Indexing;
+using OrchardCore.Search.Elasticsearch;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch.Handlers;
 
 public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourceHandler
 {
-    private const string _titleFieldName = IndexingConstants.DisplayTextKey + ".keyword";
+    private const string _titleFieldName = ContentIndexingConstants.DisplayTextKey + ".keyword";
 
-    private readonly IDocumentManager<ElasticIndexSettingsDocument> _documentManager;
+    private readonly IIndexProfileStore _indexProfileStore;
     private readonly ShellSettings _shellSettings;
     private readonly ElasticsearchServerOptions _elasticsearchOptions;
     private readonly ILogger _logger;
     private readonly IAIDataSourceManager _aIDataSourceManager;
 
     public ElasticsearchOpenAIDataSourceHandler(
-        IDocumentManager<ElasticIndexSettingsDocument> documentManager,
+        IIndexProfileStore indexProfileStore,
         IOptions<ElasticsearchServerOptions> elasticsearchOptions,
         ShellSettings shellSettings,
         ILogger<ElasticsearchOpenAIDataSourceHandler> logger,
         IAIDataSourceManager aIDataSourceManager)
     {
-        _documentManager = documentManager;
+        _indexProfileStore = indexProfileStore;
         _shellSettings = shellSettings;
         _elasticsearchOptions = elasticsearchOptions.Value;
         _logger = logger;
@@ -65,9 +65,9 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
             return;
         }
 
-        var document = await _documentManager.GetOrCreateImmutableAsync();
+        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(dataSourceMetadata.IndexName, ElasticsearchConstants.ProviderName);
 
-        if (!document.ElasticIndexSettings.TryGetValue(dataSourceMetadata.IndexName, out var indexSettings))
+        if (indexProfile is null)
         {
             _logger.LogWarning("Index named '{IndexName}' set as Elasticsearch data-source but not found in Elasticsearch document manager.", dataSourceMetadata.IndexName);
             return;
@@ -103,7 +103,7 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
         options.AddDataSource(new ElasticsearchChatDataSource()
         {
             Endpoint = uri,
-            IndexName = GetFullIndexNameInternal(indexSettings.IndexName),
+            IndexName = indexProfile.IndexFullName,
             Authentication = credentials,
             Strictness = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
             TopNDocuments = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
@@ -113,7 +113,7 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
             FieldMappings = new DataSourceFieldMappings()
             {
                 TitleFieldName = _titleFieldName,
-                FilePathFieldName = IndexingConstants.ContentItemIdKey,
+                FilePathFieldName = ContentIndexingConstants.ContentItemIdKey,
                 ContentFieldSeparator = Environment.NewLine,
             },
         });
@@ -171,35 +171,4 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
     }
 
     private const string exceptionSuffix = "should be a string in the form of cluster_name:base_64_data";
-
-    /// <summary>
-    /// The following code was copied from https://github.com/OrchardCMS/OrchardCore/blob/5f2ccbdca769f1038e05b5fe432095bc6bd6d5a5/src/OrchardCore/OrchardCore.Search.Elasticsearch.Core/Services/ElasticsearchIndexManager.cs#L662-L682
-    /// Since in OrchardCore v3, many services were renamed and this will allow us to keep this library backward compatible.
-    /// </summary>
-    /// <param name="indexName"></param>
-    /// <returns></returns>
-    private string GetFullIndexNameInternal(string indexName)
-        => GetIndexPrefix() + _separator + indexName;
-
-    private const string _separator = "_";
-    private string _indexPrefix;
-
-    private string GetIndexPrefix()
-    {
-        if (_indexPrefix == null)
-        {
-            var parts = new List<string>();
-
-            if (!string.IsNullOrWhiteSpace(_elasticsearchOptions.IndexPrefix))
-            {
-                parts.Add(_elasticsearchOptions.IndexPrefix.ToLowerInvariant());
-            }
-
-            parts.Add(_shellSettings.Name.ToLowerInvariant());
-
-            _indexPrefix = string.Join(_separator, parts);
-        }
-
-        return _indexPrefix;
-    }
 }

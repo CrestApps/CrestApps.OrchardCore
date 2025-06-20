@@ -6,24 +6,24 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Documents;
 using OrchardCore.Entities;
+using OrchardCore.Indexing;
 using OrchardCore.Mvc.ModelBinding;
-using OrchardCore.Search.Elasticsearch.Core.Models;
+using OrchardCore.Search.Elasticsearch;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 
 public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 {
-    private readonly IDocumentManager<ElasticIndexSettingsDocument> _documentManager;
+    private readonly IIndexProfileStore _indexProfileStore;
 
     internal readonly IStringLocalizer S;
 
     public AzureOpenAIElasticsearchDataSourceDisplayDriver(
-        IDocumentManager<ElasticIndexSettingsDocument> documentManager,
+        IIndexProfileStore indexProfileStore,
         IStringLocalizer<AzureOpenAIElasticsearchDataSourceDisplayDriver> stringLocalizer)
     {
-        _documentManager = documentManager;
+        _indexProfileStore = indexProfileStore;
         S = stringLocalizer;
     }
 
@@ -43,9 +43,9 @@ public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDri
             model.TopNDocuments = metadata.TopNDocuments;
             model.IndexName = metadata.IndexName;
 
-            var document = await _documentManager.GetOrCreateImmutableAsync();
+            var indexProfiles = await _indexProfileStore.GetByProviderAsync(ElasticsearchConstants.ProviderName);
 
-            model.IndexNames = document.ElasticIndexSettings.Values.Select(i => new SelectListItem(i.IndexName, i.IndexName));
+            model.IndexNames = indexProfiles.Select(i => new SelectListItem(i.Name, i.IndexName));
         }).Location("Content:3");
     }
 
@@ -61,13 +61,12 @@ public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDri
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var document = await _documentManager.GetOrCreateImmutableAsync();
 
         if (string.IsNullOrEmpty(model.IndexName))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexName), S["Invalid index name is required."]);
         }
-        else if (!document.ElasticIndexSettings.Values.Any(x => x.IndexName == model.IndexName))
+        else if (await _indexProfileStore.FindByIndexNameAndProviderAsync(model.IndexName, ElasticsearchConstants.ProviderName) is null)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexName), S["Invalid index name."]);
         }

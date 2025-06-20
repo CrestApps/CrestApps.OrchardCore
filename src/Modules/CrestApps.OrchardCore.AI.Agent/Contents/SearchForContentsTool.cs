@@ -105,7 +105,7 @@ public sealed class SearchForContentsTool : AIFunction
             StartIndex = startingIndex,
         }, _updateModelAccessor.ModelUpdater);
 
-        var contentItemsCount = await query.CountAsync();
+        var contentItemsCount = await query.CountAsync(cancellationToken);
 
         var contentItems = await query.Skip(startingIndex)
             .Take(_pagerOptions.PageSize)
