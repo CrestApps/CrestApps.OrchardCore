@@ -25,6 +25,12 @@ public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
         { "action", nameof(AdminController.Index) },
     };
 
+    private static readonly RouteValueDictionary _subscriptionDashboardRouteValues = new()
+    {
+        { "area", SubscriptionConstants.Features.Area },
+        { "controller", typeof(DashboardController).ControllerName() },
+        { "action", nameof(DashboardController.Index) },
+    };
     internal readonly IStringLocalizer S;
 
     public SubscriptionsAdminMenu(IStringLocalizer<SubscriptionsAdminMenu> localizer)
@@ -50,9 +56,15 @@ public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
                 .AddClass("subscriptions")
                 .Id("subscriptions")
                 .Action(_subscriptionRouteValues)
-                .Permission(SubscriptionPermissions.ManageOwnSubscriptions)
+                .Permission(SubscriptionPermissions.ManageSubscriptions)
                 .LocalNav()
-            );
+            )
+            .Add(S["My Subscription"], S["My Subscription"].PrefixPosition(), subscriptions => subscriptions
+                .AddClass("subscriberDashboard")
+                .Id("subscriberDashboard")
+                .Action(_subscriptionDashboardRouteValues)
+                .Permission(SubscriptionPermissions.AccessSubscriberDashboard)
+                .LocalNav());
 
         return ValueTask.CompletedTask;
     }
