@@ -78,7 +78,7 @@ public sealed class SearchForUsersTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.ListUsers))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, UsersPermissions.ListUsers))
         {
             return "You do not have permission to list users.";
         }
@@ -105,11 +105,11 @@ public sealed class SearchForUsersTool : AIFunction
             FilterResult = new QueryFilterResult<User>(new Dictionary<string, QueryTermOption<User>>()),
         }, _updateModelAccessor.ModelUpdater);
 
-        var contentItemsCount = await query.CountAsync();
+        var contentItemsCount = await query.CountAsync(cancellationToken);
 
         var contentItems = await query.Skip(startingIndex)
             .Take(_pagerOptions.PageSize)
-            .ListAsync();
+            .ListAsync(cancellationToken);
 
         return
         $$"""

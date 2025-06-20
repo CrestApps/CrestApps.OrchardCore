@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using OpenAI.Chat;
 using OrchardCore.Contents.Indexing;
 using OrchardCore.Entities;
+using OrchardCore.Indexing;
 using OrchardCore.Search.AzureAI.Models;
 using OrchardCore.Search.AzureAI.Services;
 
@@ -14,17 +15,17 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 
 public sealed class AzureAISearchOpenAIDataSourceHandler : IAzureOpenAIDataSourceHandler
 {
-    private readonly AzureAISearchIndexSettingsService _azureAISearchIndexSettingsService;
+    private readonly IIndexProfileStore _indexProfileStore;
     private readonly IAIDataSourceManager _aIDataSourceManager;
     private readonly AzureAISearchDefaultOptions _azureAISearchDefaultOptions;
 
     public AzureAISearchOpenAIDataSourceHandler(
         IOptions<AzureAISearchDefaultOptions> azureAISearchDefaultOptions,
-        AzureAISearchIndexSettingsService azureAISearchIndexSettingsService,
+        IIndexProfileStore indexProfileStore,
         IAIDataSourceManager aIDataSourceManager)
     {
         _azureAISearchDefaultOptions = azureAISearchDefaultOptions.Value;
-        _azureAISearchIndexSettingsService = azureAISearchIndexSettingsService;
+        _indexProfileStore = indexProfileStore;
         _aIDataSourceManager = aIDataSourceManager;
     }
 
@@ -52,23 +53,21 @@ public sealed class AzureAISearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
 
         // In OC v3, the `GetAsync` method was changed to accepts an Id instead of a name.
         // Until we drop support for OC v2, we need to first call `GetSettingsAsync` and find index by name.
-        var settings = await _azureAISearchIndexSettingsService.GetSettingsAsync();
+        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(dataSourceMetadata.IndexName, AzureOpenAIConstants.ProviderName);
 
-        var indexSettings = settings.FirstOrDefault(x => x.IndexName == dataSourceMetadata.IndexName);
-        if (indexSettings == null
-            || string.IsNullOrEmpty(indexSettings.IndexFullName)
-            || !_azureAISearchDefaultOptions.ConfigurationExists())
+        if (indexProfile is null ||
+            !_azureAISearchDefaultOptions.ConfigurationExists())
         {
             return;
         }
 
-        var keyField = indexSettings.IndexMappings?.FirstOrDefault(x => x.IsKey);
+        var keyField = indexProfile.As<AzureAISearchIndexMetadata>().IndexMappings?.FirstOrDefault(x => x.IsKey);
 
 #pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         options.AddDataSource(new AzureSearchChatDataSource()
         {
             Endpoint = new Uri(_azureAISearchDefaultOptions.Endpoint),
-            IndexName = indexSettings.IndexFullName,
+            IndexName = indexProfile.IndexFullName,
             Authentication = DataSourceAuthentication.FromApiKey(_azureAISearchDefaultOptions.Credential.Key),
             Strictness = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
             TopNDocuments = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
@@ -89,7 +88,7 @@ public sealed class AzureAISearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
 
     private static string GetBestTitleField(AzureAISearchIndexMap keyField)
     {
-        if (keyField == null || keyField.AzureFieldKey == IndexingConstants.ContentItemIdKey)
+        if (keyField == null || keyField.AzureFieldKey == ContentIndexingConstants.ContentItemIdKey)
         {
             return AzureAISearchIndexManager.DisplayTextAnalyzedKey;
         }

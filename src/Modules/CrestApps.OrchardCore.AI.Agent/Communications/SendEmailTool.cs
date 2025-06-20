@@ -107,11 +107,10 @@ public sealed class SendEmailTool : AIFunction
         {
             To = to,
             Subject = subject,
-            Body = body,
+            HtmlBody = body,
             Sender = email,
             From = email,
             ReplyTo = email,
-            IsHtmlBody = true,
         };
 
         if (arguments.TryGetFirstString("cc", out var cc))
