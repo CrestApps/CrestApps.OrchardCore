@@ -107,7 +107,8 @@ public sealed class AIToolInstanceHandler : ModelHandlerBase<AIToolInstance>
 
         if (properties != null)
         {
-            instance.Properties = properties.Clone();
+            instance.Properties ??= [];
+            instance.Properties.Merge(properties);
         }
 
         return Task.CompletedTask;

@@ -11,6 +11,64 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
     {
         _manifest = new ResourceManifest();
 
+        ResourcesForBackwardCompatibility();
+
+        _manifest
+            .DefineScript("easymde")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/easymde/js/easymde.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/easymde/js/easymde.js"
+            )
+            .SetVersion("2.18.0");
+
+        _manifest
+            .DefineStyle("easymde")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/easymde/css/easymde.min.css",
+                "~/CrestApps.OrchardCore.Resources/vendors/easymde/css/easymde.css"
+            )
+            .SetVersion("2.18.0");
+    }
+
+    /// <summary>
+    /// These resources were added to keep compatibility between OrchardCore v2 and v3.
+    /// Don't update the version.
+    /// </summary>
+    private static void ResourcesForBackwardCompatibility()
+    {
+        _manifest
+            .DefineScript("vuejs")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/vue-2.6.14/vue.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/vue-2.6.14/vue.js"
+            )
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js",
+                "https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"
+            )
+            .SetCdnIntegrity(
+                "sha384-ULpZhk1pvhc/UK5ktA9kwb2guy9ovNSTyxPNHANnA35YjBQgdwI+AhLkixDvdlw4",
+                "sha384-t1tHLsbM7bYMJCXlhr0//00jSs7ZhsAhxgm191xFsyzvieTMCbUWKMhFg9I6ci8q"
+            )
+            .SetVersion("2.0.0");
+
+        _manifest
+            .DefineScript("vue-draggable")
+            .SetDependencies("vuejs:2", "Sortable")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/vue-draggable-2.24.3/vuedraggable.umd.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/vue-draggable-2.24.3/vuedraggable.umd.js"
+            )
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/vuedraggable@2.24.3/dist/vuedraggable.umd.min.js",
+                "https://cdn.jsdelivr.net/npm/vuedraggable@2.24.3/dist/vuedraggable.umd.js"
+            )
+            .SetCdnIntegrity(
+                "sha384-qUA1xXJiX23E4GOeW/XHtsBkV9MUcHLSjhi3FzO08mv8+W8bv5AQ1cwqLskycOTs",
+                "sha384-+jB9vXc/EaIJTlNiZG2tv+TUpKm6GR9HCRZb3VkI3lscZWqrCYDbX2ZXffNJldL9"
+            )
+            .SetVersion("2.0.0");
+
         _manifest
             .DefineScript("vuejs")
             .SetUrl(
@@ -58,22 +116,6 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "sha384-8wHa6NoZT1zIIflbE6bEpvkCitRAeXbtoIAZAaddda+A7iyDB1/WHrGFXXXOqRzp"
             )
             .SetVersion("6.7.2");
-
-        _manifest
-            .DefineScript("easymde")
-            .SetUrl(
-                "~/CrestApps.OrchardCore.Resources/vendors/easymde/js/easymde.min.js",
-                "~/CrestApps.OrchardCore.Resources/vendors/easymde/js/easymde.js"
-            )
-            .SetVersion("2.18.0");
-
-        _manifest
-            .DefineStyle("easymde")
-            .SetUrl(
-                "~/CrestApps.OrchardCore.Resources/vendors/easymde/css/easymde.min.css",
-                "~/CrestApps.OrchardCore.Resources/vendors/easymde/css/easymde.css"
-            )
-            .SetVersion("2.18.0");
     }
 
     public void Configure(ResourceManagementOptions options)

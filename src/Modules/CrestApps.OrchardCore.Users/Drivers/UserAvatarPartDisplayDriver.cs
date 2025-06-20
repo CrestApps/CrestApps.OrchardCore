@@ -93,12 +93,12 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
                 PartDefinition = new ContentPartDefinition(nameof(UserAvatarPart)),
             };
         }).Location("Content:1.5")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, Permissions.ManageMedia));
+        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, MediaPermissions.ManageMedia));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(User user, UserAvatarPart part, UpdateEditorContext context)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, Permissions.ManageMedia))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, MediaPermissions.ManageMedia))
         {
             return null;
         }

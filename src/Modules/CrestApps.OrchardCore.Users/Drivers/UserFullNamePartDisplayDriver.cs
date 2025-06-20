@@ -58,12 +58,12 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
             model.User = user;
             model.Settings = await _siteService.GetSettingsAsync<DisplayNameSettings>();
         }).Location("Content:1.5")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.EditUsers, user));
+        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, UsersPermissions.EditUsers, user));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(User user, UserFullNamePart part, UpdateEditorContext context)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.EditUsers, user))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, UsersPermissions.EditUsers, user))
         {
             // When the user is only editing their profile never update this part of the user.
             return null;
