@@ -7,6 +7,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
+using OrchardCore.Search.AzureAI;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 
@@ -36,7 +37,7 @@ public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AI
             model.TopNDocuments = metadata.TopNDocuments;
             model.IndexName = metadata.IndexName;
 
-            model.IndexNames = (await _indexProfileStore.GetByProviderAsync(AzureOpenAIConstants.ProviderName))
+            model.IndexNames = (await _indexProfileStore.GetByProviderAsync(AzureAISearchConstants.ProviderName))
                 .Select(i => new SelectListItem(i.Name, i.IndexName))
                 .OrderBy(x => x.Text);
 
