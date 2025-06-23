@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.AI;
+namespace CrestApps.OrchardCore.AI;
 
 public enum AIToolSourceType
 {

@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.Subscriptions.Services
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@using OrchardCore.ContentManagement.Display
+
+@model ListServicePlansViewModel
+
+@inject IContentItemDisplayManager DisplayManager
+
+@if (Model.ServicePlans == null || Model.ServicePlans.Count == 0)
+{
+    <div class="alert alert-info text-center" role="alert">
+        @T["There are no service plans at the moment."]
+    </div>
+
+    return;
+}
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xxl-4 g-3">
+    @foreach (var servicePlan in Model.ServicePlans)
+    {
+        <div class="col">
+            @await DisplayAsync(servicePlan)
+        </div>
+    }
+</div>
+
+@if (Model.Pager != null)
+{
+    @await DisplayAsync(Model.Pager)
+}
