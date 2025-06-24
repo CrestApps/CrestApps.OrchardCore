@@ -455,9 +455,9 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         {
             ClientLoggingOptions = new ClientLoggingOptions()
             {
-                EnableLogging = true,
-                EnableMessageContentLogging = true,
-                EnableMessageLogging = true,
+                EnableLogging = connection.GetBooleanOrFalseValue("EnableLogging"),
+                EnableMessageContentLogging = connection.GetBooleanOrFalseValue("EnableMessageContentLogging"),
+                EnableMessageLogging = connection.GetBooleanOrFalseValue("EnableMessageLogging"),
                 LoggerFactory = _loggerFactory,
             },
         };
@@ -468,7 +468,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
             AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey()), _clientOptions),
             AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential(), _clientOptions),
             AzureAuthenticationType.Default => new AzureOpenAIClient(endpoint, new DefaultAzureCredential(), _clientOptions),
-            _ => throw new NotSupportedException("The provided authentication type is not supported.")
+            _ => throw new NotSupportedException("The specified authentication type is not supported.")
         };
 
         return azureClient;
