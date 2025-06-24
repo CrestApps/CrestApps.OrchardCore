@@ -65,4 +65,29 @@ public static class AIProviderConnectionExtensions
 
         throw new InvalidOperationException($"The '{key}' does not exists in the dictionary.");
     }
+
+    public static bool GetBooleanOrFalseValue(this IDictionary<string, object> entry, string key, bool throwException = false)
+    {
+        if (entry.TryGetValue(key, out var value))
+        {
+            if (value is bool booleanValue)
+            {
+                return booleanValue;
+            }
+
+            if (!throwException)
+            {
+                return false;
+            }
+
+            throw new InvalidOperationException($"The value for key '{key}' is not a valid boolean. Received '{value}', but expected true or false.");
+        }
+
+        if (!throwException)
+        {
+            return false;
+        }
+
+        throw new InvalidOperationException($"The '{key}' does not exists in the dictionary.");
+    }
 }

@@ -28,9 +28,19 @@
 <div class="@Orchard.GetWrapperClasses(Model.AuthenticationType == AzureAuthenticationType.ApiKey ? string.Empty : "d-none")" id="@apiKeyWrapperId">
     <label asp-for="ApiKey" class="@Orchard.GetLabelClasses()">@T["API key"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <input asp-for="ApiKey" class="form-control" autocomplete="new-password" placeholder="@(Model.HasApiKey ? T["A key is securely stored. Provider a new one to replace it or leave it blank."] : T["The API key"])" />
+        <input asp-for="ApiKey" class="form-control" autocomplete="new-password" placeholder="@(Model.HasApiKey? T["A key is securely stored. Provider a new one to replace it or leave it blank."] : T["The API key"])" />
         <span asp-validation-for="ApiKey" class="text-danger"></span>
         <span class="hint">@T["The provider's API key."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableLogging">
+            <label class="form-check-label" asp-for="EnableLogging">@T["Enable logging"]</label>
+            <span class="hint dashed">@T["When enabled, every request will be logged."]</span>
+        </div>
     </div>
 </div>
 

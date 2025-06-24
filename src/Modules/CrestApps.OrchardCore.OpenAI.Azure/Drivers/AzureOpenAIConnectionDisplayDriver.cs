@@ -46,6 +46,7 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
                 new (S["API Key"], nameof(AzureAuthenticationType.ApiKey)),
             ];
 
+            model.EnableLogging = metadata.EnableLogging;
             model.AuthenticationType = metadata.AuthenticationType;
             model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
         }).Location("Content:5");
@@ -88,6 +89,8 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
             metadata.ApiKey = protector.Protect(model.ApiKey);
         }
+
+        metadata.EnableLogging = model.EnableLogging;
 
         connection.Put(metadata);
 
