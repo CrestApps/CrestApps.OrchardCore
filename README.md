@@ -47,13 +47,13 @@ Provides interface for interacting with AI chat models like **ChatGPT** and othe
 Enhances the **AI Module** by providing AI Agents to perform tasks on your Orchard Core site. For more details, see the [Orchard Core AI Agent Module README](src/Modules/CrestApps.OrchardCore.AI.Agent/README.md).
 
 #### Model Context Protocol (MCP) Module
-Enhances the **AI Module** by adding support for connecting to any MCP server, whether hosted locally or remotely. For more details, see the [MCP Module README](src/Modules/CrestApps.OrchardCore.AI.Mcp/README.md).
+Enhances the **AI Module** by adding support for connecting to any **MCP server**, whether hosted locally or remotely. For more details, see the [MCP Module README](src/Modules/CrestApps.OrchardCore.AI.Mcp/README.md).
 
 #### Azure OpenAI Module
-Adds support for **Azure OpenAI** services within the **OpenAI Module**. See the [Azure OpenAI Module README](src/Modules/CrestApps.OrchardCore.OpenAI.Azure/README.md).  
+Extends the **AI Module** by integrating **Azure OpenAI** services. See the [Azure OpenAI Module README](src/Modules/CrestApps.OrchardCore.OpenAI.Azure/README.md).  
 
 #### OpenAI Module
-Extends the **AI Module** by integrating OpenAI-powered services. You can connect to any provider that adheres to OpenAI standard. Here are few providers:
+Extends the **AI Module** by integrating **OpenAI**-powered services. You can connect to any provider that adheres to OpenAI standard. Here are few providers:
 
 - DeepSeek
 - Google Gemini
@@ -72,10 +72,10 @@ Extends the **AI Module** by integrating OpenAI-powered services. You can connec
 See the [OpenAI Module README](src/Modules/CrestApps.OrchardCore.OpenAI/README.md) for more details.  
 
 #### Azure AI Inference Module
-Extends the **AI Module** by integrating Azure AI Inference services. See the [Azure AI Inference Module README](src/Modules/CrestApps.OrchardCore.AzureAIInference/README.md).  
+Extends the **AI Module** by integrating **Azure AI Inference** services. See the [Azure AI Inference Module README](src/Modules/CrestApps.OrchardCore.AzureAIInference/README.md).  
 
 #### Ollama Module
-Extends the **AI Module** by integrating any Ollama model. See the [Ollama Module README](src/Modules/CrestApps.OrchardCore.Ollama/README.md).  
+Extends the **AI Module** by integrating any **Ollama** model. See the [Ollama Module README](src/Modules/CrestApps.OrchardCore.Ollama/README.md).  
 
 ### Standard Modules
 
@@ -129,9 +129,9 @@ Follow these steps to get started with CrestApps:
 This project is actively maintained and evolves alongside Orchard Core.
 
 * If you're using Orchard Core versions from `2.1` up to `3.0.0-preview-18659`, please use package version `1.2.0-beta-0014`.
-* For Orchard Core `3.0.0-preview-18660` and later, use version `2.0.0-beta-0001` or newer.
+* For Orchard Core `3.0.0-preview-18669` and later, use version `2.0.0-beta-0001` or newer.
 
-**Note:** The reason for this split is that Orchard Core `3.0.0-preview-18660` upgraded to YesSql `5.4.1`, which introduced a binary breaking change. As a result, we had to divide development into two branches to maintain compatibility.
+**Note:** The reason for this split is that Orchard Core `3.0.0-preview-18669` upgraded to YesSql `5.4.1`, which introduced a binary breaking change. As a result, we had to divide development into two branches to maintain compatibility.
 
 ### Production Packages
 Stable releases are available on [NuGet.org](https://www.nuget.org/).  

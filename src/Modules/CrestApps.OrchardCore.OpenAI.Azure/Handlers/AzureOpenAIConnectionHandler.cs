@@ -47,6 +47,9 @@ public sealed class AzureOpenAIConnectionHandler : IAIProviderConnectionHandler
 
         context.Values["Endpoint"] = metadata.Endpoint?.ToString();
         context.Values["AuthenticationType"] = metadata.AuthenticationType.ToString();
+        context.Values["EnableLogging"] = metadata.EnableLogging;
+        context.Values["EnableMessageLogging"] = metadata.EnableLogging;
+        context.Values["EnableMessageContentLogging"] = metadata.EnableLogging;
 
         if (!string.IsNullOrEmpty(metadata.ApiKey))
         {
