@@ -107,6 +107,10 @@
     <NoWarn>$(NoWarn);NU1605</NoWarn>
 
     <NoWarn>$(NoWarn),1573,1591,1712</NoWarn>
+  
+    <!-- Inherit parent props file if one exists. For example to override TargetFrameworks. -->
+    <Import Condition="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../')) != ''"
+            Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
   </PropertyGroup>
 </Project>
