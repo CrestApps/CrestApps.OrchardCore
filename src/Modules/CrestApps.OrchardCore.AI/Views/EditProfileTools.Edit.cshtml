@@ -37,15 +37,15 @@
                 @for (var i = 0; i < tools.Value.Length; i++)
                 {
                     <div class="form-check">
-                        <input type="hidden" asp-for="Tools[@groupKey][@i].Id" />
-                        <input asp-for="Tools[@groupKey][@i].IsSelected"
+                        <input type="hidden" asp-for="Model.Tools[@groupKey][@i].Id" />
+                        <input asp-for="Model.Tools[@groupKey][@i].IsSelected"
                                type="checkbox"
                                class="form-check-input group-checkbox"
                                data-group="@groupId"
                                id="tool_@(groupId)_@i" />
 
                         <label class="form-check-label"
-                               asp-for="Tools[@groupKey][@i].IsSelected">
+                               asp-for="Model.Tools[@groupKey][@i].IsSelected">
                             @tools.Value[i].DisplayText
                         </label>
                         <span class="hint dashed">@tools.Value[i].Description</span>
