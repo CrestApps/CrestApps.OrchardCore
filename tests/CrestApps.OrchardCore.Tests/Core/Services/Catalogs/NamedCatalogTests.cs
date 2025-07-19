@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Services;
+using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services.Catalogs;
@@ -8,7 +10,7 @@ public sealed class NamedCatalogTests
     public async Task FindByNameAsync_ReturnsEntry_WhenExists()
     {
         var entry = new TestNamedCatalogEntry { Id = "1", Name = "Test" };
-        var records = new Dictionary<string, TestNamedCatalogEntry> { ["1"] = entry };
+        var records = new List<TestNamedCatalogEntry> { entry };
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out _);
 
         var result = await catalog.FindByNameAsync("Test");
@@ -19,7 +21,7 @@ public sealed class NamedCatalogTests
     [Fact]
     public async Task FindByNameAsync_ReturnsNull_WhenNotExists()
     {
-        var records = new Dictionary<string, TestNamedCatalogEntry>();
+        var records = new List<TestNamedCatalogEntry>();
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out _);
 
         var result = await catalog.FindByNameAsync("NotFound");
@@ -40,7 +42,7 @@ public sealed class NamedCatalogTests
     {
         var entry1 = new TestNamedCatalogEntry { Id = "1", Name = "Test" };
         var entry2 = new TestNamedCatalogEntry { Id = "2", Name = "Test" };
-        var records = new Dictionary<string, TestNamedCatalogEntry> { ["1"] = entry1 };
+        var records = new List<TestNamedCatalogEntry> { entry1 };
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out var fakeManager);
 
         await catalog.CreateAsync(entry1);
@@ -53,10 +55,10 @@ public sealed class NamedCatalogTests
         var entry1 = new TestNamedCatalogEntry { Id = "1", Name = "Test1" };
         var entry2 = new TestNamedCatalogEntry { Id = "2", Name = "Test2" };
 
-        var records = new Dictionary<string, TestNamedCatalogEntry>
+        var records = new List<TestNamedCatalogEntry>
         {
-            ["1"] = entry1,
-            ["2"] = entry2,
+            entry1,
+            entry2,
         };
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out var fakeManager);
         entry1.Name = entry2.Name;

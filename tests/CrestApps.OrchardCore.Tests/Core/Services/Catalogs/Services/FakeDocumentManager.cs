@@ -1,18 +1,24 @@
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Models;
 using OrchardCore.Documents;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 
 internal sealed class FakeDocumentManager<T> : IDocumentManager<DictionaryDocument<T>>
+    where T : CatalogEntry
 {
     private readonly DictionaryDocument<T> _doc;
 
     public bool UpdateCalled { get; private set; }
 
-    public FakeDocumentManager(Dictionary<string, T> records)
+    public FakeDocumentManager(IEnumerable<T> records)
     {
-        _doc = new DictionaryDocument<T> { Records = records };
+        _doc = new DictionaryDocument<T>
+        {
+            Records = records.ToDictionary(x => x.Id),
+        };
     }
 
     public Task<DictionaryDocument<T>> GetOrCreateMutableAsync(bool reload = false)
@@ -42,7 +48,7 @@ internal sealed class FakeDocumentManager<T> : IDocumentManager<DictionaryDocume
 
 internal sealed class FakeDocumentManager
 {
-    internal static Catalog<TCatalog> CreateCatalog<TCatalog>(Dictionary<string, TCatalog> records, out FakeDocumentManager<TCatalog> fakeManager)
+    internal static Catalog<TCatalog> CreateCatalog<TCatalog>(IEnumerable<TCatalog> records, out FakeDocumentManager<TCatalog> fakeManager)
         where TCatalog : CatalogEntry
     {
         fakeManager = new FakeDocumentManager<TCatalog>(records);
@@ -50,7 +56,7 @@ internal sealed class FakeDocumentManager
         return new Catalog<TCatalog>(fakeManager);
     }
 
-    internal static NamedCatalog<TCatalog> CreateNamedCatalog<TCatalog>(Dictionary<string, TCatalog> records, out FakeDocumentManager<TCatalog> fakeManager)
+    internal static NamedCatalog<TCatalog> CreateNamedCatalog<TCatalog>(IEnumerable<TCatalog> records, out FakeDocumentManager<TCatalog> fakeManager)
         where TCatalog : CatalogEntry, INameAwareModel
     {
         fakeManager = new FakeDocumentManager<TCatalog>(records);
@@ -58,7 +64,7 @@ internal sealed class FakeDocumentManager
         return new NamedCatalog<TCatalog>(fakeManager);
     }
 
-    internal static NamedSourceCatalog<TCatalog> CreateNamedSourceCatalog<TCatalog>(Dictionary<string, TCatalog> records, out FakeDocumentManager<TCatalog> fakeManager)
+    internal static NamedSourceCatalog<TCatalog> CreateNamedSourceCatalog<TCatalog>(IEnumerable<TCatalog> records, out FakeDocumentManager<TCatalog> fakeManager)
         where TCatalog : CatalogEntry, INameAwareModel, ISourceAwareModel
     {
         fakeManager = new FakeDocumentManager<TCatalog>(records);
