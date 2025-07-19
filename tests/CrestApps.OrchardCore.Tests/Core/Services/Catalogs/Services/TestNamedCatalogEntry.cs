@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 
-internal sealed class TestNamedCatalogEntry : CatalogEntry, INameAwareModel
+public sealed class TestNamedCatalogEntry : CatalogEntry, INameAwareModel
 {
     public string Name { get; set; }
 

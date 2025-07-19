@@ -125,7 +125,7 @@ public sealed partial class CatalogTests
     {
         var records = new List<TestCatalogEntry>
         {
-            new TestCatalogEntry { Id = "1" }
+            new() { Id = "1" }
         };
         var catalog = FakeDocumentManager.CreateCatalog(records, out var fakeManager);
         var entry = new TestCatalogEntry { Id = "1" };
