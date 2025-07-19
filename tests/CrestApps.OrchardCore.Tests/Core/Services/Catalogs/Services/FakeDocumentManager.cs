@@ -57,4 +57,12 @@ internal sealed class FakeDocumentManager
 
         return new NamedCatalog<TCatalog>(fakeManager);
     }
+
+    internal static NamedSourceCatalog<TCatalog> CreateNamedSourceCatalog<TCatalog>(Dictionary<string, TCatalog> records, out FakeDocumentManager<TCatalog> fakeManager)
+        where TCatalog : CatalogEntry, INameAwareModel, ISourceAwareModel
+    {
+        fakeManager = new FakeDocumentManager<TCatalog>(records);
+
+        return new NamedSourceCatalog<TCatalog>(fakeManager);
+    }
 }
