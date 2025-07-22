@@ -6,14 +6,12 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
-    <PackageVersion Include="ModelContextProtocol" Version="0.2.0-preview.3" />
+    <PackageVersion Include="ModelContextProtocol" Version="0.3.0-preview.1" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.1.0-preview.7" />
     <PackageVersion Include="NuGet.Versioning" Version="6.14.0" />
     <PackageVersion Include="OllamaSharp" Version="5.2.3" />
     <PackageVersion Include="Stripe.net" Version="45.6.0 " />
     <PackageVersion Include="YesSql.Abstractions" Version="5.4.1" />
-    <PackageVersion Include="ModelContextProtocol" Version="0.3.0-preview.1" />
-    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.1.0-preview.7" />
   </ItemGroup>
   <ItemGroup>
     <!-- OrchardCore Packages -->
@@ -87,7 +85,6 @@
     <!-- Testing Packages -->
     <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageVersion Include="Moq" Version="4.20.70" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.v3" Version="2.0.3" />
     <PackageVersion Include="xunit.analyzers" Version="1.22.0" />
