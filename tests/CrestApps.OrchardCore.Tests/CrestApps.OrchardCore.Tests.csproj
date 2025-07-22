@@ -8,14 +8,10 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Moq" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Moq" />
-  </ItemGroup>
-
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />

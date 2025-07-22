@@ -36,7 +36,6 @@ internal sealed class CustomContentTypeMigrations : DataMigration
 }
 ```
 
-
 Finally, register this migration:
 
 ```csharp

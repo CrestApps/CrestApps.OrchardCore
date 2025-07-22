@@ -42,7 +42,7 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 
         if (string.IsNullOrEmpty(model.DisplayText))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The title is required field."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The name is required field."]);
         }
 
         dataSource.DisplayText = model.DisplayText;

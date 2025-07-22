@@ -1,4 +1,5 @@
 using System.ClientModel;
+using System.ClientModel.Primitives;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Azure.AI.OpenAI;
@@ -30,6 +31,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
     private readonly INamedCatalog<AIDeployment> _deploymentStore;
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly IAILinkGenerator _linkGenerator;
     private readonly IEnumerable<IAzureOpenAIDataSourceHandler> _azureOpenAIDataSourceHandlers;
     private readonly DefaultAIOptions _defaultOptions;
@@ -39,10 +41,13 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
     private McpService _mcpService;
     private ICatalog<McpConnection> _mcpConnectionsStore;
 
+    private AzureOpenAIClientOptions _clientOptions;
+
     public AzureOpenAIDataSourceCompletionClient(
         INamedCatalog<AIDeployment> deploymentStore,
         IOptions<AIProviderOptions> providerOptions,
         IServiceProvider serviceProvider,
+        ILoggerFactory loggerFactory,
         IAILinkGenerator linkGenerator,
         IEnumerable<IAzureOpenAIDataSourceHandler> azureOpenAIDataSourceHandlers,
         IOptions<DefaultAIOptions> defaultOptions,
@@ -51,6 +56,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
     {
         _deploymentStore = deploymentStore;
         _serviceProvider = serviceProvider;
+        _loggerFactory = loggerFactory;
         _linkGenerator = linkGenerator;
         _azureOpenAIDataSourceHandlers = azureOpenAIDataSourceHandlers;
         _defaultOptions = defaultOptions.Value;
@@ -106,7 +112,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
         var prompts = new List<ChatMessage>
         {
-            new SystemChatMessage(GetSystemMessage(context, metadata))
+            new SystemChatMessage(GetSystemMessage(context, metadata)),
         };
 
         prompts.AddRange(azureMessages.Skip(skip).Take(pastMessageCount));
@@ -119,7 +125,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
             ? await GetFunctionsAsync(context.Profile)
             : [];
 
-        var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
+        var chatOptions = await GetOptionsWithDataSourceAsync(context, connection, functions);
         try
         {
             var data = await chatClient.CompleteChatAsync(prompts, chatOptions, cancellationToken);
@@ -253,7 +259,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
         var prompts = new List<ChatMessage>
         {
-            new SystemChatMessage(GetSystemMessage(context, metadata))
+            new SystemChatMessage(GetSystemMessage(context, metadata)),
         };
 
         prompts.AddRange(azureMessages.Skip(skip).Take(pastMessageCount));
@@ -266,7 +272,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
             ? await GetFunctionsAsync(context.Profile)
             : [];
 
-        var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
+        var chatOptions = await GetOptionsWithDataSourceAsync(context, connection, functions);
 
         Dictionary<string, object> linkContext = null;
 
@@ -443,21 +449,32 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         }
     }
 
-    private static AzureOpenAIClient GetChatClient(AIProviderConnectionEntry connection)
+    private AzureOpenAIClient GetChatClient(AIProviderConnectionEntry connection)
     {
+        _clientOptions ??= new AzureOpenAIClientOptions()
+        {
+            ClientLoggingOptions = new ClientLoggingOptions()
+            {
+                EnableLogging = connection.GetBooleanOrFalseValue("EnableLogging"),
+                EnableMessageContentLogging = connection.GetBooleanOrFalseValue("EnableMessageContentLogging"),
+                EnableMessageLogging = connection.GetBooleanOrFalseValue("EnableMessageLogging"),
+                LoggerFactory = _loggerFactory,
+            },
+        };
+
         var endpoint = connection.GetEndpoint();
         var azureClient = connection.GetAzureAuthenticationType() switch
         {
-            AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey())),
-            AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential()),
-            AzureAuthenticationType.Default => new AzureOpenAIClient(endpoint, new DefaultAzureCredential()),
-            _ => throw new NotSupportedException("The provided authentication type is not supported.")
+            AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey()), _clientOptions),
+            AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential(), _clientOptions),
+            AzureAuthenticationType.Default => new AzureOpenAIClient(endpoint, new DefaultAzureCredential(), _clientOptions),
+            _ => throw new NotSupportedException("The specified authentication type is not supported.")
         };
 
         return azureClient;
     }
 
-    private async Task<ChatCompletionOptions> GetOptionsWithDataSourceAsync(AICompletionContext context, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
+    private async Task<ChatCompletionOptions> GetOptionsWithDataSourceAsync(AICompletionContext context, AIProviderConnectionEntry connection, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
     {
         if (context.Profile is null)
         {
@@ -466,7 +483,13 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
         var chatOptions = GetOptions(context, functions);
 
-        if (!context.Profile.TryGet<AIProfileDataSourceMetadata>(out var dataSourceMetadata) || string.IsNullOrEmpty(dataSourceMetadata.DataSourceType))
+        if (!context.Profile.TryGet<AIProfileDataSourceMetadata>(out var dataSourceMetadata) ||
+            string.IsNullOrEmpty(dataSourceMetadata.DataSourceType))
+        {
+            return chatOptions;
+        }
+
+        if (context.Profile is null || !context.Profile.TryGet<AIProfileDataSourceMetadata>(out var metadata))
         {
             return chatOptions;
         }
