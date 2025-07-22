@@ -8,9 +8,5 @@ using OrchardCore.Modules.Manifest;
     Version = CrestAppsManifestConstants.Version,
     Description = "Extends the Resources module with additional reusable scripts and stylesheets.",
     Category = "Theming",
-    Dependencies =
-    [
-        "OrchardCore.Resources",
-    ],
-    IsAlwaysEnabled = true
+    IsAlwaysEnabled = false
 )]
