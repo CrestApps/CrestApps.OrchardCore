@@ -31,6 +31,19 @@ public static class AIConstants
         public const string Tools = "CrestApps.OrchardCore.AI.Tools";
 
         public const string OrchardCoreAIAgent = "CrestApps.OrchardCore.AI.Agent";
+        public const string OrchardCoreAIAgentRecipes = OrchardCoreAIAgent + ".Recipes";
+        public const string OrchardCoreAIAgentTenants = OrchardCoreAIAgent + ".Tenants";
+        public const string OrchardCoreAIAgentContents = OrchardCoreAIAgent + ".Contents";
+        public const string OrchardCoreAIAgentContentDefinitionRecipesTools = OrchardCoreAIAgent + ".ContentDefinition.Recipes.Tools";
+        public const string OrchardCoreAIAgentContentDefinitions = OrchardCoreAIAgent + ".ContentDefinitions";
+        public const string OrchardCoreAIAgentFeatures = OrchardCoreAIAgent + ".Features";
+        public const string OrchardCoreAIAgentNotifications = OrchardCoreAIAgent + ".Notifications";
+        public const string OrchardCoreAIAgentEmail = OrchardCoreAIAgent + ".Email";
+        public const string OrchardCoreAIAgentSms = OrchardCoreAIAgent + ".Sms";
+        public const string OrchardCoreAIAgentUsers = OrchardCoreAIAgent + ".Users";
+        public const string OrchardCoreAIAgentRoles = OrchardCoreAIAgent + ".Roles";
+        public const string OrchardCoreAIAgentWorkflows = OrchardCoreAIAgent + ".Workflows";
+
 
         public const string ChatCore = "CrestApps.OrchardCore.AI.Chat.Core";
 

@@ -36,6 +36,7 @@ public sealed class Startup : StartupBase
     }
 }
 
+[Feature(AIConstants.Feature.OrchardCoreAIAgentRecipes)]
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Recipes.Core")]
 public sealed class RecipesStartup : StartupBase
 {
@@ -78,6 +79,7 @@ public sealed class RecipesStartup : StartupBase
     }
 }
 
+[Feature(AIConstants.Feature.OrchardCoreAIAgentTenants)]
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Tenants")]
 public sealed class TenantsStartup : StartupBase
 {
@@ -155,6 +157,7 @@ public sealed class TenantsStartup : StartupBase
     }
 }
 
+[Feature(AIConstants.Feature.OrchardCoreAIAgentContents)]
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Contents")]
 public sealed class ContentsStartup : StartupBase
 {
@@ -232,6 +235,7 @@ public sealed class ContentsStartup : StartupBase
     }
 }
 
+[Feature(AIConstants.Feature.OrchardCoreAIAgentContentDefinitionRecipesTools)]
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.ContentTypes", "OrchardCore.Recipes.Core")]
 public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
 {
@@ -260,6 +264,7 @@ public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
     }
 }
 
+[Feature(AIConstants.Feature.OrchardCoreAIAgentContentDefinitions)]
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.ContentTypes")]
 public sealed class ContentDefinitionsStartup : StartupBase
 {
@@ -316,6 +321,7 @@ public sealed class ContentDefinitionsStartup : StartupBase
     }
 }
 
+[Feature(AIConstants.Feature.OrchardCoreAIAgentFeatures)]
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Features")]
 public sealed class FeaturesStartup : StartupBase
 {
@@ -365,6 +371,7 @@ public sealed class FeaturesStartup : StartupBase
     }
 }
 
+[Feature(AIConstants.Feature.OrchardCoreAIAgentNotifications)]
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Notifications")]
 public sealed class NotificationsStartup : StartupBase
 {
@@ -386,6 +393,7 @@ public sealed class NotificationsStartup : StartupBase
     }
 }
 
+[Feature(AIConstants.Feature.OrchardCoreAIAgentEmail)]
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Email")]
 public sealed class EmailStartup : StartupBase
 {
@@ -407,6 +415,7 @@ public sealed class EmailStartup : StartupBase
     }
 }
 
+[Feature(AIConstants.Feature.OrchardCoreAIAgentSms)]
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Sms")]
 public sealed class SmsStartup : StartupBase
 {
@@ -428,6 +437,7 @@ public sealed class SmsStartup : StartupBase
     }
 }
 
+[Feature(AIConstants.Feature.OrchardCoreAIAgentUsers)]
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Users")]
 public sealed class UsersStartup : StartupBase
 {
@@ -456,6 +466,7 @@ public sealed class UsersStartup : StartupBase
     }
 }
 
+[Feature(AIConstants.Feature.OrchardCoreAIAgentRoles)]
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Roles")]
 public sealed class RolesStartup : StartupBase
 {
@@ -477,6 +488,7 @@ public sealed class RolesStartup : StartupBase
     }
 }
 
+[Feature(AIConstants.Feature.OrchardCoreAIAgentWorkflows)]
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Workflows")]
 public sealed class WorkflowsStartup : StartupBase
 {
