@@ -1,25 +1,5 @@
 [
   {
-    "inputs": [
-      "node_modules/vue/dist/vue.global.js"
-    ],
-    "output": "wwwroot/scripts/vue.global.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@fortawesome/fontawesome-free/css/*"
-    ],
-    "output": "wwwroot/vendors/fontawesome-free/css/@"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@fortawesome/fontawesome-free/js/*"
-    ],
-    "output": "wwwroot/vendors/fontawesome-free/js/@"
-  },
-  {
     "copy": true,
     "inputs": [
       "node_modules/easymde/dist/easymde.min.js"
@@ -46,26 +26,5 @@
       "node_modules/easymde/dist/easymde.min.css"
     ],
     "output": "wwwroot/vendors/easymde/css/easymde.min.css"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@fortawesome/fontawesome-free/webfonts/*"
-    ],
-    "output": "wwwroot/vendors/fontawesome-free/webfonts/@"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/vuejs/dist/*.js"
-    ],
-    "output": "wwwroot/vendors/vue-2.6.14/@"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/vuedraggable/dist/*"
-    ],
-    "output": "wwwroot/vendors/vue-draggable-2.24.3/@"
   }
 ]
