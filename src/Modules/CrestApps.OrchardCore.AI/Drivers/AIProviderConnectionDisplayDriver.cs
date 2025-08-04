@@ -44,8 +44,8 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
             model.IsNew = context.IsNew;
             model.Types =
             [
-                new(S["Chat"],nameof(AIProviderConnectionType.Chat)),
-                new(S["Embedding"],nameof(AIProviderConnectionType.Embedding)),
+                new(S["Chat"], nameof(AIProviderConnectionType.Chat)),
+                new(S["Embedding"], nameof(AIProviderConnectionType.Embedding)),
             ];
 
         }).Location("Content:1");
