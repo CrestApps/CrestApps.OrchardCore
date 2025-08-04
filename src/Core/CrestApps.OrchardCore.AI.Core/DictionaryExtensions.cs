@@ -1,8 +1,9 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.AI.Core;
 
-public static class AIProviderConnectionExtensions
+public static class DictionaryExtensions
 {
     public static string GetApiKey(this IDictionary<string, object> entry, bool throwException = true)
         => entry.GetStringValue("ApiKey", throwException);
@@ -30,6 +31,19 @@ public static class AIProviderConnectionExtensions
 
     public static string GetDefaultEmbeddingDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
         => entry.GetStringValue("DefaultEmbeddingDeploymentName", throwException);
+
+    public static AIProviderConnectionType GetConnectionType(this IDictionary<string, object> entry)
+    {
+        var typeString = entry.GetStringValue("Type");
+
+        if (string.IsNullOrEmpty(typeString) ||
+            !Enum.TryParse<AIProviderConnectionType>(typeString, true, out var type))
+        {
+            type = AIProviderConnectionType.Chat;
+        }
+
+        return type;
+    }
 
     public static string GetStringValue(this IDictionary<string, object> entry, string key, bool throwException = false)
     {
