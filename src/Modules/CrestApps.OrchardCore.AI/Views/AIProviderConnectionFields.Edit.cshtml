@@ -29,6 +29,15 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Type" class="@Orchard.GetLabelClasses()">@T["Type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="Type" asp-items="Model.Types" class="form-select"></select>
+        <span asp-validation-for="Type" class="text-danger"></span>
+        <span class="hint">@T["The connection's type."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
     <label asp-for="DefaultDeploymentName" class="@Orchard.GetLabelClasses()">@T["Deployment name"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="text" asp-for="DefaultDeploymentName" class="form-control" />

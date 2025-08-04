@@ -2,11 +2,23 @@
 @using OrchardCore.DisplayManagement.Views
 
 @model ShapeViewModel<AIProviderConnection>
+@{
+    var type = Model.Value.Type switch
+    {
+        AIProviderConnectionType.Chat => T["Chat"],
+        AIProviderConnectionType.Embedding => T["Embedding"],
+        _ => T["Unknown connection type"]
+    };
+}
 
 <span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Provider"]">
-    <i class="text-secondary me-1" aria-hidden="true"></i>@Model.Value.ProviderName
+    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ProviderName
 </span>
 
 <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Connection Name"]">
-    <i class="text-secondary me-1" aria-hidden="true"></i>@Model.Value.DisplayText
+    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.DisplayText
+</span>
+
+<span class="badge ta-badge bg-secondary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Connection Type"]">
+    <i class="text-secondary" aria-hidden="true"></i>@type
 </span>

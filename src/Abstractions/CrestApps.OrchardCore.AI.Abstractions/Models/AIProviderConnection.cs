@@ -10,6 +10,8 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
 
     public string DisplayText { get; set; }
 
+    public AIProviderConnectionType Type { get; set; }
+
     public string DefaultDeploymentName { get; set; }
 
     public bool IsDefault { get; set; }

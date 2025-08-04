@@ -106,6 +106,13 @@ public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderCon
             connection.DefaultDeploymentName = defaultDeploymentName;
         }
 
+        var typeText = data[nameof(AIProviderConnection.Type)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(typeText) && Enum.TryParse<AIProviderConnectionType>(typeText, out var type))
+        {
+            connection.Type = type;
+        }
+
         var isDefault = data[nameof(AIProviderConnection.IsDefault)]?.GetValue<bool>();
 
         if (isDefault == true)
@@ -148,7 +155,7 @@ public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderCon
             connection.CreatedUtc = createdUtc.Value;
         }
 
-        var properties = data[nameof(AIDeployment.Properties)]?.AsObject();
+        var properties = data[nameof(AIProviderConnection.Properties)]?.AsObject();
 
         if (properties != null)
         {
