@@ -2,24 +2,24 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
-using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
-public sealed class ListContentFieldsTool : AIFunction
+public sealed class ListContentPartsDefinitionsTool : AIFunction
 {
-    public const string TheName = "listContentFieldDefinitions";
+    public const string TheName = "listContentPartsDefinitions";
 
-    private readonly ContentOptions _contentOptions;
+    private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
-    public ListContentFieldsTool(
-        ContentOptions contentOptions,
+    public ListContentPartsDefinitionsTool(
+        IContentDefinitionManager contentDefinitionManager,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)
     {
-        _contentOptions = contentOptions;
+        _contentDefinitionManager = contentDefinitionManager;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
 
@@ -34,7 +34,7 @@ public sealed class ListContentFieldsTool : AIFunction
 
     public override string Name => TheName;
 
-    public override string Description => "Retrieves the available content fields which can be used to create content parts.";
+    public override string Description => "Retrieves the available content parts definitions which can be used to create content types.";
 
     public override JsonElement JsonSchema { get; }
 
@@ -52,6 +52,6 @@ public sealed class ListContentFieldsTool : AIFunction
             return "You do not have permission to view content types.";
         }
 
-        return JsonSerializer.Serialize(_contentOptions.ContentFieldOptions.Select(x => x.Type.Name));
+        return JsonSerializer.Serialize(await _contentDefinitionManager.ListPartDefinitionsAsync(), JsonHelpers.ContentDefinitionSerializerOptions);
     }
 }

@@ -80,7 +80,6 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         }
 
         var connectionName = GetDefaultConnectionName(provider, context.Profile);
-        var deploymentName = GetDefaultDeploymentName(provider);
 
         if (string.IsNullOrEmpty(connectionName))
         {
@@ -88,6 +87,8 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
             return null;
         }
+
+        var deploymentName = GetDefaultDeploymentName(provider, connectionName);
 
         if (string.IsNullOrEmpty(deploymentName))
         {
@@ -140,7 +141,6 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         }
 
         var connectionName = GetDefaultConnectionName(provider, context.Profile);
-        var deploymentName = GetDefaultDeploymentName(provider);
 
         if (string.IsNullOrEmpty(connectionName))
         {
@@ -148,6 +148,8 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
             yield break;
         }
+
+        var deploymentName = GetDefaultDeploymentName(provider, connectionName);
 
         if (string.IsNullOrEmpty(deploymentName))
         {
