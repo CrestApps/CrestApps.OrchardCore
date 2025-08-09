@@ -24,7 +24,7 @@ public abstract class AICompletionServiceBase
 
     protected virtual string GetDefaultDeploymentName(AIProvider provider, string connectionName)
     {
-        if (provider.Connections.TryGetValue(connectionName, out var connection))
+        if (connectionName is not null && provider.Connections.TryGetValue(connectionName, out var connection))
         {
             var deploymentName = connection.GetDefaultDeploymentName();
 
