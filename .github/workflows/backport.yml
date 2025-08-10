@@ -24,8 +24,3 @@ jobs:
         Backport of #%source_pr_number% to %target_branch%
 
         /cc %cc_users%
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-      
