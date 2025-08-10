@@ -22,6 +22,8 @@ public sealed class RecipeExecutionService
 
     public async Task<bool> ExecuteRecipeAsync(JsonNode data)
     {
+        ArgumentNullException.ThrowIfNull(data);
+
         var tempArchiveName = PathExtensions.GetTempFileName() + ".json";
         var tempArchiveFolder = PathExtensions.GetTempFileName();
 
