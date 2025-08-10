@@ -105,11 +105,11 @@ public sealed class SearchForUsersTool : AIFunction
             FilterResult = new QueryFilterResult<User>(new Dictionary<string, QueryTermOption<User>>()),
         }, _updateModelAccessor.ModelUpdater);
 
-        var contentItemsCount = await query.CountAsync();
+        var contentItemsCount = await query.CountAsync(cancellationToken);
 
         var contentItems = await query.Skip(startingIndex)
             .Take(_pagerOptions.PageSize)
-            .ListAsync();
+            .ListAsync(cancellationToken);
 
         return
         $$"""

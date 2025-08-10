@@ -179,7 +179,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 await ProcessChatPromptAsync(writer, profile, sessionId, prompt.Trim(), cancellationToken);
             }
 
-            await _session.SaveChangesAsync();
+            await _session.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {
