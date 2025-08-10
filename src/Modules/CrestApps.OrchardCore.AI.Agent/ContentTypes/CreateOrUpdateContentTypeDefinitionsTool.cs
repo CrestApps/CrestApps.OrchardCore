@@ -5,9 +5,6 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Options;
-using OrchardCore.Deployment;
-using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
@@ -20,14 +17,13 @@ public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseT
     private readonly IAuthorizationService _authorizationService;
 
     public CreateOrUpdateContentTypeDefinitionsTool(
-        IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers,
+        RecipeExecutionService recipeExecutionService,
         RecipeStepsService recipeStepsService,
         IEnumerable<IRecipeStep> recipeSteps,
-        IOptions<DocumentJsonSerializerOptions> options,
         ContentMetadataService contentMetadataService,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)
-        : base(deploymentTargetHandlers, recipeStepsService, recipeSteps, options.Value)
+        : base(recipeExecutionService, recipeStepsService, recipeSteps)
     {
         _contentMetadataService = contentMetadataService;
         _httpContextAccessor = httpContextAccessor;

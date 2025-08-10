@@ -19,13 +19,13 @@ public sealed class ApplySystemSettingsTool : ImportRecipeBaseTool
     private readonly IAuthorizationService _authorizationService;
 
     public ApplySystemSettingsTool(
-        IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers,
+        RecipeExecutionService recipeExecutionService,
         RecipeStepsService recipeStepsService,
         IOptions<DocumentJsonSerializerOptions> options,
         IEnumerable<IRecipeStep> recipeSteps,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)
-        : base(deploymentTargetHandlers, recipeStepsService, recipeSteps, options.Value)
+        : base(recipeExecutionService, recipeStepsService, recipeSteps)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;

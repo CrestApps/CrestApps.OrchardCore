@@ -29,6 +29,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<RecipeExecutionService>();
         services.AddAITool<ListTimeZoneTool>(ListTimeZoneTool.TheName, (o) =>
         {
             o.Title = S["List System Time Zones"];

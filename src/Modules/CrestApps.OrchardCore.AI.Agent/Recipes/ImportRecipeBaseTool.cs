@@ -5,31 +5,25 @@ using CrestApps.OrchardCore.AI.Agent.Services;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Json.Schema;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.FileProviders;
-using OrchardCore.Deployment;
-using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.AI.Agent.Recipes;
 
 public abstract class ImportRecipeBaseTool : AIFunction
 {
-    private readonly IEnumerable<IDeploymentTargetHandler> _deploymentTargetHandlers;
+    private readonly RecipeExecutionService _recipeExecutionService;
     private readonly RecipeStepsService _recipeStepsService;
     private readonly IEnumerable<IRecipeStep> _recipeSteps;
-    private readonly DocumentJsonSerializerOptions _options;
 
     public override JsonElement JsonSchema { get; }
 
     protected ImportRecipeBaseTool(
-        IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers,
+        RecipeExecutionService recipeExecutionService,
         RecipeStepsService RecipeStepsService,
-        IEnumerable<IRecipeStep> recipeSteps,
-        DocumentJsonSerializerOptions options)
+        IEnumerable<IRecipeStep> recipeSteps)
     {
-        _deploymentTargetHandlers = deploymentTargetHandlers;
+        _recipeExecutionService = recipeExecutionService;
         _recipeStepsService = RecipeStepsService;
         _recipeSteps = recipeSteps;
-        _options = options;
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
             """
             {
@@ -141,45 +135,11 @@ public abstract class ImportRecipeBaseTool : AIFunction
             """;
         }
 
-        var tempArchiveName = PathExtensions.GetTempFileName() + ".json";
-        var tempArchiveFolder = PathExtensions.GetTempFileName();
-
-        try
+        if (await _recipeExecutionService.ExecuteRecipeAsync(data))
         {
-            using (var stream = new FileStream(tempArchiveName, FileMode.Create))
-            {
-                using var writer = new Utf8JsonWriter(stream);
-                data.WriteTo(writer, _options.SerializerOptions);
-            }
-
-            Directory.CreateDirectory(tempArchiveFolder);
-            File.Move(tempArchiveName, Path.Combine(tempArchiveFolder, "Recipe.json"));
-
-            var deploymentPackage = new PhysicalFileProvider(tempArchiveFolder);
-
-            foreach (var deploymentTargetHandler in _deploymentTargetHandlers)
-            {
-                // Don't trigger in parallel to avoid potential race conditions in the handlers
-                await deploymentTargetHandler.ImportFromFileAsync(deploymentPackage);
-            }
-
             return "Recipe was successfully imported";
         }
-        catch
-        {
-            return "Error occurred while trying to import the recipe.";
-        }
-        finally
-        {
-            if (File.Exists(tempArchiveName))
-            {
-                File.Delete(tempArchiveName);
-            }
 
-            if (Directory.Exists(tempArchiveFolder))
-            {
-                Directory.Delete(tempArchiveFolder, true);
-            }
-        }
+        return "Error occurred while trying to import the recipe.";
     }
 }

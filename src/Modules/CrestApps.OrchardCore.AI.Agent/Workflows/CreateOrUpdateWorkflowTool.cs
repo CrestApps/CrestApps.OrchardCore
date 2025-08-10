@@ -5,9 +5,6 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Options;
-using OrchardCore.Deployment;
-using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.AI.Agent.Workflows;
 
@@ -19,13 +16,12 @@ public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
     private readonly IAuthorizationService _authorizationService;
 
     public CreateOrUpdateWorkflowTool(
-        IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers,
+        RecipeExecutionService recipeExecutionService,
         RecipeStepsService recipeStepsService,
         IEnumerable<IRecipeStep> recipeSteps,
-        IOptions<DocumentJsonSerializerOptions> options,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)
-        : base(deploymentTargetHandlers, recipeStepsService, recipeSteps, options.Value)
+        : base(recipeExecutionService, recipeStepsService, recipeSteps)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;

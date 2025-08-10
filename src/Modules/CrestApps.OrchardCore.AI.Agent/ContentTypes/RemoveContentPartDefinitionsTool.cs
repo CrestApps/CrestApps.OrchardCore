@@ -1,13 +1,11 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Agent.Recipes;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Settings;
-using OrchardCore.ContentTypes.Events;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
@@ -16,22 +14,19 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
     public const string TheName = "removeContentPartDefinition";
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly IEnumerable<IContentDefinitionEventHandler> _contentDefinitionEventHandlers;
+    private readonly RecipeExecutionService _recipeExecutionService;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ILogger<RemoveContentTypeDefinitionsTool> _logger;
     private readonly IAuthorizationService _authorizationService;
 
     public RemoveContentPartDefinitionsTool(
         IContentDefinitionManager contentDefinitionManager,
-        IEnumerable<IContentDefinitionEventHandler> contentDefinitionEventHandlers,
-        ILogger<RemoveContentTypeDefinitionsTool> logger,
+        RecipeExecutionService recipeExecutionService,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)
     {
         _contentDefinitionManager = contentDefinitionManager;
-        _contentDefinitionEventHandlers = contentDefinitionEventHandlers;
+        _recipeExecutionService = recipeExecutionService;
         _httpContextAccessor = httpContextAccessor;
-        _logger = logger;
         _authorizationService = authorizationService;
 
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
@@ -70,10 +65,8 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
             return "Unable to find a name argument in the function arguments.";
         }
 
-        await _contentDefinitionManager.LoadTypeDefinitionsAsync();
-        await _contentDefinitionManager.LoadPartDefinitionsAsync();
 
-        var partDefinition = await _contentDefinitionManager.LoadPartDefinitionAsync(name);
+        var partDefinition = await _contentDefinitionManager.GetPartDefinitionAsync(name);
 
         if (partDefinition is null)
         {
@@ -85,54 +78,25 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
                 """;
         }
 
-        var settings = partDefinition.GetSettings<ContentSettings>();
+        var data = JsonNode.Parse(
+            $$"""
+            {
+              "steps": [
+                {
+                  "name": "DeleteContentDefinition",
+                  "ContentParts": [
+                    "{{name}}"
+                  ]
+                }
+              ]
+            }
+            """);
 
-        if (settings.IsSystemDefined)
+        if (await _recipeExecutionService.ExecuteRecipeAsync(data))
         {
-            throw new InvalidOperationException("Unable to remove system-defined part.");
+            return $"The content part {name} was removed successfully";
         }
 
-        foreach (var fieldDefinition in partDefinition.Fields)
-        {
-            await RemoveFieldFromPartAsync(fieldDefinition.Name, name);
-        }
-
-        await _contentDefinitionManager.DeletePartDefinitionAsync(name);
-
-        var context = new ContentPartRemovedContext
-        {
-            ContentPartDefinition = partDefinition,
-        };
-
-        _contentDefinitionEventHandlers.Invoke((handler, ctx) => handler.ContentPartRemoved(ctx), context, _logger);
-
-        return $"The content part {name} was removed successfully";
-    }
-
-    private async Task RemoveFieldFromPartAsync(string fieldName, string partName)
-    {
-        var partDefinition = await _contentDefinitionManager.LoadPartDefinitionAsync(partName);
-
-        if (partDefinition == null)
-        {
-            return;
-        }
-
-        var settings = partDefinition.GetSettings<ContentSettings>();
-
-        if (settings.IsSystemDefined)
-        {
-            throw new InvalidOperationException("Unable to remove system-defined field.");
-        }
-
-        await _contentDefinitionManager.AlterPartDefinitionAsync(partName, typeBuilder => typeBuilder.RemoveField(fieldName));
-
-        var context = new ContentFieldDetachedContext
-        {
-            ContentPartName = partName,
-            ContentFieldName = fieldName,
-        };
-
-        _contentDefinitionEventHandlers.Invoke((handler, ctx) => handler.ContentFieldDetached(ctx), context, _logger);
+        return "Unable to remove the content part definition.";
     }
 }
