@@ -56,7 +56,6 @@ public sealed class RecipesStartup : StartupBase
         services.AddScoped<IRecipeStep, SettingsSchemaStep>();
         services.AddScoped<IRecipeStep, WorkflowTypeSchemaStep>();
 
-
         services.AddAITool<ImportOrchardTool>(ImportOrchardTool.TheName, (o) =>
         {
             o.Title = S["Import Orchard Core Recipe"];
