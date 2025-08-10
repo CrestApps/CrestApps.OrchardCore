@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentManagement.Metadata.Settings;
@@ -8,17 +10,23 @@ namespace CrestApps.OrchardCore.AI.Agent.Services;
 public sealed class ContentMetadataService
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
+
     private readonly IEnumerable<Type> _contentPartTypes;
     private readonly IEnumerable<Type> _contentFieldTypes;
 
     public ContentMetadataService(
         IContentDefinitionManager contentDefinitionManager,
-        IEnumerable<Type> contentPartTypes,
-        IEnumerable<Type> contentFieldTypes)
+        IEnumerable<ContentPart> contentParts,
+        IEnumerable<ContentField> contentFields,
+        IOptions<ContentOptions> contentOptions)
     {
         _contentDefinitionManager = contentDefinitionManager;
-        _contentPartTypes = contentPartTypes;
-        _contentFieldTypes = contentFieldTypes;
+
+        _contentPartTypes = contentParts.Select(cp => cp.GetType())
+            .Union(contentOptions.Value.ContentPartOptions.Select(cpo => cpo.Type));
+
+        _contentFieldTypes = contentFields.Select(cf => cf.GetType())
+            .Union(contentOptions.Value.ContentFieldOptions.Select(cfo => cfo.Type));
     }
 
     public async Task<IEnumerable<ContentPartMetadata>> GetPartsAsync()

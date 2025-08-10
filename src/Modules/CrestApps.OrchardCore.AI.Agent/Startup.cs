@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Agent.ContentTypes;
 using CrestApps.OrchardCore.AI.Agent.Features;
 using CrestApps.OrchardCore.AI.Agent.Recipes;
 using CrestApps.OrchardCore.AI.Agent.Roles;
+using CrestApps.OrchardCore.AI.Agent.Schemas;
 using CrestApps.OrchardCore.AI.Agent.Services;
 using CrestApps.OrchardCore.AI.Agent.System;
 using CrestApps.OrchardCore.AI.Agent.Tenants;
@@ -49,6 +50,12 @@ public sealed class RecipesStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<RecipeStepsService>();
+        services.AddScoped<IRecipeStep, ContentDefinitionSchemaStep>();
+        services.AddScoped<IRecipeStep, SettingsSchemaStep>();
+        services.AddScoped<IRecipeStep, WorkflowTypeSchemaStep>();
+
+
         services.AddAITool<ImportOrchardTool>(ImportOrchardTool.TheName, (o) =>
         {
             o.Title = S["Import Orchard Core Recipe"];
