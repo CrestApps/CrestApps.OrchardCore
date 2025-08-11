@@ -4,6 +4,8 @@ using CrestApps.OrchardCore.AI.Agent.ContentTypes;
 using CrestApps.OrchardCore.AI.Agent.Features;
 using CrestApps.OrchardCore.AI.Agent.Recipes;
 using CrestApps.OrchardCore.AI.Agent.Roles;
+using CrestApps.OrchardCore.AI.Agent.Schemas;
+using CrestApps.OrchardCore.AI.Agent.Services;
 using CrestApps.OrchardCore.AI.Agent.System;
 using CrestApps.OrchardCore.AI.Agent.Tenants;
 using CrestApps.OrchardCore.AI.Agent.Users;
@@ -28,6 +30,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<RecipeExecutionService>();
         services.AddAITool<ListTimeZoneTool>(ListTimeZoneTool.TheName, (o) =>
         {
             o.Title = S["List System Time Zones"];
@@ -49,6 +52,11 @@ public sealed class RecipesStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<RecipeStepsService>();
+        services.AddScoped<IRecipeStep, ContentDefinitionSchemaStep>();
+        services.AddScoped<IRecipeStep, SettingsSchemaStep>();
+        services.AddScoped<IRecipeStep, WorkflowTypeSchemaStep>();
+
         services.AddAITool<ImportOrchardTool>(ImportOrchardTool.TheName, (o) =>
         {
             o.Title = S["Import Orchard Core Recipe"];
@@ -257,17 +265,11 @@ public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<ContentMetadataService>();
         services.AddAITool<CreateOrUpdateContentTypeDefinitionsTool>(CreateOrUpdateContentTypeDefinitionsTool.TheName, (o) =>
         {
             o.Title = S["Create or Update Content Type Definition"];
             o.Description = S["Creates a new content type definition or updates an existing one."];
-            o.Category = S["Content Definitions"];
-        });
-
-        services.AddAITool<CreateOrUpdateContentPartDefinitionsTool>(CreateOrUpdateContentPartDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["Create or Update Content Part Definition"];
-            o.Description = S["Creates a new content part definition or updates an existing one."];
             o.Category = S["Content Definitions"];
         });
     }
@@ -313,7 +315,14 @@ public sealed class ContentDefinitionsStartup : StartupBase
             o.Category = S["Content Definitions"];
         });
 
-        services.AddAITool<ListContentPartDefinitionsTool>(ListContentPartDefinitionsTool.TheName, (o) =>
+        services.AddAITool<ListContentTypesDefinitionsTool>(ListContentTypesDefinitionsTool.TheName, (o) =>
+        {
+            o.Title = S["List Available Content Types Definitions"];
+            o.Description = S["Provides a list of available content types definitions."];
+            o.Category = S["Content Definitions"];
+        });
+
+        services.AddAITool<ListContentPartsDefinitionsTool>(ListContentPartsDefinitionsTool.TheName, (o) =>
         {
             o.Title = S["List Available Content Parts Definitions"];
             o.Description = S["Provides a list of available content parts definitions."];
