@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Agent.Recipes;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -12,15 +14,18 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
     public const string TheName = "removeContentPartDefinition";
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly RecipeExecutionService _recipeExecutionService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
     public RemoveContentPartDefinitionsTool(
         IContentDefinitionManager contentDefinitionManager,
+        RecipeExecutionService recipeExecutionService,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)
     {
         _contentDefinitionManager = contentDefinitionManager;
+        _recipeExecutionService = recipeExecutionService;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
 
@@ -60,15 +65,38 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
             return "Unable to find a name argument in the function arguments.";
         }
 
-        var definition = await _contentDefinitionManager.GetPartDefinitionAsync(name);
 
-        if (definition is null)
+        var partDefinition = await _contentDefinitionManager.GetPartDefinitionAsync(name);
+
+        if (partDefinition is null)
         {
-            return $"Unable to find a type definition that match the name: {name}";
+            return
+                $"""
+                Unable to find a part definition that match the name: {name}.
+                Here are the available part that can be removed:
+                {JsonSerializer.Serialize((await _contentDefinitionManager.ListPartDefinitionsAsync()).Select(x => x.Name), JsonHelpers.ContentDefinitionSerializerOptions)}
+                """;
         }
 
-        await _contentDefinitionManager.DeletePartDefinitionAsync(name);
+        var data = JsonNode.Parse(
+            $$"""
+            {
+              "steps": [
+                {
+                  "name": "DeleteContentDefinition",
+                  "ContentParts": [
+                    "{{name}}"
+                  ]
+                }
+              ]
+            }
+            """);
 
-        return $"The content part {name} was removed successfully";
+        if (await _recipeExecutionService.ExecuteRecipeAsync(data))
+        {
+            return $"The content part {name} was removed successfully";
+        }
+
+        return "Unable to remove the content part definition.";
     }
 }
