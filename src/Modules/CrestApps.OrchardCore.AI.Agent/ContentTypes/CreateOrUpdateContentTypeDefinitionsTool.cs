@@ -12,7 +12,6 @@ public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseT
 {
     public const string TheName = "applyContentTypeDefinitionFromRecipe";
 
-    private readonly ContentMetadataService _contentMetadataService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
@@ -20,12 +19,10 @@ public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseT
         RecipeExecutionService recipeExecutionService,
         RecipeStepsService recipeStepsService,
         IEnumerable<IRecipeStep> recipeSteps,
-        ContentMetadataService contentMetadataService,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)
         : base(recipeExecutionService, recipeStepsService, recipeSteps)
     {
-        _contentMetadataService = contentMetadataService;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
     }
