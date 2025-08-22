@@ -53,9 +53,7 @@ public sealed class RecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<RecipeStepsService>();
-        services.AddScoped<IRecipeStep, ContentDefinitionSchemaStep>();
         services.AddScoped<IRecipeStep, SettingsSchemaStep>();
-        services.AddScoped<IRecipeStep, WorkflowTypeSchemaStep>();
 
         services.AddAITool<ImportOrchardTool>(ImportOrchardTool.TheName, (o) =>
         {
@@ -266,6 +264,7 @@ public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ContentMetadataService>();
+        services.AddScoped<IRecipeStep, ContentDefinitionSchemaStep>();
         services.AddAITool<CreateOrUpdateContentTypeDefinitionsTool>(CreateOrUpdateContentTypeDefinitionsTool.TheName, (o) =>
         {
             o.Title = S["Create or Update Content Type Definition"];
@@ -538,5 +537,14 @@ public sealed class WorkflowsStartup : StartupBase
             o.Description = S["List all available tasks and activities a workflow."];
             o.Category = S["Workflow Management"];
         });
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Recipes.Core", "OrchardCore.Workflows")]
+public sealed class WorkflowsRecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, WorkflowTypeSchemaStep>();
     }
 }
