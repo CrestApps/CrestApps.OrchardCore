@@ -127,11 +127,13 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
         if (!result.IsValid)
         {
+            var schemaStructure = JsonSerializer.Serialize(rootSchema);
+
             return
             $"""
                 Invalid recipe format. The recipe must match the expected schema shown below. 
                 Please generate a valid recipe and try again:
-                {JsonSerializer.Serialize(rootSchema)}
+                {schemaStructure}
             """;
         }
 
