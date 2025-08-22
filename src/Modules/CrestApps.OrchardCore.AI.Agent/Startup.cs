@@ -487,7 +487,7 @@ public sealed class RolesStartup : StartupBase
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Recipes.Core", "OrchardCore.Workflows")]
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Workflows")]
 public sealed class WorkflowsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
@@ -499,8 +499,6 @@ public sealed class WorkflowsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IRecipeStep, WorkflowTypeSchemaStep>();
-
         services.AddAITool<GetWorkflowTypesTool>(GetWorkflowTypesTool.TheName, (o) =>
         {
             o.Title = S["Get Workflow Type Info"];
@@ -514,6 +512,22 @@ public sealed class WorkflowsStartup : StartupBase
             o.Description = S["List information about a workflow types."];
             o.Category = S["Workflow Management"];
         });
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Recipes.Core", "OrchardCore.Workflows")]
+public sealed class WorkflowsRecipesStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public WorkflowsRecipesStartup(IStringLocalizer<WorkflowsStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, WorkflowTypeSchemaStep>();
 
         services.AddAITool<CreateOrUpdateWorkflowTool>(CreateOrUpdateWorkflowTool.TheName, (o) =>
         {
