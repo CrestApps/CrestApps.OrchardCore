@@ -528,7 +528,7 @@ public sealed class WorkflowsStartup : StartupBase
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Recipes.Core", "OrchardCore.Workflows")]
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Workflows", "OrchardCore.Recipes.Core")]
 public sealed class WorkflowsRecipesStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
