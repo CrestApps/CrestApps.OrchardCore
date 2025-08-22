@@ -13,7 +13,6 @@ using CrestApps.OrchardCore.AI.Agent.Workflows;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Agent;
@@ -88,27 +87,15 @@ public sealed class RecipesStartup : StartupBase
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Tenants")]
 public sealed class TenantsStartup : StartupBase
 {
-    private readonly ShellSettings _shellSettings;
-
     internal readonly IStringLocalizer S;
 
-    public TenantsStartup(
-        ShellSettings shellSettings,
-        IStringLocalizer<TenantsStartup> stringLocalizer)
+    public TenantsStartup(IStringLocalizer<TenantsStartup> stringLocalizer)
     {
-        _shellSettings = shellSettings;
         S = stringLocalizer;
     }
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        if (!_shellSettings.IsDefaultShell())
-        {
-            // This check is added as a workaround for the issue described
-            // at: https://github.com/OrchardCMS/OrchardCore/issues/18194
-            return;
-        }
-
         services.AddAITool<ListStartupRecipesTool>(ListStartupRecipesTool.TheName, (o) =>
         {
             o.Title = S["List Startup Recipes"];
