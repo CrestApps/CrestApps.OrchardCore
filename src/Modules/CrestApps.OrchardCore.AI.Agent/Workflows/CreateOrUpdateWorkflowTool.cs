@@ -1,11 +1,10 @@
 using CrestApps.OrchardCore.AI.Agent.Recipes;
+using CrestApps.OrchardCore.AI.Agent.Schemas;
+using CrestApps.OrchardCore.AI.Agent.Services;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Options;
-using OrchardCore.Deployment;
-using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.AI.Agent.Workflows;
 
@@ -17,11 +16,12 @@ public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
     private readonly IAuthorizationService _authorizationService;
 
     public CreateOrUpdateWorkflowTool(
-        IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers,
-        IOptions<DocumentJsonSerializerOptions> options,
+        RecipeExecutionService recipeExecutionService,
+        RecipeStepsService recipeStepsService,
+        IEnumerable<IRecipeStep> recipeSteps,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)
-        : base(deploymentTargetHandlers, options.Value)
+        : base(recipeExecutionService, recipeStepsService, recipeSteps)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
@@ -29,7 +29,7 @@ public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
 
     public override string Name => TheName;
 
-    public override string Description => "Creates or updates a workflow.";
+    public override string Description => "Creates or updates a workflow types.";
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {

@@ -651,7 +651,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         {
             var connectionName = GetDefaultConnectionName(provider, context.Profile);
 
-            deploymentName = GetDefaultDeploymentName(provider);
+            deploymentName = GetDefaultDeploymentName(provider, connectionName);
 
             var deployment = await GetDeploymentAsync(context);
 

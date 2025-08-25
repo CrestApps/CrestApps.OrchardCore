@@ -38,9 +38,16 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
         {
             model.DisplayText = connection.DisplayText;
             model.Name = connection.Name;
+            model.Type = connection.Type;
             model.DefaultDeploymentName = connection.DefaultDeploymentName;
             model.IsDefault = connection.IsDefault;
             model.IsNew = context.IsNew;
+            model.Types =
+            [
+                new(S["Chat"], nameof(AIProviderConnectionType.Chat)),
+                new(S["Embedding"], nameof(AIProviderConnectionType.Embedding)),
+            ];
+
         }).Location("Content:1");
     }
 
@@ -72,6 +79,15 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
         if (string.IsNullOrWhiteSpace(model.DefaultDeploymentName))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DefaultDeploymentName), S["Default deployment name is required."]);
+        }
+
+        if (!model.Type.HasValue)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Type), S["A connection type is required."]);
+        }
+        else
+        {
+            model.Type = model.Type.Value;
         }
 
         connection.DisplayText = model.DisplayText;

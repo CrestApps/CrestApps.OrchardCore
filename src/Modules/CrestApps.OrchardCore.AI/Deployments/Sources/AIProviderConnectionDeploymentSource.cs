@@ -46,6 +46,7 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
                 { "Id", connection.Id },
                 { "Source", connection.Source },
                 { "Name", connection.Name },
+                { "Type", connection.Type.ToString() },
                 { "DefaultDeploymentName", connection.DefaultDeploymentName },
                 { "IsDefault", connection.IsDefault },
                 { "DisplayText", connection.DisplayText },

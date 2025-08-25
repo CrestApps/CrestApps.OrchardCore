@@ -1,25 +1,25 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Agent.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
-using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
 public sealed class ListContentFieldsTool : AIFunction
 {
-    public const string TheName = "listContentPartDefinitions";
+    public const string TheName = "listContentFieldDefinitions";
 
-    private readonly ContentOptions _contentOptions;
+    private readonly ContentMetadataService _contentMetadataService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
     public ListContentFieldsTool(
-        ContentOptions contentOptions,
+        ContentMetadataService contentMetadataService,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)
     {
-        _contentOptions = contentOptions;
+        _contentMetadataService = contentMetadataService;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
 
@@ -52,6 +52,8 @@ public sealed class ListContentFieldsTool : AIFunction
             return "You do not have permission to view content types.";
         }
 
-        return JsonSerializer.Serialize(_contentOptions.ContentFieldOptions.Select(x => x.Type.Name));
+        var fieldTypes = await _contentMetadataService.GetFieldsAsync();
+
+        return JsonSerializer.Serialize(fieldTypes.Select(fieldType => fieldType.Name));
     }
 }
