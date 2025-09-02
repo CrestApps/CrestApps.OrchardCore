@@ -12,5 +12,5 @@ using OrchardCore.Modules.Manifest;
     [
         "OrchardCore.Resources",
     ],
-    IsAlwaysEnabled = true
+    IsAlwaysEnabled = false
 )]

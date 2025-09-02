@@ -6,15 +6,15 @@ using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
-public sealed class ListContentPartDefinitionsTool : AIFunction
+public sealed class ListContentTypesDefinitionsTool : AIFunction
 {
-    public const string TheName = "listContentPartDefinitions";
+    public const string TheName = "listContentTypesDefinitions";
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
-    public ListContentPartDefinitionsTool(
+    public ListContentTypesDefinitionsTool(
         IContentDefinitionManager contentDefinitionManager,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)
@@ -34,7 +34,7 @@ public sealed class ListContentPartDefinitionsTool : AIFunction
 
     public override string Name => TheName;
 
-    public override string Description => "Retrieves the available content parts definitions which can be used to create content types.";
+    public override string Description => "Retrieves the available content types definitions which can be used to create content types.";
 
     public override JsonElement JsonSchema { get; }
 
@@ -52,6 +52,6 @@ public sealed class ListContentPartDefinitionsTool : AIFunction
             return "You do not have permission to view content types.";
         }
 
-        return JsonSerializer.Serialize(await _contentDefinitionManager.ListPartDefinitionsAsync(), JsonHelpers.ContentDefinitionSerializerOptions);
+        return JsonSerializer.Serialize(await _contentDefinitionManager.ListTypeDefinitionsAsync(), JsonHelpers.ContentDefinitionSerializerOptions);
     }
 }

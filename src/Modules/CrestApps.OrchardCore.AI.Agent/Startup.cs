@@ -4,6 +4,8 @@ using CrestApps.OrchardCore.AI.Agent.ContentTypes;
 using CrestApps.OrchardCore.AI.Agent.Features;
 using CrestApps.OrchardCore.AI.Agent.Recipes;
 using CrestApps.OrchardCore.AI.Agent.Roles;
+using CrestApps.OrchardCore.AI.Agent.Schemas;
+using CrestApps.OrchardCore.AI.Agent.Services;
 using CrestApps.OrchardCore.AI.Agent.System;
 using CrestApps.OrchardCore.AI.Agent.Tenants;
 using CrestApps.OrchardCore.AI.Agent.Users;
@@ -48,17 +50,21 @@ public sealed class RecipesStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<ImportOrchardTool>(ImportOrchardTool.TheName, (o) =>
-        {
-            o.Title = S["Import Orchard Core Recipe"];
-            o.Description = S["Enables AI agents to import and run Orchard Core recipes within your site."];
-            o.Category = S["Recipes"];
-        });
+        services.AddScoped<RecipeExecutionService>();
+        services.AddScoped<RecipeStepsService>();
+        services.AddScoped<IRecipeStep, SettingsSchemaStep>();
 
         services.AddAITool<ApplySystemSettingsTool>(ApplySystemSettingsTool.TheName, (o) =>
         {
             o.Title = S["Apply Site Configuration"];
             o.Description = S["Applies predefined system configurations and settings using AI assistance."];
+            o.Category = S["Recipes"];
+        });
+
+        services.AddAITool<ImportOrchardTool>(ImportOrchardTool.TheName, (o) =>
+        {
+            o.Title = S["Import Orchard Core Recipe"];
+            o.Description = S["Enables AI agents to import and run Orchard Core recipes within your site."];
             o.Category = S["Recipes"];
         });
 
@@ -167,6 +173,8 @@ public sealed class ContentsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IContentDefinitionSchemaDefinition, CommonPartDefinitionSchemaDefinition>();
+
         services.AddAITool<SearchForContentsTool>(SearchForContentsTool.TheName, (o) =>
         {
             o.Title = S["Search Content Items"];
@@ -232,34 +240,6 @@ public sealed class ContentsStartup : StartupBase
     }
 }
 
-[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.ContentTypes", "OrchardCore.Recipes.Core")]
-public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
-{
-    internal readonly IStringLocalizer S;
-
-    public ContentDefinitionRecipesToolsStartup(IStringLocalizer<ContentDefinitionRecipesToolsStartup> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddAITool<CreateOrUpdateContentTypeDefinitionsTool>(CreateOrUpdateContentTypeDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["Create or Update Content Type Definition"];
-            o.Description = S["Creates a new content type definition or updates an existing one."];
-            o.Category = S["Content Definitions"];
-        });
-
-        services.AddAITool<CreateOrUpdateContentPartDefinitionsTool>(CreateOrUpdateContentPartDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["Create or Update Content Part Definition"];
-            o.Description = S["Creates a new content part definition or updates an existing one."];
-            o.Category = S["Content Definitions"];
-        });
-    }
-}
-
 [RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.ContentTypes")]
 public sealed class ContentDefinitionsStartup : StartupBase
 {
@@ -272,17 +252,12 @@ public sealed class ContentDefinitionsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<ContentMetadataService>();
+
         services.AddAITool<GetContentTypeDefinitionsTool>(GetContentTypeDefinitionsTool.TheName, (o) =>
         {
             o.Title = S["Get Content Type Definitions"];
             o.Description = S["Retrieves the definitions of all available content types."];
-            o.Category = S["Content Definitions"];
-        });
-
-        services.AddAITool<RemoveContentTypeDefinitionsTool>(RemoveContentTypeDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["Remove Content Type Definitions"];
-            o.Description = S["Removes the content type definition."];
             o.Category = S["Content Definitions"];
         });
 
@@ -293,14 +268,14 @@ public sealed class ContentDefinitionsStartup : StartupBase
             o.Category = S["Content Definitions"];
         });
 
-        services.AddAITool<RemoveContentPartDefinitionsTool>(RemoveContentPartDefinitionsTool.TheName, (o) =>
+        services.AddAITool<ListContentTypesDefinitionsTool>(ListContentTypesDefinitionsTool.TheName, (o) =>
         {
-            o.Title = S["Remove Content Part Definitions"];
-            o.Description = S["Removes the content part definition."];
+            o.Title = S["List Available Content Types Definitions"];
+            o.Description = S["Provides a list of available content types definitions."];
             o.Category = S["Content Definitions"];
         });
 
-        services.AddAITool<ListContentPartDefinitionsTool>(ListContentPartDefinitionsTool.TheName, (o) =>
+        services.AddAITool<ListContentPartsDefinitionsTool>(ListContentPartsDefinitionsTool.TheName, (o) =>
         {
             o.Title = S["List Available Content Parts Definitions"];
             o.Description = S["Provides a list of available content parts definitions."];
@@ -311,6 +286,43 @@ public sealed class ContentDefinitionsStartup : StartupBase
         {
             o.Title = S["List Available Content Fields"];
             o.Description = S["Provides a list of available content fields."];
+            o.Category = S["Content Definitions"];
+        });
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.ContentTypes", "OrchardCore.Recipes.Core")]
+public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public ContentDefinitionRecipesToolsStartup(IStringLocalizer<ContentDefinitionRecipesToolsStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, ContentDefinitionSchemaStep>();
+
+        services.AddAITool<RemoveContentTypeDefinitionsTool>(RemoveContentTypeDefinitionsTool.TheName, (o) =>
+        {
+            o.Title = S["Remove Content Type Definitions"];
+            o.Description = S["Removes the content type definition."];
+            o.Category = S["Content Definitions"];
+        });
+
+        services.AddAITool<RemoveContentPartDefinitionsTool>(RemoveContentPartDefinitionsTool.TheName, (o) =>
+        {
+            o.Title = S["Remove Content Part Definitions"];
+            o.Description = S["Removes the content part definition."];
+            o.Category = S["Content Definitions"];
+        });
+
+        services.AddAITool<CreateOrUpdateContentTypeDefinitionsTool>(CreateOrUpdateContentTypeDefinitionsTool.TheName, (o) =>
+        {
+            o.Title = S["Create or Update Content Type Definition"];
+            o.Description = S["Creates a new content type definition or updates an existing one."];
             o.Category = S["Content Definitions"];
         });
     }
@@ -502,6 +514,22 @@ public sealed class WorkflowsStartup : StartupBase
             o.Description = S["List information about a workflow types."];
             o.Category = S["Workflow Management"];
         });
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Workflows", "OrchardCore.Recipes.Core")]
+public sealed class WorkflowsRecipesStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public WorkflowsRecipesStartup(IStringLocalizer<WorkflowsStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, WorkflowTypeSchemaStep>();
 
         services.AddAITool<CreateOrUpdateWorkflowTool>(CreateOrUpdateWorkflowTool.TheName, (o) =>
         {
@@ -516,5 +544,105 @@ public sealed class WorkflowsStartup : StartupBase
             o.Description = S["List all available tasks and activities a workflow."];
             o.Category = S["Workflow Management"];
         });
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Title")]
+public sealed class TitleStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentDefinitionSchemaDefinition, TitlePartDefinitionSchemaDefinition>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Autoroute")]
+public sealed class AutorouteStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentDefinitionSchemaDefinition, AutoroutePartDefinitionSchemaDefinition>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Alias")]
+public sealed class AliasStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentDefinitionSchemaDefinition, AliasPartDefinitionSchemaDefinition>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Html")]
+public sealed class HtmlStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentDefinitionSchemaDefinition, HtmlBodyPartDefinitionSchemaDefinition>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Markdown")]
+public sealed class MarkdownStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentDefinitionSchemaDefinition, MarkdownBodyPartDefinitionSchemaDefinition>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.List")]
+public sealed class ListStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentDefinitionSchemaDefinition, ListPartDefinitionSchemaDefinition>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Flows")]
+public sealed class FlowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentDefinitionSchemaDefinition, FlowPartDefinitionSchemaDefinition>();
+        services.AddScoped<IContentDefinitionSchemaDefinition, BagPartDefinitionSchemaDefinition>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Widgets")]
+public sealed class WidgetsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentDefinitionSchemaDefinition, WidgetsListPartDefinitionSchemaDefinition>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.ContentPreview")]
+public sealed class ContentPreviewStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentDefinitionSchemaDefinition, PreviewPartDefinitionSchemaDefinition>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.Seo")]
+public sealed class SeoStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentDefinitionSchemaDefinition, SeoMetaPartDefinitionSchemaDefinition>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, "OrchardCore.AuditTrail")]
+public sealed class AuditTrailStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentDefinitionSchemaDefinition, AuditTrailPartDefinitionSchemaDefinition>();
     }
 }

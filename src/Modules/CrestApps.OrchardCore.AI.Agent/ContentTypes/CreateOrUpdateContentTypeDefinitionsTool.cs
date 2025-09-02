@@ -1,11 +1,10 @@
 using CrestApps.OrchardCore.AI.Agent.Recipes;
+using CrestApps.OrchardCore.AI.Agent.Schemas;
+using CrestApps.OrchardCore.AI.Agent.Services;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Options;
-using OrchardCore.Deployment;
-using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
@@ -17,11 +16,12 @@ public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseT
     private readonly IAuthorizationService _authorizationService;
 
     public CreateOrUpdateContentTypeDefinitionsTool(
-        IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers,
-        IOptions<DocumentJsonSerializerOptions> options,
+        RecipeExecutionService recipeExecutionService,
+        RecipeStepsService recipeStepsService,
+        IEnumerable<IRecipeStep> recipeSteps,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)
-        : base(deploymentTargetHandlers, options.Value)
+        : base(recipeExecutionService, recipeStepsService, recipeSteps)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
@@ -29,7 +29,7 @@ public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseT
 
     public override string Name => TheName;
 
-    public override string Description => "Creates or updates a content type definition based on the configuration provided in a recipe.";
+    public override string Description => "Creates or updates a content type or part definition based on the provided JSON recipe.";
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
@@ -37,7 +37,7 @@ public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseT
 
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.EditContentTypes))
         {
-            return "You do not have permission to edit content types.";
+            return "You do not have permission to edit content types or parts.";
         }
 
         if (!arguments.TryGetFirstString("recipe", out var recipe))

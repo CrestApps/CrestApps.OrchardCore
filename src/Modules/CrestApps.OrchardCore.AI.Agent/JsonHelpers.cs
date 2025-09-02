@@ -14,4 +14,9 @@ internal static class JsonHelpers
     {
         PropertyNameCaseInsensitive = true,
     };
+
+    public static JsonSerializerOptions Indented = new()
+    {
+        WriteIndented = true,
+    };
 }
