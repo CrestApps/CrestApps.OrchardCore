@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <OrchardCoreVersion>[2.1.2, 2.2.0)</OrchardCoreVersion>
+    <OrchardCoreVersion>[3.0.0-preview-18724, )</OrchardCoreVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
@@ -13,6 +13,7 @@
     <PackageVersion Include="YesSql.Core" Version="5.4.6" />
     <PackageVersion Include="ModelContextProtocol" Version="0.3.0-preview.3" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.3.0-preview.3" />
+    <Packageversion Include="Stripe.net" Version="47.4.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- OrchardCore Packages -->

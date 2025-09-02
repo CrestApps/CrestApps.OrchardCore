@@ -14,9 +14,9 @@ public static class CreateWebhookEndpoint
 {
     public static readonly string[] SupportedEvents =
     [
-        Events.InvoicePaymentSucceeded,
-        Events.CustomerSubscriptionCreated,
-        Events.PaymentIntentSucceeded,
+        EventTypes.InvoicePaymentSucceeded,
+        EventTypes.CustomerSubscriptionCreated,
+        EventTypes.PaymentIntentSucceeded,
     ];
 
     public static IEndpointRouteBuilder AddWebhookEndpoint<T>(this IEndpointRouteBuilder builder)
@@ -75,7 +75,7 @@ public static class CreateWebhookEndpoint
 
             switch (stripeEvent.Type)
             {
-                case Events.InvoicePaymentSucceeded:
+                case EventTypes.InvoicePaymentSucceeded:
                     var invoice = stripeEvent.Data.Object as Invoice;
 
                     if (invoice == null)
@@ -123,7 +123,7 @@ public static class CreateWebhookEndpoint
                     await paymentEvents.InvokeAsync((handler, context) => handler.PaymentSucceededAsync(context), successContext, logger);
                     break;
 
-                case Events.CustomerSubscriptionCreated:
+                case EventTypes.CustomerSubscriptionCreated:
                     var subscription = stripeEvent.Data.Object as Subscription;
 
                     if (subscription == null)
@@ -155,7 +155,7 @@ public static class CreateWebhookEndpoint
                     await paymentEvents.InvokeAsync((handler, context) => handler.CustomerSubscriptionCreatedAsync(context), createdContext, logger);
                     break;
 
-                case Events.PaymentIntentSucceeded:
+                case EventTypes.PaymentIntentSucceeded:
                     var paymentIntent = stripeEvent.Data.Object as PaymentIntent;
 
                     if (paymentIntent == null)
