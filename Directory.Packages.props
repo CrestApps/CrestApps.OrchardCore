@@ -8,10 +8,9 @@
     <!-- Miscellaneous Packages -->
     <PackageVersion Include="JsonSchema.Net" Version="7.4.0" />
     <PackageVersion Include="NuGet.Versioning" Version="6.14.0" />
-    <PackageVersion Include="OllamaSharp" Version="5.2.3" />
+    <PackageVersion Include="OllamaSharp" Version="5.3.4" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.4.6" />
-    <PackageVersion Include="YesSql.Core" Version="5.4.6" />
-    <PackageVersion Include="ModelContextProtocol" Version="0.3.0-preview.3" />
+<PackageVersion Include="ModelContextProtocol" Version="0.3.0-preview.3" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.3.0-preview.3" />
     <Packageversion Include="Stripe.net" Version="47.4.0" />
   </ItemGroup>
@@ -72,15 +71,16 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Microsoft Packages -->
-    <PackageVersion Include="Azure.AI.OpenAI" Version="2.2.0-beta.4" />
+    <PackageVersion Include="Azure.AI.OpenAI" Version="2.3.0-beta.1" />
     <PackageVersion Include="Azure.Identity" Version="1.14.2" />
-    <PackageVersion Include="Azure.ResourceManager.CognitiveServices" Version="1.4.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.8" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Core" Version="1.2.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI" Version="9.7.1" />
-    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.7.1" />
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="9.8.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.8.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.7.1-preview.1.25365.4" />
     <PackageVersion Include="Microsoft.Extensions.AI.AzureAIInference" Version="9.7.1-preview.1.25365.4" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.8.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- Testing Packages -->

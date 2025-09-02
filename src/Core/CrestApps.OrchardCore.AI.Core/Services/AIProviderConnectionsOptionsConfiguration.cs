@@ -41,7 +41,7 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
             {
                 ProviderName = x.Key,
                 Connections = x,
-            }).ToList();
+            });
 
         foreach (var group in groups)
         {

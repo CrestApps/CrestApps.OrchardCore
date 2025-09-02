@@ -35,8 +35,6 @@ To get started with any module, refer to its respective `README.md` file for det
 ## Available Modules
 You can install individual modules into your web project as needed, or install the `CrestApps.OrchardCore.Cms.Core.Targets` package to include all modules at once.
 
-This branch depends on Orchard Core **2.1.0** up to **2.2.0**.
-
 ### Artificial Intelligence Suite
 
 #### AI Module
@@ -131,12 +129,40 @@ Follow these steps to get started with CrestApps:
 This project is actively maintained and evolves alongside Orchard Core.
 
 * If you're using Orchard Core versions from `2.1` up to `2.2`, please use package version `1.2.0-beta-0014`.
-* For Orchard Core `3.0.0-preview-18669` and later, use version `2.0.0-beta-0001` or newer.
+* For Orchard Core `3.0.0-preview-18724` and later, use version `2.0.0-beta-0001` or newer.
 
 **Note:** The reason for this split is that Orchard Core `3.0.0-preview-18669` upgraded to YesSql `5.4.1`, which introduced a binary breaking change. As a result, we had to divide development into two branches to maintain compatibility.
 
 ### Production Packages
 Stable releases are available on [NuGet.org](https://www.nuget.org/).  
+
+### Preview Package Feed
+[![Hosted By: Cloudsmith](https://img.shields.io/badge/OSS%20hosting%20by-cloudsmith-blue?logo=cloudsmith&style=for-the-badge)](https://cloudsmith.com)  
+
+For the latest updates and preview packages, visit the [Cloudsmith CrestApps OrchardCore repository](https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore).  
+
+### Adding the Preview Feed
+
+#### In Visual Studio 
+1. Open **NuGet Package Manager Settings** (under *Tools*).  
+2. Add a new package source:  
+   - **Name:** `CrestAppsPreview`  
+   - **URL:** `https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json`  
+
+#### Via NuGet.config
+Alternatively, update your **NuGet.config** file:  
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="NuGet" value="https://api.nuget.org/v3/index.json" />
+    <add key="CrestAppsPreview" value="https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json" />
+  </packageSources>
+  <disabledPackageSources />
+</configuration>
+```
 
 ## Contributing
 
