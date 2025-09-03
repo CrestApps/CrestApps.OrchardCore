@@ -20,6 +20,7 @@ public class SourceCatalog<T> : Catalog<T>, ISourceCatalog<T>
         var document = await _documentManager.GetOrCreateImmutableAsync();
 
         return document.Records.Values.Where(x => x.Source.Equals(source, StringComparison.OrdinalIgnoreCase))
+            .Select(Clone)
             .ToArray();
     }
 

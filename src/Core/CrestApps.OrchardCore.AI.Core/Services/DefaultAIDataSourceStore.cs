@@ -57,6 +57,7 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
 
         return document.Records.Values
             .Where(x => x.ProfileSource.Equals(providerName, StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.Clone())
             .ToArray();
     }
 
@@ -69,6 +70,7 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
 
         return document.Records.Values
             .Where(x => x.ProfileSource.Equals(providerName, StringComparison.OrdinalIgnoreCase) && x.Type.Equals(type, StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.Clone())
             .ToArray();
     }
 
@@ -81,8 +83,8 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
 
         return new PageResult<AIDataSource>
         {
-            Count = records.Count,
-            Entries = records.Skip(skip).Take(pageSize).ToArray()
+            Count = records.Count(),
+            Entries = records.Skip(skip).Take(pageSize).Select(x => x.Clone()).ToArray()
         };
     }
 
@@ -90,7 +92,7 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
     {
         var document = await _documentManager.GetOrCreateImmutableAsync();
 
-        return document.Records.Values.ToArray();
+        return document.Records.Values.Select(x => x.Clone()).ToArray();
     }
 
     public async ValueTask<IReadOnlyCollection<AIDataSource>> GetAsync(IEnumerable<string> ids)
@@ -100,7 +102,7 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
         var document = await _documentManager.GetOrCreateImmutableAsync();
 
         return ids.Where(document.Records.ContainsKey)
-                .Select(id => document.Records[id])
+                .Select(id => document.Records[id].Clone())
                 .ToArray();
     }
 
@@ -141,7 +143,7 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
         return ValueTask.CompletedTask;
     }
 
-    private async ValueTask<IReadOnlyCollection<AIDataSource>> LocateInstancesAsync(QueryContext context)
+    private async ValueTask<IEnumerable<AIDataSource>> LocateInstancesAsync(QueryContext context)
     {
         var document = await _documentManager.GetOrCreateImmutableAsync();
 
@@ -152,7 +154,7 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
 
         var records = GetSortable(context, document.Records.Values.AsEnumerable());
 
-        return records.ToArray();
+        return records;
     }
 
     private static IEnumerable<AIDataSource> GetSortable(QueryContext context, IEnumerable<AIDataSource> records)

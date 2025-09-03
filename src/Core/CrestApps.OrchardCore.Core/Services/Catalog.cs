@@ -46,17 +46,7 @@ public class Catalog<T> : ICatalog<T>
 
         if (document.Records.TryGetValue(id, out var record))
         {
-            if (record is ICloneable<T> cloneableOfT)
-            {
-                return cloneableOfT.Clone();
-            }
-
-            if (record is ICloneable clonable)
-            {
-                return (T)clonable.Clone();
-            }
-
-            return record;
+            return Clone(record);
         }
 
         return null;
@@ -69,7 +59,7 @@ public class Catalog<T> : ICatalog<T>
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
         return ids.Where(document.Records.ContainsKey)
-                .Select(id => document.Records[id])
+                .Select(id => Clone(document.Records[id]))
                 .ToArray();
     }
 
@@ -83,7 +73,7 @@ public class Catalog<T> : ICatalog<T>
         return new PageResult<T>
         {
             Count = records.Count(),
-            Entries = records.Skip(skip).Take(pageSize).ToArray()
+            Entries = records.Skip(skip).Take(pageSize).Select(Clone).ToArray()
         };
     }
 
@@ -91,7 +81,7 @@ public class Catalog<T> : ICatalog<T>
     {
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
-        return document.Records.Values.ToArray();
+        return document.Records.Values.Select(Clone).ToArray();
     }
 
     public async ValueTask CreateAsync(T record)
@@ -174,7 +164,7 @@ public class Catalog<T> : ICatalog<T>
     {
     }
 
-    protected T Clone(T record)
+    protected static T Clone(T record)
     {
         if (record is ICloneable<T> cloneableOfT)
         {
