@@ -18,16 +18,21 @@ public class NamedCatalog<T> : Catalog<T>, INamedCatalog<T>
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
-        var record = document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        var record = document.Records.Values.FirstOrDefault(x => OrdinalIgnoreCaseEquals(x.Name, name));
 
         return Clone(record);
     }
 
     protected override void Saving(T record, DictionaryDocument<T> document)
     {
-        if (document.Records.Values.Any(x => x.Name.Equals(record.Name, StringComparison.OrdinalIgnoreCase) && x.Id != record.Id))
+        if (document.Records.Values.Any(x => OrdinalIgnoreCaseEquals(x.Name, record.Name) && x.Id != record.Id))
         {
             throw new InvalidOperationException("There is already another model with the same name.");
         }
+    }
+
+    protected static bool OrdinalIgnoreCaseEquals(string str1, string str2)
+    {
+        return str1.Equals(str2, StringComparison.OrdinalIgnoreCase);
     }
 }
