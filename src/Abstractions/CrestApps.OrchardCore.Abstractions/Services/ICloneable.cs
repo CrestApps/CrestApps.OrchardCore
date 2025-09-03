@@ -1,6 +1,9 @@
 namespace CrestApps.OrchardCore.Services;
 
-public interface ICloneable<T>
+public interface ICloneable<T> : ICloneable
 {
-    T Clone();
+    new T Clone();
+
+    object ICloneable.Clone()
+        => Clone();
 }
