@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.AI.Tools.ViewModels;
+namespace CrestApps.OrchardCore.AI.Tools.ViewModels;
 
 public class AIToolInstanceFieldsViewModel
 {

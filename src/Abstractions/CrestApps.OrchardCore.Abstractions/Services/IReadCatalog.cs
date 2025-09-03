@@ -21,7 +21,17 @@ public interface IReadCatalog<T>
     /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation.
     /// The result is an <see cref="IEnumerable{T}"/> containing all entry in the catalog.
     /// </returns>
-    ValueTask<IEnumerable<T>> GetAllAsync();
+    ValueTask<IReadOnlyCollection<T>> GetAllAsync();
+
+    /// <summary>
+    /// Asynchronously retrieves all entry from the catalog.
+    /// </summary>
+    /// <returns>
+    /// <param name="ids">The ids to retrieve.</param>
+    /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation.
+    /// The result is an <see cref="IEnumerable{T}"/> containing all entry in the catalog.
+    /// </returns>
+    ValueTask<IReadOnlyCollection<T>> GetAsync(IEnumerable<string> ids);
 
     /// <summary>
     /// Asynchronously retrieves a paginated list of entry based on the specified pagination and filtering parameters.

@@ -11,5 +11,5 @@ public interface ISourceCatalog<T> : ICatalog<T>
     /// A <see cref="ValueTask{IEnumerable{T}}"/> representing the asynchronous operation.
     /// The result is a collection of entries associated with the given source.
     /// </returns>
-    ValueTask<IEnumerable<T>> GetAsync(string source);
+    ValueTask<IReadOnlyCollection<T>> GetAsync(string source);
 }

@@ -102,7 +102,7 @@ public sealed class CatalogManagerTests
         var context = new QueryContext();
         var result = await manager.PageAsync(2, 3, context);
         Assert.Equal(10, result.Count);
-        Assert.Equal(3, result.Entries.Count());
+        Assert.Equal(3, result.Entries.Count);
         Assert.Equal("4", result.Entries.First().Id);
     }
 

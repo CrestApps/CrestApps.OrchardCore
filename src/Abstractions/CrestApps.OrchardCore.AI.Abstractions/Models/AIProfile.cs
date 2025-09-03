@@ -1,9 +1,10 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTextAwareModel
+public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTextAwareModel, ICloneable<AIProfile>
 {
     /// <summary>
     /// Gets or sets the technical name of the profile.

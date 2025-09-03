@@ -239,18 +239,15 @@ public sealed class DataSourcesController : Controller
             return NotFound();
         }
 
-        // Clone the deployment to prevent modifying the original instance in the store.
-        var mutableProfile = deployment.Clone();
-
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = mutableProfile.DisplayText,
-            Editor = await _displayManager.UpdateEditorAsync(mutableProfile, _updateModelAccessor.ModelUpdater, isNew: false),
+            DisplayName = deployment.DisplayText,
+            Editor = await _displayManager.UpdateEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
         if (ModelState.IsValid)
         {
-            await _dataSourceManager.UpdateAsync(mutableProfile);
+            await _dataSourceManager.UpdateAsync(deployment);
 
             await _notifier.SuccessAsync(H["Data source has been updated successfully."]);
 

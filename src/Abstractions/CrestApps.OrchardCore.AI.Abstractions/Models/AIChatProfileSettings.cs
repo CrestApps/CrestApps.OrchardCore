@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.AI.Models;
+namespace CrestApps.OrchardCore.AI.Models;
 
 public class AIChatProfileSettings
 {

@@ -229,20 +229,17 @@ public sealed class ProviderConnectionsController : Controller
             return NotFound();
         }
 
-        // Clone the instance to prevent modifying the original instance in the store.
-        var mutableInstance = model.Clone();
-
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = mutableInstance.DisplayText,
-            Editor = await _displayDriver.UpdateEditorAsync(mutableInstance, _updateModelAccessor.ModelUpdater, isNew: false),
+            DisplayName = model.DisplayText,
+            Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
         if (ModelState.IsValid)
         {
             _shellReleaseManager.RequestRelease();
 
-            await _manager.UpdateAsync(mutableInstance);
+            await _manager.UpdateAsync(model);
 
             await _notifier.SuccessAsync(H["The connection has been updated successfully."]);
 
