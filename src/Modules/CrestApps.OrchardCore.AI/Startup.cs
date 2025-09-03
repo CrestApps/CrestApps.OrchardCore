@@ -63,7 +63,6 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfileToolsDisplayDriver>()
             .AddScoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>();
 
-
 #pragma warning disable CS0618 // Type or member is obsolete
         services.AddDataMigration<ProfileStoreMigrations>();
 #pragma warning restore CS0618 // Type or member is obsolete

@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriberInvoicesViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">
+        @T["Payments"]
+    </div>
+    <div class="card-body">
+        @if (Model.Invoices == null || Model.Invoices.Count == 0)
+        {
+            <p class="mb-0">@T["No subscriptions at the moment."]</p>
+        }
+        else
+        {
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Amount"]</th>
+                        <th scope="col">@T["Date"]</th>
+                        <th scope="col">@T["Service Plan"]</th>
+                        <th scope="col">@T["Status"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var invoice in Model.Invoices)
+                    {
+                        <tr>
+                            <td scope="col">@invoice.Amount.ToString("C")</td>
+                            <td scope="col">@invoice.Date.ToString("g")</td>
+                            <td scope="col">@invoice.ServicePlanTitle</td>
+                            <td scope="col">@invoice.Status</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
