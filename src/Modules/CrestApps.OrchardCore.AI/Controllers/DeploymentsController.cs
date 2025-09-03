@@ -238,18 +238,15 @@ public sealed class DeploymentsController : Controller
             return NotFound();
         }
 
-        // Clone the deployment to prevent modifying the original instance in the store.
-        var mutableProfile = deployment.Clone();
-
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = mutableProfile.Name,
-            Editor = await _deploymentDisplayManager.UpdateEditorAsync(mutableProfile, _updateModelAccessor.ModelUpdater, isNew: false),
+            DisplayName = deployment.Name,
+            Editor = await _deploymentDisplayManager.UpdateEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
         if (ModelState.IsValid)
         {
-            await _deploymentManager.UpdateAsync(mutableProfile);
+            await _deploymentManager.UpdateAsync(deployment);
 
             await _notifier.SuccessAsync(H["Deployment has been updated successfully."]);
 

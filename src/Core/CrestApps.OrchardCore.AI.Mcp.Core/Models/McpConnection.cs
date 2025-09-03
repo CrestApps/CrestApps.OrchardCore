@@ -1,8 +1,9 @@
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Core.Models;
 
-public sealed class McpConnection : SourceCatalogEntry, IDisplayTextAwareModel
+public sealed class McpConnection : SourceCatalogEntry, IDisplayTextAwareModel, ICloneable<McpConnection>
 {
     public string DisplayText { get; set; }
 

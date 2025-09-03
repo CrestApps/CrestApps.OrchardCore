@@ -43,29 +43,35 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
 
         if (document.Records.TryGetValue(id, out var record))
         {
-            return record;
+            return record.Clone();
         }
 
         return null;
     }
 
-    public async ValueTask<IEnumerable<AIDataSource>> GetAsync(string providerName)
+    public async ValueTask<IReadOnlyCollection<AIDataSource>> GetAsync(string providerName)
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
 
         var document = await _documentManager.GetOrCreateImmutableAsync();
 
-        return document.Records.Values.Where(x => x.ProfileSource.Equals(providerName, StringComparison.OrdinalIgnoreCase));
+        return document.Records.Values
+            .Where(x => x.ProfileSource.Equals(providerName, StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.Clone())
+            .ToArray();
     }
 
-    public async ValueTask<IEnumerable<AIDataSource>> GetAsync(string providerName, string type)
+    public async ValueTask<IReadOnlyCollection<AIDataSource>> GetAsync(string providerName, string type)
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
         ArgumentException.ThrowIfNullOrEmpty(type);
 
         var document = await _documentManager.GetOrCreateImmutableAsync();
 
-        return document.Records.Values.Where(x => x.ProfileSource.Equals(providerName, StringComparison.OrdinalIgnoreCase) && x.Type.Equals(type, StringComparison.OrdinalIgnoreCase));
+        return document.Records.Values
+            .Where(x => x.ProfileSource.Equals(providerName, StringComparison.OrdinalIgnoreCase) && x.Type.Equals(type, StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.Clone())
+            .ToArray();
     }
 
     public async ValueTask<PageResult<AIDataSource>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
@@ -78,15 +84,26 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
         return new PageResult<AIDataSource>
         {
             Count = records.Count(),
-            Entries = records.Skip(skip).Take(pageSize).ToArray()
+            Entries = records.Skip(skip).Take(pageSize).Select(x => x.Clone()).ToArray()
         };
     }
 
-    public async ValueTask<IEnumerable<AIDataSource>> GetAllAsync()
+    public async ValueTask<IReadOnlyCollection<AIDataSource>> GetAllAsync()
     {
         var document = await _documentManager.GetOrCreateImmutableAsync();
 
-        return document.Records.Values;
+        return document.Records.Values.Select(x => x.Clone()).ToArray();
+    }
+
+    public async ValueTask<IReadOnlyCollection<AIDataSource>> GetAsync(IEnumerable<string> ids)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+
+        var document = await _documentManager.GetOrCreateImmutableAsync();
+
+        return ids.Where(document.Records.ContainsKey)
+                .Select(id => document.Records[id].Clone())
+                .ToArray();
     }
 
     public async ValueTask CreateAsync(AIDataSource record)
@@ -135,9 +152,7 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
             return document.Records.Values;
         }
 
-        var records = document.Records.Values.AsEnumerable();
-
-        records = GetSortable(context, records);
+        var records = GetSortable(context, document.Records.Values.AsEnumerable());
 
         return records;
     }

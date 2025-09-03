@@ -46,10 +46,21 @@ public class Catalog<T> : ICatalog<T>
 
         if (document.Records.TryGetValue(id, out var record))
         {
-            return record;
+            return Clone(record);
         }
 
         return null;
+    }
+
+    public async ValueTask<IReadOnlyCollection<T>> GetAsync(IEnumerable<string> ids)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+
+        var document = await DocumentManager.GetOrCreateImmutableAsync();
+
+        return ids.Where(document.Records.ContainsKey)
+                .Select(id => Clone(document.Records[id]))
+                .ToArray();
     }
 
     public async ValueTask<PageResult<T>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
@@ -62,15 +73,15 @@ public class Catalog<T> : ICatalog<T>
         return new PageResult<T>
         {
             Count = records.Count(),
-            Entries = records.Skip(skip).Take(pageSize).ToArray()
+            Entries = records.Skip(skip).Take(pageSize).Select(Clone).ToArray()
         };
     }
 
-    public async ValueTask<IEnumerable<T>> GetAllAsync()
+    public async ValueTask<IReadOnlyCollection<T>> GetAllAsync()
     {
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
-        return document.Records.Values;
+        return document.Records.Values.Select(Clone).ToArray();
     }
 
     public async ValueTask CreateAsync(T record)
@@ -127,9 +138,7 @@ public class Catalog<T> : ICatalog<T>
             return document.Records.Values;
         }
 
-        var records = document.Records.Values.AsEnumerable();
-
-        records = GetSortable(context, records);
+        var records = GetSortable(context, document.Records.Values.AsEnumerable());
 
         return records;
     }
@@ -153,5 +162,20 @@ public class Catalog<T> : ICatalog<T>
 
     protected virtual void Saving(T record, DictionaryDocument<T> document)
     {
+    }
+
+    protected static T Clone(T record)
+    {
+        if (record is ICloneable<T> cloneableOfT)
+        {
+            return cloneableOfT.Clone();
+        }
+
+        if (record is ICloneable clonable)
+        {
+            return (T)clonable.Clone();
+        }
+
+        return record;
     }
 }

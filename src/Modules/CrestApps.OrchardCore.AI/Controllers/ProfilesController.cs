@@ -235,18 +235,15 @@ public sealed class ProfilesController : Controller
             return NotFound();
         }
 
-        // Clone the profile to prevent modifying the original instance in the store.
-        var mutableProfile = profile.Clone();
-
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = mutableProfile.DisplayText,
-            Editor = await _profileDisplayManager.UpdateEditorAsync(mutableProfile, _updateModelAccessor.ModelUpdater, isNew: false),
+            DisplayName = profile.DisplayText,
+            Editor = await _profileDisplayManager.UpdateEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
         if (ModelState.IsValid)
         {
-            await _profileManager.UpdateAsync(mutableProfile);
+            await _profileManager.UpdateAsync(profile);
 
             await _notifier.SuccessAsync(H["Profile has been updated successfully."]);
 

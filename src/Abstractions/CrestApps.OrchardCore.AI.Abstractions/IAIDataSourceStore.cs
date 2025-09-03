@@ -46,7 +46,7 @@ public interface IAIDataSourceStore : IReadCatalog<AIDataSource>
     /// </summary>
     /// <param name="providerName"></param>
     /// <returns></returns>
-    ValueTask<IEnumerable<AIDataSource>> GetAsync(string providerName);
+    ValueTask<IReadOnlyCollection<AIDataSource>> GetAsync(string providerName);
 
     /// <summary>
     /// Asynchronously finds data sources by the given provider-name and type.
@@ -54,5 +54,5 @@ public interface IAIDataSourceStore : IReadCatalog<AIDataSource>
     /// <param name="providerName"></param>
     /// <param name="type"></param>
     /// <returns></returns>
-    ValueTask<IEnumerable<AIDataSource>> GetAsync(string providerName, string type);
+    ValueTask<IReadOnlyCollection<AIDataSource>> GetAsync(string providerName, string type);
 }

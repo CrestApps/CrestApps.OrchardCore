@@ -229,18 +229,15 @@ public sealed class ToolInstancesController : Controller
             return NotFound();
         }
 
-        // Clone the instance to prevent modifying the original instance in the store.
-        var mutableModel = model.Clone();
-
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = mutableModel.DisplayText,
-            Editor = await _instanceDisplayDriver.UpdateEditorAsync(mutableModel, _updateModelAccessor.ModelUpdater, isNew: false),
+            DisplayName = model.DisplayText,
+            Editor = await _instanceDisplayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
         if (ModelState.IsValid)
         {
-            await _manager.UpdateAsync(mutableModel);
+            await _manager.UpdateAsync(model);
 
             await _notifier.SuccessAsync(H["The instance has been updated successfully."]);
 
