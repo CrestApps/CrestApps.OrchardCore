@@ -10,7 +10,7 @@
     <PackageVersion Include="NuGet.Versioning" Version="6.14.0" />
     <PackageVersion Include="OllamaSharp" Version="5.3.4" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.4.6" />
-<PackageVersion Include="ModelContextProtocol" Version="0.3.0-preview.3" />
+    <PackageVersion Include="ModelContextProtocol" Version="0.3.0-preview.3" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.3.0-preview.3" />
     <Packageversion Include="Stripe.net" Version="47.4.0" />
   </ItemGroup>
@@ -96,15 +96,5 @@
     <PackageVersion Include="Aspire.Hosting.Elasticsearch" Version="9.2.1-preview.1.25222.1" />
     <PackageVersion Include="Aspire.Hosting.Redis" Version="9.4.1" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="9.7.0" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
-    <!-- .Net9 Packages -->
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.7.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.8" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <!-- .Net8 Packages -->
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="8.10.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="8.0.19" />
   </ItemGroup>
 </Project>

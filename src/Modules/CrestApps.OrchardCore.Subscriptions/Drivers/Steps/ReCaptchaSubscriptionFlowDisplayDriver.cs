@@ -29,7 +29,7 @@ public sealed class ReCaptchaSubscriptionFlowDisplayDriver : DisplayDriver<Subsc
 
         var _reCaptchaSettings = await _siteService.GetSettingsAsync<ReCaptchaSettings>();
 
-        if (!_reCaptchaSettings.IsValid())
+        if (!_reCaptchaSettings.ConfigurationExists())
         {
             return null;
         }
@@ -47,7 +47,7 @@ public sealed class ReCaptchaSubscriptionFlowDisplayDriver : DisplayDriver<Subsc
 
         var _reCaptchaSettings = await _siteService.GetSettingsAsync<ReCaptchaSettings>();
 
-        if (!_reCaptchaSettings.IsValid())
+        if (!_reCaptchaSettings.ConfigurationExists())
         {
             return null;
         }
