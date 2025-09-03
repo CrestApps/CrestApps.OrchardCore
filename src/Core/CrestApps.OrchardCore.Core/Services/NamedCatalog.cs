@@ -18,7 +18,9 @@ public class NamedCatalog<T> : Catalog<T>, INamedCatalog<T>
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
-        return document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        var record = document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+        return Clone(record);
     }
 
     protected override void Saving(T record, DictionaryDocument<T> document)

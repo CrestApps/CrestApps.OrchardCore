@@ -1,10 +1,11 @@
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public class AIDeployment : SourceCatalogEntry, INameAwareModel, ISourceAwareModel
+public class AIDeployment : SourceCatalogEntry, INameAwareModel, ISourceAwareModel, ICloneable<AIDeployment>
 {
     [JsonIgnore]
     public string ProviderName

@@ -1,9 +1,10 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public sealed class AIDataSource : CatalogEntry, IDisplayTextAwareModel
+public sealed class AIDataSource : CatalogEntry, IDisplayTextAwareModel, ICloneable<AIDataSource>
 {
     public string ProfileSource { get; set; }
 

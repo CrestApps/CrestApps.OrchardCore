@@ -27,7 +27,7 @@ internal sealed class AIProfileToolInstancesDisplayDriver : DisplayDriver<AIProf
     {
         var instances = await _toolInstanceStore.GetAllAsync();
 
-        if (!instances.Any())
+        if (instances.Count == 0)
         {
             return null;
         }
@@ -52,7 +52,7 @@ internal sealed class AIProfileToolInstancesDisplayDriver : DisplayDriver<AIProf
     {
         var instances = await _toolInstanceStore.GetAllAsync();
 
-        if (!instances.Any())
+        if (instances.Count == 0)
         {
             return null;
         }

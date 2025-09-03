@@ -4,5 +4,5 @@ public class PageResult<T>
 {
     public int Count { get; set; }
 
-    public IEnumerable<T> Entries { get; set; }
+    public IReadOnlyCollection<T> Entries { get; set; }
 }

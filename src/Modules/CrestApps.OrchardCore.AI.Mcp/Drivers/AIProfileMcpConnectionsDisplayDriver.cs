@@ -28,7 +28,7 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
     {
         var connections = await _store.GetAllAsync();
 
-        if (!connections.Any())
+        if (connections.Count == 0)
         {
             return null;
         }
@@ -53,7 +53,7 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
     {
         var connections = await _store.GetAllAsync();
 
-        if (!connections.Any())
+        if (connections.Count == 0)
         {
             return null;
         }

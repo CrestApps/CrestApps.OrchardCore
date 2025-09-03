@@ -1,8 +1,6 @@
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Models;
 using OrchardCore.Documents;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 
@@ -21,10 +19,10 @@ internal sealed class FakeDocumentManager<T> : IDocumentManager<DictionaryDocume
         };
     }
 
-    public Task<DictionaryDocument<T>> GetOrCreateMutableAsync(bool reload = false)
+    public Task<DictionaryDocument<T>> GetOrCreateMutableAsync()
         => Task.FromResult(_doc);
 
-    public Task<DictionaryDocument<T>> GetOrCreateImmutableAsync(bool reload = false)
+    public Task<DictionaryDocument<T>> GetOrCreateImmutableAsync()
         => Task.FromResult(_doc);
 
     public Task<DictionaryDocument<T>> GetOrCreateMutableAsync(Func<Task<DictionaryDocument<T>>> factory)
