@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using OrchardCore.ContentManagement.Display
+@using OrchardCore.DisplayManagement.ModelBinding
+
+@inject IContentItemDisplayManager ContentItemDisplayManager
+@inject IDisplayManager<OmnichannelActivity> ActivityDisplayDriver
+@inject IUpdateModelAccessor UpdateModelAccessor
+@model OmnichannelActivityContainer
+
+@{
+    var contactShape = await ContentItemDisplayManager.UpdateEditorAsync(Model.Contact, UpdateModelAccessor.ModelUpdater, isNew: false);
+
+    var subjectShape = await ContentItemDisplayManager.UpdateEditorAsync(Model.Subject, UpdateModelAccessor.ModelUpdater, isNew: false);
+
+    var activityShape = await ActivityDisplayDriver.UpdateEditorAsync(Model.Activity, UpdateModelAccessor.ModelUpdater, isNew: false, "Process");
+}
+
+<div class="activity-card">
+    @await DisplayAsync(contactShape)
+</div>
+
+<div class="activity-card">
+    @await DisplayAsync(subjectShape)
+</div>
+
+<div class="activity-card">
+    @await DisplayAsync(activityShape)
+</div>

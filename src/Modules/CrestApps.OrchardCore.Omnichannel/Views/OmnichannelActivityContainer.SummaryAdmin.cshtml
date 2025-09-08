@@ -1,0 +1,89 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Users
+@using Microsoft.AspNetCore.Mvc.Localization
+@using Microsoft.Extensions.Localization
+@using System.Globalization
+@using OrchardCore.Modules
+@inject ILocalClock LocalClock
+@inject IDisplayNameProvider DisplayNameProvider
+@model OmnichannelActivityContainer
+
+<div class="row align-items-center">
+    <div class="col-auto">
+        @T["Urgency level"]
+    </div>
+    <div class="col">
+        <h4>
+            <a asp-action="Process" asp-route-id="@Model.Activity.Id">
+                @(Model.Subject?.DisplayText ?? T["Unknown Subject"].Value)
+
+                @if (Model.Activity.Attempts > 1)
+                {
+                    <span class="badge bg-secondary" title="@T["Current attempt number"]">@Html.Raw(ToOrdinal(T, Model.Activity.Attempts))</span>
+                }
+            </a>
+        </h4>
+        <small class="text-muted">@Model.Contact?.DisplayText</small>
+    </div>
+
+    <div class="col-2">
+        @{
+            var scheduledAt = (await LocalClock.ConvertToLocalAsync(Model.Activity.ScheduledAt)).ToString("g", CultureInfo.InvariantCulture);
+        }
+
+        <span class="badge ta-badge font-weight-normal">
+            <i class="fa-solid fa-calendar text-secondary"></i>
+            <time datetime="@scheduledAt">@scheduledAt</time>
+        </span>
+    </div>
+
+    <div class="col-2">
+        @if (Model.User is not null)
+        {
+            @await DisplayNameProvider.GetAsync(Model.User)
+        }
+    </div>
+
+    <div class="col-2">
+        @Model.Activity.PreferredDestination
+    </div>
+
+    <div class="col-3">
+        @Model.Activity.Instructions
+    </div>
+
+</div>
+
+@functions {
+
+    public static LocalizedHtmlString ToOrdinal(IViewLocalizer S, int number)
+    {
+        if (number <= 0)
+        {
+            var numStr = number.ToString();
+            return new LocalizedHtmlString(numStr, numStr);
+        }
+
+        int lastTwoDigits = number % 100;
+        int lastDigit = number % 10;
+
+        string suffix;
+
+        if (lastTwoDigits is 11 or 12 or 13)
+        {
+            suffix = "th";
+        }
+        else
+        {
+            suffix = lastDigit switch
+            {
+                1 => "st",
+                2 => "nd",
+                3 => "rd",
+                _ => "th"
+            };
+        }
+
+        return S["{0} <sup>{1}</sup> attempt", number, suffix];
+    }
+}
