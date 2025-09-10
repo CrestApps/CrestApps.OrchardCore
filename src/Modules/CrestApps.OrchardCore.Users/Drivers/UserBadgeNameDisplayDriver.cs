@@ -35,18 +35,6 @@ public sealed class UserBadgeNameDisplayDriver : DisplayDriver<UserBadgeContext>
             return null;
         }
 
-        var results = new List<IDisplayResult>()
-        {
-            View("UserBadgeName", model)
-            .Location("Summary", "Header"),
-
-            View("UserBadgeNameContentMetaIcon", model)
-            .Location("AdminSummary", "Header:before"),
-
-            View("UserBadgeNameContentMeta", model)
-            .Location("AdminSummary", "Header")
-        };
-
         if (context.DisplayType == "Summary")
         {
             var isAdmin = AdminAttribute.IsApplied(_httpContextAccessor.HttpContext);
@@ -65,14 +53,18 @@ public sealed class UserBadgeNameDisplayDriver : DisplayDriver<UserBadgeContext>
 
             if (isAdmin)
             {
-                results.Add(View("UserBadgeNameAdmin", model).Location("Summary", "Header"));
+                return View("UserBadgeNameAdmin", model).Location("Summary", "Header");
             }
-            else
-            {
-                results.Add(View("UserBadgeName", model).Location("Summary", "Header"));
-            }
+
+            return View("UserBadgeName", model).Location("Summary", "Header");
         }
 
-        return Combine(results);
+        return Combine(
+            View("UserBadgeNameContentMetaIcon", model)
+            .Location("AdminSummary", "Header:before"),
+
+            View("UserBadgeNameContentMeta", model)
+            .Location("AdminSummary", "Header")
+        );
     }
 }
