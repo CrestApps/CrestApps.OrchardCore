@@ -19,6 +19,7 @@ using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.Omnichannel.Controllers;
 
+[Admin]
 [Feature(OmnichannelConstants.Features.Managements)]
 public sealed class CampaignsController : Controller
 {

@@ -63,7 +63,7 @@ public sealed class ActivitiesController : Controller
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        var query = _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index => index.AssignedToId == userId && index.Status == ActivityStatus.NotStated)
+        var query = _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index => index.AssignedToId == userId && index.Status == ActivityStatus.NotStated, collection: OmnichannelConstants.CollectionName)
                     .OrderByDescending(x => x.ScheduledAt);
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
@@ -127,7 +127,7 @@ public sealed class ActivitiesController : Controller
     [Admin("omnichannel/process/{id}")]
     public async Task<IActionResult> Process(string id)
     {
-        var activity = await _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index => index.ActivityId == id && index.Status == ActivityStatus.NotStated)
+        var activity = await _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index => index.ActivityId == id && index.Status == ActivityStatus.NotStated, collection: OmnichannelConstants.CollectionName)
             .FirstOrDefaultAsync();
 
         if (activity is null)

@@ -17,17 +17,26 @@ internal sealed class AdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Activities"], S["Activities"].PrefixPosition(), activities => activities
-                .Add(S["My Activities"], S["My Activities"].PrefixPosition(), myActivities => myActivities
+                .AddClass("activities")
+                .Id("activities")
+                .Add(S["My Activities"], S["My Activities"].PrefixPosition("1"), myActivities => myActivities
                     .AddClass("my-activities")
                     .Id("myActivities")
                     .Action("MyActivities", "Activities", "CrestApps.OrchardCore.Omnichannel")
                     .Permission(OmnichannelConstants.Permissions.ListActivities)
                     .LocalNav()
                 )
+                .Add(S["Campaigns"], S["Campaigns"].PrefixPosition(), campaigns => campaigns
+                    .AddClass("Campaigns")
+                    .Id("Campaigns")
+                    .Action("Index", "Campaigns", "CrestApps.OrchardCore.Omnichannel")
+                    .Permission(OmnichannelConstants.Permissions.ManageCampaigns)
+                    .LocalNav()
+                )
                 .Add(S["Dispositions"], S["Dispositions"].PrefixPosition(), dispositions => dispositions
                     .AddClass("dispositions")
                     .Id("dispositions")
-                    .Action("Index", "Admin", "CrestApps.OrchardCore.Omnichannel")
+                    .Action("Index", "Dispositions", "CrestApps.OrchardCore.Omnichannel")
                     .Permission(OmnichannelConstants.Permissions.ManageDispositions)
                     .LocalNav()
                 )

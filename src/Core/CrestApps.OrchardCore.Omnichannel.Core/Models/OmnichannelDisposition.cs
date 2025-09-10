@@ -24,6 +24,7 @@ public sealed class OmnichannelDisposition : CatalogEntry, IDisplayTextAwareMode
             Id = Id,
             DisplayText = DisplayText,
             Descriptions = Descriptions,
+            CaptureDate = CaptureDate,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,

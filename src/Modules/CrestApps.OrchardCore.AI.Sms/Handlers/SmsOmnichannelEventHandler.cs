@@ -50,7 +50,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         var activity = await _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
             index.Channel == omnichannelEvent.Message.Channel &&
             index.ChannelEndpoint == omnichannelEvent.Message.ServiceAddress &&
-            index.PreferredDestination == omnichannelEvent.Message.CustomerAddress)
+            index.PreferredDestination == omnichannelEvent.Message.CustomerAddress, collection: OmnichannelConstants.CollectionName)
             .OrderByDescending(x => x.ScheduledAt)
             .ThenByDescending(x => x.CreatedUtc)
             .FirstOrDefaultAsync();

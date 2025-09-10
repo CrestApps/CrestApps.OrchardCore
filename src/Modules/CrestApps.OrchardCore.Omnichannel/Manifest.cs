@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -25,6 +26,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         OmnichannelConstants.Features.Area,
+        UsersConstants.Feature.Area,
     ]
 )]
 

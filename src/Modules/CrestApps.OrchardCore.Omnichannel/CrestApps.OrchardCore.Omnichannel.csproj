@@ -26,4 +26,15 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Omnichannel.Core\CrestApps.OrchardCore.Omnichannel.Core.csproj" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <!-- 
+      Ensure this module directly depends on the required package so that when someone installs it, 
+      they won't need to manually include the Resources. 
+      This guarantees the module functions correctly and resolves the feature dependency.
+    -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.Users\CrestApps.OrchardCore.Users.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+
 </Project>
