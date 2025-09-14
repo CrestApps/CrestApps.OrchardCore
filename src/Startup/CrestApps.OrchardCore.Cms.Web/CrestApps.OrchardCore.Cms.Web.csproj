@@ -27,9 +27,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Sms\CrestApps.OrchardCore.AI.Sms.csproj" />
-    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Omnichannel.EventGrid\CrestApps.OrchardCore.Omnichannel.EventGrid.csproj" />
-    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Omnichannel\CrestApps.OrchardCore.Omnichannel.csproj" />
     <ProjectReference Include="..\..\Targets\CrestApps.OrchardCore.Cms.Core.Targets\CrestApps.OrchardCore.Cms.Core.Targets.csproj" />
   </ItemGroup>
 

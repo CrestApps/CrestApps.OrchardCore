@@ -1,0 +1,47 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OmnichannelActivityBatch>
+
+@{
+    var createdAt = Model.Value.CreatedUtc.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
+
+    var status = Model.Value.Status switch
+    {
+        OmnichannelActivityBatchStatus.New => T["New"],
+        OmnichannelActivityBatchStatus.Loading => T["Loading"],
+        OmnichannelActivityBatchStatus.Loaded => T["Loaded"],
+        _ => T["Unknown"]
+    };
+}
+
+<span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: Model.Value.CreatedUtc, Format: "g"))">
+    <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+    <time datetime="@createdAt">@await DisplayAsync(await New.Timespan(Utc: Model.Value.CreatedUtc))</time>
+</span>
+
+@if (!string.IsNullOrEmpty(Model.Value.Author))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Author"]">
+        <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@Model.Value.Author
+    </span>
+}
+
+<span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+    <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@status
+</span>
+
+@if (Model.Value.Status == OmnichannelActivityBatchStatus.Loaded)
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Total loaded activities"]">
+        <i class="fa-solid fa-list text-secondary me-1" aria-hidden="true"></i>@T.Plural((int)Model.Value.TotalLoaded.Value, "1 activity", "{0} activities")
+    </span>
+}
+else if (Model.Value.Status == OmnichannelActivityBatchStatus.Loading)
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Total processed activities"]">
+        <i class="fa-solid fa-list text-secondary me-1" aria-hidden="true"></i>@T.Plural((int)Model.Value.TotalLoaded.Value, "1 activity", "{0} activities")
+    </span>
+}

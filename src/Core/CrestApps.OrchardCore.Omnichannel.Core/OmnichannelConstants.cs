@@ -6,6 +6,8 @@ public static class OmnichannelConstants
 {
     public const string CollectionName = "Omnichannel";
 
+    public const string AgentRole = "Agent";
+
     public static class NamedParts
     {
         public const string ContactMethods = "ContactMethods";
@@ -14,6 +16,8 @@ public static class OmnichannelConstants
     public static class Sterotypes
     {
         public const string OmnichannelContact = "OmnichannelContact";
+
+        public const string OmnichannelSubject = "OmnichannelSubject";
 
         public const string ContactMethod = "ContactMethod";
     }
@@ -38,6 +42,8 @@ public static class OmnichannelConstants
 
     public static class Channels
     {
+        public const string Phone = "Phone";
+
         public const string Sms = "SMS";
 
         public const string Email = "Email";
@@ -61,10 +67,14 @@ public static class OmnichannelConstants
     {
         public readonly static Permission ListActivities = new("ListActivities", "List activities");
 
-        public readonly static Permission ProcessActivity = new("Process Activity", "Process activity");
+        public readonly static Permission ProcessActivity = new("ProcessActivity", "Process activity");
 
         public readonly static Permission ManageDispositions = new("ManageDispositions", "Manage dispositions");
 
         public readonly static Permission ManageCampaigns = new("ManageCampaigns", "Manage campaigns");
+
+        public readonly static Permission ManageActivityBatches = new("ManageActivityBatches", "Manage activity batches");
+
+        public readonly static Permission ManageChannelEndpoints = new("ManageChannelEndpoints", "Manage channel endpoints");
     }
 }

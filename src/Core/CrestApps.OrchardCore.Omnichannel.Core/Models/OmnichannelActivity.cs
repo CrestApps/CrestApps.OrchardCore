@@ -12,18 +12,21 @@ public sealed class OmnichannelActivity : Entity
     public string Channel { get; set; }
 
     /// <summary>
-    /// When the channel is SMS and the owner is AI, we specify which phone number to use to outreach to the Contact.
+    /// When the channel is SMS and the interaction type is Automatic, we specify which phone number to use to outreach to the Contact.
     /// </summary>
     public string ChannelEndpoint { get; set; }
 
+    public ActivityInteractionType InteractionType { get; set; }
+
     /// <summary>
-    /// When the owner is AI, we specify the preferred destination (Customer's Phone number or Email) to reach the Contact.
+    /// When the interaction type is Automatic, we specify the preferred destination (Customer's Phone number or Email) to reach the Contact.
     /// </summary>
     public string PreferredDestination { get; set; }
 
+    /// <summary>
+    /// Used when the interaction type is Automatic to specify which AI Profile to use to handle the interaction.
+    /// </summary>
     public string AIProfileId { get; set; }
-
-    public string AIUserId { get; set; }
 
     public string ContactContentItemId { get; set; }
 
@@ -54,11 +57,17 @@ public sealed class OmnichannelActivity : Entity
 
     public DateTime CreatedUtc { get; set; }
 
-    public string SubjectId { get; set; }
+    public string SubjectContentType { get; set; }
 
     public UrgencyLevel UrgencyLevel { get; set; }
 
     public ActivityStatus Status { get; set; }
+}
+
+public enum ActivityInteractionType
+{
+    Manual,
+    Automated,
 }
 
 public enum ActivityStatus

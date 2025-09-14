@@ -95,6 +95,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Omnic
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Omnichannel.EventGrid", "src\Modules\CrestApps.OrchardCore.Omnichannel.EventGrid\CrestApps.OrchardCore.Omnichannel.EventGrid.csproj", "{EFBDC58B-4F20-430A-8C97-3C0CAB6D707F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Omnichannel.Managements", "src\Modules\CrestApps.OrchardCore.Omnichannel.Managements\CrestApps.OrchardCore.Omnichannel.Managements.csproj", "{24229BC5-C22A-470D-86DC-A007C1E413FC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -237,6 +239,10 @@ Global
 		{EFBDC58B-4F20-430A-8C97-3C0CAB6D707F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EFBDC58B-4F20-430A-8C97-3C0CAB6D707F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EFBDC58B-4F20-430A-8C97-3C0CAB6D707F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24229BC5-C22A-470D-86DC-A007C1E413FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24229BC5-C22A-470D-86DC-A007C1E413FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24229BC5-C22A-470D-86DC-A007C1E413FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24229BC5-C22A-470D-86DC-A007C1E413FC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -276,6 +282,7 @@ Global
 		{C2444B48-8AE9-1BF0-4032-75A5D7A7A773} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
 		{35DFD494-C4A2-47B7-BFA4-8B7AE9A84996} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{EFBDC58B-4F20-430A-8C97-3C0CAB6D707F} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{24229BC5-C22A-470D-86DC-A007C1E413FC} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0E9F9B00-7078-4EA8-87A9-0B2E74375F1E}

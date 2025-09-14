@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -18,17 +17,6 @@ using OrchardCore.Modules.Manifest;
     Description = "Provides a unified communication layer that works across any channel (SMS, email, chat, phone, and more)"
 )]
 
-[assembly: Feature(
-    Name = "Omnichannel Management",
-    Id = OmnichannelConstants.Features.Managements,
-    Category = "Communications",
-    Description = "Provides was to manage Omnichannel Contacts",
-    Dependencies =
-    [
-        OmnichannelConstants.Features.Area,
-        UsersConstants.Feature.Area,
-    ]
-)]
 
 [assembly: Feature(
     Name = "Omnichannel (Azure Communication Services)",

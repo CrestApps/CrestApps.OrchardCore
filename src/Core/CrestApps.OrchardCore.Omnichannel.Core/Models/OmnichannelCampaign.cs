@@ -7,7 +7,7 @@ public sealed class OmnichannelCampaign : CatalogEntry, IDisplayTextAwareModel, 
 {
     public string DisplayText { get; set; }
 
-    public string Descriptions { get; set; }
+    public string Description { get; set; }
 
     public DateTime CreatedUtc { get; set; }
 
@@ -23,7 +23,7 @@ public sealed class OmnichannelCampaign : CatalogEntry, IDisplayTextAwareModel, 
         {
             Id = Id,
             DisplayText = DisplayText,
-            Descriptions = Descriptions,
+            Description = Description,
             CreatedUtc = CreatedUtc,
             Author = Author,
             DispositionIds = DispositionIds,

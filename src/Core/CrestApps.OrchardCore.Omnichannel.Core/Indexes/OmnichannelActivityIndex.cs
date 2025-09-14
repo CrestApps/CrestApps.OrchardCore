@@ -5,6 +5,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 
 public sealed class OmnichannelActivityIndex : MapIndex
 {
+    public ActivityInteractionType InteractionType { get; set; }
+
     public string ActivityId { get; set; }
 
     public string Channel { get; set; }
@@ -15,13 +17,11 @@ public sealed class OmnichannelActivityIndex : MapIndex
 
     public string AIProfileId { get; set; }
 
-    public string ContactContentItemId { get; set; }
-
     public string ContactContentType { get; set; }
 
     public string CampaignId { get; set; }
 
-    public string SubjectId { get; set; }
+    public string SubjectContentType { get; set; }
 
     public DateTime ScheduledAt { get; set; }
 
@@ -33,7 +33,7 @@ public sealed class OmnichannelActivityIndex : MapIndex
 
     public string CreatedById { get; set; }
 
-    public string Disposition { get; set; }
+    public string DispositionId { get; set; }
 
     public DateTime CreatedUtc { get; set; }
 

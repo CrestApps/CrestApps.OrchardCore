@@ -1,0 +1,50 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore
+
+@model OmnichannelActivityViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DispositionId" class="@Orchard.GetLabelClasses()">@T["Disposition"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DispositionId" class="form-select">
+            <option value="">@T["Select a disposition"]</option>
+            @foreach (var disposition in Model.Dispositions)
+            {
+                <option value="@disposition.Id" data-capture-date="@(disposition.CaptureDate.ToString().ToLowerInvariant())" selected="@(disposition.Id == Model.DispositionId ? "selected" : null)">@disposition.DisplayText</option>
+            }
+        </select>
+        <span asp-validation-for="DispositionId" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("d-none")" id="@Html.IdFor(x => x.ScheduleDate)_Wrapper">
+    <label asp-for="ScheduleDate" class="@Orchard.GetLabelClasses()">@T["Schedule date"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="ScheduleDate" class="form-control" />
+        <span asp-validation-for="ScheduleDate" class="text-danger"></span>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const dispositionMenu = document.getElementById('@Html.IdFor(x => x.DispositionId)');
+        const scheduleDateWrapper = document.getElementById('@Html.IdFor(x => x.ScheduleDate)_Wrapper');
+
+        function toggleScheduleDate() {
+            const selectedOption = dispositionMenu.options[dispositionMenu.selectedIndex];
+            const captureDate = selectedOption.getAttribute("data-capture-date");
+
+            if (captureDate === "true") {
+                scheduleDateWrapper.classList.remove("d-none");
+            } else {
+                scheduleDateWrapper.classList.add("d-none");
+            }
+        }
+
+        // Run once on load in case there's a preselected disposition
+        toggleScheduleDate();
+
+        // Run on change
+        dispositionMenu.addEventListener("change", toggleScheduleDate);
+    });
+</script>
