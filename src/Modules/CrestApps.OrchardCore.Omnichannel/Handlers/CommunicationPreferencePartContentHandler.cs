@@ -27,7 +27,6 @@ internal sealed class CommunicationPreferencePartContentHandler : ContentDisplay
         _contentDefinitionManager = contentDefinitionManager;
     }
 
-
     public override async Task<IDisplayResult> EditAsync(ContentItem contentItem, BuildEditorContext context)
     {
         if (_nonContactContentTypes.Contains(contentItem.ContentType))

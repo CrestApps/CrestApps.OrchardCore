@@ -1,0 +1,56 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using Microsoft.AspNetCore.Html
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OmnichannelActivityContainer>
+
+<h5>
+    <a asp-action="Process" asp-route-id="@Model.Value.Activity.Id">
+        @(Model.Value.SubjectContentTypeDefinition?.DisplayName ?? T["Unknown Subject"].Value)
+
+        @if (Model.Value.Activity.Attempts > 1)
+        {
+            <span class="badge bg-secondary" title="@T["Current attempt number"]">@ToOrdinal(T, Model.Value.Activity.Attempts)</span>
+        }
+    </a>
+</h5>
+
+@if (!string.IsNullOrEmpty(Model.Value.Activity.Instructions))
+{
+    <small class="text-muted">@Model.Value.Activity.Instructions</small>
+}
+
+@functions {
+    public static LocalizedHtmlString ToOrdinal(IViewLocalizer S, int number)
+    {
+        if (number <= 0)
+        {
+            var numStr = number.ToString();
+
+            return new LocalizedHtmlString(numStr, numStr);
+        }
+
+        int lastTwoDigits = number % 100;
+        int lastDigit = number % 10;
+
+        string suffix;
+
+        if (lastTwoDigits is 11 or 12 or 13)
+        {
+            suffix = "th";
+        }
+        else
+        {
+            suffix = lastDigit switch
+            {
+                1 => "st",
+                2 => "nd",
+                3 => "rd",
+                _ => "th"
+            };
+        }
+
+        return S["{0}<sup>{1}</sup> attempt", number, suffix];
+    }
+}

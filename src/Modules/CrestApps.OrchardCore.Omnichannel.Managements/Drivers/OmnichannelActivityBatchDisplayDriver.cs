@@ -45,20 +45,44 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         S = stringLocalizer;
     }
 
+    public override Task<IDisplayResult> DisplayAsync(OmnichannelActivityBatch batch, BuildDisplayContext context)
+    {
+        var results = new List<IDisplayResult>()
+        {
+            View("OmnichannelActivityBatch_Fields_SummaryAdmin", batch).Location("Content:1"),
+            View("OmnichannelActivityBatch_Buttons_SummaryAdmin", batch).Location("Actions:5"),
+            View("OmnichannelActivityBatch_DefaultMeta_SummaryAdmin", batch).Location("Meta:5"),
+        };
+
+        if (batch.Status == OmnichannelActivityBatchStatus.New)
+        {
+            results.Add(View("OmnichannelActivityBatch_ActionsMenuItems_SummaryAdmin", batch).Location("ActionsMenu:10"));
+        }
+
+        return CombineAsync(results);
+    }
+
     public override IDisplayResult Edit(OmnichannelActivityBatch batch, BuildEditorContext context)
     {
-        return Initialize<OmnichannelActivityLoadFormViewModel>("OmnichannelActivityBatchFields_Edit", async model =>
+        return Initialize<OmnichannelActivityBatchViewModel>("OmnichannelActivityBatchFields_Edit", async model =>
         {
+            model.DisplayText = batch.DisplayText;
             model.Channel = batch.Channel;
             model.CampaignId = batch.CampaignId;
+            model.ScheduleAt = batch.ScheduleAt;
+            model.InteractionType = batch.InteractionType;
+            model.AIProfileName = batch.AIProfileName;
             model.SubjectContentType = batch.SubjectContentType;
-            model.ContactContentType = batch.ContentContentType;
+            model.ContactContentType = batch.ContactContentType;
             model.ChannelEndpoint = batch.ChannelEndpoint;
             model.AIProfileName = batch.AIProfileName;
-            model.UserIds = batch.UserIds;
+            model.UserIds = batch.NormalizedUserNames;
             model.IncludeDoNoCalls = batch.IncludeDoNoCalls;
             model.IncludeDoNoSms = batch.IncludeDoNoSms;
             model.IncludeDoNoEmail = batch.IncludeDoNoEmail;
+            model.PreventDuplicates = context.IsNew || batch.PreventDuplicates;
+            model.Instructions = batch.Instructions;
+            model.UrgencyLevel = batch.UrgencyLevel;
 
             model.Campaigns = (await _catalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.Id)).OrderBy(x => x.Text);
 
@@ -77,9 +101,9 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                     subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
                 }
 
-                if (contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.ContactMethod))
+                if (contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelContact))
                 {
-                    subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
+                    contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
                 }
             }
 
@@ -91,7 +115,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             {
                 var displayName = await _displayNameProvider.GetAsync(user);
 
-                usersListItems.Add(new SelectListItem(displayName, user.UserName));
+                usersListItems.Add(new SelectListItem(displayName, _userManager.NormalizeName(user.UserName)));
             }
             model.AIProfiles = (await _aiProfileCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText ?? x.Name, x.Name)).OrderBy(x => x.Text);
             model.ChannelEndpoints = (await _channelEndpointsCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.Id)).OrderBy(x => x.Text);
@@ -107,17 +131,32 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 new(S["Manual"], nameof(ActivityInteractionType.Manual)),
                 new(S["Automated"], nameof(ActivityInteractionType.Automated)),
             ];
-            model.SubjectContentTypes = subjectContentTypes;
-            model.ContactContentTypes = contactContentTypes;
+
+            model.UrgencyLevels =
+            [
+                new(S["Normal"], nameof(ActivityUrgencyLevel.Normal)),
+                new(S["Very low"], nameof(ActivityUrgencyLevel.VeryLow)),
+                new(S["Low"], nameof(ActivityUrgencyLevel.Low)),
+                new(S["Medium"], nameof(ActivityUrgencyLevel.Medium)),
+                new(S["High"], nameof(ActivityUrgencyLevel.High)),
+                new(S["Very high"], nameof(ActivityUrgencyLevel.VeryHigh)),
+            ];
+            model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
+            model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
             model.Users = usersListItems.OrderBy(x => x.Text);
         }).Location("Content:1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelActivityBatch batch, UpdateEditorContext context)
     {
-        var model = new OmnichannelActivityLoadFormViewModel();
+        var model = new OmnichannelActivityBatchViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        if (string.IsNullOrEmpty(model.DisplayText))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["Title is required."]);
+        }
 
         if (string.IsNullOrEmpty(model.Channel))
         {
@@ -137,6 +176,31 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         if (model.UserIds is null || model.UserIds.Length == 0)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserIds), S["At least one user is required."]);
+        }
+
+        if (model.ScheduleAt is null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ScheduleAt), S["Schedule at field is required."]);
+        }
+
+        batch.DisplayText = model.DisplayText?.Trim();
+        batch.Channel = model.Channel;
+        batch.CampaignId = model.CampaignId;
+        batch.InteractionType = model.InteractionType;
+        batch.SubjectContentType = model.SubjectContentType;
+        batch.ContactContentType = model.ContactContentType;
+        batch.ChannelEndpoint = model.ChannelEndpoint;
+        batch.AIProfileName = model.AIProfileName;
+        batch.Instructions = model.Instructions?.Trim();
+        batch.UrgencyLevel = model.UrgencyLevel;
+        batch.NormalizedUserNames = model.UserIds ?? [];
+        batch.IncludeDoNoCalls = model.IncludeDoNoCalls;
+        batch.IncludeDoNoSms = model.IncludeDoNoSms;
+        batch.IncludeDoNoEmail = model.IncludeDoNoEmail;
+        batch.PreventDuplicates = model.PreventDuplicates;
+        if (model.ScheduleAt.HasValue)
+        {
+            batch.ScheduleAt = model.ScheduleAt.Value;
         }
 
         return Edit(batch, context);

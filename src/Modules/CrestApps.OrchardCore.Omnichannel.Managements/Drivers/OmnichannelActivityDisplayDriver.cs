@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
@@ -33,11 +34,11 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
             var campaignDispositionIds = campaign?.DispositionIds ?? [];
 
-            if (!string.IsNullOrEmpty(activity.DispositionId))
+            if (!string.IsNullOrEmpty(activity.DispositionId) && !campaignDispositionIds.Contains(activity.DispositionId))
             {
                 campaignDispositionIds.Add(activity.DispositionId);
             }
-
+            model.Notes = activity.Notes;
             model.DispositionId = activity.DispositionId;
             model.Dispositions = await _dispositionsCatalog.GetAsync(campaignDispositionIds);
         }).Location("Content:5");
@@ -78,8 +79,13 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             }
         }
 
-        model.ScheduleDate = model.ScheduleDate;
-        model.DispositionId = model.DispositionId?.Trim();
+        activity.DispositionId = model.DispositionId;
+        activity.Notes = model.Notes;
+
+        activity.Put(new DispositionMetadata
+        {
+            ScheduledDate = model.ScheduleDate,
+        });
 
         return Edit(activity, context);
     }

@@ -11,6 +11,7 @@
     var status = Model.Value.Status switch
     {
         OmnichannelActivityBatchStatus.New => T["New"],
+        OmnichannelActivityBatchStatus.Started => T["Started"],
         OmnichannelActivityBatchStatus.Loading => T["Loading"],
         OmnichannelActivityBatchStatus.Loaded => T["Loaded"],
         _ => T["Unknown"]

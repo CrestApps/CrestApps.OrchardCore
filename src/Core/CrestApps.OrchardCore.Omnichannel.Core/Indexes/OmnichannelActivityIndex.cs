@@ -15,7 +15,9 @@ public sealed class OmnichannelActivityIndex : MapIndex
 
     public string PreferredDestination { get; set; }
 
-    public string AIProfileId { get; set; }
+    public string AIProfileName { get; set; }
+
+    public string ContactContentItemId { get; set; }
 
     public string ContactContentType { get; set; }
 
@@ -37,7 +39,7 @@ public sealed class OmnichannelActivityIndex : MapIndex
 
     public DateTime CreatedUtc { get; set; }
 
-    public UrgencyLevel UrgencyLevel { get; set; }
+    public ActivityUrgencyLevel UrgencyLevel { get; set; }
 
     public ActivityStatus Status { get; set; }
 }

@@ -67,6 +67,7 @@ public sealed class OmnichannelContactsMigrations : DataMigration
                 .WithSettings(new BagPartSettings()
                 {
                     ContainedStereotypes = [OmnichannelConstants.Sterotypes.ContactMethod],
+                    CollapseContainedItems = true,
                 })
                 .WithPosition("10")
             )

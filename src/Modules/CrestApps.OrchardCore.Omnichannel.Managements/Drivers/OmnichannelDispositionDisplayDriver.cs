@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
@@ -20,9 +21,12 @@ internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<Omnich
     public override Task<IDisplayResult> DisplayAsync(OmnichannelDisposition disposition, BuildDisplayContext context)
     {
         return CombineAsync(
-            View("OmnichannelDisposition_Fields_SummaryAdmin", disposition).Location("Content:1"),
-            View("OmnichannelDisposition_Buttons_SummaryAdmin", disposition).Location("Actions:5"),
-            View("OmnichannelDisposition_DefaultMeta_SummaryAdmin", disposition).Location("Meta:5")
+            View("OmnichannelDisposition_Fields_SummaryAdmin", disposition)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
+            View("OmnichannelDisposition_Buttons_SummaryAdmin", disposition)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+            View("OmnichannelDisposition_DefaultMeta_SummaryAdmin", disposition)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
         );
     }
 

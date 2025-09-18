@@ -1,0 +1,34 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OmnichannelActivityContainer>
+
+@{
+    if (Model.Value.Activity.ScheduledAt == DateTime.MinValue)
+    {
+        Model.Value.Activity.ScheduledAt = DateTime.UtcNow;
+    }
+
+    var scheduledAt = Model.Value.Activity.ScheduledAt.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
+}
+
+<span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Scheduled at"]">
+    <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+    <time datetime="@scheduledAt">@await DisplayAsync(await New.DateTime(Utc: Model.Value.Activity.ScheduledAt, Format: "g"))</time>
+</span>
+
+@if (!string.IsNullOrEmpty(Model.Value.Contact.DisplayText))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Contact"]">
+        <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@Model.Value.Contact?.DisplayText
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.Activity.PreferredDestination))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Communication target"]">
+        <i class="fa-solid fa-comments text-secondary me-1" aria-hidden="true"></i>@Model.Value.Activity.PreferredDestination
+    </span>
+}

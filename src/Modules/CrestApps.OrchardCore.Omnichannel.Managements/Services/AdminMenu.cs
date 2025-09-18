@@ -16,9 +16,16 @@ internal sealed class AdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Activities"], S["Activities"].PrefixPosition(), activities => activities
-                .AddClass("activities")
-                .Id("activities")
+            .Add(S["Interaction Center"], S["Interaction Center"].PrefixPosition(), interactionCenter => interactionCenter
+                .AddClass("interaction-center")
+                .Id("interactionCenter")
+                .Add(S["Tasks"], "1", tasks => tasks
+                    .AddClass("tasks")
+                    .Id("tasks")
+                    .Action("Tasks", "Activities", "CrestApps.OrchardCore.Omnichannel.Managements")
+                    .Permission(OmnichannelConstants.Permissions.ListActivities)
+                    .LocalNav()
+                )
                 .Add(S["Activity Batches"], S["Activity Batches"].PrefixPosition(), dispositions => dispositions
                     .AddClass("activity-batches")
                     .Id("activityBatches")
@@ -45,13 +52,6 @@ internal sealed class AdminMenu : AdminNavigationProvider
                     .Id("channelEndpoints")
                     .Action("Index", "ChannelEndpoints", "CrestApps.OrchardCore.Omnichannel.Managements")
                     .Permission(OmnichannelConstants.Permissions.ManageChannelEndpoints)
-                    .LocalNav()
-                )
-                .Add(S["My Activities"], S["My Activities"].PrefixPosition("1"), myActivities => myActivities
-                    .AddClass("my-activities")
-                    .Id("myActivities")
-                    .Action("MyActivities", "Activities", "CrestApps.OrchardCore.Omnichannel.Managements")
-                    .Permission(OmnichannelConstants.Permissions.ListActivities)
                     .LocalNav()
                 )
 

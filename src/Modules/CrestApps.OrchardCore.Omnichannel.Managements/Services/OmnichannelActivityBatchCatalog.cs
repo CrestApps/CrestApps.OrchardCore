@@ -17,20 +17,18 @@ public sealed class OmnichannelActivityBatchCatalog : ICatalog<OmnichannelActivi
         _session = session;
     }
 
-    public ValueTask CreateAsync(OmnichannelActivityBatch entry)
+    public async ValueTask CreateAsync(OmnichannelActivityBatch entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
-        _session.Save(entry);
-
-        return ValueTask.CompletedTask;
+        await _session.SaveAsync(entry, OmnichannelConstants.CollectionName);
     }
 
     public ValueTask<bool> DeleteAsync(OmnichannelActivityBatch entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
-        _session.Delete(entry);
+        _session.Delete(entry, OmnichannelConstants.CollectionName);
 
         return ValueTask.FromResult(true);
     }
@@ -82,13 +80,13 @@ public sealed class OmnichannelActivityBatchCatalog : ICatalog<OmnichannelActivi
 
     public async ValueTask SaveChangesAsync()
     {
-        await _session.SaveChangesAsync();
+        await _session.FlushAsync();
     }
 
     public async ValueTask UpdateAsync(OmnichannelActivityBatch entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
-        await _session.SaveAsync(entry);
+        await _session.SaveAsync(entry, OmnichannelConstants.CollectionName);
     }
 }

@@ -10,7 +10,7 @@
     @Html.ValidationSummary()
     @await DisplayAsync(Model.Editor)
 
-    @if (ViewData["IsReadOnly"] as bool? ?? true)
+    @if (ViewData["IsReadOnly"] as bool? == false)
     {
         <button class="btn btn-primary" type="submit">@T["Save"]</button>
     }

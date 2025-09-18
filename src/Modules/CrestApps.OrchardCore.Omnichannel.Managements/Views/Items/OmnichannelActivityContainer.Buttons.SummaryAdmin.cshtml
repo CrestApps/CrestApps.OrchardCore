@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OmnichannelActivityContainer>
+
+<a asp-action="Process"
+   asp-route-id="@Model.Value.Activity.Id"
+   class="btn btn-primary btn-sm">@T["Process"]</a>

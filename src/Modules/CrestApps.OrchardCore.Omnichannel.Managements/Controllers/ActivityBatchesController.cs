@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Admin;
@@ -228,7 +229,7 @@ public sealed class ActivityBatchesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        if (model.Status == OmnichannelActivityBatchStatus.Loading)
+        if (model.Status == OmnichannelActivityBatchStatus.Started || model.Status == OmnichannelActivityBatchStatus.Loading)
         {
             await _notifier.ErrorAsync(H["This batch is being loaded and can't be edited."]);
 
@@ -278,7 +279,7 @@ public sealed class ActivityBatchesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        if (model.Status == OmnichannelActivityBatchStatus.Loading)
+        if (model.Status == OmnichannelActivityBatchStatus.Started || model.Status == OmnichannelActivityBatchStatus.Loading)
         {
             await _notifier.ErrorAsync(H["This batch is being loaded and can't be removed."]);
 
@@ -298,7 +299,6 @@ public sealed class ActivityBatchesController : Controller
     }
 
     [HttpPost]
-    [ActionName(nameof(Create))]
     [Admin("omnichannel/activity/batches/load/{id}", "OmnichannelActivityBatchesLoad")]
     public async Task<ActionResult> Load(string id)
     {
@@ -321,12 +321,15 @@ public sealed class ActivityBatchesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        if (model.Status == OmnichannelActivityBatchStatus.Loading)
+        if (model.Status == OmnichannelActivityBatchStatus.Started || model.Status == OmnichannelActivityBatchStatus.Loading)
         {
             await _notifier.ErrorAsync(H["This batch was already being loaded and can't be loaded again."]);
 
             return RedirectToAction(nameof(Index));
         }
+
+        model.Status = OmnichannelActivityBatchStatus.Started;
+        await _manager.UpdateAsync(model);
 
         ShellScope.AddDeferredTask(s =>
         {
@@ -338,9 +341,9 @@ public sealed class ActivityBatchesController : Controller
                 long documentId = 0;
                 var batch = await catalog.FindByIdAsync(batchId);
 
-                if (batch.Status != OmnichannelActivityBatchStatus.New)
+                if (batch.Status != OmnichannelActivityBatchStatus.Started)
                 {
-                    throw new InvalidOperationException($"Unable to load activities for batch with the ID '{batch.Id}' since it's status is not New.");
+                    throw new InvalidOperationException($"Unable to load activities for batch with the ID '{batch.Id}' since it's status is not '{nameof(OmnichannelActivityBatchStatus.Started)}'.");
                 }
 
                 batch.Status = OmnichannelActivityBatchStatus.Loading;
@@ -348,10 +351,22 @@ public sealed class ActivityBatchesController : Controller
 
                 var batchCounter = 0;
 
+                var logger = scope.ServiceProvider.GetRequiredService<ILogger<ActivityBatchesController>>();
                 var session = scope.ServiceProvider.GetRequiredService<ISession>();
                 await using var readonlySession = session.Store.CreateSession(withTracking: false);
 
-                var users = (await readonlySession.Query<User, UserIndex>(x => x.IsEnabled && x.UserId.IsIn(batch.UserIds)).ListAsync()).ToArray();
+                var users = (await readonlySession.Query<User, UserIndex>(x => x.IsEnabled && x.NormalizedUserName.IsIn(batch.NormalizedUserNames)).ListAsync()).ToArray();
+
+                if (users.Length == 0)
+                {
+                    batch.Status = OmnichannelActivityBatchStatus.New;
+
+                    await catalog.UpdateAsync(batch);
+
+                    logger.LogError("No valid users were found to assign the activities for the batch with ID '{BatchId}'.", batch.Id);
+                    return;
+                }
+
                 var activityCounter = 0;
 
                 while (true)
@@ -371,7 +386,7 @@ public sealed class ActivityBatchesController : Controller
                         contactQuery = contactQuery.With<OmnichannelContactIndex>(index => index.PrimaryEmailAddress != null);
                     }
 
-                    contactQuery = contactQuery.With<ContentItemIndex>(index => index.ContentType == batch.ContentContentType && index.Published && index.DocumentId > documentId)
+                    contactQuery = contactQuery.With<ContentItemIndex>(index => index.ContentType == batch.ContactContentType && index.Published && index.DocumentId > documentId)
                         .OrderBy(x => x.DocumentId);
 
                     // Apply the filters logic
@@ -387,11 +402,33 @@ public sealed class ActivityBatchesController : Controller
                         await catalog.UpdateAsync(batch);
                         break;
                     }
+                    var preventDuplicates = true;
+
+                    HashSet<string> inQueueActivities = null;
+
+                    if (preventDuplicates)
+                    {
+                        var contentItemsIds = contacts.Select(x => x.ContentItemId).ToArray();
+
+                        inQueueActivities = (await readonlySession.QueryIndex<OmnichannelActivityIndex>(index =>
+                            index.ContactContentType == batch.ContactContentType &&
+                            index.ContactContentItemId.IsIn(contentItemsIds) &&
+                            index.Status != ActivityStatus.Completed &&
+                            index.Status != ActivityStatus.Purged, collection: OmnichannelConstants.CollectionName)
+                            .ListAsync())
+                            .Select(x => x.ContactContentItemId)
+                            .ToHashSet();
+                    }
 
                     batchCounter++;
 
                     foreach (var contact in contacts)
                     {
+                        if (preventDuplicates && inQueueActivities.Contains(contact.ContentItemId))
+                        {
+                            continue;
+                        }
+
                         var user = users[activityCounter++ % users.Length];
 
                         documentId = Math.Min(documentId, contact.Id);
@@ -402,13 +439,13 @@ public sealed class ActivityBatchesController : Controller
                             InteractionType = batch.InteractionType,
                             Channel = batch.Channel,
                             ContactContentItemId = contact.ContentItemId,
-                            ContactContentType = batch.ContentContentType,
+                            ContactContentType = batch.ContactContentType,
                             SubjectContentType = batch.SubjectContentType,
                             PreferredDestination = GetPreferredDestenation(contact, batch.Channel),
                             ChannelEndpoint = batch.ChannelEndpoint,
-                            AIProfileId = "",
+                            AIProfileName = batch.AIProfileName,
                             CampaignId = batch.CampaignId,
-                            ScheduledAt = batch.ScheduledAt,
+                            ScheduledAt = batch.ScheduleAt,
                             AssignedToId = user.UserId,
                             AssignedToUsername = user.UserName,
                             AssignedToUtc = _clock.UtcNow,
@@ -419,10 +456,9 @@ public sealed class ActivityBatchesController : Controller
                             Status = ActivityStatus.NotStated,
                         };
 
-                        batch.Status = OmnichannelActivityBatchStatus.Loading;
                         batch.TotalLoaded++;
 
-                        await session.SaveAsync(activity);
+                        await session.SaveAsync(activity, collection: OmnichannelConstants.CollectionName);
                     }
 
                     await catalog.UpdateAsync(batch);

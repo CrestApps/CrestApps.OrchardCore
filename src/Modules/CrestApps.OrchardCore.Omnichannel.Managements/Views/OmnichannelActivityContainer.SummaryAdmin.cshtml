@@ -1,89 +1,46 @@
-@using CrestApps.OrchardCore.Omnichannel.Core.Models
-@using CrestApps.OrchardCore.Users
-@using Microsoft.AspNetCore.Mvc.Localization
-@using Microsoft.Extensions.Localization
-@using System.Globalization
-@using OrchardCore.Modules
-@inject ILocalClock LocalClock
-@inject IDisplayNameProvider DisplayNameProvider
-@model OmnichannelActivityContainer
+<div class="row g-0">
+    <div class="col-lg col-12 title d-flex align-items-center">
 
-<div class="row align-items-center">
-    <div class="col-auto">
-        @T["Urgency level"]
-    </div>
-    <div class="col">
-        <h4>
-            <a asp-action="Process" asp-route-id="@Model.Activity.Id">
-                @(Model.Subject?.DisplayText ?? T["Unknown Subject"].Value)
-
-                @if (Model.Activity.Attempts > 1)
+        <div class="summary d-flex flex-column flex-md-row">
+            <div class="me-2">
+                @if (Model.Content != null)
                 {
-                    <span class="badge bg-secondary" title="@T["Current attempt number"]">@Html.Raw(ToOrdinal(T, Model.Activity.Attempts))</span>
+                    @await DisplayAsync(Model.Content)
                 }
-            </a>
-        </h4>
-        <small class="text-muted">@Model.Contact?.DisplayText</small>
-    </div>
+            </div>
 
-    <div class="col-2">
-        @{
-            var scheduledAt = (await LocalClock.ConvertToLocalAsync(Model.Activity.ScheduledAt)).ToString("g", CultureInfo.InvariantCulture);
-        }
-
-        <span class="badge ta-badge font-weight-normal">
-            <i class="fa-solid fa-calendar text-secondary"></i>
-            <time datetime="@scheduledAt">@scheduledAt</time>
-        </span>
-    </div>
-
-    <div class="col-2">
-        @if (Model.User is not null)
-        {
-            @await DisplayNameProvider.GetAsync(Model.User)
-        }
-    </div>
-
-    <div class="col-2">
-        @Model.Activity.PreferredDestination
-    </div>
-
-    <div class="col-3">
-        @Model.Activity.Instructions
-    </div>
-
-</div>
-
-@functions {
-
-    public static LocalizedHtmlString ToOrdinal(IViewLocalizer S, int number)
-    {
-        if (number <= 0)
-        {
-            var numStr = number.ToString();
-            return new LocalizedHtmlString(numStr, numStr);
-        }
-
-        int lastTwoDigits = number % 100;
-        int lastDigit = number % 10;
-
-        string suffix;
-
-        if (lastTwoDigits is 11 or 12 or 13)
-        {
-            suffix = "th";
-        }
-        else
-        {
-            suffix = lastDigit switch
+            @if (Model.Tags != null)
             {
-                1 => "st",
-                2 => "nd",
-                3 => "rd",
-                _ => "th"
-            };
-        }
+                <div class="tags me-1">
+                    @await DisplayAsync(Model.Tags)
+                </div>
+            }
+            @if (Model.Meta != null)
+            {
+                <div class="metadata me-1">
+                    @await DisplayAsync(Model.Meta)
+                </div>
+            }
+        </div>
+    </div>
+    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
+        <div class="actions">
+            @if (Model.Actions != null)
+            {
+                @await DisplayAsync(Model.Actions)
+            }
 
-        return S["{0} <sup>{1}</sup> attempt", number, suffix];
-    }
-}
+            @if (Model.ActionsMenu != null && Model.ActionsMenu.HasItems)
+            {
+                <div class="btn-group" title="@T["Actions"]">
+                    <button type="button" class="btn btn-sm btn-secondary dropdown-toggle actions" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span>@T["Actions"]</span>
+                    </button>
+                    <div class="actions-menu dropdown-menu dropdown-menu-end">
+                        @await DisplayAsync(Model.ActionsMenu)
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

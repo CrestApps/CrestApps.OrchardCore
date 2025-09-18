@@ -4,9 +4,13 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
-public class OmnichannelActivityLoadFormViewModel
+public class OmnichannelActivityBatchViewModel
 {
+    public string DisplayText { get; set; }
+
     public string Channel { get; set; }
+
+    public DateTime? ScheduleAt { get; set; }
 
     public ActivityInteractionType InteractionType { get; set; }
 
@@ -18,7 +22,9 @@ public class OmnichannelActivityLoadFormViewModel
 
     public string ChannelEndpoint { get; set; }
 
-    public string AIProfileName { get; internal set; }
+    public string Instructions { get; set; }
+
+    public string AIProfileName { get; set; }
 
     public string[] UserIds { get; set; }
 
@@ -27,6 +33,10 @@ public class OmnichannelActivityLoadFormViewModel
     public bool IncludeDoNoSms { get; set; }
 
     public bool IncludeDoNoEmail { get; set; }
+
+    public bool PreventDuplicates { get; set; }
+
+    public ActivityUrgencyLevel UrgencyLevel { get; set; }
 
     [BindNever]
     public OmnichannelActivityBatchStatus Status { get; set; }
@@ -53,5 +63,8 @@ public class OmnichannelActivityLoadFormViewModel
     public IEnumerable<SelectListItem> ChannelEndpoints { get; set; }
 
     [BindNever]
-    public IOrderedEnumerable<SelectListItem> AIProfiles { get; set; }
+    public IEnumerable<SelectListItem> AIProfiles { get; set; }
+
+    [BindNever]
+    public IEnumerable<SelectListItem> UrgencyLevels { get; set; }
 }

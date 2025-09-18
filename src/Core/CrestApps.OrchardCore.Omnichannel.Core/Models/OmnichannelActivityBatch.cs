@@ -15,13 +15,13 @@ public sealed class OmnichannelActivityBatch : CatalogEntry, IDisplayTextAwareMo
 
     public string SubjectContentType { get; set; }
 
-    public string ContentContentType { get; set; }
+    public string ContactContentType { get; set; }
 
     public string ChannelEndpoint { get; set; }
 
     public string AIProfileName { get; set; }
 
-    public string[] UserIds { get; set; }
+    public string[] NormalizedUserNames { get; set; }
 
     public bool IncludeDoNoCalls { get; set; }
 
@@ -35,13 +35,15 @@ public sealed class OmnichannelActivityBatch : CatalogEntry, IDisplayTextAwareMo
 
     public string OwnerId { get; set; }
 
-    public DateTime ScheduledAt { get; set; }
+    public DateTime ScheduleAt { get; set; }
 
     public string Instructions { get; set; }
 
     public long? TotalLoaded { get; set; }
 
-    public UrgencyLevel UrgencyLevel { get; set; }
+    public bool PreventDuplicates { get; set; }
+
+    public ActivityUrgencyLevel UrgencyLevel { get; set; }
 
     public OmnichannelActivityBatchStatus Status { get; set; }
 
@@ -55,10 +57,10 @@ public sealed class OmnichannelActivityBatch : CatalogEntry, IDisplayTextAwareMo
             Channel = Channel,
             CampaignId = CampaignId,
             SubjectContentType = SubjectContentType,
-            ContentContentType = ContentContentType,
+            ContactContentType = ContactContentType,
             ChannelEndpoint = ChannelEndpoint,
             AIProfileName = AIProfileName,
-            UserIds = UserIds?.ToArray(),
+            NormalizedUserNames = NormalizedUserNames?.ToArray(),
             IncludeDoNoCalls = IncludeDoNoCalls,
             IncludeDoNoSms = IncludeDoNoSms,
             IncludeDoNoEmail = IncludeDoNoEmail,

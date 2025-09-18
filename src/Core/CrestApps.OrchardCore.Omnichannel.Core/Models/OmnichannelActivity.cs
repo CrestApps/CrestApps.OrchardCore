@@ -1,3 +1,4 @@
+using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -26,7 +27,7 @@ public sealed class OmnichannelActivity : Entity
     /// <summary>
     /// Used when the interaction type is Automatic to specify which AI Profile to use to handle the interaction.
     /// </summary>
-    public string AIProfileId { get; set; }
+    public string AIProfileName { get; set; }
 
     public string ContactContentItemId { get; set; }
 
@@ -35,6 +36,8 @@ public sealed class OmnichannelActivity : Entity
     public string CampaignId { get; set; }
 
     public DateTime ScheduledAt { get; set; }
+
+    public string Instructions { get; set; }
 
     /// <summary>
     /// The attempt number of this activity. Default is 1 which indicate the very first attempt.
@@ -47,11 +50,15 @@ public sealed class OmnichannelActivity : Entity
 
     public DateTime? AssignedToUtc { get; set; }
 
-    public string Instructions { get; set; }
-
     public string CreatedById { get; set; }
 
     public string CreatedByUsername { get; set; }
+
+    public DateTime? CompletedUtc { get; set; }
+
+    public string CompletedById { get; set; }
+
+    public string CompletedByUsername { get; set; }
 
     public string DispositionId { get; set; }
 
@@ -59,9 +66,12 @@ public sealed class OmnichannelActivity : Entity
 
     public string SubjectContentType { get; set; }
 
-    public UrgencyLevel UrgencyLevel { get; set; }
+    public ContentItem Subject { get; set; }
+
+    public ActivityUrgencyLevel UrgencyLevel { get; set; }
 
     public ActivityStatus Status { get; set; }
+    public string Notes { get; set; }
 }
 
 public enum ActivityInteractionType
@@ -76,9 +86,10 @@ public enum ActivityStatus
     AwaitingAgentResponse,
     AwaitingCustomerAnswer,
     Completed,
+    Purged,
 }
 
-public enum UrgencyLevel
+public enum ActivityUrgencyLevel
 {
     Normal = 0,
     VeryLow = 1,

@@ -1,0 +1,44 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels
+@using OrchardCore
+@using OrchardCore.Workflows.Models
+@model SetContactCommunicationPreferenceActivityTaskViewModel
+
+<div class="@Orchard.GetEndClasses(true)">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="SetDoNotCall">
+            <label class="form-check-label" asp-for="SetDoNotCall">@T["Set the contact to do not call."]</label>
+            <span class="hint dashed">@T["When enabled, the contact will be marked do not call."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetEndClasses(true)">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="SetDoNotSms">
+            <label class="form-check-label" asp-for="SetDoNotSms">@T["Set the contact to send SMS."]</label>
+            <span class="hint dashed">@T["When enabled, the contact will be marked do not SMS."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetEndClasses(true)">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="SetDoNotEmail">
+            <label class="form-check-label" asp-for="SetDoNotEmail">@T["Set the contact to send Email."]</label>
+            <span class="hint dashed">@T["When enabled, the contact will be marked do not Email."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetEndClasses(true)">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="SetDoNotChat">
+            <label class="form-check-label" asp-for="SetDoNotChat">@T["Set the contact to send Chat."]</label>
+            <span class="hint dashed">@T["When enabled, the contact will be marked do not Chat."]</span>
+        </div>
+    </div>
+</div>

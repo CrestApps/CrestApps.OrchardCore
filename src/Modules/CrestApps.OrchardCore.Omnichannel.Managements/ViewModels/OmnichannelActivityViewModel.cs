@@ -5,6 +5,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
 public class OmnichannelActivityViewModel
 {
+    public string Notes { get; set; }
+
     public string DispositionId { get; set; }
 
     public DateTime? ScheduleDate { get; set; }

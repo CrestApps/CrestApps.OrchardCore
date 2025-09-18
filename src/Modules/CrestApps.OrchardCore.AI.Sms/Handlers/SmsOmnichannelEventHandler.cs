@@ -68,7 +68,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         await _session.SaveAsync(activity);
 
-        if (string.IsNullOrWhiteSpace(activity.AIProfileId))
+        if (string.IsNullOrWhiteSpace(activity.AIProfileName))
         {
             _logger.LogWarning("The linked Activity {ActivityId} does not have an AI Profile associated with it. Cannot process incoming SMS message.", activity.Id);
 
@@ -77,11 +77,11 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         var chatSession = await _session.Query<AIChatSession, OminchannelActivityAIChatSessionIndex>(index => index.ActivityId == activity.Id).FirstOrDefaultAsync();
 
-        var aiProfile = await _aIProfileManager.FindByIdAsync(activity.AIProfileId);
+        var aiProfile = await _aIProfileManager.FindByIdAsync(activity.AIProfileName);
 
         if (aiProfile == null)
         {
-            _logger.LogWarning("The AI Profile {AIProfileId} associated with Activity {ActivityId} was not found. Cannot process incoming SMS message.", activity.AIProfileId, activity.Id);
+            _logger.LogWarning("The AI Profile {AIProfileId} associated with Activity {ActivityId} was not found. Cannot process incoming SMS message.", activity.AIProfileName, activity.Id);
 
             if (chatSession is not null)
             {

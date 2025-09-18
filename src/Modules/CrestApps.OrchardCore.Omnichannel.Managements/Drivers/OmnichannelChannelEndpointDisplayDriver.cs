@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Email;
@@ -30,9 +31,12 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
     public override Task<IDisplayResult> DisplayAsync(OmnichannelChannelEndpoint endpoint, BuildDisplayContext context)
     {
         return CombineAsync(
-            View("OmnichannelChannelEndpoint_Fields_SummaryAdmin", endpoint).Location("Content:1"),
-            View("OmnichannelChannelEndpoint_Buttons_SummaryAdmin", endpoint).Location("Actions:5"),
-            View("OmnichannelChannelEndpoint_DefaultMeta_SummaryAdmin", endpoint).Location("Meta:5")
+            View("OmnichannelChannelEndpoint_Fields_SummaryAdmin", endpoint)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
+            View("OmnichannelChannelEndpoint_Buttons_SummaryAdmin", endpoint)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+            View("OmnichannelChannelEndpoint_DefaultMeta_SummaryAdmin", endpoint)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
         );
     }
 
