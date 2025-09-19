@@ -1,14 +1,38 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using Microsoft.AspNetCore.Authorization
+@using OrchardCore.ContentManagement.Metadata
+@using OrchardCore.Contents
+
 @model ProcessOmnichannelActivityContainer
 
-<div class="contact-card">
-    @await DisplayAsync(Model.Contact)
+@inject IContentDefinitionManager ContentDefinitionManager
+
+@{
+    var shape = new ContactNavigationAdminShapeViewModel
+    {
+        ContactContentItem = Model.ContactContentItem,
+        ShowEdit = true,
+    };
+}
+
+@await DisplayAsync(shape)
+
+<div class="card mb-3">
+    <div class="card-header">
+        @T["Subject"]
+    </div>
+    <div class="card-body">
+        @await DisplayAsync(Model.Subject)
+    </div>
 </div>
 
-<div class="subject-card">
-    @await DisplayAsync(Model.Subject)
-</div>
-
-<div class="activity-card">
-    @await DisplayAsync(Model.Activity)
+<div class="card mb-3">
+    <div class="card-header">
+        @T["Activity"]
+    </div>
+    <div class="card-body">
+        @await DisplayAsync(Model.Activity)
+    </div>
 </div>

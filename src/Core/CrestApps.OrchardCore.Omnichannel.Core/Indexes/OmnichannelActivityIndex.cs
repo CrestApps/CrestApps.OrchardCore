@@ -25,7 +25,7 @@ public sealed class OmnichannelActivityIndex : MapIndex
 
     public string SubjectContentType { get; set; }
 
-    public DateTime ScheduledAt { get; set; }
+    public DateTime ScheduledUtc { get; set; }
 
     public int Attempts { get; set; }
 
@@ -38,6 +38,8 @@ public sealed class OmnichannelActivityIndex : MapIndex
     public string DispositionId { get; set; }
 
     public DateTime CreatedUtc { get; set; }
+
+    public DateTime? CompletedUtc { get; set; }
 
     public ActivityUrgencyLevel UrgencyLevel { get; set; }
 

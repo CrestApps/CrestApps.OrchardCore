@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Tasks;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -32,6 +33,8 @@ public sealed class Startup : StartupBase
             .AddDataMigration<OmnichannelActivityBatchIndexMigrations>();
 
         services.AddDisplayDriver<OmnichannelActivityContainer, OmnichannelActivityContainerDisplayDriver>();
+        services.AddScoped<IContentDisplayDriver, OmnichannelContactDisplayDriver>();
+
         services
             .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>();
 

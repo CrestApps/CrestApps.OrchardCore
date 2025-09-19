@@ -9,11 +9,13 @@ internal sealed class PermissionProvider : IPermissionProvider
     private readonly IEnumerable<Permission> _agentPermissions =
     [
         OmnichannelConstants.Permissions.ListActivities,
+        OmnichannelConstants.Permissions.ListContactActivities,
     ];
 
     private readonly IEnumerable<Permission> _allPermissions =
     [
         OmnichannelConstants.Permissions.ListActivities,
+        OmnichannelConstants.Permissions.ListContactActivities,
         OmnichannelConstants.Permissions.ProcessActivity,
         OmnichannelConstants.Permissions.ManageDispositions,
         OmnichannelConstants.Permissions.ManageCampaigns,

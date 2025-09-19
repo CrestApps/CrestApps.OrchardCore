@@ -67,7 +67,13 @@ public static class OmnichannelConstants
     {
         public readonly static Permission ListActivities = new("ListActivities", "List activities");
 
+        public readonly static Permission ListContactActivities = new("ListContactActivities", "List Contact activities", [ListActivities]);
+
         public readonly static Permission ProcessActivity = new("ProcessActivity", "Process activity");
+
+        public readonly static Permission ProcessOwnActivity = new("ProcessOwnActivity", "Process own activity");
+
+        public readonly static Permission EditActivity = new("EditActivity", "Edit activity");
 
         public readonly static Permission ManageDispositions = new("ManageDispositions", "Manage dispositions");
 

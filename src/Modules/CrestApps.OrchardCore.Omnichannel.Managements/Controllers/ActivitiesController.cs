@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
@@ -80,8 +81,8 @@ public sealed class ActivitiesController : Controller
         H = htmlLocalizer;
     }
 
-    [Admin("omnichannel/tasks")]
-    public async Task<IActionResult> Tasks(
+    [Admin("omnichannel/activities")]
+    public async Task<IActionResult> Activities(
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
@@ -94,7 +95,7 @@ public sealed class ActivitiesController : Controller
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         var query = _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index => index.AssignedToId == userId && index.Status == ActivityStatus.NotStated && index.InteractionType == ActivityInteractionType.Manual, collection: OmnichannelConstants.CollectionName)
-                    .OrderByDescending(x => x.ScheduledAt);
+                    .OrderByDescending(x => x.ScheduledUtc);
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
@@ -116,11 +117,10 @@ public sealed class ActivitiesController : Controller
             .Distinct()
             .ToArray();
 
-        var contacts = await _session.Query<ContentItem, ContentItemIndex>(index => index.ContentItemId.IsIn(contactsIds) && index.Latest)
-            .ListAsync();
+        var contacts = await _contentItemManager.GetAsync(contactsIds, VersionOptions.Latest);
 
         var users = await _session.Query<User, UserIndex>(index => index.UserId.IsIn(userIds))
-            .ListAsync();
+           .ListAsync();
 
         var containerSummaries = new List<IShape>();
 
@@ -152,6 +152,187 @@ public sealed class ActivitiesController : Controller
         return View(model);
     }
 
+    [Admin("omnichannel/activities/{contentItemId}")]
+    public async Task<IActionResult> List(
+        string contentItemId,
+        PagerParameters pagerParameters,
+        [Bind(Prefix = "schedule")] PagerParameters scheduledActivitiesPagerParameters,
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory)
+    {
+        var contact = await _contentItemManager.GetAsync(contentItemId, VersionOptions.Published);
+
+        if (contact is null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ListContactActivities, contact))
+        {
+            return Forbid();
+        }
+
+        var scheduledActivitiesQuery = _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
+                        index.ContactContentItemId == contentItemId &&
+                        index.Status == ActivityStatus.NotStated &&
+                        index.InteractionType == ActivityInteractionType.Manual
+                        , collection: OmnichannelConstants.CollectionName)
+                    .OrderByDescending(x => x.ScheduledUtc);
+
+        var scheduledPager = new Pager(scheduledActivitiesPagerParameters, pagerOptions.Value.GetPageSize());
+
+        var scheduledPagerShape = await shapeFactory.PagerAsync(scheduledPager, await scheduledActivitiesQuery.CountAsync());
+
+        var scheduledActivities = await scheduledActivitiesQuery
+            .Skip(scheduledPager.GetStartIndex())
+            .Take(scheduledPager.PageSize)
+            .ListAsync();
+
+        var completedActivitiesQuery = _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
+                       index.ContactContentItemId == contentItemId &&
+                       index.Status == ActivityStatus.Completed
+                       , collection: OmnichannelConstants.CollectionName)
+                   .OrderByDescending(x => x.CompletedUtc);
+
+        var completedPager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+
+        var completedPagerShape = await shapeFactory.PagerAsync(scheduledPager, await completedActivitiesQuery.CountAsync());
+
+        var completedActivities = await completedActivitiesQuery
+            .Skip(scheduledPager.GetStartIndex())
+            .Take(scheduledPager.PageSize)
+            .ListAsync();
+
+        var userIds = scheduledActivities.Select(x => x.AssignedToId)
+            .Concat(completedActivities.Select(x => x.CompletedById))
+            .Where(x => !string.IsNullOrEmpty(x))
+            .Distinct()
+            .ToArray();
+
+        var users = await _session.Query<User, UserIndex>(index => index.UserId.IsIn(userIds))
+            .ListAsync();
+
+        var contentTypeDefinitions = new Dictionary<string, ContentTypeDefinition>(StringComparer.OrdinalIgnoreCase);
+
+        var scheduledContainerSummaries = new List<IShape>();
+
+        foreach (var scheduledActivity in scheduledActivities)
+        {
+            if (!contentTypeDefinitions.TryGetValue(scheduledActivity.SubjectContentType, out var contentTypeDefinition))
+            {
+                contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(scheduledActivity.SubjectContentType);
+                contentTypeDefinitions[scheduledActivity.SubjectContentType] = contentTypeDefinition ?? new ContentTypeDefinition(scheduledActivity.SubjectContentType, scheduledActivity.SubjectContentType);
+            }
+
+            var user = users.FirstOrDefault(x => x.UserId == scheduledActivity.AssignedToId);
+
+            var container = new OmnichannelActivityContainer(scheduledActivity, contentTypeDefinition, contact, user);
+
+            scheduledContainerSummaries.Add(await _containerDisplayManager.BuildDisplayAsync(container, _updateModelAccessor.ModelUpdater, "SummaryAdmin", groupId: "ScheduledActivity"));
+        }
+
+        var completedContainerSummaries = new List<IShape>();
+
+        foreach (var completedActivity in completedActivities)
+        {
+            if (!contentTypeDefinitions.TryGetValue(completedActivity.SubjectContentType, out var contentTypeDefinition))
+            {
+                contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(completedActivity.SubjectContentType);
+                contentTypeDefinitions[completedActivity.SubjectContentType] = contentTypeDefinition ?? new ContentTypeDefinition(completedActivity.SubjectContentType, completedActivity.SubjectContentType);
+            }
+
+            var user = users.FirstOrDefault(x => x.UserId == completedActivity.AssignedToId);
+
+            var container = new OmnichannelActivityContainer(completedActivity, contentTypeDefinition, contact, user);
+
+            completedContainerSummaries.Add(await _containerDisplayManager.BuildDisplayAsync(container, _updateModelAccessor.ModelUpdater, "SummaryAdmin", "CompletedActivity"));
+        }
+
+        var model = new ListOmnichannelActivity()
+        {
+            ContactContentItem = contact,
+            ScheduledContainers = scheduledContainerSummaries,
+            ScheduledPager = scheduledPagerShape,
+            CompletedContainers = completedContainerSummaries,
+            CompletedPager = completedPagerShape,
+        };
+
+        return View(model);
+    }
+
+    [Admin("omnichannel/activities/create/{contentItemId}")]
+    public async Task<IActionResult> Create(string contentItemId)
+    {
+        var contact = await _contentItemManager.GetAsync(contentItemId, VersionOptions.Published);
+
+        if (contact is null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
+        {
+            return Forbid();
+        }
+
+        var activity = new OmnichannelActivity()
+        {
+            Id = IdGenerator.GenerateId(),
+            ContactContentItemId = contact.ContentItemId,
+            ContactContentType = contact.ContentType,
+            Status = ActivityStatus.NotStated,
+            CreatedById = User.FindFirstValue(ClaimTypes.NameIdentifier),
+            CreatedByUsername = User.Identity?.Name,
+            CreatedUtc = _clock.UtcNow,
+        };
+
+        var model = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View(model);
+    }
+
+    [HttpPost]
+    [ActionName(nameof(Create))]
+    [Admin("omnichannel/activities/create/{contentItemId}")]
+    public async Task<IActionResult> CreatePost(string contentItemId)
+    {
+        var contact = await _contentItemManager.GetAsync(contentItemId, VersionOptions.Published);
+
+        if (contact is null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
+        {
+            return Forbid();
+        }
+
+        var activity = new OmnichannelActivity()
+        {
+            Id = IdGenerator.GenerateId(),
+            ContactContentItemId = contact.ContentItemId,
+            ContactContentType = contact.ContentType,
+            Status = ActivityStatus.NotStated,
+            CreatedById = User.FindFirstValue(ClaimTypes.NameIdentifier),
+            CreatedByUsername = User.Identity?.Name,
+            CreatedUtc = _clock.UtcNow,
+        };
+
+        var model = await _activityDisplayManager.UpdateEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        if (ModelState.IsValid)
+        {
+            await _session.SaveAsync(activity, collection: OmnichannelConstants.CollectionName);
+
+            await _notifier.SuccessAsync(H["The activity has been created successfully."]);
+
+            return RedirectToAction(nameof(List), new { contact.ContentItemId });
+        }
+
+        return View(model);
+    }
+
     [Admin("omnichannel/process/{id}")]
     public async Task<IActionResult> Process(string id)
     {
@@ -178,14 +359,14 @@ public sealed class ActivitiesController : Controller
 
         var model = new ProcessOmnichannelActivityContainer()
         {
+            ContactContentItem = contact,
             Activity = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, groupId: string.Empty, htmlPrefix: "Activity"),
-            Contact = await _contentItemDisplayManager.BuildEditorAsync(contact, _updateModelAccessor.ModelUpdater, isNew: false, groupId: string.Empty, htmlFieldPrefix: "Contact"),
+            // Contact = await _contentItemDisplayManager.BuildEditorAsync(contact, _updateModelAccessor.ModelUpdater, isNew: false, groupId: string.Empty, htmlFieldPrefix: "Contact"),
             Subject = await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true, groupId: string.Empty, htmlFieldPrefix: "Subject"),
         };
 
         return View(model);
     }
-
 
     [HttpPost]
     [ActionName(nameof(Process))]
@@ -215,8 +396,9 @@ public sealed class ActivitiesController : Controller
 
         var model = new ProcessOmnichannelActivityContainer()
         {
+            ContactContentItem = contact,
             Activity = await _activityDisplayManager.UpdateEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, groupId: string.Empty, htmlPrefix: "Activity"),
-            Contact = await _contentItemDisplayManager.UpdateEditorAsync(contact, _updateModelAccessor.ModelUpdater, isNew: false, groupId: string.Empty, htmlFieldPrefix: "Contact"),
+            // Contact = await _contentItemDisplayManager.UpdateEditorAsync(contact, _updateModelAccessor.ModelUpdater, isNew: false, groupId: string.Empty, htmlFieldPrefix: "Contact"),
             Subject = await _contentItemDisplayManager.UpdateEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true, groupId: string.Empty, htmlFieldPrefix: "Subject"),
         };
 
@@ -230,7 +412,7 @@ public sealed class ActivitiesController : Controller
             activity.CompletedUtc = _clock.UtcNow;
 
             await _session.SaveAsync(activity, collection: OmnichannelConstants.CollectionName);
-            await _session.SaveAsync(contact);
+            // await _session.SaveAsync(contact);
 
             var disposition = await _dispositionsCatalog.FindByIdAsync(activity.DispositionId);
 
@@ -246,7 +428,7 @@ public sealed class ActivitiesController : Controller
 
             await _notifier.SuccessAsync(H["The activity has been processed successfully."]);
 
-            return RedirectToAction(nameof(Tasks));
+            return RedirectToAction(nameof(Activities));
         }
 
         return View(model);

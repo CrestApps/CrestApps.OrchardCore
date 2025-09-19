@@ -19,7 +19,8 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
             .Column<string>("ContactContentType", column => column.WithLength(255))
             .Column<string>("CampaignId", column => column.WithLength(26))
             .Column<string>("SubjectContentType", column => column.WithLength(26))
-            .Column<DateTime>("ScheduledAt", column => column.NotNull())
+            .Column<DateTime>("ScheduledUtc", column => column.NotNull())
+            .Column<DateTime>("CompletedUtc", column => column.NotNull())
             .Column<int>("Attempts", column => column.NotNull())
             .Column<string>("AssignedToId", column => column.WithLength(26))
             .Column<DateTime>("AssignedToUtc")
@@ -39,7 +40,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
                 "Channel",
                 "ChannelEndpoint",
                 "PreferredDestination",
-                "ScheduledAt"),
+                "ScheduledUtc"),
             collection: OmnichannelConstants.CollectionName
         );
 
@@ -50,7 +51,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
                 "AssignedToId",
                 "Status",
                 "InteractionType",
-                "ScheduledAt"),
+                "ScheduledUtc"),
             collection: OmnichannelConstants.CollectionName
         );
 

@@ -1,0 +1,12 @@
+<zone Name="Title">
+    <h1>@RenderTitleSegments(T["New Activity"])</h1>
+</zone>
+
+<form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["id"]" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Content)
+
+    <button class="btn btn-primary" type="submit">@T["Save"]</button>
+
+    <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+</form>

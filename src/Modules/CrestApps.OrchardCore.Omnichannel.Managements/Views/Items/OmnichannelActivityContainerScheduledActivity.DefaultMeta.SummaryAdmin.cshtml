@@ -1,17 +1,13 @@
 @using System.Globalization
 @using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Users
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement.Views
 
 @model ShapeViewModel<OmnichannelActivityContainer>
-
+@inject IDisplayNameProvider DisplayNameProvider
 @{
-    if (Model.Value.Activity.ScheduledAt == DateTime.MinValue)
-    {
-        Model.Value.Activity.ScheduledAt = DateTime.UtcNow;
-    }
-
     var scheduledAt = Model.Value.Activity.ScheduledAt.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
 }
 
@@ -25,10 +21,10 @@
     <time datetime="@scheduledAt">@await DisplayAsync(await New.DateTime(Utc: Model.Value.Activity.ScheduledAt, Format: "g"))</time>
 </span>
 
-@if (!string.IsNullOrEmpty(Model.Value.Contact.DisplayText))
+@if (Model.Value.User is not null)
 {
-    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Contact"]">
-        <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@Model.Value.Contact?.DisplayText
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Assigned to"]">
+        <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@await DisplayNameProvider.GetAsync(Model.Value.User)
     </span>
 }
 

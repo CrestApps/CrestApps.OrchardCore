@@ -351,6 +351,7 @@ public sealed class ActivityBatchesController : Controller
 
                 var batchCounter = 0;
 
+                var localClock = scope.ServiceProvider.GetRequiredService<ILocalClock>();
                 var logger = scope.ServiceProvider.GetRequiredService<ILogger<ActivityBatchesController>>();
                 var session = scope.ServiceProvider.GetRequiredService<ISession>();
                 await using var readonlySession = session.Store.CreateSession(withTracking: false);
@@ -422,6 +423,7 @@ public sealed class ActivityBatchesController : Controller
 
                     batchCounter++;
 
+                    var scheduledUtc = await localClock.ConvertToUtcAsync(batch.ScheduleAt);
                     foreach (var contact in contacts)
                     {
                         if (preventDuplicates && inQueueActivities.Contains(contact.ContentItemId))
@@ -445,7 +447,7 @@ public sealed class ActivityBatchesController : Controller
                             ChannelEndpoint = batch.ChannelEndpoint,
                             AIProfileName = batch.AIProfileName,
                             CampaignId = batch.CampaignId,
-                            ScheduledAt = batch.ScheduleAt,
+                            ScheduledAt = scheduledUtc,
                             AssignedToId = user.UserId,
                             AssignedToUsername = user.UserName,
                             AssignedToUtc = _clock.UtcNow,

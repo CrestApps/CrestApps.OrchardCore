@@ -51,7 +51,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             index.Channel == omnichannelEvent.Message.Channel &&
             index.ChannelEndpoint == omnichannelEvent.Message.ServiceAddress &&
             index.PreferredDestination == omnichannelEvent.Message.CustomerAddress, collection: OmnichannelConstants.CollectionName)
-            .OrderByDescending(x => x.ScheduledAt)
+            .OrderByDescending(x => x.ScheduledUtc)
             .ThenByDescending(x => x.CreatedUtc)
             .FirstOrDefaultAsync();
 

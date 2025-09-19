@@ -7,9 +7,17 @@
 
 @inject IAuthorizationService AuthorizationService
 
-@if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ProcessActivity, Model.Value))
+@if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ProcessActivity, Model.Value.Activity))
 {
     <a asp-action="Process"
        asp-route-id="@Model.Value.Activity.Id"
        class="btn btn-success btn-sm">@T["Process"]</a>
 }
+
+@if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity, Model.Value.Activity))
+{
+    <a asp-action="Edit"
+       asp-route-id="@Model.Value.Activity.Id"
+       class="btn btn-primary btn-sm">@T["Edit"]</a>
+}
+

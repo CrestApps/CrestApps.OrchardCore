@@ -1,3 +1,4 @@
+using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Views;
 
@@ -12,7 +13,7 @@ public sealed class ProcessOmnichannelActivityContainer : ShapeViewModel
 
     public IShape Activity { get; set; }
 
-    public IShape Contact { get; set; }
+    public ContentItem ContactContentItem { get; set; }
 
     public IShape Subject { get; set; }
 }

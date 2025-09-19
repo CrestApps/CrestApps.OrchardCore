@@ -19,10 +19,10 @@ internal sealed class AdminMenu : AdminNavigationProvider
             .Add(S["Interaction Center"], S["Interaction Center"].PrefixPosition(), interactionCenter => interactionCenter
                 .AddClass("interaction-center")
                 .Id("interactionCenter")
-                .Add(S["Tasks"], "1", tasks => tasks
-                    .AddClass("tasks")
-                    .Id("tasks")
-                    .Action("Tasks", "Activities", "CrestApps.OrchardCore.Omnichannel.Managements")
+                .Add(S["Activities"], "1", activities => activities
+                    .AddClass("activities")
+                    .Id("activities")
+                    .Action("Activities", "Activities", "CrestApps.OrchardCore.Omnichannel.Managements")
                     .Permission(OmnichannelConstants.Permissions.ListActivities)
                     .LocalNav()
                 )

@@ -10,7 +10,7 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Tasks;
 
-public sealed class SetContactCommunicationPreferenceActivityTask : TaskActivity<TryAgainActivityTask>
+public sealed class SetContactCommunicationPreferenceActivityTask : TaskActivity<SetContactCommunicationPreferenceActivityTask>
 {
     private readonly ISession _session;
     private readonly IClock _clock;
