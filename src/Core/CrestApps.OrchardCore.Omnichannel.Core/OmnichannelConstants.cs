@@ -24,7 +24,9 @@ public static class OmnichannelConstants
 
     public static class ContentParts
     {
-        public const string OmnichannelContactInfo = "OmnichannelContactInfoPart";
+        // public const string OmnichannelContactInfo = "OmnichannelContactInfoPart";
+
+        public const string OmnichannelContact = "OmnichannelContactPart";
 
         public const string EmailInfo = "EmailInfoPart";
 
@@ -33,7 +35,7 @@ public static class OmnichannelConstants
 
     public static class ContentTypes
     {
-        public const string OmnichannelContact = "OmnichannelContact";
+        // public const string OmnichannelContact = "OmnichannelContact";
 
         public const string EmailAddress = "EmailAddress";
 

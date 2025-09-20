@@ -6,10 +6,6 @@ public sealed class OmnichannelContactIndex : MapIndex
 {
     public string ContentItemId { get; set; }
 
-    public string FirstName { get; set; }
-
-    public string LastName { get; set; }
-
     public string PrimaryCellPhoneNumber { get; set; }
 
     public string PrimaryHomePhoneNumber { get; set; }

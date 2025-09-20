@@ -1,10 +1,14 @@
 @using System.Globalization
 @using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.Contents
 @using OrchardCore.DisplayManagement.Views
 
 @model ShapeViewModel<OmnichannelActivityContainer>
+
+@inject IAuthorizationService AuthorizationService
 
 @{
     if (Model.Value.Activity.ScheduledAt == DateTime.MinValue)
@@ -25,10 +29,22 @@
     <time datetime="@scheduledAt">@await DisplayAsync(await New.DateTime(Utc: Model.Value.Activity.ScheduledAt, Format: "g"))</time>
 </span>
 
-@if (!string.IsNullOrEmpty(Model.Value.Contact.DisplayText))
+@if (!string.IsNullOrEmpty(Model.Value.Contact?.DisplayText))
 {
     <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Contact"]">
-        <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@Model.Value.Contact?.DisplayText
+        <i class="fa-solid fa-address-book text-secondary me-1" aria-hidden="true"></i>
+        @if (await AuthorizationService.AuthorizeAsync(User, CommonPermissions.EditContent, Model.Value.Contact))
+        {
+            <a edit-for="@Model.Value.Contact" asp-route-returnUrl="@FullRequestPath">@Model.Value.Contact.DisplayText</a>
+        }
+        else if (await AuthorizationService.AuthorizeAsync(User, CommonPermissions.ViewContent, Model.Value.Contact))
+        {
+            <a display-for="@Model.Value.Contact" asp-route-returnUrl="@FullRequestPath">@Model.Value.Contact.DisplayText</a>
+        }
+        else
+        {
+            @Model.Value.Contact?.DisplayText
+        }
     </span>
 }
 

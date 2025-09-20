@@ -101,7 +101,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                     subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
                 }
 
-                if (contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelContact))
+                if (contentType.Parts.Any(x => x.Name == OmnichannelConstants.ContentParts.OmnichannelContact))
                 {
                     contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
                 }

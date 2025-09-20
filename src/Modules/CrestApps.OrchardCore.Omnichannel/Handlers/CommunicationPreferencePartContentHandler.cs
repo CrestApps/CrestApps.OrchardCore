@@ -1,10 +1,7 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Models;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
-using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
@@ -14,38 +11,19 @@ namespace CrestApps.OrchardCore.Omnichannel.Handlers;
 internal sealed class CommunicationPreferencePartContentHandler : ContentDisplayDriver
 {
     private readonly IClock _clock;
-    private readonly IContentDefinitionManager _contentDefinitionManager;
 
-    private readonly HashSet<string> _contactContentTypes = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _nonContactContentTypes = new(StringComparer.OrdinalIgnoreCase);
-
-    public CommunicationPreferencePartContentHandler(
-        IClock clock,
-        IContentDefinitionManager contentDefinitionManager)
+    public CommunicationPreferencePartContentHandler(IClock clock)
     {
         _clock = clock;
-        _contentDefinitionManager = contentDefinitionManager;
     }
 
-    public override async Task<IDisplayResult> EditAsync(ContentItem contentItem, BuildEditorContext context)
+    public override bool CanHandleModel(ContentItem contentItem)
     {
-        if (_nonContactContentTypes.Contains(contentItem.ContentType))
-        {
-            return null;
-        }
+        return contentItem.Has<OmnichannelContactPart>();
+    }
 
-        if (!_contactContentTypes.Contains(contentItem.ContentType))
-        {
-            var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
-
-            if (!typeDefinition.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelContact))
-            {
-                return null;
-            }
-
-            _contactContentTypes.Add(contentItem.ContentType);
-        }
-
+    public override IDisplayResult Edit(ContentItem contentItem, BuildEditorContext context)
+    {
         return Initialize<CommunicationPreferenceViewModel>("CommunicationPreference_Edit", model =>
         {
             var part = contentItem.As<CommunicationPreferencePart>();
@@ -66,23 +44,6 @@ internal sealed class CommunicationPreferencePartContentHandler : ContentDisplay
 
     public override async Task<IDisplayResult> UpdateAsync(ContentItem contentItem, UpdateEditorContext context)
     {
-        if (_nonContactContentTypes.Contains(contentItem.ContentType))
-        {
-            return null;
-        }
-
-        if (!_contactContentTypes.Contains(contentItem.ContentType))
-        {
-            var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
-
-            if (!typeDefinition.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelContact))
-            {
-                return null;
-            }
-
-            _contactContentTypes.Add(contentItem.ContentType);
-        }
-
         var model = new CommunicationPreferenceViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);

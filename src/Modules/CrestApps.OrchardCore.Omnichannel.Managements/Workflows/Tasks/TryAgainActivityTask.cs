@@ -108,18 +108,13 @@ public sealed class TryAgainActivityTask : TaskActivity<TryAgainActivityTask>
         {
             nextAttempt.ScheduledAt = dispositionMetadata.ScheduledDate.Value;
         }
-        else if (!DefaultScheduleHours.HasValue)
+        else if (DefaultScheduleHours.HasValue)
         {
             nextAttempt.ScheduledAt = now.AddHours(DefaultScheduleHours.Value);
         }
         else
         {
             nextAttempt.ScheduledAt = now.AddDays(1);
-        }
-
-        if (DefaultScheduleHours.HasValue && !dispositionMetadata?.ScheduledDate.HasValue == true)
-        {
-            nextAttempt.ScheduledAt = now.AddHours(DefaultScheduleHours.Value);
         }
 
         if (!string.IsNullOrEmpty(NormalizedUserName))

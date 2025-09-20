@@ -15,13 +15,12 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
             .For<OmnichannelContactIndex>()
             .Map(contact =>
             {
-                var part = contact.As<OmnichannelContactInfoPart>();
-
-                var index = new OmnichannelContactIndex
+                if (!contact.TryGet<OmnichannelContactPart>(out _))
                 {
-                    FirstName = part?.FirstName?.Text,
-                    LastName = part?.LastName?.Text
-                };
+                    return null;
+                }
+
+                var index = new OmnichannelContactIndex();
 
                 if (contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) &&
                     bagPart.ContentItems is not null &&

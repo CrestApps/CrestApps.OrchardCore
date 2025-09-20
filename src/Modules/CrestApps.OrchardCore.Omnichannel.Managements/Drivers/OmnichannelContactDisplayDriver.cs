@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using OrchardCore;
 using OrchardCore.ContentManagement;
@@ -16,50 +16,24 @@ internal sealed class OmnichannelContactDisplayDriver : ContentDisplayDriver
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
     private readonly Dictionary<string, ContentTypeDefinition> _evaluatedContentTypes = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, ContentTypeDefinition> _contactContentTypes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, ContentTypeDefinition> _contactWithHeaderContentTypes = new(StringComparer.OrdinalIgnoreCase);
-
 
     public OmnichannelContactDisplayDriver(IContentDefinitionManager contentDefinitionManager)
     {
         _contentDefinitionManager = contentDefinitionManager;
     }
 
-    public override async Task<IDisplayResult> DisplayAsync(ContentItem contentItem, BuildDisplayContext context)
+    public override bool CanHandleModel(ContentItem contentItem)
     {
-        if (!_evaluatedContentTypes.TryGetValue(contentItem.ContentType, out var contentTypeDefinition))
+        return contentItem.Has<OmnichannelContactPart>();
+    }
+
+    public override IDisplayResult Display(ContentItem contentItem, BuildDisplayContext context)
+    {
+        return Initialize<ContentItemViewModel>("ContactSummaryAdmin", model =>
         {
-            contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
-
-            if (contentTypeDefinition is null)
-            {
-                return null;
-            }
-
-            _evaluatedContentTypes[contentItem.ContentType] = contentTypeDefinition;
-
-            if (contentTypeDefinition?.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelContact) != true)
-            {
-                return null;
-            }
-
-            _contactContentTypes[contentItem.ContentType] = contentTypeDefinition;
-
-            if (!contentTypeDefinition.Parts.Any(x => x.Name == "ListPart"))
-            {
-                _contactWithHeaderContentTypes[contentItem.ContentType] = contentTypeDefinition;
-            }
-        }
-
-        if (_contactContentTypes.TryGetValue(contentItem.ContentType, out contentTypeDefinition))
-        {
-            return Initialize<ContentItemViewModel>("ContactSummaryAdmin", model =>
-            {
-                model.ContentItem = contentItem;
-            }).Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:3");
-        }
-
-        return null;
+            model.ContentItem = contentItem;
+        }).Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:3");
     }
 
     public override async Task<IDisplayResult> EditAsync(ContentItem contentItem, BuildEditorContext context)
@@ -79,13 +53,6 @@ internal sealed class OmnichannelContactDisplayDriver : ContentDisplayDriver
             }
 
             _evaluatedContentTypes[contentItem.ContentType] = contentTypeDefinition;
-
-            if (contentTypeDefinition?.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelContact) != true)
-            {
-                return null;
-            }
-
-            _contactContentTypes[contentItem.ContentType] = contentTypeDefinition;
 
             if (contentTypeDefinition.Parts.Any(x => x.Name == "ListPart"))
             {

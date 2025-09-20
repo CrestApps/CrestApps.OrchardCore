@@ -105,7 +105,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                         subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
                     }
 
-                    if (contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelContact))
+                    if (contentType.Parts.Any(x => x.Name == OmnichannelConstants.ContentParts.OmnichannelContact))
                     {
                         contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
                     }
@@ -219,9 +219,8 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 activity.ScheduledAt = await _localClock.ConvertToUtcAsync(editModel.ScheduleAt.Value);
             }
 
-            return Edit(activity, context);
+            return await EditAsync(activity, context);
         }
-
 
         // The following fields are for processing a task.
         var model = new OmnichannelActivityViewModel();
@@ -265,6 +264,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             ScheduledDate = model.ScheduleDate,
         });
 
-        return Edit(activity, context);
+        return await EditAsync(activity, context);
     }
 }
