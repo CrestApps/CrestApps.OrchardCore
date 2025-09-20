@@ -12,5 +12,17 @@ public class OmnichannelActivityViewModel
     public DateTime? ScheduleDate { get; set; }
 
     [BindNever]
+    public string CampaignTitle { get; set; }
+
+    [BindNever]
+    public string Channel { get; set; }
+
+    [BindNever]
+    public string InteractionType { get; set; }
+
+    [BindNever]
+    public string Instructions { get; set; }
+
+    [BindNever]
     public IEnumerable<OmnichannelDisposition> Dispositions { get; set; }
 }

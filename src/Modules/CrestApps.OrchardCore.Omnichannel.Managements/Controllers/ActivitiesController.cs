@@ -156,7 +156,7 @@ public sealed class ActivitiesController : Controller
     public async Task<IActionResult> List(
         string contentItemId,
         PagerParameters pagerParameters,
-        [Bind(Prefix = "s.")] PagerParameters scheduledActivitiesPagerParameters,
+        [Bind(Prefix = "s")] PagerParameters scheduledPagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
     {
@@ -180,14 +180,16 @@ public sealed class ActivitiesController : Controller
                     .OrderBy(x => x.ScheduledUtc)
                     .ThenBy(x => x.Id);
 
-        var scheduledPager = new Pager(scheduledActivitiesPagerParameters, pagerOptions.Value.GetPageSize());
+        var scheduledPager = new Pager(scheduledPagerParameters, pagerOptions.Value.GetPageSize());
 
         var routeValues = new RouteValueDictionary()
         {
-            {"s.PageNum", scheduledActivitiesPagerParameters.Page },
+            {"s.pagenum", scheduledPagerParameters.Page },
+            {"s.PageSize", scheduledPagerParameters.PageSize },
         };
 
         var scheduledPagerShape = await shapeFactory.PagerAsync(scheduledPager, await scheduledActivitiesQuery.CountAsync(), routeValues);
+        scheduledPagerShape.Properties["PagerId"] = "s.pagenum";
 
         var scheduledActivities = await scheduledActivitiesQuery
             .Skip(scheduledPager.GetStartIndex())
@@ -293,6 +295,8 @@ public sealed class ActivitiesController : Controller
             CreatedUtc = _clock.UtcNow,
         };
 
+        ViewData["Contact"] = contact;
+
         var model = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: true);
 
         return View(model);
@@ -336,6 +340,8 @@ public sealed class ActivitiesController : Controller
 
             return RedirectToAction(nameof(List), new { contact.ContentItemId });
         }
+
+        ViewData["Contact"] = contact;
 
         return View(model);
     }
@@ -432,8 +438,8 @@ public sealed class ActivitiesController : Controller
         var model = new ProcessOmnichannelActivityContainer()
         {
             ContactContentItem = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest),
-            Activity = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, groupId: string.Empty, htmlPrefix: "Activity"),
-            Subject = await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true, groupId: string.Empty, htmlFieldPrefix: "Subject"),
+            Activity = await _activityDisplayManager.BuildEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, groupId: "Process"),
+            Subject = await _contentItemDisplayManager.BuildEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
         return View(model);
@@ -462,8 +468,8 @@ public sealed class ActivitiesController : Controller
         var model = new ProcessOmnichannelActivityContainer()
         {
             ContactContentItem = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest),
-            Activity = await _activityDisplayManager.UpdateEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, groupId: string.Empty, htmlPrefix: "Activity"),
-            Subject = await _contentItemDisplayManager.UpdateEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true, groupId: string.Empty, htmlFieldPrefix: "Subject"),
+            Activity = await _activityDisplayManager.UpdateEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: false, groupId: "Process"),
+            Subject = await _contentItemDisplayManager.UpdateEditorAsync(subject, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
         if (ModelState.IsValid)

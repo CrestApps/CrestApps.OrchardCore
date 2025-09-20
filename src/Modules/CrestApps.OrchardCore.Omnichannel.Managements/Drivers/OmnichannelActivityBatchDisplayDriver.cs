@@ -168,6 +168,11 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Subject is required."]);
         }
 
+        if (string.IsNullOrEmpty(model.CampaignId))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["Campaign is required."]);
+        }
+
         if (string.IsNullOrEmpty(model.ContactContentType))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ContactContentType), S["Contact is required."]);
@@ -181,6 +186,27 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         if (model.ScheduleAt is null)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ScheduleAt), S["Schedule at field is required."]);
+        }
+
+        if (model.InteractionType == ActivityInteractionType.Automated)
+        {
+            if (string.IsNullOrEmpty(model.ChannelEndpoint))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChannelEndpoint), S["Channel endpoint at field is required."]);
+            }
+
+            if (string.IsNullOrEmpty(model.AIProfileName))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileName), S["AI Profile is required for automated activities."]);
+            }
+            else
+            {
+                var aiProfile = await _aiProfileCatalog.FindByNameAsync(model.AIProfileName);
+                if (aiProfile == null)
+                {
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileName), S["The selected AI Profile is invalid."]);
+                }
+            }
         }
 
         batch.DisplayText = model.DisplayText?.Trim();
@@ -198,6 +224,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         batch.IncludeDoNoSms = model.IncludeDoNoSms;
         batch.IncludeDoNoEmail = model.IncludeDoNoEmail;
         batch.PreventDuplicates = model.PreventDuplicates;
+
         if (model.ScheduleAt.HasValue)
         {
             batch.ScheduleAt = model.ScheduleAt.Value;

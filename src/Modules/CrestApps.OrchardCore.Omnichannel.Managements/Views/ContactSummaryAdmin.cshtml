@@ -1,4 +1,10 @@
 @using CrestApps.OrchardCore.Omnichannel.Core
+@using Microsoft.AspNetCore.Authorization
 @model OrchardCore.ContentManagement.Display.ViewModels.ContentItemViewModel
 
-<a class="btn btn-sm btn-secondary" asp-action="List" asp-controller="Activities" asp-route-contentItemId="@Model.ContentItem.ContentItemId" asp-area="@OmnichannelConstants.Features.Managements">@T["List Activities"]</a>
+@inject IAuthorizationService AuthorizationService
+
+@if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ListContactActivities, Model.ContentItem))
+{
+    <a class="btn btn-sm btn-secondary" asp-action="List" asp-controller="Activities" asp-route-contentItemId="@Model.ContentItem.ContentItemId" asp-area="@OmnichannelConstants.Features.Managements">@T["List Activities"]</a>
+}

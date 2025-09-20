@@ -62,6 +62,8 @@ public sealed class OmnichannelActivity : Entity
 
     public string DispositionId { get; set; }
 
+    public string Notes { get; set; }
+
     public DateTime CreatedUtc { get; set; }
 
     public string SubjectContentType { get; set; }
@@ -71,7 +73,6 @@ public sealed class OmnichannelActivity : Entity
     public ActivityUrgencyLevel UrgencyLevel { get; set; }
 
     public ActivityStatus Status { get; set; }
-    public string Notes { get; set; }
 }
 
 public enum ActivityInteractionType

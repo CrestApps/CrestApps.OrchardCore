@@ -37,32 +37,33 @@ public sealed class CompletedActivityEvent : EventActivity
         set => SetProperty(value);
     }
 
-    public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
+    public override async ValueTask<IEnumerable<Outcome>> GetPossibleOutcomesAsync(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
         if (string.IsNullOrWhiteSpace(CampaignId))
         {
-            yield return Outcome(S["Invalid Campaign"]);
-            yield break;
+            return [Outcome(S["Invalid Campaign"])];
         }
 
-        var campaign = _campaignsCatalog.FindByIdAsync(CampaignId).AsTask().GetAwaiter().GetResult();
+        var campaign = await _campaignsCatalog.FindByIdAsync(CampaignId);
 
         if (campaign == null)
         {
-            yield return Outcome(S["Invalid Campaign"]);
-            yield break;
+            return [Outcome(S["Invalid Campaign"])];
         }
 
         var dispositionIds = campaign.DispositionIds ?? [];
 
-        var dispositions = _dispositionsCatalog.GetAsync(dispositionIds).AsTask().GetAwaiter().GetResult();
+        var dispositions = await _dispositionsCatalog.GetAsync(dispositionIds);
 
+        var outcomes = new List<Outcome>();
         foreach (var disposition in dispositions.OrderBy(x => x.DisplayText))
         {
-            yield return Outcome(new LocalizedString(disposition.DisplayText, disposition.DisplayText));
+            outcomes.Add(Outcome(new LocalizedString(disposition.DisplayText, disposition.DisplayText)));
         }
 
-        yield return Outcome(S["Done"]);
+        outcomes.Add(Outcome(S["Done"]));
+
+        return outcomes;
     }
 
     public override ActivityExecutionResult Resume(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
