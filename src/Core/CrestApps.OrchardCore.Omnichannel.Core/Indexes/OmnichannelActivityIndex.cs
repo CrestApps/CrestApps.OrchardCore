@@ -5,6 +5,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 
 public sealed class OmnichannelActivityIndex : MapIndex
 {
+    public long DocumentId { get; set; }
+
     public ActivityInteractionType InteractionType { get; set; }
 
     public string ActivityId { get; set; }

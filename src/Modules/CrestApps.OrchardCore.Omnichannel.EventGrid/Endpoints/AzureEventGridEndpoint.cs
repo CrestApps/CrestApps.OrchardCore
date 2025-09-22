@@ -14,11 +14,11 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OrchardCore.Modules;
 
-internal static class EventGridEndpoint
+internal static class AzureEventGridEndpoint
 {
-    public static IEndpointRouteBuilder AddEventGridEndpoint(this IEndpointRouteBuilder builder)
+    public static IEndpointRouteBuilder AddAzureEventGridEndpoint(this IEndpointRouteBuilder builder)
     {
-        _ = builder.MapPost("Omnichannel/EventGrid", HandleAsync)
+        _ = builder.MapPost("Omnichannel/webhook/AzureEventGrid", HandleAsync)
             .DisableAntiforgery()
             .AllowAnonymous();
 

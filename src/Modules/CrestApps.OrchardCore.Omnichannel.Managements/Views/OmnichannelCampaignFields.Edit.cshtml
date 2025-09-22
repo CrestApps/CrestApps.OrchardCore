@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using OrchardCore
 
@@ -8,6 +9,44 @@
     <div class="@Orchard.GetEndClasses()">
         <input asp-for="DisplayText" class="form-control" />
         <span asp-validation-for="DisplayText" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="InteractionType" class="@Orchard.GetLabelClasses()">@T["Interaction type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="InteractionType" asp-items="Model.InteractionTypes" class="form-select"></select>
+        <span asp-validation-for="InteractionType" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("automated-interaction-type", Model.InteractionType == ActivityInteractionType.Manual ? "d-none" : string.Empty)">
+    <label asp-for="ChannelEndpoint" class="@Orchard.GetLabelClasses()">@T["Channel endpoint"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="ChannelEndpoint" asp-items="Model.ChannelEndpoints" class="form-select">
+            <option value="">@T["Select an endpoint"]</option>
+        </select>
+        <span asp-validation-for="ChannelEndpoint" class="text-danger"></span>
+        <span class="hint">@T["Specifies the endpoint to use when sending a response to the incoming message."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("automated-interaction-type", Model.InteractionType == ActivityInteractionType.Manual ? "d-none" : string.Empty)">
+    <label asp-for="AIProfileName" class="@Orchard.GetLabelClasses()">@T["AI Profile"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="AIProfileName" asp-items="Model.AIProfiles" class="form-select">
+            <option value="">@T["Select an AI Profile"]</option>
+        </select>
+        <span asp-validation-for="AIProfileName" class="text-danger"></span>
+        <span class="hint">@T["Specifies the AI Profile to use to generate the responses to the incoming messages."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("automated-interaction-type", Model.InteractionType == ActivityInteractionType.Manual ? "d-none" : string.Empty)">
+    <div class="col-large col-12 col-sm-12 col-md-12 col-lg-12 col-xl-9">
+        <label asp-for="InitialOutboundPromptPattern" class="form-label">@T["Initial outbound prompt pattern"]</label>
+        <textarea asp-for="InitialOutboundPromptPattern" rows="5" class="form-control"></textarea>
+        <span class="hint">@T["This is the first message sent to the contact to initiate the conversation. Supports Liquid syntax. You can use the following variables to generate the message: <code>{0}</code>, <code>{1}</code>, <code>{2}</code>, and <code>{3}</code>.", "Contact", "Campaign", "Profile", "Session"]</span>
     </div>
 </div>
 
@@ -37,3 +76,51 @@
         <span asp-validation-for="Description" class="text-danger"></span>
     </div>
 </div>
+
+<style asp-name="codemirror"></style>
+<script asp-name="codemirror" at="Foot"></script>
+<script asp-name="codemirror-mode-javascript" at="Foot"></script>
+<script asp-name="codemirror-addon-display-autorefresh" at="Foot"></script>
+<script asp-name="codemirror-addon-mode-simple" at="Foot"></script>
+<script asp-name="codemirror-addon-mode-multiplex" at="Foot"></script>
+<script asp-name="codemirror-mode-xml" at="Foot"></script>
+<script asp-src="~/OrchardCore.Liquid/codemirror/liquid.js" at="Foot"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+
+        CodeMirror.fromTextArea(document.getElementById('@Html.IdFor(x => x.InitialOutboundPromptPattern)'), {
+            autoRefresh: true,
+            lineNumbers: true,
+            styleActiveLine: true,
+            matchBrackets: true,
+            mode: { name: "liquid" },
+        });
+
+        const interactionTypeSelect = document.getElementById("@Html.IdFor(x => x.InteractionType)");
+
+        function toggleInteractionTypeFields() {
+            const value = interactionTypeSelect.value;
+            const automatedEls = document.querySelectorAll(".automated-interaction-type");
+            const manualEls = document.querySelectorAll(".manual-interaction-type");
+
+            if (value === "@nameof(ActivityInteractionType.Automated)") {
+                automatedEls.forEach(el => el.classList.remove("d-none"));
+                manualEls.forEach(el => el.classList.add("d-none"));
+            } else if (value === "@nameof(ActivityInteractionType.Manual)") {
+                automatedEls.forEach(el => el.classList.add("d-none"));
+                manualEls.forEach(el => el.classList.remove("d-none"));
+            } else {
+                // Hide all by default if no selection
+                automatedEls.forEach(el => el.classList.add("d-none"));
+                manualEls.forEach(el => el.classList.add("d-none"));
+            }
+        }
+
+        // Run once on load to set initial state
+        toggleInteractionTypeFields();
+
+        // Listen for changes
+        interactionTypeSelect.addEventListener("change", toggleInteractionTypeFields);
+    });
+</script>

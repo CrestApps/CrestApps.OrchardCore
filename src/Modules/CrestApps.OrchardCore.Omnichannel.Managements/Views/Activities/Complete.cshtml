@@ -1,6 +1,6 @@
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Process Activity"])</h1>
+    <h1>@RenderTitleSegments(T["Complete Activity"])</h1>
 </zone>
 
 @{
@@ -17,11 +17,11 @@
 
 @await DisplayAsync(shape)
 
-<form method="post" asp-route-id="@activityId" enctype="multipart/form-data" class="no-multisubmit">
+<form method="post" asp-action="Complete" asp-route-id="@activityId" enctype="multipart/form-data" class="no-multisubmit">
     @Html.ValidationSummary()
     @await DisplayAsync(Model)
 
-    <button class="btn btn-primary" type="submit">@T["Process"]</button>
+    <button class="btn btn-primary" type="submit">@T["Complete"]</button>
 
     <a class="btn btn-secondary cancel" role="button" asp-route-action="List" asp-route-contentItemId="@Model.ContactContentItem.ContentItemId">@T["Cancel"]</a>
 </form>

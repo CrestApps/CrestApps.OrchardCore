@@ -10,6 +10,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Users;
+using OrchardCore.Users.Models;
 using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Drivers;
@@ -54,10 +55,13 @@ internal sealed class TryAgainActivityTaskDisplayDriver : ActivityDisplayDriver<
         foreach (var user in users)
         {
             var displayName = await _displayNameProvider.GetAsync(user);
+
+            var userId = user is User su ? su.UserId : _userManager.NormalizeName(user.UserName);
+
             userItems.Add(new SelectListItem
             {
                 Text = displayName,
-                Value = _userManager.NormalizeName(user.UserName)
+                Value = userId,
             });
         }
 

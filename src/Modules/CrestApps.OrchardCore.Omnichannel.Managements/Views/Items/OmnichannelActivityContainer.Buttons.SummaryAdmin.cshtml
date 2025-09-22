@@ -12,9 +12,9 @@
     <a class="btn btn-sm btn-secondary" asp-action="List" asp-controller="Activities" asp-route-contentItemId="@Model.Value.Contact.ContentItemId" asp-area="@OmnichannelConstants.Features.Managements">@T["List Activities"]</a>
 }
 
-@if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ProcessActivity, Model.Value))
+@if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.CompleteActivity, Model.Value))
 {
-    <a asp-action="Process"
-       asp-route-id="@Model.Value.Activity.Id"
-       class="btn btn-success btn-sm">@T["Process"]</a>
+    <a asp-action="Complete"
+       asp-route-id="@Model.Value.Activity.ActivityId"
+       class="btn btn-success btn-sm">@T["Complete"]</a>
 }

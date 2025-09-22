@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Services;
 using CrestApps.OrchardCore.Users;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Handlers;
@@ -17,6 +19,7 @@ using OrchardCore.Entities;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Users;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
@@ -32,6 +35,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     private readonly ILocalClock _localClock;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly UserManager<IUser> _userManager;
+    private readonly IContentManager _contentManager;
 
     internal readonly IStringLocalizer S;
 
@@ -45,6 +49,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         IClock clock,
         ILocalClock localClock,
         UserManager<IUser> userManager,
+        IContentManager contentManager,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<OmnichannelActivityDisplayDriver> stringLocalizer)
     {
@@ -57,23 +62,23 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         _clock = clock;
         _localClock = localClock;
         _userManager = userManager;
+        _contentManager = contentManager;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(OmnichannelActivity activity, BuildEditorContext context)
     {
+        var isCompletingActivity = context.GroupId == OmnichannelConstants.CompleteActivityGroup;
+
         var fields = Initialize<EditOmnichannelActivity>("OmnichannelActivityFields_Edit", async model =>
         {
             model.Channel = activity.Channel;
             model.CampaignId = activity.CampaignId;
-            model.ScheduleAt = context.IsNew || activity.ScheduledAt == DateTime.MinValue
+            model.ScheduleAt = context.IsNew || activity.ScheduledUtc == DateTime.MinValue
                 ? (await _localClock.GetLocalNowAsync()).DateTime
-                : activity.ScheduledAt;
-            model.InteractionType = activity.InteractionType;
-            model.AIProfileName = activity.AIProfileName;
+                : activity.ScheduledUtc;
             model.SubjectContentType = activity.SubjectContentType;
-            model.AIProfileName = activity.AIProfileName;
             model.UserId = activity.AssignedToId ?? _httpContextAccessor.HttpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
             model.Instructions = activity.Instructions;
             model.UrgencyLevel = activity.UrgencyLevel;
@@ -107,23 +112,18 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
             foreach (var user in users)
             {
+                var userId = user is User su ? su.UserId : _userManager.NormalizeName(user.UserName);
+
                 var displayName = await _displayNameProvider.GetAsync(user);
 
-                usersListItems.Add(new SelectListItem(displayName, _userManager.NormalizeName(user.UserName)));
+                usersListItems.Add(new SelectListItem(displayName, userId));
             }
-            model.AIProfiles = (await _aiProfileCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText ?? x.Name, x.Name)).OrderBy(x => x.Text);
-            model.ChannelEndpoints = (await _channelEndpointsCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.Id)).OrderBy(x => x.Text);
+
             model.Channels =
             [
                 new(S["Phone"], OmnichannelConstants.Channels.Phone),
                 new(S["SMS"], OmnichannelConstants.Channels.Sms),
                 new(S["Email"], OmnichannelConstants.Channels.Email),
-            ];
-
-            model.InteractionTypes =
-            [
-                new(S["Manual"], nameof(ActivityInteractionType.Manual)),
-                new(S["Automated"], nameof(ActivityInteractionType.Automated)),
             ];
 
             model.UrgencyLevels =
@@ -139,9 +139,10 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
             model.Users = usersListItems.OrderBy(x => x.Text);
 
-        }).Location("Content:5");
+        }).Location("Content:5")
+        .RenderWhen(() => Task.FromResult(activity.Status == ActivityStatus.NotStated && !isCompletingActivity));
 
-        var process = Initialize<OmnichannelActivityViewModel>("OmnichannelActivityProcess_Edit", async model =>
+        var completing = Initialize<OmnichannelActivityViewModel>("OmnichannelActivityComplete_Edit", async model =>
         {
             var campaign = await _campaignsCatalog.FindByIdAsync(activity.CampaignId);
 
@@ -152,6 +153,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 campaignDispositionIds.Add(activity.DispositionId);
             }
 
+            model.Channel = activity.Channel;
             model.CampaignTitle = campaign?.DisplayText;
             model.Channel = activity.Channel;
             model.InteractionType = activity.InteractionType.ToString();
@@ -159,15 +161,32 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             model.Dispositions = await _dispositionsCatalog.GetAsync(campaignDispositionIds);
             model.Notes = activity.Notes;
             model.DispositionId = activity.DispositionId;
-        }).Location("Content:5")
-        .OnGroup("Process");
+            model.ScheduledLocal = (await _localClock.ConvertToLocalAsync(activity.ScheduledUtc)).DateTime;
+            model.AssignedToName = await _displayNameProvider.GetAsync(await _userManager.FindByIdAsync(activity.AssignedToId));
+            model.UrgencyLevel = activity.UrgencyLevel;
 
-        return Combine(fields, process);
+            if (activity.Status == ActivityStatus.Completed)
+            {
+                model.CompletedLocal = (await _localClock.ConvertToLocalAsync(activity.CompletedUtc.Value)).DateTime;
+                model.CompletedByName = await _displayNameProvider.GetAsync(await _userManager.FindByIdAsync(activity.CompletedById));
+            }
+
+        }).Location("Content:5")
+        .OnGroup(OmnichannelConstants.CompleteActivityGroup);
+
+        if (activity.Status == ActivityStatus.Completed)
+        {
+            completing.OnGroup("");
+        }
+
+        return Combine(fields, completing);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelActivity activity, UpdateEditorContext context)
     {
-        if (context.GroupId == "Process")
+        var isCompletingActivity = context.GroupId == OmnichannelConstants.CompleteActivityGroup;
+
+        if (isCompletingActivity || activity.Status == ActivityStatus.Completed)
         {
             // The following fields are for processing a task.
             var processModel = new OmnichannelActivityViewModel();
@@ -197,7 +216,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(processModel.DispositionId), S["The selected Disposition is invalid."]);
                 }
-                else if (disposition.CaptureDate && !processModel.ScheduleDate.HasValue)
+                else if (isCompletingActivity && disposition.CaptureDate && !processModel.ScheduleDate.HasValue)
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(processModel.ScheduleDate), S["The Schedule Date field is required."]);
                 }
@@ -211,81 +230,92 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 ScheduledDate = processModel.ScheduleDate,
             });
 
-            return Edit(activity, context);
-        }
-
-        var model = new EditOmnichannelActivity();
-
-        await context.Updater.TryUpdateModelAsync(model, Prefix);
-
-        if (string.IsNullOrEmpty(model.Channel))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["Channel is required."]);
-        }
-
-        if (string.IsNullOrEmpty(model.SubjectContentType))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Subject is required."]);
-        }
-
-        if (string.IsNullOrEmpty(model.CampaignId))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["Campaign is required."]);
-        }
-
-        if (string.IsNullOrEmpty(model.UserId))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserId), S["Contact is required."]);
-        }
-
-        if (!model.ScheduleAt.HasValue)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ScheduleAt), S["Schedule at field is required."]);
-        }
-
-        if (model.InteractionType == ActivityInteractionType.Automated)
-        {
-            if (string.IsNullOrEmpty(model.ChannelEndpoint))
+            if (isCompletingActivity)
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChannelEndpoint), S["Channel endpoint at field is required."]);
+                return Edit(activity, context);
+            }
+        }
+
+        if (activity.Status == ActivityStatus.NotStated && !isCompletingActivity)
+        {
+            var model = new EditOmnichannelActivity();
+
+            await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+            if (string.IsNullOrEmpty(model.SubjectContentType))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Subject is required."]);
             }
 
-            if (string.IsNullOrEmpty(model.AIProfileName))
+            if (string.IsNullOrEmpty(model.Channel))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileName), S["AI Profile is required for automated activities."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["Channel is required."]);
             }
             else
             {
-                var aiProfile = await _aiProfileCatalog.FindByNameAsync(model.AIProfileName);
-                if (aiProfile == null)
+                var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+                if (contact is not null)
                 {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileName), S["The selected AI Profile is invalid."]);
+                    activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, model.Channel);
                 }
             }
-        }
 
-        activity.Channel = model.Channel;
-        activity.CampaignId = model.CampaignId;
-        activity.InteractionType = model.InteractionType;
-        activity.SubjectContentType = model.SubjectContentType;
-        activity.ContactContentType = activity.ContactContentType;
-        activity.ChannelEndpoint = model.ChannelEndpoint;
-        activity.AIProfileName = model.AIProfileName;
-        activity.Instructions = model.Instructions?.Trim();
-        activity.UrgencyLevel = model.UrgencyLevel;
+            OmnichannelCampaign campaign = null;
 
-        if (activity.AssignedToId != model.UserId ||
-            string.IsNullOrEmpty(activity.AssignedToId) ||
-            !activity.AssignedToUtc.HasValue)
-        {
-            activity.AssignedToUtc = _clock.UtcNow;
-            activity.AssignedToUsername = (await _userManager.FindByIdAsync(model.UserId))?.UserName;
-            activity.AssignedToId = model.UserId;
-        }
+            if (string.IsNullOrEmpty(model.CampaignId))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["Campaign is required."]);
+            }
+            else
+            {
+                campaign = await _campaignsCatalog.FindByIdAsync(model.CampaignId);
 
-        if (model.ScheduleAt.HasValue)
-        {
-            activity.ScheduledAt = await _localClock.ConvertToUtcAsync(model.ScheduleAt.Value);
+                if (campaign is null)
+                {
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["The selected Campaign is invalid."]);
+                }
+            }
+
+            if (string.IsNullOrEmpty(model.UserId))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserId), S["Contact is required."]);
+            }
+
+            if (!model.ScheduleAt.HasValue)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ScheduleAt), S["Schedule at field is required."]);
+            }
+
+            if (campaign is not null)
+            {
+                activity.ChannelEndpoint = campaign?.ChannelEndpoint;
+                activity.InteractionType = campaign?.InteractionType ?? ActivityInteractionType.Manual;
+                activity.AIProfileName = campaign?.AIProfileName;
+                activity.CampaignId = model.CampaignId;
+            }
+
+            activity.Channel = model.Channel;
+            activity.SubjectContentType = model.SubjectContentType;
+            activity.ContactContentType = activity.ContactContentType;
+            activity.Instructions = model.Instructions?.Trim();
+            activity.UrgencyLevel = model.UrgencyLevel;
+
+            if (activity.AssignedToId != model.UserId ||
+                string.IsNullOrEmpty(activity.AssignedToId) ||
+                !activity.AssignedToUtc.HasValue)
+            {
+                activity.AssignedToUtc = _clock.UtcNow;
+                activity.AssignedToUsername = (await _userManager.FindByIdAsync(model.UserId))?.UserName;
+                activity.AssignedToId = model.UserId;
+            }
+
+            if (model.ScheduleAt.HasValue)
+            {
+                activity.ScheduledUtc = await _localClock.ConvertToUtcAsync(model.ScheduleAt.Value);
+            }
+
+            return Edit(activity, context);
         }
 
         return Edit(activity, context);

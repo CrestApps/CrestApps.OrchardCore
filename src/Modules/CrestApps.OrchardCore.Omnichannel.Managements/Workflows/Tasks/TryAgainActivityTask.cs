@@ -81,7 +81,7 @@ public sealed class TryAgainActivityTask : TaskActivity<TryAgainActivityTask>
         var now = _clock.UtcNow;
         var nextAttempt = new OmnichannelActivity()
         {
-            Id = IdGenerator.GenerateId(),
+            ActivityId = IdGenerator.GenerateId(),
             Channel = activity.Channel,
             ChannelEndpoint = activity.ChannelEndpoint,
             InteractionType = activity.InteractionType,
@@ -106,15 +106,15 @@ public sealed class TryAgainActivityTask : TaskActivity<TryAgainActivityTask>
 
         if (activity.TryGet<DispositionMetadata>(out var dispositionMetadata) && dispositionMetadata.ScheduledDate.HasValue)
         {
-            nextAttempt.ScheduledAt = dispositionMetadata.ScheduledDate.Value;
+            nextAttempt.ScheduledUtc = dispositionMetadata.ScheduledDate.Value;
         }
         else if (DefaultScheduleHours.HasValue)
         {
-            nextAttempt.ScheduledAt = now.AddHours(DefaultScheduleHours.Value);
+            nextAttempt.ScheduledUtc = now.AddHours(DefaultScheduleHours.Value);
         }
         else
         {
-            nextAttempt.ScheduledAt = now.AddDays(1);
+            nextAttempt.ScheduledUtc = now.AddDays(1);
         }
 
         if (!string.IsNullOrEmpty(NormalizedUserName))

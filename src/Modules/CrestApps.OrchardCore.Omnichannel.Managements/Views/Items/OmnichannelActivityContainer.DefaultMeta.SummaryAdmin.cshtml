@@ -11,12 +11,7 @@
 @inject IAuthorizationService AuthorizationService
 
 @{
-    if (Model.Value.Activity.ScheduledAt == DateTime.MinValue)
-    {
-        Model.Value.Activity.ScheduledAt = DateTime.UtcNow;
-    }
-
-    var scheduledAt = Model.Value.Activity.ScheduledAt.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
+    var scheduledAt = Model.Value.Activity.ScheduledUtc.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
 }
 
 @if (Model.Value.Activity.Attempts > 1)
@@ -26,7 +21,7 @@
 
 <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Scheduled at"]">
     <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
-    <time datetime="@scheduledAt">@await DisplayAsync(await New.DateTime(Utc: Model.Value.Activity.ScheduledAt, Format: "g"))</time>
+    <time datetime="@scheduledAt">@await DisplayAsync(await New.DateTime(Utc: Model.Value.Activity.ScheduledUtc, Format: "g"))</time>
 </span>
 
 @if (!string.IsNullOrEmpty(Model.Value.Contact?.DisplayText))
@@ -52,5 +47,12 @@
 {
     <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Communication target"]">
         <i class="fa-solid fa-comments text-secondary me-1" aria-hidden="true"></i>@Model.Value.Activity.PreferredDestination
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.Activity.Channel))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Channel"]">
+        <i class="fa-solid fa-comments text-secondary me-1" aria-hidden="true"></i>@Model.Value.Activity.Channel
     </span>
 }

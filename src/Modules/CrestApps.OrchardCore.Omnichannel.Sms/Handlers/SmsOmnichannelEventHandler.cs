@@ -1,15 +1,16 @@
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.AI.Sms.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Indexes;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Sms;
 using YesSql;
 
-namespace CrestApps.OrchardCore.AI.Sms.Handlers;
+namespace CrestApps.OrchardCore.Omnichannel.Sms.Handlers;
 
 internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 {
@@ -70,18 +71,18 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         if (string.IsNullOrWhiteSpace(activity.AIProfileName))
         {
-            _logger.LogWarning("The linked Activity {ActivityId} does not have an AI Profile associated with it. Cannot process incoming SMS message.", activity.Id);
+            _logger.LogWarning("The linked Activity {ActivityId} does not have an AI Profile associated with it. Cannot process incoming SMS message.", activity.ActivityId);
 
             return;
         }
 
-        var chatSession = await _session.Query<AIChatSession, OminchannelActivityAIChatSessionIndex>(index => index.ActivityId == activity.Id).FirstOrDefaultAsync();
+        var chatSession = await _session.Query<AIChatSession, OminchannelActivityAIChatSessionIndex>(index => index.ActivityId == activity.ActivityId).FirstOrDefaultAsync();
 
         var aiProfile = await _aIProfileManager.FindByIdAsync(activity.AIProfileName);
 
         if (aiProfile == null)
         {
-            _logger.LogWarning("The AI Profile {AIProfileId} associated with Activity {ActivityId} was not found. Cannot process incoming SMS message.", activity.AIProfileName, activity.Id);
+            _logger.LogWarning("The AI Profile {AIProfileId} associated with Activity {ActivityId} was not found. Cannot process incoming SMS message.", activity.AIProfileName, activity.ActivityId);
 
             if (chatSession is not null)
             {
@@ -130,14 +131,14 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                 if (string.IsNullOrWhiteSpace(bestChoice))
                 {
-                    _logger.LogWarning("AI Completion did not return any content for Activity {ActivityId} using AI Profile {AIProfileId}.", activity.Id, aiProfile.Id);
+                    _logger.LogWarning("AI Completion did not return any content for Activity {ActivityId} using AI Profile {AIProfileId}.", activity.ActivityId, aiProfile.Id);
 
                     return;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "AI Completion failed for Activity {ActivityId} using AI Profile {AIProfileId}.", activity.Id, aiProfile.Id);
+                _logger.LogError(ex, "AI Completion failed for Activity {ActivityId} using AI Profile {AIProfileId}.", activity.ActivityId, aiProfile.Id);
             }
         }
 
@@ -172,7 +173,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send SMS message to {To} for Activity {ActivityId}.", activity.PreferredDestination, activity.Id);
+            _logger.LogError(ex, "Failed to send SMS message to {To} for Activity {ActivityId}.", activity.PreferredDestination, activity.ActivityId);
         }
 
         await _session.SaveAsync(chatSession);

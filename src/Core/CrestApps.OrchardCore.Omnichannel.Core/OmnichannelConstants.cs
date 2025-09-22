@@ -8,6 +8,8 @@ public static class OmnichannelConstants
 
     public const string AgentRole = "Agent";
 
+    public const string CompleteActivityGroup = "complete";
+
     public static class NamedParts
     {
         public const string ContactMethods = "ContactMethods";
@@ -71,9 +73,9 @@ public static class OmnichannelConstants
 
         public readonly static Permission ListContactActivities = new("ListContactActivities", "List Contact activities", [ListActivities]);
 
-        public readonly static Permission ProcessActivity = new("ProcessActivity", "Process activity");
+        public readonly static Permission CompleteActivity = new("CompleteActivity", "Complete activity");
 
-        public readonly static Permission ProcessOwnActivity = new("ProcessOwnActivity", "Process own activity");
+        public readonly static Permission CompleteOwnActivity = new("CompleteOwnActivity", "Complete own activity");
 
         public readonly static Permission EditActivity = new("EditActivity", "Edit activity");
 

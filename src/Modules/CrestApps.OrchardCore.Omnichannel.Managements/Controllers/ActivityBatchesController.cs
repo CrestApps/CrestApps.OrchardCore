@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +23,6 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Environment.Shell.Scope;
-using OrchardCore.Flows.Models;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
@@ -351,12 +351,12 @@ public sealed class ActivityBatchesController : Controller
 
                 var batchCounter = 0;
 
-                var localClock = scope.ServiceProvider.GetRequiredService<ILocalClock>();
                 var logger = scope.ServiceProvider.GetRequiredService<ILogger<ActivityBatchesController>>();
                 var session = scope.ServiceProvider.GetRequiredService<ISession>();
+
                 await using var readonlySession = session.Store.CreateSession(withTracking: false);
 
-                var users = (await readonlySession.Query<User, UserIndex>(x => x.IsEnabled && x.NormalizedUserName.IsIn(batch.NormalizedUserNames)).ListAsync()).ToArray();
+                var users = (await readonlySession.Query<User, UserIndex>(x => x.IsEnabled && x.UserId.IsIn(batch.UserIds)).ListAsync()).ToArray();
 
                 if (users.Length == 0)
                 {
@@ -367,6 +367,11 @@ public sealed class ActivityBatchesController : Controller
                     logger.LogError("No valid users were found to assign the activities for the batch with ID '{BatchId}'.", batch.Id);
                     return;
                 }
+
+                var localClock = scope.ServiceProvider.GetRequiredService<ILocalClock>();
+                var campaignCatalog = scope.ServiceProvider.GetRequiredService<ICatalog<OmnichannelCampaign>>();
+
+                var campaign = await campaignCatalog.FindByIdAsync(batch.CampaignId);
 
                 var activityCounter = 0;
 
@@ -422,8 +427,10 @@ public sealed class ActivityBatchesController : Controller
                     }
 
                     batchCounter++;
+                    var now = _clock.UtcNow;
 
                     var scheduledUtc = await localClock.ConvertToUtcAsync(batch.ScheduleAt);
+
                     foreach (var contact in contacts)
                     {
                         if (preventDuplicates && inQueueActivities.Contains(contact.ContentItemId))
@@ -437,21 +444,22 @@ public sealed class ActivityBatchesController : Controller
 
                         var activity = new OmnichannelActivity
                         {
-                            Id = IdGenerator.GenerateId(),
-                            InteractionType = batch.InteractionType,
+                            ActivityId = IdGenerator.GenerateId(),
+                            InteractionType = campaign.InteractionType,
                             Channel = batch.Channel,
                             ContactContentItemId = contact.ContentItemId,
                             ContactContentType = batch.ContactContentType,
                             SubjectContentType = batch.SubjectContentType,
-                            PreferredDestination = GetPreferredDestenation(contact, batch.Channel),
-                            ChannelEndpoint = batch.ChannelEndpoint,
-                            AIProfileName = batch.AIProfileName,
+                            PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, batch.Channel),
+                            ChannelEndpoint = campaign.ChannelEndpoint,
+                            AIProfileName = campaign.AIProfileName,
                             CampaignId = batch.CampaignId,
-                            ScheduledAt = scheduledUtc,
+                            ScheduledUtc = scheduledUtc,
                             AssignedToId = user.UserId,
                             AssignedToUsername = user.UserName,
-                            AssignedToUtc = _clock.UtcNow,
+                            AssignedToUtc = now,
                             Instructions = batch.Instructions,
+                            CreatedUtc = now,
                             CreatedById = loaderId,
                             CreatedByUsername = loaderUserName,
                             UrgencyLevel = batch.UrgencyLevel,
@@ -529,83 +537,5 @@ public sealed class ActivityBatchesController : Controller
         }
 
         return RedirectToAction(nameof(Index));
-    }
-
-    private static string GetPreferredDestenation(ContentItem contact, string channel)
-    {
-        if (!contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) ||
-            bagPart.ContentItems is null ||
-            bagPart.ContentItems.Count == 0)
-        {
-            return null;
-        }
-
-        if (channel == OmnichannelConstants.Channels.Email)
-        {
-            foreach (var contentMethod in bagPart.ContentItems)
-            {
-                var emailPart = contentMethod.As<EmailInfoPart>();
-
-                if (!string.IsNullOrEmpty(emailPart.Email?.Text))
-                {
-                    return emailPart.Email.Text;
-                }
-            }
-
-            return null;
-        }
-
-        if (channel == OmnichannelConstants.Channels.Phone)
-        {
-            var phoneNumbers = new PriorityQueue<string, int>();
-            foreach (var contentMethod in bagPart.ContentItems)
-            {
-                var phonePart = contentMethod.As<PhoneNumberInfoPart>();
-
-                if (phonePart?.Type is null || string.IsNullOrEmpty(phonePart.Number?.Text))
-                {
-                    continue;
-                }
-
-                switch (phonePart.Type.Text)
-                {
-                    case "Cell":
-                        phoneNumbers.Enqueue(phonePart.Number.Text, 1);
-                        break;
-                    case "Home":
-                        phoneNumbers.Enqueue(phonePart.Number.Text, 2);
-                        break;
-                    case "Office":
-                        phoneNumbers.Enqueue(phonePart.Number.Text, 3);
-                        break;
-                    case "Work":
-                        phoneNumbers.Enqueue(phonePart.Number.Text, 4);
-                        break;
-                    case "Other":
-                        phoneNumbers.Enqueue(phonePart.Number.Text, 5);
-                        break;
-                    default:
-                        continue;
-                }
-            }
-
-            return phoneNumbers.Dequeue();
-        }
-        else if (channel == OmnichannelConstants.Channels.Sms)
-        {
-            foreach (var contentMethod in bagPart.ContentItems)
-            {
-                var phonePart = contentMethod.As<PhoneNumberInfoPart>();
-
-                if (phonePart?.Type is null || phonePart.Type.Text != "Cell" || string.IsNullOrEmpty(phonePart.Number?.Text))
-                {
-                    continue;
-                }
-
-                return phonePart.Number.Text;
-            }
-        }
-
-        return null;
     }
 }

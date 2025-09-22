@@ -5,13 +5,8 @@
 
 @model ShapeViewModel<OmnichannelActivityContainer>
 
-<h5>
-    <a asp-action="Process" asp-route-id="@Model.Value.Activity.Id">
+<h5 class="mb-0">
+    <a asp-action="Complete" asp-route-id="@Model.Value.Activity.ActivityId">
         @(Model.Value.SubjectContentTypeDefinition?.DisplayName ?? T["Unknown Subject"].Value)
     </a>
 </h5>
-
-@if (!string.IsNullOrEmpty(Model.Value.Activity.Notes))
-{
-    <small class="text-muted">@Model.Value.Activity.Notes</small>
-}

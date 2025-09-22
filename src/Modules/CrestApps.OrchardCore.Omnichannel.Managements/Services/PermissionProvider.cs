@@ -16,7 +16,7 @@ internal sealed class PermissionProvider : IPermissionProvider
     [
         OmnichannelConstants.Permissions.ListActivities,
         OmnichannelConstants.Permissions.ListContactActivities,
-        OmnichannelConstants.Permissions.ProcessActivity,
+        OmnichannelConstants.Permissions.CompleteActivity,
         OmnichannelConstants.Permissions.ManageDispositions,
         OmnichannelConstants.Permissions.ManageCampaigns,
         OmnichannelConstants.Permissions.ManageChannelEndpoints,

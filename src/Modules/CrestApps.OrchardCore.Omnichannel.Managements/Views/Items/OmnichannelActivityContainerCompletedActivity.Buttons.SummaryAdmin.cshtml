@@ -10,6 +10,6 @@
 @if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity, Model.Value.Activity))
 {
     <a asp-action="Edit"
-       asp-route-id="@Model.Value.Activity.Id"
+       asp-route-id="@Model.Value.Activity.ActivityId"
        class="btn btn-primary btn-sm">@T["Edit"]</a>
 }

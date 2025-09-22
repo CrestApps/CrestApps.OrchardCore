@@ -9,6 +9,17 @@ public sealed class OmnichannelCampaign : CatalogEntry, IDisplayTextAwareModel, 
 
     public string Description { get; set; }
 
+    public ActivityInteractionType InteractionType { get; set; }
+
+    public string AIProfileName { get; set; }
+
+    public string ChannelEndpoint { get; set; }
+
+    /// <summary>
+    /// When the campaign in automated, this will be the initial message to start the converation with the customer.
+    /// </summary>
+    public string InitialOutboundPromptPattern { get; set; }
+
     public DateTime CreatedUtc { get; set; }
 
     public string Author { get; set; }
@@ -24,10 +35,14 @@ public sealed class OmnichannelCampaign : CatalogEntry, IDisplayTextAwareModel, 
             Id = Id,
             DisplayText = DisplayText,
             Description = Description,
+            InteractionType = InteractionType,
+            AIProfileName = AIProfileName,
+            ChannelEndpoint = ChannelEndpoint,
+            InitialOutboundPromptPattern = InitialOutboundPromptPattern,
             CreatedUtc = CreatedUtc,
             Author = Author,
-            DispositionIds = DispositionIds,
             OwnerId = OwnerId,
+            DispositionIds = DispositionIds?.ToArray(),
         };
     }
 }

@@ -7,21 +7,15 @@ public sealed class OmnichannelActivityBatch : CatalogEntry, IDisplayTextAwareMo
 {
     public string DisplayText { get; set; }
 
-    public ActivityInteractionType InteractionType { get; set; }
+    public string CampaignId { get; set; }
 
     public string Channel { get; set; }
-
-    public string CampaignId { get; set; }
 
     public string SubjectContentType { get; set; }
 
     public string ContactContentType { get; set; }
 
-    public string ChannelEndpoint { get; set; }
-
-    public string AIProfileName { get; set; }
-
-    public string[] NormalizedUserNames { get; set; }
+    public string[] UserIds { get; set; }
 
     public bool IncludeDoNoCalls { get; set; }
 
@@ -53,20 +47,22 @@ public sealed class OmnichannelActivityBatch : CatalogEntry, IDisplayTextAwareMo
         {
             Id = Id,
             DisplayText = DisplayText,
-            InteractionType = InteractionType,
-            Channel = Channel,
             CampaignId = CampaignId,
+            Channel = Channel,
             SubjectContentType = SubjectContentType,
             ContactContentType = ContactContentType,
-            ChannelEndpoint = ChannelEndpoint,
-            AIProfileName = AIProfileName,
-            NormalizedUserNames = NormalizedUserNames?.ToArray(),
+            UserIds = UserIds?.ToArray(),
             IncludeDoNoCalls = IncludeDoNoCalls,
             IncludeDoNoSms = IncludeDoNoSms,
             IncludeDoNoEmail = IncludeDoNoEmail,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,
+            ScheduleAt = ScheduleAt,
+            Instructions = Instructions,
+            TotalLoaded = TotalLoaded,
+            PreventDuplicates = PreventDuplicates,
+            UrgencyLevel = UrgencyLevel,
             Status = Status,
         };
     }

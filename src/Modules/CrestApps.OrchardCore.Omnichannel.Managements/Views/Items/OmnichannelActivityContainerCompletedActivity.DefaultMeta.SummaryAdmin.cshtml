@@ -12,11 +12,6 @@
 @inject ICatalog<OmnichannelDisposition> DispositionCatalog
 
 @{
-    if (!Model.Value.Activity.CompletedUtc.HasValue)
-    {
-        Model.Value.Activity.CompletedUtc = DateTime.UtcNow;
-    }
-
     var completedAt = Model.Value.Activity.CompletedUtc.Value.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
 }
 

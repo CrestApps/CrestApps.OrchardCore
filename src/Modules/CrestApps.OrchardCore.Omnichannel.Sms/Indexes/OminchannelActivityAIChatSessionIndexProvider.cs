@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.Entities;
 using YesSql.Indexes;
 
-namespace CrestApps.OrchardCore.AI.Sms.Indexes;
+namespace CrestApps.OrchardCore.Omnichannel.Sms.Indexes;
 
 public sealed class OminchannelActivityAIChatSessionIndexProvider : IndexProvider<AIChatSession>
 {

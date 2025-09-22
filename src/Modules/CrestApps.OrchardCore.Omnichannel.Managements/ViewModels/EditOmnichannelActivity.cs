@@ -10,17 +10,11 @@ public class EditOmnichannelActivity
 
     public DateTime? ScheduleAt { get; set; }
 
-    public ActivityInteractionType InteractionType { get; set; }
-
-    public string ChannelEndpoint { get; set; }
-
     public string CampaignId { get; set; }
 
     public string SubjectContentType { get; set; }
 
     public string Instructions { get; set; }
-
-    public string AIProfileName { get; set; }
 
     public string UserId { get; set; }
 
@@ -39,17 +33,8 @@ public class EditOmnichannelActivity
     public IEnumerable<SelectListItem> Users { get; set; }
 
     [BindNever]
-    public IEnumerable<SelectListItem> Channels { get; set; }
-
-    [BindNever]
-    public IEnumerable<SelectListItem> InteractionTypes { get; set; }
-
-    [BindNever]
-    public IEnumerable<SelectListItem> ChannelEndpoints { get; set; }
-
-    [BindNever]
-    public IEnumerable<SelectListItem> AIProfiles { get; set; }
-
-    [BindNever]
     public IEnumerable<SelectListItem> UrgencyLevels { get; set; }
+
+    [BindNever]
+    public IEnumerable<SelectListItem> Channels { get; set; }
 }

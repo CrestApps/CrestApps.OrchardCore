@@ -5,7 +5,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 public sealed class OmnichannelActivity : Entity
 {
-    public string Id { get; set; }
+    /// <summary>
+    /// The primary key in the database.
+    /// </summary>
+    public long Id { get; set; }
+
+    /// <summary>
+    /// The unique identifier for the activity.
+    /// </summary>
+    public string ActivityId { get; set; }
 
     /// <summary>
     /// 'SMS', 'Chat', 'Email', etc.
@@ -17,7 +25,15 @@ public sealed class OmnichannelActivity : Entity
     /// </summary>
     public string ChannelEndpoint { get; set; }
 
+    /// <summary>
+    /// The type of interaction.
+    /// </summary>
     public ActivityInteractionType InteractionType { get; set; }
+
+    /// <summary>
+    /// When the interaction is automated, we store the AI session Id.
+    /// </summary>
+    public string AISessionId { get; set; }
 
     /// <summary>
     /// When the interaction type is Automatic, we specify the preferred destination (Customer's Phone number or Email) to reach the Contact.
@@ -35,7 +51,7 @@ public sealed class OmnichannelActivity : Entity
 
     public string CampaignId { get; set; }
 
-    public DateTime ScheduledAt { get; set; }
+    public DateTime ScheduledUtc { get; set; }
 
     public string Instructions { get; set; }
 

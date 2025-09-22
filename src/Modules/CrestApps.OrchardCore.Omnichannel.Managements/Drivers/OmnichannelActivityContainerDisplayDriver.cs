@@ -9,17 +9,49 @@ internal sealed class OmnichannelActivityContainerDisplayDriver : DisplayDriver<
     public override Task<IDisplayResult> DisplayAsync(OmnichannelActivityContainer container, BuildDisplayContext context)
     {
         return CombineAsync(
-            View("OmnichannelActivityContainer_Fields_SummaryAdmin", container).Location("Content:1"),
-            View("OmnichannelActivityContainer_Buttons_SummaryAdmin", container).Location("Actions:5"),
-            View("OmnichannelActivityContainer_DefaultMeta_SummaryAdmin", container).Location("Meta:5"),
+            View("OmnichannelActivityContainer_Fields_SummaryAdmin", container)
+                .Location("Content:1"),
 
-            View("OmnichannelActivityContainerScheduledActivity_Fields_SummaryAdmin", container).Location("Content:1").OnGroup("ScheduledActivity"),
-            View("OmnichannelActivityContainerScheduledActivity_Buttons_SummaryAdmin", container).Location("Actions:5").OnGroup("ScheduledActivity"),
-            View("OmnichannelActivityContainerScheduledActivity_DefaultMeta_SummaryAdmin", container).Location("Meta:5").OnGroup("ScheduledActivity"),
+            View("OmnichannelActivityContainer_Description_SummaryAdmin", container)
+                .Location("Description:1")
+                .RenderWhen(() => Task.FromResult(!string.IsNullOrEmpty(container.Activity.Instructions))),
 
-            View("OmnichannelActivityContainerCompletedActivity_Fields_SummaryAdmin", container).Location("Content:1").OnGroup("CompletedActivity"),
-            View("OmnichannelActivityContainerCompletedActivity_Buttons_SummaryAdmin", container).Location("Actions:5").OnGroup("CompletedActivity"),
-            View("OmnichannelActivityContainerCompletedActivity_DefaultMeta_SummaryAdmin", container).Location("Meta:5").OnGroup("CompletedActivity")
+            View("OmnichannelActivityContainer_Buttons_SummaryAdmin", container)
+                .Location("Actions:5"),
+
+            View("OmnichannelActivityContainer_DefaultMeta_SummaryAdmin", container)
+                .Location("Meta:5"),
+
+            View("OmnichannelActivityContainerScheduledActivity_Fields_SummaryAdmin", container)
+                .Location("Content:1")
+                .OnGroup("ScheduledActivity"),
+
+            View("OmnichannelActivityContainerScheduledActivity_Description_SummaryAdmin", container)
+                .Location("Description:1")
+                .OnGroup("ScheduledActivity")
+                .RenderWhen(() => Task.FromResult(!string.IsNullOrEmpty(container.Activity.Instructions))),
+
+            View("OmnichannelActivityContainerScheduledActivity_Buttons_SummaryAdmin", container)
+                .Location("Actions:5").OnGroup("ScheduledActivity"),
+
+            View("OmnichannelActivityContainerScheduledActivity_DefaultMeta_SummaryAdmin", container)
+                .Location("Meta:5").OnGroup("ScheduledActivity"),
+
+            View("OmnichannelActivityContainerCompletedActivity_Fields_SummaryAdmin", container)
+                .Location("Content:1")
+                .OnGroup("CompletedActivity"),
+
+            View("OmnichannelActivityContainerCompletedActivity_Buttons_SummaryAdmin", container)
+                .Location("Actions:5").OnGroup("CompletedActivity"),
+
+            View("OmnichannelActivityContainerCompletedActivity_DefaultMeta_SummaryAdmin", container)
+                .Location("Meta:5")
+                .OnGroup("CompletedActivity"),
+
+           View("OmnichannelActivityContainerCompletedActivity_Description_SummaryAdmin", container)
+                .Location("Description:1")
+                .OnGroup("CompletedActivity")
+                .RenderWhen(() => Task.FromResult(!string.IsNullOrEmpty(container.Activity.Notes)))
         );
     }
 }

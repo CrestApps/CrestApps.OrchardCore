@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using OrchardCore
 
@@ -11,10 +12,43 @@
     <dd>@Model.Channel</dd>
 
     <dt>@T["Campaign"]</dt>
-    <dd>@Model.CampaignTitle
+    <dd>@Model.CampaignTitle</dd>
+
+    <dt>@T["Urgency level"]</dt>
+    <dd>
+        @{
+            var value = Model.UrgencyLevel switch
+            {
+                ActivityUrgencyLevel.VeryLow => T["Very low"],
+                ActivityUrgencyLevel.Low => T["Low"],
+                ActivityUrgencyLevel.Medium => T["Medium"],
+                ActivityUrgencyLevel.High => T["High"],
+                ActivityUrgencyLevel.VeryHigh => T["Very high"],
+                _ => T["Normal"],
+            };
+
+            @value
+        }
+    </dd>
+
+    <dt>@T["Assigned to"]</dt>
+    <dd>@Model.AssignedToName</dd>
+
+    <dt>@T["Scheduled at"]</dt>
+    <dd>@Model.ScheduledLocal.ToString("g")</dd>
+
+    @if (Model.CompletedLocal.HasValue)
+    {
+        <dt>@T["Completed by"]</dt>
+        <dd>@Model.CompletedByName</dd>
+
+        <dt>@T["Completed at"]</dt>
+        <dd>@Model.CompletedLocal.Value.ToString("g")</dd>
+    }
 
     <dt>@T["Instructions"]</dt>
     <dd>@Model.Instructions</dd>
+
 </dl>
 
 <div class="@Orchard.GetWrapperClasses()">

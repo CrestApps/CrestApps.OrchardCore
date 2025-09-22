@@ -1,9 +1,9 @@
-using CrestApps.OrchardCore.AI.Sms.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Sms.Indexes;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.AI.Sms.Migrations;
+namespace CrestApps.OrchardCore.Omnichannel.Sms.Migrations;
 
 internal sealed class OminchannelActivityAIChatSessionIndexMigrations : DataMigration
 {

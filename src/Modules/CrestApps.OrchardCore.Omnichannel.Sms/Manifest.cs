@@ -4,21 +4,22 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
-    Name = "SMS AI Communication",
+    Name = "SMS Omnichannel Automation",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
 )]
 
 [assembly: Feature(
-    Name = "SMS AI Communication",
-    Id = "CrestApps.OrchardCore.AI.Sms",
-    Description = "Provides a way to communication clients using SMS",
+    Name = "SMS Omnichannel Automation",
+    Id = "CrestApps.OrchardCore.Omnichannel.Sms",
+    Description = "Provides a way handle automated activities using the SMS channel.",
     Category = "Artificial Intelligence",
     Dependencies =
     [
         AIConstants.Feature.Area,
         AIConstants.Feature.ChatCore,
         OmnichannelConstants.Features.Managements,
+        "OrchardCore.Sms",
     ]
 )]

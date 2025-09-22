@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
@@ -13,14 +12,13 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Users;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<OmnichannelActivityBatch>
 {
     private readonly ICatalog<OmnichannelCampaign> _catalog;
-    private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointsCatalog;
-    private readonly INamedCatalog<AIProfile> _aiProfileCatalog;
     private readonly UserManager<IUser> _userManager;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -29,16 +27,12 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
     public OmnichannelActivityBatchDisplayDriver(
         ICatalog<OmnichannelCampaign> catalog,
-        ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,
-        INamedCatalog<AIProfile> aiProfileCatalog,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
         IContentDefinitionManager contentDefinitionManager,
         IStringLocalizer<OmnichannelActivityBatchDisplayDriver> stringLocalizer)
     {
         _catalog = catalog;
-        _channelEndpointsCatalog = channelEndpointsCatalog;
-        _aiProfileCatalog = aiProfileCatalog;
         _userManager = userManager;
         _displayNameProvider = displayNameProvider;
         _contentDefinitionManager = contentDefinitionManager;
@@ -67,16 +61,12 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         return Initialize<OmnichannelActivityBatchViewModel>("OmnichannelActivityBatchFields_Edit", async model =>
         {
             model.DisplayText = batch.DisplayText;
-            model.Channel = batch.Channel;
             model.CampaignId = batch.CampaignId;
+            model.Channel = batch.Channel;
             model.ScheduleAt = batch.ScheduleAt;
-            model.InteractionType = batch.InteractionType;
-            model.AIProfileName = batch.AIProfileName;
             model.SubjectContentType = batch.SubjectContentType;
             model.ContactContentType = batch.ContactContentType;
-            model.ChannelEndpoint = batch.ChannelEndpoint;
-            model.AIProfileName = batch.AIProfileName;
-            model.UserIds = batch.NormalizedUserNames;
+            model.UserIds = batch.UserIds;
             model.IncludeDoNoCalls = batch.IncludeDoNoCalls;
             model.IncludeDoNoSms = batch.IncludeDoNoSms;
             model.IncludeDoNoEmail = batch.IncludeDoNoEmail;
@@ -91,11 +81,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
             foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
             {
-                if (!contentType.TryGetStereotype(out var stereotype))
-                {
-                    continue;
-                }
-
                 if (contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
                 {
                     subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
@@ -113,24 +98,12 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
             foreach (var user in users)
             {
+                var userId = user is User su ? su.UserId : _userManager.NormalizeName(user.UserName);
+
                 var displayName = await _displayNameProvider.GetAsync(user);
 
-                usersListItems.Add(new SelectListItem(displayName, _userManager.NormalizeName(user.UserName)));
+                usersListItems.Add(new SelectListItem(displayName, userId));
             }
-            model.AIProfiles = (await _aiProfileCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText ?? x.Name, x.Name)).OrderBy(x => x.Text);
-            model.ChannelEndpoints = (await _channelEndpointsCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.Id)).OrderBy(x => x.Text);
-            model.Channels =
-            [
-                new(S["Phone"], OmnichannelConstants.Channels.Phone),
-                new(S["SMS"], OmnichannelConstants.Channels.Sms),
-                new(S["Email"], OmnichannelConstants.Channels.Email),
-            ];
-
-            model.InteractionTypes =
-            [
-                new(S["Manual"], nameof(ActivityInteractionType.Manual)),
-                new(S["Automated"], nameof(ActivityInteractionType.Automated)),
-            ];
 
             model.UrgencyLevels =
             [
@@ -141,6 +114,14 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 new(S["High"], nameof(ActivityUrgencyLevel.High)),
                 new(S["Very high"], nameof(ActivityUrgencyLevel.VeryHigh)),
             ];
+
+            model.Channels =
+            [
+                new(S["Phone"], OmnichannelConstants.Channels.Phone),
+                new(S["SMS"], OmnichannelConstants.Channels.Sms),
+                new(S["Email"], OmnichannelConstants.Channels.Email),
+            ];
+
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
             model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
             model.Users = usersListItems.OrderBy(x => x.Text);
@@ -158,14 +139,14 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["Title is required."]);
         }
 
-        if (string.IsNullOrEmpty(model.Channel))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["Channel is required."]);
-        }
-
         if (string.IsNullOrEmpty(model.SubjectContentType))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Subject is required."]);
+        }
+
+        if (string.IsNullOrEmpty(model.Channel))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["Channel is required."]);
         }
 
         if (string.IsNullOrEmpty(model.CampaignId))
@@ -188,42 +169,19 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ScheduleAt), S["Schedule at field is required."]);
         }
 
-        if (model.InteractionType == ActivityInteractionType.Automated)
-        {
-            if (string.IsNullOrEmpty(model.ChannelEndpoint))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChannelEndpoint), S["Channel endpoint at field is required."]);
-            }
-
-            if (string.IsNullOrEmpty(model.AIProfileName))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileName), S["AI Profile is required for automated activities."]);
-            }
-            else
-            {
-                var aiProfile = await _aiProfileCatalog.FindByNameAsync(model.AIProfileName);
-                if (aiProfile == null)
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileName), S["The selected AI Profile is invalid."]);
-                }
-            }
-        }
-
         batch.DisplayText = model.DisplayText?.Trim();
-        batch.Channel = model.Channel;
         batch.CampaignId = model.CampaignId;
-        batch.InteractionType = model.InteractionType;
         batch.SubjectContentType = model.SubjectContentType;
         batch.ContactContentType = model.ContactContentType;
-        batch.ChannelEndpoint = model.ChannelEndpoint;
-        batch.AIProfileName = model.AIProfileName;
+
         batch.Instructions = model.Instructions?.Trim();
         batch.UrgencyLevel = model.UrgencyLevel;
-        batch.NormalizedUserNames = model.UserIds ?? [];
+        batch.UserIds = model.UserIds ?? [];
         batch.IncludeDoNoCalls = model.IncludeDoNoCalls;
         batch.IncludeDoNoSms = model.IncludeDoNoSms;
         batch.IncludeDoNoEmail = model.IncludeDoNoEmail;
         batch.PreventDuplicates = model.PreventDuplicates;
+        batch.Channel = model.Channel;
 
         if (model.ScheduleAt.HasValue)
         {

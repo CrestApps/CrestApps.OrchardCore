@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -10,9 +11,8 @@ public class OmnichannelActivityBatchViewModel
 
     public string Channel { get; set; }
 
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
     public DateTime? ScheduleAt { get; set; }
-
-    public ActivityInteractionType InteractionType { get; set; }
 
     public string CampaignId { get; set; }
 
@@ -20,11 +20,7 @@ public class OmnichannelActivityBatchViewModel
 
     public string ContactContentType { get; set; }
 
-    public string ChannelEndpoint { get; set; }
-
     public string Instructions { get; set; }
-
-    public string AIProfileName { get; set; }
 
     public string[] UserIds { get; set; }
 
@@ -55,15 +51,6 @@ public class OmnichannelActivityBatchViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> Channels { get; set; }
-
-    [BindNever]
-    public IEnumerable<SelectListItem> InteractionTypes { get; set; }
-
-    [BindNever]
-    public IEnumerable<SelectListItem> ChannelEndpoints { get; set; }
-
-    [BindNever]
-    public IEnumerable<SelectListItem> AIProfiles { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> UrgencyLevels { get; set; }

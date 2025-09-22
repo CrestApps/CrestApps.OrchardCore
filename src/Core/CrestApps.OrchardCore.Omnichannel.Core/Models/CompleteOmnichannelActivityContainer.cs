@@ -4,10 +4,10 @@ using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
-public sealed class ProcessOmnichannelActivityContainer : ShapeViewModel
+public sealed class CompleteOmnichannelActivityContainer : ShapeViewModel
 {
-    public ProcessOmnichannelActivityContainer()
-        : base("ProcessOmnichannelActivityContainer")
+    public CompleteOmnichannelActivityContainer()
+        : base("CompleteOmnichannelActivityContainer")
     {
     }
 
