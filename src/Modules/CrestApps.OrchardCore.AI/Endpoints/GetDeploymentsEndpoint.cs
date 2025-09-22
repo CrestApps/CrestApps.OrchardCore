@@ -44,7 +44,8 @@ internal static class GetDeploymentsEndpoint
 
         return TypedResults.Ok(deployments.Select(x => new
         {
-            x.Id,
+            Id = x.ItemId,
+            x.ItemId,
             x.Name,
             x.CreatedUtc,
         }));

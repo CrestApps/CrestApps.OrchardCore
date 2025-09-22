@@ -14,7 +14,7 @@ public sealed class DefaultAIDeploymentStore : NamedSourceCatalog<AIDeployment>
 
     protected override void Saving(AIDeployment deployment, DictionaryDocument<AIDeployment> document)
     {
-        if (document.Records.Values.Any(x => x.ProviderName == deployment.ProviderName && x.ConnectionName == deployment.ConnectionName && x.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase) && x.Id != deployment.Id))
+        if (document.Records.Values.Any(x => x.ProviderName == deployment.ProviderName && x.ConnectionName == deployment.ConnectionName && x.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase) && x.ItemId != deployment.ItemId))
         {
             throw new InvalidOperationException("There is already another deployment with the same name.");
         }

@@ -5,7 +5,7 @@ using OrchardCore.Documents;
 namespace CrestApps.OrchardCore.Core.Services;
 
 public class NamedSourceCatalog<T> : SourceCatalog<T>, INamedSourceCatalog<T>, ISourceCatalog<T>
-    where T : CatalogEntry, INameAwareModel, ISourceAwareModel
+    where T : CatalogItem, INameAwareModel, ISourceAwareModel
 {
     public NamedSourceCatalog(IDocumentManager<DictionaryDocument<T>> documentManager)
         : base(documentManager)
@@ -18,15 +18,9 @@ public class NamedSourceCatalog<T> : SourceCatalog<T>, INamedSourceCatalog<T>, I
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
-        return document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-    }
+        var record = document.Records.Values.FirstOrDefault(x => OrdinalIgnoreCaseEquals(x.Name, name));
 
-    protected override void Saving(T record, DictionaryDocument<T> document)
-    {
-        if (document.Records.Values.Any(x => x.Name.Equals(record.Name, StringComparison.OrdinalIgnoreCase) && x.Id != record.Id))
-        {
-            throw new InvalidOperationException("There is already another model with the same name.");
-        }
+        return Clone(record);
     }
 
     public async ValueTask<T> GetAsync(string name, string source)
@@ -36,6 +30,21 @@ public class NamedSourceCatalog<T> : SourceCatalog<T>, INamedSourceCatalog<T>, I
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
-        return document.Records.Values.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && x.Source.Equals(source, StringComparison.OrdinalIgnoreCase));
+        var record = document.Records.Values.FirstOrDefault(x => OrdinalIgnoreCaseEquals(x.Name, name) && OrdinalIgnoreCaseEquals(x.Source, source));
+
+        return Clone(record);
+    }
+
+    protected static bool OrdinalIgnoreCaseEquals(string str1, string str2)
+    {
+        return str1.Equals(str2, StringComparison.OrdinalIgnoreCase);
+    }
+
+    protected override void Saving(T record, DictionaryDocument<T> document)
+    {
+        if (document.Records.Values.Any(x => OrdinalIgnoreCaseEquals(x.Name, record.Name) && x.ItemId != record.ItemId))
+        {
+            throw new InvalidOperationException("There is already another model with the same name.");
+        }
     }
 }

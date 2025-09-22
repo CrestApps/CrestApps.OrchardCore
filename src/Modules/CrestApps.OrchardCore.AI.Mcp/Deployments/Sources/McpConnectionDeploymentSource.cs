@@ -27,14 +27,14 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
 
         foreach (var connection in connections)
         {
-            if (connectionIds.Length > 0 && !connectionIds.Contains(connection.Id))
+            if (connectionIds.Length > 0 && !connectionIds.Contains(connection.ItemId))
             {
                 continue;
             }
 
             var deploymentInfo = new JsonObject()
             {
-                { "Id", connection.Id },
+                { "ItemId", connection.ItemId },
                 { "DisplayText", connection.DisplayText },
                 { "Author", connection.Author },
                 { "CreatedUtc" , connection.CreatedUtc },

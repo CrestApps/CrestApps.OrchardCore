@@ -38,7 +38,7 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
         {
             AIProfile profile = null;
 
-            var id = token[nameof(AIProfile.Id)]?.GetValue<string>();
+            var id = token[nameof(AIProfile.ItemId)]?.GetValue<string>();
 
             if (!string.IsNullOrEmpty(id))
             {

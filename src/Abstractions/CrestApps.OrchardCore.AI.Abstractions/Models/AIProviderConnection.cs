@@ -1,10 +1,11 @@
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, IDisplayTextAwareModel
+public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, IDisplayTextAwareModel, ICloneable<AIProviderConnection>
 {
     public string Name { get; set; }
 
@@ -42,7 +43,7 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
     {
         return new AIProviderConnection
         {
-            Id = Id,
+            ItemId = ItemId,
             Source = Source,
             Name = Name,
             DisplayText = DisplayText,

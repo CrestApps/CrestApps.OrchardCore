@@ -8,7 +8,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Core.Services;
 
 public class CatalogManager<T> : ICatalogManager<T>
-    where T : CatalogEntry, new()
+    where T : CatalogItem, new()
 {
     protected readonly ICatalog<T> Catalog;
     protected readonly ILogger Logger;
@@ -41,7 +41,7 @@ public class CatalogManager<T> : ICatalogManager<T>
         var deletingContext = new DeletingContext<T>(entry);
         await Handlers.InvokeAsync((handler, ctx) => handler.DeletingAsync(ctx), deletingContext, Logger);
 
-        if (string.IsNullOrEmpty(entry.Id))
+        if (string.IsNullOrEmpty(entry.ItemId))
         {
             return false;
         }
@@ -76,7 +76,7 @@ public class CatalogManager<T> : ICatalogManager<T>
 
         var entry = new T()
         {
-            Id = id,
+            ItemId = id,
         };
 
         var initializingContext = new InitializingContext<T>(entry, data);
@@ -85,9 +85,9 @@ public class CatalogManager<T> : ICatalogManager<T>
         var initializedContext = new InitializedContext<T>(entry);
         await Handlers.InvokeAsync((handler, ctx) => handler.InitializedAsync(ctx), initializedContext, Logger);
 
-        if (string.IsNullOrEmpty(entry.Id))
+        if (string.IsNullOrEmpty(entry.ItemId))
         {
-            entry.Id = id;
+            entry.ItemId = id;
         }
 
         return entry;

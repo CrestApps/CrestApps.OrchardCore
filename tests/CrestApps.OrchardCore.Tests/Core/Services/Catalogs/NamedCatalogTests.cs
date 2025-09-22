@@ -1,5 +1,3 @@
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services.Catalogs;
@@ -9,7 +7,7 @@ public sealed class NamedCatalogTests
     [Fact]
     public async Task FindByNameAsync_ReturnsEntry_WhenExists()
     {
-        var entry = new TestNamedCatalogEntry { Id = "1", Name = "Test" };
+        var entry = new TestNamedCatalogEntry { ItemId = "1", Name = "Test" };
         var records = new List<TestNamedCatalogEntry> { entry };
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out _);
 
@@ -40,8 +38,8 @@ public sealed class NamedCatalogTests
     [Fact]
     public async Task CreateAsync_Throws_WhenDuplicateName()
     {
-        var entry1 = new TestNamedCatalogEntry { Id = "1", Name = "Test" };
-        var entry2 = new TestNamedCatalogEntry { Id = "2", Name = "Test" };
+        var entry1 = new TestNamedCatalogEntry { ItemId = "1", Name = "Test" };
+        var entry2 = new TestNamedCatalogEntry { ItemId = "2", Name = "Test" };
         var records = new List<TestNamedCatalogEntry> { entry1 };
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out var fakeManager);
 
@@ -52,8 +50,8 @@ public sealed class NamedCatalogTests
     [Fact]
     public async Task UpdateAsync_Throws_WhenDuplicateName()
     {
-        var entry1 = new TestNamedCatalogEntry { Id = "1", Name = "Test1" };
-        var entry2 = new TestNamedCatalogEntry { Id = "2", Name = "Test2" };
+        var entry1 = new TestNamedCatalogEntry { ItemId = "1", Name = "Test1" };
+        var entry2 = new TestNamedCatalogEntry { ItemId = "2", Name = "Test2" };
 
         var records = new List<TestNamedCatalogEntry>
         {

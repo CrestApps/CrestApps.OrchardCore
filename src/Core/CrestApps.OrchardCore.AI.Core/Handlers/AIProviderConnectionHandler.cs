@@ -51,7 +51,7 @@ public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderCon
         {
             var connection = await _connectionsCatalog.FindByNameAsync(context.Model.Name);
 
-            if (connection is not null && connection.Id != context.Model.Id)
+            if (connection is not null && connection.ItemId != context.Model.ItemId)
             {
                 context.Result.Fail(new ValidationResult(S["A connection with this name already exists. The name must be unique."], [nameof(AIProviderConnection.Name)]));
             }

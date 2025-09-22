@@ -18,7 +18,7 @@ public sealed class AIProviderConnectionStore : NamedCatalog<AIProviderConnectio
 
         if (record.IsDefault)
         {
-            var previousModels = document.Records.Values.Where(r => r.IsDefault && r.Id != record.Id);
+            var previousModels = document.Records.Values.Where(r => r.IsDefault && r.ItemId != record.ItemId);
 
             foreach (var model in previousModels)
             {

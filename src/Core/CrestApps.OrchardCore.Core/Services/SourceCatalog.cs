@@ -5,7 +5,7 @@ using OrchardCore.Documents;
 namespace CrestApps.OrchardCore.Core.Services;
 
 public class SourceCatalog<T> : Catalog<T>, ISourceCatalog<T>
-    where T : CatalogEntry, ISourceAwareModel
+    where T : CatalogItem, ISourceAwareModel
 {
     private readonly IDocumentManager<DictionaryDocument<T>> _documentManager;
 
@@ -15,11 +15,15 @@ public class SourceCatalog<T> : Catalog<T>, ISourceCatalog<T>
         _documentManager = documentManager;
     }
 
-    public async ValueTask<IEnumerable<T>> GetAsync(string source)
+    public async ValueTask<IReadOnlyCollection<T>> GetAsync(string source)
     {
+        ArgumentException.ThrowIfNullOrEmpty(source);
+
         var document = await _documentManager.GetOrCreateImmutableAsync();
 
-        return document.Records.Values.Where(x => x.Source.Equals(source, StringComparison.OrdinalIgnoreCase));
+        return document.Records.Values.Where(x => x.Source.Equals(source, StringComparison.OrdinalIgnoreCase))
+            .Select(Clone)
+            .ToArray();
     }
 
     protected override IEnumerable<T> GetSortable(QueryContext context, IEnumerable<T> records)

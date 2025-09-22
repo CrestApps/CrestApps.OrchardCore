@@ -75,7 +75,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
         if (connection is null)
         {
-            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
+            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.ItemId);
 
             return null;
         }
@@ -125,7 +125,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
             ? await GetFunctionsAsync(context.Profile)
             : [];
 
-        var chatOptions = await GetOptionsWithDataSourceAsync(context, connection, functions);
+        var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
         try
         {
             var data = await chatClient.CompleteChatAsync(prompts, chatOptions, cancellationToken);
@@ -222,7 +222,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
         if (connection is null)
         {
-            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
+            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.ItemId);
 
             yield break;
         }
@@ -272,7 +272,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
             ? await GetFunctionsAsync(context.Profile)
             : [];
 
-        var chatOptions = await GetOptionsWithDataSourceAsync(context, connection, functions);
+        var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
 
         Dictionary<string, object> linkContext = null;
 
@@ -474,7 +474,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         return azureClient;
     }
 
-    private async Task<ChatCompletionOptions> GetOptionsWithDataSourceAsync(AICompletionContext context, AIProviderConnectionEntry connection, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
+    private async Task<ChatCompletionOptions> GetOptionsWithDataSourceAsync(AICompletionContext context, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
     {
         if (context.Profile is null)
         {
@@ -598,7 +598,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
                 if (_mcpService is not null)
                 {
                     var connections = (await _mcpConnectionsStore.GetAllAsync())
-                        .ToDictionary(x => x.Id);
+                        .ToDictionary(x => x.ItemId);
 
                     foreach (var connectionId in mcpMetadata.ConnectionIds)
                     {

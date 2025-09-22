@@ -68,12 +68,12 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
 
                 _handlers.Invoke((handler, ctx) => handler.Initializing(ctx), mappingContext, _logger);
 
-                provider.Connections[connection.Id] = new AIProviderConnectionEntry(mappingContext.Values);
+                provider.Connections[connection.ItemId] = new AIProviderConnectionEntry(mappingContext.Values);
             }
 
             if (defaultConnection is not null)
             {
-                provider.DefaultConnectionName = defaultConnection.Id;
+                provider.DefaultConnectionName = defaultConnection.ItemId;
                 provider.DefaultDeploymentName = defaultConnection.DefaultDeploymentName;
             }
 

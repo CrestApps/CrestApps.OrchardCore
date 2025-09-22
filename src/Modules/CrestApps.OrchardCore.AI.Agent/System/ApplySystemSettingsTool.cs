@@ -5,9 +5,7 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Options;
 using OrchardCore.Deployment;
-using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.AI.Agent.System;
 
@@ -21,7 +19,6 @@ public sealed class ApplySystemSettingsTool : ImportRecipeBaseTool
     public ApplySystemSettingsTool(
         RecipeExecutionService recipeExecutionService,
         RecipeStepsService recipeStepsService,
-        IOptions<DocumentJsonSerializerOptions> options,
         IEnumerable<IRecipeStep> recipeSteps,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)

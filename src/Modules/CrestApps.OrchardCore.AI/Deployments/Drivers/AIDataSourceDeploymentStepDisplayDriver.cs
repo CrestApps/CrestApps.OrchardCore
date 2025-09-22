@@ -38,9 +38,9 @@ internal sealed class AIDataSourceDeploymentStepDisplayDriver : DisplayDriver<De
             model.IncludeAll = step.IncludeAll;
             model.DataSources = (await _store.GetAllAsync()).Select(x => new AIDataSourceEntryViewModel
             {
-                Id = x.Id,
+                ItemId = x.ItemId,
                 DisplayText = x.DisplayText,
-                IsSelected = step.SourceIds?.Contains(x.Id) ?? false
+                IsSelected = step.SourceIds?.Contains(x.ItemId) ?? false
             }).OrderBy(x => x.DisplayText)
             .ToArray();
         }).Location("Content");
@@ -67,7 +67,7 @@ internal sealed class AIDataSourceDeploymentStepDisplayDriver : DisplayDriver<De
             }
 
             step.IncludeAll = false;
-            step.SourceIds = model.DataSources.Where(x => x.IsSelected).Select(x => x.Id).ToArray();
+            step.SourceIds = model.DataSources.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
         }
 
         return Edit(step, context);

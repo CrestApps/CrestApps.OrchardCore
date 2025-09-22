@@ -27,7 +27,7 @@ internal sealed class AIProfileToolInstancesDisplayDriver : DisplayDriver<AIProf
     {
         var instances = await _toolInstanceStore.GetAllAsync();
 
-        if (!instances.Any())
+        if (instances.Count == 0)
         {
             return null;
         }
@@ -38,10 +38,10 @@ internal sealed class AIProfileToolInstancesDisplayDriver : DisplayDriver<AIProf
 
             model.Instances = instances.Select(instance => new ToolEntry
             {
-                Id = instance.Id,
+                ItemId = instance.ItemId,
                 DisplayText = instance.DisplayText,
                 Description = instance.As<InvokableToolMetadata>()?.Description,
-                IsSelected = toolMetadata.InstanceIds?.Contains(instance.Id) ?? false,
+                IsSelected = toolMetadata.InstanceIds?.Contains(instance.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
             .ToArray();
 
@@ -52,7 +52,7 @@ internal sealed class AIProfileToolInstancesDisplayDriver : DisplayDriver<AIProf
     {
         var instances = await _toolInstanceStore.GetAllAsync();
 
-        if (!instances.Any())
+        if (instances.Count == 0)
         {
             return null;
         }
@@ -63,7 +63,7 @@ internal sealed class AIProfileToolInstancesDisplayDriver : DisplayDriver<AIProf
 
         var metadata = new AIProfileFunctionInstancesMetadata
         {
-            InstanceIds = model.Instances?.Where(x => x.IsSelected).Select(x => x.Id).ToArray() ?? []
+            InstanceIds = model.Instances?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray() ?? []
         };
 
         profile.Put(metadata);

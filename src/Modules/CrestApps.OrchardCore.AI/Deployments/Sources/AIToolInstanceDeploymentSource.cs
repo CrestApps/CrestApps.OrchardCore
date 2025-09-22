@@ -27,14 +27,14 @@ internal sealed class AIToolInstanceDeploymentSource : DeploymentSourceBase<AITo
 
         foreach (var instance in instances)
         {
-            if (instanceIds.Length > 0 && !instanceIds.Contains(instance.Id))
+            if (instanceIds.Length > 0 && !instanceIds.Contains(instance.ItemId))
             {
                 continue;
             }
 
             var instanceObject = new JsonObject()
             {
-                { "Id", instance.Id },
+                { "ItemId", instance.ItemId },
                 { "Source", instance.Source },
                 { "DisplayText", instance.DisplayText },
                 { "CreatedUtc", instance.CreatedUtc },

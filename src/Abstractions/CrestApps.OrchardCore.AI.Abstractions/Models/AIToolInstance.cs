@@ -1,8 +1,9 @@
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public sealed class AIToolInstance : SourceCatalogEntry, IDisplayTextAwareModel
+public sealed class AIToolInstance : SourceCatalogEntry, IDisplayTextAwareModel, ICloneable<AIToolInstance>
 {
     public string DisplayText { get; set; }
 
@@ -16,7 +17,7 @@ public sealed class AIToolInstance : SourceCatalogEntry, IDisplayTextAwareModel
     {
         return new AIToolInstance
         {
-            Id = Id,
+            ItemId = ItemId,
             Source = Source,
             DisplayText = DisplayText,
             CreatedUtc = CreatedUtc,

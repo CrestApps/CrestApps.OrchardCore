@@ -104,7 +104,7 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             .Any(d => d.ProviderName == deployment.ProviderName &&
             d.ConnectionName == deployment.ConnectionName &&
             d.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase)
-            && d.Id != deployment.Id);
+            && d.ItemId != deployment.ItemId);
 
         if (anotherExists)
         {

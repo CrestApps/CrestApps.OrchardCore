@@ -34,7 +34,7 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
 
             var deploymentInfo = new JsonObject()
             {
-                { "Id", deployment.Id },
+                { "ItemId", deployment.ItemId },
                 { "Name", deployment.Name },
                 { "ProviderName" , deployment.Source },
                 { "ConnectionName", deployment.ConnectionName },
