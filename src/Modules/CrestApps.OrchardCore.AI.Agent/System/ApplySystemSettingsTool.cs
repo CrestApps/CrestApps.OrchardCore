@@ -46,6 +46,6 @@ public sealed class ApplySystemSettingsTool : ImportRecipeBaseTool
             return MissingArgument();
         }
 
-        return await ProcessRecipeAsync(recipe, cancellationToken);
+        return await ProcessRecipeAsync(recipe);
     }
 }

@@ -19,6 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 

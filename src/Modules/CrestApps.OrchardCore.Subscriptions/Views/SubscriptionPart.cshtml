@@ -1,0 +1,24 @@
+@using CrestApps.OrchardCore.Subscriptions
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@using Microsoft.AspNetCore.Mvc.Localization
+@using CrestApps.OrchardCore.Subscriptions.Extensions;
+
+@model DisplaySubscriptionViewModel
+
+<div class="row">
+    @if (Model.InitialAmount.HasValue)
+    {
+        <div class="col-6">@Model.InitialAmountDescription</div>
+        <div class="col-6">@Model.InitialAmount.Value.ToString("C")</div>
+    }
+
+    <div class="col-6">@T["Billing Amount"]</div>
+    <div class="col-6">@T.GetAmount(Model.DurationType, Model.BillingDuration, Model.Price)</div>
+
+    @if (Model.BillingCycleLimit.HasValue)
+    {
+        <div class="col-6">@T["Total payments"]</div>
+        <div class="col-6">@Model.BillingCycleLimit.Value</div>
+    }
+</div>

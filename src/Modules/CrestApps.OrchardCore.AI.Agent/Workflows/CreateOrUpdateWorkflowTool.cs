@@ -45,6 +45,6 @@ public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
             return MissingArgument();
         }
 
-        return await ProcessRecipeAsync(recipe, cancellationToken);
+        return await ProcessRecipeAsync(recipe);
     }
 }
