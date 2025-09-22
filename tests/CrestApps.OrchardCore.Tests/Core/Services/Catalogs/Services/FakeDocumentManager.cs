@@ -5,7 +5,7 @@ using OrchardCore.Documents;
 namespace CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 
 internal sealed class FakeDocumentManager<T> : IDocumentManager<DictionaryDocument<T>>
-    where T : CatalogEntry
+    where T : CatalogItem
 {
     private readonly DictionaryDocument<T> _doc;
 
@@ -15,7 +15,7 @@ internal sealed class FakeDocumentManager<T> : IDocumentManager<DictionaryDocume
     {
         _doc = new DictionaryDocument<T>
         {
-            Records = records.ToDictionary(x => x.Id),
+            Records = records.ToDictionary(x => x.ItemId),
         };
     }
 
@@ -47,7 +47,7 @@ internal sealed class FakeDocumentManager<T> : IDocumentManager<DictionaryDocume
 internal sealed class FakeDocumentManager
 {
     internal static Catalog<TCatalog> CreateCatalog<TCatalog>(IEnumerable<TCatalog> records, out FakeDocumentManager<TCatalog> fakeManager)
-        where TCatalog : CatalogEntry
+        where TCatalog : CatalogItem
     {
         fakeManager = new FakeDocumentManager<TCatalog>(records);
 
@@ -55,7 +55,7 @@ internal sealed class FakeDocumentManager
     }
 
     internal static NamedCatalog<TCatalog> CreateNamedCatalog<TCatalog>(IEnumerable<TCatalog> records, out FakeDocumentManager<TCatalog> fakeManager)
-        where TCatalog : CatalogEntry, INameAwareModel
+        where TCatalog : CatalogItem, INameAwareModel
     {
         fakeManager = new FakeDocumentManager<TCatalog>(records);
 
@@ -63,7 +63,7 @@ internal sealed class FakeDocumentManager
     }
 
     internal static NamedSourceCatalog<TCatalog> CreateNamedSourceCatalog<TCatalog>(IEnumerable<TCatalog> records, out FakeDocumentManager<TCatalog> fakeManager)
-        where TCatalog : CatalogEntry, INameAwareModel, ISourceAwareModel
+        where TCatalog : CatalogItem, INameAwareModel, ISourceAwareModel
     {
         fakeManager = new FakeDocumentManager<TCatalog>(records);
 

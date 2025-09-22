@@ -17,7 +17,7 @@ public sealed class McpConnection : SourceCatalogEntry, IDisplayTextAwareModel, 
     {
         return new McpConnection()
         {
-            Id = Id,
+            ItemId = ItemId,
             Source = Source,
             DisplayText = DisplayText,
             CreatedUtc = CreatedUtc,

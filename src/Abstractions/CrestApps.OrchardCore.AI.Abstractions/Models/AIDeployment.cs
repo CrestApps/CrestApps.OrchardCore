@@ -37,7 +37,7 @@ public class AIDeployment : SourceCatalogEntry, INameAwareModel, ISourceAwareMod
     {
         return new AIDeployment
         {
-            Id = Id,
+            ItemId = ItemId,
             Name = Name,
             Source = Source,
             ConnectionName = ConnectionName,

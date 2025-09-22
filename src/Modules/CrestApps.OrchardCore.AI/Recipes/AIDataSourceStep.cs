@@ -37,7 +37,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
         {
             AIDataSource dataSource = null;
 
-            var id = token[nameof(AIDataSource.Id)]?.GetValue<string>();
+            var id = token[nameof(AIDataSource.ItemId)]?.GetValue<string>();
 
             if (!string.IsNullOrEmpty(id))
             {

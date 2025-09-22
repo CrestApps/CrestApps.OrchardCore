@@ -36,14 +36,14 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
 
         foreach (var connection in connections)
         {
-            if (connectionIds.Length > 0 && !connectionIds.Contains(connection.Id))
+            if (connectionIds.Length > 0 && !connectionIds.Contains(connection.ItemId))
             {
                 continue;
             }
 
             var connectionObject = new JsonObject()
             {
-                { "Id", connection.Id },
+                { "ItemId", connection.ItemId },
                 { "Source", connection.Source },
                 { "Name", connection.Name },
                 { "Type", connection.Type.ToString() },

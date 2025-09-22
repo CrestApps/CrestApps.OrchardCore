@@ -20,7 +20,7 @@
         @for (var i = 0; i < Model.Connections.Length; i++)
         {
             <div class="form-check">
-                <input type="hidden" asp-for="Connections[i].Id" />
+                <input type="hidden" asp-for="Connections[i].ItemId" />
                 <input asp-for="Connections[i].IsSelected" type="checkbox" class="form-check-input">
                 <label class="form-check-label" asp-for="Connections[i].IsSelected">@Model.Connections[i].DisplayText</label>
             </div>

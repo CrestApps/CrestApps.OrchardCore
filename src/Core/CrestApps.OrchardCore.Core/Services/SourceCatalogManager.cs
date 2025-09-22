@@ -8,14 +8,14 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Core.Services;
 
 public class SourceCatalogManager<T> : CatalogManager<T>, ISourceCatalogManager<T>
-    where T : CatalogEntry, ISourceAwareModel, new()
+    where T : CatalogItem, ISourceAwareModel, new()
 {
     protected readonly ISourceCatalog<T> SourceCatalog;
 
     public SourceCatalogManager(
         ISourceCatalog<T> sourceCatalog,
         IEnumerable<ICatalogEntryHandler<T>> handlers,
-        ILogger<CatalogManager<T>> logger)
+        ILogger<SourceCatalogManager<T>> logger)
         : base(sourceCatalog, handlers, logger)
     {
         SourceCatalog = sourceCatalog;
@@ -55,7 +55,7 @@ public class SourceCatalogManager<T> : CatalogManager<T>, ISourceCatalogManager<
 
         var entry = new T()
         {
-            Id = id,
+            ItemId = id,
             Source = source,
         };
 
@@ -65,9 +65,9 @@ public class SourceCatalogManager<T> : CatalogManager<T>, ISourceCatalogManager<
         var initializedContext = new InitializedContext<T>(entry);
         await Handlers.InvokeAsync((handler, ctx) => handler.InitializedAsync(ctx), initializedContext, Logger);
 
-        if (string.IsNullOrEmpty(entry.Id))
+        if (string.IsNullOrEmpty(entry.ItemId))
         {
-            entry.Id = id;
+            entry.ItemId = id;
         }
 
         entry.Source = source;

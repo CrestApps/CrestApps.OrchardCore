@@ -34,7 +34,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         var chatSession = new AIChatSession
         {
             SessionId = IdGenerator.GenerateId(),
-            ProfileId = profile.Id,
+            ProfileId = profile.ItemId,
             CreatedUtc = _clock.UtcNow,
         };
 

@@ -75,7 +75,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
         if (connection is null)
         {
-            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
+            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.ItemId);
 
             return null;
         }
@@ -222,7 +222,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
         if (connection is null)
         {
-            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
+            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.ItemId);
 
             yield break;
         }
@@ -598,7 +598,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
                 if (_mcpService is not null)
                 {
                     var connections = (await _mcpConnectionsStore.GetAllAsync())
-                        .ToDictionary(x => x.Id);
+                        .ToDictionary(x => x.ItemId);
 
                     foreach (var connectionId in mcpMetadata.ConnectionIds)
                     {

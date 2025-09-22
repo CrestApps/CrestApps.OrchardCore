@@ -37,7 +37,7 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
         {
             McpConnection connection = null;
 
-            var id = token[nameof(McpConnection.Id)]?.GetValue<string>();
+            var id = token[nameof(McpConnection.ItemId)]?.GetValue<string>();
 
             if (!string.IsNullOrEmpty(id))
             {

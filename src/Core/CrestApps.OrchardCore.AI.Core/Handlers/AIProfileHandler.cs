@@ -51,7 +51,7 @@ public sealed class AIProfileHandler : ModelHandlerBase<AIProfile>
         {
             var profile = await _profilesCatalog.FindByNameAsync(context.Model.Name);
 
-            if (profile is not null && profile.Id != context.Model.Id)
+            if (profile is not null && profile.ItemId != context.Model.ItemId)
             {
                 context.Result.Fail(new ValidationResult(S["A profile with this name already exists. The name must be unique."], [nameof(AIProfile.Name)]));
             }

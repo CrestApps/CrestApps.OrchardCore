@@ -16,7 +16,7 @@
     @for (var i = 0; i < Model.Instances.Length; i++)
     {
         <div class="form-check">
-            <input type="hidden" asp-for="Instances[i].Id" />
+            <input type="hidden" asp-for="Instances[i].ItemId" />
             <input asp-for="Instances[i].IsSelected" type="checkbox" class="form-check-input">
             <label class="form-check-label" asp-for="Instances[i].IsSelected">@Model.Instances[i].DisplayText</label>
             <span class="hint dashed">@Model.Instances[i].Description</span>

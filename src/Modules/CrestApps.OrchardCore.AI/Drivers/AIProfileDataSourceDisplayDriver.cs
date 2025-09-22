@@ -43,7 +43,7 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
             var metadata = profile.As<AIProfileDataSourceMetadata>();
             model.DataSourceId = metadata.DataSourceId;
             model.DataSources = (await _dataSourceStore.GetAsync(profile.Source))
-            .Select(x => new SelectListItem(x.DisplayText, x.Id));
+            .Select(x => new SelectListItem(x.DisplayText, x.ItemId));
         }).Location("Content:2");
     }
 

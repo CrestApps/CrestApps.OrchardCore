@@ -36,7 +36,7 @@ public sealed class AICompletionTaskDisplayDriver : ActivityDisplayDriver<AIComp
         model.ResultPropertyName = activity.ResultPropertyName;
 
         model.Profiles = (await _profilesCatalog.GetAllAsync())
-            .Select(profile => new SelectListItem(profile.DisplayText, profile.Id));
+            .Select(profile => new SelectListItem(profile.DisplayText, profile.ItemId));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionTask activity, UpdateEditorContext context)
