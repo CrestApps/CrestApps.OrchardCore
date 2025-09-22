@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 
-public sealed class TestNamedCatalogEntry : CatalogEntry, INameAwareModel
+public sealed class TestNamedCatalogEntry : CatalogItem, INameAwareModel
 {
     public string Name { get; set; }
 
@@ -13,14 +13,14 @@ public sealed class TestNamedCatalogEntry : CatalogEntry, INameAwareModel
             return false;
         }
 
-        return string.Equals(Id, other.Id, StringComparison.Ordinal)
+        return string.Equals(ItemId, other.ItemId, StringComparison.Ordinal)
             && string.Equals(Name, other.Name, StringComparison.Ordinal)
             && GetType() == other.GetType();
     }
 
     public override int GetHashCode()
     {
-        return (Id?.GetHashCode() ?? 0) ^ (Name?.GetHashCode() ?? 0) ^ GetType().GetHashCode();
+        return (ItemId?.GetHashCode() ?? 0) ^ (Name?.GetHashCode() ?? 0) ^ GetType().GetHashCode();
     }
 }
 

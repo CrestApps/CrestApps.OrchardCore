@@ -41,7 +41,7 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
     {
         return new AIProviderConnection
         {
-            Id = Id,
+            ItemId = ItemId,
             Source = Source,
             Name = Name,
             DisplayText = DisplayText,

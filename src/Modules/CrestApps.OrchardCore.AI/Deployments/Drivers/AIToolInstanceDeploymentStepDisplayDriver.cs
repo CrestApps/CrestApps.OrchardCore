@@ -40,9 +40,9 @@ internal sealed class AIToolInstanceDeploymentStepDisplayDriver : DisplayDriver<
             model.IncludeAll = step.IncludeAll;
             model.Instances = (await _store.GetAllAsync()).Select(x => new AIToolInstanceEntryViewModel
             {
-                Id = x.Id,
+                ItemId = x.ItemId,
                 DisplayText = x.DisplayText,
-                IsSelected = step.InstanceIds?.Contains(x.Id) ?? false
+                IsSelected = step.InstanceIds?.Contains(x.ItemId) ?? false
             }).OrderBy(x => x.DisplayText)
             .ToArray();
         }).Location("Content");
@@ -69,7 +69,7 @@ internal sealed class AIToolInstanceDeploymentStepDisplayDriver : DisplayDriver<
             }
 
             step.IncludeAll = false;
-            step.InstanceIds = model.Instances.Where(x => x.IsSelected).Select(x => x.Id).ToArray();
+            step.InstanceIds = model.Instances.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
         }
 
         return Edit(step, context);

@@ -20,12 +20,12 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
 
         var document = await _documentManager.GetOrCreateMutableAsync();
 
-        if (!document.Records.TryGetValue(model.Id, out var existingInstance))
+        if (!document.Records.TryGetValue(model.ItemId, out var existingInstance))
         {
             return false;
         }
 
-        var removed = document.Records.Remove(model.Id);
+        var removed = document.Records.Remove(model.ItemId);
 
         if (removed)
         {
@@ -112,12 +112,12 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
 
         var document = await _documentManager.GetOrCreateMutableAsync();
 
-        if (string.IsNullOrEmpty(record.Id))
+        if (string.IsNullOrEmpty(record.ItemId))
         {
-            record.Id = IdGenerator.GenerateId();
+            record.ItemId = IdGenerator.GenerateId();
         }
 
-        document.Records[record.Id] = record;
+        document.Records[record.ItemId] = record;
 
         await _documentManager.UpdateAsync(document);
     }
@@ -128,12 +128,12 @@ public sealed class DefaultAIDataSourceStore : IAIDataSourceStore
 
         var document = await _documentManager.GetOrCreateMutableAsync();
 
-        if (string.IsNullOrEmpty(record.Id))
+        if (string.IsNullOrEmpty(record.ItemId))
         {
-            record.Id = IdGenerator.GenerateId();
+            record.ItemId = IdGenerator.GenerateId();
         }
 
-        document.Records[record.Id] = record;
+        document.Records[record.ItemId] = record;
 
         await _documentManager.UpdateAsync(document);
     }

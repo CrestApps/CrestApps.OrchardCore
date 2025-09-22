@@ -40,9 +40,9 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
             model.Connections = connections
             .Select(entry => new ToolEntry
             {
-                Id = entry.Id,
+                ItemId = entry.ItemId,
                 DisplayText = entry.DisplayText,
-                IsSelected = mcpMetadata.ConnectionIds?.Contains(entry.Id) ?? false,
+                IsSelected = mcpMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
             .ToArray();
 
@@ -62,7 +62,7 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var ids = model.Connections?.Where(x => x.IsSelected).Select(x => x.Id).ToArray();
+        var ids = model.Connections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
 
         var metadata = new AIProfileMcpMetadata();
 
@@ -72,7 +72,7 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
         }
         else
         {
-            metadata.ConnectionIds = connections.Select(x => x.Id)
+            metadata.ConnectionIds = connections.Select(x => x.ItemId)
                 .Intersect(ids)
                 .ToArray();
         }

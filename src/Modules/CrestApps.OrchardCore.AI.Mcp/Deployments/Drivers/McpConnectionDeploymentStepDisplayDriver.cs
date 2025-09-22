@@ -40,7 +40,7 @@ internal sealed class McpConnectionDeploymentStepDisplayDriver : DisplayDriver<D
                     else
                     {
                         model.Names = (await _store.GetAllAsync())
-                        .Where(x => step.ConnectionIds.Contains(x.Id))
+                        .Where(x => step.ConnectionIds.Contains(x.ItemId))
                         .Select(x => x.DisplayText);
                     }
                 }).Location("Summary", "Content"),
@@ -54,9 +54,9 @@ internal sealed class McpConnectionDeploymentStepDisplayDriver : DisplayDriver<D
         {
             model.IncludeAll = step.IncludeAll;
             model.Connections = (await _store.GetAllAsync())
-            .Select(connection => new SelectListItem(connection.DisplayText, connection.Id)
+            .Select(connection => new SelectListItem(connection.DisplayText, connection.ItemId)
             {
-                Selected = step.ConnectionIds is not null && step.ConnectionIds.Contains(connection.Id),
+                Selected = step.ConnectionIds is not null && step.ConnectionIds.Contains(connection.ItemId),
             }).ToArray();
         }).Location("Content");
     }

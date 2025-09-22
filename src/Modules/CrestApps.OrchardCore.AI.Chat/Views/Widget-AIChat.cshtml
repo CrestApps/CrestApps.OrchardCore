@@ -102,7 +102,7 @@
     <div class="chat-input p-2 ">
 
         <div class="text-bg-light rounded-5 w-100 border">
-            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input p-3" id="@userPromptHtmlId" data-session-id="" data-profile-id="@(profile.Id)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
+            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input p-3" id="@userPromptHtmlId" data-session-id="" data-profile-id="@(profile.ItemId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
 
             <div class="d-flex justify-content-between px-3 my-2">
                 <div>
@@ -117,7 +117,7 @@
                                     @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
                                     {
                                         <li>
-                                            <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.Id">@promptGeneratedProfile.Name</button>
+                                            <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.ItemId">@promptGeneratedProfile.Name</button>
                                         </li>
                                     }
                                 </ul>

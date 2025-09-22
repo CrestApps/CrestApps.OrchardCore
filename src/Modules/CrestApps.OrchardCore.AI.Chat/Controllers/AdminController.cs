@@ -73,7 +73,7 @@ public sealed class AdminController : Controller
 
         var model = new ChatSessionViewModel
         {
-            ProfileId = profile.Id,
+            ProfileId = profile.ItemId,
             History = []
         };
 
@@ -82,7 +82,7 @@ public sealed class AdminController : Controller
         {
             var chatSession = await _sessionManager.FindAsync(sessionId);
 
-            if (chatSession == null || chatSession.ProfileId != profile.Id)
+            if (chatSession == null || chatSession.ProfileId != profile.ItemId)
             {
                 return NotFound();
             }

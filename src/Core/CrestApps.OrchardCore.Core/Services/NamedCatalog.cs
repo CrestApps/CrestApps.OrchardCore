@@ -5,7 +5,7 @@ using OrchardCore.Documents;
 namespace CrestApps.OrchardCore.Core.Services;
 
 public class NamedCatalog<T> : Catalog<T>, INamedCatalog<T>
-    where T : CatalogEntry, INameAwareModel
+    where T : CatalogItem, INameAwareModel
 {
     public NamedCatalog(IDocumentManager<DictionaryDocument<T>> documentManager)
         : base(documentManager)
@@ -25,7 +25,7 @@ public class NamedCatalog<T> : Catalog<T>, INamedCatalog<T>
 
     protected override void Saving(T record, DictionaryDocument<T> document)
     {
-        if (document.Records.Values.Any(x => OrdinalIgnoreCaseEquals(x.Name, record.Name) && x.Id != record.Id))
+        if (document.Records.Values.Any(x => OrdinalIgnoreCaseEquals(x.Name, record.Name) && x.ItemId != record.ItemId))
         {
             throw new InvalidOperationException("There is already another model with the same name.");
         }

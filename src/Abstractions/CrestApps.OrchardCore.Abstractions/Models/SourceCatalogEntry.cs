@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.Models;
 
-public class SourceCatalogEntry : CatalogEntry, ISourceAwareModel
+public class SourceCatalogEntry : CatalogItem, ISourceAwareModel
 {
     /// <summary>
     /// Gets the name of the source for this profile.

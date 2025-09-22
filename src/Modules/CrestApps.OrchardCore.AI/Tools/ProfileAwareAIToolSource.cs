@@ -73,7 +73,7 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
 
             var funcMetadata = instance.As<InvokableToolMetadata>();
 
-            Name = instance.Id;
+            Name = instance.ItemId;
             Description = string.IsNullOrEmpty(funcMetadata.Description)
                 ? "Provides a way to call another model."
                 : funcMetadata.Description;
@@ -143,7 +143,7 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while invoking the profile with the id '{ProfileId}' and source '{Source}'.", _profile.Id, _profile.Source);
+                _logger.LogError(ex, "An error occurred while invoking the profile with the id '{ProfileId}' and source '{Source}'.", _profile.ItemId, _profile.Source);
 
                 return Task.FromResult<object>("Unable to get a response from the profile.");
             }

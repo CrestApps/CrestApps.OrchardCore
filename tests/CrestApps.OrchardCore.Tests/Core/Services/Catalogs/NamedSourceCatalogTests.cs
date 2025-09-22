@@ -1,5 +1,3 @@
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services.Catalogs;
@@ -9,7 +7,7 @@ public sealed class NamedSourceCatalogTests
     [Fact]
     public async Task FindByNameAsync_ReturnsEntry_WhenExists()
     {
-        var entry = new TestNamedSourceCatalogEntry { Id = "1", Name = "Test", Source = "A" };
+        var entry = new TestNamedSourceCatalogEntry { ItemId = "1", Name = "Test", Source = "A" };
         var records = new List<TestNamedSourceCatalogEntry> { entry };
         var catalog = FakeDocumentManager.CreateNamedSourceCatalog(records, out _);
 
@@ -40,7 +38,7 @@ public sealed class NamedSourceCatalogTests
     [Fact]
     public async Task GetAsync_ByNameAndSource_ReturnsEntry_WhenExists()
     {
-        var entry = new TestNamedSourceCatalogEntry { Id = "1", Name = "Test", Source = "A" };
+        var entry = new TestNamedSourceCatalogEntry { ItemId = "1", Name = "Test", Source = "A" };
         var records = new List<TestNamedSourceCatalogEntry> { entry };
         var catalog = FakeDocumentManager.CreateNamedSourceCatalog(records, out _);
 
@@ -52,7 +50,7 @@ public sealed class NamedSourceCatalogTests
     [Fact]
     public async Task GetAsync_ByNameAndSource_ReturnsNull_WhenNotExists()
     {
-        var entry = new TestNamedSourceCatalogEntry { Id = "1", Name = "Test", Source = "A" };
+        var entry = new TestNamedSourceCatalogEntry { ItemId = "1", Name = "Test", Source = "A" };
         var records = new List<TestNamedSourceCatalogEntry> { entry };
         var catalog = FakeDocumentManager.CreateNamedSourceCatalog(records, out _);
 
@@ -74,8 +72,8 @@ public sealed class NamedSourceCatalogTests
     [Fact]
     public async Task CreateAsync_Throws_WhenDuplicateName()
     {
-        var entry1 = new TestNamedSourceCatalogEntry { Id = "1", Name = "Test", Source = "A" };
-        var entry2 = new TestNamedSourceCatalogEntry { Id = "2", Name = "Test", Source = "B" };
+        var entry1 = new TestNamedSourceCatalogEntry { ItemId = "1", Name = "Test", Source = "A" };
+        var entry2 = new TestNamedSourceCatalogEntry { ItemId = "2", Name = "Test", Source = "B" };
         var records = new List<TestNamedSourceCatalogEntry> { entry1 };
         var catalog = FakeDocumentManager.CreateNamedSourceCatalog(records, out var fakeManager);
 
@@ -86,8 +84,8 @@ public sealed class NamedSourceCatalogTests
     [Fact]
     public async Task UpdateAsync_Throws_WhenDuplicateName()
     {
-        var entry1 = new TestNamedSourceCatalogEntry { Id = "1", Name = "Test1", Source = "A" };
-        var entry2 = new TestNamedSourceCatalogEntry { Id = "2", Name = "Test2", Source = "B" };
+        var entry1 = new TestNamedSourceCatalogEntry { ItemId = "1", Name = "Test1", Source = "A" };
+        var entry2 = new TestNamedSourceCatalogEntry { ItemId = "2", Name = "Test2", Source = "B" };
 
         var records = new List<TestNamedSourceCatalogEntry>
         {

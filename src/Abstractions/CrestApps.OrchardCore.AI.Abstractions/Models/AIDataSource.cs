@@ -4,7 +4,7 @@ using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
-public sealed class AIDataSource : CatalogEntry, IDisplayTextAwareModel, ICloneable<AIDataSource>
+public sealed class AIDataSource : CatalogItem, IDisplayTextAwareModel, ICloneable<AIDataSource>
 {
     public string ProfileSource { get; set; }
 
@@ -22,7 +22,7 @@ public sealed class AIDataSource : CatalogEntry, IDisplayTextAwareModel, IClonea
     {
         return new AIDataSource
         {
-            Id = Id,
+            ItemId = ItemId,
             DisplayText = DisplayText,
             ProfileSource = ProfileSource,
             Type = Type,

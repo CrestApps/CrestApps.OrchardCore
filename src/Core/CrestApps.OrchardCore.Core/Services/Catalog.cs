@@ -6,7 +6,7 @@ using OrchardCore.Documents;
 namespace CrestApps.OrchardCore.Core.Services;
 
 public class Catalog<T> : ICatalog<T>
-    where T : CatalogEntry
+    where T : CatalogItem
 {
     protected readonly IDocumentManager<DictionaryDocument<T>> DocumentManager;
 
@@ -21,14 +21,14 @@ public class Catalog<T> : ICatalog<T>
 
         var document = await DocumentManager.GetOrCreateMutableAsync();
 
-        if (!document.Records.TryGetValue(entry.Id, out var existingInstance))
+        if (!document.Records.TryGetValue(entry.ItemId, out var existingInstance))
         {
             return false;
         }
 
         Deleting(entry, document);
 
-        var removed = document.Records.Remove(entry.Id);
+        var removed = document.Records.Remove(entry.ItemId);
 
         if (removed)
         {
@@ -90,14 +90,14 @@ public class Catalog<T> : ICatalog<T>
 
         var document = await DocumentManager.GetOrCreateMutableAsync();
 
-        if (string.IsNullOrEmpty(record.Id))
+        if (string.IsNullOrEmpty(record.ItemId))
         {
-            record.Id = IdGenerator.GenerateId();
+            record.ItemId = IdGenerator.GenerateId();
         }
 
         Saving(record, document);
 
-        document.Records[record.Id] = record;
+        document.Records[record.ItemId] = record;
 
         await DocumentManager.UpdateAsync(document);
     }
@@ -108,14 +108,14 @@ public class Catalog<T> : ICatalog<T>
 
         var document = await DocumentManager.GetOrCreateMutableAsync();
 
-        if (string.IsNullOrEmpty(record.Id))
+        if (string.IsNullOrEmpty(record.ItemId))
         {
-            record.Id = IdGenerator.GenerateId();
+            record.ItemId = IdGenerator.GenerateId();
         }
 
         Saving(record, document);
 
-        document.Records[record.Id] = record;
+        document.Records[record.ItemId] = record;
 
         await DocumentManager.UpdateAsync(document);
     }

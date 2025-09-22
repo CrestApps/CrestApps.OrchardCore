@@ -31,7 +31,7 @@ public sealed class DefaultAIDataSourceManager : IAIDataSourceManager
         var deletingContext = new DeletingContext<AIDataSource>(model);
         await _handlers.InvokeAsync((handler, ctx) => handler.DeletingAsync(ctx), deletingContext, _logger);
 
-        if (string.IsNullOrEmpty(model.Id))
+        if (string.IsNullOrEmpty(model.ItemId))
         {
             return false;
         }
@@ -67,7 +67,7 @@ public sealed class DefaultAIDataSourceManager : IAIDataSourceManager
 
         var model = new AIDataSource()
         {
-            Id = id,
+            ItemId = id,
             ProfileSource = providerName,
             Type = type,
         };
@@ -78,9 +78,9 @@ public sealed class DefaultAIDataSourceManager : IAIDataSourceManager
         var initializedContext = new InitializedContext<AIDataSource>(model);
         await _handlers.InvokeAsync((handler, ctx) => handler.InitializedAsync(ctx), initializedContext, _logger);
 
-        if (string.IsNullOrEmpty(model.Id))
+        if (string.IsNullOrEmpty(model.ItemId))
         {
-            model.Id = id;
+            model.ItemId = id;
         }
 
         return model;
