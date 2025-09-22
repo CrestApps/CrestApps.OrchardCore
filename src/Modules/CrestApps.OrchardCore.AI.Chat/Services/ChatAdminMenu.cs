@@ -49,7 +49,7 @@ public sealed class ChatAdminMenu : AdminNavigationProvider
                        .AddClass(profile.Name.HtmlClassify())
                        .Action("Index", "Admin", AIConstants.Feature.Chat, new RouteValueDictionary
                        {
-                           { "profileId", profile.Id },
+                           { "profileId", profile.ItemId },
                        })
                        .Permission(AIPermissions.QueryAnyAIProfile)
                        .Resource(profile)

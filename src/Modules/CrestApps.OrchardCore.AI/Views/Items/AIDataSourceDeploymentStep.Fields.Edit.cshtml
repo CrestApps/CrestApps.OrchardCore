@@ -20,7 +20,7 @@
         @for (var i = 0; i < Model.DataSources.Length; i++)
         {
             <div class="form-check">
-                <input type="hidden" asp-for="DataSources[i].Id" />
+                <input type="hidden" asp-for="DataSources[i].ItemId" />
                 <input asp-for="DataSources[i].IsSelected" type="checkbox" class="form-check-input">
                 <label class="form-check-label" asp-for="DataSources[i].IsSelected">@Model.DataSources[i].DisplayText</label>
             </div>

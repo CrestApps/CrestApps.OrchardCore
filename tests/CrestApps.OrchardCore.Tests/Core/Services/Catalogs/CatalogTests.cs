@@ -8,7 +8,7 @@ public sealed partial class CatalogTests
     [Fact]
     public async Task DeleteAsync_RemovesEntry_WhenExists()
     {
-        var entry = new TestCatalogEntry { Id = "1" };
+        var entry = new TestCatalogEntry { ItemId = "1" };
         var catalog = FakeDocumentManager.CreateCatalog([entry], out var fakeManager);
 
         var result = await catalog.DeleteAsync(entry);
@@ -22,7 +22,7 @@ public sealed partial class CatalogTests
     [Fact]
     public async Task DeleteAsync_ReturnsFalse_WhenNotExists()
     {
-        var entry = new TestCatalogEntry { Id = "2" };
+        var entry = new TestCatalogEntry { ItemId = "2" };
         var catalog = FakeDocumentManager.CreateCatalog<TestCatalogEntry>([], out var fakeManager);
 
         var result = await catalog.DeleteAsync(entry);
@@ -41,7 +41,7 @@ public sealed partial class CatalogTests
     [Fact]
     public async Task FindByIdAsync_ReturnsEntry_WhenExists()
     {
-        var entry = new TestCatalogEntry { Id = "1" };
+        var entry = new TestCatalogEntry { ItemId = "1" };
         var catalog = FakeDocumentManager.CreateCatalog([entry], out _);
 
         var result = await catalog.FindByIdAsync("1");
@@ -71,7 +71,7 @@ public sealed partial class CatalogTests
     public async Task PageAsync_ReturnsPagedResults()
     {
         var entries = Enumerable.Range(1, 10)
-            .Select(i => new TestCatalogEntry { Id = i.ToString() });
+            .Select(i => new TestCatalogEntry { ItemId = i.ToString() });
 
         var catalog = FakeDocumentManager.CreateCatalog(entries, out _);
         var context = new QueryContext();
@@ -80,7 +80,7 @@ public sealed partial class CatalogTests
 
         Assert.Equal(10, result.Count);
         Assert.Equal(3, result.Entries.Count);
-        Assert.Equal("4", result.Entries.First().Id);
+        Assert.Equal("4", result.Entries.First().ItemId);
     }
 
     [Fact]
@@ -88,8 +88,8 @@ public sealed partial class CatalogTests
     {
         var entries = new List<TestCatalogEntry>
         {
-            new() { Id = "1" },
-            new() { Id = "2" }
+            new() { ItemId = "1" },
+            new() { ItemId = "2" }
         };
 
         var catalog = FakeDocumentManager.CreateCatalog(entries, out _);
@@ -104,7 +104,7 @@ public sealed partial class CatalogTests
     {
         var records = new List<TestCatalogEntry>();
         var catalog = FakeDocumentManager.CreateCatalog(records, out var fakeManager);
-        var entry = new TestCatalogEntry { Id = "new" };
+        var entry = new TestCatalogEntry { ItemId = "new" };
 
         await catalog.CreateAsync(entry);
 
@@ -125,14 +125,14 @@ public sealed partial class CatalogTests
     {
         var records = new List<TestCatalogEntry>
         {
-            new() { Id = "1" }
+            new() { ItemId = "1" }
         };
         var catalog = FakeDocumentManager.CreateCatalog(records, out var fakeManager);
-        var entry = new TestCatalogEntry { Id = "1" };
+        var entry = new TestCatalogEntry { ItemId = "1" };
 
         await catalog.UpdateAsync(entry);
 
-        Assert.Contains(records, r => r.Id == "1");
+        Assert.Contains(records, r => r.ItemId == "1");
         Assert.True(fakeManager.UpdateCalled);
     }
 

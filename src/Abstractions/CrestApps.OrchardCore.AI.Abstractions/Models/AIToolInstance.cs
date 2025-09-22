@@ -17,7 +17,7 @@ public sealed class AIToolInstance : SourceCatalogEntry, IDisplayTextAwareModel,
     {
         return new AIToolInstance
         {
-            Id = Id,
+            ItemId = ItemId,
             Source = Source,
             DisplayText = DisplayText,
             CreatedUtc = CreatedUtc,

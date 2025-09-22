@@ -37,7 +37,7 @@
                 @for (var i = 0; i < tools.Value.Length; i++)
                 {
                     <div class="form-check">
-                        <input type="hidden" asp-for="@Model.Tools[groupKey][i].Id" />
+                        <input type="hidden" asp-for="@Model.Tools[groupKey][i].ItemId" />
                         <input asp-for="@Model.Tools[groupKey][i].IsSelected"
                                type="checkbox"
                                class="form-check-input group-checkbox"

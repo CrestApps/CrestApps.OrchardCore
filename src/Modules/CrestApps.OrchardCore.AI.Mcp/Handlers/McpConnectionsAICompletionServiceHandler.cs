@@ -39,7 +39,7 @@ public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServ
         }
 
         var connections = (await _store.GetAllAsync())
-            .ToDictionary(x => x.Id);
+            .ToDictionary(x => x.ItemId);
 
         if (connections.Count == 0)
         {
@@ -71,7 +71,7 @@ public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServ
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unable to get the tools from the connection Id '{ConnectionId}' and Name: '{ConnectionName}'", connection.Id, connection.DisplayText);
+                _logger.LogError(ex, "Unable to get the tools from the connection Id '{ConnectionId}' and Name: '{ConnectionName}'", connection.ItemId, connection.DisplayText);
             }
         }
     }

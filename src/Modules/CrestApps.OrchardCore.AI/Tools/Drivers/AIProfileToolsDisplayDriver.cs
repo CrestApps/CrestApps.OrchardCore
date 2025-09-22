@@ -39,7 +39,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
             .OrderBy(group => group.Key)
             .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
             {
-                Id = entry.Key,
+                ItemId = entry.Key,
                 DisplayText = entry.Value.Title,
                 Description = entry.Value.Description,
                 IsSelected = metadata.Names?.Contains(entry.Key) ?? false,
@@ -59,7 +59,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.Id).ToArray();
+        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
 
         var metadata = new AIProfileFunctionInvocationMetadata();
 

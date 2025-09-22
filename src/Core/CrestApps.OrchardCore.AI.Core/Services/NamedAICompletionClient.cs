@@ -83,7 +83,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         if (string.IsNullOrEmpty(connectionName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find the connection name associated with the profile with id '{ProfileId}' or a default DefaultConnectionName.", context.Profile?.Id);
+            Logger.LogWarning("Unable to chat. Unable to find the connection name associated with the profile with id '{ProfileId}' or a default DefaultConnectionName.", context.Profile?.ItemId);
 
             return null;
         }
@@ -92,7 +92,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         if (string.IsNullOrEmpty(deploymentName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
+            Logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.ItemId);
 
             return null;
         }
@@ -144,7 +144,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         if (string.IsNullOrEmpty(connectionName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find the connection name associated with the profile with id '{ProfileId}' or a default DefaultConnectionName.", context.Profile?.Id);
+            Logger.LogWarning("Unable to chat. Unable to find the connection name associated with the profile with id '{ProfileId}' or a default DefaultConnectionName.", context.Profile?.ItemId);
 
             yield break;
         }
@@ -153,7 +153,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         if (string.IsNullOrEmpty(deploymentName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.Id);
+            Logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.ItemId);
 
             yield break;
         }

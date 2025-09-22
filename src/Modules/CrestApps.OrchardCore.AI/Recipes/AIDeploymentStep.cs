@@ -37,7 +37,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
         {
             AIDeployment deployment = null;
 
-            var id = token[nameof(AIDeployment.Id)]?.GetValue<string>();
+            var id = token[nameof(AIDeployment.ItemId)]?.GetValue<string>();
 
             if (!string.IsNullOrEmpty(id))
             {

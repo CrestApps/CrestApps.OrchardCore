@@ -38,7 +38,7 @@ public sealed class AIProfileToolMetadataDisplayDriver : DisplayDriver<AIToolIns
             model.ProfileId = metadata.ProfileId;
 
             model.Profiles = (await _profilesCatalog.GetAllAsync())
-            .Select(profile => new SelectListItem(profile.DisplayText, profile.Id));
+            .Select(profile => new SelectListItem(profile.DisplayText, profile.ItemId));
         }).Location("Content:5");
     }
 

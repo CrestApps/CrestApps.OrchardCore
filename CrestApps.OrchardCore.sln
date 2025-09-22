@@ -96,6 +96,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Omnichannel.Managements", "src\Modules\CrestApps.OrchardCore.Omnichannel.Managements\CrestApps.OrchardCore.Omnichannel.Managements.csproj", "{24229BC5-C22A-470D-86DC-A007C1E413FC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Omnichannel.Sms", "src\Modules\CrestApps.OrchardCore.Omnichannel.Sms\CrestApps.OrchardCore.Omnichannel.Sms.csproj", "{CC35BF36-83D2-7025-C76A-9F40891EDBF4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.YesSql.Core", "src\Core\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj", "{4C246918-26A3-4694-AB48-E48E00AB5C33}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -243,6 +244,10 @@ Global
 		{CC35BF36-83D2-7025-C76A-9F40891EDBF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CC35BF36-83D2-7025-C76A-9F40891EDBF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CC35BF36-83D2-7025-C76A-9F40891EDBF4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C246918-26A3-4694-AB48-E48E00AB5C33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C246918-26A3-4694-AB48-E48E00AB5C33}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C246918-26A3-4694-AB48-E48E00AB5C33}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C246918-26A3-4694-AB48-E48E00AB5C33}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -283,6 +288,7 @@ Global
 		{EFBDC58B-4F20-430A-8C97-3C0CAB6D707F} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{24229BC5-C22A-470D-86DC-A007C1E413FC} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{CC35BF36-83D2-7025-C76A-9F40891EDBF4} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{4C246918-26A3-4694-AB48-E48E00AB5C33} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0E9F9B00-7078-4EA8-87A9-0B2E74375F1E}

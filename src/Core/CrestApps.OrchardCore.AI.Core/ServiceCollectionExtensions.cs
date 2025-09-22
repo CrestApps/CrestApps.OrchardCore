@@ -16,7 +16,8 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAICoreServices(this IServiceCollection services)
     {
         services
-            .AddCoreModelServices()
+            .AddCatalogs()
+            .AddCatalogManagers()
             .AddScoped<IAIClientFactory, DefaultAIClientFactory>()
             .AddScoped<INamedCatalog<AIProfile>, DefaultAIProfileStore>()
             .AddScoped<AIProviderConnectionStore>()

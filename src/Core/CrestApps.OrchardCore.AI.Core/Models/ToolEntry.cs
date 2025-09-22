@@ -2,7 +2,7 @@ namespace CrestApps.OrchardCore.AI.Core.Models;
 
 public class ToolEntry
 {
-    public string Id { get; set; }
+    public string ItemId { get; set; }
 
     public string DisplayText { get; set; }
 

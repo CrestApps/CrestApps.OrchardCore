@@ -197,7 +197,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         {
             var existingChatSession = await sessionManager.FindAsync(sessionId);
 
-            if (existingChatSession != null && existingChatSession.ProfileId == profile.Id)
+            if (existingChatSession != null && existingChatSession.ProfileId == profile.ItemId)
             {
                 return (existingChatSession, false);
             }

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services project.
+    </Description>
+    <PackageTags>$(PackageTags) AI</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="YesSql.Core" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

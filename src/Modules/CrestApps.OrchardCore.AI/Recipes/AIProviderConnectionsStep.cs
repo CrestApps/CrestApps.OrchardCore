@@ -38,11 +38,11 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
         {
             AIProviderConnection connection = null;
 
-            var id = token[nameof(AIProviderConnection.Id)]?.GetValue<string>();
+            var itemId = token[nameof(AIProviderConnection.ItemId)]?.GetValue<string>();
 
-            if (!string.IsNullOrEmpty(id))
+            if (!string.IsNullOrEmpty(itemId))
             {
-                connection = await _manager.FindByIdAsync(id);
+                connection = await _manager.FindByIdAsync(itemId);
             }
 
             var sourceName = token[nameof(AIProviderConnection.Source)]?.GetValue<string>();

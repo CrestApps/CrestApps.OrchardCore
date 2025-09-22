@@ -49,7 +49,7 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
                 if (deployment is not null)
                 {
                     model.Deployments = (await _deploymentManager.GetAllAsync(profileSource.ProviderName, deployment.ConnectionName))
-                    .Select(x => new SelectListItem(x.Name, x.Id));
+                    .Select(x => new SelectListItem(x.Name, x.ItemId));
                 }
             }
 
@@ -65,7 +65,7 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
                 if (!string.IsNullOrEmpty(connectionName))
                 {
                     model.Deployments = (await _deploymentManager.GetAllAsync(profileSource.ProviderName, connectionName))
-                    .Select(x => new SelectListItem(x.Name, x.Id));
+                    .Select(x => new SelectListItem(x.Name, x.ItemId));
                 }
             }
         }).Location("Content:3");

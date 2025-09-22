@@ -40,9 +40,9 @@ internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayD
             model.IncludeAll = step.IncludeAll;
             model.Connections = (await _connectionsCatalog.GetAllAsync()).Select(x => new AIProviderConnectionEntryViewModel
             {
-                Id = x.Id,
+                ItemId = x.ItemId,
                 DisplayText = x.DisplayText,
-                IsSelected = step.ConnectionIds?.Contains(x.Id) ?? false
+                IsSelected = step.ConnectionIds?.Contains(x.ItemId) ?? false
             }).OrderBy(x => x.DisplayText)
             .ToArray();
         }).Location("Content");
@@ -69,7 +69,7 @@ internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayD
             }
 
             step.IncludeAll = false;
-            step.ConnectionIds = model.Connections.Where(x => x.IsSelected).Select(x => x.Id).ToArray();
+            step.ConnectionIds = model.Connections.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
         }
 
         return Edit(step, context);

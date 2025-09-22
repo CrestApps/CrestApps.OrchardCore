@@ -79,7 +79,7 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
     {
         return new AIProfile()
         {
-            Id = Id,
+            ItemId = ItemId,
             Name = Name,
             DisplayText = DisplayText,
             Source = Source,

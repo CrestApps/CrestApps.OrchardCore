@@ -25,14 +25,14 @@ internal sealed class AIDataSourceDeploymentSource : DeploymentSourceBase<AIData
 
         foreach (var dataSource in dataSources)
         {
-            if (sourceIds.Length > 0 && !sourceIds.Contains(dataSource.Id))
+            if (sourceIds.Length > 0 && !sourceIds.Contains(dataSource.ItemId))
             {
                 continue;
             }
 
             var sourceObject = new JsonObject()
             {
-                { "Id", dataSource.Id },
+                { "ItemId", dataSource.ItemId },
                 { "ProfileSource", dataSource.ProfileSource },
                 { "Type", dataSource.Type },
                 { "DisplayText", dataSource.DisplayText },

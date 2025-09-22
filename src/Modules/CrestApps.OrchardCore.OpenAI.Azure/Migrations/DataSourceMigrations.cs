@@ -57,7 +57,7 @@ internal sealed class DataSourceMigrations : DataMigration
 
                     profile.Alter<AIProfileDataSourceMetadata>(m =>
                     {
-                        m.DataSourceId = dataSource.Id;
+                        m.DataSourceId = dataSource.ItemId;
                         m.DataSourceType = dataSource.Type;
                     });
                 }
