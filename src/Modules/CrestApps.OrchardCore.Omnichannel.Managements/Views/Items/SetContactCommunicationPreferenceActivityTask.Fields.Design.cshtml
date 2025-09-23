@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Tasks
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+@model ActivityViewModel<SetContactCommunicationPreferenceActivityTask>
+
+<header>
+    <h4><i class="fa fa-circle-exclamation"></i>@Model.Activity.GetTitleOrDefault(() => T["Set Contact Communication Preference Task"])</h4>
+</header>

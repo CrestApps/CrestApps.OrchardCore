@@ -53,5 +53,4 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
 
         return 1;
     }
-
 }
