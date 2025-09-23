@@ -19,19 +19,22 @@ public sealed class OmnichannelActivityIndexProvider : IndexProvider<Omnichannel
             .For<OmnichannelActivityIndex>()
             .Map(activity => new OmnichannelActivityIndex()
             {
-                ActivityId = activity.ActivityId,
+                ItemId = activity.ItemId,
                 Channel = activity.Channel,
                 ChannelEndpoint = activity.ChannelEndpoint,
                 SubjectContentType = activity.SubjectContentType,
                 PreferredDestination = activity.PreferredDestination,
                 ContactContentType = activity.ContactContentType,
                 ContactContentItemId = activity.ContactContentItemId,
+                AIProfileName = activity.AIProfileName,
                 CampaignId = activity.CampaignId,
                 ScheduledUtc = activity.ScheduledUtc,
                 Attempts = activity.Attempts,
                 AssignedToId = activity.AssignedToId,
                 AssignedToUtc = activity.AssignedToUtc,
                 CreatedById = activity.CreatedById,
+                CompletedUtc = activity.CompletedUtc,
+                InteractionType = activity.InteractionType,
                 DispositionId = activity.DispositionId,
                 CreatedUtc = activity.CreatedUtc,
                 UrgencyLevel = activity.UrgencyLevel,

@@ -10,6 +10,7 @@ using OrchardCore.Modules;
 using OrchardCore.Settings;
 using OrchardCore.Sms.Models;
 using OrchardCore.Sms.Services;
+using YesSqlSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
 
@@ -27,7 +28,7 @@ internal static class TwilioEventGridEndpoint
     private static async Task<IResult> HandleAsync(
         HttpContext context,
         IEnumerable<IOmnichannelEventHandler> handlers,
-        YesSql.ISession session,
+        YesSqlSession session,
         IClock clock,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,

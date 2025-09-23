@@ -64,13 +64,13 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             model.Dispositions = dispositions.Select(d => new SelectListItem
             {
                 Text = d.DisplayText,
-                Value = d.Id,
-                Selected = campaign.DispositionIds is not null && campaign.DispositionIds.Contains(d.Id)
+                Value = d.ItemId,
+                Selected = campaign.DispositionIds is not null && campaign.DispositionIds.Contains(d.ItemId)
             }).OrderBy(x => x.Text)
             .ToArray();
 
             model.AIProfiles = (await _aiProfileCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText ?? x.Name, x.Name)).OrderBy(x => x.Text);
-            model.ChannelEndpoints = (await _channelEndpointsCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.Id)).OrderBy(x => x.Text);
+            model.ChannelEndpoints = (await _channelEndpointsCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.ItemId)).OrderBy(x => x.Text);
 
             model.InteractionTypes =
             [
@@ -95,7 +95,7 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
 
         var selectedDispositionIds = (model.Dispositions?.Where(x => x.Selected)
             .Select(d => d.Value) ?? [])
-            .Intersect(dispositions.Select(y => y.Id))
+            .Intersect(dispositions.Select(y => y.ItemId))
             .ToArray();
 
         if (selectedDispositionIds is null || selectedDispositionIds.Length == 0)
@@ -142,6 +142,7 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
         campaign.InteractionType = model.InteractionType;
         campaign.ChannelEndpoint = model.ChannelEndpoint;
         campaign.AIProfileName = model.AIProfileName;
+        campaign.InitialOutboundPromptPattern = model.InitialOutboundPromptPattern;
 
         return Edit(campaign, context);
     }

@@ -32,17 +32,20 @@ internal sealed class OmnichannelActivityContainerDisplayDriver : DisplayDriver<
                 .RenderWhen(() => Task.FromResult(!string.IsNullOrEmpty(container.Activity.Instructions))),
 
             View("OmnichannelActivityContainerScheduledActivity_Buttons_SummaryAdmin", container)
-                .Location("Actions:5").OnGroup("ScheduledActivity"),
+                .Location("Actions:5")
+                .OnGroup("ScheduledActivity"),
 
             View("OmnichannelActivityContainerScheduledActivity_DefaultMeta_SummaryAdmin", container)
-                .Location("Meta:5").OnGroup("ScheduledActivity"),
+                .Location("Meta:5")
+                .OnGroup("ScheduledActivity"),
 
             View("OmnichannelActivityContainerCompletedActivity_Fields_SummaryAdmin", container)
                 .Location("Content:1")
                 .OnGroup("CompletedActivity"),
 
             View("OmnichannelActivityContainerCompletedActivity_Buttons_SummaryAdmin", container)
-                .Location("Actions:5").OnGroup("CompletedActivity"),
+                .Location("Actions:5")
+                .OnGroup("CompletedActivity"),
 
             View("OmnichannelActivityContainerCompletedActivity_DefaultMeta_SummaryAdmin", container)
                 .Location("Meta:5")

@@ -1,4 +1,7 @@
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
@@ -9,6 +12,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Events;
 using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Tasks;
 using CrestApps.OrchardCore.Services;
+using CrestApps.OrchardCore.YesSql.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -30,7 +34,9 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>();
         services
             .AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchDisplayDriver>()
-            .AddScoped<ICatalog<OmnichannelActivityBatch>, OmnichannelActivityBatchCatalog>()
+            .AddDocumentCatalog<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName)
+            .AddScoped<IOmnichannelActivityStore, OmnichannelActivityStore>()
+            .AddScoped<IOmnichannelActivityManager, OmnichannelActivityManager>()
             .AddScoped<ICatalogEntryHandler<OmnichannelActivityBatch>, OmnichannelActivityBatchHandler>()
             .AddIndexProvider<OmnichannelActivityBatchIndexProvider>()
             .AddDataMigration<OmnichannelActivityBatchIndexMigrations>();

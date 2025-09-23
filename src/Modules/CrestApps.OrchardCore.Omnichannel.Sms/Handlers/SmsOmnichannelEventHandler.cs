@@ -1,8 +1,8 @@
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Indexes;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -21,6 +21,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly IAIProfileManager _aIProfileManager;
     private readonly ISession _session;
     private readonly ISmsService _smsService;
+    private readonly IOmnichannelActivityStore _omnichannelActivityStore;
     private readonly ILogger _logger;
 
     public SmsOmnichannelEventHandler(
@@ -29,6 +30,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IAIProfileManager aIProfileManager,
         ISession session,
         ISmsService smsService,
+        IOmnichannelActivityStore omnichannelActivityStore,
         ILogger<SmsOmnichannelEventHandler> logger)
     {
         _chatSessionManager = chatSessionManager;
@@ -36,6 +38,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _aIProfileManager = aIProfileManager;
         _session = session;
         _smsService = smsService;
+        _omnichannelActivityStore = omnichannelActivityStore;
         _logger = logger;
     }
 
@@ -48,13 +51,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             return;
         }
 
-        var activity = await _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
-            index.Channel == omnichannelEvent.Message.Channel &&
-            index.ChannelEndpoint == omnichannelEvent.Message.ServiceAddress &&
-            index.PreferredDestination == omnichannelEvent.Message.CustomerAddress, collection: OmnichannelConstants.CollectionName)
-            .OrderByDescending(x => x.ScheduledUtc)
-            .ThenByDescending(x => x.CreatedUtc)
-            .FirstOrDefaultAsync();
+        var activity = await _omnichannelActivityStore.GetAsync(omnichannelEvent.Message.Channel,
+            omnichannelEvent.Message.ServiceAddress,
+            omnichannelEvent.Message.CustomerAddress,
+            ActivityInteractionType.Automated);
 
         if (activity is null)
         {
@@ -64,25 +64,24 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         }
 
         // Always set the activity status to AwaitingAgentResponse when a new message is received from the customer to ensure we don't miss responding to them.
-
         activity.Status = ActivityStatus.AwaitingAgentResponse;
 
-        await _session.SaveAsync(activity);
+        await _omnichannelActivityStore.UpdateAsync(activity);
 
         if (string.IsNullOrWhiteSpace(activity.AIProfileName))
         {
-            _logger.LogWarning("The linked Activity {ActivityId} does not have an AI Profile associated with it. Cannot process incoming SMS message.", activity.ActivityId);
+            _logger.LogWarning("The linked Activity {ActivityId} does not have an AI Profile associated with it. Cannot process incoming SMS message.", activity.ItemId);
 
             return;
         }
 
-        var chatSession = await _session.Query<AIChatSession, OminchannelActivityAIChatSessionIndex>(index => index.ActivityId == activity.ActivityId).FirstOrDefaultAsync();
+        var chatSession = await _session.Query<AIChatSession, OminchannelActivityAIChatSessionIndex>(index => index.ActivityId == activity.ItemId).FirstOrDefaultAsync();
 
         var aiProfile = await _aIProfileManager.FindByIdAsync(activity.AIProfileName);
 
         if (aiProfile == null)
         {
-            _logger.LogWarning("The AI Profile {AIProfileId} associated with Activity {ActivityId} was not found. Cannot process incoming SMS message.", activity.AIProfileName, activity.ActivityId);
+            _logger.LogWarning("The AI Profile {AIProfileId} associated with Activity {ActivityId} was not found. Cannot process incoming SMS message.", activity.AIProfileName, activity.ItemId);
 
             if (chatSession is not null)
             {
@@ -131,14 +130,14 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                 if (string.IsNullOrWhiteSpace(bestChoice))
                 {
-                    _logger.LogWarning("AI Completion did not return any content for Activity {ActivityId} using AI Profile {AIProfileId}.", activity.ActivityId, aiProfile.Id);
+                    _logger.LogWarning("AI Completion did not return any content for Activity {ActivityId} using AI Profile {AIProfileId}.", activity.ItemId, aiProfile.ItemId);
 
                     return;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "AI Completion failed for Activity {ActivityId} using AI Profile {AIProfileId}.", activity.ActivityId, aiProfile.Id);
+                _logger.LogError(ex, "AI Completion failed for Activity {ActivityId} using AI Profile {AIProfileId}.", activity.ItemId, aiProfile.ItemId);
             }
         }
 
@@ -165,7 +164,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                     activity.Status = ActivityStatus.AwaitingCustomerAnswer;
 
-                    await _session.SaveAsync(activity);
+                    await _omnichannelActivityStore.UpdateAsync(activity);
 
                     break;
                 }
@@ -173,7 +172,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send SMS message to {To} for Activity {ActivityId}.", activity.PreferredDestination, activity.ActivityId);
+            _logger.LogError(ex, "Failed to send SMS message to {To} for Activity {ActivityId}.", activity.PreferredDestination, activity.ItemId);
         }
 
         await _session.SaveAsync(chatSession);

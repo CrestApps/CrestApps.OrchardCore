@@ -83,7 +83,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             model.Instructions = activity.Instructions;
             model.UrgencyLevel = activity.UrgencyLevel;
 
-            model.Campaigns = (await _campaignsCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.Id)).OrderBy(x => x.Text);
+            model.Campaigns = (await _campaignsCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.ItemId)).OrderBy(x => x.Text);
 
             var subjectContentTypes = new List<SelectListItem>();
             var contactContentTypes = new List<SelectListItem>();
@@ -210,7 +210,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
                 var dispositions = await _dispositionsCatalog.GetAsync(campaignDispositionIds);
 
-                var disposition = dispositions.FirstOrDefault(d => d.Id == processModel.DispositionId);
+                var disposition = dispositions.FirstOrDefault(d => d.ItemId == processModel.DispositionId);
 
                 if (disposition == null)
                 {

@@ -10,7 +10,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelActivityIndex>(table => table
-            .Column<string>("ActivityId", column => column.WithLength(26))
+            .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Channel", column => column.WithLength(50))
             .Column<string>("ChannelEndpoint", column => column.WithLength(255))
             .Column<string>("PreferredDestination", column => column.WithLength(255))

@@ -1,19 +1,14 @@
+using CrestApps.OrchardCore.Models;
 using OrchardCore.ContentManagement;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
-public sealed class OmnichannelActivity : Entity
+public sealed class OmnichannelActivity : CatalogItem
 {
     /// <summary>
     /// The primary key in the database.
     /// </summary>
     public long Id { get; set; }
-
-    /// <summary>
-    /// The unique identifier for the activity.
-    /// </summary>
-    public string ActivityId { get; set; }
 
     /// <summary>
     /// 'SMS', 'Chat', 'Email', etc.

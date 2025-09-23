@@ -1,12 +1,10 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using YesSql.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Indexes;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 
-public sealed class OmnichannelActivityBatchIndex : MapIndex
+public sealed class OmnichannelActivityBatchIndex : CatalogItemIndex
 {
-    public string BatchId { get; set; }
-
     public string Channel { get; set; }
 
     public string DisplayText { get; set; }

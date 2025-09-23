@@ -30,7 +30,7 @@ internal sealed class CompletedActivityEventDisplayDriver : ActivityDisplayDrive
         model.CampaignId = activity.CampaignId;
 
         model.Campaigns = (await _catalog.GetAllAsync())
-            .Select(x => new SelectListItem(x.DisplayText, x.Id))
+            .Select(x => new SelectListItem(x.DisplayText, x.ItemId))
             .OrderBy(x => x.Text);
     }
 

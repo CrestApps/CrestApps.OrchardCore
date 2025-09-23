@@ -15,6 +15,7 @@
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Sms.Abstractions" />
     <PackageReference Include="OrchardCore.Sms.Core" />
+    <PackageReference Include="YesSql.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

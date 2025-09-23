@@ -74,7 +74,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             model.Instructions = batch.Instructions;
             model.UrgencyLevel = batch.UrgencyLevel;
 
-            model.Campaigns = (await _catalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.Id)).OrderBy(x => x.Text);
+            model.Campaigns = (await _catalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.ItemId)).OrderBy(x => x.Text);
 
             var subjectContentTypes = new List<SelectListItem>();
             var contactContentTypes = new List<SelectListItem>();

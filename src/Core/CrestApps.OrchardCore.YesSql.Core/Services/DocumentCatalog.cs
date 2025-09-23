@@ -20,6 +20,12 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         Session = session;
     }
 
+    internal DocumentCatalog(ISession session, string collectionName)
+        : this(session)
+    {
+        CollectionName = collectionName;
+    }
+
     public async ValueTask<bool> DeleteAsync(T entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
@@ -62,12 +68,12 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
                 {
                     if (context.Sorted)
                     {
-                        query = query.With<INameAwareIndex>(x => x.Name.Contains(context.Name))
-                            .OrderBy(x => x.Name);
+                        query = query.With<INameAwareIndex>(x => x.DisplayText.Contains(context.Name))
+                            .OrderBy(x => x.DisplayText);
                     }
                     else
                     {
-                        query = query.With<INameAwareIndex>(x => x.Name.Contains(context.Name));
+                        query = query.With<INameAwareIndex>(x => x.DisplayText.Contains(context.Name));
                     }
                 }
                 else if (typeof(TIndex).IsAssignableFrom(typeof(IDisplayTextAwareIndex)))

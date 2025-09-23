@@ -24,6 +24,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.AI.Abstractions\CrestApps.OrchardCore.AI.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Omnichannel.Core\CrestApps.OrchardCore.Omnichannel.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

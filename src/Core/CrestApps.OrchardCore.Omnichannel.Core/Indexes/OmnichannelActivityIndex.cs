@@ -1,15 +1,13 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using YesSql.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Indexes;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 
-public sealed class OmnichannelActivityIndex : MapIndex
+public sealed class OmnichannelActivityIndex : CatalogItemIndex
 {
     public long DocumentId { get; set; }
 
     public ActivityInteractionType InteractionType { get; set; }
-
-    public string ActivityId { get; set; }
 
     public string Channel { get; set; }
 

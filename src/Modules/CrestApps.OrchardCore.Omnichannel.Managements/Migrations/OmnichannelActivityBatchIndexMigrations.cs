@@ -10,7 +10,7 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : DataMigration
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelActivityBatchIndex>(table => table
-                .Column<string>("BatchId", column => column.WithLength(26))
+                .Column<string>("ItemId", column => column.WithLength(26))
                 .Column<string>("Channel", column => column.WithLength(50))
                 .Column<string>("DisplayText", column => column.WithLength(255))
                 .Column<string>("Status", column => column.WithLength(20)),
@@ -23,7 +23,7 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : DataMigration
                 "DocumentId",
                 "Channel",
                 "DisplayText",
-                "BatchId"
+                "ItemId"
                 ),
             collection: OmnichannelConstants.CollectionName
         );

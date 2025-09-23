@@ -72,7 +72,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "An error occurred while processing the activity with id '{ActivityId}'", activity.ActivityId);
+                    logger.LogError(ex, "An error occurred while processing the activity with id '{ActivityId}'", activity.ItemId);
                 }
 
                 documentId = activity.Id;

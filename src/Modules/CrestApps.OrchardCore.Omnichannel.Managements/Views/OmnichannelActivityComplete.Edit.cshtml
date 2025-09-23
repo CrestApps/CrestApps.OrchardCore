@@ -67,7 +67,7 @@
                 <option value="">@T["Select a disposition"]</option>
                 @foreach (var disposition in Model.Dispositions)
                 {
-                    <option value="@disposition.Id" data-capture-date="@disposition.CaptureDate.ToString().ToLowerInvariant()">@disposition.DisplayText</option>
+                    <option value="@disposition.ItemId" data-capture-date="@disposition.CaptureDate.ToString().ToLowerInvariant()">@disposition.DisplayText</option>
                 }
             </select>
             <span asp-validation-for="DispositionId" class="text-danger"></span>

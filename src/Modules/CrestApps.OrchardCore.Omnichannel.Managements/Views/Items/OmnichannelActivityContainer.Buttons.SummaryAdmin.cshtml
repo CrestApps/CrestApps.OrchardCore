@@ -15,6 +15,6 @@
 @if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.CompleteActivity, Model.Value))
 {
     <a asp-action="Complete"
-       asp-route-id="@Model.Value.Activity.ActivityId"
+       asp-route-id="@Model.Value.Activity.ItemId"
        class="btn btn-success btn-sm">@T["Complete"]</a>
 }

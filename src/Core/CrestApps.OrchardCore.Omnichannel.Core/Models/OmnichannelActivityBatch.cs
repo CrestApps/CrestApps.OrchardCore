@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
-public sealed class OmnichannelActivityBatch : CatalogEntry, IDisplayTextAwareModel, ICloneable<OmnichannelActivityBatch>
+public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareModel, ICloneable<OmnichannelActivityBatch>
 {
     public string DisplayText { get; set; }
 
@@ -45,7 +45,7 @@ public sealed class OmnichannelActivityBatch : CatalogEntry, IDisplayTextAwareMo
     {
         return new OmnichannelActivityBatch()
         {
-            Id = Id,
+            ItemId = ItemId,
             DisplayText = DisplayText,
             CampaignId = CampaignId,
             Channel = Channel,

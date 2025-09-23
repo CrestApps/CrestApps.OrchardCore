@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
-public sealed class OmnichannelDisposition : CatalogEntry, IDisplayTextAwareModel, ICloneable<OmnichannelDisposition>
+public sealed class OmnichannelDisposition : CatalogItem, IDisplayTextAwareModel, ICloneable<OmnichannelDisposition>
 {
     public string DisplayText { get; set; }
 
@@ -21,7 +21,7 @@ public sealed class OmnichannelDisposition : CatalogEntry, IDisplayTextAwareMode
     {
         return new OmnichannelDisposition()
         {
-            Id = Id,
+            ItemId = ItemId,
             DisplayText = DisplayText,
             Description = Description,
             CaptureDate = CaptureDate,

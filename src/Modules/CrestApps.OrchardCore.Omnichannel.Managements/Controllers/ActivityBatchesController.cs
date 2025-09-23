@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -14,7 +15,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.BackgroundJobs;
 using OrchardCore.ContentManagement;
@@ -335,15 +335,16 @@ public sealed class ActivityBatchesController : Controller
         {
             // Query the contacts, and find the ones that do not already have an activity assigned.
             // Then, load the activities and assign them to the agents.
-            return HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("load-activity-batch", User.FindFirstValue(ClaimTypes.NameIdentifier), User.Identity.Name, model.Id, async (scope, loaderId, loaderUserName, batchId) =>
+            return HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("load-activity-batch", User.FindFirstValue(ClaimTypes.NameIdentifier), User.Identity.Name, model.ItemId, async (scope, loaderId, loaderUserName, batchId) =>
             {
                 var catalog = scope.ServiceProvider.GetRequiredService<ICatalog<OmnichannelActivityBatch>>();
+
                 long documentId = 0;
                 var batch = await catalog.FindByIdAsync(batchId);
 
                 if (batch.Status != OmnichannelActivityBatchStatus.Started)
                 {
-                    throw new InvalidOperationException($"Unable to load activities for batch with the ID '{batch.Id}' since it's status is not '{nameof(OmnichannelActivityBatchStatus.Started)}'.");
+                    throw new InvalidOperationException($"Unable to load activities for batch with the ID '{batch.ItemId}' since it's status is not '{nameof(OmnichannelActivityBatchStatus.Started)}'.");
                 }
 
                 batch.Status = OmnichannelActivityBatchStatus.Loading;
@@ -364,7 +365,7 @@ public sealed class ActivityBatchesController : Controller
 
                     await catalog.UpdateAsync(batch);
 
-                    logger.LogError("No valid users were found to assign the activities for the batch with ID '{BatchId}'.", batch.Id);
+                    logger.LogError("No valid users were found to assign the activities for the batch with ID '{BatchId}'.", batch.ItemId);
                     return;
                 }
 
@@ -374,6 +375,8 @@ public sealed class ActivityBatchesController : Controller
                 var campaign = await campaignCatalog.FindByIdAsync(batch.CampaignId);
 
                 var activityCounter = 0;
+
+                var activityManager = scope.ServiceProvider.GetRequiredService<IOmnichannelActivityManager>();
 
                 while (true)
                 {
@@ -442,32 +445,31 @@ public sealed class ActivityBatchesController : Controller
 
                         documentId = Math.Min(documentId, contact.Id);
 
-                        var activity = new OmnichannelActivity
-                        {
-                            ActivityId = IdGenerator.GenerateId(),
-                            InteractionType = campaign.InteractionType,
-                            Channel = batch.Channel,
-                            ContactContentItemId = contact.ContentItemId,
-                            ContactContentType = batch.ContactContentType,
-                            SubjectContentType = batch.SubjectContentType,
-                            PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, batch.Channel),
-                            ChannelEndpoint = campaign.ChannelEndpoint,
-                            AIProfileName = campaign.AIProfileName,
-                            CampaignId = batch.CampaignId,
-                            ScheduledUtc = scheduledUtc,
-                            AssignedToId = user.UserId,
-                            AssignedToUsername = user.UserName,
-                            AssignedToUtc = now,
-                            Instructions = batch.Instructions,
-                            CreatedUtc = now,
-                            CreatedById = loaderId,
-                            CreatedByUsername = loaderUserName,
-                            UrgencyLevel = batch.UrgencyLevel,
-                            Status = ActivityStatus.NotStated,
-                        };
+                        var activity = await activityManager.NewAsync();
+
+                        activity.InteractionType = campaign.InteractionType;
+                        activity.Channel = batch.Channel;
+                        activity.ContactContentItemId = contact.ContentItemId;
+                        activity.ContactContentType = batch.ContactContentType;
+                        activity.SubjectContentType = batch.SubjectContentType;
+                        activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, batch.Channel);
+                        activity.ChannelEndpoint = campaign.ChannelEndpoint;
+                        activity.AIProfileName = campaign.AIProfileName;
+                        activity.CampaignId = batch.CampaignId;
+                        activity.ScheduledUtc = scheduledUtc;
+                        activity.AssignedToId = user.UserId;
+                        activity.AssignedToUsername = user.UserName;
+                        activity.AssignedToUtc = now;
+                        activity.Instructions = batch.Instructions;
+                        activity.CreatedUtc = now;
+                        activity.CreatedById = loaderId;
+                        activity.CreatedByUsername = loaderUserName;
+                        activity.UrgencyLevel = batch.UrgencyLevel;
+                        activity.Status = ActivityStatus.NotStated;
 
                         batch.TotalLoaded++;
 
+                        await activityManager.CreateAsync(activity);
                         await session.SaveAsync(activity, collection: OmnichannelConstants.CollectionName);
                     }
 

@@ -70,7 +70,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         }
 
         var campaign = await _campaignCatalog.FindByIdAsync(activity.CampaignId)
-            ?? throw new InvalidOperationException($"Unable to find the campaign '{activity.CampaignId}' that is associated with the activity '{activity.ActivityId}'.");
+            ?? throw new InvalidOperationException($"Unable to find the campaign '{activity.CampaignId}' that is associated with the activity '{activity.ItemId}'.");
 
         var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
@@ -92,7 +92,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 
         var smsResult = await _smsService.SendAsync(new SmsMessage
         {
-            // From = activity.ChannelEndpoint,
+            From = activity.ChannelEndpoint,
             To = activity.PreferredDestination,
             Body = initialPrompt,
         });

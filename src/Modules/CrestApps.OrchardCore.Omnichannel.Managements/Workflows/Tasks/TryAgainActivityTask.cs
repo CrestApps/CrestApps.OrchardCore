@@ -81,7 +81,7 @@ public sealed class TryAgainActivityTask : TaskActivity<TryAgainActivityTask>
         var now = _clock.UtcNow;
         var nextAttempt = new OmnichannelActivity()
         {
-            ActivityId = IdGenerator.GenerateId(),
+            ItemId = IdGenerator.GenerateId(),
             Channel = activity.Channel,
             ChannelEndpoint = activity.ChannelEndpoint,
             InteractionType = activity.InteractionType,
