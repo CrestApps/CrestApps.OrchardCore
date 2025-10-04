@@ -18,6 +18,8 @@ public class OmnichannelCampaignViewModel
 
     public string InitialOutboundPromptPattern { get; set; }
 
+    public string Channel { get; set; }
+
     public SelectListItem[] Dispositions { get; set; }
 
     [BindNever]
@@ -25,6 +27,9 @@ public class OmnichannelCampaignViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> InteractionTypes { get; set; }
+
+    [BindNever]
+    public IEnumerable<SelectListItem> Channels { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> ChannelEndpoints { get; set; }

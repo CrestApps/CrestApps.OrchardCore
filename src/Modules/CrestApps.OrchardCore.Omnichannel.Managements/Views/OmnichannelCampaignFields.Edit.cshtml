@@ -20,6 +20,14 @@
     </div>
 </div>
 
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Channel" class="@Orchard.GetLabelClasses()">@T["Channel"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="Channel" asp-items="Model.Channels" class="form-select"></select>
+        <span asp-validation-for="Channel" class="text-danger"></span>
+    </div>
+</div>
+
 <div class="@Orchard.GetWrapperClasses("automated-interaction-type", Model.InteractionType == ActivityInteractionType.Manual ? "d-none" : string.Empty)">
     <label asp-for="ChannelEndpoint" class="@Orchard.GetLabelClasses()">@T["Channel endpoint"]</label>
     <div class="@Orchard.GetEndClasses()">

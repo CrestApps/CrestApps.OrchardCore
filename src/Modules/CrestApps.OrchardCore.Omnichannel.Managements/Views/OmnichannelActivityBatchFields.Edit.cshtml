@@ -20,16 +20,6 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Channel" class="@Orchard.GetLabelClasses()">@T["Channel"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <select asp-for="Channel" asp-items="Model.Channels" class="form-select">
-            <option value="">@T["Select a channel"]</option>
-        </select>
-        <span asp-validation-for="Channel" class="text-danger"></span>
-    </div>
-</div>
-
-<div class="@Orchard.GetWrapperClasses()">
     <label asp-for="CampaignId" class="@Orchard.GetLabelClasses()">@T["Campaign"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">

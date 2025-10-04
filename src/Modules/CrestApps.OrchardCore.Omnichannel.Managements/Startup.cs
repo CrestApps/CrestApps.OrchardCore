@@ -78,6 +78,8 @@ public sealed class Startup : StartupBase
             .AddDataMigration<OmnichannelActivityIndexMigrations>();
 
         services.AddActivity<TryAgainActivityTask, TryAgainActivityTaskDisplayDriver>();
+        services.AddActivity<NewActivityTask, NewActivityTaskDisplayDriver>();
+
         services.AddActivity<CompletedActivityEvent, CompletedActivityEventDisplayDriver>();
         services.AddActivity<SetContactCommunicationPreferenceActivityTask, SetContactCommunicationPreferenceActivityTaskDisplayDriver>();
     }

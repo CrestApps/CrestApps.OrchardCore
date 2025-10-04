@@ -19,6 +19,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     private readonly IAIProfileManager _aIProfileManager;
     private readonly IAIChatSessionManager _aIChatSessionManager;
     private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
+    private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointCatalog;
     private readonly ISmsService _smsService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
@@ -29,6 +30,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         IAIProfileManager aIProfileManager,
         IAIChatSessionManager aIChatSessionManager,
         ICatalog<OmnichannelCampaign> campaignCatalog,
+        ICatalog<OmnichannelChannelEndpoint> channelEndpointCatalog,
         ISmsService smsService,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
@@ -37,6 +39,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         _aIProfileManager = aIProfileManager;
         _aIChatSessionManager = aIChatSessionManager;
         _campaignCatalog = campaignCatalog;
+        _channelEndpointCatalog = channelEndpointCatalog;
         _smsService = smsService;
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
@@ -64,7 +67,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 
         if (chatSession is null)
         {
-            chatSession = await _aIChatSessionManager.NewAsync(profile);
+            chatSession = await _aIChatSessionManager.NewAsync(profile, NewAIChatSessionContext.Robots);
 
             chatSession.Title = S["Automated SMS Activity"];
         }
@@ -90,12 +93,23 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             throw new InvalidOperationException("The initial generated prompt is empty.");
         }
 
-        var smsResult = await _smsService.SendAsync(new SmsMessage
+        var message = new SmsMessage
         {
-            From = activity.ChannelEndpoint,
             To = activity.PreferredDestination,
             Body = initialPrompt,
-        });
+        };
+
+        if (!string.IsNullOrEmpty(activity.ChannelEndpoint))
+        {
+            var endpoint = await _channelEndpointCatalog.FindByIdAsync(activity.ChannelEndpoint);
+
+            if (endpoint is not null && endpoint.Channel == activity.Channel)
+            {
+                message.From = endpoint.Value;
+            }
+        }
+
+        var smsResult = await _smsService.SendAsync(message);
 
         if (smsResult.Succeeded)
         {

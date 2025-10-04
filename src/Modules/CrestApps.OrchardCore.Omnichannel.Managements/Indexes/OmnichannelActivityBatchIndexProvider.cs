@@ -18,7 +18,6 @@ internal sealed class OmnichannelActivityBatchIndexProvider : IndexProvider<Omni
             .For<OmnichannelActivityBatchIndex>()
             .Map(batch => new OmnichannelActivityBatchIndex
             {
-                Channel = batch.Channel,
                 ItemId = batch.ItemId,
                 DisplayText = !string.IsNullOrEmpty(batch.DisplayText)
                     ? batch.DisplayText.Substring(0, Math.Min(255, batch.DisplayText.Length))

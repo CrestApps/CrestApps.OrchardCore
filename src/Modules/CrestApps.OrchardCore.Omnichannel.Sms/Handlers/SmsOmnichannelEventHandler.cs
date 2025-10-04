@@ -99,7 +99,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             return;
         }
 
-        chatSession ??= await _chatSessionManager.NewAsync(aiProfile);
+        chatSession ??= await _chatSessionManager.NewAsync(aiProfile, NewAIChatSessionContext.Robots);
 
         chatSession.Prompts.Add(new AIChatSessionPrompt
         {

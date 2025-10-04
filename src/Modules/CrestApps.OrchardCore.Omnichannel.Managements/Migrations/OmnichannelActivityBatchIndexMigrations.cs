@@ -11,7 +11,6 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : DataMigration
     {
         await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelActivityBatchIndex>(table => table
                 .Column<string>("ItemId", column => column.WithLength(26))
-                .Column<string>("Channel", column => column.WithLength(50))
                 .Column<string>("DisplayText", column => column.WithLength(255))
                 .Column<string>("Status", column => column.WithLength(20)),
             collection: OmnichannelConstants.CollectionName
@@ -21,7 +20,6 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : DataMigration
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityBatchIndex>(table => table
             .CreateIndex("IDX_OmnichannelActivityBatchIndex_DocumentId",
                 "DocumentId",
-                "Channel",
                 "DisplayText",
                 "ItemId"
                 ),

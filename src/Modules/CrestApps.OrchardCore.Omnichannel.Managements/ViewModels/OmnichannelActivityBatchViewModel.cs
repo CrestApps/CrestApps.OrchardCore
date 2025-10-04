@@ -9,8 +9,6 @@ public class OmnichannelActivityBatchViewModel
 {
     public string DisplayText { get; set; }
 
-    public string Channel { get; set; }
-
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
     public DateTime? ScheduleAt { get; set; }
 
@@ -48,9 +46,6 @@ public class OmnichannelActivityBatchViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> Users { get; set; }
-
-    [BindNever]
-    public IEnumerable<SelectListItem> Channels { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> UrgencyLevels { get; set; }

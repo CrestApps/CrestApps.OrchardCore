@@ -24,17 +24,18 @@ public interface IAIChatSessionManager
     /// A task representing the asynchronous operation. The task result is a list of <see cref="AIChatSessionResult"/> objects,
     /// which represent the top sessions based on the query context and pagination parameters.
     /// </returns>
-    Task<AIChatSessionResult> PageAsync(int page, int pageSize, AIChatSessionQueryContext context);
+    Task<AIChatSessionResult> PageAsync(int page, int pageSize, AIChatSessionQueryContext context = null);
 
     /// <summary>
     /// Asynchronously creates a new AI chat session for the specified AI chat profile.
     /// </summary>
     /// <param name="profile">The AI chat profile for which the new session will be created. Must not be null.</param>
+    /// <param name="context">The request context</param>
     /// <returns>
     /// A task representing the asynchronous operation. The task result is a new <see cref="AIChatSession"/>
     /// associated with the provided profile.
     /// </returns>
-    Task<AIChatSession> NewAsync(AIProfile profile);
+    Task<AIChatSession> NewAsync(AIProfile profile, NewAIChatSessionContext context = null);
 
     /// <summary>
     /// Asynchronously saves or updates the specified AI chat session.

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Services;
@@ -55,8 +56,8 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             model.Description = campaign.Description;
             model.InteractionType = campaign.InteractionType;
             model.AIProfileName = campaign.AIProfileName;
+            model.Channel = campaign.Channel;
             model.ChannelEndpoint = campaign.ChannelEndpoint;
-            model.AIProfileName = campaign.AIProfileName;
             model.InitialOutboundPromptPattern = campaign.InitialOutboundPromptPattern;
 
             var dispositions = await _dispositionsCatalog.GetAllAsync();
@@ -70,6 +71,12 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             .ToArray();
 
             model.AIProfiles = (await _aiProfileCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText ?? x.Name, x.Name)).OrderBy(x => x.Text);
+            model.Channels =
+            [
+                new(S["Phone"], OmnichannelConstants.Channels.Phone),
+                new(S["SMS"], OmnichannelConstants.Channels.Sms),
+                new(S["Email"], OmnichannelConstants.Channels.Email),
+            ];
             model.ChannelEndpoints = (await _channelEndpointsCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.ItemId)).OrderBy(x => x.Text);
 
             model.InteractionTypes =
@@ -107,11 +114,16 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             campaign.DispositionIds = selectedDispositionIds;
         }
 
+        if (string.IsNullOrEmpty(model.Channel))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["Channel field is required."]);
+        }
+
         if (model.InteractionType == ActivityInteractionType.Automated)
         {
             if (string.IsNullOrEmpty(model.ChannelEndpoint))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChannelEndpoint), S["Channel endpoint at field is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChannelEndpoint), S["Channel endpoint field is required for automated activities."]);
             }
 
             if (string.IsNullOrEmpty(model.AIProfileName))
@@ -121,6 +133,7 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             else
             {
                 var aiProfile = await _aiProfileCatalog.FindByNameAsync(model.AIProfileName);
+
                 if (aiProfile == null)
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileName), S["The selected AI Profile is invalid."]);
@@ -140,6 +153,7 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
         campaign.DisplayText = model.DisplayText?.Trim();
         campaign.Description = model.Description?.Trim();
         campaign.InteractionType = model.InteractionType;
+        campaign.Channel = model.Channel;
         campaign.ChannelEndpoint = model.ChannelEndpoint;
         campaign.AIProfileName = model.AIProfileName;
         campaign.InitialOutboundPromptPattern = model.InitialOutboundPromptPattern;

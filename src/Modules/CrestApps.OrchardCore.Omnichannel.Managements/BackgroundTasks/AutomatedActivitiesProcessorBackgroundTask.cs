@@ -22,9 +22,6 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
 
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        // Get all activities that are scheduled to run and process them.
-        var session = serviceProvider.GetRequiredService<ISession>();
-        var clock = serviceProvider.GetRequiredService<IClock>();
         var processors = serviceProvider.GetService<IEnumerable<IOmnichannelProcessor>>()
             .ToDictionary(x => x.Channel, StringComparer.OrdinalIgnoreCase);
 
@@ -37,9 +34,11 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
             return;
         }
 
+        var session = serviceProvider.GetRequiredService<ISession>();
+        var clock = serviceProvider.GetRequiredService<IClock>();
+
         var now = clock.UtcNow;
         long documentId = 0;
-
         var iterationCount = 0;
 
         while (true)

@@ -9,8 +9,6 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
 
     public string CampaignId { get; set; }
 
-    public string Channel { get; set; }
-
     public string SubjectContentType { get; set; }
 
     public string ContactContentType { get; set; }
@@ -48,7 +46,6 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             ItemId = ItemId,
             DisplayText = DisplayText,
             CampaignId = CampaignId,
-            Channel = Channel,
             SubjectContentType = SubjectContentType,
             ContactContentType = ContactContentType,
             UserIds = UserIds?.ToArray(),

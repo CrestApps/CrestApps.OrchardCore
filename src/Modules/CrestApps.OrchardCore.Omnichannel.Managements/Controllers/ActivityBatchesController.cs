@@ -382,15 +382,15 @@ public sealed class ActivityBatchesController : Controller
                 {
                     var contactQuery = readonlySession.Query<ContentItem>();
 
-                    if (batch.Channel == OmnichannelConstants.Channels.Sms)
+                    if (campaign.Channel == OmnichannelConstants.Channels.Sms)
                     {
                         contactQuery = contactQuery.With<OmnichannelContactIndex>(index => index.PrimaryCellPhoneNumber != null);
                     }
-                    else if (batch.Channel == OmnichannelConstants.Channels.Phone)
+                    else if (campaign.Channel == OmnichannelConstants.Channels.Phone)
                     {
                         contactQuery = contactQuery.With<OmnichannelContactIndex>(index => index.PrimaryCellPhoneNumber != null || index.PrimaryHomePhoneNumber != null);
                     }
-                    else if (batch.Channel == OmnichannelConstants.Channels.Email)
+                    else if (campaign.Channel == OmnichannelConstants.Channels.Email)
                     {
                         contactQuery = contactQuery.With<OmnichannelContactIndex>(index => index.PrimaryEmailAddress != null);
                     }
@@ -448,11 +448,11 @@ public sealed class ActivityBatchesController : Controller
                         var activity = await activityManager.NewAsync();
 
                         activity.InteractionType = campaign.InteractionType;
-                        activity.Channel = batch.Channel;
+                        activity.Channel = campaign.Channel;
                         activity.ContactContentItemId = contact.ContentItemId;
                         activity.ContactContentType = batch.ContactContentType;
                         activity.SubjectContentType = batch.SubjectContentType;
-                        activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, batch.Channel);
+                        activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, campaign.Channel);
                         activity.ChannelEndpoint = campaign.ChannelEndpoint;
                         activity.AIProfileName = campaign.AIProfileName;
                         activity.CampaignId = batch.CampaignId;

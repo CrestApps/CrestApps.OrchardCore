@@ -18,7 +18,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<OmnichannelActivityBatch>
 {
-    private readonly ICatalog<OmnichannelCampaign> _catalog;
+    private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
     private readonly UserManager<IUser> _userManager;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -26,13 +26,13 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     internal readonly IStringLocalizer S;
 
     public OmnichannelActivityBatchDisplayDriver(
-        ICatalog<OmnichannelCampaign> catalog,
+        ICatalog<OmnichannelCampaign> campaignCatalog,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
         IContentDefinitionManager contentDefinitionManager,
         IStringLocalizer<OmnichannelActivityBatchDisplayDriver> stringLocalizer)
     {
-        _catalog = catalog;
+        _campaignCatalog = campaignCatalog;
         _userManager = userManager;
         _displayNameProvider = displayNameProvider;
         _contentDefinitionManager = contentDefinitionManager;
@@ -62,7 +62,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         {
             model.DisplayText = batch.DisplayText;
             model.CampaignId = batch.CampaignId;
-            model.Channel = batch.Channel;
             model.ScheduleAt = batch.ScheduleAt;
             model.SubjectContentType = batch.SubjectContentType;
             model.ContactContentType = batch.ContactContentType;
@@ -74,7 +73,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             model.Instructions = batch.Instructions;
             model.UrgencyLevel = batch.UrgencyLevel;
 
-            model.Campaigns = (await _catalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.ItemId)).OrderBy(x => x.Text);
+            model.Campaigns = (await _campaignCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.ItemId)).OrderBy(x => x.Text);
 
             var subjectContentTypes = new List<SelectListItem>();
             var contactContentTypes = new List<SelectListItem>();
@@ -115,13 +114,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 new(S["Very high"], nameof(ActivityUrgencyLevel.VeryHigh)),
             ];
 
-            model.Channels =
-            [
-                new(S["Phone"], OmnichannelConstants.Channels.Phone),
-                new(S["SMS"], OmnichannelConstants.Channels.Sms),
-                new(S["Email"], OmnichannelConstants.Channels.Email),
-            ];
-
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
             model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
             model.Users = usersListItems.OrderBy(x => x.Text);
@@ -142,11 +134,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         if (string.IsNullOrEmpty(model.SubjectContentType))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Subject is required."]);
-        }
-
-        if (string.IsNullOrEmpty(model.Channel))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["Channel is required."]);
         }
 
         if (string.IsNullOrEmpty(model.CampaignId))
@@ -181,7 +168,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         batch.IncludeDoNoSms = model.IncludeDoNoSms;
         batch.IncludeDoNoEmail = model.IncludeDoNoEmail;
         batch.PreventDuplicates = model.PreventDuplicates;
-        batch.Channel = model.Channel;
 
         if (model.ScheduleAt.HasValue)
         {

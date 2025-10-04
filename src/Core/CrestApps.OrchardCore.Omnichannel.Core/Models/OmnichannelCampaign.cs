@@ -13,6 +13,8 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
 
     public string AIProfileName { get; set; }
 
+    public string Channel { get; set; }
+
     public string ChannelEndpoint { get; set; }
 
     /// <summary>
@@ -37,6 +39,7 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
             Description = Description,
             InteractionType = InteractionType,
             AIProfileName = AIProfileName,
+            Channel = Channel,
             ChannelEndpoint = ChannelEndpoint,
             InitialOutboundPromptPattern = InitialOutboundPromptPattern,
             CreatedUtc = CreatedUtc,
