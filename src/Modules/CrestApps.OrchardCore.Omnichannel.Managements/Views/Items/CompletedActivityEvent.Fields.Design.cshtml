@@ -1,0 +1,8 @@
+@model ActivityViewModel<CompletedActivityEvent>
+@using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Events
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+<header>
+    <h4><i class="fa fa-circle-exclamation"></i>@Model.Activity.GetTitleOrDefault(() => T["Completed Omnichannel Activity Event"])</h4>
+</header>
