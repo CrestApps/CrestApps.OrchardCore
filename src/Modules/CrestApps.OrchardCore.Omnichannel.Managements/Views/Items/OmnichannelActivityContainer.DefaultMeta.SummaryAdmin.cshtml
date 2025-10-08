@@ -1,0 +1,58 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.Omnichannel.Core
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.Contents
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OmnichannelActivityContainer>
+
+@inject IAuthorizationService AuthorizationService
+
+@{
+    var scheduledAt = Model.Value.Activity.ScheduledUtc.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
+}
+
+@if (Model.Value.Activity.Attempts > 1)
+{
+    <span class="badge bg-secondary" title="@T["Attempt number"]">@T.ToOrdinal(Model.Value.Activity.Attempts)</span>
+}
+
+<span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Scheduled at"]">
+    <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+    <time datetime="@scheduledAt">@await DisplayAsync(await New.DateTime(Utc: Model.Value.Activity.ScheduledUtc, Format: "g"))</time>
+</span>
+
+@if (!string.IsNullOrEmpty(Model.Value.Contact?.DisplayText))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Contact"]">
+        <i class="fa-solid fa-address-book text-secondary me-1" aria-hidden="true"></i>
+        @if (await AuthorizationService.AuthorizeAsync(User, CommonPermissions.EditContent, Model.Value.Contact))
+        {
+            <a edit-for="@Model.Value.Contact" asp-route-returnUrl="@FullRequestPath">@Model.Value.Contact.DisplayText</a>
+        }
+        else if (await AuthorizationService.AuthorizeAsync(User, CommonPermissions.ViewContent, Model.Value.Contact))
+        {
+            <a display-for="@Model.Value.Contact" asp-route-returnUrl="@FullRequestPath">@Model.Value.Contact.DisplayText</a>
+        }
+        else
+        {
+            @Model.Value.Contact?.DisplayText
+        }
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.Activity.PreferredDestination))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Communication target"]">
+        <i class="fa-solid fa-comments text-secondary me-1" aria-hidden="true"></i>@Model.Value.Activity.PreferredDestination
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.Activity.Channel))
+{
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Channel"]">
+        <i class="fa-solid fa-comments text-secondary me-1" aria-hidden="true"></i>@Model.Value.Activity.Channel
+    </span>
+}

@@ -1,0 +1,47 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels
+@using OrchardCore
+
+@model NewActivityTaskViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="CampaignId" class="@Orchard.GetLabelClasses()">@T["Campaign"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">
+            <option value="">@T["Same as previous activity"]</option>
+        </select>
+        <span asp-validation-for="CampaignId" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="SubjectContentType" class="@Orchard.GetLabelClasses()">@T["Subject content type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select">
+            <option value="">@T["Same as previous activity"]</option>
+        </select>
+        <span asp-validation-for="SubjectContentType" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label class="form-label" asp-for="NormalizedUserName">@T["Activity owner"]</label>
+    <select class="form-select" asp-for="NormalizedUserName" asp-items="Model.Users">
+        <option value="">@T["Same owner as the completed activity"]</option>
+    </select>
+    <span class="hint">@T["Optionally, you may assign the new activity to another user."]</span>
+</div>
+
+<div class="mb-3">
+    <label class="form-label" asp-for="UrgencyLevel">@T["Urgency level"]</label>
+    <select class="form-select" asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels">
+        <option value="">@T["Same level as the completed activity"]</option>
+    </select>
+    <span class="hint">@T["Optionally, you may assign the new activity a different urgency level."]</span>
+</div>
+
+<div class="mb-3" asp-validation-class-for="DefaultScheduleHours">
+    <label asp-for="DefaultScheduleHours" class="form-label">@T["Default schedule (in hour)"]</label>
+    <input type="number" asp-for="DefaultScheduleHours" class="form-control" min="1" />
+    <span asp-validation-for="DefaultScheduleHours"></span>
+    <span class="hint">@T["If no next schedule date is selected, this value (in hours) determines when the next attempt will be scheduled. For example, 24 = 1 day from now."]</span>
+</div>
