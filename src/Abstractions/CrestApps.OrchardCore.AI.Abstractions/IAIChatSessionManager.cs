@@ -30,11 +30,12 @@ public interface IAIChatSessionManager
     /// Asynchronously creates a new AI chat session for the specified AI chat profile.
     /// </summary>
     /// <param name="profile">The AI chat profile for which the new session will be created. Must not be null.</param>
+    /// <param name="context"></param>
     /// <returns>
     /// A task representing the asynchronous operation. The task result is a new <see cref="AIChatSession"/>
     /// associated with the provided profile.
     /// </returns>
-    Task<AIChatSession> NewAsync(AIProfile profile);
+    Task<AIChatSession> NewAsync(AIProfile profile, NewAIChatSessionContext context);
 
     /// <summary>
     /// Asynchronously saves or updates the specified AI chat session.
