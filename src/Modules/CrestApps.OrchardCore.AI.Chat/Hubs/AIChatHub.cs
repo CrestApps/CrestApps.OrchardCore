@@ -204,7 +204,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         }
 
         // At this point, we need to create a new session.
-        var chatSession = await sessionManager.NewAsync(profile);
+        var chatSession = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
 
         if (profile.TitleType == AISessionTitleType.Generated)
         {

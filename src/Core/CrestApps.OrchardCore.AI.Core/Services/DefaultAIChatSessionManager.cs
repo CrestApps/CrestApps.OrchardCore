@@ -27,9 +27,10 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         _session = session;
     }
 
-    public async Task<AIChatSession> NewAsync(AIProfile profile)
+    public async Task<AIChatSession> NewAsync(AIProfile profile, NewAIChatSessionContext context)
     {
         ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(context);
 
         var chatSession = new AIChatSession
         {
@@ -44,7 +45,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         {
             chatSession.UserId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         }
-        else
+        else if (!context.AllowRobots)
         {
             var clientId = await _clientIPAddressAccessor.GetClientIdAsync(_httpContextAccessor.HttpContext);
 
