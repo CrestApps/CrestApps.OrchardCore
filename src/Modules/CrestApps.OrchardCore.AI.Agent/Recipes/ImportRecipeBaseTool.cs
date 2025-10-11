@@ -49,7 +49,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
             return ValueTask.FromResult<object>(MissingArgument());
         }
 
-        return ProcessRecipeAsync(recipe, cancellationToken);
+        return ProcessRecipeAsync(recipe);
     }
 
     protected static string MissingArgument(string name = "recipe")
@@ -57,7 +57,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
         return $"Unable to find a '{name}' argument in the arguments parameter.";
     }
 
-    protected async ValueTask<object> ProcessRecipeAsync(string json, CancellationToken cancellationToken)
+    protected async ValueTask<object> ProcessRecipeAsync(string json)
     {
         var data = JsonSerializer.Deserialize<JsonObject>(json, JsonHelpers.RecipeSerializerOptions);
 

@@ -1,0 +1,8 @@
+[
+  {
+    "inputs": [
+      "Assets/js/payment-option-selection.js"
+    ],
+    "output": "wwwroot/Scripts/payment-option-selection.js"
+  }
+]
