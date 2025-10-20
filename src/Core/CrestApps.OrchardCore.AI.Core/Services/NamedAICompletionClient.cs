@@ -102,23 +102,13 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             metadata = _defaultMetadata;
         }
 
-        var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
-
-        var chatMessages = messages.Where(x => (x.Role == ChatRole.User || x.Role == ChatRole.Assistant) && !string.IsNullOrEmpty(x.Text));
-
-        var skip = GetTotalMessagesToSkip(chatMessages.Count(), pastMessageCount);
-
-        var prompts = new List<ChatMessage>()
-        {
-            new(ChatRole.System, GetSystemMessage(context, metadata))
-        }.Concat(chatMessages.Skip(skip).Take(pastMessageCount))
-        .ToList();
-
         try
         {
             var chatClient = await BuildClientAsync(connectionName, context, metadata, deploymentName);
 
             var chatOptions = await GetChatOptionsAsync(context, metadata, deploymentName);
+
+            var prompts = GetPrompts(messages, context, metadata);
 
             return await chatClient.GetResponseAsync(prompts, chatOptions, cancellationToken);
         }
@@ -163,21 +153,11 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             metadata = _defaultMetadata;
         }
 
-        var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
-
-        var chatMessages = messages.Where(x => (x.Role == ChatRole.User || x.Role == ChatRole.Assistant) && !string.IsNullOrEmpty(x.Text));
-
-        var skip = GetTotalMessagesToSkip(chatMessages.Count(), pastMessageCount);
-
-        var prompts = new List<ChatMessage>()
-        {
-            new(ChatRole.System, GetSystemMessage(context, metadata))
-        }.Concat(chatMessages.Skip(skip).Take(pastMessageCount))
-        .ToList();
-
         var chatClient = await BuildClientAsync(connectionName, context, metadata, deploymentName);
 
         var chatOptions = await GetChatOptionsAsync(context, metadata, deploymentName);
+
+        var prompts = GetPrompts(messages, context, metadata);
 
         await foreach (var update in chatClient.GetStreamingResponseAsync(prompts, chatOptions, cancellationToken))
         {
@@ -185,15 +165,42 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         }
     }
 
+    private static List<ChatMessage> GetPrompts(IEnumerable<ChatMessage> messages, AICompletionContext context, AIProfileMetadata metadata)
+    {
+        var chatMessages = messages.Where(x => (x.Role == ChatRole.User || x.Role == ChatRole.Assistant) && !string.IsNullOrEmpty(x.Text));
+
+        var prompts = new List<ChatMessage>();
+
+        var systemMessage = GetSystemMessage(context, metadata);
+
+        if (!string.IsNullOrEmpty(systemMessage))
+        {
+            prompts.Add(new ChatMessage(ChatRole.System, systemMessage));
+        }
+
+        if (metadata.PastMessagesCount > 1)
+        {
+            var skip = GetTotalMessagesToSkip(chatMessages.Count(), metadata.PastMessagesCount.Value);
+
+            prompts.AddRange(chatMessages.Skip(skip).Take(metadata.PastMessagesCount.Value));
+        }
+        else
+        {
+            prompts.AddRange(chatMessages);
+        }
+
+        return prompts;
+    }
+
     private async Task<ChatOptions> GetChatOptionsAsync(AICompletionContext context, AIProfileMetadata metadata, string deploymentName)
     {
         var chatOptions = new ChatOptions()
         {
-            Temperature = metadata.Temperature ?? _defaultOptions.Temperature,
-            TopP = metadata.TopP ?? _defaultOptions.TopP,
-            FrequencyPenalty = metadata.FrequencyPenalty ?? _defaultOptions.FrequencyPenalty,
-            PresencePenalty = metadata.PresencePenalty ?? _defaultOptions.PresencePenalty,
-            MaxOutputTokens = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
+            Temperature = metadata.Temperature,
+            TopP = metadata.TopP,
+            FrequencyPenalty = metadata.FrequencyPenalty,
+            PresencePenalty = metadata.PresencePenalty,
+            MaxOutputTokens = metadata.MaxTokens,
         };
 
         var supportFunctions = SupportFunctionInvocation(context, deploymentName);

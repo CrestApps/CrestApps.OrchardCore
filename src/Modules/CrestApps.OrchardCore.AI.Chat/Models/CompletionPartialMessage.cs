@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.AI.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Hubs;
+namespace CrestApps.OrchardCore.AI.Chat.Models;
 
 public class CompletionPartialMessage
 {
