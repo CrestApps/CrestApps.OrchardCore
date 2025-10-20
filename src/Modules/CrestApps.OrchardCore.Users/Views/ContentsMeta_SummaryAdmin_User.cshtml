@@ -22,5 +22,5 @@
 }
 @if (!string.IsNullOrEmpty(contentItem.Author))
 {
-    <shape Type="ContentsMeta_SummaryAdmin_Author" prop-authorName="@(contentItem.Author)" cache-id="content-author-@(contentItem.Author)" cache-tag="@(UsersConstants.UserDisplayNameCacheTag),@(UsersConstants.UserDisplayNameCacheTag):@contentItem.Author" />
+    <shape Type="ContentsMeta_SummaryAdmin_Author" prop-authorName="@(contentItem.Author)" cache-id="user-display-name-author" cache-context="username-@(contentItem.Author)" cache-tag="@(UsersConstants.UserDisplayNameCacheTag),@(UsersConstants.UserDisplayNameCacheTag):@contentItem.Author" />
 }
