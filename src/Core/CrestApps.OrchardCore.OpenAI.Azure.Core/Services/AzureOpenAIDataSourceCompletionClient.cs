@@ -107,15 +107,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
             metadata = _defaultMetadata;
         }
 
-        var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
-        var skip = GetTotalMessagesToSkip(azureMessages.Count, pastMessageCount);
-
-        var prompts = new List<ChatMessage>
-        {
-            new SystemChatMessage(GetSystemMessage(context, metadata)),
-        };
-
-        prompts.AddRange(azureMessages.Skip(skip).Take(pastMessageCount));
+        var prompts = GetPrompts(context, azureMessages, metadata);
 
         var azureClient = GetChatClient(connection);
 
@@ -254,16 +246,6 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
             metadata = _defaultMetadata;
         }
 
-        var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
-        var skip = GetTotalMessagesToSkip(azureMessages.Count, pastMessageCount);
-
-        var prompts = new List<ChatMessage>
-        {
-            new SystemChatMessage(GetSystemMessage(context, metadata)),
-        };
-
-        prompts.AddRange(azureMessages.Skip(skip).Take(pastMessageCount));
-
         var azureClient = GetChatClient(connection);
 
         var chatClient = azureClient.GetChatClient(deploymentName);
@@ -277,6 +259,8 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         Dictionary<string, object> linkContext = null;
 
         ChatCompletionOptions subSequenceContext = null;
+
+        var prompts = GetPrompts(context, azureMessages, metadata);
 
         await foreach (var update in chatClient.CompleteChatStreamingAsync(prompts, chatOptions, cancellationToken))
         {
@@ -641,6 +625,31 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         }
 
         return null;
+    }
+
+    private static List<ChatMessage> GetPrompts(AICompletionContext context, List<ChatMessage> azureMessages, AIProfileMetadata metadata)
+    {
+        var prompts = new List<ChatMessage>();
+
+        var systemMessage = GetSystemMessage(context, metadata);
+
+        if (!string.IsNullOrEmpty(systemMessage))
+        {
+            prompts.Add(new SystemChatMessage(systemMessage));
+        }
+
+        if (metadata.PastMessagesCount > 1)
+        {
+            var skip = GetTotalMessagesToSkip(azureMessages.Count, metadata.PastMessagesCount.Value);
+
+            prompts.AddRange(azureMessages.Skip(skip).Take(metadata.PastMessagesCount.Value));
+        }
+        else
+        {
+            prompts.AddRange(azureMessages);
+        }
+
+        return prompts;
     }
 
     private async Task<(AIProviderConnectionEntry, string)> GetConnectionAsync(AICompletionContext context, string providerName)
