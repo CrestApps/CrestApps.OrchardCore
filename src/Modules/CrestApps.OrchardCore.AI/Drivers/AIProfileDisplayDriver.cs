@@ -113,12 +113,12 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             var metadata = profile.As<AIProfileMetadata>();
 
             model.SystemMessage = metadata.SystemMessage;
-            model.FrequencyPenalty = metadata.FrequencyPenalty;
-            model.PastMessagesCount = metadata.PastMessagesCount;
-            model.PresencePenalty = metadata.PresencePenalty;
-            model.Temperature = metadata.Temperature;
-            model.MaxTokens = metadata.MaxTokens;
-            model.TopP = metadata.TopP;
+            model.FrequencyPenalty = context.IsNew ? _defaultAIOptions.FrequencyPenalty : metadata.FrequencyPenalty;
+            model.PastMessagesCount = context.IsNew ? _defaultAIOptions.PastMessagesCount : metadata.PastMessagesCount;
+            model.PresencePenalty = context.IsNew ? _defaultAIOptions.PresencePenalty : metadata.PresencePenalty;
+            model.Temperature = context.IsNew ? _defaultAIOptions.Temperature : metadata.Temperature;
+            model.MaxTokens = context.IsNew ? _defaultAIOptions.MaxOutputTokens : metadata.MaxTokens;
+            model.TopP = context.IsNew ? _defaultAIOptions.TopP : metadata.TopP;
             model.UseCaching = metadata.UseCaching;
             model.AllowCaching = _defaultAIOptions.EnableDistributedCaching;
 
@@ -199,7 +199,23 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         var metadata = profile.As<AIProfileMetadata>();
 
         metadata.FrequencyPenalty = parametersModel.FrequencyPenalty;
-        metadata.PastMessagesCount = parametersModel.PastMessagesCount;
+
+        if (model.ProfileType == AIProfileType.Chat)
+        {
+            if (!parametersModel.PastMessagesCount.HasValue)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(parametersModel.PastMessagesCount), S["Past messages count is required."]);
+            }
+            else if (parametersModel.PastMessagesCount.Value < 1)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(parametersModel.PastMessagesCount), S["Past messages count cannot be less than {0}.", 1]);
+            }
+            else
+            {
+                metadata.PastMessagesCount = parametersModel.PastMessagesCount.Value;
+            }
+        }
+
         metadata.PresencePenalty = parametersModel.PresencePenalty;
         metadata.Temperature = parametersModel.Temperature;
         metadata.MaxTokens = parametersModel.MaxTokens;
