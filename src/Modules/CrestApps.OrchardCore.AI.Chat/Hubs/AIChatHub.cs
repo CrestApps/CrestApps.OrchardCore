@@ -1,5 +1,6 @@
 using System.Text;
 using System.Threading.Channels;
+using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
@@ -204,7 +205,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         }
 
         // At this point, we need to create a new session.
-        var chatSession = await sessionManager.NewAsync(profile);
+        var chatSession = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
 
         if (profile.TitleType == AISessionTitleType.Generated)
         {
