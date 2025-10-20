@@ -147,7 +147,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
             if (string.IsNullOrEmpty(name))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(mainFieldsModel.Name), S["Name is required."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(mainFieldsModel.Name), S["Technical name is required."]);
             }
             else if (await _profilesCatalog.FindByNameAsync(name) is not null)
             {
@@ -159,7 +159,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
         if (string.IsNullOrEmpty(mainFieldsModel.DisplayText))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(mainFieldsModel.DisplayText), S["Display Text is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(mainFieldsModel.DisplayText), S["Title is required."]);
         }
 
         if (!string.IsNullOrEmpty(connectionModel.ConnectionName))
