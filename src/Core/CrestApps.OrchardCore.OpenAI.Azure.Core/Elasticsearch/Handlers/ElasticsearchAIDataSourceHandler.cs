@@ -8,7 +8,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch.Handlers;
 
-public sealed class ElasticsearchAIDataSourceHandler : ModelHandlerBase<AIDataSource>
+public sealed class ElasticsearchAIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
 {
     internal readonly IStringLocalizer S;
 

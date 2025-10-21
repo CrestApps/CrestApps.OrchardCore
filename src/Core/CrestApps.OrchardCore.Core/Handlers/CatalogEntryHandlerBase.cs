@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.Core.Handlers;
 
-public abstract class ModelHandlerBase<T> : ICatalogEntryHandler<T>
+public abstract class CatalogEntryHandlerBase<T> : ICatalogEntryHandler<T>
 {
     public virtual Task DeletedAsync(DeletedContext<T> context)
         => Task.CompletedTask;
