@@ -50,5 +50,8 @@ public static class AIConstants
         public const string AIChatSessionRouteName = "AIChatSession";
 
         public const string GetDeploymentsByConnectionRouteName = "GetDeploymentsByConnection";
+
+        public const string GetConnectionsByProviderRouteName = "GetConnectionsByProvider";
+
     }
 }

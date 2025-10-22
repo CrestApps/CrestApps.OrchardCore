@@ -70,6 +70,12 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<CatalogItemMigrations>();
 #pragma warning restore CS0618 // Type or member is obsolete
     }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes
+            .AddGetConnectionsEndpoint();
+    }
 }
 
 [RequireFeatures("OrchardCore.Recipes.Core")]
@@ -90,7 +96,9 @@ public sealed class WorkflowsStartup : StartupBase
         {
             o.MemberAccessStrategy.Register<AIResponseMessage>();
         });
-        services.AddActivity<AICompletionTask, AICompletionTaskDisplayDriver>();
+
+        services.AddActivity<AICompletionFromProfileTask, AICompletionFromProfileTaskDisplayDriver>();
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigTaskDisplayDriver>();
     }
 }
 

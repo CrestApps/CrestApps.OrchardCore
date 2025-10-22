@@ -13,7 +13,7 @@ using OrchardCore.Workflows.Models;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Models;
 
-public sealed class AICompletionTask : TaskActivity<AICompletionTask>
+public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromProfileTask>
 {
     private readonly INamedCatalogManager<AIProfile> _profileManager;
     private readonly IAICompletionService _completionService;
@@ -22,12 +22,12 @@ public sealed class AICompletionTask : TaskActivity<AICompletionTask>
 
     internal readonly IStringLocalizer S;
 
-    public AICompletionTask(
+    public AICompletionFromProfileTask(
         INamedCatalogManager<AIProfile> profileManager,
         IAICompletionService completionService,
         ILiquidTemplateManager liquidTemplateManager,
-        ILogger<AICompletionTask> logger,
-        IStringLocalizer<AICompletionTask> stringLocalizer)
+        ILogger<AICompletionFromProfileTask> logger,
+        IStringLocalizer<AICompletionFromProfileTask> stringLocalizer)
     {
         _profileManager = profileManager;
         _completionService = completionService;
@@ -36,7 +36,7 @@ public sealed class AICompletionTask : TaskActivity<AICompletionTask>
         S = stringLocalizer;
     }
 
-    public override LocalizedString DisplayText => S["AI Completion"];
+    public override LocalizedString DisplayText => S["AI Completion using Profile"];
 
     public override LocalizedString Category => S["Artificial Intelligence"];
 
@@ -111,7 +111,7 @@ public sealed class AICompletionTask : TaskActivity<AICompletionTask>
                 Content = bestChoice.Text,
             };
 
-            workflowContext.Output[ResultPropertyName] = value;
+            workflowContext.Output[ResultPropertyName ?? "ChatResponse"] = value;
 
             return Outcomes("Done");
         }

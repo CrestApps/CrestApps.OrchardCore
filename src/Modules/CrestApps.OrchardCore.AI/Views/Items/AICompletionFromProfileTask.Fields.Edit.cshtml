@@ -1,7 +1,7 @@
 @using CrestApps.OrchardCore.AI.Workflows.ViewModels
 @using CrestApps.OrchardCore.AI.Models
 
-@model AICompletionTaskViewModel
+@model AICompletionFromProfileTaskViewModel
 
 <div class="mb-3" asp-validation-class-for="ProfileId">
     <label asp-for="ProfileId" class="form-label">@T["Profiles"]</label>
@@ -12,16 +12,16 @@
     <span class="hint">@T["The profile to use when generating the message."]</span>
 </div>
 
-<div class="mb-3" asp-validation-class-for="PromptTemplate">
-    <label asp-for="PromptTemplate" class="form-label">@T["Prompt template"]</label>
-    <input type="text" asp-for="PromptTemplate" class="form-control code" />
-    <span asp-validation-for="PromptTemplate"></span>
-    <span class="hint">@T["This template is used to generate the prompt for the AI model. You can structure the prompt using Liquid syntax and seamlessly combine existing variables with placeholders like <code>{0}</code>.", "profile"]</span>
-</div>
-
 <div class="mb-3" asp-validation-class-for="ResultPropertyName">
     <label asp-for="ResultPropertyName" class="form-label">@T["Result property name"]</label>
     <input asp-for="ResultPropertyName" class="form-control" autofocus="autofocus" />
     <span asp-validation-for="ResultPropertyName"></span>
     <span class="hint">@T["Specifies where the result will be stored. Prefix the Result Property Name with AI- to avoid conflicts. This allows access to the AI Chat Response in subsequent workflow tasks."]</span>
+</div>
+
+<div class="mb-3" asp-validation-class-for="PromptTemplate">
+    <label asp-for="PromptTemplate" class="form-label">@T["Prompt template"]</label>
+    <input type="text" asp-for="PromptTemplate" class="form-control code" />
+    <span asp-validation-for="PromptTemplate"></span>
+    <span class="hint">@T["This template is used to generate the prompt for the AI model. You can structure the prompt using Liquid syntax and seamlessly combine existing variables with placeholders like <code>{0}</code>.", "profile"]</span>
 </div>

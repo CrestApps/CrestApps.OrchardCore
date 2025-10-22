@@ -1,0 +1,122 @@
+using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Workflows.Models;
+using CrestApps.OrchardCore.AI.Workflows.ViewModels;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Liquid;
+using OrchardCore.Mvc.ModelBinding;
+using OrchardCore.Workflows.Display;
+
+namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
+
+public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDriver<AICompletionWithConfigTask, AICompletionWithConfigTaskViewModel>
+{
+    private readonly AIToolDefinitionOptions _toolDefinitions;
+    private readonly AIProviderOptions _aiProviderOptions;
+    private readonly ILiquidTemplateManager _liquidTemplateManager;
+
+    internal readonly IStringLocalizer S;
+
+    public AICompletionWithConfigTaskDisplayDriver(
+        IOptions<AIToolDefinitionOptions> toolDefinitions,
+        IOptions<AIProviderOptions> aiProviderOptions,
+        ILiquidTemplateManager liquidTemplateManager,
+        IStringLocalizer<AICompletionFromProfileTaskDisplayDriver> stringLocalizer)
+    {
+        _toolDefinitions = toolDefinitions.Value;
+        _aiProviderOptions = aiProviderOptions.Value;
+        _liquidTemplateManager = liquidTemplateManager;
+        S = stringLocalizer;
+    }
+
+    protected override void EditActivity(AICompletionWithConfigTask activity, AICompletionWithConfigTaskViewModel model)
+    {
+        model.ProviderName = activity.ProviderName;
+        model.PromptTemplate = activity.PromptTemplate;
+        model.ResultPropertyName = activity.ResultPropertyName;
+        model.ConnectionName = activity.ConnectionName;
+        model.DeploymentName = activity.DeploymentName;
+
+        model.MaxTokens = activity.MaxTokens;
+        model.Temperature = activity.Temperature;
+        model.TopP = activity.TopP;
+        model.FrequencyPenalty = activity.FrequencyPenalty;
+        model.PresencePenalty = activity.PresencePenalty;
+        model.SystemMessage = activity.SystemMessage;
+
+        model.Providers = _aiProviderOptions.Providers.Select(provider => new SelectListItem(provider.Key, provider.Key));
+        model.Tools = _toolDefinitions.Tools
+            .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
+            .OrderBy(group => group.Key)
+            .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
+            {
+                ItemId = entry.Key,
+                DisplayText = entry.Value.Title,
+                Description = entry.Value.Description,
+                IsSelected = activity.ToolNames?.Contains(entry.Key) ?? false,
+            }).OrderBy(entry => entry.DisplayText).ToArray());
+    }
+
+    public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)
+    {
+        var model = new AICompletionWithConfigTaskViewModel();
+
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        if (string.IsNullOrEmpty(model.ProviderName))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProviderName), S["The Provider is required."]);
+        }
+        else if (!_aiProviderOptions.Providers.TryGetValue(model.ProviderName, out _))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProviderName), S["The Provider is invalid."]);
+        }
+
+        if (string.IsNullOrEmpty(model.PromptTemplate))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PromptTemplate), S["The Prompt template is required."]);
+        }
+        else if (!_liquidTemplateManager.Validate(model.PromptTemplate, out _))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PromptTemplate), S["The Prompt template is invalid."]);
+        }
+
+        if (string.IsNullOrWhiteSpace(model.ResultPropertyName))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ResultPropertyName), S["The Property name is required."]);
+        }
+
+        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
+
+        if (selectedToolKeys is null || !selectedToolKeys.Any())
+        {
+            activity.ToolNames = [];
+        }
+        else
+        {
+            activity.ToolNames = _toolDefinitions.Tools.Keys
+                .Intersect(selectedToolKeys)
+                .ToArray();
+        }
+
+        activity.ProviderName = model.ProviderName;
+        activity.PromptTemplate = model.PromptTemplate;
+        activity.ResultPropertyName = model.ResultPropertyName?.Trim();
+        activity.ConnectionName = model.ConnectionName;
+        activity.DeploymentName = model.DeploymentName;
+
+        activity.MaxTokens = model.MaxTokens;
+        activity.Temperature = model.Temperature;
+        activity.TopP = model.TopP;
+        activity.FrequencyPenalty = model.FrequencyPenalty;
+        activity.PresencePenalty = model.PresencePenalty;
+        activity.SystemMessage = model.SystemMessage;
+
+        return Edit(activity, context);
+    }
+}
