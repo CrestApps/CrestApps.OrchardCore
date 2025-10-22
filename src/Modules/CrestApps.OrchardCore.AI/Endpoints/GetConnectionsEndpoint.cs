@@ -44,6 +44,7 @@ internal static class GetConnectionsEndpoint
         return TypedResults.Ok(provider.Connections.Select(x => new
         {
             Id = x.Key,
+            Name = x.Key,
         }));
     }
 }

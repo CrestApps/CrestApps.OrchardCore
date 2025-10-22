@@ -18,7 +18,6 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
     private readonly AIProviderOptions _aiProviderOptions;
     private readonly IAIClientFactory _aIClientFactory;
     private readonly IAIToolsService _aIToolsService;
-    private readonly IAICompletionService _completionService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly ILoggerFactory _loggerFactory;
     private readonly DefaultAIOptions _defaultOptions;
@@ -30,7 +29,6 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
         IOptions<AIProviderOptions> aiProviderOptions,
         IAIClientFactory aIClientFactory,
         IAIToolsService aIToolsService,
-        IAICompletionService completionService,
         ILiquidTemplateManager liquidTemplateManager,
         ILoggerFactory loggerFactory,
         IOptions<DefaultAIOptions> defaultOptions,
@@ -40,7 +38,6 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
         _aiProviderOptions = aiProviderOptions.Value;
         _aIClientFactory = aIClientFactory;
         _aIToolsService = aIToolsService;
-        _completionService = completionService;
         _liquidTemplateManager = liquidTemplateManager;
         _loggerFactory = loggerFactory;
         _defaultOptions = defaultOptions.Value;

@@ -1,6 +1,7 @@
 @using CrestApps.OrchardCore.AI.Workflows.ViewModels
 @using CrestApps.OrchardCore.AI.Models
 @using OrchardCore
+@using CrestApps.OrchardCore.AI.Core
 
 @model AICompletionWithConfigTaskViewModel
 
@@ -16,7 +17,7 @@
 <div class="mb-3" asp-validation-class-for="ConnectionName">
     <label asp-for="ConnectionName" class="form-label">@T["Conntection"]</label>
     <select asp-for="ConnectionName" class="form-select" asp-items="Model.ConnectionNames">
-        <option value="">@T["Select a connection"]</option>
+        <option value="">@T["Default connection"]</option>
     </select>
     <span asp-validation-for="ConnectionName"></span>
 </div>
@@ -24,7 +25,7 @@
 <div class="mb-3" asp-validation-class-for="DeploymentName">
     <label asp-for="DeploymentName" class="form-label">@T["Deployment"]</label>
     <select asp-for="DeploymentName" class="form-select" asp-items="Model.DeploymentNames">
-        <option value="">@T["Select a deployment"]</option>
+        <option value="">@T["Default deployment"]</option>
     </select>
     <span asp-validation-for="DeploymentName"></span>
 </div>
@@ -40,7 +41,7 @@
     <label asp-for="PromptTemplate" class="form-label">@T["Prompt template"]</label>
     <input type="text" asp-for="PromptTemplate" class="form-control code" />
     <span asp-validation-for="PromptTemplate"></span>
-    <span class="hint">@T["This template is used to generate the prompt for the AI model. You can structure the prompt using Liquid syntax and seamlessly combine existing variables with placeholders like <code>{0}</code>.", "profile"]</span>
+    <span class="hint">@T["This template is used to generate the prompt for the AI model. You can structure the prompt using Liquid syntax."]</span>
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
@@ -99,37 +100,190 @@
     }
 </style>
 
-<script asp-name="easymde" at="Foot"></script>
-<script at="Foot" depends-on="easymde">
+<style asp-name="codemirror"></style>
+<script asp-name="codemirror" at="Foot"></script>
+<script asp-name="codemirror-mode-javascript" at="Foot"></script>
+<script asp-name="codemirror-addon-display-autorefresh" at="Foot"></script>
+<script asp-name="codemirror-addon-mode-simple" at="Foot"></script>
+<script asp-name="codemirror-addon-mode-multiplex" at="Foot"></script>
+<script asp-name="codemirror-mode-xml" at="Foot"></script>
+<script asp-src="~/OrchardCore.Liquid/codemirror/liquid.js" at="Foot"></script>
+
+<script at="Foot" depends-on="codemirror">
     document.addEventListener('DOMContentLoaded', function () {
-        const isRtl = @(Orchard.IsRightToLeft() ? "true" : "false");
+        const initializeLiquidEditor = (textArea) => {
 
-        const systemMessageElement = document.getElementById("@Html.IdFor(m => m.SystemMessage)");
-        var mde = new EasyMDE({
-            element: systemMessageElement,
-            forceSync: true,
-            autoDownloadFontAwesome: false
-        });
-
-        mde.codemirror.on('change', function () {
-            document.dispatchEvent(new Event('contentpreview:render'));
-        });
-
-        if (isRtl) {
-            var toolbarEditors = document.querySelectorAll('.editor-toolbar');
-
-            for (var i = 0; i < toolbarEditors.length; i++)
-            {
-                toolbarEditors[i].style.direction = 'rtl';
-                toolbarEditors[i].style.textAlign = 'right';
+            if (!textArea) {
+                return;
             }
 
-            var mirrorContainers = document.querySelectorAll('.CodeMirror');
+            var editor = CodeMirror.fromTextArea(textArea, {
+                autoRefresh: true,
+                lineNumbers: true,
+                styleActiveLine: true,
+                matchBrackets: true,
+                mode: { name: "liquid" },
+            });
 
-            for (var i = 0; i < mirrorContainers.length; i++)
-            {
-                mirrorContainers[i].style.textAlign = 'right';
+            editor.on('change', function (cmEditor) {
+                cmEditor.save();
+                document.dispatchEvent(new Event('contentpreview:render'));
+            });
+        }
+
+        initializeLiquidEditor(document.getElementById('@Html.IdFor(x => x.PromptTemplate)'));
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const providerElement = document.getElementById('@Html.IdFor(m => m.ProviderName)');
+        const connectionElement = document.getElementById('@Html.IdFor(m => m.ConnectionName)');
+        const deploymentElement = document.getElementById('@Html.IdFor(m => m.DeploymentName)');
+
+        if (!providerElement || !connectionElement || !deploymentElement) {
+            console.warn('AICompletionWithConfigTask: missing provider/connection/deployment elements');
+            return;
+        }
+
+        const connectionContainer = connectionElement.closest('.mb-3');
+        const deploymentContainer = deploymentElement.closest('.mb-3');
+
+        // Hide by default
+        if (connectionContainer) connectionContainer.style.display = 'none';
+        if (deploymentContainer) deploymentContainer.style.display = 'none';
+
+        const providerNameInitial = '@(Model.ProviderName ?? "")';
+        const connectionInitial = '@(Model.ConnectionName ?? "")';
+        const deploymentInitial = '@(Model.DeploymentName ?? "")';
+
+        async function fetchConnections(providerName) {
+            // Remove existing connection options that have a value (keep the default empty option)
+            [...connectionElement.options].forEach(option => {
+                if (option.value) option.remove();
+            });
+
+            // Hide deployment since connections are changing
+            if (deploymentContainer) deploymentContainer.style.display = 'none';
+            // Also clear deployment options (keep default)
+            [...deploymentElement.options].forEach(option => {
+                if (option.value) option.remove();
+            });
+
+            if (!providerName) {
+                connectionElement.value = '';
+                return;
             }
+
+            var url = '@(Url.RouteUrl(AIConstants.RouteNames.GetConnectionsByProviderRouteName))';
+            try {
+                const response = await fetch(`${url}?providerName=${encodeURIComponent(providerName)}`);
+                if (!response.ok) throw new Error('Failed to fetch connections');
+
+                const connections = await response.json();
+
+                if (connections && connections.length) {
+                    connections.forEach(connection => {
+                        let option = document.createElement('option');
+                        option.value = connection.id;
+                        option.textContent = connection.name;
+                        connectionElement.appendChild(option);
+                    });
+
+                    // Show connection select
+                    if (connectionContainer) connectionContainer.style.display = '';
+
+                    // If there was an initial value set by server, select it and fetch deployments
+                    if (connectionInitial) {
+                        connectionElement.value = connectionInitial;
+                        await fetchDeployments(providerName, connectionInitial);
+                    }
+                } else {
+                    // No connections, hide connection
+                    if (connectionContainer) connectionContainer.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error fetching connections:', error);
+            }
+        }
+
+        async function fetchDeployments(providerName, connection) {
+            // Remove existing deployment options that have a value (keep default)
+            [...deploymentElement.options].forEach(option => {
+                if (option.value) option.remove();
+            });
+
+            if (!connection) {
+                deploymentElement.value = '';
+                if (deploymentContainer) deploymentContainer.style.display = 'none';
+                return;
+            }
+
+            var url = '@(Url.RouteUrl(AIConstants.RouteNames.GetDeploymentsByConnectionRouteName))';
+            try {
+                const response = await fetch(`${url}?providerName=${encodeURIComponent(providerName)}&connection=${encodeURIComponent(connection)}`);
+                if (!response.ok) throw new Error('Failed to fetch deployments');
+
+                const deployments = await response.json();
+
+                if (deployments && deployments.length) {
+                    deployments.forEach(deployment => {
+                        let option = document.createElement('option');
+                        option.value = deployment.id;
+                        option.textContent = deployment.name;
+                        deploymentElement.appendChild(option);
+                    });
+
+                    // Show deployment container if there are options beyond the default
+                    if (deploymentContainer && deploymentElement.options.length > 1) deploymentContainer.style.display = '';
+
+                    // If there was an initial value set by server, select it
+                    if (deploymentInitial) {
+                        deploymentElement.value = deploymentInitial;
+                    }
+                } else {
+                    if (deploymentContainer) deploymentContainer.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error fetching deployments:', error);
+            }
+        }
+
+        // Wire events
+        providerElement.addEventListener('change', async (e) => {
+            const provider = e.target.value;
+            // When provider changes, clear selected connection/deployment
+            connectionElement.value = '';
+            deploymentElement.value = '';
+
+            await fetchConnections(provider);
+        });
+
+        connectionElement.addEventListener('change', async (e) => {
+            const selectedConnection = e.target.value;
+            const provider = providerElement.value || providerNameInitial;
+
+            // Remove only options that have a value
+            [...deploymentElement.options].forEach(option => {
+                if (option.value) option.remove();
+            });
+
+            if (!selectedConnection) {
+                deploymentElement.value = '';
+                if (deploymentContainer) deploymentContainer.style.display = 'none';
+                return;
+            }
+
+            await fetchDeployments(provider, selectedConnection);
+
+            // Fallback: if deployments were added show container
+            if (deploymentContainer && deploymentElement.options.length > 1) {
+                deploymentContainer.style.display = '';
+            }
+        });
+
+        // On load, if provider exists, fetch connections
+        if (providerNameInitial) {
+            providerElement.value = providerNameInitial;
+            fetchConnections(providerNameInitial);
         }
     });
 </script>
