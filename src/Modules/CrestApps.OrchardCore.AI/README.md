@@ -587,25 +587,35 @@ You can also create or update AI deployments using the following recipe:
 
 ### AI Chat with Workflows
 
-When used with the **Workflows** feature, the **AI Services** feature introduces a new activity to interact with AI chat services:
+When combined with the **Workflows** feature, the **AI Services** module introduces new activities that allow workflows to interact directly with AI chat services.
 
-#### Chat Utility Completion Task
+#### AI Completion using Profile Task
 
-This activity allows you to send a message to the AI chat service and store the response in a workflow property. To use it, search for the **Chat Utility Completion** task in your workflow and specify a unique **Result Property Name**. The generated response will be stored in this property.
+This activity lets you request AI completions using an existing **AI Profile**, and store the response in a workflow property.
+To use it, search for the **AI Completion using Profile** task in your workflow and specify a unique **Result Property Name**.
+The generated response will be saved in this property.
 
-For example, if the **Result Property Name** is `AI-CrestApps-Step1`, access the response later with:
+For example, if the **Result Property Name** is `AI-CrestApps-Step1`, you can access the response later using:
 
 ```liquid
 {{ Workflow.Output["AI-CrestApps-Step1"].Content }}
 ```
 
-If you want the response in HTML format, enable the `Include HTML Content` option, and access it with:
+To prevent naming conflicts with other workflow tasks, it's recommended to prefix your **Result Property Name** with `AI-`.
+
+#### AI Completion using Direct Config Task
+
+This activity allows you to request AI completions by defining the configuration directly within the workflow, without relying on a predefined AI Profile.
+To use it, search for the **AI Completion using Direct Config** task in your workflow and specify a unique **Result Property Name**.
+The generated response will be saved in this property.
+
+For example, if the **Result Property Name** is `AI-CrestApps-Step1`, you can access the response later using:
 
 ```liquid
-{{ Workflow.Output["AI-CrestApps-Step1"].HtmlContent }}
+{{ Workflow.Output["AI-CrestApps-Step1"].Content }}
 ```
 
-To avoid conflicts with other workflow tasks, it's recommended to prefix the **Result Property Name** with `AI-`.
+As with other AI tasks, it's recommended to prefix your **Result Property Name** with `AI-` to avoid conflicts.
 
 ---
 
