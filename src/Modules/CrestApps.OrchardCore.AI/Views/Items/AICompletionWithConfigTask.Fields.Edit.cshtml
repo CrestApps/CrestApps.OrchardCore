@@ -100,6 +100,41 @@
     }
 </style>
 
+<script asp-name="easymde" at="Foot"></script>
+<script at="Foot" depends-on="easymde">
+    document.addEventListener('DOMContentLoaded', function () {
+        const isRtl = @(Orchard.IsRightToLeft() ? "true" : "false");
+
+        const systemMessageElement = document.getElementById("@Html.IdFor(m => m.SystemMessage)");
+        var mde = new EasyMDE({
+            element: systemMessageElement,
+            forceSync: true,
+            autoDownloadFontAwesome: false
+        });
+
+        mde.codemirror.on('change', function () {
+            document.dispatchEvent(new Event('contentpreview:render'));
+        });
+
+        if (isRtl) {
+            var toolbarEditors = document.querySelectorAll('.editor-toolbar');
+
+            for (var i = 0; i < toolbarEditors.length; i++)
+            {
+                toolbarEditors[i].style.direction = 'rtl';
+                toolbarEditors[i].style.textAlign = 'right';
+            }
+
+            var mirrorContainers = document.querySelectorAll('.CodeMirror');
+
+            for (var i = 0; i < mirrorContainers.length; i++)
+            {
+                mirrorContainers[i].style.textAlign = 'right';
+            }
+        }
+    });
+</script>
+
 <style asp-name="codemirror"></style>
 <script asp-name="codemirror" at="Foot"></script>
 <script asp-name="codemirror-mode-javascript" at="Foot"></script>
@@ -148,8 +183,12 @@
         const deploymentContainer = deploymentElement.closest('.mb-3');
 
         // Hide by default
-        if (connectionContainer) connectionContainer.style.display = 'none';
-        if (deploymentContainer) deploymentContainer.style.display = 'none';
+        if (connectionContainer) {
+            connectionContainer.style.display = 'none';
+        }
+        if (deploymentContainer) {
+            deploymentContainer.style.display = 'none';
+        }
 
         const providerNameInitial = '@(Model.ProviderName ?? "")';
         const connectionInitial = '@(Model.ConnectionName ?? "")';
@@ -158,14 +197,16 @@
         async function fetchConnections(providerName) {
             // Remove existing connection options that have a value (keep the default empty option)
             [...connectionElement.options].forEach(option => {
-                if (option.value) option.remove();
+                if (option.value) {
+                    option.remove();
+                }
             });
 
-            // Hide deployment since connections are changing
-            if (deploymentContainer) deploymentContainer.style.display = 'none';
             // Also clear deployment options (keep default)
             [...deploymentElement.options].forEach(option => {
-                if (option.value) option.remove();
+                if (option.value) {
+                    option.remove();
+                }
             });
 
             if (!providerName) {
@@ -176,9 +217,19 @@
             var url = '@(Url.RouteUrl(AIConstants.RouteNames.GetConnectionsByProviderRouteName))';
             try {
                 const response = await fetch(`${url}?providerName=${encodeURIComponent(providerName)}`);
-                if (!response.ok) throw new Error('Failed to fetch connections');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch connections');
+                }
 
                 const connections = await response.json();
+
+                // Show connection and deployment selects when provider is selected
+                if (connectionContainer) {
+                    connectionContainer.style.display = '';
+                }
+                if (deploymentContainer) {
+                    deploymentContainer.style.display = '';
+                }
 
                 if (connections && connections.length) {
                     connections.forEach(connection => {
@@ -188,9 +239,6 @@
                         connectionElement.appendChild(option);
                     });
 
-                    // Show connection select
-                    if (connectionContainer) connectionContainer.style.display = '';
-
                     // If there was an initial value set by server, select it and fetch deployments
                     if (connectionInitial) {
                         connectionElement.value = connectionInitial;
@@ -198,7 +246,9 @@
                     }
                 } else {
                     // No connections, hide connection
-                    if (connectionContainer) connectionContainer.style.display = 'none';
+                    if (connectionContainer) {
+                        connectionContainer.style.display = 'none';
+                    }
                 }
             } catch (error) {
                 console.error('Error fetching connections:', error);
@@ -208,19 +258,32 @@
         async function fetchDeployments(providerName, connection) {
             // Remove existing deployment options that have a value (keep default)
             [...deploymentElement.options].forEach(option => {
-                if (option.value) option.remove();
+                if (option.value) {
+                    option.remove();
+                }
             });
 
             if (!connection) {
                 deploymentElement.value = '';
-                if (deploymentContainer) deploymentContainer.style.display = 'none';
+                // If a provider is selected, keep deployment visible (default option only)
+                if (!providerElement.value) {
+                    if (deploymentContainer) {
+                        deploymentContainer.style.display = 'none';
+                    }
+                } else {
+                    if (deploymentContainer) {
+                        deploymentContainer.style.display = '';
+                    }
+                }
                 return;
             }
 
             var url = '@(Url.RouteUrl(AIConstants.RouteNames.GetDeploymentsByConnectionRouteName))';
             try {
                 const response = await fetch(`${url}?providerName=${encodeURIComponent(providerName)}&connection=${encodeURIComponent(connection)}`);
-                if (!response.ok) throw new Error('Failed to fetch deployments');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch deployments');
+                }
 
                 const deployments = await response.json();
 
@@ -232,15 +295,26 @@
                         deploymentElement.appendChild(option);
                     });
 
-                    // Show deployment container if there are options beyond the default
-                    if (deploymentContainer && deploymentElement.options.length > 1) deploymentContainer.style.display = '';
+                    // Show deployment container
+                    if (deploymentContainer) {
+                        deploymentContainer.style.display = '';
+                    }
 
                     // If there was an initial value set by server, select it
                     if (deploymentInitial) {
                         deploymentElement.value = deploymentInitial;
                     }
                 } else {
-                    if (deploymentContainer) deploymentContainer.style.display = 'none';
+                    // No deployments returned - if a provider is selected keep the container visible (default option)
+                    if (providerElement.value) {
+                        if (deploymentContainer) {
+                            deploymentContainer.style.display = '';
+                        }
+                    } else {
+                        if (deploymentContainer) {
+                            deploymentContainer.style.display = 'none';
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('Error fetching deployments:', error);
@@ -254,6 +328,23 @@
             connectionElement.value = '';
             deploymentElement.value = '';
 
+            // Ensure selects are visible when provider selected, hidden otherwise
+            if (provider) {
+                if (connectionContainer) {
+                    connectionContainer.style.display = '';
+                }
+                if (deploymentContainer) {
+                    deploymentContainer.style.display = '';
+                }
+            } else {
+                if (connectionContainer) {
+                    connectionContainer.style.display = 'none';
+                }
+                if (deploymentContainer) {
+                    deploymentContainer.style.display = 'none';
+                }
+            }
+
             await fetchConnections(provider);
         });
 
@@ -263,12 +354,23 @@
 
             // Remove only options that have a value
             [...deploymentElement.options].forEach(option => {
-                if (option.value) option.remove();
+                if (option.value) {
+                    option.remove();
+                }
             });
 
             if (!selectedConnection) {
                 deploymentElement.value = '';
-                if (deploymentContainer) deploymentContainer.style.display = 'none';
+                // If provider is selected keep deployment visible (default only), otherwise hide
+                if (provider) {
+                    if (deploymentContainer) {
+                        deploymentContainer.style.display = '';
+                    }
+                } else {
+                    if (deploymentContainer) {
+                        deploymentContainer.style.display = 'none';
+                    }
+                }
                 return;
             }
 
@@ -280,9 +382,15 @@
             }
         });
 
-        // On load, if provider exists, fetch connections
+        // On load, if provider exists, fetch connections and show selects
         if (providerNameInitial) {
             providerElement.value = providerNameInitial;
+            if (connectionContainer) {
+                connectionContainer.style.display = '';
+            }
+            if (deploymentContainer) {
+                deploymentContainer.style.display = '';
+            }
             fetchConnections(providerNameInitial);
         }
     });

@@ -18,6 +18,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly AIProviderOptions _aiProviderOptions;
+    private readonly DefaultAIOptions _defaultAIOptions;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
 
     internal readonly IStringLocalizer S;
@@ -25,41 +26,46 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
     public AICompletionWithConfigTaskDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IOptions<AIProviderOptions> aiProviderOptions,
+        IOptions<DefaultAIOptions> defaultAIOptions,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<AICompletionFromProfileTaskDisplayDriver> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
         _aiProviderOptions = aiProviderOptions.Value;
+        _defaultAIOptions = defaultAIOptions.Value;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
     }
 
-    protected override void EditActivity(AICompletionWithConfigTask activity, AICompletionWithConfigTaskViewModel model)
+    public override IDisplayResult Edit(AICompletionWithConfigTask activity, BuildEditorContext context)
     {
-        model.ProviderName = activity.ProviderName;
-        model.PromptTemplate = activity.PromptTemplate;
-        model.ResultPropertyName = activity.ResultPropertyName;
-        model.ConnectionName = activity.ConnectionName;
-        model.DeploymentName = activity.DeploymentName;
+        return Initialize<AICompletionWithConfigTaskViewModel>(ActivityName + "_Fields_Edit", model =>
+        {
+            model.ProviderName = activity.ProviderName;
+            model.PromptTemplate = activity.PromptTemplate;
+            model.ResultPropertyName = activity.ResultPropertyName;
+            model.ConnectionName = activity.ConnectionName;
+            model.DeploymentName = activity.DeploymentName;
 
-        model.MaxTokens = activity.MaxTokens;
-        model.Temperature = activity.Temperature;
-        model.TopP = activity.TopP;
-        model.FrequencyPenalty = activity.FrequencyPenalty;
-        model.PresencePenalty = activity.PresencePenalty;
-        model.SystemMessage = activity.SystemMessage;
+            model.MaxTokens = context.IsNew ? _defaultAIOptions.MaxOutputTokens : activity.MaxTokens;
+            model.Temperature = context.IsNew ? _defaultAIOptions.Temperature : activity.Temperature;
+            model.TopP = context.IsNew ? _defaultAIOptions.TopP : activity.TopP;
+            model.FrequencyPenalty = context.IsNew ? _defaultAIOptions.FrequencyPenalty : activity.FrequencyPenalty;
+            model.PresencePenalty = context.IsNew ? _defaultAIOptions.PresencePenalty : activity.PresencePenalty;
+            model.SystemMessage = activity.SystemMessage;
 
-        model.Providers = _aiProviderOptions.Providers.Select(provider => new SelectListItem(provider.Key, provider.Key));
-        model.Tools = _toolDefinitions.Tools
-            .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
-            .OrderBy(group => group.Key)
-            .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
-            {
-                ItemId = entry.Key,
-                DisplayText = entry.Value.Title,
-                Description = entry.Value.Description,
-                IsSelected = activity.ToolNames?.Contains(entry.Key) ?? false,
-            }).OrderBy(entry => entry.DisplayText).ToArray());
+            model.Providers = _aiProviderOptions.Providers.Select(provider => new SelectListItem(provider.Key, provider.Key));
+            model.Tools = _toolDefinitions.Tools
+                .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
+                .OrderBy(group => group.Key)
+                .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
+                {
+                    ItemId = entry.Key,
+                    DisplayText = entry.Value.Title,
+                    Description = entry.Value.Description,
+                    IsSelected = activity.ToolNames?.Contains(entry.Key) ?? false,
+                }).OrderBy(entry => entry.DisplayText).ToArray());
+        }).Location("Content");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)

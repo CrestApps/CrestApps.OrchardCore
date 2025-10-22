@@ -81,31 +81,31 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
 
     public float? FrequencyPenalty
     {
-        get => GetProperty<float>();
+        get => GetProperty<float?>();
         set => SetProperty(value);
     }
 
     public float? PresencePenalty
     {
-        get => GetProperty<float>();
+        get => GetProperty<float?>();
         set => SetProperty(value);
     }
 
     public float? Temperature
     {
-        get => GetProperty<float>();
+        get => GetProperty<float?>();
         set => SetProperty(value);
     }
 
     public float? TopP
     {
-        get => GetProperty<float>();
+        get => GetProperty<float?>();
         set => SetProperty(value);
     }
 
     public int? MaxTokens
     {
-        get => GetProperty<int>();
+        get => GetProperty<int?>();
         set => SetProperty(value);
     }
 
