@@ -10,7 +10,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch.Handlers;
 
-public sealed class MongoDbAIProfileHandler : ModelHandlerBase<AIDataSource>
+public sealed class MongoDbAIProfileHandler : CatalogEntryHandlerBase<AIDataSource>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 

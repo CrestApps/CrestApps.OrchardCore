@@ -10,7 +10,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 
-internal sealed class McpConnectionHandler : ModelHandlerBase<McpConnection>
+internal sealed class McpConnectionHandler : CatalogEntryHandlerBase<McpConnection>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;
