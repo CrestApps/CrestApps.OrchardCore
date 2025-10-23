@@ -12,24 +12,24 @@ using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
-public sealed class AICompletionTaskDisplayDriver : ActivityDisplayDriver<AICompletionTask, AICompletionTaskViewModel>
+public sealed class AICompletionFromProfileTaskDisplayDriver : ActivityDisplayDriver<AICompletionFromProfileTask, AICompletionFromProfileTaskViewModel>
 {
     private readonly INamedCatalog<AIProfile> _profilesCatalog;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
 
     internal readonly IStringLocalizer S;
 
-    public AICompletionTaskDisplayDriver(
+    public AICompletionFromProfileTaskDisplayDriver(
         INamedCatalog<AIProfile> profilesCatalog,
         ILiquidTemplateManager liquidTemplateManager,
-        IStringLocalizer<AICompletionTaskDisplayDriver> stringLocalizer)
+        IStringLocalizer<AICompletionFromProfileTaskDisplayDriver> stringLocalizer)
     {
         _profilesCatalog = profilesCatalog;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
     }
 
-    protected override async ValueTask EditActivityAsync(AICompletionTask activity, AICompletionTaskViewModel model)
+    protected override async ValueTask EditActivityAsync(AICompletionFromProfileTask activity, AICompletionFromProfileTaskViewModel model)
     {
         model.ProfileId = activity.ProfileId;
         model.PromptTemplate = activity.PromptTemplate;
@@ -39,9 +39,9 @@ public sealed class AICompletionTaskDisplayDriver : ActivityDisplayDriver<AIComp
             .Select(profile => new SelectListItem(profile.DisplayText, profile.ItemId));
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(AICompletionTask activity, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(AICompletionFromProfileTask activity, UpdateEditorContext context)
     {
-        var model = new AICompletionTaskViewModel();
+        var model = new AICompletionFromProfileTaskViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
