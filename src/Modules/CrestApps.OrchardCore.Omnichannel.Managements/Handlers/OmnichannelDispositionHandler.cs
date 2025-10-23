@@ -10,7 +10,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
-internal sealed class OmnichannelDispositionHandler : ModelHandlerBase<OmnichannelDisposition>
+internal sealed class OmnichannelDispositionHandler : CatalogEntryHandlerBase<OmnichannelDisposition>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;

@@ -13,7 +13,7 @@ using OrchardCore.Sms;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
-internal sealed class OmnichannelChannelEndpointHandler : ModelHandlerBase<OmnichannelChannelEndpoint>
+internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBase<OmnichannelChannelEndpoint>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;

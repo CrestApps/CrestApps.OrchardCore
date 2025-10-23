@@ -10,7 +10,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
-internal sealed class OmnichannelCampaignHandler : ModelHandlerBase<OmnichannelCampaign>
+internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<OmnichannelCampaign>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;
