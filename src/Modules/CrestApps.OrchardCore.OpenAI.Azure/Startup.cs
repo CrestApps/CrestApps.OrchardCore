@@ -7,11 +7,9 @@ using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 using CrestApps.OrchardCore.OpenAI.Azure.Handlers;
-using CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 
@@ -117,10 +115,6 @@ public sealed class AISearchStartup : StartupBase
     {
         services.AddDisplayDriver<AIDataSource, AzureOpenAISearchADataSourceDisplayDriver>();
         services.AddScoped<ICatalogEntryHandler<AIDataSource>, AzureAISearchAIDataSourceHandler>();
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        services.AddDataMigration<DataSourceMigrations>();
-#pragma warning restore CS0618 // Type or member is obsolete
 
         services
             .AddScoped<IAzureOpenAIDataSourceHandler, AzureAISearchOpenAIDataSourceHandler>()

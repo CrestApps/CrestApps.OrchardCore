@@ -64,11 +64,6 @@ public sealed class Startup : StartupBase
             .AddScoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>();
 
         services.AddDataMigration<AIProfileDefaultContextMigrations>();
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        services.AddDataMigration<ProfileStoreMigrations>();
-        services.AddDataMigration<CatalogItemMigrations>();
-#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -159,10 +154,6 @@ public sealed class DeploymentsStartup : StartupBase
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
             .AddNavigationProvider<AIDeploymentAdminMenu>();
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        services.AddDataMigration<DeploymentStoreMigrations>();
-#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
