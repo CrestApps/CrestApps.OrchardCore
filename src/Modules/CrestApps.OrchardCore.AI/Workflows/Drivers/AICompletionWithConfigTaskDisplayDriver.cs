@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -39,7 +40,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
 
     public override IDisplayResult Edit(AICompletionWithConfigTask activity, BuildEditorContext context)
     {
-        return Initialize<AICompletionWithConfigTaskViewModel>(ActivityName + "_Fields_Edit", model =>
+        var contents = Initialize<AICompletionWithConfigTaskViewModel>(ActivityName + "_Fields_Edit", model =>
         {
             model.ProviderName = activity.ProviderName;
             model.PromptTemplate = activity.PromptTemplate;
@@ -55,6 +56,16 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
             model.SystemMessage = activity.SystemMessage;
 
             model.Providers = _aiProviderOptions.Providers.Select(provider => new SelectListItem(provider.Key, provider.Key));
+
+        }).Location("Content");
+
+        if (_toolDefinitions.Tools.Count == 0)
+        {
+            return contents;
+        }
+
+        var tools = Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
+        {
             model.Tools = _toolDefinitions.Tools
                 .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
                 .OrderBy(group => group.Key)
@@ -65,7 +76,9 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
                     Description = entry.Value.Description,
                     IsSelected = activity.ToolNames?.Contains(entry.Key) ?? false,
                 }).OrderBy(entry => entry.DisplayText).ToArray());
-        }).Location("Content");
+        }).Location("Content:8#Capabilities:5");
+
+        return Combine(contents, tools);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)
@@ -97,19 +110,6 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ResultPropertyName), S["The Property name is required."]);
         }
 
-        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
-
-        if (selectedToolKeys is null || !selectedToolKeys.Any())
-        {
-            activity.ToolNames = [];
-        }
-        else
-        {
-            activity.ToolNames = _toolDefinitions.Tools.Keys
-                .Intersect(selectedToolKeys)
-                .ToArray();
-        }
-
         activity.ProviderName = model.ProviderName;
         activity.PromptTemplate = model.PromptTemplate;
         activity.ResultPropertyName = model.ResultPropertyName?.Trim();
@@ -122,6 +122,26 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         activity.FrequencyPenalty = model.FrequencyPenalty;
         activity.PresencePenalty = model.PresencePenalty;
         activity.SystemMessage = model.SystemMessage;
+
+        if (_toolDefinitions.Tools.Count > 0)
+        {
+            var toolsModel = new EditProfileToolsViewModel();
+
+            await context.Updater.TryUpdateModelAsync(toolsModel, Prefix);
+
+            var selectedToolKeys = toolsModel.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
+
+            if (selectedToolKeys is null || !selectedToolKeys.Any())
+            {
+                activity.ToolNames = [];
+            }
+            else
+            {
+                activity.ToolNames = _toolDefinitions.Tools.Keys
+                    .Intersect(selectedToolKeys)
+                    .ToArray();
+            }
+        }
 
         return Edit(activity, context);
     }

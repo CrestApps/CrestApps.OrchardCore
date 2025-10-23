@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -33,8 +32,6 @@ public class AICompletionWithConfigTaskViewModel
 
     [Range(4, int.MaxValue)]
     public int? MaxTokens { get; set; }
-
-    public Dictionary<string, ToolEntry[]> Tools { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> Providers { get; set; }
