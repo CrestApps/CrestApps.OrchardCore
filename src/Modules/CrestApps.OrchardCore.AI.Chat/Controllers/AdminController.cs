@@ -211,6 +211,11 @@ public sealed class AdminController : Controller
     [Admin("ai/chat/session/delete/{sessionId}", "DeleteChatSession")]
     public async Task<IActionResult> Delete(string sessionId)
     {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.DeleteChatSession))
+        {
+            return Forbid();
+        }
+
         var chatSession = await _sessionManager.FindAsync(sessionId);
 
         if (chatSession == null)
@@ -246,6 +251,11 @@ public sealed class AdminController : Controller
     [Admin("ai/chat/session/delete-all/{profileId}", "DeleteAllChatSessions")]
     public async Task<IActionResult> DeleteAll(string profileId)
     {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.DeleteAllChatSessions))
+        {
+            return Forbid();
+        }
+
         var profile = await _profileManager.FindByIdAsync(profileId);
 
         if (profile == null)

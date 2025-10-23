@@ -1,7 +1,13 @@
 @using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService
 
 @model ListChatSessionsViewModel
+
+@{
+    var canDeleteSession = await AuthorizationService.AuthorizeAsync(User, AIPermissions.DeleteChatSession);
+}
 
 <!-- Hidden submit button do not remove -->
 <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
@@ -32,7 +38,7 @@
                     </div>
                     <div>
                         <a asp-action="Index" asp-controller="Admin" asp-route-profileId="@session.ProfileId" asp-route-sessionId="@session.SessionId" class="btn btn-sm btn-success">@T["View"]</a>
-                        @if (!string.IsNullOrEmpty(session.UserId))
+                        @if (!string.IsNullOrEmpty(session.UserId) && canDeleteSession)
                         {
                             <a asp-action="Delete"
                                asp-controller="Admin"
