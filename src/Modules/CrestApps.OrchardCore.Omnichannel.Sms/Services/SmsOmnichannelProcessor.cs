@@ -46,7 +46,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         S = stringLocalizer;
     }
 
-    public string Channel { get; } = "SMS";
+    public string Channel { get; } = OmnichannelConstants.Channels.Sms;
 
     public async Task StartAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
     {
@@ -67,7 +67,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 
         if (chatSession is null)
         {
-            chatSession = await _aIChatSessionManager.NewAsync(profile, NewAIChatSessionContext.Robots);
+            chatSession = await _aIChatSessionManager.NewAsync(profile, new NewAIChatSessionContext() { AllowRobots = true, });
 
             chatSession.Title = S["Automated SMS Activity"];
         }
