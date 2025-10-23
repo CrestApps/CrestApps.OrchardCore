@@ -252,7 +252,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             return S["Authentication failed. Please check your API credentials."];
         }
 
-        // 2️⃣ Bad request / invalid parameters
+        // Bad request / invalid parameters
         if (message.Contains("bad request", StringComparison.OrdinalIgnoreCase) ||
             message.Contains("invalid request", StringComparison.OrdinalIgnoreCase))
         {
