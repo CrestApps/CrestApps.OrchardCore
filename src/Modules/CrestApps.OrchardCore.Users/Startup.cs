@@ -22,7 +22,6 @@ using OrchardCore.Contents.Models;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement;
-using OrchardCore.DisplayManagement.Descriptors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
@@ -44,8 +43,7 @@ public sealed class Startup : StartupBase
         services.AddUserCacheService();
         services.TryAddBasicDisplayNameProvider();
         services.AddDisplayDriver<UserMenu, DisplayNameUserMenuDisplayDriver>();
-        services.AddDisplayDriver<UserBadgeContext, UserBadgeNameDisplayDriver>();
-        services.AddShapeTableProvider<DisplayUserShapeTableProvider>();
+        // services.AddShapeTableProvider<NavbarShapeTableProvider>();
     }
 }
 
@@ -55,16 +53,6 @@ public sealed class LiquidStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddLiquidFilter<DisplayUserFullNameFilter>("display_name");
-    }
-}
-
-[RequireFeatures("OrchardCore.Contents")]
-public sealed class CoreContentUserStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddShapeTableProvider<ContentShapeTableProvider>();
-        services.AddScoped<IContentDisplayDriver, UserContentsDriver>();
     }
 }
 
@@ -82,10 +70,7 @@ public sealed class DisplayNameStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.PostConfigure<DisplayUserOptions>(options =>
-        {
-            options.ConvertAuthorToShape = true;
-        });
+        services.AddShapeTableProvider<DisplayNameShapeTableProvider>();
 
         var oldProvider = services.FirstOrDefault(x => x.ServiceType == typeof(IUserPickerResultProvider) && x.ImplementationType == typeof(DefaultUserPickerResultProvider));
 
@@ -146,10 +131,7 @@ public sealed class AvatarStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.PostConfigure<DisplayUserOptions>(options =>
-        {
-            options.ConvertAuthorToShape = true;
-        });
+        services.AddShapeTableProvider<AvatarShapeTableProvider>();
 
         services.AddContentPart<UserAvatarPart>();
         services.AddScoped<IDisplayDriver<User>, UserAvatarPartDisplayDriver>();
@@ -162,7 +144,5 @@ public sealed class AvatarStartup : StartupBase
         services.AddNavigationProvider<AvatarAdminMenu>();
         services.AddTransient<IConfigureOptions<UserAvatarOptions>, UserAvatarOptionsConfiguration>();
         services.AddSiteDisplayDriver<UserAvatarOptionsDisplayDriver>();
-        services.AddScoped<IDisplayDriver<UserBadgeContext>, UserBadgeAvatarDisplayDriver>();
-        services.AddScoped<IShapeTableProvider, AvatarUserShapeTableProvider>();
     }
 }
