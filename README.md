@@ -129,7 +129,7 @@ Follow these steps to get started with CrestApps:
 This project is actively maintained and evolves alongside Orchard Core.
 
 * If you're using Orchard Core versions from `2.1` up to `2.3`, please use package version `1.2.x`.
-* For Orchard Core `3.0.0-preview-18752` and later, please use version `2.0.0-beta-0006` or newer.
+* For Orchard Core `3.0.0-preview-18795` and later, please use version `2.0.0-beta-0006` or newer.
 
 **Note:** The reason for this split is that Orchard Core `3.0.0-preview-18669` upgraded to YesSql `5.4.1`, which introduced a binary breaking change. As a result, we had to divide development into two branches to maintain compatibility.
 

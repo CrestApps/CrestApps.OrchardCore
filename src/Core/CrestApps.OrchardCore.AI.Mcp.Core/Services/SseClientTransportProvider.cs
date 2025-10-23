@@ -13,7 +13,7 @@ public sealed class SseClientTransportProvider : IMcpClientTransportProvider
     {
         var metadata = connection.As<SseMcpConnectionMetadata>();
 
-        var transport = new SseClientTransport(new SseClientTransportOptions()
+        var transport = new HttpClientTransport(new HttpClientTransportOptions()
         {
             Endpoint = metadata.Endpoint,
             AdditionalHeaders = metadata.AdditionalHeaders,
