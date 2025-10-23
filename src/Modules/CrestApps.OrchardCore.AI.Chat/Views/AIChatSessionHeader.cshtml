@@ -4,13 +4,23 @@
 @model ChatSessionCapsuleViewModel
 
 <div class="card text-bg-theme">
-    <div class="card-body d-flex justify-content-end">
-        <a class="btn btn-secondary me-1" asp-action="Chat" asp-controller="Admin" asp-route-profileId="@Model.Session.ProfileId">
-            <i class="fa-solid fa-plus"></i> @T["New Chat"]
-        </a>
+    <div class="card-body d-flex justify-content-between">
+        <form asp-action="DeleteAll" asp-controller="Admin" asp-route-profileId="@Model.Session.ProfileId" method="post" class="d-inline">
+            <button type="submit"
+                    class="btn btn-danger"
+                    data-url-af="RemoveUrl UnsafeUrl">
+                <i class="fa-solid fa-trash"></i> @T["Delete All History"]
+            </button>
+        </form>
 
-        <a class="btn btn-primary" asp-action="History" asp-controller="Admin" asp-route-profileId="@Model.Session.ProfileId">
-            <i class="fa-solid fa-list"></i> @T["Chat History"]
-        </a>
+        <div>
+            <a class="btn btn-secondary me-1" asp-action="Chat" asp-controller="Admin" asp-route-profileId="@Model.Session.ProfileId">
+                <i class="fa-solid fa-plus"></i> @T["New Chat"]
+            </a>
+
+            <a class="btn btn-primary" asp-action="History" asp-controller="Admin" asp-route-profileId="@Model.Session.ProfileId">
+                <i class="fa-solid fa-list"></i> @T["Chat History"]
+            </a>
+        </div>
     </div>
 </div>

@@ -45,4 +45,23 @@ public interface IAIChatSessionManager
     /// A task representing the asynchronous operation. This method does not return any value.
     /// </returns>
     Task SaveAsync(AIChatSession chatSession);
+
+    /// <summary>
+    /// Asynchronously deletes the specified AI chat session.
+    /// </summary>
+    /// <param name="sessionId">The unique identifier of the chat session to delete. Must not be null or empty.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result is <c>true</c> if the session was successfully deleted,
+    /// or <c>false</c> if the session was not found or could not be deleted.
+    /// </returns>
+    Task<bool> DeleteAsync(string sessionId);
+
+    /// <summary>
+    /// Asynchronously deletes all AI chat sessions for the specified profile and current user.
+    /// </summary>
+    /// <param name="profileId">The profile identifier to filter sessions. Must not be null or empty.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result is the number of sessions that were deleted.
+    /// </returns>
+    Task<int> DeleteAllAsync(string profileId);
 }
