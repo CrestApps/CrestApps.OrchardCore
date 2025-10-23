@@ -5,7 +5,7 @@
 @model EditDisplayNameSettingPartViewModel
 
 <div class="mb-3">
-    <label asp-for="Type">@T["Display Name Format"]</label>
+    <label asp-for="Type">@T["Display name format"]</label>
     <select asp-for="Type" class="form-select" asp-items="Model.Types"></select>
     <span asp-validation-for="Type" class="text-danger"></span>
 </div>
@@ -17,25 +17,25 @@
 </div>
 
 <div class="mb-3">
-    <label asp-for="DisplayName">@T["Display Name"]</label>
+    <label asp-for="DisplayName">@T["Display name"]</label>
     <select asp-for="DisplayName" class="form-select" asp-items="Model.PropertyTypes"></select>
     <span asp-validation-for="DisplayName" class="text-danger"></span>
 </div>
 
 <div class="mb-3">
-    <label asp-for="FirstName">@T["First Name"]</label>
+    <label asp-for="FirstName">@T["First name"]</label>
     <select asp-for="FirstName" class="form-select" asp-items="Model.PropertyTypes"></select>
     <span asp-validation-for="FirstName" class="text-danger"></span>
 </div>
 
 <div class="mb-3">
-    <label asp-for="MiddleName">@T["Middle Name"]</label>
+    <label asp-for="MiddleName">@T["Middle name"]</label>
     <select asp-for="MiddleName" class="form-select" asp-items="Model.PropertyTypes"></select>
     <span asp-validation-for="MiddleName" class="text-danger"></span>
 </div>
 
 <div class="mb-3">
-    <label asp-for="LastName">@T["Last Name"]</label>
+    <label asp-for="LastName">@T["Last name"]</label>
     <select asp-for="LastName" class="form-select" asp-items="Model.PropertyTypes"></select>
     <span asp-validation-for="LastName" class="text-danger"></span>
 </div>
