@@ -65,6 +65,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             {
                 return;
             }
+
             if (profileSource is not null && _connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
             {
                 if (provider.Connections.Count == 1)

@@ -2,11 +2,11 @@
 @using OrchardCore.Workflows.Helpers
 @using OrchardCore.Workflows.ViewModels
 
-@model ActivityViewModel<AICompletionTask>
+@model ActivityViewModel<AICompletionWithConfigTask>
 
 <header>
     <h4>
         <i class="fa-regular fa-comment" aria-hidden="true"></i>
-        @Model.Activity.GetTitleOrDefault(() => T["AI Completion. Property {0}.", Model.Activity.ResultPropertyName])
+        @Model.Activity.GetTitleOrDefault(() => T["AI Completion using Direct Config. Property {0}.", Model.Activity.ResultPropertyName])
     </h4>
 </header>
