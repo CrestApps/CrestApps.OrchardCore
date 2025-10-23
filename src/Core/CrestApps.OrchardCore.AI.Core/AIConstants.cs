@@ -52,6 +52,5 @@ public static class AIConstants
         public const string GetDeploymentsByConnectionRouteName = "GetDeploymentsByConnection";
 
         public const string GetConnectionsByProviderRouteName = "GetConnectionsByProvider";
-
     }
 }
