@@ -208,6 +208,7 @@ public sealed class AdminController : Controller
     public IActionResult Chat(string profileId)
         => RedirectToAction(nameof(Index), new { profileId });
 
+    [Authorize]
     [Admin("ai/chat/session/delete/{sessionId}", "DeleteChatSession")]
     public async Task<IActionResult> Delete(string sessionId)
     {
@@ -242,6 +243,7 @@ public sealed class AdminController : Controller
         return RedirectToAction(nameof(History), new { profileId = chatSession.ProfileId });
     }
 
+    [Authorize]
     [HttpPost]
     [Admin("ai/chat/session/delete-all/{profileId}", "DeleteAllChatSessions")]
     public async Task<IActionResult> DeleteAll(string profileId)
