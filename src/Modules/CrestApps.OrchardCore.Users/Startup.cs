@@ -22,7 +22,6 @@ using OrchardCore.Contents.Models;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement;
-using OrchardCore.DisplayManagement.Descriptors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
@@ -145,6 +144,5 @@ public sealed class AvatarStartup : StartupBase
         services.AddNavigationProvider<AvatarAdminMenu>();
         services.AddTransient<IConfigureOptions<UserAvatarOptions>, UserAvatarOptionsConfiguration>();
         services.AddSiteDisplayDriver<UserAvatarOptionsDisplayDriver>();
-        services.AddScoped<IShapeTableProvider, AvatarUserShapeTableProvider>();
     }
 }

@@ -14,7 +14,7 @@ public sealed class DisplayNameShapeTableProvider : IShapeTableProvider
                .OnDisplaying(displaying =>
                {
                    // UserDisplayNameText__DisplayName (e.g., 'UserDisplayNameText-DisplayText')
-                   displaying.Shape.Metadata.Alternates.Add($"UserDisplayNameText__DisplayText");
+                   displaying.Shape.Metadata.Alternates.Add("UserDisplayNameText__DisplayText");
 
                    // UserDisplayNameText_[DisplayType]__DisplayText (e.g., 'UserDisplayNameText-DisplayText.SummaryAdmin')
                    displaying.Shape.Metadata.Alternates.Add($"UserDisplayNameText_{displaying.Shape.Metadata.DisplayType.EncodeAlternateElement()}__DisplayText");
