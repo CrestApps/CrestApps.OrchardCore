@@ -139,7 +139,19 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     {
         ArgumentException.ThrowIfNullOrEmpty(sessionId);
 
-        var chatSession = await FindAsync(sessionId);
+        var user = _httpContextAccessor.HttpContext?.User;
+
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            return false;
+        }
+
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var chatSession = await _session.Query<AIChatSession, AIChatSessionIndex>(
+            i => i.SessionId == sessionId && i.UserId == userId,
+            collection: AIConstants.CollectionName)
+            .FirstOrDefaultAsync();
 
         if (chatSession == null)
         {
