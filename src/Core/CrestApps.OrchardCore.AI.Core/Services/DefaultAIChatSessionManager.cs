@@ -169,11 +169,14 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             collection: AIConstants.CollectionName)
             .ListAsync();
 
+        var totalDeleted = 0;
+
         foreach (var session in sessions)
         {
             _session.Delete(session, collection: AIConstants.CollectionName);
+            totalDeleted++;
         }
 
-        return sessions.Count;
+        return totalDeleted;
     }
 }

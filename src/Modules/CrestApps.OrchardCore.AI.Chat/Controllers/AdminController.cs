@@ -209,7 +209,7 @@ public sealed class AdminController : Controller
         => RedirectToAction(nameof(Index), new { profileId });
 
     [Admin("ai/chat/session/delete/{sessionId}", "DeleteChatSession")]
-    public async Task<IActionResult> Delete(string sessionId, string profileId)
+    public async Task<IActionResult> Delete(string sessionId)
     {
         var chatSession = await _sessionManager.FindAsync(sessionId);
 
@@ -239,12 +239,7 @@ public sealed class AdminController : Controller
             await _notifier.ErrorAsync(H["Unable to delete the chat session."]);
         }
 
-        if (!string.IsNullOrEmpty(profileId))
-        {
-            return RedirectToAction(nameof(History), new { profileId });
-        }
-
-        return RedirectToAction(nameof(Index), new { profileId = chatSession.ProfileId });
+        return RedirectToAction(nameof(History), new { profileId = chatSession.ProfileId });
     }
 
     [HttpPost]
