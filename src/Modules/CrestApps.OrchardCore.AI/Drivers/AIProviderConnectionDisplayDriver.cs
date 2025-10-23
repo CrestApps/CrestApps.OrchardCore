@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
@@ -11,14 +12,17 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProviderConnection>
 {
     private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
+    private readonly IShellReleaseManager _shellReleaseManager;
 
     internal readonly IStringLocalizer S;
 
     public AIProviderConnectionDisplayDriver(
         INamedCatalog<AIProviderConnection> connectionsCatalog,
+        IShellReleaseManager shellReleaseManager,
         IStringLocalizer<AIProviderConnectionDisplayDriver> stringLocalizer)
     {
         _connectionsCatalog = connectionsCatalog;
+        _shellReleaseManager = shellReleaseManager;
         S = stringLocalizer;
     }
 
@@ -34,6 +38,8 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
 
     public override IDisplayResult Edit(AIProviderConnection connection, BuildEditorContext context)
     {
+        context.AddTenantReloadWarningWrapper();
+
         return Initialize<AIProviderConnectionFieldsViewModel>("AIProviderConnectionFields_Edit", model =>
         {
             model.DisplayText = connection.DisplayText;
@@ -77,6 +83,8 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
         connection.DisplayText = model.DisplayText;
         connection.DefaultDeploymentName = model.DefaultDeploymentName;
         connection.IsDefault = model.IsDefault;
+
+        _shellReleaseManager.RequestRelease();
 
         return Edit(connection, context);
     }
