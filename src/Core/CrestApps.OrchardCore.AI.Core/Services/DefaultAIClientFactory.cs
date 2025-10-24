@@ -73,7 +73,9 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
         throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{providerName}'.");
     }
 
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(string providerName, string connectionName, string deploymentName = null)
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
         ArgumentException.ThrowIfNullOrEmpty(connectionName);

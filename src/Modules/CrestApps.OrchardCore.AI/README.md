@@ -36,6 +36,7 @@ Below is an example configuration:
           "DefaultConnectionName": "<!-- The default connection name to use from the Connections list -->",
           "DefaultDeploymentName": "<!-- The default deployment name -->",
           "DefaultEmbeddingDeploymentName": "<!-- The default embedding deployment name (optional, for embedding services) -->",
+          "DefaultSpeechToTextDeploymentName": "<!-- The default speech-to-text deployment name (optional, for speech-to-text service)-->",
           "Connections": {
             "<!-- Connection name goes here -->": {
               "DefaultDeploymentName": "<!-- The default deployment name for this connection -->"
@@ -82,9 +83,9 @@ Each provider requires its own connection and deployment settings. The `DefaultC
 
 ### Microsoft.AI.Extensions
 
-The AI module is built on top of [Microsoft.Extensions.AI](https://www.nuget.org/packages/Microsoft.Extensions.AI), making it easy to integrate AI services into your application. We provide the `IAIClientFactory` service, which allows you to easily create standard services such as `IChatClient` and `IEmbeddingGenerator` for any of your configured providers and connections.
+The AI module is built on top of [Microsoft.Extensions.AI](https://www.nuget.org/packages/Microsoft.Extensions.AI), making it easy to integrate AI services into your application. We provide the `IAIClientFactory` service, which allows you to easily create standard services such as `IChatClient`,  `IEmbeddingGenerator` and `ISpeechToTextClient` for any of your configured providers and connections.
 
-Simply inject `IAIClientFactory` into your service and use the `CreateChatClientAsync` or `CreateEmbeddingGeneratorAsync` methods to obtain the required client.
+Simply inject `IAIClientFactory` into your service and use the `CreateChatClientAsync`, `CreateEmbeddingGeneratorAsync` or `CreateISpeechToTextClientAsync` methods to obtain the required client.
 
 ### AI Deployments Feature
 

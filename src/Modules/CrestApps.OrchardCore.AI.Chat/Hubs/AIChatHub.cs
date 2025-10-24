@@ -165,7 +165,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
             }
 
             // Get the speech-to-text client
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             ISpeechToTextClient speechToTextClient;
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             try
             {
                 speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, profile.ConnectionName, profile.DeploymentId);
@@ -188,10 +190,19 @@ public class AIChatHub : Hub<IAIChatHubClient>
             try
             {
                 var audioBytes = Convert.FromBase64String(base64Audio);
-                var audioContent = new AudioContent(audioBytes, "audio/webm");
-                var response = await speechToTextClient.TranscribeAsync(audioContent, cancellationToken: cancellationToken);
+                using var audioStream = new System.IO.MemoryStream(audioBytes);
 
-                transcribedText = response?.Text?.Trim();
+                var builder = new StringBuilder();
+
+                await foreach (var update in speechToTextClient.GetStreamingTextAsync(audioStream, cancellationToken: cancellationToken))
+                {
+                    if (update is not null && !string.IsNullOrEmpty(update.Text))
+                    {
+                        builder.Append(update.Text);
+                    }
+                }
+
+                transcribedText = builder.ToString().Trim();
 
                 if (string.IsNullOrWhiteSpace(transcribedText))
                 {
@@ -252,7 +263,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
             }
 
             // Get the speech-to-text client
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             ISpeechToTextClient speechToTextClient;
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             try
             {
                 speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, profile.ConnectionName, profile.DeploymentId);
@@ -267,10 +280,19 @@ public class AIChatHub : Hub<IAIChatHubClient>
             try
             {
                 var audioBytes = Convert.FromBase64String(base64Audio);
-                var audioContent = new AudioContent(audioBytes, "audio/webm");
-                var response = await speechToTextClient.TranscribeAsync(audioContent, cancellationToken: cancellationToken);
+                using var audioStream = new MemoryStream(audioBytes);
 
-                var transcribedText = response?.Text?.Trim();
+                var builder = new StringBuilder();
+
+                await foreach (var update in speechToTextClient.GetStreamingTextAsync(audioStream, cancellationToken: cancellationToken))
+                {
+                    if (update is not null && !string.IsNullOrEmpty(update.Text))
+                    {
+                        builder.Append(update.Text);
+                    }
+                }
+
+                var transcribedText = builder.ToString().Trim();
 
                 // Return the chunk even if empty - the client will handle it
                 return transcribedText ?? string.Empty;

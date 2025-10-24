@@ -39,5 +39,7 @@ public interface IAIClientFactory
     /// <returns>
     /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation, with the created <see cref="ISpeechToTextClient"/>.
     /// </returns>
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(string providerName, string connectionName, string deploymentName);
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 }
