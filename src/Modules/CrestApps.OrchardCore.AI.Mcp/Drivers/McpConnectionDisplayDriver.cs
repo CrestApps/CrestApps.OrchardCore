@@ -42,7 +42,7 @@ internal sealed class McpConnectionDisplayDriver : DisplayDriver<McpConnection>
 
         if (string.IsNullOrWhiteSpace(model.DisplayText))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The Display text is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The Title is required."]);
         }
 
         connection.DisplayText = model.DisplayText;

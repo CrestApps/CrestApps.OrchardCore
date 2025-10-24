@@ -30,38 +30,8 @@
 
 @if (Model.IsNew)
 {
+    <script asp-name="CrestAppsTechnicalNameGenerator"></script>
     <script>
-        (function () {
-            document.addEventListener('DOMContentLoaded', function () {
-                var displayEl = document.getElementById('@Html.IdFor(x => x.DisplayText)');
-                var nameEl = document.getElementById('@Html.IdFor(x => x.Name)');
-                if (!displayEl || !nameEl) return;
-
-                // Track whether the user has entered a non-empty value in the Name field.
-                var userEdited = nameEl.value.trim() !== '';
-
-                // Resume auto-generation only when the Name field is empty again.
-                nameEl.addEventListener('input', function () {
-                    userEdited = nameEl.value.trim() !== '';
-                });
-
-                function toTitleCaseNoSpaces(value) {
-                    return value
-                        .trim()
-                        // split on whitespace or common separators or any non-alphanumeric
-                        .split(/[^A-Za-z0-9]+/)
-                        .filter(function (w) { return w.length > 0; })
-                        .map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); })
-                        .join('');
-                }
-
-                // Generate on keyup as requested
-                displayEl.addEventListener('keyup', function () {
-                    if (userEdited) return;
-                    var generated = toTitleCaseNoSpaces(displayEl.value || '');
-                    nameEl.value = generated;
-                });
-            });
-        })();
+        window.initAutoGenerateTechnicalName('@Html.IdFor(x => x.DisplayText)', '@Html.IdFor(x => x.Name)');
     </script>
 }
