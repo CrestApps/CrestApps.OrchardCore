@@ -121,4 +121,21 @@
         border: none;
         box-shadow: none;
     }
+
+    .microphone-button {
+        transition: all 0.3s ease;
+    }
+
+        .microphone-button.btn-danger {
+            animation: pulse-red 1.5s infinite;
+        }
+
+    @@keyframes pulse-red {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+        }
+        50% {
+            box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+        }
+    }
 </style>
