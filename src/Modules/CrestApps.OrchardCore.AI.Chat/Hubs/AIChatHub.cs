@@ -131,6 +131,19 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 return null;
             }
 
+            if (string.IsNullOrWhiteSpace(base64Audio))
+            {
+                await Clients.Caller.ReceiveError(S["Audio data is required."].Value);
+                return null;
+            }
+
+            // Limit audio size to prevent DoS attacks (10MB base64 = ~7.5MB raw audio, enough for ~5 minutes at 24kbps)
+            if (base64Audio.Length > 10_000_000)
+            {
+                await Clients.Caller.ReceiveError(S["Audio data is too large. Please record a shorter message."].Value);
+                return null;
+            }
+
             var profile = await _profileManager.FindByIdAsync(profileId);
 
             if (profile is null)
