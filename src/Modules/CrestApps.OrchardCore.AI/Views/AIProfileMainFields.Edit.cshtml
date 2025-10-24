@@ -30,8 +30,8 @@
 
 @if (Model.IsNew)
 {
-    <script asp-name="TechnicalNameGenerator"></script>
-    <script depends-on="TechnicalNameGenerator">
+    <script asp-name="technical-name-generator"></script>
+    <script depends-on="technical-name-generator">
         window.initAutoGenerateTechnicalName('@Html.IdFor(x => x.DisplayText)', '@Html.IdFor(x => x.Name)');
     </script>
 }

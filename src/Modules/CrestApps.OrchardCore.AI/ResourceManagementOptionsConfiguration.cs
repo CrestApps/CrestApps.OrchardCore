@@ -17,7 +17,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.0");
 
         _manifest
-            .DefineScript("TechnicalNameGenerator")
+            .DefineScript("technical-name-generator")
             .SetUrl("~/CrestApps.OrchardCore.AI/scripts/technical-name-generator.min.js", "~/CrestApps.OrchardCore.AI/scripts/technical-name-generator.js")
             .SetVersion("1.0.0");
     }
