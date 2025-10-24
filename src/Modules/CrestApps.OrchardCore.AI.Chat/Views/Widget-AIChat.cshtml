@@ -127,6 +127,9 @@
                 </div>
 
                 <div>
+                    <button class="btn btn-outline-secondary rounded-circle me-2 microphone-button" type="button" id="@(baseId)_MicrophoneButton" title="@T["Record voice message"]">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
                     <button class="btn btn-dark rounded-circle" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                         <i class="fa-solid fa-arrow-up"></i>
                     </button>
@@ -160,6 +163,7 @@
         chatContainerElementSelector: '#@chatContainerHtmlId',
         inputElementSelector: '#@userPromptHtmlId',
         sendButtonElementSelector: '#@buttonHtmlId',
+        microphoneButtonElementSelector: '#@(baseId)_MicrophoneButton',
         placeholderElementSelector: '#@placeholderHtmlId',
         messages: [],
         messageTemplate: `

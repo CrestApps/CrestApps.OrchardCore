@@ -65,6 +65,7 @@ window.openAIChatManager = function () {
                 return {
                     inputElement: null,
                     buttonElement: null,
+                    microphoneButton: null,
                     chatContainer: null,
                     placeholder: null,
                     isSessionStarted: false,
@@ -74,6 +75,9 @@ window.openAIChatManager = function () {
                     chatHistorySection: null,
                     widgetIsInitialized: false,
                     isSteaming: false,
+                    isRecording: false,
+                    mediaRecorder: null,
+                    audioChunks: [],
                     stream: null,
                     messages: [],
                     prompt: ''
@@ -398,6 +402,20 @@ window.openAIChatManager = function () {
                     this.chatContainer = document.querySelector(config.chatContainerElementSelector);
                     this.placeholder = document.querySelector(config.placeholderElementSelector);
 
+                    if (config.microphoneButtonElementSelector) {
+                        this.microphoneButton = document.querySelector(config.microphoneButtonElementSelector);
+                        
+                        if (this.microphoneButton) {
+                            this.microphoneButton.addEventListener('click', () => {
+                                if (this.isRecording) {
+                                    this.stopRecording();
+                                } else {
+                                    this.startRecording();
+                                }
+                            });
+                        }
+                    }
+
                     this.inputElement.addEventListener('keyup', event => {
 
                         if (this.stream != null) {
@@ -605,6 +623,107 @@ window.openAIChatManager = function () {
                 },
                 copyResponse(message) {
                     navigator.clipboard.writeText(message);
+                },
+                async startRecording() {
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        console.error('Media devices not supported');
+                        alert('Your browser does not support audio recording. Please use a modern browser like Chrome, Edge, or Firefox.');
+                        return;
+                    }
+
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        this.mediaRecorder = new MediaRecorder(stream, {
+                            mimeType: 'audio/webm'
+                        });
+                        this.audioChunks = [];
+
+                        this.mediaRecorder.ondataavailable = (event) => {
+                            if (event.data.size > 0) {
+                                this.audioChunks.push(event.data);
+                            }
+                        };
+
+                        this.mediaRecorder.onstop = async () => {
+                            const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                            await this.sendAudioMessage(audioBlob);
+                            
+                            // Stop all tracks to release the microphone
+                            stream.getTracks().forEach(track => track.stop());
+                        };
+
+                        this.mediaRecorder.start();
+                        this.isRecording = true;
+                        
+                        if (this.microphoneButton) {
+                            this.microphoneButton.classList.add('btn-danger');
+                            this.microphoneButton.classList.remove('btn-outline-secondary');
+                            this.microphoneButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
+                        }
+                    } catch (error) {
+                        console.error('Error accessing microphone:', error);
+                        alert('Unable to access microphone. Please check your browser permissions and try again.');
+                    }
+                },
+                stopRecording() {
+                    if (this.mediaRecorder && this.isRecording) {
+                        this.mediaRecorder.stop();
+                        this.isRecording = false;
+                        
+                        if (this.microphoneButton) {
+                            this.microphoneButton.classList.remove('btn-danger');
+                            this.microphoneButton.classList.add('btn-outline-secondary');
+                            this.microphoneButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+                        }
+                    }
+                },
+                async sendAudioMessage(audioBlob) {
+                    try {
+                        this.showTypingIndicator();
+
+                        // Convert blob to base64 for SignalR transmission
+                        const reader = new FileReader();
+                        reader.readAsDataURL(audioBlob);
+                        
+                        reader.onloadend = async () => {
+                            const base64Audio = reader.result.split(',')[1];
+                            
+                            try {
+                                const transcribedText = await this.connection.invoke(
+                                    "SendAudioMessage",
+                                    this.getProfileId(),
+                                    base64Audio,
+                                    this.getSessionId(),
+                                    null
+                                );
+
+                                this.hideTypingIndicator();
+
+                                if (transcribedText) {
+                                    // Set the transcribed text in the input field
+                                    this.inputElement.value = transcribedText;
+                                    this.prompt = transcribedText;
+                                    
+                                    // Enable the send button
+                                    this.buttonElement.removeAttribute('disabled');
+                                    
+                                    // Optionally auto-send the message
+                                    // Uncomment the next line if you want to automatically send after transcription
+                                    // this.sendMessage();
+                                } else {
+                                    console.error('No transcription returned');
+                                }
+                            } catch (err) {
+                                this.hideTypingIndicator();
+                                console.error("Error sending audio message:", err);
+                                alert('Error processing voice message. Please try again.');
+                            }
+                        };
+                    } catch (error) {
+                        this.hideTypingIndicator();
+                        console.error('Error sending audio message:', error);
+                        alert('Error processing voice message. Please try again.');
+                    }
                 }
             },
             mounted() {
@@ -617,6 +736,9 @@ window.openAIChatManager = function () {
                 })();
             },
             beforeUnmount() {
+                if (this.isRecording) {
+                    this.stopRecording();
+                }
                 if (this.stream) {
                     this.stream.dispose();
                     this.stream = null;

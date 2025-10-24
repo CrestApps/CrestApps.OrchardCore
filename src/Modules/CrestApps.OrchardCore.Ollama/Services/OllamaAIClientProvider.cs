@@ -20,4 +20,9 @@ public sealed class OllamaAIClientProvider : AIClientProviderBase
     {
         return new OllamaApiClient(connection.GetEndpoint(), deploymentName);
     }
+
+    protected override ISpeechToTextClient GetSpeechToTextClient(AIProviderConnectionEntry connection, string deploymentName)
+    {
+        throw new NotSupportedException("Ollama does not currently support speech-to-text functionality.");
+    }
 }

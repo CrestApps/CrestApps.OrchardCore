@@ -38,9 +38,26 @@ public abstract class AIClientProviderBase : IAIClientProvider
         return ValueTask.FromResult(GetEmbeddingGenerator(connection, deploymentName));
     }
 
+    public ValueTask<ISpeechToTextClient> GetSpeechToTextClientAsync(AIProviderConnectionEntry connection, string deploymentName = null)
+    {
+        if (string.IsNullOrEmpty(deploymentName))
+        {
+            deploymentName = connection.GetDefaultDeploymentName(false);
+        }
+
+        if (string.IsNullOrEmpty(deploymentName))
+        {
+            throw new ArgumentException("A deployment name must be provided, either directly or as a default in the connection settings.");
+        }
+
+        return ValueTask.FromResult(GetSpeechToTextClient(connection, deploymentName));
+    }
+
     protected abstract string GetProviderName();
 
     protected abstract IChatClient GetChatClient(AIProviderConnectionEntry connection, string deploymentName);
 
     protected abstract IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator(AIProviderConnectionEntry connection, string deploymentName);
+
+    protected abstract ISpeechToTextClient GetSpeechToTextClient(AIProviderConnectionEntry connection, string deploymentName);
 }

@@ -44,4 +44,9 @@ public sealed class AzureAIInferenceClientProvider : AIClientProviderBase
 
         return client.AsIEmbeddingGenerator();
     }
+
+    protected override ISpeechToTextClient GetSpeechToTextClient(AIProviderConnectionEntry connection, string deploymentName)
+    {
+        throw new NotSupportedException("Azure AI Inference does not currently support speech-to-text functionality through this client.");
+    }
 }

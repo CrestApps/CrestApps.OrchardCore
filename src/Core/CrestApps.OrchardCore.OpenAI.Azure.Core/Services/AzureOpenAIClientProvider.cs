@@ -32,6 +32,14 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
             .AsIEmbeddingGenerator();
     }
 
+    protected override ISpeechToTextClient GetSpeechToTextClient(AIProviderConnectionEntry connection, string deploymentName)
+    {
+        var azureClient = GetAzureOpenAIClient(connection);
+
+        return azureClient.GetAudioClient(deploymentName)
+            .AsISpeechToTextClient();
+    }
+
     private static AzureOpenAIClient GetAzureOpenAIClient(AIProviderConnectionEntry connection)
     {
         var endpoint = connection.GetEndpoint();

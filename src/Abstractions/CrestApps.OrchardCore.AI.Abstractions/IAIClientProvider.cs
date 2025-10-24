@@ -30,4 +30,12 @@ public interface IAIClientProvider
     /// <param name="deploymentName">The optional deployment name to use.</param>
     /// <returns>A <see cref="ValueTask{IEmbeddingGenerator}"/> representing the asynchronous operation.</returns>
     ValueTask<IEmbeddingGenerator<string, Embedding<float>>> GetEmbeddingGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null);
+
+    /// <summary>
+    /// Gets a speech-to-text client for the specified connection and deployment.
+    /// </summary>
+    /// <param name="connection">The connection entry containing provider configuration.</param>
+    /// <param name="deploymentName">The optional deployment name to use.</param>
+    /// <returns>A <see cref="ValueTask{ISpeechToTextClient}"/> representing the asynchronous operation.</returns>
+    ValueTask<ISpeechToTextClient> GetSpeechToTextClientAsync(AIProviderConnectionEntry connection, string deploymentName = null);
 }

@@ -27,6 +27,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly ISession _session;
     private readonly IAICompletionService _completionService;
+    private readonly IAIClientFactory _clientFactory;
     private readonly ILogger<AIChatHub> _logger;
 
     protected readonly IStringLocalizer S;
@@ -38,6 +39,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         ILiquidTemplateManager liquidTemplateManager,
         ISession session,
         IAICompletionService completionService,
+        IAIClientFactory clientFactory,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
     {
@@ -47,6 +49,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _liquidTemplateManager = liquidTemplateManager;
         _session = session;
         _completionService = completionService;
+        _clientFactory = clientFactory;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -116,6 +119,84 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 References = message.References,
             })
         });
+    }
+
+    public async Task<string> SendAudioMessage(string profileId, string base64Audio, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(profileId))
+            {
+                await Clients.Caller.ReceiveError(S["{0} is required.", nameof(profileId)].Value);
+                return null;
+            }
+
+            var profile = await _profileManager.FindByIdAsync(profileId);
+
+            if (profile is null)
+            {
+                await Clients.Caller.ReceiveError(S["Profile not found."].Value);
+                return null;
+            }
+
+            var httpContext = Context.GetHttpContext();
+
+            if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+            {
+                await Clients.Caller.ReceiveError(S["You are not authorized to interact with the given profile."].Value);
+                return null;
+            }
+
+            // Get the speech-to-text client
+            ISpeechToTextClient speechToTextClient;
+            try
+            {
+                speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, profile.ConnectionName, profile.DeploymentId);
+            }
+            catch (NotSupportedException ex)
+            {
+                await Clients.Caller.ReceiveError(S["Speech-to-text is not supported by the selected provider: {0}", ex.Message].Value);
+                _logger.LogWarning(ex, "Speech-to-text not supported for provider {Provider}", profile.Source);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                await Clients.Caller.ReceiveError(S["Failed to initialize speech-to-text client: {0}", ex.Message].Value);
+                _logger.LogError(ex, "Error creating speech-to-text client for provider {Provider}", profile.Source);
+                return null;
+            }
+
+            // Convert audio to text
+            string transcribedText;
+            try
+            {
+                var audioBytes = Convert.FromBase64String(base64Audio);
+                var audioContent = new AudioContent(audioBytes, "audio/webm");
+                var response = await speechToTextClient.TranscribeAsync(audioContent, cancellationToken: cancellationToken);
+
+                transcribedText = response?.Text?.Trim();
+
+                if (string.IsNullOrWhiteSpace(transcribedText))
+                {
+                    await Clients.Caller.ReceiveError(S["Unable to transcribe audio. Please try again."].Value);
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error transcribing audio");
+                await Clients.Caller.ReceiveError(S["Error transcribing audio: {0}", ex.Message].Value);
+                return null;
+            }
+
+            return transcribedText;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing audio message");
+            await Clients.Caller.ReceiveError(S["An error occurred while processing your voice message."].Value);
+            return null;
+        }
     }
 
     private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
