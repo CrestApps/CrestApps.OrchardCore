@@ -122,8 +122,31 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.TopP = context.IsNew ? _defaultAIOptions.TopP : metadata.TopP;
             model.UseCaching = metadata.UseCaching;
             model.AllowCaching = _defaultAIOptions.EnableDistributedCaching;
+            model.UseMicrophone = metadata.UseMicrophone;
+            model.SpeechToTextConnectionName = metadata.SpeechToTextConnectionName;
 
             model.IsSystemMessageLocked = profile.GetSettings<AIProfileSettings>().LockSystemMessage;
+
+            // Populate speech-to-text connections for the current provider
+            if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
+            {
+                model.SpeechToTextConnections = [];
+            }
+            else if (_connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
+            {
+                model.SpeechToTextConnections = provider.Connections
+                    .Where(x => x.Value.TryGetValue("Types", out var types) && 
+                               types is string[] typeArray && 
+                               typeArray.Contains(nameof(AIProviderConnectionType.SpeechToText), StringComparer.OrdinalIgnoreCase))
+                    .Select(x => new SelectListItem(
+                        x.Value.TryGetValue("ConnectionNameAlias", out var alias) ? alias.ToString() : x.Key, 
+                        x.Key))
+                    .ToArray();
+            }
+            else
+            {
+                model.SpeechToTextConnections = [];
+            }
         }).Location("Content:10");
 
         return Combine(mainFieldsResult, connectionFieldResult, fieldsResult, parametersResult);
@@ -221,6 +244,8 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         metadata.Temperature = parametersModel.Temperature;
         metadata.MaxTokens = parametersModel.MaxTokens;
         metadata.TopP = parametersModel.TopP;
+        metadata.UseMicrophone = parametersModel.UseMicrophone;
+        metadata.SpeechToTextConnectionName = parametersModel.SpeechToTextConnectionName;
 
         if (_defaultAIOptions.EnableDistributedCaching)
         {

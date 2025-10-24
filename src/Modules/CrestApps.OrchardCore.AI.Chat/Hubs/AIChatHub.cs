@@ -164,13 +164,17 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 return null;
             }
 
+            // Get the speech-to-text client using the dedicated connection from profile metadata
+            var metadata = profile.As<CrestApps.OrchardCore.AI.Core.Models.AIProfileMetadata>();
+            var speechToTextConnection = metadata?.SpeechToTextConnectionName ?? profile.ConnectionName;
+
             // Get the speech-to-text client
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             ISpeechToTextClient speechToTextClient;
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             try
             {
-                speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, profile.ConnectionName, profile.DeploymentId);
+                speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, speechToTextConnection, profile.DeploymentId);
             }
             catch (NotSupportedException ex)
             {
@@ -262,13 +266,17 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 return null;
             }
 
+            // Get the speech-to-text client using the dedicated connection from profile metadata
+            var metadata = profile.As<CrestApps.OrchardCore.AI.Core.Models.AIProfileMetadata>();
+            var speechToTextConnection = metadata?.SpeechToTextConnectionName ?? profile.ConnectionName;
+
             // Get the speech-to-text client
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             ISpeechToTextClient speechToTextClient;
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             try
             {
-                speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, profile.ConnectionName, profile.DeploymentId);
+                speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, speechToTextConnection, profile.DeploymentId);
             }
             catch (Exception ex)
             {

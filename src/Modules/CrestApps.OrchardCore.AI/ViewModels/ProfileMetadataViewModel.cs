@@ -28,11 +28,18 @@ public class ProfileMetadataViewModel
 
     public bool UseCaching { get; set; }
 
+    public bool UseMicrophone { get; set; }
+
+    public string SpeechToTextConnectionName { get; set; }
+
     [BindNever]
     public bool IsSystemMessageLocked { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> Deployments { get; set; }
+
+    [BindNever]
+    public IEnumerable<SelectListItem> SpeechToTextConnections { get; set; }
 
     [BindNever]
     public bool AllowCaching { get; set; }
