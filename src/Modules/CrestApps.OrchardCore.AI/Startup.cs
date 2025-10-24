@@ -30,6 +30,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
+using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
 
@@ -64,6 +65,8 @@ public sealed class Startup : StartupBase
             .AddScoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>();
 
         services.AddDataMigration<AIProfileDefaultContextMigrations>();
+
+        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
