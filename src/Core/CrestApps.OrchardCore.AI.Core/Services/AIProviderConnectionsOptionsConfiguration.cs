@@ -52,6 +52,7 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
                     Connections = new Dictionary<string, AIProviderConnectionEntry>(),
                 };
             }
+
             AIProviderConnection defaultConnection = null;
 
             foreach (var connection in group.Connections)
@@ -75,6 +76,18 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
             {
                 provider.DefaultConnectionName = defaultConnection.Id;
                 provider.DefaultDeploymentName = defaultConnection.DefaultDeploymentName;
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(provider.DefaultDeploymentName))
+                {
+                    provider.DefaultDeploymentName = provider.Connections.FirstOrDefault().Value.GetDefaultDeploymentName();
+                }
+
+                if (string.IsNullOrEmpty(provider.DefaultConnectionName))
+                {
+                    provider.DefaultConnectionName = provider.Connections.FirstOrDefault().Key;
+                }
             }
 
             options.Providers[group.ProviderName] = provider;
