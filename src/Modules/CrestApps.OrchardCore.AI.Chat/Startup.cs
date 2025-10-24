@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.Services;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.SignalR.Core.Services;
@@ -22,13 +21,12 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat;
 
-[Feature(AIConstants.Feature.Chat)]
 public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddScoped<IPermissionProvider, ChatSessionPermissionProvider>()
+            .AddPermissionProvider<ChatSessionPermissionProvider>()
             .AddDisplayDriver<AIChatSessionListOptions, AIChatSessionListOptionsDisplayDriver>()
             .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileMenuDisplayDriver>()
