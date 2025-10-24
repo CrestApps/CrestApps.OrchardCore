@@ -1,0 +1,54 @@
+@using CrestApps.OrchardCore.Omnichannel.Models
+@using OrchardCore.Modules
+
+@inject ILocalClock LocalClock
+@model CommunicationPreferenceViewModel
+
+
+<div class="mb-3">
+
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" asp-for="DoNotCall">
+        <label class="form-check-label" asp-for="DoNotCall">
+            @T["Do not call"]
+            @if (Model.DoNotCallUtc.HasValue)
+            {
+                <span class="hint dashed">@T["Set at {0}", await LocalClock.ConvertToLocalAsync(Model.DoNotCallUtc.Value)]</span>
+            }
+        </label>
+    </div>
+
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" asp-for="DoNotSms">
+        <label class="form-check-label" asp-for="DoNotSms">
+            @T["Do not SMS"]
+            @if (Model.DoNotSmsUtc.HasValue)
+            {
+                <span class="hint dashed">@T["Set at {0}", await LocalClock.ConvertToLocalAsync(Model.DoNotSmsUtc.Value)]</span>
+            }
+        </label>
+    </div>
+
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" asp-for="DoNotChat">
+        <label class="form-check-label" asp-for="DoNotChat">
+            @T["Do not Chat"]
+            @if (Model.DoNotChatUtc.HasValue)
+            {
+                <span class="hint dashed">@T["Set at {0}", await LocalClock.ConvertToLocalAsync(Model.DoNotChatUtc.Value)]</span>
+            }
+        </label>
+    </div>
+
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" asp-for="DoNotEmail">
+        <label class="form-check-label" asp-for="DoNotEmail">
+            @T["Do not Email"]
+            @if (Model.DoNotEmailUtc.HasValue)
+            {
+                <span class="hint dashed">@T["Set at {0}", await LocalClock.ConvertToLocalAsync(Model.DoNotEmailUtc.Value)]</span>
+            }
+        </label>
+    </div>
+
+</div>
