@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Entities;
 using OrchardCore.Liquid;
@@ -28,6 +29,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly ISession _session;
     private readonly IAICompletionService _completionService;
     private readonly IAIClientFactory _clientFactory;
+    private readonly AIChatOptions _chatOptions;
     private readonly ILogger<AIChatHub> _logger;
 
     protected readonly IStringLocalizer S;
@@ -40,6 +42,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         ISession session,
         IAICompletionService completionService,
         IAIClientFactory clientFactory,
+        IOptions<AIChatOptions> chatOptions,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
     {
@@ -50,6 +53,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _session = session;
         _completionService = completionService;
         _clientFactory = clientFactory;
+        _chatOptions = chatOptions.Value;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -137,8 +141,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 return null;
             }
 
-            // Limit audio size to prevent DoS attacks (10MB base64 = ~7.5MB raw audio, enough for ~5 minutes at 24kbps)
-            if (base64Audio.Length > 10_000_000)
+            // Limit audio size to prevent DoS attacks
+            if (base64Audio.Length > _chatOptions.MaxAudioSizeInBytes)
             {
                 await Clients.Caller.ReceiveError(S["Audio data is too large. Please record a shorter message."].Value);
                 return null;
@@ -209,6 +213,78 @@ public class AIChatHub : Hub<IAIChatHubClient>
             _logger.LogError(ex, "Error processing audio message");
             await Clients.Caller.ReceiveError(S["An error occurred while processing your voice message."].Value);
             return null;
+        }
+    }
+
+    public async Task<string> SendAudioChunk(string profileId, string base64Audio, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(profileId))
+            {
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(base64Audio))
+            {
+                return null;
+            }
+
+            // Limit chunk size to prevent DoS attacks
+            if (base64Audio.Length > _chatOptions.MaxAudioSizeInBytes)
+            {
+                _logger.LogWarning("Audio chunk too large: {Size} bytes", base64Audio.Length);
+                return null;
+            }
+
+            var profile = await _profileManager.FindByIdAsync(profileId);
+
+            if (profile is null)
+            {
+                return null;
+            }
+
+            var httpContext = Context.GetHttpContext();
+
+            if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+            {
+                return null;
+            }
+
+            // Get the speech-to-text client
+            ISpeechToTextClient speechToTextClient;
+            try
+            {
+                speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, profile.ConnectionName, profile.DeploymentId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to create speech-to-text client for chunk");
+                return null;
+            }
+
+            // Convert audio chunk to text
+            try
+            {
+                var audioBytes = Convert.FromBase64String(base64Audio);
+                var audioContent = new AudioContent(audioBytes, "audio/webm");
+                var response = await speechToTextClient.TranscribeAsync(audioContent, cancellationToken: cancellationToken);
+
+                var transcribedText = response?.Text?.Trim();
+
+                // Return the chunk even if empty - the client will handle it
+                return transcribedText ?? string.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error transcribing audio chunk");
+                return string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing audio chunk");
+            return string.Empty;
         }
     }
 

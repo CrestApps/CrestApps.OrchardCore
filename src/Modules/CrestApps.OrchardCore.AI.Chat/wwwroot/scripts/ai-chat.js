@@ -64,6 +64,8 @@ window.openAIChatManager = function () {
           isRecording: false,
           mediaRecorder: null,
           audioChunks: [],
+          audioStream: null,
+          recordingMessageId: null,
           stream: null,
           messages: [],
           prompt: ''
@@ -568,75 +570,102 @@ window.openAIChatManager = function () {
         },
         startRecording: function startRecording() {
           var _this9 = this;
-          return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+          return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
             var stream;
-            return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-              while (1) switch (_context3.prev = _context3.next) {
+            return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+              while (1) switch (_context4.prev = _context4.next) {
                 case 0:
                   if (!(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)) {
-                    _context3.next = 4;
+                    _context4.next = 4;
                     break;
                   }
                   console.error('Media devices not supported');
                   alert('Your browser does not support audio recording. Please use a modern browser like Chrome, Edge, or Firefox.');
-                  return _context3.abrupt("return");
+                  return _context4.abrupt("return");
                 case 4:
-                  _context3.prev = 4;
-                  _context3.next = 7;
+                  _context4.prev = 4;
+                  _context4.next = 7;
                   return navigator.mediaDevices.getUserMedia({
                     audio: true
                   });
                 case 7:
-                  stream = _context3.sent;
+                  stream = _context4.sent;
                   _this9.mediaRecorder = new MediaRecorder(stream, {
                     mimeType: 'audio/webm'
                   });
                   _this9.audioChunks = [];
-                  _this9.mediaRecorder.ondataavailable = function (event) {
-                    if (event.data.size > 0) {
-                      _this9.audioChunks.push(event.data);
-                    }
-                  };
-                  _this9.mediaRecorder.onstop = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
-                    var audioBlob;
-                    return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-                      while (1) switch (_context2.prev = _context2.next) {
+                  _this9.audioStream = stream;
+                  _this9.recordingMessageId = null;
+                  _this9.mediaRecorder.ondataavailable = /*#__PURE__*/function () {
+                    var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(event) {
+                      return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+                        while (1) switch (_context2.prev = _context2.next) {
+                          case 0:
+                            if (!(event.data.size > 0)) {
+                              _context2.next = 3;
+                              break;
+                            }
+                            _context2.next = 3;
+                            return _this9.sendAudioChunk(event.data);
+                          case 3:
+                          case "end":
+                            return _context2.stop();
+                        }
+                      }, _callee2);
+                    }));
+                    return function (_x) {
+                      return _ref.apply(this, arguments);
+                    };
+                  }();
+                  _this9.mediaRecorder.onstop = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+                    return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+                      while (1) switch (_context3.prev = _context3.next) {
                         case 0:
-                          audioBlob = new Blob(_this9.audioChunks, {
-                            type: 'audio/webm'
-                          });
-                          _context2.next = 3;
-                          return _this9.sendAudioMessage(audioBlob);
-                        case 3:
+                          _context3.next = 2;
+                          return _this9.finalizeRecording();
+                        case 2:
                           // Stop all tracks to release the microphone
-                          stream.getTracks().forEach(function (track) {
-                            return track.stop();
-                          });
-                        case 4:
+                          if (_this9.audioStream) {
+                            _this9.audioStream.getTracks().forEach(function (track) {
+                              return track.stop();
+                            });
+                            _this9.audioStream = null;
+                          }
+                        case 3:
                         case "end":
-                          return _context2.stop();
+                          return _context3.stop();
                       }
-                    }, _callee2);
+                    }, _callee3);
                   }));
-                  _this9.mediaRecorder.start();
+
+                  // Start recording with 1-second timeslice for chunked processing
+                  _this9.mediaRecorder.start(1000);
                   _this9.isRecording = true;
+
+                  // Show initial transcription message
+                  _this9.recordingMessageId = _this9.messages.length;
+                  _this9.addMessage({
+                    role: 'user',
+                    content: '',
+                    isTranscribing: true
+                  });
                   if (_this9.microphoneButton) {
                     _this9.microphoneButton.classList.add('btn-danger');
                     _this9.microphoneButton.classList.remove('btn-outline-secondary');
                     _this9.microphoneButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
                   }
-                  _context3.next = 21;
+                  _context4.next = 25;
                   break;
-                case 17:
-                  _context3.prev = 17;
-                  _context3.t0 = _context3["catch"](4);
-                  console.error('Error accessing microphone:', _context3.t0);
-                  alert('Unable to access microphone. Please check your browser permissions and try again.');
                 case 21:
+                  _context4.prev = 21;
+                  _context4.t0 = _context4["catch"](4);
+                  console.error('Error accessing microphone:', _context4.t0);
+                  alert('Unable to access microphone. Please check your browser permissions and try again.');
+                case 25:
                 case "end":
-                  return _context3.stop();
+                  return _context4.stop();
               }
-            }, _callee3, null, [[4, 17]]);
+            }, _callee4, null, [[4, 21]]);
           }))();
         },
         stopRecording: function stopRecording() {
@@ -650,38 +679,132 @@ window.openAIChatManager = function () {
             }
           }
         },
-        sendAudioMessage: function sendAudioMessage(audioBlob) {
+        sendAudioChunk: function sendAudioChunk(audioBlob) {
           var _this10 = this;
-          return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
+          return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
             var reader;
-            return _regeneratorRuntime().wrap(function _callee5$(_context5) {
-              while (1) switch (_context5.prev = _context5.next) {
+            return _regeneratorRuntime().wrap(function _callee6$(_context6) {
+              while (1) switch (_context6.prev = _context6.next) {
+                case 0:
+                  _context6.prev = 0;
+                  // Convert blob to base64 for SignalR transmission
+                  reader = new FileReader();
+                  reader.readAsDataURL(audioBlob);
+                  return _context6.abrupt("return", new Promise(function (resolve, reject) {
+                    reader.onloadend = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
+                      var base64Audio, transcribedChunk, message;
+                      return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+                        while (1) switch (_context5.prev = _context5.next) {
+                          case 0:
+                            base64Audio = reader.result.split(',')[1];
+                            _context5.prev = 1;
+                            _context5.next = 4;
+                            return _this10.connection.invoke("SendAudioChunk", _this10.getProfileId(), base64Audio, _this10.getSessionId(), null);
+                          case 4:
+                            transcribedChunk = _context5.sent;
+                            if (transcribedChunk && _this10.recordingMessageId !== null) {
+                              // Update the transcription message with new chunk
+                              message = _this10.messages[_this10.recordingMessageId];
+                              if (message) {
+                                message.content += (message.content ? ' ' : '') + transcribedChunk;
+                                message.htmlContent = marked.parse(message.content, {
+                                  renderer: renderer
+                                });
+                                _this10.messages[_this10.recordingMessageId] = message;
+                                _this10.scrollToBottom();
+                              }
+                            }
+                            resolve();
+                            _context5.next = 13;
+                            break;
+                          case 9:
+                            _context5.prev = 9;
+                            _context5.t0 = _context5["catch"](1);
+                            console.error("Error sending audio chunk:", _context5.t0);
+                            reject(_context5.t0);
+                          case 13:
+                          case "end":
+                            return _context5.stop();
+                        }
+                      }, _callee5, null, [[1, 9]]);
+                    }));
+                    reader.onerror = reject;
+                  }));
+                case 6:
+                  _context6.prev = 6;
+                  _context6.t0 = _context6["catch"](0);
+                  console.error('Error processing audio chunk:', _context6.t0);
+                case 9:
+                case "end":
+                  return _context6.stop();
+              }
+            }, _callee6, null, [[0, 6]]);
+          }))();
+        },
+        finalizeRecording: function finalizeRecording() {
+          var _this11 = this;
+          return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee7() {
+            var message;
+            return _regeneratorRuntime().wrap(function _callee7$(_context7) {
+              while (1) switch (_context7.prev = _context7.next) {
+                case 0:
+                  if (_this11.recordingMessageId !== null) {
+                    message = _this11.messages[_this11.recordingMessageId];
+                    if (message) {
+                      // Remove the transcribing flag
+                      delete message.isTranscribing;
+
+                      // If we got transcription, keep it and enable send button
+                      if (message.content) {
+                        _this11.inputElement.value = message.content;
+                        _this11.prompt = message.content;
+                        _this11.buttonElement.removeAttribute('disabled');
+                      } else {
+                        // No transcription received, remove the empty message
+                        _this11.messages.splice(_this11.recordingMessageId, 1);
+                      }
+                    }
+                    _this11.recordingMessageId = null;
+                  }
+                case 1:
+                case "end":
+                  return _context7.stop();
+              }
+            }, _callee7);
+          }))();
+        },
+        sendAudioMessage: function sendAudioMessage(audioBlob) {
+          var _this12 = this;
+          return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee9() {
+            var reader;
+            return _regeneratorRuntime().wrap(function _callee9$(_context9) {
+              while (1) switch (_context9.prev = _context9.next) {
                 case 0:
                   try {
-                    _this10.showTypingIndicator();
+                    _this12.showTypingIndicator();
 
                     // Convert blob to base64 for SignalR transmission
                     reader = new FileReader();
                     reader.readAsDataURL(audioBlob);
-                    reader.onloadend = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
+                    reader.onloadend = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee8() {
                       var base64Audio, transcribedText;
-                      return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-                        while (1) switch (_context4.prev = _context4.next) {
+                      return _regeneratorRuntime().wrap(function _callee8$(_context8) {
+                        while (1) switch (_context8.prev = _context8.next) {
                           case 0:
                             base64Audio = reader.result.split(',')[1];
-                            _context4.prev = 1;
-                            _context4.next = 4;
-                            return _this10.connection.invoke("SendAudioMessage", _this10.getProfileId(), base64Audio, _this10.getSessionId(), null);
+                            _context8.prev = 1;
+                            _context8.next = 4;
+                            return _this12.connection.invoke("SendAudioMessage", _this12.getProfileId(), base64Audio, _this12.getSessionId(), null);
                           case 4:
-                            transcribedText = _context4.sent;
-                            _this10.hideTypingIndicator();
+                            transcribedText = _context8.sent;
+                            _this12.hideTypingIndicator();
                             if (transcribedText) {
                               // Set the transcribed text in the input field
-                              _this10.inputElement.value = transcribedText;
-                              _this10.prompt = transcribedText;
+                              _this12.inputElement.value = transcribedText;
+                              _this12.prompt = transcribedText;
 
                               // Enable the send button
-                              _this10.buttonElement.removeAttribute('disabled');
+                              _this12.buttonElement.removeAttribute('disabled');
 
                               // Optionally auto-send the message
                               // Uncomment the next line if you want to automatically send after transcription
@@ -689,51 +812,51 @@ window.openAIChatManager = function () {
                             } else {
                               console.error('No transcription returned');
                             }
-                            _context4.next = 14;
+                            _context8.next = 14;
                             break;
                           case 9:
-                            _context4.prev = 9;
-                            _context4.t0 = _context4["catch"](1);
-                            _this10.hideTypingIndicator();
-                            console.error("Error sending audio message:", _context4.t0);
+                            _context8.prev = 9;
+                            _context8.t0 = _context8["catch"](1);
+                            _this12.hideTypingIndicator();
+                            console.error("Error sending audio message:", _context8.t0);
                             alert('Error processing voice message. Please try again.');
                           case 14:
                           case "end":
-                            return _context4.stop();
+                            return _context8.stop();
                         }
-                      }, _callee4, null, [[1, 9]]);
+                      }, _callee8, null, [[1, 9]]);
                     }));
                   } catch (error) {
-                    _this10.hideTypingIndicator();
+                    _this12.hideTypingIndicator();
                     console.error('Error sending audio message:', error);
                     alert('Error processing voice message. Please try again.');
                   }
                 case 1:
                 case "end":
-                  return _context5.stop();
+                  return _context9.stop();
               }
-            }, _callee5);
+            }, _callee9);
           }))();
         }
       },
       mounted: function mounted() {
-        var _this11 = this;
-        _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
-          return _regeneratorRuntime().wrap(function _callee6$(_context6) {
-            while (1) switch (_context6.prev = _context6.next) {
+        var _this13 = this;
+        _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee10() {
+          return _regeneratorRuntime().wrap(function _callee10$(_context10) {
+            while (1) switch (_context10.prev = _context10.next) {
               case 0:
-                _context6.next = 2;
-                return _this11.startConnection();
+                _context10.next = 2;
+                return _this13.startConnection();
               case 2:
-                _this11.initializeApp();
+                _this13.initializeApp();
                 if (config.widget) {
-                  _this11.initializeWidget();
+                  _this13.initializeWidget();
                 }
               case 4:
               case "end":
-                return _context6.stop();
+                return _context10.stop();
             }
-          }, _callee6);
+          }, _callee10);
         }))();
       },
       beforeUnmount: function beforeUnmount() {

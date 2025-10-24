@@ -78,6 +78,8 @@ window.openAIChatManager = function () {
                     isRecording: false,
                     mediaRecorder: null,
                     audioChunks: [],
+                    audioStream: null,
+                    recordingMessageId: null,
                     stream: null,
                     messages: [],
                     prompt: ''
@@ -637,23 +639,38 @@ window.openAIChatManager = function () {
                             mimeType: 'audio/webm'
                         });
                         this.audioChunks = [];
+                        this.audioStream = stream;
+                        this.recordingMessageId = null;
 
-                        this.mediaRecorder.ondataavailable = (event) => {
+                        this.mediaRecorder.ondataavailable = async (event) => {
                             if (event.data.size > 0) {
-                                this.audioChunks.push(event.data);
+                                // Send audio chunk immediately for real-time transcription
+                                await this.sendAudioChunk(event.data);
                             }
                         };
 
                         this.mediaRecorder.onstop = async () => {
-                            const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-                            await this.sendAudioMessage(audioBlob);
+                            // Finalize the transcription
+                            await this.finalizeRecording();
                             
                             // Stop all tracks to release the microphone
-                            stream.getTracks().forEach(track => track.stop());
+                            if (this.audioStream) {
+                                this.audioStream.getTracks().forEach(track => track.stop());
+                                this.audioStream = null;
+                            }
                         };
 
-                        this.mediaRecorder.start();
+                        // Start recording with 1-second timeslice for chunked processing
+                        this.mediaRecorder.start(1000);
                         this.isRecording = true;
+                        
+                        // Show initial transcription message
+                        this.recordingMessageId = this.messages.length;
+                        this.addMessage({
+                            role: 'user',
+                            content: '',
+                            isTranscribing: true
+                        });
                         
                         if (this.microphoneButton) {
                             this.microphoneButton.classList.add('btn-danger');
@@ -675,6 +692,68 @@ window.openAIChatManager = function () {
                             this.microphoneButton.classList.add('btn-outline-secondary');
                             this.microphoneButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
                         }
+                    }
+                },
+                async sendAudioChunk(audioBlob) {
+                    try {
+                        // Convert blob to base64 for SignalR transmission
+                        const reader = new FileReader();
+                        reader.readAsDataURL(audioBlob);
+                        
+                        return new Promise((resolve, reject) => {
+                            reader.onloadend = async () => {
+                                const base64Audio = reader.result.split(',')[1];
+                                
+                                try {
+                                    const transcribedChunk = await this.connection.invoke(
+                                        "SendAudioChunk",
+                                        this.getProfileId(),
+                                        base64Audio,
+                                        this.getSessionId(),
+                                        null
+                                    );
+
+                                    if (transcribedChunk && this.recordingMessageId !== null) {
+                                        // Update the transcription message with new chunk
+                                        let message = this.messages[this.recordingMessageId];
+                                        if (message) {
+                                            message.content += (message.content ? ' ' : '') + transcribedChunk;
+                                            message.htmlContent = marked.parse(message.content, { renderer });
+                                            this.messages[this.recordingMessageId] = message;
+                                            this.scrollToBottom();
+                                        }
+                                    }
+                                    resolve();
+                                } catch (err) {
+                                    console.error("Error sending audio chunk:", err);
+                                    reject(err);
+                                }
+                            };
+
+                            reader.onerror = reject;
+                        });
+                    } catch (error) {
+                        console.error('Error processing audio chunk:', error);
+                    }
+                },
+                async finalizeRecording() {
+                    if (this.recordingMessageId !== null) {
+                        let message = this.messages[this.recordingMessageId];
+                        if (message) {
+                            // Remove the transcribing flag
+                            delete message.isTranscribing;
+                            
+                            // If we got transcription, keep it and enable send button
+                            if (message.content) {
+                                this.inputElement.value = message.content;
+                                this.prompt = message.content;
+                                this.buttonElement.removeAttribute('disabled');
+                            } else {
+                                // No transcription received, remove the empty message
+                                this.messages.splice(this.recordingMessageId, 1);
+                            }
+                        }
+                        this.recordingMessageId = null;
                     }
                 },
                 async sendAudioMessage(audioBlob) {
