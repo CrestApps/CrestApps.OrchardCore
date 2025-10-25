@@ -109,6 +109,32 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             ];
         }).Location("Content:5");
 
+        var speechToTextResult = Initialize<SpeechToTextMetadataViewModel>("AIProfileSpeechToText_Edit", model =>
+        {
+            var speechToTextMetadata = profile.As<SpeechToTextMetadata>();
+
+            model.UseMicrophone = speechToTextMetadata?.UseMicrophone ?? false;
+            model.ConnectionName = speechToTextMetadata?.ConnectionName;
+
+            // Populate speech-to-text connections for the current provider
+            if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
+            {
+                model.Connections = [];
+            }
+            else if (_connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
+            {
+                model.Connections = provider.Connections.Where(x => x.Value.GetConnectionType() == AIProviderConnectionType.SpeechToText)
+                    .Select(x => new SelectListItem(
+                        x.Value.TryGetValue("ConnectionNameAlias", out var alias) ? alias.ToString() : x.Key,
+                        x.Key))
+                    .ToArray();
+            }
+            else
+            {
+                model.Connections = [];
+            }
+        }).Location("Content:7");
+
         var parametersResult = Initialize<ProfileMetadataViewModel>("AIProfileParameters_Edit", model =>
         {
             var metadata = profile.As<AIProfileMetadata>();
@@ -126,35 +152,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.IsSystemMessageLocked = profile.GetSettings<AIProfileSettings>().LockSystemMessage;
         }).Location("Content:10");
 
-        var speechToTextResult = Initialize<SpeechToTextMetadataViewModel>("AIProfileSpeechToText_Edit", model =>
-        {
-            var speechToTextMetadata = profile.As<SpeechToTextMetadata>();
-
-            model.UseMicrophone = speechToTextMetadata?.UseMicrophone ?? false;
-            model.ConnectionName = speechToTextMetadata?.ConnectionName;
-
-            // Populate speech-to-text connections for the current provider
-            if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
-            {
-                model.Connections = [];
-            }
-            else if (_connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
-            {
-                model.Connections = provider.Connections
-                    .Where(x => x.Value.TryGetValue("Type", out var type) && 
-                               type?.ToString() == nameof(AIProviderConnectionType.SpeechToText))
-                    .Select(x => new SelectListItem(
-                        x.Value.TryGetValue("ConnectionNameAlias", out var alias) ? alias.ToString() : x.Key, 
-                        x.Key))
-                    .ToArray();
-            }
-            else
-            {
-                model.Connections = [];
-            }
-        }).Location("Content:11");
-
-        return Combine(mainFieldsResult, connectionFieldResult, fieldsResult, parametersResult, speechToTextResult);
+        return Combine(mainFieldsResult, connectionFieldResult, fieldsResult, speechToTextResult, parametersResult);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

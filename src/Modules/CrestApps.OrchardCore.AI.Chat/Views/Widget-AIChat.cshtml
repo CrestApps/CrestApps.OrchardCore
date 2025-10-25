@@ -8,6 +8,7 @@
 @using OrchardCore.Environment.Shell
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.OrchardCore.Services
+@using OrchardCore.Entities
 
 @inject INamedCatalog<AIProfile> ProfileCatalog
 @inject IAuthorizationService AuthorizationService
@@ -38,7 +39,7 @@
     var hubLink = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
     var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
     var promptGeneratedProfiles = await ProfileCatalog.GetAsync(AIProfileType.TemplatePrompt);
-    
+
     var speechToTextMetadata = profile.As<SpeechToTextMetadata>();
     var showMicrophone = speechToTextMetadata?.UseMicrophone ?? false;
 
@@ -171,7 +172,7 @@
         sendButtonElementSelector: '#@buttonHtmlId',
         @if (showMicrophone)
         {
-            <text>microphoneButtonElementSelector: '#@(baseId)_MicrophoneButton',</text>
+                            <text>microphoneButtonElementSelector: '#@(baseId)_MicrophoneButton',</text>
         }
         placeholderElementSelector: '#@placeholderHtmlId',
         messages: [],
@@ -294,6 +295,7 @@
         0%, 100% {
             box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
         }
+
         50% {
             box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
         }

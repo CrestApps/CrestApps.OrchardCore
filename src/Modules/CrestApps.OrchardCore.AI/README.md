@@ -40,6 +40,7 @@ Below is an example configuration:
           "Connections": {
             "<!-- Connection name goes here -->": {
               "DefaultDeploymentName": "<!-- The default deployment name for this connection -->"
+              "Type": "Chat", // Valid values are 'Chat', 'Embedding' or 'SpeechToText'
               // Provider-specific settings go here
             }
           }
@@ -87,7 +88,7 @@ If no `Type` is specified, `Chat` is used as the default.
   "OrchardCore": {
     "CrestApps_AI": {
       "Providers": {
-        "OpenAI": {
+        "<!-- Provider name goes here (valid values: 'OpenAI', 'Azure', 'AzureAIInference', or 'Ollama') -->": {
           "Connections": {
             "ChatConnection": {
               "Type": "Chat",

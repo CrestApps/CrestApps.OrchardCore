@@ -52,6 +52,7 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
             [
                 new(S["Chat"], nameof(AIProviderConnectionType.Chat)),
                 new(S["Embedding"], nameof(AIProviderConnectionType.Embedding)),
+                new(S["Speech to text"], nameof(AIProviderConnectionType.SpeechToText)),
             ];
 
         }).Location("Content:1");
