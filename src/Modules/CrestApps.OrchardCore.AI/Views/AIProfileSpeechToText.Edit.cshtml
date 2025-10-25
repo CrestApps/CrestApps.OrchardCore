@@ -14,7 +14,7 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()" id="speechToTextConnectionContainer" style="display: none;">
-    <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Speech-to-Text Connection"]</label>
+    <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Speech-to-text Connection"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="ConnectionName" class="form-select" asp-items="Model.Connections">
             <option value="">@T["Select a connection"]</option>

@@ -66,6 +66,7 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
 
                 mappingContext.Values["DefaultDeploymentName"] = connection.DefaultDeploymentName;
                 mappingContext.Values["ConnectionNameAlias"] = connection.Name;
+                mappingContext.Values["Type"] = connection.Type;
 
                 _handlers.Invoke((handler, ctx) => handler.Initializing(ctx), mappingContext, _logger);
 

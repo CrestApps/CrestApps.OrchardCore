@@ -124,7 +124,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             else if (_connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
             {
                 model.Connections = provider.Connections.Where(x => x.Value.GetConnectionType() == AIProviderConnectionType.SpeechToText)
-                    .Select(x => new SelectListItem(x.Key, x.Key));
+                    .Select(x => new SelectListItem(x.Value.TryGetValue("ConnectionNameAlias", out var a) ? a.ToString() : x.Key, x.Key));
             }
             else
             {
@@ -262,6 +262,11 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         // Handle speech-to-text metadata
         var speechToTextModel = new SpeechToTextMetadataViewModel();
         await context.Updater.TryUpdateModelAsync(speechToTextModel, Prefix);
+
+        if (speechToTextModel.UseMicrophone && string.IsNullOrEmpty(speechToTextModel.ConnectionName))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(speechToTextModel.ConnectionName), S["The Speech-to-text Connection is required when using microphone."]);
+        }
 
         var speechToTextMetadata = new SpeechToTextMetadata
         {
