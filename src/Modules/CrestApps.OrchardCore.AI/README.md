@@ -68,6 +68,59 @@ Each provider can define multiple connections, and the `DefaultConnectionName` d
 
 ---
 
+### Connection Types
+
+When configuring provider connections, you can specify the connection type using the `Type` property. This allows you to define connections for different purposes within the same provider.
+
+**Available Connection Types:**
+
+- **`Chat`** (default) - For chat/completion models
+- **`Embedding`** - For embedding models  
+- **`SpeechToText`** - For speech-to-text models (voice input)
+
+If no `Type` is specified, `Chat` is used as the default.
+
+**Usage Example:**
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Providers": {
+        "OpenAI": {
+          "Connections": {
+            "ChatConnection": {
+              "Type": "Chat",
+              "DefaultDeploymentName": "gpt-4",
+              "Endpoint": "https://api.openai.com/v1",
+              "ApiKey": "your-api-key"
+            },
+            "EmbeddingConnection": {
+              "Type": "Embedding",
+              "DefaultDeploymentName": "text-embedding-3-small",
+              "Endpoint": "https://api.openai.com/v1",
+              "ApiKey": "your-api-key"
+            },
+            "WhisperConnection": {
+              "Type": "SpeechToText",
+              "DefaultDeploymentName": "whisper-1",
+              "Endpoint": "https://api.openai.com/v1",
+              "ApiKey": "your-api-key"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+For provider-specific configuration examples, see:
+- [OpenAI Configuration Guide](../CrestApps.OrchardCore.OpenAI/README.md)
+- [Azure OpenAI Configuration Guide](../CrestApps.OrchardCore.OpenAI.Azure/README.md)
+
+---
+
 ### Provider Configuration
 
 The following providers are supported **out of the box**:

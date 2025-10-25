@@ -21,31 +21,7 @@ The AI Chat feature includes support for voice input using microphone recording 
 
 **Configuration:**
 
-1. **Enable a Speech-to-Text Connection** - Configure a provider connection with `Type` set to `SpeechToText` in your `appsettings.json`:
-
-```json
-{
-  "OrchardCore": {
-    "CrestApps_AI": {
-      "Providers": {
-        "OpenAI": {
-          "Connections": {
-            "MyWhisperConnection": {
-              "Type": "SpeechToText",
-              "DefaultDeploymentName": "whisper-1",
-              "Endpoint": "https://api.openai.com/v1",
-              "ApiKey": "your-api-key"
-            }
-          }
-        }
-      },
-      "Chat": {
-        "MaxAudioSizeInBytes": 10000000
-      }
-    }
-  }
-}
-```
+1. **Enable a Speech-to-Text Connection** - Configure a provider connection with `Type` set to `SpeechToText` in your `appsettings.json`. See the [AI Services README](../CrestApps.OrchardCore.AI/README.md#connection-types) for details on connection types.
 
 2. **Configure AI Profile** - In the admin UI, edit your AI Profile and:
    - Check "Use Microphone" option
@@ -57,56 +33,25 @@ The AI Chat feature includes support for voice input using microphone recording 
    - Example: `"MaxAudioSizeInBytes": null` (no limit)
    - Example: `"MaxAudioSizeInBytes": 5000000` (5MB limit)
 
-**How It Works:**
-- Audio is recorded in 1-second chunks and transcribed in real-time
-- Transcribed text appears progressively in the chat UI as you speak
-- When you stop recording, the complete transcription is placed in the input field for review
-- You can edit the transcribed text before sending if needed
-
-### Connection Types
-
-When configuring provider connections, you can specify the connection type using the `Type` property:
-
-- **`Chat`** (default) - For chat/completion models
-- **`Embedding`** - For embedding models
-- **`SpeechToText`** - For speech-to-text models (voice input)
-
-If no `Type` is specified, `Chat` is used as the default.
-
-**Example Configuration with Multiple Connection Types:**
+Configuration example:
 
 ```json
 {
   "OrchardCore": {
     "CrestApps_AI": {
-      "Providers": {
-        "OpenAI": {
-          "Connections": {
-            "ChatConnection": {
-              "Type": "Chat",
-              "DefaultDeploymentName": "gpt-4",
-              "Endpoint": "https://api.openai.com/v1",
-              "ApiKey": "your-api-key"
-            },
-            "EmbeddingConnection": {
-              "Type": "Embedding",
-              "DefaultDeploymentName": "text-embedding-3-small",
-              "Endpoint": "https://api.openai.com/v1",
-              "ApiKey": "your-api-key"
-            },
-            "WhisperConnection": {
-              "Type": "SpeechToText",
-              "DefaultDeploymentName": "whisper-1",
-              "Endpoint": "https://api.openai.com/v1",
-              "ApiKey": "your-api-key"
-            }
-          }
-        }
+      "Chat": {
+        "MaxAudioSizeInBytes": 10000000
       }
     }
   }
 }
 ```
+
+**How It Works:**
+- Audio is recorded in 1-second chunks and transcribed in real-time
+- Transcribed text appears progressively in the chat UI as you speak
+- When you stop recording, the complete transcription is placed in the input field for review
+- You can edit the transcribed text before sending if needed
 
 ### Here is a Screen cast of the Admin Chat User Interface
 

@@ -167,7 +167,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             }
 
             // Get the speech-to-text client using the dedicated connection from profile metadata
-            var speechToTextMetadata = profile.As<CrestApps.OrchardCore.AI.Core.Models.SpeechToTextMetadata>();
+            var speechToTextMetadata = profile.As<SpeechToTextMetadata>();
             var speechToTextConnection = speechToTextMetadata?.ConnectionName ?? profile.ConnectionName;
 
             // Get the speech-to-text client
@@ -271,7 +271,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             }
 
             // Get the speech-to-text client using the dedicated connection from profile metadata
-            var speechToTextMetadata = profile.As<CrestApps.OrchardCore.AI.Core.Models.SpeechToTextMetadata>();
+            var speechToTextMetadata = profile.As<SpeechToTextMetadata>();
             var speechToTextConnection = speechToTextMetadata?.ConnectionName ?? profile.ConnectionName;
 
             // Get the speech-to-text client
