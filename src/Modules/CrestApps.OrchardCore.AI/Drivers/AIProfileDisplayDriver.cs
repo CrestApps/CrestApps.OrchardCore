@@ -116,7 +116,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.UseMicrophone = speechToTextMetadata?.UseMicrophone ?? false;
             model.ConnectionName = speechToTextMetadata?.ConnectionName;
 
-            // Populate speech-to-text connections for the current provider
+            // Populate speech-to-text connections for the current provider.
             if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
             {
                 model.Connections = [];
@@ -124,10 +124,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             else if (_connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
             {
                 model.Connections = provider.Connections.Where(x => x.Value.GetConnectionType() == AIProviderConnectionType.SpeechToText)
-                    .Select(x => new SelectListItem(
-                        x.Value.TryGetValue("ConnectionNameAlias", out var alias) ? alias.ToString() : x.Key,
-                        x.Key))
-                    .ToArray();
+                    .Select(x => new SelectListItem(x.Key, x.Key));
             }
             else
             {
