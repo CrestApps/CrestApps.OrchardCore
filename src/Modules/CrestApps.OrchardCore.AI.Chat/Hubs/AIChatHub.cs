@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Entities;
 using OrchardCore.Liquid;
@@ -27,6 +28,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly ISession _session;
     private readonly IAICompletionService _completionService;
+    private readonly IAIClientFactory _clientFactory;
+    private readonly AIChatOptions _chatOptions;
     private readonly ILogger<AIChatHub> _logger;
 
     protected readonly IStringLocalizer S;
@@ -38,6 +41,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
         ILiquidTemplateManager liquidTemplateManager,
         ISession session,
         IAICompletionService completionService,
+        IAIClientFactory clientFactory,
+        IOptions<AIChatOptions> chatOptions,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
     {
@@ -47,6 +52,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _liquidTemplateManager = liquidTemplateManager;
         _session = session;
         _completionService = completionService;
+        _clientFactory = clientFactory;
+        _chatOptions = chatOptions.Value;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -116,6 +123,203 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 References = message.References,
             })
         });
+    }
+
+    public async Task<string> SendAudioMessage(string profileId, string base64Audio, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(profileId))
+            {
+                await Clients.Caller.ReceiveError(S["{0} is required.", nameof(profileId)].Value);
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(base64Audio))
+            {
+                await Clients.Caller.ReceiveError(S["Audio data is required."].Value);
+                return null;
+            }
+
+            // Limit audio size to prevent DoS attacks (only if limit is configured)
+            if (_chatOptions.MaxAudioSizeInBytes.HasValue && 
+                _chatOptions.MaxAudioSizeInBytes.Value > 0 && 
+                base64Audio.Length > _chatOptions.MaxAudioSizeInBytes.Value)
+            {
+                await Clients.Caller.ReceiveError(S["Audio data is too large. Please record a shorter message."].Value);
+                return null;
+            }
+
+            var profile = await _profileManager.FindByIdAsync(profileId);
+
+            if (profile is null)
+            {
+                await Clients.Caller.ReceiveError(S["Profile not found."].Value);
+                return null;
+            }
+
+            var httpContext = Context.GetHttpContext();
+
+            if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+            {
+                await Clients.Caller.ReceiveError(S["You are not authorized to interact with the given profile."].Value);
+                return null;
+            }
+
+            // Get the speech-to-text client using the dedicated connection from profile metadata
+            var speechToTextMetadata = profile.As<SpeechToTextMetadata>();
+            var speechToTextConnection = speechToTextMetadata?.ConnectionName ?? profile.ConnectionName;
+
+            // Get the speech-to-text client
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+            ISpeechToTextClient speechToTextClient;
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+            try
+            {
+                speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, speechToTextConnection, profile.DeploymentId);
+            }
+            catch (NotSupportedException ex)
+            {
+                await Clients.Caller.ReceiveError(S["Speech-to-text is not supported by the selected provider: {0}", ex.Message].Value);
+                _logger.LogWarning(ex, "Speech-to-text not supported for provider {Provider}", profile.Source);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                await Clients.Caller.ReceiveError(S["Failed to initialize speech-to-text client: {0}", ex.Message].Value);
+                _logger.LogError(ex, "Error creating speech-to-text client for provider {Provider}", profile.Source);
+                return null;
+            }
+
+            // Convert audio to text
+            string transcribedText;
+            try
+            {
+                var audioBytes = Convert.FromBase64String(base64Audio);
+                using var audioStream = new System.IO.MemoryStream(audioBytes);
+
+                var builder = new StringBuilder();
+
+                await foreach (var update in speechToTextClient.GetStreamingTextAsync(audioStream, cancellationToken: cancellationToken))
+                {
+                    if (update is not null && !string.IsNullOrEmpty(update.Text))
+                    {
+                        builder.Append(update.Text);
+                    }
+                }
+
+                transcribedText = builder.ToString().Trim();
+
+                if (string.IsNullOrWhiteSpace(transcribedText))
+                {
+                    await Clients.Caller.ReceiveError(S["Unable to transcribe audio. Please try again."].Value);
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error transcribing audio");
+                await Clients.Caller.ReceiveError(S["Error transcribing audio: {0}", ex.Message].Value);
+                return null;
+            }
+
+            return transcribedText;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing audio message");
+            await Clients.Caller.ReceiveError(S["An error occurred while processing your voice message."].Value);
+            return null;
+        }
+    }
+
+    public async Task<string> SendAudioChunk(string profileId, string base64Audio, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(profileId))
+            {
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(base64Audio))
+            {
+                return null;
+            }
+
+            // Limit chunk size to prevent DoS attacks (only if limit is configured)
+            if (_chatOptions.MaxAudioSizeInBytes.HasValue && 
+                _chatOptions.MaxAudioSizeInBytes.Value > 0 && 
+                base64Audio.Length > _chatOptions.MaxAudioSizeInBytes.Value)
+            {
+                _logger.LogWarning("Audio chunk too large: {Size} bytes", base64Audio.Length);
+                return null;
+            }
+
+            var profile = await _profileManager.FindByIdAsync(profileId);
+
+            if (profile is null)
+            {
+                return null;
+            }
+
+            var httpContext = Context.GetHttpContext();
+
+            if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+            {
+                return null;
+            }
+
+            // Get the speech-to-text client using the dedicated connection from profile metadata
+            var speechToTextMetadata = profile.As<SpeechToTextMetadata>();
+            var speechToTextConnection = speechToTextMetadata?.ConnectionName ?? profile.ConnectionName;
+
+            // Get the speech-to-text client
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+            ISpeechToTextClient speechToTextClient;
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+            try
+            {
+                speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, speechToTextConnection, profile.DeploymentId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to create speech-to-text client for chunk");
+                return null;
+            }
+
+            // Convert audio chunk to text
+            try
+            {
+                var audioBytes = Convert.FromBase64String(base64Audio);
+                using var audioStream = new MemoryStream(audioBytes);
+
+                var builder = new StringBuilder();
+
+                await foreach (var update in speechToTextClient.GetStreamingTextAsync(audioStream, cancellationToken: cancellationToken))
+                {
+                    if (update is not null && !string.IsNullOrEmpty(update.Text))
+                    {
+                        builder.Append(update.Text);
+                    }
+                }
+
+                var transcribedText = builder.ToString().Trim();
+
+                // Return the chunk even if empty - the client will handle it
+                return transcribedText ?? string.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error transcribing audio chunk");
+                return string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing audio chunk");
+            return string.Empty;
+        }
     }
 
     private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
