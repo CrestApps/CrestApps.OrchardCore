@@ -1,5 +1,6 @@
 @using CrestApps.OrchardCore.AI
 @using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.Models
 @using CrestApps.OrchardCore.AI.Core.Services
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.OrchardCore.AI.Models
@@ -28,8 +29,8 @@
 
     var promptGeneratedProfiles = await ProfilesCatalog.GetAsync(AIProfileType.TemplatePrompt);
     
-    var metadata = Model.Profile?.As<CrestApps.OrchardCore.AI.Core.Models.AIProfileMetadata>();
-    var showMicrophone = metadata?.UseMicrophone ?? false;
+    var speechToTextMetadata = Model.Profile?.As<SpeechToTextMetadata>();
+    var showMicrophone = speechToTextMetadata?.UseMicrophone ?? false;
 }
 
 <div class="mb-3 mx-3 p-3 overflow-y-auto h-100 rounded-2 border bg-theme" id="@chatContainerHtmlId">

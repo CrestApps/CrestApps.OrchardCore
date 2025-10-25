@@ -1,0 +1,42 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model SpeechToTextMetadataViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="UseMicrophone" id="useMicrophoneCheckbox">
+            <label class="form-check-label" asp-for="UseMicrophone">@T["Use Microphone"]</label>
+            <span class="hint dashed">@T["When enabled, users can use their microphone to speak their messages instead of typing."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()" id="speechToTextConnectionContainer" style="display: none;">
+    <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Speech-to-Text Connection"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="ConnectionName" class="form-select" asp-items="Model.Connections">
+            <option value="">@T["Select a connection..."]</option>
+        </select>
+        <span class="hint">@T["Select the speech-to-text connection to use for microphone input. Only connections configured for the current provider are shown."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        const useMicrophoneCheckbox = document.getElementById('useMicrophoneCheckbox');
+        const speechToTextConnectionContainer = document.getElementById('speechToTextConnectionContainer');
+
+        function toggleSpeechToTextConnection() {
+            if (useMicrophoneCheckbox && speechToTextConnectionContainer) {
+                speechToTextConnectionContainer.style.display = useMicrophoneCheckbox.checked ? 'block' : 'none';
+            }
+        }
+
+        if (useMicrophoneCheckbox) {
+            useMicrophoneCheckbox.addEventListener('change', toggleSpeechToTextConnection);
+            // Initialize visibility on page load
+            toggleSpeechToTextConnection();
+        }
+    });
+</script>

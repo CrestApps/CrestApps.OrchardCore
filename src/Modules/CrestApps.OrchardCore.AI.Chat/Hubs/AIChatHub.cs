@@ -165,8 +165,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
             }
 
             // Get the speech-to-text client using the dedicated connection from profile metadata
-            var metadata = profile.As<CrestApps.OrchardCore.AI.Core.Models.AIProfileMetadata>();
-            var speechToTextConnection = metadata?.SpeechToTextConnectionName ?? profile.ConnectionName;
+            var speechToTextMetadata = profile.As<CrestApps.OrchardCore.AI.Core.Models.SpeechToTextMetadata>();
+            var speechToTextConnection = speechToTextMetadata?.ConnectionName ?? profile.ConnectionName;
 
             // Get the speech-to-text client
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
@@ -267,8 +267,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
             }
 
             // Get the speech-to-text client using the dedicated connection from profile metadata
-            var metadata = profile.As<CrestApps.OrchardCore.AI.Core.Models.AIProfileMetadata>();
-            var speechToTextConnection = metadata?.SpeechToTextConnectionName ?? profile.ConnectionName;
+            var speechToTextMetadata = profile.As<CrestApps.OrchardCore.AI.Core.Models.SpeechToTextMetadata>();
+            var speechToTextConnection = speechToTextMetadata?.ConnectionName ?? profile.ConnectionName;
 
             // Get the speech-to-text client
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
