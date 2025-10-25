@@ -141,8 +141,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 return null;
             }
 
-            // Limit audio size to prevent DoS attacks
-            if (base64Audio.Length > _chatOptions.MaxAudioSizeInBytes)
+            // Limit audio size to prevent DoS attacks (only if limit is configured)
+            if (_chatOptions.MaxAudioSizeInBytes.HasValue && 
+                _chatOptions.MaxAudioSizeInBytes.Value > 0 && 
+                base64Audio.Length > _chatOptions.MaxAudioSizeInBytes.Value)
             {
                 await Clients.Caller.ReceiveError(S["Audio data is too large. Please record a shorter message."].Value);
                 return null;
@@ -245,8 +247,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 return null;
             }
 
-            // Limit chunk size to prevent DoS attacks
-            if (base64Audio.Length > _chatOptions.MaxAudioSizeInBytes)
+            // Limit chunk size to prevent DoS attacks (only if limit is configured)
+            if (_chatOptions.MaxAudioSizeInBytes.HasValue && 
+                _chatOptions.MaxAudioSizeInBytes.Value > 0 && 
+                base64Audio.Length > _chatOptions.MaxAudioSizeInBytes.Value)
             {
                 _logger.LogWarning("Audio chunk too large: {Size} bytes", base64Audio.Length);
                 return null;

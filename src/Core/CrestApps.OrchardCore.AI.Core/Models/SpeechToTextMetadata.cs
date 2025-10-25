@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.AI.Core.Models;
 
-public class SpeechToTextMetadata
+public sealed class SpeechToTextMetadata
 {
     /// <summary>
     /// Gets or sets a value indicating whether the microphone input is enabled for this profile.
