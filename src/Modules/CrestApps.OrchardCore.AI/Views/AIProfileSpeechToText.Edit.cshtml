@@ -14,9 +14,9 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()" id="speechToTextConnectionContainer" style="display: none;">
-    <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Speech-to-text Connection"]</label>
+    <label asp-for="ServiceConnectionName" class="@Orchard.GetLabelClasses()">@T["Speech-to-text Connection"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="ConnectionName" class="form-select" asp-items="Model.Connections">
+        <select asp-for="ServiceConnectionName" class="form-select" asp-items="Model.Connections">
             <option value="">@T["Select a connection"]</option>
         </select>
         <span class="hint">@T["Select the speech-to-text connection to use for microphone input. Only connections configured for the current provider are shown."]</span>

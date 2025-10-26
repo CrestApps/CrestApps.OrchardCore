@@ -772,91 +772,26 @@ window.openAIChatManager = function () {
               }
             }, _callee7);
           }))();
-        },
-        sendAudioMessage: function sendAudioMessage(audioBlob) {
-          var _this12 = this;
-          return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee9() {
-            var reader;
-            return _regeneratorRuntime().wrap(function _callee9$(_context9) {
-              while (1) switch (_context9.prev = _context9.next) {
-                case 0:
-                  try {
-                    _this12.showTypingIndicator();
-
-                    // Convert blob to base64 for SignalR transmission
-                    reader = new FileReader();
-                    reader.readAsDataURL(audioBlob);
-                    reader.onloadend = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee8() {
-                      var base64Audio, transcribedText;
-                      return _regeneratorRuntime().wrap(function _callee8$(_context8) {
-                        while (1) switch (_context8.prev = _context8.next) {
-                          case 0:
-                            base64Audio = reader.result.split(',')[1];
-                            _context8.prev = 1;
-                            _context8.next = 4;
-                            return _this12.connection.invoke("SendAudioMessage", _this12.getProfileId(), base64Audio, _this12.getSessionId(), null);
-                          case 4:
-                            transcribedText = _context8.sent;
-                            _this12.hideTypingIndicator();
-                            if (transcribedText) {
-                              // Set the transcribed text in the input field
-                              _this12.inputElement.value = transcribedText;
-                              _this12.prompt = transcribedText;
-
-                              // Enable the send button
-                              _this12.buttonElement.removeAttribute('disabled');
-
-                              // Optionally auto-send the message
-                              // Uncomment the next line if you want to automatically send after transcription
-                              // this.sendMessage();
-                            } else {
-                              console.error('No transcription returned');
-                            }
-                            _context8.next = 14;
-                            break;
-                          case 9:
-                            _context8.prev = 9;
-                            _context8.t0 = _context8["catch"](1);
-                            _this12.hideTypingIndicator();
-                            console.error("Error sending audio message:", _context8.t0);
-                            alert('Error processing voice message. Please try again.');
-                          case 14:
-                          case "end":
-                            return _context8.stop();
-                        }
-                      }, _callee8, null, [[1, 9]]);
-                    }));
-                  } catch (error) {
-                    _this12.hideTypingIndicator();
-                    console.error('Error sending audio message:', error);
-                    alert('Error processing voice message. Please try again.');
-                  }
-                case 1:
-                case "end":
-                  return _context9.stop();
-              }
-            }, _callee9);
-          }))();
         }
       },
       mounted: function mounted() {
-        var _this13 = this;
-        _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee10() {
-          return _regeneratorRuntime().wrap(function _callee10$(_context10) {
-            while (1) switch (_context10.prev = _context10.next) {
+        var _this12 = this;
+        _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee8() {
+          return _regeneratorRuntime().wrap(function _callee8$(_context8) {
+            while (1) switch (_context8.prev = _context8.next) {
               case 0:
-                _context10.next = 2;
-                return _this13.startConnection();
+                _context8.next = 2;
+                return _this12.startConnection();
               case 2:
-                _this13.initializeApp();
+                _this12.initializeApp();
                 if (config.widget) {
-                  _this13.initializeWidget();
+                  _this12.initializeWidget();
                 }
               case 4:
               case "end":
-                return _context10.stop();
+                return _context8.stop();
             }
-          }, _callee10);
+          }, _callee8);
         }))();
       },
       beforeUnmount: function beforeUnmount() {

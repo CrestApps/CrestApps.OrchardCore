@@ -114,14 +114,9 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             var speechToTextMetadata = profile.As<SpeechToTextMetadata>();
 
             model.UseMicrophone = speechToTextMetadata?.UseMicrophone ?? false;
-            model.ConnectionName = speechToTextMetadata?.ConnectionName;
+            model.ServiceConnectionName = speechToTextMetadata?.ConnectionName;
 
-            // Populate speech-to-text connections for the current provider.
-            if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
-            {
-                model.Connections = [];
-            }
-            else if (_connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
+            if (_connectionOptions.Providers.TryGetValue(profile.Source, out var provider))
             {
                 model.Connections = provider.Connections.Where(x => x.Value.GetConnectionType() == AIProviderConnectionType.SpeechToText)
                     .Select(x => new SelectListItem(x.Value.TryGetValue("ConnectionNameAlias", out var a) ? a.ToString() : x.Key, x.Key));
@@ -263,15 +258,15 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         var speechToTextModel = new SpeechToTextMetadataViewModel();
         await context.Updater.TryUpdateModelAsync(speechToTextModel, Prefix);
 
-        if (speechToTextModel.UseMicrophone && string.IsNullOrEmpty(speechToTextModel.ConnectionName))
+        if (speechToTextModel.UseMicrophone && string.IsNullOrEmpty(speechToTextModel.ServiceConnectionName))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(speechToTextModel.ConnectionName), S["The Speech-to-text Connection is required when using microphone."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(speechToTextModel.ServiceConnectionName), S["The Speech-to-text Connection is required when using microphone."]);
         }
 
         var speechToTextMetadata = new SpeechToTextMetadata
         {
             UseMicrophone = speechToTextModel.UseMicrophone,
-            ConnectionName = speechToTextModel.ConnectionName
+            ConnectionName = speechToTextModel.ServiceConnectionName
         };
 
         profile.Put(speechToTextMetadata);

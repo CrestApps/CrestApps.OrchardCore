@@ -7,7 +7,7 @@ public class SpeechToTextMetadataViewModel
 {
     public bool UseMicrophone { get; set; }
 
-    public string ConnectionName { get; set; }
+    public string ServiceConnectionName { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> Connections { get; set; }

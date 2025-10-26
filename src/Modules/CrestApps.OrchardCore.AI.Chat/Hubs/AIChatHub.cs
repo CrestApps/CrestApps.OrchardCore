@@ -125,114 +125,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
         });
     }
 
-    public async Task<string> SendAudioMessage(string profileId, string base64Audio, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(profileId))
-            {
-                await Clients.Caller.ReceiveError(S["{0} is required.", nameof(profileId)].Value);
-                return null;
-            }
-
-            if (string.IsNullOrWhiteSpace(base64Audio))
-            {
-                await Clients.Caller.ReceiveError(S["Audio data is required."].Value);
-                return null;
-            }
-
-            // Limit audio size to prevent DoS attacks (only if limit is configured)
-            if (_chatOptions.MaxAudioSizeInBytes.HasValue && 
-                _chatOptions.MaxAudioSizeInBytes.Value > 0 && 
-                base64Audio.Length > _chatOptions.MaxAudioSizeInBytes.Value)
-            {
-                await Clients.Caller.ReceiveError(S["Audio data is too large. Please record a shorter message."].Value);
-                return null;
-            }
-
-            var profile = await _profileManager.FindByIdAsync(profileId);
-
-            if (profile is null)
-            {
-                await Clients.Caller.ReceiveError(S["Profile not found."].Value);
-                return null;
-            }
-
-            var httpContext = Context.GetHttpContext();
-
-            if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
-            {
-                await Clients.Caller.ReceiveError(S["You are not authorized to interact with the given profile."].Value);
-                return null;
-            }
-
-            // Get the speech-to-text client using the dedicated connection from profile metadata
-            var speechToTextMetadata = profile.As<SpeechToTextMetadata>();
-            var speechToTextConnection = speechToTextMetadata?.ConnectionName ?? profile.ConnectionName;
-
-            // Get the speech-to-text client
-#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-            ISpeechToTextClient speechToTextClient;
-#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-            try
-            {
-                speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, speechToTextConnection, profile.DeploymentId);
-            }
-            catch (NotSupportedException ex)
-            {
-                await Clients.Caller.ReceiveError(S["Speech-to-text is not supported by the selected provider: {0}", ex.Message].Value);
-                _logger.LogWarning(ex, "Speech-to-text not supported for provider {Provider}", profile.Source);
-                return null;
-            }
-            catch (Exception ex)
-            {
-                await Clients.Caller.ReceiveError(S["Failed to initialize speech-to-text client: {0}", ex.Message].Value);
-                _logger.LogError(ex, "Error creating speech-to-text client for provider {Provider}", profile.Source);
-                return null;
-            }
-
-            // Convert audio to text
-            string transcribedText;
-            try
-            {
-                var audioBytes = Convert.FromBase64String(base64Audio);
-                using var audioStream = new System.IO.MemoryStream(audioBytes);
-
-                var builder = new StringBuilder();
-
-                await foreach (var update in speechToTextClient.GetStreamingTextAsync(audioStream, cancellationToken: cancellationToken))
-                {
-                    if (update is not null && !string.IsNullOrEmpty(update.Text))
-                    {
-                        builder.Append(update.Text);
-                    }
-                }
-
-                transcribedText = builder.ToString().Trim();
-
-                if (string.IsNullOrWhiteSpace(transcribedText))
-                {
-                    await Clients.Caller.ReceiveError(S["Unable to transcribe audio. Please try again."].Value);
-                    return null;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error transcribing audio");
-                await Clients.Caller.ReceiveError(S["Error transcribing audio: {0}", ex.Message].Value);
-                return null;
-            }
-
-            return transcribedText;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing audio message");
-            await Clients.Caller.ReceiveError(S["An error occurred while processing your voice message."].Value);
-            return null;
-        }
-    }
-
     public async Task<string> SendAudioChunk(string profileId, string base64Audio, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
     {
         try
@@ -248,8 +140,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
             }
 
             // Limit chunk size to prevent DoS attacks (only if limit is configured)
-            if (_chatOptions.MaxAudioSizeInBytes.HasValue && 
-                _chatOptions.MaxAudioSizeInBytes.Value > 0 && 
+            if (_chatOptions.MaxAudioSizeInBytes.HasValue &&
+                _chatOptions.MaxAudioSizeInBytes.Value > 0 &&
                 base64Audio.Length > _chatOptions.MaxAudioSizeInBytes.Value)
             {
                 _logger.LogWarning("Audio chunk too large: {Size} bytes", base64Audio.Length);

@@ -406,7 +406,7 @@ window.openAIChatManager = function () {
 
                     if (config.microphoneButtonElementSelector) {
                         this.microphoneButton = document.querySelector(config.microphoneButtonElementSelector);
-                        
+
                         if (this.microphoneButton) {
                             this.microphoneButton.addEventListener('click', () => {
                                 if (this.isRecording) {
@@ -652,7 +652,7 @@ window.openAIChatManager = function () {
                         this.mediaRecorder.onstop = async () => {
                             // Finalize the transcription
                             await this.finalizeRecording();
-                            
+
                             // Stop all tracks to release the microphone
                             if (this.audioStream) {
                                 this.audioStream.getTracks().forEach(track => track.stop());
@@ -663,7 +663,7 @@ window.openAIChatManager = function () {
                         // Start recording with 1-second timeslice for chunked processing
                         this.mediaRecorder.start(1000);
                         this.isRecording = true;
-                        
+
                         // Show initial transcription message
                         this.recordingMessageId = this.messages.length;
                         this.addMessage({
@@ -671,7 +671,7 @@ window.openAIChatManager = function () {
                             content: '',
                             isTranscribing: true
                         });
-                        
+
                         if (this.microphoneButton) {
                             this.microphoneButton.classList.add('btn-danger');
                             this.microphoneButton.classList.remove('btn-outline-secondary');
@@ -686,7 +686,7 @@ window.openAIChatManager = function () {
                     if (this.mediaRecorder && this.isRecording) {
                         this.mediaRecorder.stop();
                         this.isRecording = false;
-                        
+
                         if (this.microphoneButton) {
                             this.microphoneButton.classList.remove('btn-danger');
                             this.microphoneButton.classList.add('btn-outline-secondary');
@@ -699,11 +699,11 @@ window.openAIChatManager = function () {
                         // Convert blob to base64 for SignalR transmission
                         const reader = new FileReader();
                         reader.readAsDataURL(audioBlob);
-                        
+
                         return new Promise((resolve, reject) => {
                             reader.onloadend = async () => {
                                 const base64Audio = reader.result.split(',')[1];
-                                
+
                                 try {
                                     const transcribedChunk = await this.connection.invoke(
                                         "SendAudioChunk",
@@ -742,7 +742,7 @@ window.openAIChatManager = function () {
                         if (message) {
                             // Remove the transcribing flag
                             delete message.isTranscribing;
-                            
+
                             // If we got transcription, keep it and enable send button
                             if (message.content) {
                                 this.inputElement.value = message.content;
@@ -754,54 +754,6 @@ window.openAIChatManager = function () {
                             }
                         }
                         this.recordingMessageId = null;
-                    }
-                },
-                async sendAudioMessage(audioBlob) {
-                    try {
-                        this.showTypingIndicator();
-
-                        // Convert blob to base64 for SignalR transmission
-                        const reader = new FileReader();
-                        reader.readAsDataURL(audioBlob);
-                        
-                        reader.onloadend = async () => {
-                            const base64Audio = reader.result.split(',')[1];
-                            
-                            try {
-                                const transcribedText = await this.connection.invoke(
-                                    "SendAudioMessage",
-                                    this.getProfileId(),
-                                    base64Audio,
-                                    this.getSessionId(),
-                                    null
-                                );
-
-                                this.hideTypingIndicator();
-
-                                if (transcribedText) {
-                                    // Set the transcribed text in the input field
-                                    this.inputElement.value = transcribedText;
-                                    this.prompt = transcribedText;
-                                    
-                                    // Enable the send button
-                                    this.buttonElement.removeAttribute('disabled');
-                                    
-                                    // Optionally auto-send the message
-                                    // Uncomment the next line if you want to automatically send after transcription
-                                    // this.sendMessage();
-                                } else {
-                                    console.error('No transcription returned');
-                                }
-                            } catch (err) {
-                                this.hideTypingIndicator();
-                                console.error("Error sending audio message:", err);
-                                alert('Error processing voice message. Please try again.');
-                            }
-                        };
-                    } catch (error) {
-                        this.hideTypingIndicator();
-                        console.error('Error sending audio message:', error);
-                        alert('Error processing voice message. Please try again.');
                     }
                 }
             },
