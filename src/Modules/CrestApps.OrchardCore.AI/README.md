@@ -114,6 +114,9 @@ The **AI Connection Management** feature enhances **AI Services** by providing a
 
 #### Example Configurations for Common Providers
 
+> [!IMPORTANT]  
+> You need to use a paid plan for all of these even when using models that are free from the web. Otherwise, you'll get various errors along the lines of `insufficient_quota`.
+
 - DeepSeek
   - **Deployment name** (the model to use): e.g. `deepseek-chat`.
   - **Endpoint**: `https://api.deepseek.com/v1/`.
