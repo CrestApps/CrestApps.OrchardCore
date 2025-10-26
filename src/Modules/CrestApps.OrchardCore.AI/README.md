@@ -110,13 +110,25 @@ The **AI Connection Management** feature enhances **AI Services** by providing a
 
 2. **Add a New Connection**  
    - Click **"Add Connection"**, select a provider, and enter the required details.  
-   - Example: Connecting to **Google Gemini**  
-     - Generate an **API Key** from [Google AI Studio](https://aistudio.google.com).  
-     - Enter the **Endpoint**:  
-       ```
-       https://generativelanguage.googleapis.com/v1beta/openai/
-       ```  
-     - Specify the **Model**, e.g., **gemini-2.0-flash**.  
+   - Example configurations are in the next section.
+
+#### Example Configurations for Common Providers
+
+> [!IMPORTANT]  
+> You need to use a paid plan for all of these even when using models that are free from the web. Otherwise, you'll get various errors along the lines of `insufficient_quota`.
+
+- DeepSeek
+  - **Deployment name** (the model to use): e.g. `deepseek-chat`.
+  - **Endpoint**: `https://api.deepseek.com/v1/`.
+  - **API Key**: Generate one in [DeepSeek Platform](https://platform.deepseek.com).
+- Google Gemini
+  - **Deployment name**: e.g. `gemini-2.0-flash`.
+  - **Endpoint**: `https://generativelanguage.googleapis.com/v1beta/openai/`.
+  - **API Key**: Generate one in [Google AI Studio](https://aistudio.google.com).
+- OpenAI
+  - **Deployment name**: e.g. `gpt-4o-mini`.
+  - **Endpoint**: `https://api.openai.com/v1/`.
+  - **API Key**: Generate one in [OpenAI Platform](https://platform.openai.com/account/api-keys).
 
 #### Creating AI Profiles  
 
