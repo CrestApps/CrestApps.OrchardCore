@@ -80,6 +80,9 @@ window.openAIChatManager = function () {
                     audioChunks: [],
                     audioStream: null,
                     recordingMessageId: null,
+                    audioSubject: null,
+                    audioSubjectCompleted: false,
+                    audioInvokePromise: null,
                     stream: null,
                     messages: [],
                     prompt: ''
@@ -635,29 +638,83 @@ window.openAIChatManager = function () {
 
                     try {
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        this.mediaRecorder = new MediaRecorder(stream, {
-                            mimeType: 'audio/webm'
-                        });
+
+                        this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
                         this.audioChunks = [];
                         this.audioStream = stream;
                         this.recordingMessageId = null;
+                        this.audioSubjectCompleted = false;
+
+                        // Create a SignalR Subject for client-to-server streaming and invoke hub method once
+                        this.audioSubject = new signalR.Subject();
+                        this.audioInvokePromise = this.connection.invoke(
+                            "SendAudioChunk",
+                            this.getProfileId(),
+                            this.getSessionId(),
+                            this.audioSubject
+                        ).catch(err => {
+                            console.error('Error sending audio stream:', err);
+                            return { transcript: '', sessionId: this.getSessionId() };
+                        });
 
                         this.mediaRecorder.ondataavailable = async (event) => {
-                            if (event.data.size > 0) {
-                                // Send audio chunk immediately for real-time transcription
-                                await this.sendAudioChunk(event.data);
+                            if (!this.audioSubject || this.audioSubjectCompleted) {
+                                return;
+                            }
+                            if (event.data && event.data.size > 0) {
+                                try {
+                                    const arrayBuffer = await event.data.arrayBuffer();
+                                    const uint8Array = new Uint8Array(arrayBuffer);
+                                    let binary = '';
+                                    for (let i = 0; i < uint8Array.length; i++) {
+                                        binary += String.fromCharCode(uint8Array[i]);
+                                    }
+                                    const base64 = btoa(binary);
+                                    if (this.audioSubject && !this.audioSubjectCompleted) {
+                                        this.audioSubject.next(base64);
+                                    }
+                                } catch (e) {
+                                    console.error('Error encoding audio chunk:', e);
+                                }
                             }
                         };
 
                         this.mediaRecorder.onstop = async () => {
-                            // Finalize the transcription
-                            await this.finalizeRecording();
+                            // Complete the stream and wait for the final transcript
+                            try { this.audioSubjectCompleted = true; this.audioSubject?.complete(); } catch { }
+
+                            try {
+                                const result = await this.audioInvokePromise;
+                                const finalTranscript = result?.transcript || '';
+                                const returnedSessionId = result?.sessionId;
+                                if (returnedSessionId) {
+                                    this.setSessionId(returnedSessionId);
+                                }
+                                if (this.recordingMessageId !== null) {
+                                    const message = this.messages[this.recordingMessageId];
+                                    if (message) {
+                                        message.content = finalTranscript || message.content || '';
+                                        message.htmlContent = marked.parse(message.content, { renderer });
+                                        this.messages[this.recordingMessageId] = message;
+                                        this.scrollToBottom();
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Error finalizing audio stream:', e);
+                            } finally {
+                                this.audioSubject = null;
+                                this.audioInvokePromise = null;
+                                this.audioSubjectCompleted = false;
+                            }
 
                             // Stop all tracks to release the microphone
                             if (this.audioStream) {
                                 this.audioStream.getTracks().forEach(track => track.stop());
                                 this.audioStream = null;
                             }
+
+                            // Finish UI finalize
+                            await this.finalizeRecording();
                         };
 
                         // Start recording with 1-second timeslice for chunked processing
@@ -668,7 +725,7 @@ window.openAIChatManager = function () {
                         this.recordingMessageId = this.messages.length;
                         this.addMessage({
                             role: 'user',
-                            content: '',
+                            content: '...', // placeholder until transcript arrives
                             isTranscribing: true
                         });
 
@@ -695,43 +752,21 @@ window.openAIChatManager = function () {
                     }
                 },
                 async sendAudioChunk(audioBlob) {
+                    // Deprecated per-chunk invoke; now using client-to-server streaming
                     try {
-                        // Convert blob to base64 for SignalR transmission
-                        const reader = new FileReader();
-                        reader.readAsDataURL(audioBlob);
-
-                        return new Promise((resolve, reject) => {
-                            reader.onloadend = async () => {
-                                const base64Audio = reader.result.split(',')[1];
-
-                                try {
-                                    const transcribedChunk = await this.connection.invoke(
-                                        "SendAudioChunk",
-                                        this.getProfileId(),
-                                        base64Audio,
-                                        this.getSessionId(),
-                                        null
-                                    );
-
-                                    if (transcribedChunk && this.recordingMessageId !== null) {
-                                        // Update the transcription message with new chunk
-                                        let message = this.messages[this.recordingMessageId];
-                                        if (message) {
-                                            message.content += (message.content ? ' ' : '') + transcribedChunk;
-                                            message.htmlContent = marked.parse(message.content, { renderer });
-                                            this.messages[this.recordingMessageId] = message;
-                                            this.scrollToBottom();
-                                        }
-                                    }
-                                    resolve();
-                                } catch (err) {
-                                    console.error("Error sending audio chunk:", err);
-                                    reject(err);
-                                }
-                            };
-
-                            reader.onerror = reject;
-                        });
+                        if (!this.audioSubject || this.audioSubjectCompleted) {
+                            return;
+                        }
+                        const arrayBuffer = await audioBlob.arrayBuffer();
+                        const uint8Array = new Uint8Array(arrayBuffer);
+                        let binary = '';
+                        for (let i = 0; i < uint8Array.length; i++) {
+                            binary += String.fromCharCode(uint8Array[i]);
+                        }
+                        const base64 = btoa(binary);
+                        if (this.audioSubject && !this.audioSubjectCompleted) {
+                            this.audioSubject.next(base64);
+                        }
                     } catch (error) {
                         console.error('Error processing audio chunk:', error);
                     }
@@ -744,7 +779,7 @@ window.openAIChatManager = function () {
                             delete message.isTranscribing;
 
                             // If we got transcription, keep it and enable send button
-                            if (message.content) {
+                            if (message.content && message.content !== '...') {
                                 this.inputElement.value = message.content;
                                 this.prompt = message.content;
                                 this.buttonElement.removeAttribute('disabled');
