@@ -1,14 +1,20 @@
 ## AI Services Feature
 
-The **AI Services** feature enables interaction with AI models by providing essential services. Once activated, a new **Artificial Intelligence** menu item appears in the admin menu, offering options to manage AI profiles.
+The **AI Services** feature provides the foundational infrastructure for interacting with AI models through configurable profiles and service integrations.
 
-An **AI Profile** defines how the AI chatbot engages with users, including configuring the chatbot's welcome message, system message, and response behavior.
+Once enabled, a new **Artificial Intelligence** menu item appears in the admin dashboard, allowing administrators to create and manage **AI Profiles**.
 
-Note: This feature does not provide any completion client implementations (e.g., OpenAI, DeepSeek, etc.). It only provides a user interface to manage AI profiles along with the core services.
+An **AI Profile** defines how the AI system interacts with users — including its welcome message, system message, and response behavior.
+
+> **Note:** This feature does **not** include any AI completion client implementations such as **OpenAI**. It only provides the **user interface** and **core services** for managing AI profiles. You must install and configure a compatible provider module (e.g., `OpenAI`, `Azure`, `AzureAIInference`, or `Ollama`) separately.
+
+---
 
 ### Configuration
 
-Before utilizing any AI features, ensure the necessary settings are configured. This can be done using various setting providers. Below is an example of how to configure the services in the `appsettings.json` file:
+Before using the AI Services feature, ensure the required settings are properly configured. This can be done through the `appsettings.json` file or other configuration sources.
+
+Below is an example configuration:
 
 ```json
 {
@@ -26,10 +32,10 @@ Before utilizing any AI features, ensure the necessary settings are configured. 
         "EnableDistributedCaching": true
       },
       "Providers": {
-        "<!-- Provider name goes here -->": {
-          "DefaultConnectionName": "<!-- The default connection name -->",
+        "<!-- Provider name goes here (valid values: 'OpenAI', 'Azure', 'AzureAIInference', or 'Ollama') -->": {
+          "DefaultConnectionName": "<!-- The default connection name to use from the Connections list -->",
           "DefaultDeploymentName": "<!-- The default deployment name -->",
-          "DefaultEmbeddingDeploymentName": "<!-- The default embedding deployment name if you want to use Embedding services -->"
+          "DefaultEmbeddingDeploymentName": "<!-- The default embedding deployment name (optional, for embedding services) -->",
           "Connections": {
             "<!-- Connection name goes here -->": {
               "DefaultDeploymentName": "<!-- The default deployment name for this connection -->"
@@ -42,6 +48,37 @@ Before utilizing any AI features, ensure the necessary settings are configured. 
   }
 }
 ```
+
+---
+
+### Provider Configuration
+
+The following providers are supported **out of the box**:
+
+* **OpenAI** — [View configuration guide](../CrestApps.OrchardCore.OpenAI/README.md)
+* **Azure** — [View configuration guide](../CrestApps.OrchardCore.OpenAI.Azure/README.md)
+* **AzureAIInference** — [View configuration guide](../CrestApps.OrchardCore.AzureAIInference/README.md)
+* **Ollama** — [View configuration guide](../CrestApps.OrchardCore.Ollama/README.md)
+
+> **Tip:** Most modern AI providers offer APIs that follow the **OpenAI API standard**.
+> For these providers, use the **`OpenAI`** provider type when configuring their connections and endpoints.
+
+Each provider can define multiple connections, and the `DefaultConnectionName` determines which one is used when multiple connections are available.
+
+---
+
+### Provider Configuration
+
+The following providers are supported **out of the box**:
+
+* **OpenId** — [View configuration guide](../CrestApps.OrchardCore.OpenAI/README.md)
+* **Azure** — [View configuration guide](../CrestApps.OrchardCore.OpenAI.Azure/README.md)
+* **AzureAIInference** — [View configuration guide](../CrestApps.OrchardCore.OpenAI.AzureAIInference/README.md)
+* **Ollama** — [View configuration guide](../CrestApps.OrchardCore.OpenAI.Ollama/README.md)
+
+Each provider requires its own connection and deployment settings. The `DefaultConnectionName` determines which connection is used when multiple connections are configured.
+
+---
 
 ### Microsoft.AI.Extensions
 
@@ -73,13 +110,25 @@ The **AI Connection Management** feature enhances **AI Services** by providing a
 
 2. **Add a New Connection**  
    - Click **"Add Connection"**, select a provider, and enter the required details.  
-   - Example: Connecting to **Google Gemini**  
-     - Generate an **API Key** from [Google AI Studio](https://aistudio.google.com).  
-     - Enter the **Endpoint**:  
-       ```
-       https://generativelanguage.googleapis.com/v1beta/openai/
-       ```  
-     - Specify the **Model**, e.g., **gemini-2.0-flash**.  
+   - Example configurations are in the next section.
+
+#### Example Configurations for Common Providers
+
+> [!IMPORTANT]  
+> You need to use a paid plan for all of these even when using models that are free from the web. Otherwise, you'll get various errors along the lines of `insufficient_quota`.
+
+- DeepSeek
+  - **Deployment name** (the model to use): e.g. `deepseek-chat`.
+  - **Endpoint**: `https://api.deepseek.com/v1/`.
+  - **API Key**: Generate one in [DeepSeek Platform](https://platform.deepseek.com).
+- Google Gemini
+  - **Deployment name**: e.g. `gemini-2.0-flash`.
+  - **Endpoint**: `https://generativelanguage.googleapis.com/v1beta/openai/`.
+  - **API Key**: Generate one in [Google AI Studio](https://aistudio.google.com).
+- OpenAI
+  - **Deployment name**: e.g. `gpt-4o-mini`.
+  - **Endpoint**: `https://api.openai.com/v1/`.
+  - **API Key**: Generate one in [OpenAI Platform](https://platform.openai.com/account/api-keys).
 
 #### Creating AI Profiles  
 
