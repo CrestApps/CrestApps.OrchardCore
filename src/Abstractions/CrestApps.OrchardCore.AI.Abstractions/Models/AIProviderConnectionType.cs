@@ -4,5 +4,4 @@ public enum AIProviderConnectionType
 {
     Chat,
     Embedding,
-    SpeechToText,
 }
