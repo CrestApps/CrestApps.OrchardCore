@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Models
+@using Microsoft.AspNetCore.Authorization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProfile>
+
+@inject IAuthorizationService AuthorizationService
+
+@if (Model.Value.Type == AIProfileType.Chat && await AuthorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, Model.Value))
+{
+    <a asp-action="Index"
+       asp-controller="Admin"
+       asp-route-profileId="@Model.Value.ItemId"
+       class="btn btn-primary btn-sm">@T["Chat"]</a>
+}
+
+<a asp-action="Edit"
+   asp-route-id="@Model.Value.ItemId"
+   class="btn btn-primary btn-sm">@T["Edit"]</a>
+
+@if (Model.Value.GetSettings<AIProfileSettings>().IsRemovable)
+{
+    <a asp-action="Delete"
+       asp-route-id="@Model.Value.ItemId"
+       class="btn btn-danger btn-sm"
+       data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+}

@@ -1,0 +1,35 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Models
+
+@model ShapeViewModel<AIProfile>
+
+<li>
+    <a asp-action="Index"
+       asp-controller="Admin"
+       asp-area="@AIConstants.Feature.Chat"
+       asp-route-profileId="@Model.Value.ItemId"
+       class="dropdown-item">@T["Chat"]</a>
+</li>
+
+<li>
+    <a asp-action="History"
+       asp-controller="Admin"
+       asp-area="@AIConstants.Feature.Chat"
+       asp-route-profileId="@Model.Value.ItemId"
+       class="dropdown-item">@T["View chat history"]</a>
+</li>
+
+<li>
+    <a asp-action="DeleteAll"
+       asp-controller="Admin"
+       asp-area="@AIConstants.Feature.Chat"
+       asp-route-profileId="@Model.Value.ItemId"
+       class="dropdown-item text-danger"
+       data-url-af="RemoveUrl UnsafeUrl"
+       data-title="Delete"
+       data-message="@T["Are you sure you want to delete all chat history?"]"
+       data-ok-text="@T["Yes"]"
+       data-cancel-text="@T["Cancel"]">
+        @T["Delete chat history"]
+    </a>
+</li>

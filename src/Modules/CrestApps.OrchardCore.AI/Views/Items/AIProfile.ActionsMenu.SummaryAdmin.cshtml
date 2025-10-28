@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Models
+
+@model ShapeViewModel<AIProfile>
+
+<li>
+    <a asp-action="Delete"
+       asp-route-id="@Model.Value.ItemId"
+       class="dropdown-item text-danger"
+       data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+</li>

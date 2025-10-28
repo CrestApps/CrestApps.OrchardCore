@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -18,6 +20,8 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly INamedCatalog<AIProfile> _profilesCatalog;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AIOptions _aiOptions;
     private readonly DefaultAIOptions _defaultAIOptions;
     private readonly AIProviderOptions _connectionOptions;
@@ -30,10 +34,14 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> connectionOptions,
         IOptions<DefaultAIOptions> defaultAIOptions,
+        IAuthorizationService authorizationService,
+        IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
     {
         _profilesCatalog = profilesCatalog;
         _liquidTemplateManager = liquidTemplateManager;
+        _authorizationService = authorizationService;
+        _httpContextAccessor = httpContextAccessor;
         _aiOptions = aiOptions.Value;
         _defaultAIOptions = defaultAIOptions.Value;
         _connectionOptions = connectionOptions.Value;
@@ -46,7 +54,10 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             View("AIProfile_Fields_SummaryAdmin", profile).Location("Content:1"),
             View("AIProfile_Buttons_SummaryAdmin", profile).Location("Actions:5"),
             View("AIProfile_DefaultTags_SummaryAdmin", profile).Location("Tags:5"),
-            View("AIProfile_DefaultMeta_SummaryAdmin", profile).Location("Meta:5")
+            View("AIProfile_DefaultMeta_SummaryAdmin", profile).Location("Meta:5"),
+             View("AIProfile_ActionsMenu_SummaryAdmin", profile)
+            .Location("ActionsMenu:10")
+            .RenderWhen(async () => profile.GetSettings<AIProfileSettings>().IsRemovable && await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles, profile))
         );
     }
 
