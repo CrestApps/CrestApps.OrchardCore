@@ -31,7 +31,8 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileMenuDisplayDriver>()
             .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()
-            .AddNavigationProvider<ChatAdminMenu>();
+            .AddNavigationProvider<ChatAdminMenu>()
+            .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
