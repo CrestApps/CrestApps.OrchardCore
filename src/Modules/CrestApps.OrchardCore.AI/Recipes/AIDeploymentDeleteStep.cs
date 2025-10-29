@@ -38,15 +38,13 @@ internal sealed class AIDeploymentDeleteStep : NamedRecipeStepHandler
             return;
         }
 
-        var deploymentNames = model.DeploymentNames ?? [];
-
-        if (deploymentNames.Length == 0)
+        if (model.DeploymentNames is null || model.DeploymentNames.Length == 0)
         {
             context.Errors.Add(S["No deployment names were provided."]);
             return;
         }
 
-        foreach (var deploymentName in deploymentNames)
+        foreach (var deploymentName in model.DeploymentNames)
         {
             var name = deploymentName?.Trim();
             if (string.IsNullOrEmpty(name))
