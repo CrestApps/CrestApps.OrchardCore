@@ -31,6 +31,51 @@ To configure a connection, add the following settings to the `appsettings.json` 
 
 ---
 
+### Complete Configuration Example with Multiple Connection Types
+
+OpenAI supports multiple connection types for different capabilities:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Providers": {
+        "OpenAI": {
+          "DefaultConnectionName": "openai-cloud",
+          "DefaultDeploymentName": "gpt-4o-mini",
+          "Connections": {
+            "openai-cloud": {
+              "Type": "Chat",
+              "ApiKey": "<!-- Your API Key Goes Here -->",
+              "DefaultDeploymentName": "gpt-4o-mini"
+            },
+            "openai-embeddings": {
+              "Type": "Embedding",
+              "ApiKey": "<!-- Your API Key Goes Here -->",
+              "DefaultDeploymentName": "text-embedding-3-small"
+            },
+            "openai-whisper": {
+              "Type": "SpeechToText",
+              "ApiKey": "<!-- Your API Key Goes Here -->",
+              "DefaultDeploymentName": "whisper-1"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Connection Types:**
+- `Chat` - For chat/completion models (gpt-4, gpt-4o-mini, etc.)
+- `Embedding` - For embedding models (text-embedding-3-small, text-embedding-3-large, etc.)
+- `SpeechToText` - For speech-to-text models (whisper-1)
+
+If no `Type` is specified, `Chat` is used as the default.
+
+---
+
 ### Using AI Deployments  
 
 If the **AI Deployments** feature is enabled, you can create multiple deployments under the same connection. This allows different AI profiles to utilize different models while sharing the same connection.  
