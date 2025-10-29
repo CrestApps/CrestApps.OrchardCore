@@ -14,11 +14,11 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 /// </summary>
 public sealed class CustomChatInstanceDisplayDriver : DisplayDriver<AIChatSession>
 {
-    private readonly AIProviderOptions _connectionOptions;
+    private readonly AIOptions _aiOptions;
 
-    public CustomChatInstanceDisplayDriver(IOptions<AIProviderOptions> connectionOptions)
+    public CustomChatInstanceDisplayDriver(IOptions<AIOptions> aiOptions)
     {
-        _connectionOptions = connectionOptions.Value;
+        _aiOptions = aiOptions.Value;
     }
 
     public override Task<IDisplayResult> EditAsync(AIChatSession session, BuildEditorContext context)
@@ -40,7 +40,7 @@ public sealed class CustomChatInstanceDisplayDriver : DisplayDriver<AIChatSessio
             ConnectionName = metadata.ConnectionName,
             DeploymentId = metadata.DeploymentId,
             TitleType = AISessionTitleType.InitialPrompt,
-            Source = metadata.Source ?? GetSourceFromProvider(metadata.ProviderName)
+            Source = metadata.Source ?? GetDefaultSource()
         };
 
         // Add metadata
@@ -82,21 +82,9 @@ public sealed class CustomChatInstanceDisplayDriver : DisplayDriver<AIChatSessio
         return Task.FromResult<IDisplayResult>(Combine(headerResult, contentResult));
     }
 
-    private string GetSourceFromProvider(string providerName)
+    private string GetDefaultSource()
     {
-        if (string.IsNullOrEmpty(providerName))
-        {
-            return _connectionOptions.Providers.Keys.FirstOrDefault();
-        }
-
-        // Map provider name to source
-        // This is a simple implementation - you may need to adjust based on your configuration
-        return providerName switch
-        {
-            "OpenAI" => "OpenAI",
-            "AzureOpenAI" => "AzureOpenAI",
-            "Ollama" => "Ollama",
-            _ => providerName
-        };
+        // Get the first available profile source
+        return _aiOptions.ProfileSources.Keys.FirstOrDefault();
     }
 }
