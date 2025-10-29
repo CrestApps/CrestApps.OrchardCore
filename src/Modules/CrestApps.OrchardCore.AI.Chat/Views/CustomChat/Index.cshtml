@@ -112,10 +112,17 @@
 
                 <!-- Chat Tab -->
                 <div class="tab-pane fade" id="chat" role="tabpanel" aria-labelledby="chat-tab">
-                    <div id="custom-chat-container">
-                        @* Chat interface will be loaded here *@
-                        <p class="text-muted">@T["Chat interface for custom instances coming soon..."]</p>
-                    </div>
+                    @if (Model.ChatContent != null)
+                    {
+                        @await DisplayAsync(Model.ChatContent)
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <i class="fa-solid fa-info-circle"></i>
+                            @T["Save your settings first to start chatting."]
+                        </div>
+                    }
                 </div>
             </div>
         }

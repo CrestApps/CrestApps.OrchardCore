@@ -70,4 +70,9 @@ public sealed class AIChatInstanceMetadata
     /// Gets or sets the provider name associated with the connection.
     /// </summary>
     public string ProviderName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the source/implementation name (e.g., "OpenAI", "AzureOpenAI", "Ollama").
+    /// </summary>
+    public string Source { get; set; }
 }

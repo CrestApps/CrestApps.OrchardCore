@@ -24,6 +24,7 @@ public sealed class CustomChatController : Controller
     private readonly IAIChatSessionManager _sessionManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly IDisplayManager<AIChatSession> _sessionDisplayManager;
     private readonly AIOptions _aiOptions;
     private readonly AIProviderOptions _connectionOptions;
     private readonly DefaultAIOptions _defaultAIOptions;
@@ -38,6 +39,7 @@ public sealed class CustomChatController : Controller
         IAIChatSessionManager sessionManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
+        IDisplayManager<AIChatSession> sessionDisplayManager,
         IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> connectionOptions,
         IOptions<DefaultAIOptions> defaultAIOptions,
@@ -51,6 +53,7 @@ public sealed class CustomChatController : Controller
         _sessionManager = sessionManager;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
+        _sessionDisplayManager = sessionDisplayManager;
         _aiOptions = aiOptions.Value;
         _connectionOptions = connectionOptions.Value;
         _defaultAIOptions = defaultAIOptions.Value;
@@ -136,10 +139,14 @@ public sealed class CustomChatController : Controller
 
         var configuration = await BuildConfigurationViewModelAsync(session, metadata);
 
+        // Build chat content using the display manager
+        var chatContent = await _sessionDisplayManager.BuildEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: false);
+
         var model = new ManageCustomChatInstancesViewModel
         {
             CurrentSession = session,
             Configuration = configuration,
+            ChatContent = chatContent,
             Instances = customInstances,
             IsNew = false
         };
@@ -206,6 +213,7 @@ public sealed class CustomChatController : Controller
             PastMessagesCount = model.PastMessagesCount,
             UseCaching = model.UseCaching,
             ProviderName = model.ProviderName,
+            Source = GetSourceFromProvider(model.ProviderName),
             ToolNames = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId).ToArray() ?? []
         };
 
@@ -431,6 +439,21 @@ public sealed class CustomChatController : Controller
         }
 
         return model;
+    }
+
+    private string GetSourceFromProvider(string providerName)
+    {
+        if (string.IsNullOrEmpty(providerName))
+        {
+            // Get the first available profile source
+            return _aiOptions.ProfileSources.Keys.FirstOrDefault();
+        }
+
+        // Try to find a matching profile source for this provider
+        var matchingSource = _aiOptions.ProfileSources.FirstOrDefault(ps => 
+            ps.Value.ProviderName.Equals(providerName, StringComparison.OrdinalIgnoreCase));
+
+        return matchingSource.Key ?? providerName;
     }
 
     private string CurrentUserId()
