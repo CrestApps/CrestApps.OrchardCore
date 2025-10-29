@@ -31,6 +31,10 @@ internal sealed class CatalogItemMigrations : DataMigration
 
             collections.Add("");
 
+            await using var connection = dbConnectionAccessor.CreateConnection();
+
+            await connection.OpenAsync();
+
             foreach (var collection in collections)
             {
                 var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(collection);
@@ -47,11 +51,6 @@ internal sealed class CatalogItemMigrations : DataMigration
                 sqlBuilder.AddSelector("," + quotedContentColumnName);
                 sqlBuilder.From(quotedTableName);
                 sqlBuilder.WhereAnd($" {quotedTypeColumnName} LIKE 'CrestApps.OrchardCore.Models.DictionaryDocument`1[[%' ");
-
-                await using var connection = dbConnectionAccessor.CreateConnection();
-
-                await connection.OpenAsync();
-                var transaction = await connection.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
 
                 try
                 {
@@ -100,19 +99,12 @@ internal sealed class CatalogItemMigrations : DataMigration
                             );
                         }
                     }
-
-                    await transaction.CommitAsync();
                 }
                 catch (Exception e)
                 {
                     logger.LogError(e, "An error occurred while updating indexing tasks Category to Content.");
 
-                    await transaction.RollbackAsync();
                     throw;
-                }
-                finally
-                {
-                    await connection.CloseAsync();
                 }
             }
         });
