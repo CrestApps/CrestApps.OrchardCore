@@ -12,6 +12,7 @@ internal sealed class AIPermissionsProvider : IPermissionProvider
     [
         AIPermissions.ManageAIProfiles,
         AIPermissions.QueryAnyAIProfile,
+        AIPermissions.ManageCustomChatInstances,
     ];
 
     private readonly INamedCatalog<AIProfile> _profilesCatalog;

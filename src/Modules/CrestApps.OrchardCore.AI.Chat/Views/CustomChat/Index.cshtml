@@ -1,0 +1,154 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.OrchardCore.AI.Models
+@using OrchardCore.Entities
+
+@model ManageCustomChatInstancesViewModel
+
+@{
+    var title = Model.IsNew ? T["New Custom Chat"] : (Model.CurrentSession?.Title ?? T["Custom Chat"]);
+}
+
+<zone Name="Title"><h1>@RenderTitleSegments(title)</h1></zone>
+
+<div class="row">
+    <!-- Sidebar with instance list -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">@T["My Instances"]</h5>
+                <a asp-action="Index" asp-controller="CustomChat" class="btn btn-sm btn-primary" title="@T["Create New"]">
+                    <i class="fa-solid fa-plus"></i>
+                </a>
+            </div>
+            <div class="list-group list-group-flush">
+                @if (Model.Instances.Any())
+                {
+                    foreach (var instance in Model.Instances)
+                    {
+                        var isActive = !Model.IsNew && Model.CurrentSession?.SessionId == instance.SessionId;
+                        <a asp-action="Edit" asp-controller="CustomChat" asp-route-sessionId="@instance.SessionId"
+                           class="list-group-item list-group-item-action @(isActive ? "active" : "")">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">@(instance.Title ?? T["Untitled"])</h6>
+                            </div>
+                            <small>@instance.CreatedUtc.ToLocalTime().ToString("g")</small>
+                        </a>
+                    }
+                }
+                else
+                {
+                    <div class="list-group-item text-muted text-center py-4">
+                        <i class="fa-solid fa-inbox fa-2x mb-2"></i>
+                        <p class="mb-0">@T["No instances yet"]</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content area with tabs -->
+    <div class="col-md-9">
+        @if (Model.IsNew)
+        {
+            <!-- Show configuration form for new instance -->
+            <div class="card">
+                <div class="card-body">
+                    <h3>@T["Create New Chat Instance"]</h3>
+                    <p class="text-muted">@T["Configure your custom AI chat instance with personalized settings."]</p>
+
+                    <form asp-action="Save" asp-controller="CustomChat" method="post">
+                        @await Html.PartialAsync("_CustomChatConfiguration", new CustomChatInstanceViewModel
+                        {
+                            IsNew = true,
+                            AllowCaching = Model.Configuration?.AllowCaching ?? false,
+                            ConnectionNames = Model.Configuration?.ConnectionNames ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>(),
+                            Deployments = Model.Configuration?.Deployments ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>()
+                        })
+
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa-solid fa-save"></i> @T["Create Instance"]
+                            </button>
+                            <a asp-action="Index" asp-controller="CustomChat" class="btn btn-secondary">@T["Cancel"]</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+        else if (Model.CurrentSession != null)
+        {
+            <!-- Tabs for existing instance -->
+            <ul class="nav nav-tabs" id="customChatTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab" aria-controls="settings" aria-selected="true">
+                        <i class="fa-solid fa-cog"></i> @T["Settings"]
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat" type="button" role="tab" aria-controls="chat" aria-selected="false">
+                        <i class="fa-solid fa-comments"></i> @T["Chat"]
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content border border-top-0 p-3" id="customChatTabContent">
+                <!-- Settings Tab -->
+                <div class="tab-pane fade show active" id="settings" role="tabpanel" aria-labelledby="settings-tab">
+                    <form asp-action="Save" asp-controller="CustomChat" method="post">
+                        <input type="hidden" asp-for="Configuration.SessionId" value="@Model.CurrentSession.SessionId" />
+
+                        @await Html.PartialAsync("_CustomChatConfiguration", Model.Configuration)
+
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa-solid fa-save"></i> @T["Save Changes"]
+                            </button>
+                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                <i class="fa-solid fa-trash"></i> @T["Delete Instance"]
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Chat Tab -->
+                <div class="tab-pane fade" id="chat" role="tabpanel" aria-labelledby="chat-tab">
+                    <div id="custom-chat-container">
+                        @* Chat interface will be loaded here *@
+                        <p class="text-muted">@T["Chat interface for custom instances coming soon..."]</p>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <i class="fa-solid fa-info-circle"></i>
+                @T["Select an instance from the list or create a new one to get started."]
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+@if (!Model.IsNew && Model.CurrentSession != null)
+{
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">@T["Confirm Delete"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @T["Are you sure you want to delete this chat instance? This action cannot be undone."]
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                    <form asp-action="Delete" asp-controller="CustomChat" asp-route-sessionId="@Model.CurrentSession.SessionId" method="post" style="display: inline;">
+                        <button type="submit" class="btn btn-danger">@T["Delete"]</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
