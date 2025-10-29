@@ -111,6 +111,7 @@ public sealed class OCDeploymentsStartup : StartupBase
     {
         services.AddDeployment<AIProfileDeploymentSource, AIProfileDeploymentStep, AIProfileDeploymentStepDisplayDriver>();
         services.AddDeployment<AIDeploymentDeploymentSource, AIDeploymentDeploymentStep, AIDeploymentDeploymentStepDisplayDriver>();
+        services.AddDeployment<DeleteAIDeploymentDeploymentSource, DeleteAIDeploymentDeploymentStep, DeleteAIDeploymentDeploymentStepDisplayDriver>();
     }
 }
 
@@ -189,6 +190,7 @@ public sealed class DeploymentRecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<AIDeploymentStep>();
+        services.AddRecipeExecutionStep<DeleteAIDeploymentStep>();
     }
 }
 #endregion
