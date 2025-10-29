@@ -46,17 +46,16 @@ internal sealed class AIDeploymentDeleteStep : NamedRecipeStepHandler
 
         foreach (var deploymentName in model.DeploymentNames)
         {
-            var name = deploymentName?.Trim();
-            if (string.IsNullOrEmpty(name))
+            if (string.IsNullOrEmpty(deploymentName))
             {
                 continue;
             }
 
-            var deployment = await _manager.FindByNameAsync(name);
+            var deployment = await _manager.FindByNameAsync(deploymentName);
 
             if (deployment is null)
             {
-                context.Errors.Add(S["Unable to find a deployment with the name '{0}'.", name]);
+                context.Errors.Add(S["Unable to find a deployment with the name '{0}'.", deploymentName]);
                 continue;
             }
 
