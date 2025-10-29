@@ -41,7 +41,6 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
                 { "Author", deployment.Author },
                 { "OwnerId", deployment.OwnerId },
                 { "CreatedUtc" , deployment.CreatedUtc },
-                { "OwnerId" , deployment.OwnerId },
                 { "Properties", deployment.Properties?.DeepClone() },
             };
 
