@@ -189,6 +189,7 @@ public sealed class DeploymentRecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<AIDeploymentStep>();
+        services.AddRecipeExecutionStep<AIDeploymentDeleteStep>();
     }
 }
 #endregion

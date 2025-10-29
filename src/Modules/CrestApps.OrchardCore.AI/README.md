@@ -632,6 +632,44 @@ You can also create or update AI deployments using the following recipe:
 }
 ```
 
+#### Deleting AI Deployments via Recipes
+
+You can delete model deployments using the `DeleteAIDeployment` recipe step. This step supports deleting specific deployments by name or deleting all deployments.
+
+- Delete all deployments:
+
+```json
+{
+  "steps": [
+    {
+      "name": "DeleteAIDeployment",
+      "IncludeAll": true
+    }
+  ]
+}
+```
+
+- Delete specific deployments by name:
+
+```json
+{
+  "steps": [
+    {
+      "name": "DeleteAIDeployment",
+      "DeploymentNames": [
+        "gpt-4o-mini",
+        "my-custom-deployment"
+      ]
+    }
+  ]
+}
+```
+
+Notes:
+- Deployment names are matched case-insensitively.
+- If `IncludeAll` is `true`, all deployments will be removed and `DeploymentNames` is ignored.
+- Ensure the `AI Deployments` feature and the `OrchardCore.Recipes` feature are enabled.
+
 ---
 
 ### AI Chat with Workflows
