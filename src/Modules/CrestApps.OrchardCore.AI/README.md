@@ -634,7 +634,7 @@ You can also create or update AI deployments using the following recipe:
 
 #### Deleting AI Deployments via Recipes
 
-You can delete model deployments using the `DeleteAIDeployment` recipe step. This step supports deleting specific deployments by name or deleting all deployments.
+You can delete model deployments using the `DeleteAIDeployments` recipe step. This step supports deleting specific deployments by name or deleting all deployments.
 
 - Delete all deployments:
 
@@ -642,7 +642,7 @@ You can delete model deployments using the `DeleteAIDeployment` recipe step. Thi
 {
   "steps": [
     {
-      "name": "DeleteAIDeployment",
+      "name": "DeleteAIDeployments",
       "IncludeAll": true
     }
   ]
@@ -655,7 +655,7 @@ You can delete model deployments using the `DeleteAIDeployment` recipe step. Thi
 {
   "steps": [
     {
-      "name": "DeleteAIDeployment",
+      "name": "DeleteAIDeployments",
       "DeploymentNames": [
         "gpt-4o-mini",
         "my-custom-deployment"

@@ -5,17 +5,17 @@ using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Recipes;
 
-internal sealed class AIDeploymentDeleteStep : NamedRecipeStepHandler
+internal sealed class DeleteAIDeploymentDeleteStep : NamedRecipeStepHandler
 {
-    public const string StepKey = "DeleteAIDeployment";
+    public const string StepKey = "DeleteAIDeployments";
 
     private readonly IAIDeploymentManager _manager;
 
     internal readonly IStringLocalizer S;
 
-    public AIDeploymentDeleteStep(
+    public DeleteAIDeploymentDeleteStep(
         IAIDeploymentManager manager,
-        IStringLocalizer<AIDeploymentDeleteStep> stringLocalizer)
+        IStringLocalizer<DeleteAIDeploymentDeleteStep> stringLocalizer)
         : base(StepKey)
     {
         _manager = manager;
