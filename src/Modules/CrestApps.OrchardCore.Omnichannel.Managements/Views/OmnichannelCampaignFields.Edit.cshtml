@@ -29,12 +29,12 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses("automated-interaction-type", Model.InteractionType == ActivityInteractionType.Manual ? "d-none" : string.Empty)">
-    <label asp-for="ChannelEndpoint" class="@Orchard.GetLabelClasses()">@T["Channel endpoint"]</label>
+    <label asp-for="ChannelEndpointId" class="@Orchard.GetLabelClasses()">@T["Channel endpoint"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="ChannelEndpoint" asp-items="Model.ChannelEndpoints" class="form-select">
+        <select asp-for="ChannelEndpointId" asp-items="Model.ChannelEndpoints" class="form-select">
             <option value="">@T["Select an endpoint"]</option>
         </select>
-        <span asp-validation-for="ChannelEndpoint" class="text-danger"></span>
+        <span asp-validation-for="ChannelEndpointId" class="text-danger"></span>
         <span class="hint">@T["Specifies the endpoint to use when sending a response to the incoming message."]</span>
     </div>
 </div>

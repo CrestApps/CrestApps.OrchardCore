@@ -21,7 +21,7 @@ public sealed class OmnichannelActivityIndexProvider : IndexProvider<Omnichannel
             {
                 ItemId = activity.ItemId,
                 Channel = activity.Channel,
-                ChannelEndpoint = activity.ChannelEndpoint,
+                ChannelEndpointId = activity.ChannelEndpointId,
                 SubjectContentType = activity.SubjectContentType,
                 PreferredDestination = activity.PreferredDestination,
                 ContactContentType = activity.ContactContentType,

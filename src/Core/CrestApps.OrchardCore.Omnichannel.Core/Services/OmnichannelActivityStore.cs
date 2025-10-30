@@ -69,15 +69,15 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         };
     }
 
-    public async Task<OmnichannelActivity> GetAsync(string channel, string channelEndpoint, string preferredDestination, ActivityInteractionType interactionType)
+    public async Task<OmnichannelActivity> GetAsync(string channel, string channelEndpointId, string preferredDestination, ActivityInteractionType interactionType)
     {
         ArgumentException.ThrowIfNullOrEmpty(channel);
-        ArgumentException.ThrowIfNullOrEmpty(channelEndpoint);
+        ArgumentException.ThrowIfNullOrEmpty(channelEndpointId);
         ArgumentException.ThrowIfNullOrEmpty(preferredDestination);
 
         return await Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
             index.Channel == channel &&
-            index.ChannelEndpoint == channelEndpoint &&
+            index.ChannelEndpointId == channelEndpointId &&
             index.PreferredDestination == preferredDestination &&
             index.InteractionType == interactionType, collection: OmnichannelConstants.CollectionName)
             .OrderByDescending(x => x.ScheduledUtc)

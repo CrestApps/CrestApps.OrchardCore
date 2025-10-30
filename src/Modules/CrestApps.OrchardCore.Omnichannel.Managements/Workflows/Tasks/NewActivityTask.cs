@@ -91,7 +91,7 @@ public sealed class NewActivityTask : TaskActivity<NewActivityTask>
         {
             ItemId = IdGenerator.GenerateId(),
             Channel = activity.Channel,
-            ChannelEndpoint = activity.ChannelEndpoint,
+            ChannelEndpointId = activity.ChannelEndpointId,
             InteractionType = activity.InteractionType,
             PreferredDestination = activity.PreferredDestination,
             AIProfileName = activity.AIProfileName,
@@ -142,7 +142,7 @@ public sealed class NewActivityTask : TaskActivity<NewActivityTask>
             {
                 newAttempt.Channel = campaign.Channel;
                 newAttempt.InteractionType = campaign.InteractionType;
-                newAttempt.ChannelEndpoint = campaign.ChannelEndpoint;
+                newAttempt.ChannelEndpointId = campaign.ChannelEndpointId;
                 newAttempt.CampaignId = campaign.ItemId;
             }
         }

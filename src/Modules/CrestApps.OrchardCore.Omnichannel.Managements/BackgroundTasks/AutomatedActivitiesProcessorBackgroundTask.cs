@@ -61,7 +61,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
 
             foreach (var activity in activities)
             {
-                documentId = Math.Max(documentId, activity.Id);
+                documentId = activity.Id;
 
                 try
                 {
@@ -73,8 +73,6 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                 {
                     logger.LogError(ex, "An error occurred while processing the activity with id '{ActivityId}'", activity.ItemId);
                 }
-
-                documentId = activity.Id;
 
                 await session.SaveAsync(activity, false, collection: OmnichannelConstants.CollectionName, cancellationToken);
             }

@@ -37,6 +37,8 @@ public sealed class Startup : StartupBase
             .AddDocumentCatalog<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName)
             .AddScoped<IOmnichannelActivityStore, OmnichannelActivityStore>()
             .AddScoped<IOmnichannelActivityManager, OmnichannelActivityManager>()
+            .AddScoped<IOmnichannelChannelEndpointStore, OmnichannelChannelEndpointStore>()
+            .AddScoped<IOmnichannelChannelEndpointManager, OmnichannelChannelEndpointManager>()
             .AddScoped<ICatalogEntryHandler<OmnichannelActivityBatch>, OmnichannelActivityBatchHandler>()
             .AddIndexProvider<OmnichannelActivityBatchIndexProvider>()
             .AddDataMigration<OmnichannelActivityBatchIndexMigrations>();

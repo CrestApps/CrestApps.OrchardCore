@@ -75,6 +75,8 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Value), S["Endpoint value is a required field."]);
         }
 
+        var value = model.Value.Trim();
+
         if (string.IsNullOrWhiteSpace(model.Channel))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["Channel is a required field."]);
@@ -86,6 +88,11 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
                 if (!_phoneFormatValidator.IsValid(model.Value))
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(model.Value), S["Invalid phone number. Please enter a valid international number in the format: +<CountryCode><Number> (e.g., +14155552671)."]);
+                }
+                else
+                {
+                    // Ensure phone numbers don't contain any spaces since its valid to have spaces in phone numbers.
+                    value = model.Value.GetCleanedPhoneNumber();
                 }
             }
             else if (model.Channel == OmnichannelConstants.Channels.Email)
@@ -100,7 +107,7 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
         endpoint.DisplayText = model.DisplayText?.Trim();
         endpoint.Description = model.Description?.Trim();
         endpoint.Channel = model.Channel;
-        endpoint.Value = model.Value?.Trim();
+        endpoint.Value = value;
 
         return Edit(endpoint, context);
     }

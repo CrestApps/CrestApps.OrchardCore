@@ -11,7 +11,7 @@ public sealed class OmnichannelActivityIndex : CatalogItemIndex
 
     public string Channel { get; set; }
 
-    public string ChannelEndpoint { get; set; }
+    public string ChannelEndpointId { get; set; }
 
     public string PreferredDestination { get; set; }
 

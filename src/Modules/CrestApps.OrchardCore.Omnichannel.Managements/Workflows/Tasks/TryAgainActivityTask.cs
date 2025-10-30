@@ -83,7 +83,7 @@ public sealed class TryAgainActivityTask : TaskActivity<TryAgainActivityTask>
         {
             ItemId = IdGenerator.GenerateId(),
             Channel = activity.Channel,
-            ChannelEndpoint = activity.ChannelEndpoint,
+            ChannelEndpointId = activity.ChannelEndpointId,
             InteractionType = activity.InteractionType,
             PreferredDestination = activity.PreferredDestination,
             AIProfileName = activity.AIProfileName,

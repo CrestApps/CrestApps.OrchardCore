@@ -7,12 +7,19 @@ public interface IAIChatSessionManager
     /// <summary>
     /// Asynchronously retrieves an existing AI chat session by its session ID.
     /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    Task<AIChatSession> FindByIdAsync(string id);
+
+    /// <summary>
+    /// Asynchronously retrieves an existing AI chat session by its session ID after applying ownership check.
+    /// </summary>
     /// <param name="sessionId">The unique identifier of the chat session. Must not be null or empty.</param>
     /// <returns>
     /// A task representing the asynchronous operation. The task result is the <see cref="AIChatSession"/> if found,
     /// or <c>null</c> if no session with the specified session ID exists.
     /// </returns>
-    Task<AIChatSession> FindAsync(string sessionId);
+    Task<AIChatSession> FindAsync(string id);
 
     /// <summary>
     /// Asynchronously retrieves a list of top AI chat sessions based on the provided pagination parameters and query context.

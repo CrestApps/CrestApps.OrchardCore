@@ -453,7 +453,7 @@ public sealed class ActivityBatchesController : Controller
                         activity.ContactContentType = batch.ContactContentType;
                         activity.SubjectContentType = batch.SubjectContentType;
                         activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, campaign.Channel);
-                        activity.ChannelEndpoint = campaign.ChannelEndpoint;
+                        activity.ChannelEndpointId = campaign.ChannelEndpointId;
                         activity.AIProfileName = campaign.AIProfileName;
                         activity.CampaignId = batch.CampaignId;
                         activity.ScheduledUtc = scheduledUtc;

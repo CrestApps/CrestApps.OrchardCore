@@ -57,7 +57,7 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             model.InteractionType = campaign.InteractionType;
             model.AIProfileName = campaign.AIProfileName;
             model.Channel = campaign.Channel;
-            model.ChannelEndpoint = campaign.ChannelEndpoint;
+            model.ChannelEndpointId = campaign.ChannelEndpointId;
             model.InitialOutboundPromptPattern = campaign.InitialOutboundPromptPattern;
 
             var dispositions = await _dispositionsCatalog.GetAllAsync();
@@ -121,9 +121,9 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
 
         if (model.InteractionType == ActivityInteractionType.Automated)
         {
-            if (string.IsNullOrEmpty(model.ChannelEndpoint))
+            if (string.IsNullOrEmpty(model.ChannelEndpointId))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChannelEndpoint), S["Channel endpoint field is required for automated activities."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChannelEndpointId), S["Channel endpoint field is required for automated activities."]);
             }
 
             if (string.IsNullOrEmpty(model.AIProfileName))
@@ -154,7 +154,7 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
         campaign.Description = model.Description?.Trim();
         campaign.InteractionType = model.InteractionType;
         campaign.Channel = model.Channel;
-        campaign.ChannelEndpoint = model.ChannelEndpoint;
+        campaign.ChannelEndpointId = model.ChannelEndpointId;
         campaign.AIProfileName = model.AIProfileName;
         campaign.InitialOutboundPromptPattern = model.InitialOutboundPromptPattern;
 

@@ -289,7 +289,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
             if (campaign is not null)
             {
-                activity.ChannelEndpoint = campaign?.ChannelEndpoint;
+                activity.ChannelEndpointId = campaign?.ChannelEndpointId;
                 activity.InteractionType = campaign?.InteractionType ?? ActivityInteractionType.Manual;
                 activity.AIProfileName = campaign?.AIProfileName;
                 activity.CampaignId = model.CampaignId;

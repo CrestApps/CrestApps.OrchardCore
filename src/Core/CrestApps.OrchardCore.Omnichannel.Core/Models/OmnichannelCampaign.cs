@@ -15,7 +15,7 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
 
     public string Channel { get; set; }
 
-    public string ChannelEndpoint { get; set; }
+    public string ChannelEndpointId { get; set; }
 
     /// <summary>
     /// When the campaign in automated, this will be the initial message to start the converation with the customer.
@@ -40,7 +40,7 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
             InteractionType = InteractionType,
             AIProfileName = AIProfileName,
             Channel = Channel,
-            ChannelEndpoint = ChannelEndpoint,
+            ChannelEndpointId = ChannelEndpointId,
             InitialOutboundPromptPattern = InitialOutboundPromptPattern,
             CreatedUtc = CreatedUtc,
             Author = Author,

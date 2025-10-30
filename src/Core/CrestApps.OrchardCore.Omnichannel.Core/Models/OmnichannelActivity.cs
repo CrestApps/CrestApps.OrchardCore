@@ -18,7 +18,7 @@ public sealed class OmnichannelActivity : CatalogItem
     /// <summary>
     /// When the channel is SMS and the interaction type is Automatic, we specify which phone number to use to outreach to the Contact.
     /// </summary>
-    public string ChannelEndpoint { get; set; }
+    public string ChannelEndpointId { get; set; }
 
     /// <summary>
     /// The type of interaction.

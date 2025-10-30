@@ -12,7 +12,7 @@ public class OmnichannelCampaignViewModel
 
     public ActivityInteractionType InteractionType { get; set; }
 
-    public string ChannelEndpoint { get; set; }
+    public string ChannelEndpointId { get; set; }
 
     public string AIProfileName { get; set; }
 

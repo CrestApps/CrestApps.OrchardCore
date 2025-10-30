@@ -1,10 +1,11 @@
-using System.Text;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Twillio;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -31,7 +32,8 @@ internal static class TwilioWebhookEndpoint
         YesSqlSession session,
         IClock clock,
         ISiteService siteService,
-         IDataProtectionProvider dataProtectionProvider,
+        IDataProtectionProvider dataProtectionProvider,
+        IHostEnvironment hostEnvironment,
         ILogger<Startup> logger)
     {
         var settings = await siteService.GetSettingsAsync<TwilioSettings>();
@@ -42,11 +44,34 @@ internal static class TwilioWebhookEndpoint
             ? null
             : protector.Unprotect(settings.AuthToken);
 
-        if (!IsRequestValid(context, authToken, logger))
+        if (string.IsNullOrEmpty(authToken))
+        {
+            logger.LogWarning("Twillio provider is missing the AuthToken.");
+
+            return TypedResults.BadRequest();
+        }
+
+        var request = context.Request;
+
+        var requestUrl = $"{request.Scheme}://{request.Host}{request.Path}{request.QueryString}";
+
+        Dictionary<string, string> parameters = null;
+
+        if (request.HasFormContentType)
+        {
+            var form = await request.ReadFormAsync(context.RequestAborted).ConfigureAwait(false);
+
+            parameters = form.ToDictionary(p => p.Key, p => p.Value.ToString());
+        }
+
+        var validator = new TwillioRequestValidator(authToken);
+
+        if (!request.Headers.TryGetValue("X-Twilio-Signature", out var signature) ||
+            (hostEnvironment.IsProduction() && !validator.Validate(requestUrl, parameters, signature.First())))
         {
             logger.LogWarning("Unauthorized Twilio request.");
 
-            return TypedResults.Unauthorized();
+            return TypedResults.Forbid();
         }
 
         var data = await context.Request.ReadFormAsync();
@@ -84,51 +109,5 @@ internal static class TwilioWebhookEndpoint
 
         // Return empty 200 OK to Twilio
         return TypedResults.Ok();
-    }
-
-    private static bool IsRequestValid(HttpContext context, string authToken, ILogger logger)
-    {
-        if (string.IsNullOrEmpty(authToken))
-        {
-            return true; // no validation
-        }
-
-        if (!context.Request.Headers.TryGetValue("X-Twilio-Signature", out var twilioSignature))
-        {
-            return false;
-        }
-
-        var requestUrl = $"{context.Request.Scheme}://{context.Request.Host}{context.Request.Path}";
-
-        var form = context.Request.HasFormContentType
-            ? context.Request.Form.ToDictionary(k => k.Key, v => v.Value.ToString())
-            : [];
-
-        // Build the string to sign
-        var sb = new StringBuilder();
-        sb.Append(requestUrl);
-
-        foreach (var key in form.Keys.OrderBy(k => k, StringComparer.Ordinal))
-        {
-            sb.Append(key).Append(form[key]);
-        }
-
-        var encoding = new UTF8Encoding();
-
-#pragma warning disable CA5350 // Do Not Use Weak Cryptographic Algorithms
-        using var hmac = new System.Security.Cryptography.HMACSHA1(encoding.GetBytes(authToken));
-#pragma warning restore CA5350 // Do Not Use Weak Cryptographic Algorithms
-
-        var hash = hmac.ComputeHash(encoding.GetBytes(sb.ToString()));
-        var signature = Convert.ToBase64String(hash);
-
-        var isValid = signature == twilioSignature;
-
-        if (!isValid)
-        {
-            logger.LogWarning("Twilio signature validation failed.");
-        }
-
-        return isValid;
     }
 }

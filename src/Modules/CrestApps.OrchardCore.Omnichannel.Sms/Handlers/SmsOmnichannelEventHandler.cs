@@ -3,8 +3,8 @@ using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Sms.Indexes;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Sms;
@@ -19,27 +19,34 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly IAIChatSessionManager _chatSessionManager;
     private readonly IAICompletionService _aICompletionService;
     private readonly IAIProfileManager _aIProfileManager;
+    private readonly IOmnichannelChannelEndpointManager _channelEndpointsManager;
     private readonly ISession _session;
     private readonly ISmsService _smsService;
     private readonly IOmnichannelActivityStore _omnichannelActivityStore;
     private readonly ILogger _logger;
 
+    internal readonly IStringLocalizer S;
+
     public SmsOmnichannelEventHandler(
         IAIChatSessionManager chatSessionManager,
         IAICompletionService aICompletionService,
         IAIProfileManager aIProfileManager,
+        IOmnichannelChannelEndpointManager channelEndpointsManager,
         ISession session,
         ISmsService smsService,
         IOmnichannelActivityStore omnichannelActivityStore,
-        ILogger<SmsOmnichannelEventHandler> logger)
+        ILogger<SmsOmnichannelEventHandler> logger,
+        IStringLocalizer<SmsOmnichannelEventHandler> stringLocalizer)
     {
         _chatSessionManager = chatSessionManager;
         _aICompletionService = aICompletionService;
         _aIProfileManager = aIProfileManager;
+        _channelEndpointsManager = channelEndpointsManager;
         _session = session;
         _smsService = smsService;
         _omnichannelActivityStore = omnichannelActivityStore;
         _logger = logger;
+        S = stringLocalizer;
     }
 
     public async Task HandleAsync(OmnichannelEvent omnichannelEvent)
@@ -51,8 +58,19 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             return;
         }
 
+        var serviceAddress = omnichannelEvent.Message.ServiceAddress.GetCleanedPhoneNumber();
+
+        var endpoint = await _channelEndpointsManager.GetByServiceAddressAsync(omnichannelEvent.Message.Channel, serviceAddress);
+
+        if (endpoint is null)
+        {
+            _logger.LogWarning("No channel endpoint found for incoming SMS message. Channel: {Channel}, Service Address: {ServiceAddress}", omnichannelEvent.Message.Channel, omnichannelEvent.Message.ServiceAddress);
+
+            return;
+        }
+
         var activity = await _omnichannelActivityStore.GetAsync(omnichannelEvent.Message.Channel,
-            omnichannelEvent.Message.ServiceAddress,
+            endpoint.ItemId,
             omnichannelEvent.Message.CustomerAddress,
             ActivityInteractionType.Automated);
 
@@ -75,31 +93,30 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             return;
         }
 
-        var chatSession = await _session.Query<AIChatSession, OminchannelActivityAIChatSessionIndex>(index => index.ActivityId == activity.ItemId).FirstOrDefaultAsync();
-
-        var aiProfile = await _aIProfileManager.FindByIdAsync(activity.AIProfileName);
+        var aiProfile = await _aIProfileManager.FindByNameAsync(activity.AIProfileName);
 
         if (aiProfile == null)
         {
             _logger.LogWarning("The AI Profile {AIProfileId} associated with Activity {ActivityId} was not found. Cannot process incoming SMS message.", activity.AIProfileName, activity.ItemId);
 
-            if (chatSession is not null)
-            {
-                // Mark the chat session as closed.
-                chatSession.Prompts.Add(new AIChatSessionPrompt
-                {
-                    Id = IdGenerator.GenerateId(),
-                    Role = ChatRole.User,
-                    Content = omnichannelEvent.Message.Content
-                });
+            return;
+        }
 
-                await _session.SaveAsync(chatSession);
-            }
+        if (string.IsNullOrWhiteSpace(activity.AISessionId))
+        {
+            _logger.LogWarning("The linked Activity {ActivityId} does not have an AI Session associated with it. Cannot process incoming SMS message.", activity.ItemId);
 
             return;
         }
 
-        chatSession ??= await _chatSessionManager.NewAsync(aiProfile, new NewAIChatSessionContext() { AllowRobots = true, });
+        var chatSession = await _chatSessionManager.FindByIdAsync(activity.AISessionId);
+
+        if (chatSession is null)
+        {
+            _logger.LogWarning("The AI Chat Session {AISessionId} associated with Activity {ActivityId} was not found. Cannot process incoming SMS message.", activity.AISessionId, activity.ItemId);
+
+            return;
+        }
 
         chatSession.Prompts.Add(new AIChatSessionPrompt
         {

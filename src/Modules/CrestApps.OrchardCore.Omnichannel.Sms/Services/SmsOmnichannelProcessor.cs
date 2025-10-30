@@ -62,7 +62,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 
         if (!string.IsNullOrWhiteSpace(activity.AISessionId))
         {
-            chatSession = await _aIChatSessionManager.FindAsync(activity.AISessionId);
+            chatSession = await _aIChatSessionManager.FindByIdAsync(activity.AISessionId);
         }
 
         if (chatSession is null)
@@ -99,9 +99,9 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             Body = initialPrompt,
         };
 
-        if (!string.IsNullOrEmpty(activity.ChannelEndpoint))
+        if (!string.IsNullOrEmpty(activity.ChannelEndpointId))
         {
-            var endpoint = await _channelEndpointCatalog.FindByIdAsync(activity.ChannelEndpoint);
+            var endpoint = await _channelEndpointCatalog.FindByIdAsync(activity.ChannelEndpointId);
 
             if (endpoint is not null && endpoint.Channel == activity.Channel)
             {
@@ -116,18 +116,19 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             chatSession.Prompts.Add(new AIChatSessionPrompt
             {
                 Id = IdGenerator.GenerateId(),
-                Role = ChatRole.User,
+                Role = ChatRole.Assistant,
                 Content = initialPrompt,
             });
 
             await _aIChatSessionManager.SaveAsync(chatSession);
 
+            // Update the activity with the AI session details.
             activity.AISessionId = chatSession.SessionId;
             activity.Status = ActivityStatus.AwaitingCustomerAnswer;
         }
         else
         {
-            throw new InvalidOperationException($"Failed to send SMS for an automated activity.");
+            throw new InvalidOperationException("Failed to send SMS for an automated activity.");
         }
     }
 }

@@ -12,7 +12,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelActivityIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Channel", column => column.WithLength(50))
-            .Column<string>("ChannelEndpoint", column => column.WithLength(255))
+            .Column<string>("ChannelEndpointId", column => column.WithLength(26))
             .Column<string>("PreferredDestination", column => column.WithLength(255))
             .Column<string>("AIProfileName", column => column.WithLength(255))
             .Column<string>("ContactContentItemId", column => column.WithLength(26))
@@ -38,7 +38,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
             .CreateIndex("IDX_OmnichannelActivityIndex_DocumentId",
                 "DocumentId",
                 "Channel",
-                "ChannelEndpoint",
+                "ChannelEndpointId",
                 "PreferredDestination",
                 "ScheduledUtc"),
             collection: OmnichannelConstants.CollectionName
