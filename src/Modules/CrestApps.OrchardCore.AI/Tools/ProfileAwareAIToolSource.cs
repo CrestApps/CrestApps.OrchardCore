@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
@@ -133,11 +134,10 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
                     promptString = prompt?.ToString();
                 }
 
-                var context = new AICompletionContext
+                var context = _profile.AsAICompletionContext(c =>
                 {
-                    Profile = _profile,
-                    DisableTools = true,
-                };
+                    c.DisableTools = true;
+                });
 
                 return await _completionService.CompleteAsync(_profile.Source, [new ChatMessage(ChatRole.User, promptString)], context, cancellationToken);
             }

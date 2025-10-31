@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Endpoints.Models;
 using CrestApps.OrchardCore.AI.Models;
@@ -60,10 +61,7 @@ internal static class ApiAIUtilityCompletionEndpoint
             return TypedResults.NotFound();
         }
 
-        var completion = await completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], new AICompletionContext()
-        {
-            Profile = profile,
-        });
+        var completion = await completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], profile.AsAICompletionContext());
 
         var result = new AIChatResponse
         {
@@ -72,12 +70,10 @@ internal static class ApiAIUtilityCompletionEndpoint
             Message = new AIChatResponseMessageDetailed(),
         };
 
-        if (completion.AdditionalProperties is not null)
+        if (completion.AdditionalProperties is not null &&
+            completion.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
         {
-            if (completion.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
-            {
-                result.Message.References = referenceItems;
-            }
+            result.Message.References = referenceItems;
         }
 
         result.Message.Content = completion.Messages.FirstOrDefault()?.Text ?? AIConstants.DefaultBlankMessage;

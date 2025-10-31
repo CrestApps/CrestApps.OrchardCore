@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
@@ -93,11 +94,10 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
 
         try
         {
-            var completion = await _completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, userPrompt.Trim())], new AICompletionContext()
+            var completion = await _completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, userPrompt.Trim())], profile.AsAICompletionContext(c =>
             {
-                Profile = profile,
-                UserMarkdownInResponse = IncludeHtmlResponse,
-            });
+                c.UserMarkdownInResponse = IncludeHtmlResponse;
+            }));
 
             var bestChoice = completion.Messages.FirstOrDefault();
 

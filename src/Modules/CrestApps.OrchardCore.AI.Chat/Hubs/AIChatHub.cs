@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Support;
@@ -316,11 +317,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 m.MaxTokens = 64; // 64 token to generate about 255 characters.
             });
 
-            var context = new AICompletionContext()
+            var context = profileClone.AsAICompletionContext(c =>
             {
-                Profile = profileClone,
-                SystemMessage = AIConstants.TitleGeneratorSystemMessage,
-            };
+                c.SystemMessage = AIConstants.TitleGeneratorSystemMessage;
+            });
 
             var titleResponse = await _completionService.CompleteAsync(profile.Source,
             [
@@ -365,12 +365,11 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         var builder = new StringBuilder();
 
-        var completionContext = new AICompletionContext()
+        var completionContext = profile.AsAICompletionContext(c =>
         {
-            Profile = profile,
-            Session = chatSession,
-            UserMarkdownInResponse = true,
-        };
+            c.Session = chatSession;
+            c.UserMarkdownInResponse = true;
+        });
 
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
@@ -445,11 +444,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
             Title = profile.PromptSubject,
         };
 
-        var completionContext = new AICompletionContext()
+        var completionContext = profile.AsAICompletionContext(c =>
         {
-            Profile = profile,
-            UserMarkdownInResponse = true,
-        };
+            c.UserMarkdownInResponse = true;
+        });
 
         var builder = new StringBuilder();
 
@@ -508,11 +506,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         var messageId = IdGenerator.GenerateId();
 
-        var completionContext = new AICompletionContext
+        var completionContext = profile.AsAICompletionContext(c =>
         {
-            Profile = profile,
-            UserMarkdownInResponse = true
-        };
+            c.UserMarkdownInResponse = true;
+        });
 
         var references = new Dictionary<string, AICompletionReference>();
 
