@@ -2,7 +2,6 @@ using System.Text;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Support;
@@ -28,6 +27,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly ISession _session;
     private readonly IAICompletionService _completionService;
+    private readonly IAICompletionContextBuilder _aICompletionContextBuilder;
     private readonly ILogger<AIChatHub> _logger;
 
     protected readonly IStringLocalizer S;
@@ -39,6 +39,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         ILiquidTemplateManager liquidTemplateManager,
         ISession session,
         IAICompletionService completionService,
+        IAICompletionContextBuilder aICompletionContextBuilder,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
     {
@@ -48,6 +49,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _liquidTemplateManager = liquidTemplateManager;
         _session = session;
         _completionService = completionService;
+        _aICompletionContextBuilder = aICompletionContextBuilder;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -317,7 +319,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 m.MaxTokens = 64; // 64 token to generate about 255 characters.
             });
 
-            var context = profileClone.AsAICompletionContext(c =>
+            var context = await _aICompletionContextBuilder.BuildAsync(profileClone, c =>
             {
                 c.SystemMessage = AIConstants.TitleGeneratorSystemMessage;
             });
@@ -365,7 +367,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         var builder = new StringBuilder();
 
-        var completionContext = profile.AsAICompletionContext(c =>
+        var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
         {
             c.Session = chatSession;
             c.UserMarkdownInResponse = true;
@@ -444,7 +446,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             Title = profile.PromptSubject,
         };
 
-        var completionContext = profile.AsAICompletionContext(c =>
+        var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
         {
             c.UserMarkdownInResponse = true;
         });
@@ -506,7 +508,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         var messageId = IdGenerator.GenerateId();
 
-        var completionContext = profile.AsAICompletionContext(c =>
+        var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
         {
             c.UserMarkdownInResponse = true;
         });

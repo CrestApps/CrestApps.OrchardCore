@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core;
+using CrestApps.OrchardCore.AI.Mcp.Core.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Mcp.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.Deployments.Drivers;
@@ -40,6 +41,7 @@ public sealed class Startup : StartupBase
         services.AddPermissionProvider<McpPermissionsProvider>();
         services.AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>();
         services.AddDisplayDriver<McpConnection, McpConnectionDisplayDriver>();
+        services.AddScoped<IAICompletionContextBuilderHandler, McpAICompletionContextBuilderHandler>();
 
         // Register SSE transport type.
         services

@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Endpoints.Models;
 using CrestApps.OrchardCore.AI.Models;
@@ -29,6 +28,7 @@ internal static class ApiAIUtilityCompletionEndpoint
        INamedCatalogManager<AIProfile> chatProfileManager,
        IHttpContextAccessor httpContextAccessor,
        IAICompletionService completionService,
+       IAICompletionContextBuilder completionContextBuilder,
        ILogger<T> logger,
        AIUtilityCompletionRequest requestData)
     {
@@ -61,7 +61,8 @@ internal static class ApiAIUtilityCompletionEndpoint
             return TypedResults.NotFound();
         }
 
-        var completion = await completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], profile.AsAICompletionContext());
+        var context = await completionContextBuilder.BuildAsync(profile);
+        var completion = await completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], context);
 
         var result = new AIChatResponse
         {

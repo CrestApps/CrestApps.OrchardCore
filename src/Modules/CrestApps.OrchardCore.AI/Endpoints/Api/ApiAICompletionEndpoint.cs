@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Endpoints.Models;
 using CrestApps.OrchardCore.AI.Models;
@@ -37,6 +36,7 @@ internal static class ApiAICompletionEndpoint
        ILiquidTemplateManager liquidTemplateManager,
        IHttpContextAccessor httpContextAccessor,
        IAICompletionService completionService,
+       IAICompletionContextBuilder completionContextBuilder,
        ILogger<T> logger,
        AICompletionRequest requestData)
     {
@@ -78,7 +78,7 @@ internal static class ApiAICompletionEndpoint
                 return TypedResults.NotFound();
             }
 
-            (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, parentProfile, completionService, userPrompt: profile.Name);
+            (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, parentProfile, completionService, userPrompt: profile.Name, completionContextBuilder);
 
             userPrompt = await liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
                 new Dictionary<string, FluidValue>()
@@ -101,10 +101,10 @@ internal static class ApiAICompletionEndpoint
 
             if (profile.Type == AIProfileType.Utility)
             {
-                return await GetUtilityMessageAsync(completionService, profile, userPrompt);
+                return await GetUtilityMessageAsync(completionService, profile, userPrompt, completionContextBuilder);
             }
 
-            (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, profile, completionService, userPrompt);
+            (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, profile, completionService, userPrompt, completionContextBuilder);
         }
 
         ChatResponse completion = null;
@@ -113,7 +113,8 @@ internal static class ApiAICompletionEndpoint
 
         if (profile.Type == AIProfileType.TemplatePrompt)
         {
-            completion = await completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, userPrompt)], profile.AsAICompletionContext());
+            var contextForTemplate = await completionContextBuilder.BuildAsync(profile);
+            completion = await completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, userPrompt)], contextForTemplate);
 
             bestChoice = completion?.Messages?.FirstOrDefault();
 
@@ -141,7 +142,7 @@ internal static class ApiAICompletionEndpoint
             var transcript = chatSession.Prompts.Where(x => !x.IsGeneratedPrompt)
                 .Select(prompt => new ChatMessage(prompt.Role, prompt.Content));
 
-            var context = profile.AsAICompletionContext(c =>
+            var context = await completionContextBuilder.BuildAsync(profile, c =>
             {
                 c.Session = chatSession;
             });
@@ -196,7 +197,7 @@ internal static class ApiAICompletionEndpoint
         });
     }
 
-    private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, IAICompletionService completionService, string userPrompt)
+    private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, IAICompletionService completionService, string userPrompt, IAICompletionContextBuilder completionContextBuilder)
     {
         if (!string.IsNullOrWhiteSpace(sessionId))
         {
@@ -226,7 +227,7 @@ internal static class ApiAICompletionEndpoint
                 m.MaxTokens = 64; // 64 token to generate about 255 characters.
             });
 
-            var context = profileClone.AsAICompletionContext(c =>
+            var context = await completionContextBuilder.BuildAsync(profileClone, c =>
             {
                 c.SystemMessage = AIConstants.TitleGeneratorSystemMessage;
             });
@@ -247,9 +248,10 @@ internal static class ApiAICompletionEndpoint
         return (chatSession, true);
     }
 
-    private static async Task<IResult> GetUtilityMessageAsync(IAICompletionService completionService, AIProfile profile, string prompt)
+    private static async Task<IResult> GetUtilityMessageAsync(IAICompletionService completionService, AIProfile profile, string prompt, IAICompletionContextBuilder completionContextBuilder)
     {
-        var completion = await completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, prompt)], profile.AsAICompletionContext());
+        var context = await completionContextBuilder.BuildAsync(profile);
+        var completion = await completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, prompt)], context);
 
         var result = new AIChatResponse
         {

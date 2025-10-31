@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
@@ -18,16 +17,19 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
     private readonly ILogger<ProfileAwareAIToolSource> _logger;
     private readonly IAICompletionService _completionService;
     private readonly INamedCatalog<AIProfile> _profilesCatalog;
+    private readonly IAICompletionContextBuilder _aICompletionContextBuilder;
 
     public ProfileAwareAIToolSource(
         ILogger<ProfileAwareAIToolSource> logger,
         IAICompletionService completionService,
         INamedCatalog<AIProfile> profilesCatalog,
+        IAICompletionContextBuilder aICompletionContextBuilder,
         IStringLocalizer<ProfileAwareAIToolSource> S)
     {
         _logger = logger;
         _completionService = completionService;
         _profilesCatalog = profilesCatalog;
+        _aICompletionContextBuilder = aICompletionContextBuilder;
         DisplayName = S["Profile Invoker"];
         Description = S["Provides a function that calls other profile."];
     }
@@ -46,12 +48,12 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
     {
         if (!instance.TryGet<AIProfileFunctionMetadata>(out var metadata) || string.IsNullOrEmpty(metadata.ProfileId))
         {
-            return new ProfileInvoker(_completionService, instance, profile: null, _logger);
+            return new ProfileInvoker(_completionService, instance, profile: null, _aICompletionContextBuilder, _logger);
         }
 
         var profile = await _profilesCatalog.FindByIdAsync(metadata.ProfileId);
 
-        return new ProfileInvoker(_completionService, instance, profile, _logger);
+        return new ProfileInvoker(_completionService, instance, profile, _aICompletionContextBuilder, _logger);
     }
 
     private sealed class ProfileInvoker : AIFunction
@@ -61,15 +63,18 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
         private readonly IAICompletionService _completionService;
         private readonly ILogger _logger;
         private readonly AIProfile _profile;
+        private readonly IAICompletionContextBuilder _aICompletionContextBuilder;
 
         public ProfileInvoker(
             IAICompletionService completionService,
             AIToolInstance instance,
             AIProfile profile,
+            IAICompletionContextBuilder aICompletionContextBuilder,
             ILogger logger)
         {
             _completionService = completionService;
             _profile = profile;
+            _aICompletionContextBuilder = aICompletionContextBuilder;
             _logger = logger;
 
             var funcMetadata = instance.As<InvokableToolMetadata>();
@@ -134,7 +139,7 @@ internal sealed class ProfileAwareAIToolSource : IAIToolSource
                     promptString = prompt?.ToString();
                 }
 
-                var context = _profile.AsAICompletionContext(c =>
+                var context = await _aICompletionContextBuilder.BuildAsync(_profile, c =>
                 {
                     c.DisableTools = true;
                 });

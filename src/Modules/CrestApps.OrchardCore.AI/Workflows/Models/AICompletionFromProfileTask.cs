@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
@@ -19,6 +18,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
     private readonly INamedCatalogManager<AIProfile> _profileManager;
     private readonly IAICompletionService _completionService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
+    private readonly IAICompletionContextBuilder _completionContextBuilder;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -27,12 +27,14 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         INamedCatalogManager<AIProfile> profileManager,
         IAICompletionService completionService,
         ILiquidTemplateManager liquidTemplateManager,
+        IAICompletionContextBuilder completionContextBuilder,
         ILogger<AICompletionFromProfileTask> logger,
         IStringLocalizer<AICompletionFromProfileTask> stringLocalizer)
     {
         _profileManager = profileManager;
         _completionService = completionService;
         _liquidTemplateManager = liquidTemplateManager;
+        _completionContextBuilder = completionContextBuilder;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -94,10 +96,11 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
 
         try
         {
-            var completion = await _completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, userPrompt.Trim())], profile.AsAICompletionContext(c =>
+            var context = await _completionContextBuilder.BuildAsync(profile, c =>
             {
                 c.UserMarkdownInResponse = IncludeHtmlResponse;
-            }));
+            });
+            var completion = await _completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, userPrompt.Trim())], context);
 
             var bestChoice = completion.Messages.FirstOrDefault();
 
