@@ -77,7 +77,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        var query = _session.Query<AIChatSession, AIChatSessionIndex>(i => i.UserId == userId && i.Title != null, collection: AIConstants.CollectionName);
+        var query = _session.Query<AIChatSession, AIChatSessionIndex>(i => i.UserId == userId && i.Title != null && i.ProfileId != null, collection: AIConstants.CollectionName);
 
         if (!string.IsNullOrEmpty(context.ProfileId))
         {
@@ -110,7 +110,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == sessionId && i.UserId == userId, collection: AIConstants.CollectionName)
+            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == sessionId && i.UserId == userId && i.ProfileId != null, collection: AIConstants.CollectionName)
                 .FirstOrDefaultAsync();
         }
         else
@@ -149,7 +149,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
         var chatSession = await _session.Query<AIChatSession, AIChatSessionIndex>(
-            i => i.SessionId == sessionId && i.UserId == userId,
+            i => i.SessionId == sessionId && i.UserId == userId && i.ProfileId != null,
             collection: AIConstants.CollectionName)
             .FirstOrDefaultAsync();
 
