@@ -5,11 +5,13 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
@@ -24,7 +26,9 @@ public sealed class AdminController : Controller
     private readonly IDisplayManager<AIChatSessionListOptions> _optionsDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly AIOptions _aiOptions;
+    private readonly INotifier _notifier;
 
+    internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
     public AdminController(
@@ -35,6 +39,8 @@ public sealed class AdminController : Controller
         IDisplayManager<AIChatSessionListOptions> optionsDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         IOptions<AIOptions> aiOptions,
+        INotifier notifier,
+        IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer
         )
     {
@@ -45,6 +51,8 @@ public sealed class AdminController : Controller
         _optionsDisplayManager = optionsDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _aiOptions = aiOptions.Value;
+        _notifier = notifier;
+        H = htmlLocalizer;
         S = stringLocalizer;
     }
 
@@ -199,6 +207,81 @@ public sealed class AdminController : Controller
     [Admin("ai/chat/interact/{profileId}/", "AIChatNewSession")]
     public IActionResult Chat(string profileId)
         => RedirectToAction(nameof(Index), new { profileId });
+
+    [HttpPost]
+    [Admin("ai/chat/chat-session/delete/{sessionId}", "DeleteChatSession")]
+    public async Task<IActionResult> Delete(string sessionId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.DeleteChatSession))
+        {
+            return Forbid();
+        }
+
+        var chatSession = await _sessionManager.FindAsync(sessionId);
+
+        if (chatSession == null)
+        {
+            return NotFound();
+        }
+
+        var profile = await _profileManager.FindByIdAsync(chatSession.ProfileId);
+
+        if (profile == null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
+        {
+            return Forbid();
+        }
+
+        if (await _sessionManager.DeleteAsync(sessionId))
+        {
+            await _notifier.SuccessAsync(H["Chat session has been deleted successfully."]);
+        }
+        else
+        {
+            await _notifier.ErrorAsync(H["Unable to delete the chat session."]);
+        }
+
+        return RedirectToAction(nameof(History), new { profileId = chatSession.ProfileId });
+    }
+
+    [HttpPost]
+    [Admin("ai/chat/history/{profileId}/delete-all", "DeleteAllChatSessions")]
+    public async Task<IActionResult> DeleteAll(string profileId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.DeleteAllChatSessions))
+        {
+            return Forbid();
+        }
+
+        var profile = await _profileManager.FindByIdAsync(profileId);
+
+        if (profile == null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
+        {
+            return Forbid();
+        }
+
+        var count = await _sessionManager.DeleteAllAsync(profileId);
+
+        if (count > 0)
+        {
+            await _notifier.SuccessAsync(H["All chat sessions have been deleted successfully."]);
+        }
+        else
+        {
+            await _notifier.InformationAsync(H["No chat sessions found to delete."]);
+        }
+
+        return RedirectToAction(nameof(Index), new { profileId });
+    }
 
     private string CurrentUserId()
         => User.FindFirstValue(ClaimTypes.NameIdentifier);

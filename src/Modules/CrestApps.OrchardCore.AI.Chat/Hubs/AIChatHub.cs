@@ -10,6 +10,8 @@ using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Entities;
 using OrchardCore.Liquid;
@@ -25,6 +27,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly ISession _session;
     private readonly IAICompletionService _completionService;
+    private readonly IAICompletionContextBuilder _aICompletionContextBuilder;
+    private readonly ILogger<AIChatHub> _logger;
+
+    protected readonly IStringLocalizer S;
 
     public AIChatHub(
         IAuthorizationService authorizationService,
@@ -32,7 +38,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
         IAIChatSessionManager sessionManager,
         ILiquidTemplateManager liquidTemplateManager,
         ISession session,
-        IAICompletionService completionService)
+        IAICompletionService completionService,
+        IAICompletionContextBuilder aICompletionContextBuilder,
+        ILogger<AIChatHub> logger,
+        IStringLocalizer<AIChatHub> stringLocalizer)
     {
         _authorizationService = authorizationService;
         _profileManager = profileManager;
@@ -40,6 +49,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _liquidTemplateManager = liquidTemplateManager;
         _session = session;
         _completionService = completionService;
+        _aICompletionContextBuilder = aICompletionContextBuilder;
+        _logger = logger;
+        S = stringLocalizer;
     }
 
     public ChannelReader<CompletionPartialMessage> SendMessage(string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
@@ -57,7 +69,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         if (string.IsNullOrWhiteSpace(sessionId))
         {
-            await Clients.Caller.ReceiveError($"{nameof(sessionId)} is required.");
+            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionId)].Value);
 
             return;
         }
@@ -66,7 +78,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         if (chatSession == null)
         {
-            await Clients.Caller.ReceiveError("Session not found.");
+            await Clients.Caller.ReceiveError(S["Session not found."].Value);
 
             return;
         }
@@ -75,7 +87,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         if (profile is null)
         {
-            await Clients.Caller.ReceiveError("Profile not found.");
+            await Clients.Caller.ReceiveError(S["Profile not found."].Value);
 
             return;
         }
@@ -84,7 +96,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
         {
-            await Clients.Caller.ReceiveError("You are not authorized to interact with the given profile.");
+            await Clients.Caller.ReceiveError(S["You are not authorized to interact with the given profile."].Value);
 
             return;
         }
@@ -111,13 +123,11 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
     private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
     {
-        Exception localException = null;
-
         try
         {
             if (string.IsNullOrWhiteSpace(profileId))
             {
-                await Clients.Caller.ReceiveError($"{nameof(profileId)} is required.");
+                await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionId)].Value);
 
                 return;
             }
@@ -126,7 +136,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             if (profile is null)
             {
-                await Clients.Caller.ReceiveError("Profile not found.");
+                await Clients.Caller.ReceiveError(S["Profile not found."].Value);
 
                 return;
             }
@@ -135,7 +145,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
             {
-                await Clients.Caller.ReceiveError("You are not authorized to interact with the given profile.");
+                await Clients.Caller.ReceiveError(S["You are not authorized to interact with the given profile."].Value);
 
                 return;
             }
@@ -144,7 +154,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             {
                 if (string.IsNullOrWhiteSpace(prompt))
                 {
-                    await Clients.Caller.ReceiveError($"{nameof(prompt)} is required.");
+                    await Clients.Caller.ReceiveError(S["{0} is required.", nameof(prompt)].Value);
                     return;
                 }
 
@@ -158,7 +168,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             {
                 if (string.IsNullOrWhiteSpace(sessionProfileId))
                 {
-                    await Clients.Caller.ReceiveError($"{nameof(sessionProfileId)} is required.");
+                    await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionProfileId)].Value);
 
                     return;
                 }
@@ -167,7 +177,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
                 if (parentProfile is null)
                 {
-                    await Clients.Caller.ReceiveError($"Invalid value given to {nameof(sessionProfileId)}.");
+                    await Clients.Caller.ReceiveError(S["Invalid value given to {0}.", nameof(sessionProfileId)].Value);
 
                     return;
                 }
@@ -184,12 +194,104 @@ public class AIChatHub : Hub<IAIChatHubClient>
         }
         catch (Exception ex)
         {
-            localException = ex;
+            _logger.LogError(ex, "An error occurred while processing the chat prompt.");
+
+            var errorMessage = new CompletionPartialMessage
+            {
+                SessionId = sessionId,
+                MessageId = IdGenerator.GenerateId(),
+                Content = GetFriendlyErrorMessage(ex).Value,
+            };
+
+            await writer.WriteAsync(errorMessage, cancellationToken);
         }
         finally
         {
-            writer.Complete(localException);
+            writer.Complete();
         }
+    }
+
+    private LocalizedString GetFriendlyErrorMessage(Exception ex)
+    {
+        // Handle explicit HttpRequestException with known status codes.
+        if (ex is HttpRequestException httpEx)
+        {
+            // Some HttpRequestExceptions don't have StatusCode populated (e.g., socket errors)
+            if (httpEx.StatusCode is { } code)
+            {
+                return code switch
+                {
+                    System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden
+                      => S["Authentication failed. Please check your API credentials."],
+
+                    System.Net.HttpStatusCode.BadRequest
+                      => S["Invalid request. Please verify your connection settings."],
+
+                    System.Net.HttpStatusCode.NotFound
+                      => S["The provider endpoint could not be found. Please verify the API URL."],
+
+                    System.Net.HttpStatusCode.TooManyRequests
+                      => S["Rate limit reached. Please wait and try again later."],
+
+                    >= System.Net.HttpStatusCode.InternalServerError
+                      => S["The provider service is currently unavailable. Please try again later."],
+
+                    _ => S["An error occurred while communicating with the provider."]
+                };
+            }
+
+            // If no status code, it might be a network or DNS-level failure.
+            return S["Unable to reach the provider. Please check your connection or endpoint URL."];
+        }
+
+        var message = ex.Message ?? string.Empty;
+
+        // Authentication errors.
+        if (message.Contains("401", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("403", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("unauthorized", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("invalid api key", StringComparison.OrdinalIgnoreCase) ||
+            ex.GetType().Name.Contains("Authentication", StringComparison.OrdinalIgnoreCase))
+        {
+            return S["Authentication failed. Please check your API credentials."];
+        }
+
+        // Bad request / invalid parameters
+        if (message.Contains("bad request", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("invalid request", StringComparison.OrdinalIgnoreCase))
+        {
+            return S["Invalid request. Please verify your profile configuration or parameters."];
+        }
+
+        // Not found errors.
+        if (message.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("endpoint not found", StringComparison.OrdinalIgnoreCase))
+        {
+            return S["The provider endpoint could not be found. Please verify the API URL."];
+        }
+
+        // Rate limit / too many requests.
+        if (message.Contains("too many requests", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
+        {
+            return S["Rate limit reached. Please wait and try again later."];
+        }
+
+        // Connectivity / timeout issues.
+        if (ex is TimeoutException || ex is TaskCanceledException)
+        {
+            return S["The request timed out. Please try again later."];
+        }
+
+        if (ex.InnerException is System.Net.Sockets.SocketException ||
+            message.Contains("connection refused", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("name or service not known", StringComparison.OrdinalIgnoreCase))
+        {
+            return S["Unable to reach the provider. Please check your connection or endpoint URL."];
+        }
+
+        // Fallback generic error.
+        return S["Our service is currently unavailable. Please try again later."];
     }
 
     private async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, string userPrompt)
@@ -217,11 +319,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 m.MaxTokens = 64; // 64 token to generate about 255 characters.
             });
 
-            var context = new AICompletionContext()
+            var context = await _aICompletionContextBuilder.BuildAsync(profileClone, c =>
             {
-                Profile = profileClone,
-                SystemMessage = AIConstants.TitleGeneratorSystemMessage,
-            };
+                c.SystemMessage = AIConstants.TitleGeneratorSystemMessage;
+            });
 
             var titleResponse = await _completionService.CompleteAsync(profile.Source,
             [
@@ -266,12 +367,11 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         var builder = new StringBuilder();
 
-        var completionContext = new AICompletionContext()
+        var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
         {
-            Profile = profile,
-            Session = chatSession,
-            UserMarkdownInResponse = true,
-        };
+            c.Session = chatSession;
+            c.UserMarkdownInResponse = true;
+        });
 
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
@@ -346,11 +446,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
             Title = profile.PromptSubject,
         };
 
-        var completionContext = new AICompletionContext()
+        var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
         {
-            Profile = profile,
-            UserMarkdownInResponse = true,
-        };
+            c.UserMarkdownInResponse = true;
+        });
 
         var builder = new StringBuilder();
 
@@ -409,11 +508,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         var messageId = IdGenerator.GenerateId();
 
-        var completionContext = new AICompletionContext
+        var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
         {
-            Profile = profile,
-            UserMarkdownInResponse = true
-        };
+            c.UserMarkdownInResponse = true;
+        });
 
         var references = new Dictionary<string, AICompletionReference>();
 

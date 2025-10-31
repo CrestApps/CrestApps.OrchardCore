@@ -77,7 +77,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        var query = _session.Query<AIChatSession, AIChatSessionIndex>(i => i.UserId == userId && i.Title != null, collection: AIConstants.CollectionName);
+        var query = _session.Query<AIChatSession, AIChatSessionIndex>(i => i.UserId == userId && i.Title != null && i.ProfileId != null, collection: AIConstants.CollectionName);
 
         if (!string.IsNullOrEmpty(context.ProfileId))
         {
@@ -118,7 +118,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id && i.UserId == userId, collection: AIConstants.CollectionName)
+            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id && i.UserId == userId && i.ProfileId != null, collection: AIConstants.CollectionName)
                 .FirstOrDefaultAsync();
         }
         else
@@ -141,5 +141,62 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         ArgumentNullException.ThrowIfNull(chatSession);
 
         return _session.SaveAsync(chatSession, collection: AIConstants.CollectionName);
+    }
+
+    public async Task<bool> DeleteAsync(string sessionId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(sessionId);
+
+        var user = _httpContextAccessor.HttpContext?.User;
+
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            return false;
+        }
+
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var chatSession = await _session.Query<AIChatSession, AIChatSessionIndex>(
+            i => i.SessionId == sessionId && i.UserId == userId && i.ProfileId != null,
+            collection: AIConstants.CollectionName)
+            .FirstOrDefaultAsync();
+
+        if (chatSession == null)
+        {
+            return false;
+        }
+
+        _session.Delete(chatSession, collection: AIConstants.CollectionName);
+
+        return true;
+    }
+
+    public async Task<int> DeleteAllAsync(string profileId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(profileId);
+
+        var user = _httpContextAccessor.HttpContext?.User;
+
+        if (user?.Identity?.IsAuthenticated is null || user.Identity.IsAuthenticated == false)
+        {
+            return 0;
+        }
+
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var sessions = await _session.Query<AIChatSession, AIChatSessionIndex>(
+            i => i.UserId == userId && i.ProfileId == profileId,
+            collection: AIConstants.CollectionName)
+            .ListAsync();
+
+        var totalDeleted = 0;
+
+        foreach (var session in sessions)
+        {
+            _session.Delete(session, collection: AIConstants.CollectionName);
+            totalDeleted++;
+        }
+
+        return totalDeleted;
     }
 }

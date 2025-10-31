@@ -1,6 +1,5 @@
 using Azure.AI.OpenAI.Chat;
 using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
 using OpenAI.Chat;
@@ -26,12 +25,7 @@ public sealed class MongoDBOpenAIDataSourceHandler : IAzureOpenAIDataSourceHandl
 
     public async ValueTask ConfigureSourceAsync(ChatCompletionOptions options, AzureOpenAIDataSourceContext context)
     {
-        if (context.Profile is null || !context.Profile.TryGet<AIProfileDataSourceMetadata>(out var metadata))
-        {
-            return;
-        }
-
-        var dataSource = await _aIDataSourceManager.FindByIdAsync(metadata.DataSourceId);
+        var dataSource = await _aIDataSourceManager.FindByIdAsync(context.DataSourceId);
 
         if (dataSource is null)
         {
