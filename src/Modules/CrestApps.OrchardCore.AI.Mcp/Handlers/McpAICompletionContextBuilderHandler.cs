@@ -2,9 +2,9 @@ using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.Entities;
 
-namespace CrestApps.OrchardCore.AI.Mcp.Core.Handlers;
+namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 
-public sealed class McpAICompletionContextBuilderHandler : IAICompletionContextBuilderHandler
+internal sealed class McpAICompletionContextBuilderHandler : IAICompletionContextBuilderHandler
 {
     public Task BuildingAsync(AICompletionContextBuildingContext context)
     {
