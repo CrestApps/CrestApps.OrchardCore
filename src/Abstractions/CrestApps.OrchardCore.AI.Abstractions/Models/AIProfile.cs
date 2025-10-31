@@ -85,6 +85,7 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
             Source = Source,
             Type = Type,
             DeploymentId = DeploymentId,
+            ConnectionName = ConnectionName,
             TitleType = TitleType,
             WelcomeMessage = WelcomeMessage,
             PromptSubject = PromptSubject,
