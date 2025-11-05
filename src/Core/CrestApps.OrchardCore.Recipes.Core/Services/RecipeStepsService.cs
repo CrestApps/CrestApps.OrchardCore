@@ -2,7 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.Caching.Memory;
 using OrchardCore.Recipes.Services;
 
-namespace CrestApps.OrchardCore.AI.Agent.Services;
+namespace CrestApps.OrchardCore.Recipes.Core.Services;
 
 public sealed class RecipeStepsService
 {
