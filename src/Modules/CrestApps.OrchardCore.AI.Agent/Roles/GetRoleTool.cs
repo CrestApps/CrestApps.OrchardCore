@@ -76,7 +76,7 @@ internal sealed class GetRoleTool : AIFunction
 
         IRole role = null;
 
-        if (!hasRoleId)
+        if (hasRoleId)
         {
             role = await _roleManager.FindByIdAsync(roleId);
         }
