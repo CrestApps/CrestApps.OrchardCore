@@ -89,6 +89,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Roles
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.YesSql.Core", "src\Core\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj", "{4C246918-26A3-4694-AB48-E48E00AB5C33}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Recipes.Core", "src\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj", "{778ECABA-481F-494F-887C-433EF577C650}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Recipes", "src\Modules\CrestApps.OrchardCore.Recipes\CrestApps.OrchardCore.Recipes.csproj", "{DE1D88FF-3F04-4620-9F83-7437447F4FC8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -219,6 +223,14 @@ Global
 		{4C246918-26A3-4694-AB48-E48E00AB5C33}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4C246918-26A3-4694-AB48-E48E00AB5C33}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4C246918-26A3-4694-AB48-E48E00AB5C33}.Release|Any CPU.Build.0 = Release|Any CPU
+		{778ECABA-481F-494F-887C-433EF577C650}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{778ECABA-481F-494F-887C-433EF577C650}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{778ECABA-481F-494F-887C-433EF577C650}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{778ECABA-481F-494F-887C-433EF577C650}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE1D88FF-3F04-4620-9F83-7437447F4FC8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE1D88FF-3F04-4620-9F83-7437447F4FC8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE1D88FF-3F04-4620-9F83-7437447F4FC8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE1D88FF-3F04-4620-9F83-7437447F4FC8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -255,6 +267,8 @@ Global
 		{828C71FC-D3FC-4791-B870-F6951E0F9BAF} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{0ECE7076-8981-492F-97BB-1EC4CCF89B9F} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
 		{4C246918-26A3-4694-AB48-E48E00AB5C33} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
+		{778ECABA-481F-494F-887C-433EF577C650} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
+		{DE1D88FF-3F04-4620-9F83-7437447F4FC8} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0E9F9B00-7078-4EA8-87A9-0B2E74375F1E}

@@ -40,6 +40,7 @@ public sealed class Startup : StartupBase
         services.AddPermissionProvider<McpPermissionsProvider>();
         services.AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>();
         services.AddDisplayDriver<McpConnection, McpConnectionDisplayDriver>();
+        services.AddScoped<IAICompletionContextBuilderHandler, McpAICompletionContextBuilderHandler>();
 
         // Register SSE transport type.
         services

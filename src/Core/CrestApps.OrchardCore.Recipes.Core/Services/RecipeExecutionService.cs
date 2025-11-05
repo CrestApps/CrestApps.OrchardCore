@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Deployment;
 using OrchardCore.Json;
 
-namespace CrestApps.OrchardCore.AI.Agent.Recipes;
+namespace CrestApps.OrchardCore.Recipes.Core.Services;
 
 public sealed class RecipeExecutionService
 {

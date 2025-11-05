@@ -319,7 +319,6 @@ public sealed class GetWeatherFunction : AIFunction
     public GetWeatherFunction()
     {
         Name = TheName;
-        Description = "Retrieves weather information for a specified location.";
 
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
         """
@@ -339,7 +338,7 @@ public sealed class GetWeatherFunction : AIFunction
 
     public override string Name { get; }
 
-    public override string Description => "Retrieves weather information for a specified location."
+    public override string Description => "Retrieves weather information for a specified location.";
 
     public override JsonElement JsonSchema { get; }
 
@@ -373,13 +372,13 @@ public sealed class GetWeatherFunction : AIFunction
 To register the custom function, add it as a service in the `Startup` class:
 
 ```csharp
-services.AddAITool<GetWeatherFunction>(GetWeatherFunction.Name);
+services.AddAITool<GetWeatherFunction>(GetWeatherFunction.TheName);
 ```
 
 Alternatively, you can register it with configuration options:
 
 ```csharp
-services.AddAITool<GetWeatherFunction>(GetWeatherFunction.Name, options =>
+services.AddAITool<GetWeatherFunction>(GetWeatherFunction.TheName, options =>
 {
     options.Title = "Weather Getter";
     options.Description = "Retrieves weather information for a specified location.";
@@ -686,6 +685,44 @@ You can also create or update AI deployments using the following recipe:
   ]
 }
 ```
+
+#### Deleting AI Deployments via Recipes
+
+You can delete model deployments using the `DeleteAIDeployments` recipe step. This step supports deleting specific deployments by name or deleting all deployments.
+
+- Delete all deployments:
+
+```json
+{
+  "steps": [
+    {
+      "name": "DeleteAIDeployments",
+      "IncludeAll": true
+    }
+  ]
+}
+```
+
+- Delete specific deployments by name:
+
+```json
+{
+  "steps": [
+    {
+      "name": "DeleteAIDeployments",
+      "DeploymentNames": [
+        "gpt-4o-mini",
+        "my-custom-deployment"
+      ]
+    }
+  ]
+}
+```
+
+Notes:
+- Deployment names are matched case-insensitively.
+- If `IncludeAll` is `true`, all deployments will be removed and `DeploymentNames` is ignored.
+- Ensure the `AI Deployments` feature and the `OrchardCore.Recipes` feature are enabled.
 
 ---
 

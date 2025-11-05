@@ -18,6 +18,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
     private readonly INamedCatalogManager<AIProfile> _profileManager;
     private readonly IAICompletionService _completionService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
+    private readonly IAICompletionContextBuilder _completionContextBuilder;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -26,12 +27,14 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         INamedCatalogManager<AIProfile> profileManager,
         IAICompletionService completionService,
         ILiquidTemplateManager liquidTemplateManager,
+        IAICompletionContextBuilder completionContextBuilder,
         ILogger<AICompletionFromProfileTask> logger,
         IStringLocalizer<AICompletionFromProfileTask> stringLocalizer)
     {
         _profileManager = profileManager;
         _completionService = completionService;
         _liquidTemplateManager = liquidTemplateManager;
+        _completionContextBuilder = completionContextBuilder;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -93,11 +96,11 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
 
         try
         {
-            var completion = await _completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, userPrompt.Trim())], new AICompletionContext()
+            var context = await _completionContextBuilder.BuildAsync(profile, c =>
             {
-                Profile = profile,
-                UserMarkdownInResponse = IncludeHtmlResponse,
+                c.UserMarkdownInResponse = IncludeHtmlResponse;
             });
+            var completion = await _completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, userPrompt.Trim())], context);
 
             var bestChoice = completion.Messages.FirstOrDefault();
 
