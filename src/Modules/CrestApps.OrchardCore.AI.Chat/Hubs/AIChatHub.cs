@@ -27,6 +27,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly ISession _session;
     private readonly IAICompletionService _completionService;
+    private readonly IAICompletionContextBuilder _aICompletionContextBuilder;
     private readonly ILogger<AIChatHub> _logger;
 
     protected readonly IStringLocalizer S;
@@ -38,6 +39,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         ILiquidTemplateManager liquidTemplateManager,
         ISession session,
         IAICompletionService completionService,
+        IAICompletionContextBuilder aICompletionContextBuilder,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
     {
@@ -47,6 +49,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _liquidTemplateManager = liquidTemplateManager;
         _session = session;
         _completionService = completionService;
+        _aICompletionContextBuilder = aICompletionContextBuilder;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -316,11 +319,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 m.MaxTokens = 64; // 64 token to generate about 255 characters.
             });
 
-            var context = new AICompletionContext()
+            var context = await _aICompletionContextBuilder.BuildAsync(profileClone, c =>
             {
-                Profile = profileClone,
-                SystemMessage = AIConstants.TitleGeneratorSystemMessage,
-            };
+                c.SystemMessage = AIConstants.TitleGeneratorSystemMessage;
+            });
 
             var titleResponse = await _completionService.CompleteAsync(profile.Source,
             [
@@ -365,12 +367,11 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         var builder = new StringBuilder();
 
-        var completionContext = new AICompletionContext()
+        var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
         {
-            Profile = profile,
-            Session = chatSession,
-            UserMarkdownInResponse = true,
-        };
+            c.Session = chatSession;
+            c.UserMarkdownInResponse = true;
+        });
 
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
@@ -445,11 +446,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
             Title = profile.PromptSubject,
         };
 
-        var completionContext = new AICompletionContext()
+        var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
         {
-            Profile = profile,
-            UserMarkdownInResponse = true,
-        };
+            c.UserMarkdownInResponse = true;
+        });
 
         var builder = new StringBuilder();
 
@@ -508,11 +508,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         var messageId = IdGenerator.GenerateId();
 
-        var completionContext = new AICompletionContext
+        var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
         {
-            Profile = profile,
-            UserMarkdownInResponse = true
-        };
+            c.UserMarkdownInResponse = true;
+        });
 
         var references = new Dictionary<string, AICompletionReference>();
 

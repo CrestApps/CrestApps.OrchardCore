@@ -20,12 +20,10 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public override Task<IDisplayResult> DisplayAsync(AIProfile profile, BuildDisplayContext context)
+    public override IDisplayResult Display(AIProfile profile, BuildDisplayContext context)
     {
-        return CombineAsync(
-            View("AIProfile_ChatActionsMenu_SummaryAdmin", profile)
+        return View("AIProfile_ChatActionsMenu_SummaryAdmin", profile)
             .Location("ActionsMenu:5")
-            .RenderWhen(async () => profile.Type == AIProfileType.Chat && await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
-        );
+            .RenderWhen(async () => profile.Type == AIProfileType.Chat && await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile));
     }
 }

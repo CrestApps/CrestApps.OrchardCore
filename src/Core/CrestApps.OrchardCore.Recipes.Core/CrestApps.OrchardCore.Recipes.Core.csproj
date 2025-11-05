@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore Recipes Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services project for the Recipes module.
+    </Description>
+    <PackageTags>$(PackageTags) AI</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JsonSchema.Net" />
+    <PackageReference Include="OrchardCore.Deployment.Abstractions" />
+  </ItemGroup>
+
+</Project>

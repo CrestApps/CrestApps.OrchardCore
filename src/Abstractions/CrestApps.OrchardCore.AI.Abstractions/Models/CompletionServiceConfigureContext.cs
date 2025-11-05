@@ -6,20 +6,20 @@ public sealed class CompletionServiceConfigureContext
 {
     public ChatOptions ChatOptions { get; }
 
-    public readonly AIProfile Profile;
+    public readonly AICompletionContext CompletionContext;
 
     public bool IsFunctionInvocationSupported { get; }
 
     public CompletionServiceConfigureContext(
         ChatOptions chatOptions,
-        AIProfile profile,
+        AICompletionContext completionContext,
         bool isFunctionInvocationSupported)
     {
         ArgumentNullException.ThrowIfNull(chatOptions);
-        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(completionContext);
 
         ChatOptions = chatOptions;
-        Profile = profile;
+        CompletionContext = completionContext;
         IsFunctionInvocationSupported = isFunctionInvocationSupported;
     }
 }

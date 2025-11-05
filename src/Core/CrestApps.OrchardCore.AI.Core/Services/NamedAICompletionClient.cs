@@ -4,15 +4,12 @@ using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Entities;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
 public abstract class NamedAICompletionClient : AICompletionServiceBase, IAICompletionClient
 {
-    private static readonly AIProfileMetadata _defaultMetadata = new();
-
     public const string DefaultLogCategory = "AICompletionService";
 
     private readonly IAIClientFactory _aIClientFactory;
@@ -79,11 +76,11 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             throw new ArgumentException($"Provider '{ProviderName}' not found.");
         }
 
-        var connectionName = GetDefaultConnectionName(provider, context.Profile);
+        var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
 
         if (string.IsNullOrEmpty(connectionName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find the connection name associated with the profile with id '{ProfileId}' or a default DefaultConnectionName.", context.Profile?.ItemId);
+            Logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' or the default connection", context.ConnectionName);
 
             return null;
         }
@@ -92,23 +89,18 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         if (string.IsNullOrEmpty(deploymentName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.ItemId);
+            Logger.LogWarning("Unable to chat. Unable to find a deployment id '{DeploymentId}' or the default deployment", context.DeploymentId);
 
             return null;
         }
 
-        if (context.Profile is null || !context.Profile.TryGet<AIProfileMetadata>(out var metadata))
-        {
-            metadata = _defaultMetadata;
-        }
-
         try
         {
-            var chatClient = await BuildClientAsync(connectionName, context, metadata, deploymentName);
+            var chatClient = await BuildClientAsync(connectionName, context, deploymentName);
 
-            var chatOptions = await GetChatOptionsAsync(context, metadata, deploymentName);
+            var chatOptions = await GetChatOptionsAsync(context, deploymentName);
 
-            var prompts = GetPrompts(messages, context, metadata);
+            var prompts = GetPrompts(messages, context);
 
             return await chatClient.GetResponseAsync(prompts, chatOptions, cancellationToken);
         }
@@ -130,11 +122,11 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             throw new ArgumentException($"Provider '{ProviderName}' not found.");
         }
 
-        var connectionName = GetDefaultConnectionName(provider, context.Profile);
+        var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
 
         if (string.IsNullOrEmpty(connectionName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find the connection name associated with the profile with id '{ProfileId}' or a default DefaultConnectionName.", context.Profile?.ItemId);
+            Logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' or the default connection", context.ConnectionName);
 
             yield break;
         }
@@ -143,21 +135,16 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         if (string.IsNullOrEmpty(deploymentName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.ItemId);
+            Logger.LogWarning("Unable to chat. Unable to find a deployment id '{DeploymentId}' or the default deployment", context.DeploymentId);
 
             yield break;
         }
 
-        if (context.Profile is null || !context.Profile.TryGet<AIProfileMetadata>(out var metadata))
-        {
-            metadata = _defaultMetadata;
-        }
+        var chatClient = await BuildClientAsync(connectionName, context, deploymentName);
 
-        var chatClient = await BuildClientAsync(connectionName, context, metadata, deploymentName);
+        var chatOptions = await GetChatOptionsAsync(context, deploymentName);
 
-        var chatOptions = await GetChatOptionsAsync(context, metadata, deploymentName);
-
-        var prompts = GetPrompts(messages, context, metadata);
+        var prompts = GetPrompts(messages, context);
 
         await foreach (var update in chatClient.GetStreamingResponseAsync(prompts, chatOptions, cancellationToken))
         {
@@ -165,24 +152,24 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         }
     }
 
-    private static List<ChatMessage> GetPrompts(IEnumerable<ChatMessage> messages, AICompletionContext context, AIProfileMetadata metadata)
+    private static List<ChatMessage> GetPrompts(IEnumerable<ChatMessage> messages, AICompletionContext context)
     {
         var chatMessages = messages.Where(x => (x.Role == ChatRole.User || x.Role == ChatRole.Assistant) && !string.IsNullOrEmpty(x.Text));
 
         var prompts = new List<ChatMessage>();
 
-        var systemMessage = GetSystemMessage(context, metadata);
+        var systemMessage = GetSystemMessage(context);
 
         if (!string.IsNullOrEmpty(systemMessage))
         {
             prompts.Add(new ChatMessage(ChatRole.System, systemMessage));
         }
 
-        if (metadata.PastMessagesCount > 1)
+        if (context.PastMessagesCount > 1)
         {
-            var skip = GetTotalMessagesToSkip(chatMessages.Count(), metadata.PastMessagesCount.Value);
+            var skip = GetTotalMessagesToSkip(chatMessages.Count(), context.PastMessagesCount.Value);
 
-            prompts.AddRange(chatMessages.Skip(skip).Take(metadata.PastMessagesCount.Value));
+            prompts.AddRange(chatMessages.Skip(skip).Take(context.PastMessagesCount.Value));
         }
         else
         {
@@ -192,20 +179,20 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         return prompts;
     }
 
-    private async Task<ChatOptions> GetChatOptionsAsync(AICompletionContext context, AIProfileMetadata metadata, string deploymentName)
+    private async Task<ChatOptions> GetChatOptionsAsync(AICompletionContext context, string deploymentName)
     {
         var chatOptions = new ChatOptions()
         {
-            Temperature = metadata.Temperature,
-            TopP = metadata.TopP,
-            FrequencyPenalty = metadata.FrequencyPenalty,
-            PresencePenalty = metadata.PresencePenalty,
-            MaxOutputTokens = metadata.MaxTokens,
+            Temperature = context.Temperature,
+            TopP = context.TopP,
+            FrequencyPenalty = context.FrequencyPenalty,
+            PresencePenalty = context.PresencePenalty,
+            MaxOutputTokens = context.MaxTokens,
         };
 
         var supportFunctions = SupportFunctionInvocation(context, deploymentName);
 
-        var configureContext = new CompletionServiceConfigureContext(chatOptions, context.Profile, supportFunctions);
+        var configureContext = new CompletionServiceConfigureContext(chatOptions, context, supportFunctions);
 
         await _handlers.InvokeAsync((handler, ctx) => handler.ConfigureAsync(ctx), configureContext, Logger);
 
@@ -219,7 +206,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         return chatOptions;
     }
 
-    private async ValueTask<IChatClient> BuildClientAsync(string connectionName, AICompletionContext context, AIProfileMetadata metadata, string modelName)
+    private async ValueTask<IChatClient> BuildClientAsync(string connectionName, AICompletionContext context, string modelName)
     {
         var client = await _aIClientFactory.CreateChatClientAsync(ProviderName, connectionName, modelName);
 
@@ -232,7 +219,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             builder.UseFunctionInvocation(LoggerFactory, ConfigureFunctionInvocation);
         }
 
-        if (_defaultOptions.EnableDistributedCaching && context.UseCaching && metadata.UseCaching)
+        if (_defaultOptions.EnableDistributedCaching && context.UseCaching)
         {
             builder.UseDistributedCache(_distributedCache);
         }

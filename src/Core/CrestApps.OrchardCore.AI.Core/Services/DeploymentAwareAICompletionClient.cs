@@ -33,9 +33,9 @@ public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClien
 
     protected override async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
     {
-        if (!string.IsNullOrEmpty(content.Profile?.DeploymentId))
+        if (!string.IsNullOrEmpty(content.DeploymentId))
         {
-            return await _store.FindByIdAsync(content.Profile.DeploymentId);
+            return await _store.FindByIdAsync(content.DeploymentId);
         }
 
         return null;

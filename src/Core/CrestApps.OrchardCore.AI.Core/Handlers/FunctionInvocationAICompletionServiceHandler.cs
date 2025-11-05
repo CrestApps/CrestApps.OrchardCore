@@ -1,6 +1,4 @@
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
@@ -16,17 +14,18 @@ public sealed class FunctionInvocationAICompletionServiceHandler : IAICompletion
     public async Task ConfigureAsync(CompletionServiceConfigureContext context)
     {
         if (!context.IsFunctionInvocationSupported ||
-            !context.Profile.TryGet<AIProfileFunctionInvocationMetadata>(out var metadata) ||
-            metadata.Names is null || metadata.Names.Length == 0)
+            context.CompletionContext is null ||
+            context.CompletionContext.ToolNames is null ||
+            context.CompletionContext.ToolNames.Length == 0)
         {
             return;
         }
 
         context.ChatOptions.Tools ??= [];
 
-        foreach (var name in metadata.Names)
+        foreach (var toolName in context.CompletionContext.ToolNames)
         {
-            var tool = await _toolsService.GetByNameAsync(name);
+            var tool = await _toolsService.GetByNameAsync(toolName);
 
             if (tool is null)
             {

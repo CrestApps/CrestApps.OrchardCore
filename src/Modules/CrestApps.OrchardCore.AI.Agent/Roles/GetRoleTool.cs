@@ -76,11 +76,11 @@ internal sealed class GetRoleTool : AIFunction
 
         IRole role = null;
 
-        if (!hasRoleId)
+        if (hasRoleId)
         {
             role = await _roleManager.FindByIdAsync(roleId);
         }
-        else if (!string.IsNullOrEmpty(roleName))
+        else if (hasRoleName)
         {
             role = await _roleManager.FindByNameAsync(roleName);
         }

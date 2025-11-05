@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Drivers;
 using CrestApps.OrchardCore.AI.Endpoints;
 using CrestApps.OrchardCore.AI.Endpoints.Api;
+using CrestApps.OrchardCore.AI.Handlers;
 using CrestApps.OrchardCore.AI.Indexes;
 using CrestApps.OrchardCore.AI.Migrations;
 using CrestApps.OrchardCore.AI.Models;
@@ -123,6 +124,7 @@ public sealed class DataSourceStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAIDataSourceServices();
+        services.AddScoped<IAICompletionContextBuilderHandler, DataSourceAICompletionContextBuilderHandler>();
         services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
         services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
         services.AddNavigationProvider<AIDataProviderAdminMenu>();
@@ -226,6 +228,7 @@ public sealed class ToolsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IAICompletionContextBuilderHandler, ToolInstancesAICompletionContextBuilderHandler>();
         services.AddDisplayDriver<AIProfile, AIProfileToolInstancesDisplayDriver>();
         services.AddDisplayDriver<AIToolInstance, InvokableToolMetadataDisplayDriver>();
         services.AddDisplayDriver<AIToolInstance, AIProfileToolMetadataDisplayDriver>();
