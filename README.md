@@ -94,6 +94,9 @@ Enables you to restrict content items based on user roles. See the [Content Acce
 #### Resources Module
 Provides additional resources to accelerate development. See the [Resources Module README](src/Modules/CrestApps.OrchardCore.Resources/README.md).  
 
+#### CrestApps Recipes Module
+Provides a structured way to define and retrieve recipe steps. See the [CrestApps Recipes Module README](src/Modules/CrestApps.OrchardCore.Recipes/README.md).  
+
 ## Getting Started
 
 ### Running Locally

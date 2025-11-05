@@ -1,15 +1,20 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Agent.Schemas;
-using CrestApps.OrchardCore.AI.Agent.Services;
 using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.AI;
 
-namespace CrestApps.OrchardCore.AI.Agent.Recipes;
+namespace CrestApps.OrchardCore.AI.Core;
 
 public abstract class ImportRecipeBaseTool : AIFunction
 {
+    protected readonly static JsonSerializerOptions RecipeSerializerOptions = new(JOptions.Default)
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
     private readonly RecipeExecutionService _recipeExecutionService;
     private readonly RecipeStepsService _recipeStepsService;
     private readonly IEnumerable<IRecipeStep> _recipeSteps;
@@ -57,9 +62,11 @@ public abstract class ImportRecipeBaseTool : AIFunction
         return $"Unable to find a '{name}' argument in the arguments parameter.";
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     protected async ValueTask<object> ProcessRecipeAsync(string json, CancellationToken cancellationToken)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
-        var data = JsonSerializer.Deserialize<JsonObject>(json, JsonHelpers.RecipeSerializerOptions);
+        var data = JsonSerializer.Deserialize<JsonObject>(json, RecipeSerializerOptions);
 
         var stepSchemas = new Dictionary<string, JsonSchema>(StringComparer.OrdinalIgnoreCase);
 
