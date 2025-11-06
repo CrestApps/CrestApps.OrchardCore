@@ -40,7 +40,7 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
 
         // Azure Whisper deployments do not expose the standard /audio/speech-to-text API.
         // Instead, they use /audio/transcriptions, which requires a custom implementation.
-        return new AzureWhisperSpeechToTextClient(azureClient, deploymentName);
+        return new AzureSpeechToTextClient(azureClient, deploymentName);
     }
 
     private static AzureOpenAIClient GetAzureOpenAIClient(AIProviderConnectionEntry connection)
