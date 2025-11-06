@@ -73,7 +73,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
         var fields = Initialize<EditOmnichannelActivity>("OmnichannelActivityFields_Edit", async model =>
         {
-            model.Channel = activity.Channel;
             model.CampaignId = activity.CampaignId;
             model.ScheduleAt = context.IsNew || activity.ScheduledUtc == DateTime.MinValue
                 ? (await _localClock.GetLocalNowAsync()).DateTime
@@ -118,13 +117,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
                 usersListItems.Add(new SelectListItem(displayName, userId));
             }
-
-            model.Channels =
-            [
-                new(S["Phone"], OmnichannelConstants.Channels.Phone),
-                new(S["SMS"], OmnichannelConstants.Channels.Sms),
-                new(S["Email"], OmnichannelConstants.Channels.Email),
-            ];
 
             model.UrgencyLevels =
             [
@@ -247,20 +239,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubjectContentType), S["Subject is required."]);
             }
 
-            if (string.IsNullOrEmpty(model.Channel))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Channel), S["Channel is required."]);
-            }
-            else
-            {
-                var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
-
-                if (contact is not null)
-                {
-                    activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, model.Channel);
-                }
-            }
-
             OmnichannelCampaign campaign = null;
 
             if (string.IsNullOrEmpty(model.CampaignId))
@@ -274,6 +252,20 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 if (campaign is null)
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["The selected Campaign is invalid."]);
+                }
+                else
+                {
+                    activity.Channel = campaign.Channel;
+                }
+            }
+
+            if (campaign is not null)
+            {
+                var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+                if (!string.IsNullOrEmpty(campaign.Channel))
+                {
+                    activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, campaign.Channel);
                 }
             }
 
@@ -291,11 +283,9 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             {
                 activity.ChannelEndpointId = campaign?.ChannelEndpointId;
                 activity.InteractionType = campaign?.InteractionType ?? ActivityInteractionType.Manual;
-                activity.AIProfileName = campaign?.AIProfileName;
                 activity.CampaignId = model.CampaignId;
             }
 
-            activity.Channel = model.Channel;
             activity.SubjectContentType = model.SubjectContentType;
             activity.ContactContentType = activity.ContactContentType;
             activity.Instructions = model.Instructions?.Trim();

@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -5,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -17,21 +20,27 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
 {
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointsCatalog;
-    private readonly INamedCatalog<AIProfile> _aiProfileCatalog;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
+    private readonly AIToolDefinitionOptions _toolDefinitions;
+    private readonly AIProviderOptions _aiProviderOptions;
+    private readonly DefaultAIOptions _defaultAIOptions;
 
     internal readonly IStringLocalizer S;
 
     public OmnichannelCampaignDisplayDriver(
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,
-        INamedCatalog<AIProfile> aiProfileCatalog,
+        IOptions<AIToolDefinitionOptions> toolDefinitions,
+        IOptions<AIProviderOptions> aiProviderOptions,
+        IOptions<DefaultAIOptions> defaultAIOptions,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<OmnichannelCampaignDisplayDriver> stringLocalizer)
     {
         _dispositionsCatalog = dispositionsCatalog;
         _channelEndpointsCatalog = channelEndpointsCatalog;
-        _aiProfileCatalog = aiProfileCatalog;
+        _toolDefinitions = toolDefinitions.Value;
+        _aiProviderOptions = aiProviderOptions.Value;
+        _defaultAIOptions = defaultAIOptions.Value;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
     }
@@ -55,10 +64,21 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             model.DisplayText = campaign.DisplayText;
             model.Description = campaign.Description;
             model.InteractionType = campaign.InteractionType;
-            model.AIProfileName = campaign.AIProfileName;
             model.Channel = campaign.Channel;
             model.ChannelEndpointId = campaign.ChannelEndpointId;
             model.InitialOutboundPromptPattern = campaign.InitialOutboundPromptPattern;
+            model.CampaignGoal = campaign.CampaignGoal;
+
+            // AI config
+            model.ProviderName = campaign.ProviderName;
+            model.ConnectionName = campaign.ConnectionName;
+            model.DeploymentName = campaign.DeploymentName;
+            model.SystemMessage = campaign.SystemMessage;
+            model.MaxTokens = context.IsNew ? _defaultAIOptions.MaxOutputTokens : campaign.MaxTokens;
+            model.Temperature = context.IsNew ? _defaultAIOptions.Temperature : campaign.Temperature;
+            model.TopP = context.IsNew ? _defaultAIOptions.TopP : campaign.TopP;
+            model.FrequencyPenalty = context.IsNew ? _defaultAIOptions.FrequencyPenalty : campaign.FrequencyPenalty;
+            model.PresencePenalty = context.IsNew ? _defaultAIOptions.PresencePenalty : campaign.PresencePenalty;
 
             var dispositions = await _dispositionsCatalog.GetAllAsync();
 
@@ -70,7 +90,8 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             }).OrderBy(x => x.Text)
             .ToArray();
 
-            model.AIProfiles = (await _aiProfileCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText ?? x.Name, x.Name)).OrderBy(x => x.Text);
+            model.Providers = _aiProviderOptions.Providers.Select(provider => new SelectListItem(provider.Key, provider.Key));
+
             model.Channels =
             [
                 new(S["Phone"], OmnichannelConstants.Channels.Phone),
@@ -84,6 +105,20 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
                 new(S["Manual"], nameof(ActivityInteractionType.Manual)),
                 new(S["Automated"], nameof(ActivityInteractionType.Automated)),
             ];
+
+            if (_toolDefinitions.Tools.Count > 0)
+            {
+                model.Tools = _toolDefinitions.Tools
+                .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
+                .OrderBy(group => group.Key)
+                .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
+                {
+                    ItemId = entry.Key,
+                    DisplayText = entry.Value.Title,
+                    Description = entry.Value.Description,
+                    IsSelected = campaign.ToolNames?.Contains(entry.Key) ?? false,
+                }).OrderBy(entry => entry.DisplayText).ToArray());
+            }
         }).Location("Content:1");
     }
 
@@ -126,18 +161,20 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChannelEndpointId), S["Channel endpoint field is required for automated activities."]);
             }
 
-            if (string.IsNullOrEmpty(model.AIProfileName))
+            // Campaign goal is required for automated type
+            if (string.IsNullOrWhiteSpace(model.CampaignGoal))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileName), S["AI Profile is required for automated activities."]);
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignGoal), S["Campaign goal is required for automated activities."]);
             }
-            else
-            {
-                var aiProfile = await _aiProfileCatalog.FindByNameAsync(model.AIProfileName);
 
-                if (aiProfile == null)
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.AIProfileName), S["The selected AI Profile is invalid."]);
-                }
+            // Provider validation
+            if (string.IsNullOrEmpty(model.ProviderName))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProviderName), S["The Provider is required."]);
+            }
+            else if (!_aiProviderOptions.Providers.TryGetValue(model.ProviderName, out _))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProviderName), S["The Provider is invalid."]);
             }
 
             if (string.IsNullOrWhiteSpace(model.InitialOutboundPromptPattern))
@@ -150,13 +187,45 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             }
         }
 
+        // Map fields regardless of type so values are preserved when switching back/forth in UI
         campaign.DisplayText = model.DisplayText?.Trim();
         campaign.Description = model.Description?.Trim();
         campaign.InteractionType = model.InteractionType;
         campaign.Channel = model.Channel;
         campaign.ChannelEndpointId = model.ChannelEndpointId;
-        campaign.AIProfileName = model.AIProfileName;
         campaign.InitialOutboundPromptPattern = model.InitialOutboundPromptPattern;
+        campaign.CampaignGoal = model.CampaignGoal;
+
+        // AI config
+        campaign.ProviderName = model.ProviderName;
+        campaign.ConnectionName = model.ConnectionName;
+        campaign.DeploymentName = model.DeploymentName;
+        campaign.SystemMessage = model.SystemMessage;
+        campaign.MaxTokens = model.MaxTokens;
+        campaign.Temperature = model.Temperature;
+        campaign.TopP = model.TopP;
+        campaign.FrequencyPenalty = model.FrequencyPenalty;
+        campaign.PresencePenalty = model.PresencePenalty;
+
+        if (_toolDefinitions.Tools.Count > 0)
+        {
+            // Bind tools selection
+            var toolsModel = new OmnichannelCampaignViewModel();
+            await context.Updater.TryUpdateModelAsync(toolsModel, Prefix);
+
+            var selectedToolKeys = toolsModel.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
+
+            if (selectedToolKeys is null || !selectedToolKeys.Any())
+            {
+                campaign.ToolNames = [];
+            }
+            else
+            {
+                campaign.ToolNames = _toolDefinitions.Tools.Keys
+                .Intersect(selectedToolKeys)
+                .ToArray();
+            }
+        }
 
         return Edit(campaign, context);
     }

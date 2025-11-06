@@ -35,11 +35,6 @@ public sealed class OmnichannelActivity : CatalogItem
     /// </summary>
     public string PreferredDestination { get; set; }
 
-    /// <summary>
-    /// Used when the interaction type is Automatic to specify which AI Profile to use to handle the interaction.
-    /// </summary>
-    public string AIProfileName { get; set; }
-
     public string ContactContentItemId { get; set; }
 
     public string ContactContentType { get; set; }

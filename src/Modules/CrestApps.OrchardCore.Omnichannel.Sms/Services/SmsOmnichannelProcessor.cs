@@ -10,39 +10,40 @@ using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.Liquid;
+using OrchardCore.Modules;
 using OrchardCore.Sms;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Services;
 
 public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 {
-    private readonly IAIProfileManager _aIProfileManager;
     private readonly IAIChatSessionManager _aIChatSessionManager;
     private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointCatalog;
     private readonly ISmsService _smsService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
+    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
     public SmsOmnichannelProcessor(
-        IAIProfileManager aIProfileManager,
         IAIChatSessionManager aIChatSessionManager,
         ICatalog<OmnichannelCampaign> campaignCatalog,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointCatalog,
         ISmsService smsService,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
+        IClock clock,
         IStringLocalizer<SmsOmnichannelProcessor> stringLocalizer)
     {
-        _aIProfileManager = aIProfileManager;
         _aIChatSessionManager = aIChatSessionManager;
         _campaignCatalog = campaignCatalog;
         _channelEndpointCatalog = channelEndpointCatalog;
         _smsService = smsService;
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
+        _clock = clock;
         S = stringLocalizer;
     }
 
@@ -50,14 +51,6 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 
     public async Task StartAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(activity.AIProfileName))
-        {
-            throw new InvalidOperationException("AI Profile Name is not specified for the SMS activity.");
-        }
-
-        var profile = await _aIProfileManager.FindByNameAsync(activity.AIProfileName)
-            ?? throw new InvalidOperationException($"AI Profile '{activity.AIProfileName}' is not found.");
-
         AIChatSession chatSession = null;
 
         if (!string.IsNullOrWhiteSpace(activity.AISessionId))
@@ -65,15 +58,25 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             chatSession = await _aIChatSessionManager.FindByIdAsync(activity.AISessionId);
         }
 
-        if (chatSession is null)
-        {
-            chatSession = await _aIChatSessionManager.NewAsync(profile, new NewAIChatSessionContext() { AllowRobots = true, });
-
-            chatSession.Title = S["Automated SMS Activity"];
-        }
-
         var campaign = await _campaignCatalog.FindByIdAsync(activity.CampaignId)
             ?? throw new InvalidOperationException($"Unable to find the campaign '{activity.CampaignId}' that is associated with the activity '{activity.ItemId}'.");
+
+        if (chatSession is null)
+        {
+            chatSession = new AIChatSession
+            {
+                SessionId = IdGenerator.GenerateId(),
+                CreatedUtc = _clock.UtcNow,
+                Title = S["Automated SMS Activity"],
+            };
+
+            chatSession.Prompts.Add(new AIChatSessionPrompt
+            {
+                Id = IdGenerator.GenerateId(),
+                Role = ChatRole.System,
+                Content = campaign.SystemMessage,
+            });
+        }
 
         var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
@@ -82,7 +85,6 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
                 {
                     ["Contact"] = new ObjectValue(contact),
                     ["Campaign"] = new ObjectValue(campaign),
-                    ["Profile"] = new ObjectValue(profile),
                     ["Session"] = new ObjectValue(chatSession),
                 });
 

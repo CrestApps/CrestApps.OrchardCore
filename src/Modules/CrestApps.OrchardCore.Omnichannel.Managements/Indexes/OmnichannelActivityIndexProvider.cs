@@ -26,7 +26,6 @@ public sealed class OmnichannelActivityIndexProvider : IndexProvider<Omnichannel
                 PreferredDestination = activity.PreferredDestination,
                 ContactContentType = activity.ContactContentType,
                 ContactContentItemId = activity.ContactContentItemId,
-                AIProfileName = activity.AIProfileName,
                 CampaignId = activity.CampaignId,
                 ScheduledUtc = activity.ScheduledUtc,
                 Attempts = activity.Attempts,

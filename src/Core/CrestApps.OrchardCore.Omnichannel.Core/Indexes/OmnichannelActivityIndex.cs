@@ -15,8 +15,6 @@ public sealed class OmnichannelActivityIndex : CatalogItemIndex
 
     public string PreferredDestination { get; set; }
 
-    public string AIProfileName { get; set; }
-
     public string ContactContentItemId { get; set; }
 
     public string ContactContentType { get; set; }

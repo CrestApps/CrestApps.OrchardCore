@@ -5,7 +5,7 @@ using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Events;
+namespace CrestApps.OrchardCore.Omnichannel.Core.Workflows;
 
 public sealed class CompletedActivityEvent : EventActivity
 {

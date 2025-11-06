@@ -6,8 +6,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
 public class EditOmnichannelActivity
 {
-    public string Channel { get; set; }
-
     public DateTime? ScheduleAt { get; set; }
 
     public string CampaignId { get; set; }
@@ -34,7 +32,4 @@ public class EditOmnichannelActivity
 
     [BindNever]
     public IEnumerable<SelectListItem> UrgencyLevels { get; set; }
-
-    [BindNever]
-    public IEnumerable<SelectListItem> Channels { get; set; }
 }

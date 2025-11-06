@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Events;
+using CrestApps.OrchardCore.Omnichannel.Core.Workflows;
 using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;

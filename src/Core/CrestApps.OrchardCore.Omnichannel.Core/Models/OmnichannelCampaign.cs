@@ -11,8 +11,6 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
 
     public ActivityInteractionType InteractionType { get; set; }
 
-    public string AIProfileName { get; set; }
-
     public string Channel { get; set; }
 
     public string ChannelEndpointId { get; set; }
@@ -21,6 +19,32 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
     /// When the campaign in automated, this will be the initial message to start the converation with the customer.
     /// </summary>
     public string InitialOutboundPromptPattern { get; set; }
+
+    /// <summary>
+    /// A clear description of what success looks like for this automated campaign.
+    /// Used by the AI to determine when the chat can be terminated.
+    /// </summary>
+    public string CampaignGoal { get; set; }
+
+    public string ProviderName { get; set; }
+
+    public string ConnectionName { get; set; }
+
+    public string DeploymentName { get; set; }
+
+    public string SystemMessage { get; set; }
+
+    public float? Temperature { get; set; }
+
+    public float? TopP { get; set; }
+
+    public float? FrequencyPenalty { get; set; }
+
+    public float? PresencePenalty { get; set; }
+
+    public int? MaxTokens { get; set; }
+
+    public string[] ToolNames { get; set; }
 
     public DateTime CreatedUtc { get; set; }
 
@@ -38,10 +62,20 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
             DisplayText = DisplayText,
             Description = Description,
             InteractionType = InteractionType,
-            AIProfileName = AIProfileName,
             Channel = Channel,
             ChannelEndpointId = ChannelEndpointId,
             InitialOutboundPromptPattern = InitialOutboundPromptPattern,
+            CampaignGoal = CampaignGoal,
+            ProviderName = ProviderName,
+            ConnectionName = ConnectionName,
+            DeploymentName = DeploymentName,
+            SystemMessage = SystemMessage,
+            Temperature = Temperature,
+            TopP = TopP,
+            FrequencyPenalty = FrequencyPenalty,
+            PresencePenalty = PresencePenalty,
+            MaxTokens = MaxTokens,
+            ToolNames = ToolNames?.ToArray(),
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,
