@@ -38,10 +38,9 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
     {
         var azureClient = GetAzureOpenAIClient(connection);
 
-#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        return azureClient.GetAudioClient(deploymentName)
-            .AsISpeechToTextClient();
-#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        // Azure Whisper deployments do not expose the standard /audio/speech-to-text API.
+        // Instead, they use /audio/transcriptions, which requires a custom implementation.
+        return new AzureWhisperSpeechToTextClient(azureClient, deploymentName);
     }
 
     private static AzureOpenAIClient GetAzureOpenAIClient(AIProviderConnectionEntry connection)
