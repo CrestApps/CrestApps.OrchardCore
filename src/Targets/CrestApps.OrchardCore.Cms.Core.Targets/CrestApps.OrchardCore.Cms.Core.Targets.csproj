@@ -25,6 +25,7 @@
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Omnichannel\CrestApps.OrchardCore.Omnichannel.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.OpenAI.Azure\CrestApps.OrchardCore.OpenAI.Azure.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.OpenAI\CrestApps.OrchardCore.OpenAI.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Recipes\CrestApps.OrchardCore.Recipes.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Roles\CrestApps.OrchardCore.Roles.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.SignalR\CrestApps.OrchardCore.SignalR.csproj" PrivateAssets="none" />

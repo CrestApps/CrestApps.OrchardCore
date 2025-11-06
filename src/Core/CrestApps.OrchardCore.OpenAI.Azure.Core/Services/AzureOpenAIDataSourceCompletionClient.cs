@@ -355,6 +355,11 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
     private static async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<ChatToolCall> tollCalls, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
     {
+        if (tollCalls is null || !tollCalls.Any())
+        {
+            return;
+        }
+
         prompts.Add(ChatMessage.CreateAssistantMessage(tollCalls));
 
         foreach (var toolCall in tollCalls)
@@ -385,6 +390,11 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
     private async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<StreamingChatToolCallUpdate> tollCallsUpdate)
     {
+        if (tollCallsUpdate is null || !tollCallsUpdate.Any())
+        {
+            return;
+        }
+
         _toolsService ??= _serviceProvider.GetService<IAIToolsService>();
 
         if (_toolsService is null)

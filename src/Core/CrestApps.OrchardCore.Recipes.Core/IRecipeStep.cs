@@ -1,6 +1,6 @@
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.AI.Agent.Schemas;
+namespace CrestApps.OrchardCore.Recipes.Core;
 
 public interface IRecipeStep
 {

@@ -1,7 +1,7 @@
-using CrestApps.OrchardCore.AI.Agent.Recipes;
-using CrestApps.OrchardCore.AI.Agent.Schemas;
-using CrestApps.OrchardCore.AI.Agent.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
