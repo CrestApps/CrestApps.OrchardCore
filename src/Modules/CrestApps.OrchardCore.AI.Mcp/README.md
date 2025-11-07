@@ -1,3 +1,12 @@
+## Table of Contents
+
+- [Model Context Protocol (MCP)](#model-context-protocol-mcp)
+- [Features](#features)
+  - [Model Context Protocol (MCP) Client Feature](#model-context-protocol-mcp-client-feature)
+  - [Model Context Protocol (Local MCP) Client Feature](#model-context-protocol-local-mcp-client-feature)
+  - [Admin Chat UI with Time MCP Server Integration](#admin-chat-ui-with-time-mcp-server-integration-mcp-demonstration)
+- [Explore More MCP Servers](#-explore-more-mcp-servers)
+
 # Model Context Protocol (MCP)
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) is an open standard that allows seamless integration between large language model (LLM) applications and external tools or data sources. Whether you're building an AI-enhanced IDE, a chat interface, or custom AI workflows, MCP makes it easy to supply LLMs with the context they need.
