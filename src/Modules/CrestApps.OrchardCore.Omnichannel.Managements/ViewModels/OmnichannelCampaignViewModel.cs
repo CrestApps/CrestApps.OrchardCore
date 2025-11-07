@@ -49,6 +49,10 @@ public class OmnichannelCampaignViewModel
 
     public SelectListItem[] Dispositions { get; set; }
 
+    public bool AllowAIToUpdateContact { get; set; }
+
+    public bool AllowAIToUpdateSubject { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> InteractionTypes { get; set; }
 

@@ -10,9 +10,11 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Json;
 using OrchardCore.Modules;
 using OrchardCore.Sms;
 using OrchardCore.Workflows.Services;
@@ -24,72 +26,98 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 {
     private const string _conclusionSystemMessage =
     """
-    # GPT System Message – Conversation Disposition Selector (ID Output)
+    You are an AI model responsible for analyzing **customer support chat summaries** between a **Customer (User)** and an **AI Assistant (acting on behalf of a contact center agent)**.  
 
-    You are an AI model responsible for analyzing **customer support chat summaries** between a **Customer (User)** and an **AI Assistant (acting on behalf of a contact center agent)**. Your goal is to determine whether the conversation has reached a **conclusion**, and if it has, return the **ID** of the appropriate disposition from a provided list.
+    The **user prompt** you will receive will include:
 
-    ## Inputs
-    1. **Chat Summary** – a summarized transcript of the conversation between the customer and the assistant.  
-    2. **Campaign Goal** – the overall purpose or objective of the campaign (e.g., sales, technical support, appointment booking).  
-    3. **List of Dispositions** – a list of objects, each with:
-       - `Id` (unique identifier)
-       - `Name` (friendly name of the disposition)
-       - `Description` (optional description of the disposition)
+    Chat Summary: <summary of conversation>
+    Campaign Goal: <campaign objective>
+    List of Dispositions: <list of dispositions in JSON format>
+    Subject: <optional, only present if subject evaluation and update was made>
+    Contact: <optional, only present if contact evaluation and update was made>
 
-    	Example:
-    	[
-    	  {"Id": "1", "Name": "Sale Completed", "Description": "Customer completed a purchase"},
-    	  {"Id": "2", "Name": "Appointment Scheduled", "Description": "Customer scheduled an appointment"},
-    	  {"Id": "3", "Name": "Customer Uninterested", "Description": "Customer declined the offer"},
-    	  {"Id": "4", "Name": "Follow-up Required", "Description": "Conversation requires follow-up"}
-    	]
+    ````
+
+    Your primary goal is to determine whether the conversation has reached a **conclusion**, and if it has, return the **ID** of the appropriate disposition from the provided list.
+
+    ---
 
     ## Task Instructions
 
     1. **Determine if the conversation is concluded.**
-
        * A conversation is **concluded** when the customer has reached a clear end state relative to the campaign goal.
-       * If the conversation is **ongoing** (e.g., waiting for customer response, unresolved issue, AI still assisting), it is **not concluded**.
+       * If the conversation is **ongoing** (e.g., waiting for a response, unresolved issue, or AI still assisting), it is **not concluded**.
 
     2. **If the conversation is concluded:**
-
-       * **Pick exactly one disposition** from the provided list that best matches the conversation’s outcome.
+       * Select **exactly one** disposition from the provided list that best matches the conversation's outcome.
        * **Return only the `Id`** of the selected disposition.
-       * **Do not create or invent new dispositions** — use only the IDs from the provided list.
+       * **Do not create or invent new dispositions** — use only the provided ones.
 
     3. **If the conversation is not concluded:**
-
        * Return an **empty result** (`null`) for the `DispositionId` and mark `Concluded` as `false`.
+
+    ---
+
+    ## Subject Update (Optional)
+
+    * Only evaluate the **Subject** if a `Subject:` field is present in the user prompt.
+    * Use the most recent conversation context to determine if the subject should be updated.
+    * Return `"Subject": null` if no update is needed.
+    * Do **not** modify the JSON structure; only replace the value.
+
+    ````
+
+    ---
+
+    ## Contact Update (Optional)
+
+    * Only evaluate the **Contact** if a `Contact:` field is present in the user prompt.
+    * Update fields only when the user provides **new or corrected contact information** (ex., name, phone, or email).
+    * Return `"Contact": null` if no update is needed.
+    * Do **not** modify the JSON structure; only replace the values inside it.
+
+    Example input for contact evaluation:
+
+    ---
 
     ## Output Format
 
-    Return your answer directly as a JSON object, without wrapping it inside any additional object like `data` or other fields:
+    Return your answer directly as a JSON object with **all possible fields**, even if some are `null`:
 
+    ```json
     {
       "Concluded": true | false,
-      "DispositionId": "<id_of_matching_disposition_or_null>"
+      "DispositionId": "<id_of_matching_disposition_or_null>",
+      "Subject": "<updated_subject_or_null>",
+      "Contact": "<updated_contact_or_null>"
     }
+    ```
 
-    ### Examples
+    * If `Subject` or `Contact` sections are not provided in the user prompt or no updates are required, return them as `null`.
+    * Never invent new fields or change the structure of the JSON.
+    * Always preserve the provided JSON structure exactly.
 
-    **Concluded conversation**
-    {
-      "Concluded": true,
-      "DispositionId": "2"
-    }
-
-    **Ongoing conversation**
-    {
-      "Concluded": false,
-      "DispositionId": null
-    }
+    ---
 
     ## Evaluation Notes
 
-    * Focus on the **resolution of the conversation** in relation to the **campaign goal**.
-    * Ignore irrelevant small talk or details.
-    * **Choose only one disposition** from the list; do not guess or invent.
-    * If unsure, return `"Concluded": false` rather than making an incorrect assignment.
+    * Focus on whether the conversation reached a **clear end state** relative to the **campaign goal**.
+    * Ignore irrelevant conversation details.
+    * If unsure, prefer `"Concluded": false`.
+    * Never invent data, and never modify the output schema.
+
+    ```
+
+    This version ensures:
+
+    - The model expects structured **user prompts** instead of embedded JSON.
+    - Subject and contact updates are only evaluated **if present**.
+    - Clear instructions for handling concluded vs ongoing conversations.
+    - Output schema is strictly enforced.  
+
+    If you want, I can also **rewrite this into a fully concise system prompt under 500 words** optimized for GPT usage while keeping all rules intact. Do you want me to do that?
+    ```
+    
     """;
 
     private readonly IAIChatSessionManager _chatSessionManager;
@@ -99,6 +127,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly ISession _session;
     private readonly ISmsService _smsService;
     private readonly IOmnichannelActivityStore _omnichannelActivityStore;
+    private readonly DocumentJsonSerializerOptions _jsonSerializerOptions;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -111,6 +140,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         ISession session,
         ISmsService smsService,
         IOmnichannelActivityStore omnichannelActivityStore,
+        IOptions<DocumentJsonSerializerOptions> jsonSerializerOptions,
         ILogger<SmsOmnichannelEventHandler> logger,
         IStringLocalizer<SmsOmnichannelEventHandler> stringLocalizer)
     {
@@ -121,6 +151,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _session = session;
         _smsService = smsService;
         _omnichannelActivityStore = omnichannelActivityStore;
+        _jsonSerializerOptions = jsonSerializerOptions.Value;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -271,52 +302,104 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     var dispositions = await dispositionCatalog.GetAsync(campaign.DispositionIds);
                     var client = await clientFactory.CreateChatClientAsync(campaign.ProviderName, campaign.ConnectionName, campaign.DeploymentName);
 
-                    // TODO, use the AI model to update the subject and the contact if the settings allows for it.
+                    var contentManager = scope.ServiceProvider.GetRequiredService<IContentManager>();
+
+                    ContentItem subject = null;
+                    ContentItem contact = null;
+
+                    var userPrompt = $"""
+                        Chat Summary: {JsonSerializer.Serialize(chatSession.Prompts)}
+                        Campaign Goal: {campaign.CampaignGoal}
+                        List of Dispositions: {JsonSerializer.Serialize(dispositions.Select(x => new { Id = x.ItemId, Name = x.DisplayText, x.Description }))}
+                        """;
+
+                    if (campaign.AllowAIToUpdateSubject)
+                    {
+                        subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
+
+                        userPrompt +=
+                        $"""
+                        Subject: {JsonSerializer.Serialize(activity.Subject, _jsonSerializerOptions.SerializerOptions)}
+                        """;
+                    }
+
+                    if (campaign.AllowAIToUpdateContact)
+                    {
+                        contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+                        userPrompt +=
+                        $"""
+                        Contact: {JsonSerializer.Serialize(contact, _jsonSerializerOptions.SerializerOptions)}
+                        """;
+                    }
+
                     var transcript = new List<ChatMessage>
                     {
                         new (ChatRole.System, _conclusionSystemMessage),
-                        new (ChatRole.User,
-                        $"""
-                        Chat Summary: {JsonSerializer.Serialize(chatSession.Prompts)}
-
-                        Campaign Goal: {campaign.CampaignGoal}
-
-                        List of Dispositions: {JsonSerializer.Serialize(dispositions.Select(x => new { Id = x.ItemId, Name = x.DisplayText, x.Description}))}
-                        """),
+                        new (ChatRole.User, userPrompt),
                     };
 
-                    var result = await client.GetResponseAsync<ConverationConclusionResult>(transcript);
+                    var result = await client.GetResponseAsync<ConverationConclusionResult>(transcript, _jsonSerializerOptions.SerializerOptions);
 
-                    if (result.Result is not null && result.Result.Concluded)
+                    if (result.Result is not null)
                     {
-                        var clock = scope.ServiceProvider.GetRequiredService<IClock>();
-                        var workflowManager = scope.ServiceProvider.GetRequiredService<IWorkflowManager>();
-                        var contentManager = scope.ServiceProvider.GetRequiredService<IContentManager>();
+                        OmnichannelActivity omnichannelActivity = null;
 
-                        var omnichannelActivity = await store.FindByIdAsync(activity.ItemId);
-
-                        omnichannelActivity.Status = ActivityStatus.Completed;
-                        omnichannelActivity.CompletedUtc = clock.UtcNow;
-                        omnichannelActivity.DispositionId = result.Result.DispositionId;
-                        omnichannelActivity.CompletedById = omnichannelActivity.AssignedToId;
-                        omnichannelActivity.CompletedByUsername = omnichannelActivity.AssignedToUsername;
-
-                        await _omnichannelActivityStore.UpdateAsync(omnichannelActivity);
-
-                        var disposition = await _omnichannelActivityStore.FindByIdAsync(activity.DispositionId);
-
-                        var subject = activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
-                        var contact = await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
-
-                        var input = new Dictionary<string, object>
+                        if (campaign.AllowAIToUpdateSubject && result.Result.Subject is not null)
                         {
-                            { "Activity", activity },
-                            { "Contact", contact },
-                            { "Subject", subject },
-                            { "Disposition", disposition },
-                        };
+                            subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
+                            subject.Merge(result.Result.Subject);
 
-                        await workflowManager.TriggerEventAsync(nameof(CompletedActivityEvent), input, correlationId: activity.ItemId);
+                            omnichannelActivity ??= await store.FindByIdAsync(activity.ItemId);
+
+                            omnichannelActivity.Subject = subject;
+
+                            // Update the activity with the new subject since the converation may not be concluded.
+                            await _omnichannelActivityStore.UpdateAsync(omnichannelActivity);
+                        }
+
+                        if (campaign.AllowAIToUpdateContact && result.Result.Contact is not null)
+                        {
+                            contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+                            if (contact is not null)
+                            {
+                                contact.Merge(result.Result.Contact);
+
+                                await contentManager.UpdateAsync(contact);
+                            }
+                        }
+
+                        if (result.Result.Concluded)
+                        {
+                            var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+                            var workflowManager = scope.ServiceProvider.GetRequiredService<IWorkflowManager>();
+
+                            omnichannelActivity ??= await store.FindByIdAsync(activity.ItemId);
+
+                            omnichannelActivity.Status = ActivityStatus.Completed;
+                            omnichannelActivity.CompletedUtc = clock.UtcNow;
+                            omnichannelActivity.DispositionId = result.Result.DispositionId;
+                            omnichannelActivity.CompletedById = omnichannelActivity.AssignedToId;
+                            omnichannelActivity.CompletedByUsername = omnichannelActivity.AssignedToUsername;
+
+                            await _omnichannelActivityStore.UpdateAsync(omnichannelActivity);
+
+                            var disposition = await _omnichannelActivityStore.FindByIdAsync(activity.DispositionId);
+
+                            subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
+                            contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+                            var input = new Dictionary<string, object>
+                            {
+                                { "Activity", activity },
+                                { "Contact", contact },
+                                { "Subject", subject },
+                                { "Disposition", disposition },
+                            };
+
+                            await workflowManager.TriggerEventAsync(nameof(CompletedActivityEvent), input, correlationId: activity.ItemId);
+                        }
                     }
                 });
 
@@ -334,6 +417,11 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private sealed class ConverationConclusionResult
     {
         public bool Concluded { get; set; }
+
         public string DispositionId { get; set; }
+
+        public ContentItem Subject { get; set; }
+
+        public ContentItem Contact { get; set; }
     }
 }

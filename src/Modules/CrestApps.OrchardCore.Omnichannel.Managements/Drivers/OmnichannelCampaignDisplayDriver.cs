@@ -79,6 +79,8 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             model.TopP = context.IsNew ? _defaultAIOptions.TopP : campaign.TopP;
             model.FrequencyPenalty = context.IsNew ? _defaultAIOptions.FrequencyPenalty : campaign.FrequencyPenalty;
             model.PresencePenalty = context.IsNew ? _defaultAIOptions.PresencePenalty : campaign.PresencePenalty;
+            model.AllowAIToUpdateContact = context.IsNew ? false : campaign.AllowAIToUpdateContact;
+            model.AllowAIToUpdateSubject = context.IsNew ? true : campaign.AllowAIToUpdateSubject;
 
             var dispositions = await _dispositionsCatalog.GetAllAsync();
 
@@ -206,6 +208,8 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
         campaign.TopP = model.TopP;
         campaign.FrequencyPenalty = model.FrequencyPenalty;
         campaign.PresencePenalty = model.PresencePenalty;
+        campaign.AllowAIToUpdateContact = model.AllowAIToUpdateContact;
+        campaign.AllowAIToUpdateSubject = model.AllowAIToUpdateSubject;
 
         if (_toolDefinitions.Tools.Count > 0)
         {
