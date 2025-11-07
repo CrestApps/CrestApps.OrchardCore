@@ -1,7 +1,8 @@
 ## Table of Contents
 
-- [User Display Name](#user-display-name)
-- [User Avatar](#user-avatar)
+- [Features](#features)
+  - [User Display Name](#user-display-name)
+  - [User Avatar](#user-avatar)
 - [Extensions](#extensions)
   - [Liquid](#liquid)
   - [Users](#users)

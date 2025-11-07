@@ -5,7 +5,7 @@
   - [Model Context Protocol (MCP) Client Feature](#model-context-protocol-mcp-client-feature)
   - [Model Context Protocol (Local MCP) Client Feature](#model-context-protocol-local-mcp-client-feature)
   - [Admin Chat UI with Time MCP Server Integration](#admin-chat-ui-with-time-mcp-server-integration-mcp-demonstration)
-- [Explore More MCP Servers](#-explore-more-mcp-servers)
+- [Explore More MCP Servers](#explore-more-mcp-servers)
 
 # Model Context Protocol (MCP)
 
