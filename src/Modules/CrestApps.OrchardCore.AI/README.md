@@ -1,3 +1,30 @@
+## Table of Contents
+
+- [AI Services Feature](#ai-services-feature)
+  - [Configuration](#configuration)
+  - [Provider Configuration](#provider-configuration)
+  - [Microsoft.AI.Extensions](#microsoftaiextensions)
+  - [AI Deployments Feature](#ai-deployments-feature)
+  - [AI Chat Services Feature](#ai-chat-services-feature)
+  - [AI Chat WebAPI](#ai-chat-webapi)
+  - [AI Connection Management](#ai-connection-management)
+  - [AI Data Source Management](#ai-data-source-management)
+  - [Defining Chat Profiles Using Code](#defining-chat-profiles-using-code)
+- [AI Tool Management Feature](#ai-tool-management-feature)
+  - [Extending AI Chat with Custom Functions](#extending-ai-chat-with-custom-functions)
+  - [Using AI Tool Sources](#using-ai-tool-sources)
+  - [Configuring AI Profiles with Custom Functions](#configuring-ai-profiles-with-custom-functions)
+- [Adding Custom AI Profile Sources](#adding-custom-ai-profile-sources)
+  - [Implementing a Custom Completion Client](#implementing-a-custom-completion-client)
+  - [Supporting Multiple Deployments](#supporting-multiple-deployments)
+  - [Adding AI Profiles via Recipes](#adding-ai-profiles-via-recipes)
+  - [Deleting AI Deployments via Recipes](#deleting-ai-deployments-via-recipes)
+- [AI Chat with Workflows](#ai-chat-with-workflows)
+  - [AI Completion using Profile Task](#ai-completion-using-profile-task)
+  - [AI Completion using Direct Config Task](#ai-completion-using-direct-config-task)
+- [Deployments with AI Chat](#deployments-with-ai-chat)
+- [Compatibility](#compatibility)
+
 ## AI Services Feature
 
 The **AI Services** feature provides the foundational infrastructure for interacting with AI models through configurable profiles and service integrations.
