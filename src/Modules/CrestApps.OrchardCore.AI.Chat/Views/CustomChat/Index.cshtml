@@ -6,12 +6,7 @@
 @model ManageCustomChatInstancesViewModel
 
 @{
-    var title = Model.IsNew ? T["New Custom Chat"] : T["Custom Chat"];
-
-    if (!string.IsNullOrEmpty(Model.CurrentSession?.Title))
-    {
-        title = new LocalizedHtmlString(Model.CurrentSession.Title, Model.CurrentSession.Title);
-    }
+    var title = Model.IsNew ? T["New Custom Chat"] : new LocalizedHtmlString(Model.CurrentSession?.Title ?? "Custom Chat", Model.CurrentSession?.Title ?? "Custom Chat");
 }
 
 <zone Name="Title"><h1>@RenderTitleSegments(title)</h1></zone>
@@ -35,18 +30,7 @@
                         <a asp-action="Edit" asp-controller="CustomChat" asp-route-sessionId="@instance.SessionId"
                            class="list-group-item list-group-item-action @(isActive ? "active" : string.Empty)">
                             <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">
-
-                                    @if (!string.IsNullOrEmpty(instance.Title))
-                                    {
-                                        @instance.Title
-                                    }
-                                    else
-                                    {
-                                        @T["Untitled"]
-                                    }
-
-                                </h6>
+                                <h6 class="mb-1">@instance.Title</h6>
                             </div>
                             <small>@instance.CreatedUtc.ToLocalTime().ToString("g")</small>
                         </a>
@@ -74,22 +58,16 @@
                     <p class="text-muted">@T["Configure your custom AI chat instance with personalized settings."]</p>
 
                     <form asp-action="Save" asp-controller="CustomChat" method="post">
-                        @await Html.PartialAsync("_CustomChatConfiguration", new CustomChatInstanceViewModel
-                        {
-                            IsNew = true,
-                                        AllowCaching = Model.Configuration?.AllowCaching ?? false,
-                                        ConnectionNames = Model.Configuration?.ConnectionNames ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>(),
-                                        Deployments = Model.Configuration?.Deployments ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>()
-                                        })
+                        @await Html.PartialAsync("_CustomChatConfiguration", Model.Configuration)
 
-                    <div class="mb-3">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fa-solid fa-save"></i> @T["Create Instance"]
-                        </button>
-                        <a asp-action="Index" asp-controller="CustomChat" class="btn btn-secondary">@T["Cancel"]</a>
-                    </div>
-                </form>
-            </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa-solid fa-save"></i> @T["Create Instance"]
+                            </button>
+                            <a asp-action="Index" asp-controller="CustomChat" class="btn btn-secondary">@T["Cancel"]</a>
+                        </div>
+                    </form>
+                </div>
         </div>
                 }
         else if (Model.CurrentSession != null)
