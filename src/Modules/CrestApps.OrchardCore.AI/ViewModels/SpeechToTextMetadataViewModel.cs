@@ -9,6 +9,14 @@ public class SpeechToTextMetadataViewModel
 
     public string ServiceConnectionName { get; set; }
 
+    public string DeploymentId { get; set; }
+
+    [BindNever]
+    public string ProviderName { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> Connections { get; set; }
+
+    [BindNever]
+    public IEnumerable<SelectListItem> Deployments { get; set; }
 }

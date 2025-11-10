@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.ViewModels
 @using OrchardCore
 
@@ -23,14 +24,37 @@
     </div>
 </div>
 
+<div class="@Orchard.GetWrapperClasses()" id="speechToTextDeploymentContainer" style="display: none;">
+    <label asp-for="DeploymentId" class="@Orchard.GetLabelClasses()">@T["Deployment"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DeploymentId" class="form-select">
+            <option value="">@T["Default deployment"]</option>
+            @if (Model.Deployments != null)
+            {
+                foreach (var deployment in Model.Deployments)
+                {
+                    <option value="@deployment.Value">@deployment.Text</option>
+                }
+            }
+        </select>
+        <span class="hint">@T["The deployment to use for speech-to-text transcription."]</span>
+    </div>
+</div>
+
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
         const useMicrophoneCheckbox = document.getElementById('@Html.IdFor(x => x.UseMicrophone)');
         const speechToTextConnectionContainer = document.getElementById('speechToTextConnectionContainer');
+        const speechToTextDeploymentContainer = document.getElementById('speechToTextDeploymentContainer');
+        const connectionNameElement = document.getElementById('@Html.IdFor(x => x.ServiceConnectionName)');
+        const deploymentsElement = document.getElementById('@Html.IdFor(x => x.DeploymentId)');
+        const providerName = '@(Model.ProviderName)';
 
         function toggleSpeechToTextConnection() {
             if (useMicrophoneCheckbox && speechToTextConnectionContainer) {
-                speechToTextConnectionContainer.style.display = useMicrophoneCheckbox.checked ? 'block' : 'none';
+                const isChecked = useMicrophoneCheckbox.checked;
+                speechToTextConnectionContainer.style.display = isChecked ? 'block' : 'none';
+                speechToTextDeploymentContainer.style.display = isChecked && connectionNameElement.value ? 'block' : 'none';
             }
         }
 
@@ -38,6 +62,48 @@
             useMicrophoneCheckbox.addEventListener('change', toggleSpeechToTextConnection);
             // Initialize visibility on page load
             toggleSpeechToTextConnection();
+        }
+
+        if (connectionNameElement) {
+            connectionNameElement.addEventListener('change', async (e) => {
+                const selectedConnection = e.target.value;
+
+                // Remove only options that have a value
+                [...deploymentsElement.options].forEach(option => {
+                    if (option.value) {
+                        option.remove();
+                    }
+                });
+
+                if (!selectedConnection) {
+                    deploymentsElement.value = '';
+                    speechToTextDeploymentContainer.style.display = 'none';
+                    return;
+                }
+
+                speechToTextDeploymentContainer.style.display = 'block';
+
+                var url = '@(Url.RouteUrl(AIConstants.RouteNames.GetDeploymentsByConnectionRouteName))';
+                try {
+                    const response = await fetch(`${url}?providerName=${encodeURIComponent(providerName)}&connection=${encodeURIComponent(selectedConnection)}`);
+
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch deployments');
+                    }
+
+                    const deployments = await response.json();
+
+                    // Populate new options
+                    deployments.forEach(deployment => {
+                        let option = document.createElement('option');
+                        option.value = deployment.id;
+                        option.textContent = deployment.name;
+                        deploymentsElement.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Error fetching deployments:', error);
+                }
+            });
         }
     });
 </script>

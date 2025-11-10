@@ -11,4 +11,14 @@ public sealed class SpeechToTextMetadata
     /// Gets or sets the connection name for speech-to-text when microphone is enabled.
     /// </summary>
     public string ConnectionName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider name for speech-to-text connection.
+    /// </summary>
+    public string ProviderName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the deployment ID for speech-to-text when microphone is enabled.
+    /// </summary>
+    public string DeploymentId { get; set; }
 }

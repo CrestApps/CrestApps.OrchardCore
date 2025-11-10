@@ -126,15 +126,39 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
             model.UseMicrophone = speechToTextMetadata?.UseMicrophone ?? false;
             model.ServiceConnectionName = speechToTextMetadata?.ConnectionName;
+            model.DeploymentId = speechToTextMetadata?.DeploymentId;
 
-            if (_connectionOptions.Providers.TryGetValue(profile.Source, out var provider))
+            if (_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
             {
-                model.Connections = provider.Connections.Where(x => x.Value.GetConnectionType() == AIProviderConnectionType.SpeechToText)
-                    .Select(x => new SelectListItem(x.Value.TryGetValue("ConnectionNameAlias", out var a) ? a.ToString() : x.Key, x.Key));
+                model.ProviderName = profileSource.ProviderName;
+
+                if (_connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
+                {
+                    model.Connections = provider.Connections.Where(x => x.Value.GetConnectionType() == AIProviderConnectionType.SpeechToText)
+                        .Select(x => new SelectListItem(x.Value.TryGetValue("ConnectionNameAlias", out var a) ? a.ToString() : x.Key, x.Key));
+
+                    // Populate deployments if a connection is selected
+                    if (!string.IsNullOrEmpty(speechToTextMetadata?.ConnectionName) &&
+                        provider.Connections.TryGetValue(speechToTextMetadata.ConnectionName, out var connection))
+                    {
+                        var deployments = connection.GetStringValue("Deployments");
+                        if (!string.IsNullOrEmpty(deployments))
+                        {
+                            model.Deployments = deployments.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(d => new SelectListItem(d.Trim(), d.Trim()));
+                        }
+                    }
+                }
+                else
+                {
+                    model.Connections = [];
+                    model.Deployments = [];
+                }
             }
             else
             {
                 model.Connections = [];
+                model.Deployments = [];
             }
         }).Location("Content:7");
 
@@ -277,8 +301,15 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         var speechToTextMetadata = new SpeechToTextMetadata
         {
             UseMicrophone = speechToTextModel.UseMicrophone,
-            ConnectionName = speechToTextModel.ServiceConnectionName
+            ConnectionName = speechToTextModel.ServiceConnectionName,
+            DeploymentId = speechToTextModel.DeploymentId
         };
+
+        // ProviderName will be set by the connection handler during initialization
+        if (_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
+        {
+            speechToTextMetadata.ProviderName = profileSource.ProviderName;
+        }
 
         profile.Put(speechToTextMetadata);
 
