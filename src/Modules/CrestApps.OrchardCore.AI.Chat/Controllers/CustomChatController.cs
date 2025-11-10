@@ -29,7 +29,6 @@ public sealed class CustomChatController : Controller
     private readonly DefaultAIOptions _defaultAIOptions;
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly INotifier _notifier;
-    private readonly IShapeFactory _shapeFactory;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -44,7 +43,6 @@ public sealed class CustomChatController : Controller
         IOptions<DefaultAIOptions> defaultAIOptions,
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         INotifier notifier,
-        IShapeFactory shapeFactory,
         IHtmlLocalizer<CustomChatController> htmlLocalizer,
         IStringLocalizer<CustomChatController> stringLocalizer
         )
@@ -58,7 +56,6 @@ public sealed class CustomChatController : Controller
         _defaultAIOptions = defaultAIOptions.Value;
         _toolDefinitions = toolDefinitions.Value;
         _notifier = notifier;
-        _shapeFactory = shapeFactory;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -97,7 +94,7 @@ public sealed class CustomChatController : Controller
         return View(model);
     }
 
-    [Admin("ai/custom-chat/{sessionId}", "CustomChatEdit")]
+    [Admin("ai/custom-chat/edit/{sessionId}", "CustomChatEdit")]
     public async Task<IActionResult> Edit(string sessionId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageCustomChatInstances))
@@ -138,7 +135,7 @@ public sealed class CustomChatController : Controller
 
         var configuration = BuildConfigurationViewModel(session, metadata);
 
-        // Build chat content using the display manager
+        // Build chat content using the display manager.
         var chatContent = await _sessionDisplayManager.BuildEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: false);
 
         var model = new ManageCustomChatInstancesViewModel
@@ -147,7 +144,7 @@ public sealed class CustomChatController : Controller
             Configuration = configuration,
             ChatContent = chatContent,
             Instances = customInstances,
-            IsNew = false
+            IsNew = false,
         };
 
         return View("Index", model);
@@ -175,7 +172,7 @@ public sealed class CustomChatController : Controller
 
         if (string.IsNullOrEmpty(model.SessionId))
         {
-            // Create new instance
+            // Create new instance.
             session = new AIChatSession
             {
                 SessionId = Guid.NewGuid().ToString("N"),
@@ -197,7 +194,7 @@ public sealed class CustomChatController : Controller
             session.Title = model.Title;
         }
 
-        // Store configuration as metadata
+        // Store configuration as metadata.
         var metadata = new AIChatInstanceMetadata
         {
             IsCustomInstance = true,
@@ -316,7 +313,7 @@ public sealed class CustomChatController : Controller
             AllowCaching = _defaultAIOptions.EnableDistributedCaching,
             IsNew = true,
             // Set default provider
-            ProviderName = _connectionOptions.Providers.Keys.FirstOrDefault()
+            ProviderName = _connectionOptions.Providers.Keys.FirstOrDefault(),
         };
 
         // Populate connections
@@ -336,7 +333,7 @@ public sealed class CustomChatController : Controller
                 // Populate deployments for the default connection
                 if (provider.Connections.First().Value.TryGetValue("Deployments", out var deploymentsObj) && deploymentsObj is IDictionary<string, object> deployments)
                 {
-                    model.Deployments = deployments.Select(d => new SelectListItem(d.Value.ToString(), d.Key)).ToList();
+                    model.Deployments = deployments.Select(d => new SelectListItem(d.Value.ToString(), d.Key)).ToArray();
                 }
             }
         }
@@ -382,7 +379,7 @@ public sealed class CustomChatController : Controller
             UseCaching = metadata.UseCaching,
             ProviderName = metadata.ProviderName,
             AllowCaching = _defaultAIOptions.EnableDistributedCaching,
-            IsNew = false
+            IsNew = false,
         };
 
         // Set default provider if not set

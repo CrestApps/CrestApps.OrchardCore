@@ -6,7 +6,9 @@
 @model ManageCustomChatInstancesViewModel
 
 @{
-    var title = Model.IsNew ? T["New Custom Chat"] : new LocalizedHtmlString(Model.CurrentSession?.Title ?? "Custom Chat", Model.CurrentSession?.Title ?? "Custom Chat");
+    var title = Model.IsNew
+        ? T["New Custom Chat"].Value
+        : Model.CurrentSession?.Title ?? T["Custom Chat"].Value;
 }
 
 <zone Name="Title"><h1>@RenderTitleSegments(title)</h1></zone>
@@ -22,7 +24,7 @@
                 </a>
             </div>
             <div class="list-group list-group-flush">
-                @if (Model.Instances.Any())
+                @if (Model.Instances.Count > 0)
                 {
                     foreach (var instance in Model.Instances)
                     {
@@ -68,8 +70,8 @@
                         </div>
                     </form>
                 </div>
-        </div>
-                }
+            </div>
+        }
         else if (Model.CurrentSession != null)
         {
             <!-- Tabs for existing instance -->
