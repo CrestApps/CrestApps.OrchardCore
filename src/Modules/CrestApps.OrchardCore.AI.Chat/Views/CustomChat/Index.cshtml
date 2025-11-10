@@ -1,11 +1,17 @@
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
 @using CrestApps.OrchardCore.AI.Models
+@using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.Entities
 
 @model ManageCustomChatInstancesViewModel
 
 @{
-    var title = Model.IsNew ? T["New Custom Chat"] : (Model.CurrentSession?.Title ?? T["Custom Chat"]);
+    var title = Model.IsNew ? T["New Custom Chat"] : T["Custom Chat"];
+
+    if (!string.IsNullOrEmpty(Model.CurrentSession?.Title))
+    {
+        title = new LocalizedHtmlString(Model.CurrentSession.Title, Model.CurrentSession.Title);
+    }
 }
 
 <zone Name="Title"><h1>@RenderTitleSegments(title)</h1></zone>
@@ -27,9 +33,20 @@
                     {
                         var isActive = !Model.IsNew && Model.CurrentSession?.SessionId == instance.SessionId;
                         <a asp-action="Edit" asp-controller="CustomChat" asp-route-sessionId="@instance.SessionId"
-                           class="list-group-item list-group-item-action @(isActive ? "active" : "")">
+                           class="list-group-item list-group-item-action @(isActive ? "active" : string.Empty)">
                             <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">@(instance.Title ?? T["Untitled"])</h6>
+                                <h6 class="mb-1">
+
+                                    @if (!string.IsNullOrEmpty(instance.Title))
+                                    {
+                                        @instance.Title
+                                    }
+                                    else
+                                    {
+                                        @T["Untitled"]
+                                    }
+
+                                </h6>
                             </div>
                             <small>@instance.CreatedUtc.ToLocalTime().ToString("g")</small>
                         </a>
@@ -60,21 +77,21 @@
                         @await Html.PartialAsync("_CustomChatConfiguration", new CustomChatInstanceViewModel
                         {
                             IsNew = true,
-                            AllowCaching = Model.Configuration?.AllowCaching ?? false,
-                            ConnectionNames = Model.Configuration?.ConnectionNames ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>(),
-                            Deployments = Model.Configuration?.Deployments ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>()
-                        })
+                                        AllowCaching = Model.Configuration?.AllowCaching ?? false,
+                                        ConnectionNames = Model.Configuration?.ConnectionNames ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>(),
+                                        Deployments = Model.Configuration?.Deployments ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>()
+                                        })
 
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fa-solid fa-save"></i> @T["Create Instance"]
-                            </button>
-                            <a asp-action="Index" asp-controller="CustomChat" class="btn btn-secondary">@T["Cancel"]</a>
-                        </div>
-                    </form>
-                </div>
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-save"></i> @T["Create Instance"]
+                        </button>
+                        <a asp-action="Index" asp-controller="CustomChat" class="btn btn-secondary">@T["Cancel"]</a>
+                    </div>
+                </form>
             </div>
-        }
+        </div>
+                }
         else if (Model.CurrentSession != null)
         {
             <!-- Tabs for existing instance -->

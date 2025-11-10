@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -137,7 +136,7 @@ public sealed class CustomChatController : Controller
             .Where(s => s.As<AIChatInstanceMetadata>()?.IsCustomInstance == true)
             .ToList();
 
-        var configuration = await BuildConfigurationViewModelAsync(session, metadata);
+        var configuration = BuildConfigurationViewModel(session, metadata);
 
         // Build chat content using the display manager
         var chatContent = await _sessionDisplayManager.BuildEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: false);
@@ -315,11 +314,10 @@ public sealed class CustomChatController : Controller
             PastMessagesCount = _defaultAIOptions.PastMessagesCount,
             UseCaching = true,
             AllowCaching = _defaultAIOptions.EnableDistributedCaching,
-            IsNew = true
+            IsNew = true,
+            // Set default provider
+            ProviderName = _connectionOptions.Providers.Keys.FirstOrDefault()
         };
-
-        // Set default provider
-        model.ProviderName = _connectionOptions.Providers.Keys.FirstOrDefault();
 
         // Populate connections
         if (!string.IsNullOrEmpty(model.ProviderName) && _connectionOptions.Providers.TryGetValue(model.ProviderName, out var provider))
@@ -366,7 +364,7 @@ public sealed class CustomChatController : Controller
         return await Task.FromResult(model);
     }
 
-    private async Task<CustomChatInstanceViewModel> BuildConfigurationViewModelAsync(AIChatSession session, AIChatInstanceMetadata metadata)
+    private CustomChatInstanceViewModel BuildConfigurationViewModel(AIChatSession session, AIChatInstanceMetadata metadata)
     {
         var model = new CustomChatInstanceViewModel
         {
@@ -450,7 +448,7 @@ public sealed class CustomChatController : Controller
         }
 
         // Try to find a matching profile source for this provider
-        var matchingSource = _aiOptions.ProfileSources.FirstOrDefault(ps => 
+        var matchingSource = _aiOptions.ProfileSources.FirstOrDefault(ps =>
             ps.Value.ProviderName.Equals(providerName, StringComparison.OrdinalIgnoreCase));
 
         return matchingSource.Key ?? providerName;
