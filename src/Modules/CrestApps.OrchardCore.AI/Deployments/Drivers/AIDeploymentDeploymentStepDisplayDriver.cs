@@ -12,15 +12,15 @@ namespace CrestApps.OrchardCore.AI.Deployments.Drivers;
 
 internal sealed class AIDeploymentDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, AIDeploymentDeploymentStep>
 {
-    private readonly INamedCatalog<AIProfile> _profilesCatalog;
+    private readonly INamedCatalog<AIDeployment> _deploymentCatalog;
 
     internal readonly IStringLocalizer S;
 
     public AIDeploymentDeploymentStepDisplayDriver(
-        INamedCatalog<AIProfile> profilesCatalog,
+        INamedCatalog<AIDeployment> deploymentCatalog,
         IStringLocalizer<AIProfileDeploymentStepDisplayDriver> stringLocalizer)
     {
-        _profilesCatalog = profilesCatalog;
+        _deploymentCatalog = deploymentCatalog;
         S = stringLocalizer;
     }
 
@@ -39,7 +39,7 @@ internal sealed class AIDeploymentDeploymentStepDisplayDriver : DisplayDriver<De
         {
             model.IncludeAll = step.IncludeAll;
             model.DeploymentNames = step.DeploymentNames;
-            model.AllDeploymentName = (await _profilesCatalog.GetAllAsync()).Select(d => d.Name).Order().ToArray();
+            model.AllDeploymentName = (await _deploymentCatalog.GetAllAsync()).Select(d => d.Name).Order().ToArray();
         }).Location("Content");
     }
 
