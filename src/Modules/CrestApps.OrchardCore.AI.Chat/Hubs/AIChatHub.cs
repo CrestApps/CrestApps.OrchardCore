@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Entities;
 using OrchardCore.Liquid;
@@ -27,6 +28,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly ISession _session;
     private readonly IAICompletionService _completionService;
+    private readonly IAIClientFactory _clientFactory;
+    private readonly AIProviderOptions _aiProviderOptions;
     private readonly IAICompletionContextBuilder _aICompletionContextBuilder;
     private readonly ILogger<AIChatHub> _logger;
 
@@ -39,6 +42,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
         ILiquidTemplateManager liquidTemplateManager,
         ISession session,
         IAICompletionService completionService,
+        IAIClientFactory clientFactory,
+        IOptions<AIProviderOptions> aiProviderOptions,
         IAICompletionContextBuilder aICompletionContextBuilder,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
@@ -49,9 +54,17 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _liquidTemplateManager = liquidTemplateManager;
         _session = session;
         _completionService = completionService;
+        _clientFactory = clientFactory;
+        _aiProviderOptions = aiProviderOptions.Value;
         _aICompletionContextBuilder = aICompletionContextBuilder;
         _logger = logger;
         S = stringLocalizer;
+    }
+
+    public sealed class TranscriptResponse
+    {
+        public string Transcript { get; set; }
+        public string SessionId { get; set; }
     }
 
     public ChannelReader<CompletionPartialMessage> SendMessage(string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
@@ -69,7 +82,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         if (string.IsNullOrWhiteSpace(sessionId))
         {
-            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionId)].Value);
+            await Clients.Caller.ReceiveError(S[$"{0} is required.", nameof(sessionId)].Value);
 
             return;
         }
@@ -121,13 +134,156 @@ public class AIChatHub : Hub<IAIChatHubClient>
         });
     }
 
+    // Accept a client-to-server streamed parameter of base64-encoded audio chunks
+    public async Task SendAudioChunk(string profileId, string sessionId, IAsyncEnumerable<string> stream)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(profileId))
+            {
+                return;
+            }
+
+            if (stream == null)
+            {
+                return;
+            }
+
+            var profile = await _profileManager.FindByIdAsync(profileId);
+
+            if (profile is null)
+            {
+                return;
+            }
+
+            var httpContext = Context.GetHttpContext();
+
+            if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+            {
+                return;
+            }
+
+            // Get the speech-to-text client using the dedicated connection from profile metadata
+            var speechToTextMetadata = profile.As<SpeechToTextMetadata>();
+            var speechToTextConnection = speechToTextMetadata?.ConnectionName ?? profile.ConnectionName;
+
+#pragma warning disable MEAI001
+            ISpeechToTextClient speechToTextClient;
+#pragma warning restore MEAI001
+            try
+            {
+                if (!_aiProviderOptions.Providers.TryGetValue(profile.Source, out var provider))
+                {
+                    _logger.LogWarning("AI provider '{ProviderName}' not found", profile.Source);
+                    return;
+                }
+
+                if (!provider.Connections.TryGetValue(speechToTextConnection, out var connection))
+                {
+                    _logger.LogWarning("Speech-to-text connection '{ConnectionName}' not found for provider '{ProviderName}'", speechToTextConnection, profile.Source);
+                    return;
+                }
+
+                speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, speechToTextConnection, connection.GetDefaultDeploymentName() ?? connection.GetDefaultSpeechToTextDeploymentName());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to create speech-to-text client for chunk");
+                return;
+            }
+
+            try
+            {
+                // Accumulate the streamed base64 chunks into a single audio stream
+                using var audioStream = new MemoryStream();
+                long totalBytes = 0;
+
+                await foreach (var base64 in stream.WithCancellation(Context.ConnectionAborted))
+                {
+                    if (string.IsNullOrWhiteSpace(base64))
+                    {
+                        continue;
+                    }
+
+                    byte[] bytes;
+                    try
+                    {
+                        bytes = Convert.FromBase64String(base64);
+                    }
+                    catch (FormatException)
+                    {
+                        // Ignore malformed chunk
+                        continue;
+                    }
+
+                    totalBytes += bytes.Length;
+
+                    await audioStream.WriteAsync(bytes, Context.ConnectionAborted);
+                }
+
+                audioStream.Position = 0;
+
+                var builder = new StringBuilder();
+                var messageId = IdGenerator.GenerateId();
+
+                AIChatSession chatSession = null;
+                var isNewSession = false;
+
+                if (!string.IsNullOrWhiteSpace(sessionId))
+                {
+                    chatSession = await _sessionManager.FindAsync(sessionId);
+                }
+
+                if (chatSession is null)
+                {
+                    chatSession = await _sessionManager.NewAsync(profile, new NewAIChatSessionContext());
+                    isNewSession = true;
+                }
+
+                await foreach (var update in speechToTextClient.GetStreamingTextAsync(audioStream, cancellationToken: Context.ConnectionAborted))
+                {
+                    if (update is not null && !string.IsNullOrEmpty(update.Text))
+                    {
+                        builder.Append(update.Text);
+                        // Optionally stream partial transcript to caller here
+                    }
+                }
+
+                var transcribedText = builder.ToString().Trim() ?? string.Empty;
+
+                chatSession.Prompts.Add(new AIChatSessionPrompt
+                {
+                    Id = messageId,
+                    Role = ChatRole.User,
+                    Content = transcribedText,
+                });
+
+                if (isNewSession)
+                {
+                    await SetTitleAync(profile, chatSession, transcribedText);
+                }
+
+                await _sessionManager.SaveAsync(chatSession);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error transcribing audio chunk");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing audio chunk");
+        }
+    }
+
     private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(profileId))
             {
-                await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionId)].Value);
+                await Clients.Caller.ReceiveError(S[$"{0} is required.", nameof(sessionId)].Value);
 
                 return;
             }
@@ -248,10 +404,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         // Authentication errors.
         if (message.Contains("401", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("403", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("unauthorized", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("invalid api key", StringComparison.OrdinalIgnoreCase) ||
-            ex.GetType().Name.Contains("Authentication", StringComparison.OrdinalIgnoreCase))
+        message.Contains("403", StringComparison.OrdinalIgnoreCase) ||
+        message.Contains("unauthorized", StringComparison.OrdinalIgnoreCase) ||
+        message.Contains("invalid api key", StringComparison.OrdinalIgnoreCase) ||
+        ex.GetType().Name.Contains("Authentication", StringComparison.OrdinalIgnoreCase))
         {
             return S["Authentication failed. Please check your API credentials."];
         }
@@ -309,6 +465,13 @@ public class AIChatHub : Hub<IAIChatHubClient>
         // At this point, we need to create a new session.
         var chatSession = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
 
+        await SetTitleAync(profile, chatSession, userPrompt);
+
+        return (chatSession, true);
+    }
+
+    private async Task SetTitleAync(AIProfile profile, AIChatSession chatSession, string userPrompt)
+    {
         if (profile.TitleType == AISessionTitleType.Generated)
         {
             var profileClone = profile.Clone();
@@ -339,8 +502,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
         {
             chatSession.Title = Str.Truncate(userPrompt, 255);
         }
-
-        return (chatSession, true);
     }
 
     private async Task ProcessChatPromptAsync(ChannelWriter<CompletionPartialMessage> writer, AIProfile profile, string sessionId, string prompt, CancellationToken cancellationToken)
