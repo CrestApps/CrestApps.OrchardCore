@@ -313,15 +313,20 @@ public class AIChatHub : Hub<IAIChatHubClient>
         {
             var profileClone = profile.Clone();
 
-            profileClone.Alter<AIProfileMetadata>(m =>
-            {
-                m.SystemMessage = null;
-                m.MaxTokens = 64; // 64 token to generate about 255 characters.
-            });
-
             var context = await _aICompletionContextBuilder.BuildAsync(profileClone, c =>
             {
                 c.SystemMessage = AIConstants.TitleGeneratorSystemMessage;
+                c.FrequencyPenalty = 0;
+                c.PresencePenalty = 0;
+                c.TopP = 1;
+                c.Temperature = 0;
+                c.MaxTokens = 64; // 64 token to generate about 255 characters.
+                c.UserMarkdownInResponse = false;
+
+                // Avoid using tools or any data sources when generating title to reduce the used tokens.
+                c.DataSourceId = null;
+                c.DataSourceType = null;
+                c.DisableTools = true;
             });
 
             var titleResponse = await _completionService.CompleteAsync(profile.Source,
