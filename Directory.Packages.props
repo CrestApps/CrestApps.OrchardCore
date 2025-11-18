@@ -88,9 +88,10 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Aspire Packages -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.1" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.2" />
+    <PackageVersion Include="Aspire.Hosting.Azure.AIFoundry" Version="9.5.2-preview.1.25522.3" />
     <PackageVersion Include="Aspire.Hosting.Elasticsearch" Version="9.5.0" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="9.5.1" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="9.5.2" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="9.8.0" />
   </ItemGroup>
 </Project>
