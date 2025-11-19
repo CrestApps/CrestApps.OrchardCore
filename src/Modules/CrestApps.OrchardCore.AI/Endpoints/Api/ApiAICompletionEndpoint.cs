@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
-using OrchardCore.Entities;
 using OrchardCore.Liquid;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Api;
@@ -214,30 +213,8 @@ internal static class ApiAICompletionEndpoint
 
         if (profile.TitleType == AISessionTitleType.Generated)
         {
-            var transcription = new List<ChatMessage>
-            {
-                new (ChatRole.User, userPrompt),
-            };
-
-            var profileClone = profile.Clone();
-
-            profileClone.Alter<AIProfileMetadata>(m =>
-            {
-                m.SystemMessage = null;
-                m.MaxTokens = 64; // 64 token to generate about 255 characters.
-            });
-
-            var context = await completionContextBuilder.BuildAsync(profileClone, c =>
-            {
-                c.SystemMessage = AIConstants.TitleGeneratorSystemMessage;
-            });
-
-            var titleResponse = await completionService.CompleteAsync(profile.Source, transcription, context);
-
             // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
-            chatSession.Title = titleResponse.Messages.Count > 0
-                ? Str.Truncate(titleResponse.Messages.First().Text, 255)
-                : Str.Truncate(userPrompt, 255);
+            chatSession.Title = await GetGeneratedTitleAsync(profile, userPrompt, completionService, completionContextBuilder);
         }
 
         if (string.IsNullOrEmpty(chatSession.Title))
@@ -246,6 +223,39 @@ internal static class ApiAICompletionEndpoint
         }
 
         return (chatSession, true);
+    }
+
+    private static async Task<string> GetGeneratedTitleAsync(
+        AIProfile profile,
+        string userPrompt,
+        IAICompletionService completionService,
+       IAICompletionContextBuilder completionContextBuilder)
+    {
+        var context = await completionContextBuilder.BuildAsync(profile, c =>
+        {
+            c.SystemMessage = AIConstants.TitleGeneratorSystemMessage;
+            c.FrequencyPenalty = 0;
+            c.PresencePenalty = 0;
+            c.TopP = 1;
+            c.Temperature = 0;
+            c.MaxTokens = 64; // 64 token to generate about 255 characters.
+            c.UserMarkdownInResponse = false;
+
+            // Avoid using tools or any data sources when generating title to reduce the used tokens.
+            c.DataSourceId = null;
+            c.DataSourceType = null;
+            c.DisableTools = true;
+        });
+
+        var titleResponse = await completionService.CompleteAsync(profile.Source,
+        [
+            new (ChatRole.User, userPrompt),
+        ], context);
+
+        // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
+        return titleResponse.Messages.Count > 0
+            ? Str.Truncate(titleResponse.Messages.First().Text, 255)
+            : Str.Truncate(userPrompt, 255);
     }
 
     private static async Task<IResult> GetUtilityMessageAsync(IAICompletionService completionService, AIProfile profile, string prompt, IAICompletionContextBuilder completionContextBuilder)
