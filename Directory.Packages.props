@@ -88,6 +88,7 @@
   <ItemGroup>
     <!-- Aspire Packages -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Azure.AIFoundry" Version="13.0.0-preview.1.25560.3" />
     <PackageVersion Include="Aspire.Hosting.Elasticsearch" Version="13.0.0" />
     <PackageVersion Include="Aspire.Hosting.Redis" Version="13.0.0" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="9.9.0" />
