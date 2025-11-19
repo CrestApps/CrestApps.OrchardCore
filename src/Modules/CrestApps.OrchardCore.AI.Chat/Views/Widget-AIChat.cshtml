@@ -8,6 +8,7 @@
 @using OrchardCore.Environment.Shell
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.OrchardCore.Services
+@using OrchardCore.Entities
 
 @inject INamedCatalog<AIProfile> ProfileCatalog
 @inject IAuthorizationService AuthorizationService
@@ -38,6 +39,9 @@
     var hubLink = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
     var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
     var promptGeneratedProfiles = await ProfileCatalog.GetAsync(AIProfileType.TemplatePrompt);
+
+    var speechToTextMetadata = profile.As<SpeechToTextMetadata>();
+    var showMicrophone = speechToTextMetadata?.UseMicrophone ?? false;
 
     var baseId = $"Widget_{contentItem.ContentItemId}";
     var chatAppHtmlId = $"{baseId}_ChatApp";
@@ -127,6 +131,12 @@
                 </div>
 
                 <div>
+                    @if (showMicrophone)
+                    {
+                        <button class="btn btn-outline-secondary rounded-circle me-2 microphone-button" type="button" id="@(baseId)_MicrophoneButton" title="@T["Record voice message"]">
+                            <i class="fa-solid fa-microphone"></i>
+                        </button>
+                    }
                     <button class="btn btn-dark rounded-circle" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                         <i class="fa-solid fa-arrow-up"></i>
                     </button>
@@ -160,6 +170,10 @@
         chatContainerElementSelector: '#@chatContainerHtmlId',
         inputElementSelector: '#@userPromptHtmlId',
         sendButtonElementSelector: '#@buttonHtmlId',
+        @if (showMicrophone)
+        {
+                                    <text>microphoneButtonElementSelector: '#@(baseId)_MicrophoneButton',</text>
+        }
         placeholderElementSelector: '#@placeholderHtmlId',
         messages: [],
         messageTemplate: `
@@ -268,4 +282,22 @@
             .navbar .button-group button {
                 margin-left: 0.5rem; /* Add space between buttons */
             }
+
+    .microphone-button {
+        transition: all 0.3s ease;
+    }
+
+        .microphone-button.btn-danger {
+            animation: pulse-red 1.5s infinite;
+        }
+
+    @@keyframes pulse-red {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+        }
+
+        50% {
+            box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+        }
+    }
 </style>

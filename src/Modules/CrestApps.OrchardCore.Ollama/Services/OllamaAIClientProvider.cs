@@ -20,4 +20,11 @@ public sealed class OllamaAIClientProvider : AIClientProviderBase
     {
         return new OllamaApiClient(connection.GetEndpoint(), deploymentName);
     }
+
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    protected override ISpeechToTextClient GetSpeechToTextClient(AIProviderConnectionEntry connection, string deploymentName)
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    {
+        throw new NotSupportedException("Ollama does not currently support speech-to-text functionality.");
+    }
 }
