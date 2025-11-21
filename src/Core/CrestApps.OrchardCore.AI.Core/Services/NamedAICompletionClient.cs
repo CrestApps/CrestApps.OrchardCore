@@ -229,6 +229,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             builder.UseOpenTelemetry(LoggerFactory, sourceName: DefaultLogCategory, ConfigureOpenTelemetry);
         }
 
+
         return builder.Build();
     }
 }

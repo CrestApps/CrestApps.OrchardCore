@@ -1,19 +1,19 @@
 using System.Text;
-using Azure.AI.OpenAI.Chat;
+using System.Text.Json;
 using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.OpenAI.Core.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OpenAI.Chat;
 using OrchardCore.Contents.Indexing;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Search.Elasticsearch;
 using OrchardCore.Search.Elasticsearch.Core.Models;
 
-namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch.Handlers;
+namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 
-public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourceHandler
+public sealed class ElasticsearchAICompletionServiceHandler : IAICompletionServiceHandler
 {
     private const string _titleFieldName = ContentIndexingConstants.DisplayTextKey + ".keyword";
 
@@ -22,10 +22,10 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
     private readonly ILogger _logger;
     private readonly IAIDataSourceManager _aIDataSourceManager;
 
-    public ElasticsearchOpenAIDataSourceHandler(
+    public ElasticsearchAICompletionServiceHandler(
         IIndexProfileStore indexProfileStore,
         IOptions<ElasticsearchConnectionOptions> elasticsearchOptions,
-        ILogger<ElasticsearchOpenAIDataSourceHandler> logger,
+        ILogger<ElasticsearchAICompletionServiceHandler> logger,
         IAIDataSourceManager aIDataSourceManager)
     {
         _indexProfileStore = indexProfileStore;
@@ -34,12 +34,14 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
         _aIDataSourceManager = aIDataSourceManager;
     }
 
-    public bool CanHandle(string type)
-        => string.Equals(type, AzureOpenAIConstants.DataSourceTypes.Elasticsearch, StringComparison.Ordinal);
-
-    public async ValueTask ConfigureSourceAsync(ChatCompletionOptions options, AzureOpenAIDataSourceContext context)
+    public async Task ConfigureAsync(CompletionServiceConfigureContext context)
     {
-        var dataSource = await _aIDataSourceManager.FindByIdAsync(context.DataSourceId);
+        if (context.CompletionContext.DataSourceType != ElasticsearchConstants.ProviderName)
+        {
+            return;
+        }
+
+        var dataSource = await _aIDataSourceManager.FindByIdAsync(context.CompletionContext.DataSourceId);
 
         if (dataSource is null)
         {
@@ -51,7 +53,7 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
             return;
         }
 
-        if (!dataSource.TryGet<AzureAIProfileElasticsearchMetadata>(out var dataSourceMetadata))
+        if (!dataSource.TryGet<OpenAIProfileElasticsearchMetadata>(out var dataSourceMetadata))
         {
             return;
         }
@@ -75,40 +77,71 @@ public sealed class ElasticsearchOpenAIDataSourceHandler : IAzureOpenAIDataSourc
             uri = new Uri(_elasticsearchOptions.Url);
         }
 
-#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        DataSourceAuthentication credentials;
+        context.ChatOptions.AdditionalProperties ??= [];
+
+        var newDataSource = new
+        {
+            type = "elasticsearch",
+            parameters = new Dictionary<string, object>
+            {
+                ["endpoint"] = uri,
+                ["index_name"] = indexProfile.IndexFullName,
+                ["strictness"] = dataSourceMetadata.Strictness ?? 3,
+                ["top_n"] = dataSourceMetadata.TopNDocuments ?? 5,
+                ["query_type"] = "simple",
+                ["semantic_configuration"] = "default",
+                ["in_scope"] = true,
+                ["output_contexts"] = "citations",
+                ["field_mappings"] = new
+                {
+                    title_field_name = _titleFieldName,
+                    file_path_field_name = ContentIndexingConstants.ContentItemIdKey,
+                    content_field_separator = Environment.NewLine,
+                },
+            },
+        };
 
         if (_elasticsearchOptions.AuthenticationType == ElasticsearchAuthenticationType.KeyIdAndKey)
         {
-            credentials = DataSourceAuthentication.FromKeyAndKeyId(_elasticsearchOptions.Key, _elasticsearchOptions.KeyId);
+            newDataSource.parameters["authentication"] = new
+            {
+                type = "KeyAndKeyId",
+                key = _elasticsearchOptions.Key,
+                key_id = _elasticsearchOptions.KeyId,
+            };
         }
         else if (_elasticsearchOptions.AuthenticationType == ElasticsearchAuthenticationType.Base64ApiKey)
         {
-            credentials = DataSourceAuthentication.FromEncodedApiKey(_elasticsearchOptions.Base64ApiKey);
+            newDataSource.parameters["authentication"] = new
+            {
+                type = "EncodedApiKey",
+                encoded_api_key = _elasticsearchOptions.Base64ApiKey
+            };
+        }
+        else if (_elasticsearchOptions.AuthenticationType == ElasticsearchAuthenticationType.ApiKey)
+        {
+            newDataSource.parameters["api_key"] = _elasticsearchOptions.ApiKey;
         }
         else
         {
-            throw new InvalidOperationException($"The '{_elasticsearchOptions.AuthenticationType}' is not supported as Authentication type for Elasticsearch AI Data Source. Only '{ElasticsearchAuthenticationType.KeyIdAndKey}' and '{ElasticsearchAuthenticationType.Base64ApiKey}' are supported.");
+            throw new InvalidOperationException($"The '{_elasticsearchOptions.AuthenticationType}' is not supported as Authentication type for Elasticsearch AI Data Source. Only '{ElasticsearchAuthenticationType.ApiKey}', '{ElasticsearchAuthenticationType.KeyIdAndKey}' and '{ElasticsearchAuthenticationType.Base64ApiKey}' are supported.");
         }
 
-        options.AddDataSource(new ElasticsearchChatDataSource()
+        List<object> dataSources = [];
+
+        if (context.ChatOptions.AdditionalProperties.TryGetValue("data_sources", out var existing))
         {
-            Endpoint = uri,
-            IndexName = indexProfile.IndexFullName,
-            Authentication = credentials,
-            Strictness = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
-            QueryType = DataSourceQueryType.Simple,
-            InScope = true,
-            OutputContexts = DataSourceOutputContexts.Citations,
-            FieldMappings = new DataSourceFieldMappings()
+            var existingSources = JsonSerializer.Deserialize<List<object>>(existing.ToString() ?? "[]");
+
+            if (existingSources != null)
             {
-                TitleFieldName = _titleFieldName,
-                FilePathFieldName = ContentIndexingConstants.ContentItemIdKey,
-                ContentFieldSeparator = Environment.NewLine,
-            },
-        });
-#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+                dataSources.AddRange(existingSources);
+            }
+        }
+
+        dataSources.Add(newDataSource);
+
+        context.ChatOptions.AdditionalProperties["data_sources"] = BinaryData.FromObjectAsJson(dataSources);
     }
 
     /// <summary>

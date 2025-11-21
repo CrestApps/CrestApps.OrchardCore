@@ -66,8 +66,7 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Microsoft Packages -->
-    <PackageVersion Include="Azure.AI.OpenAI" Version="2.5.0-beta.1" />
-    <PackageVersion Include="Azure.Identity" Version="1.17.0" />
+    <PackageVersion Include="Azure.Identity" Version="1.17.1" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.0.0" />

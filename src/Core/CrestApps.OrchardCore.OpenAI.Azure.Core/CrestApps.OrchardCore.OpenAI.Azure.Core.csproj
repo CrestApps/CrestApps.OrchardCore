@@ -11,8 +11,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Elasticsearch\Handlers\MongoDBOpenAIDataSourceHandler.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Azure.Identity" />
-    <PackageReference Include="Azure.AI.OpenAI" />
     <PackageReference Include="OrchardCore.Data.Abstractions" />
     <PackageReference Include="OrchardCore.Search.AzureAI.Core" />
     <PackageReference Include="Microsoft.Extensions.AI" />

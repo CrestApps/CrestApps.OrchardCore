@@ -26,6 +26,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IAICompletionServiceHandler, AzureAISearchAICompletionServiceHandler>();
         services
             .AddScoped<IAIClientProvider, AzureOpenAIClientProvider>()
             .AddAIDeploymentProvider(AzureOpenAIConstants.ProviderName, o =>
@@ -117,7 +118,7 @@ public sealed class AISearchStartup : StartupBase
         services.AddScoped<ICatalogEntryHandler<AIDataSource>, AzureAISearchAIDataSourceHandler>();
 
         services
-            .AddScoped<IAzureOpenAIDataSourceHandler, AzureAISearchOpenAIDataSourceHandler>()
+            // .AddScoped<IAzureOpenAIDataSourceHandler, AzureAISearchOpenAIDataSourceHandler>()
             .AddAIDataSource(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.AzureAISearch, o =>
             {
                 o.DisplayName = S["Azure OpenAI with Azure AI Search"];
@@ -142,7 +143,7 @@ public sealed class ElasticsearchStartup : StartupBase
         services.AddScoped<ICatalogEntryHandler<AIDataSource>, ElasticsearchAIDataSourceHandler>();
 
         services
-            .AddScoped<IAzureOpenAIDataSourceHandler, ElasticsearchOpenAIDataSourceHandler>()
+            // .AddScoped<IAzureOpenAIDataSourceHandler, ElasticsearchOpenAIDataSourceHandler>()
             .AddAIDataSource(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.Elasticsearch, o =>
             {
                 o.DisplayName = S["Azure OpenAI with Elasticsearch"];
@@ -167,7 +168,7 @@ public sealed class MongoDBStartup : StartupBase
         services.AddScoped<ICatalogEntryHandler<AIDataSource>, MongoDbAIProfileHandler>();
 
         services
-            .AddScoped<IAzureOpenAIDataSourceHandler, MongoDBOpenAIDataSourceHandler>()
+            // .AddScoped<IAzureOpenAIDataSourceHandler, MongoDBOpenAIDataSourceHandler>()
             .AddAIDataSource(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.MongoDB, o =>
             {
                 o.DisplayName = S["Azure OpenAI with Mongo DB"];
