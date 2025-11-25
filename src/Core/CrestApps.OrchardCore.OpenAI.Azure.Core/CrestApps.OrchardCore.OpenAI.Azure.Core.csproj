@@ -12,7 +12,6 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" />
-    <PackageReference Include="Azure.AI.OpenAI" />
     <PackageReference Include="OrchardCore.Data.Abstractions" />
     <PackageReference Include="OrchardCore.Search.AzureAI.Core" />
     <PackageReference Include="Microsoft.Extensions.AI" />
@@ -24,6 +23,7 @@
     <ProjectReference Include="..\CrestApps.Azure.Core\CrestApps.Azure.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.AI.Mcp.Core\CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.OpenAI.Core\CrestApps.OrchardCore.OpenAI.Core.csproj" />
   </ItemGroup>
 
 </Project>

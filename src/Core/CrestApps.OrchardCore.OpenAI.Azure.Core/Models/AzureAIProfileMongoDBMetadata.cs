@@ -15,4 +15,6 @@ public sealed class AzureAIProfileMongoDBMetadata
     public string AppName { get; set; }
 
     public string CollectionName { get; set; }
+
+    public string DatabaseName { get; set; }
 }
