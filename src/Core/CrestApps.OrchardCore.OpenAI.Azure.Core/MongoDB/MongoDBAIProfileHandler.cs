@@ -3,22 +3,22 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDB;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 
-namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch.Handlers;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDb;
 
-public sealed class MongoDbAIProfileHandler : CatalogEntryHandlerBase<AIDataSource>
+public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSource>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
 
-    public MongoDbAIProfileHandler(
+    public MongoDBAIProfileHandler(
         IDataProtectionProvider dataProtectionProvider,
-        IStringLocalizer<MongoDbAIProfileHandler> stringLocalizer)
+        IStringLocalizer<MongoDBAIProfileHandler> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
         S = stringLocalizer;

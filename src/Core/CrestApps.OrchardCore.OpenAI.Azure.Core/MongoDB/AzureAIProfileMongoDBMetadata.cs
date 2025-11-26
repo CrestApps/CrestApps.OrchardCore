@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDB;
 
 public sealed class AzureAIProfileMongoDBMetadata
 {

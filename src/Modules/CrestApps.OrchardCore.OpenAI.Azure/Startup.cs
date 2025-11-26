@@ -2,8 +2,9 @@ using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch.Handlers;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDb;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 using CrestApps.OrchardCore.OpenAI.Azure.Handlers;
@@ -166,10 +167,10 @@ public sealed class MongoDBStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<AIDataSource, AzureOpenAIMongoDBDataSourceDisplayDriver>();
-        services.AddScoped<ICatalogEntryHandler<AIDataSource>, MongoDbAIProfileHandler>();
+        services.AddScoped<ICatalogEntryHandler<AIDataSource>, MongoDBAIProfileHandler>();
 
         services
-            .AddScoped<IOpenAIChatOptionsConfiguration, MongoDBOpenAIChatOptionsConfiguration>()
+            .AddScoped<IOpenAIChatOptionsConfiguration, MongoDbOpenAIChatOptionsConfiguration>()
             .AddAIDataSource(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.MongoDB, o =>
             {
                 o.DisplayName = S["Azure OpenAI with Mongo DB"];

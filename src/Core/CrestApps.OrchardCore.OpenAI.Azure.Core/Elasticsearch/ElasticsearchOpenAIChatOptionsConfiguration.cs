@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.AzureAISearch;
 using CrestApps.OrchardCore.OpenAI.Core;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
@@ -13,7 +13,7 @@ using OrchardCore.Indexing.Models;
 using OrchardCore.Search.Elasticsearch;
 using OrchardCore.Search.Elasticsearch.Core.Models;
 
-namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch.Handlers;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch;
 
 public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOptionsConfiguration
 {
