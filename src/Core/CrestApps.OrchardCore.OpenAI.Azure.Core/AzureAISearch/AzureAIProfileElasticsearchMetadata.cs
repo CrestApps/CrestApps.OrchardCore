@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Core.AzureAISearch;
 
 public sealed class AzureAIProfileElasticsearchMetadata
 {
