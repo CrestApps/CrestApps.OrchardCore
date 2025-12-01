@@ -72,6 +72,14 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
     {
     }
 
+    protected virtual void ProcessChatResponseUpdate(ChatResponseUpdate update, IEnumerable<ChatMessage> prompts)
+    {
+    }
+
+    protected virtual void ProcessChatResponse(ChatResponse response, IEnumerable<ChatMessage> prompts)
+    {
+    }
+
     public async Task<ChatResponse> CompleteAsync(IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
@@ -108,7 +116,11 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
             var prompts = GetPrompts(messages, context);
 
-            return await chatClient.GetResponseAsync(prompts, chatOptions, cancellationToken);
+            var response = await chatClient.GetResponseAsync(prompts, chatOptions, cancellationToken);
+
+            ProcessChatResponse(response, prompts);
+
+            return response;
         }
         catch (Exception ex)
         {
@@ -154,6 +166,8 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         await foreach (var update in chatClient.GetStreamingResponseAsync(prompts, chatOptions, cancellationToken))
         {
+            ProcessChatResponseUpdate(update, prompts);
+
             yield return update;
         }
     }

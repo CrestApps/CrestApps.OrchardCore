@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.AzureAISearch;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 

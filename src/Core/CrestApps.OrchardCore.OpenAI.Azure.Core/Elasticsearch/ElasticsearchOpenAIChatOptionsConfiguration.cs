@@ -2,7 +2,6 @@ using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.AzureAISearch;
 using CrestApps.OrchardCore.OpenAI.Core;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;

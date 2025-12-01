@@ -170,7 +170,7 @@ public sealed class MongoDBStartup : StartupBase
         services.AddScoped<ICatalogEntryHandler<AIDataSource>, MongoDBAIProfileHandler>();
 
         services
-            .AddScoped<IOpenAIChatOptionsConfiguration, MongoDbOpenAIChatOptionsConfiguration>()
+            .AddScoped<IOpenAIChatOptionsConfiguration, MongoDBOpenAIChatOptionsConfiguration>()
             .AddAIDataSource(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.MongoDB, o =>
             {
                 o.DisplayName = S["Azure OpenAI with Mongo DB"];

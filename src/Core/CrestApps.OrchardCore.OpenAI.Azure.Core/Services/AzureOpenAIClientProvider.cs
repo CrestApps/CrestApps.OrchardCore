@@ -26,7 +26,7 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
 
     protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, string deploymentName)
     {
-        var endpoint = new Uri($"{connection.GetEndpoint()}openai/deployments/{deploymentName}/?api-version=2025-01-01-preview");
+        var endpoint = new Uri($"{connection.GetEndpoint()}openai/deployments/{deploymentName}?api-version=2025-01-01-preview");
 
         return GetClient(connection, endpoint)
             .GetChatClient(deploymentName)
