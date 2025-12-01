@@ -2,11 +2,10 @@ using System.ComponentModel.DataAnnotations;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 
-namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch.Handlers;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch;
 
 public sealed class ElasticsearchAIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
 {
