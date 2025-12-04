@@ -5,8 +5,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 const string elasticsearchSecret = "CrestApps!2023";
 const string ollamaModelName = "deepseek-v2:16b";
-var foundryModelName = AIFoundryModel.Microsoft.Phi4MiniInstruct;
-const string foundryModelId = "Phi-3.5-mini-instruct-cuda-gpu:1";
+var foundryModel = AIFoundryModel.Local.Phi4Mini;
 
 var enableOllama = builder.Configuration.GetValue("Aspire:EnableOllama", true);
 var enableFoundry = builder.Configuration.GetValue("Aspire:EnableFoundry", true); ;
@@ -60,7 +59,7 @@ if (enableFoundry)
         .WithEndpoint(63455)
         .RunAsFoundryLocal();
 
-    var chat = foundry.AddDeployment("chat", foundryModelName);
+    var chat = foundry.AddDeployment("chat", foundryModel);
 
     resources
         .WithReference(foundry)
@@ -91,10 +90,19 @@ resources
         if (foundry is not null)
         {
             // Foundry
-            options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__OpenAI__DefaultConnectionName", "FoundryLocal");
-            options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__OpenAI__DefaultDeploymentName", foundryModelId);
-            options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__OpenAI__Connections__FoundryLocal__Endpoint", "http://localhost:63455");
-            options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__OpenAI__Connections__FoundryLocal__DefaultDeploymentName", foundryModelId);
+            options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__DefaultConnectionName", "FoundryLocal");
+            options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__DefaultDeploymentName", foundryModel.Name);
+            if (foundry.Resource.TryGetUrls(out var urls) && urls.Any())
+            {
+                options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__Connections__FoundryLocal__Endpoint", urls.First());
+            }
+            else
+            {
+                options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__Connections__FoundryLocal__Endpoint", "http://localhost:63455");
+            }
+            options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__Connections__FoundryLocal__AuthenticationType", "ApiKey");
+            options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__Connections__FoundryLocal__ApiKey", foundry.Resource.ApiKey);
+            options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__Connections__FoundryLocal__DefaultDeploymentName", foundryModel.Name);
         }
 
         if (ollama is not null)
