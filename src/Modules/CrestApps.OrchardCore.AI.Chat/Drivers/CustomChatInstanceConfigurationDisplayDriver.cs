@@ -169,6 +169,7 @@ public sealed class CustomChatInstanceConfigurationDisplayDriver : DisplayDriver
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Title), S["Title is required."]);
         }
 
+
         session.Title = model.Title;
 
         // Store configuration as metadata
