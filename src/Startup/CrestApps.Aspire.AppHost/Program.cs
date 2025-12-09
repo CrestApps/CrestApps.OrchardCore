@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Aspire.Hosting.Azure;
 using Microsoft.Extensions.Configuration;
 
@@ -56,7 +57,7 @@ if (enableFoundry)
 {
     foundry = builder
         .AddAzureAIFoundry("Foundry")
-        .WithEndpoint(63455)
+        .WithEndpoint(63455, 63455)
         .RunAsFoundryLocal();
 
     var chat = foundry.AddDeployment("chat", foundryModel);
@@ -73,6 +74,7 @@ resources
     .WithReference(redis)
     .WithReference(ollama)
     .WithReference(elasticsearch)
+    .WithReference(foundry)
     .WaitFor(redis)
     .WithHttpsEndpoint(5001, name: "HttpsOrchardCore")
     .WithEnvironment(options =>
@@ -87,19 +89,23 @@ resources
         options.EnvironmentVariables.Add("OrchardCore__OrchardCore_Elasticsearch__Password", elasticsearchSecret);
         options.EnvironmentVariables.Add("OrchardCore__OrchardCore_Elasticsearch__Ports__0", "9200");
 
-        if (foundry is not null)
+        if (foundry is not null && options.EnvironmentVariables.TryGetValue("ConnectionStrings__Foundry", out var cs))
         {
             // Foundry
+            var foundryConnectionString = cs as ConnectionStringReference;
+
+            if (foundryConnectionString?.Resource is AzureAIFoundryResource r && r.ConnectionStringExpression?.ValueExpression is not null)
+            {
+                var connectionBuilder = new DbConnectionStringBuilder()
+                {
+                    ConnectionString = r.ConnectionStringExpression.ValueExpression,
+                };
+
+                options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__Connections__FoundryLocal__Endpoint", connectionBuilder["Endpoint"]);
+            }
+
             options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__DefaultConnectionName", "FoundryLocal");
             options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__DefaultDeploymentName", foundryModel.Name);
-            if (foundry.Resource.TryGetUrls(out var urls) && urls.Any())
-            {
-                options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__Connections__FoundryLocal__Endpoint", urls.First());
-            }
-            else
-            {
-                options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__Connections__FoundryLocal__Endpoint", "http://localhost:63455");
-            }
             options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__Connections__FoundryLocal__AuthenticationType", "ApiKey");
             options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__Connections__FoundryLocal__ApiKey", foundry.Resource.ApiKey);
             options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__AzureAIInference__Connections__FoundryLocal__DefaultDeploymentName", foundryModel.Name);
