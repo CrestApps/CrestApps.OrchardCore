@@ -45,6 +45,7 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
             model.Strictness = metadata.Strictness;
             model.TopNDocuments = metadata.TopNDocuments;
             model.IndexName = metadata.IndexName;
+            model.DatabaseName = metadata.DatabaseName;
         }).Location("Content:3");
     }
 
@@ -110,7 +111,7 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
         metadata.Strictness = model.Strictness;
         metadata.TopNDocuments = model.TopNDocuments;
         metadata.Authentication.Username = model.Username;
-
+        metadata.DatabaseName = model.DatabaseName;
         dataSource.Put(metadata);
 
         return Edit(dataSource, context);

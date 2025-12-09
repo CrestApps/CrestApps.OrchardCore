@@ -111,6 +111,13 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
             metadata.IndexName = indexName;
         }
 
+        var datbaseName = metadataNode[nameof(metadata.DatabaseName)]?.GetValue<string>();
+
+        if (!string.IsNullOrEmpty(datbaseName))
+        {
+            metadata.DatabaseName = datbaseName;
+        }
+
         var collectionName = metadataNode[nameof(metadata.CollectionName)]?.GetValue<string>();
 
         if (!string.IsNullOrEmpty(collectionName))

@@ -21,6 +21,14 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DatabaseName" class="@Orchard.GetLabelClasses()">@T["Database name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" class="form-control" asp-for="DatabaseName" />
+        <span class="hint">@T["The Mongo DB database name."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
     <label asp-for="CollectionName" class="@Orchard.GetLabelClasses()">@T["Collection name"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="text" class="form-control" asp-for="CollectionName" />
