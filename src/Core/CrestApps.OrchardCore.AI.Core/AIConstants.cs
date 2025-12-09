@@ -4,9 +4,10 @@ public static class AIConstants
 {
     public const string TitleGeneratorSystemMessage =
     """
-    - Generate a short topic title about the user prompt.
-    - Response using title case.
-    - Response must be under 255 characters in length.
+    - Create a concise title that reflects the main topic of the user's prompt.
+    - Use Title Case.
+    - Do not use markdown, symbols, or decorative formatting.
+    - Keep the title under 255 characters.
     """;
 
     public const string DefaultBlankMessage = "AI drew blank and no message was generated!";
