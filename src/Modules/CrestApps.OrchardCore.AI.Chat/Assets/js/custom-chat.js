@@ -155,6 +155,15 @@ window.customChatManager = function () {
                     this.inputElement.value = '';
                     this.prompt = '';
                 },
+                getMessageHistory() {
+                    // Get previous messages for context (excluding indicator messages)
+                    return this.messages
+                        .filter(msg => msg.role !== 'indicator')
+                        .map(msg => ({
+                            role: msg.role,
+                            content: msg.content
+                        }));
+                },
                 streamMessage(trimmedPrompt) {
 
                     if (this.stream) {
@@ -170,7 +179,10 @@ window.customChatManager = function () {
 
                     var messageIndex = this.messages.length;
 
-                    this.stream = this.connection.stream("SendCustomChatMessage", config.instanceId, trimmedPrompt)
+                    // Get the message history before the current message was added
+                    var history = this.getMessageHistory();
+
+                    this.stream = this.connection.stream("SendCustomChatMessage", config.instanceId, trimmedPrompt, history)
                         .subscribe({
                             next: (chunk) => {
                                 let message = this.messages[messageIndex];

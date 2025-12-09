@@ -555,16 +555,16 @@ public class AIChatHub : Hub<IAIChatHubClient>
         }
     }
 
-    public ChannelReader<CompletionPartialMessage> SendCustomChatMessage(string instanceId, string prompt, CancellationToken cancellationToken)
+    public ChannelReader<CompletionPartialMessage> SendCustomChatMessage(string instanceId, string prompt, IEnumerable<ChatMessageEntry> history, CancellationToken cancellationToken)
     {
         var channel = Channel.CreateUnbounded<CompletionPartialMessage>();
 
-        _ = HandleCustomChatPromptAsync(channel.Writer, instanceId, prompt, cancellationToken);
+        _ = HandleCustomChatPromptAsync(channel.Writer, instanceId, prompt, history, cancellationToken);
 
         return channel.Reader;
     }
 
-    private async Task HandleCustomChatPromptAsync(ChannelWriter<CompletionPartialMessage> writer, string instanceId, string prompt, CancellationToken cancellationToken)
+    private async Task HandleCustomChatPromptAsync(ChannelWriter<CompletionPartialMessage> writer, string instanceId, string prompt, IEnumerable<ChatMessageEntry> history, CancellationToken cancellationToken)
     {
         try
         {
@@ -596,7 +596,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 return;
             }
 
-            await ProcessCustomChatPromptAsync(writer, instance, prompt.Trim(), cancellationToken);
+            await ProcessCustomChatPromptAsync(writer, instance, prompt.Trim(), history, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -616,7 +616,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         }
     }
 
-    private async Task ProcessCustomChatPromptAsync(ChannelWriter<CompletionPartialMessage> writer, AICustomChatInstance instance, string prompt, CancellationToken cancellationToken)
+    private async Task ProcessCustomChatPromptAsync(ChannelWriter<CompletionPartialMessage> writer, AICustomChatInstance instance, string prompt, IEnumerable<ChatMessageEntry> history, CancellationToken cancellationToken)
     {
         var messageId = IdGenerator.GenerateId();
 
@@ -639,7 +639,25 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         var builder = new StringBuilder();
 
-        await foreach (var chunk in _completionService.CompleteStreamingAsync(instance.Source, [new ChatMessage(ChatRole.User, prompt)], completionContext, cancellationToken))
+        // Build the transcript from history and current prompt
+        var transcript = new List<ChatMessage>();
+
+        if (history != null)
+        {
+            var pastMessagesCount = instance.PastMessagesCount ?? 10;
+            var recentHistory = history.TakeLast(pastMessagesCount);
+
+            foreach (var entry in recentHistory)
+            {
+                var role = entry.Role?.ToLowerInvariant() == "user" ? ChatRole.User : ChatRole.Assistant;
+                transcript.Add(new ChatMessage(role, entry.Content ?? string.Empty));
+            }
+        }
+
+        // Add the current prompt
+        transcript.Add(new ChatMessage(ChatRole.User, prompt));
+
+        await foreach (var chunk in _completionService.CompleteStreamingAsync(instance.Source, transcript, completionContext, cancellationToken))
         {
             if (chunk.AdditionalProperties is not null)
             {

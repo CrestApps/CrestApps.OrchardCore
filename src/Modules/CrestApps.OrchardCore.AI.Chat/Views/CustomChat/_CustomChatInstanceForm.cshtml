@@ -6,7 +6,7 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="Title" class="@Orchard.GetLabelClasses()">@T["Title"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <input type="text" class="form-control" asp-for="Title" required />
+        <input type="text" class="form-control" asp-for="Title" />
         <span asp-validation-for="Title" class="text-danger"></span>
         <span class="hint">@T["A descriptive title for this chat instance."]</span>
     </div>

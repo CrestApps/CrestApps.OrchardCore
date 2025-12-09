@@ -152,6 +152,17 @@ window.customChatManager = function () {
           this.inputElement.value = '';
           this.prompt = '';
         },
+        getMessageHistory: function getMessageHistory() {
+          // Get previous messages for context (excluding indicator messages)
+          return this.messages.filter(function (msg) {
+            return msg.role !== 'indicator';
+          }).map(function (msg) {
+            return {
+              role: msg.role,
+              content: msg.content
+            };
+          });
+        },
         streamMessage: function streamMessage(trimmedPrompt) {
           var _this3 = this;
           if (this.stream) {
@@ -163,7 +174,10 @@ window.customChatManager = function () {
           var content = '';
           var references = {};
           var messageIndex = this.messages.length;
-          this.stream = this.connection.stream("SendCustomChatMessage", config.instanceId, trimmedPrompt).subscribe({
+
+          // Get the message history before the current message was added
+          var history = this.getMessageHistory();
+          this.stream = this.connection.stream("SendCustomChatMessage", config.instanceId, trimmedPrompt, history).subscribe({
             next: function next(chunk) {
               var message = _this3.messages[messageIndex];
               if (!message) {

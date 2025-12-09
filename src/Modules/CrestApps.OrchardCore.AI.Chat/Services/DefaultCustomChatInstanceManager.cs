@@ -59,6 +59,11 @@ public sealed class DefaultCustomChatInstanceManager : ICustomChatInstanceManage
 
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
+        if (string.IsNullOrEmpty(userId))
+        {
+            return null;
+        }
+
         return await _session.Query<AICustomChatInstance, AICustomChatInstanceIndex>(
             i => i.InstanceId == instanceId && i.UserId == userId,
             collection: AICustomChatConstants.CollectionName)
@@ -75,6 +80,11 @@ public sealed class DefaultCustomChatInstanceManager : ICustomChatInstanceManage
         }
 
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return [];
+        }
 
         return await _session.Query<AICustomChatInstance, AICustomChatInstanceIndex>(
             i => i.UserId == userId,
