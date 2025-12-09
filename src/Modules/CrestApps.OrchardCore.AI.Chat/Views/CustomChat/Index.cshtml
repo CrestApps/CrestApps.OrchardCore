@@ -1,0 +1,160 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.OrchardCore.AI.Chat.Models
+
+@model CustomChatIndexViewModel
+
+@{
+    var activeInstance = ViewData["ActiveInstance"] as AICustomChatInstance;
+    var baseId = Html.IdForModel();
+}
+
+<zone Name="Title">
+    <h1>@T["Custom AI Chat"]</h1>
+</zone>
+
+<zone Name="Actions">
+    <a class="btn btn-primary" asp-action="Create">
+        <i class="fa-solid fa-plus"></i> @T["New Instance"]
+    </a>
+</zone>
+
+<div class="d-flex flex-row h-100">
+    @* Left sidebar - Instance list *@
+    <div class="d-none d-md-block flex-shrink-0 bg-theme p-2 border rounded me-3" style="width: 18rem; height: calc(100vh - 2rem - var(--oc-top-nav-height, 0)); overflow-y:auto">
+        <div class="list-group">
+            @if (Model.Instances.Count == 0)
+            {
+                <div class="text-center p-3">
+                    <p class="text-muted">@T["No custom chat instances yet."]</p>
+                    <a class="btn btn-sm btn-outline-primary" asp-action="Create">
+                        <i class="fa-solid fa-plus"></i> @T["Create One"]
+                    </a>
+                </div>
+            }
+            else
+            {
+                @foreach (var instance in Model.Instances)
+                {
+                    var isActive = instance.InstanceId == Model.ActiveInstanceId;
+                    <a asp-action="Index" asp-route-instanceId="@instance.InstanceId"
+                       class="list-group-item list-group-item-action @(isActive ? "active" : "")">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1 text-truncate">@(string.IsNullOrEmpty(instance.Title) ? T["Untitled"] : instance.Title)</h6>
+                        </div>
+                        <small class="@(isActive ? "text-light" : "text-muted")">@instance.CreatedUtc.ToString("g")</small>
+                    </a>
+                }
+            }
+        </div>
+    </div>
+
+    @* Main content area with tabs *@
+    <div class="d-flex flex-column h-100 flex-grow-1">
+        @if (activeInstance != null)
+        {
+            <ul class="nav nav-tabs mb-3" id="customChatTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings-pane" type="button" role="tab" aria-controls="settings-pane" aria-selected="false">
+                        <i class="fa-solid fa-cog"></i> @T["Settings"]
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat-pane" type="button" role="tab" aria-controls="chat-pane" aria-selected="true">
+                        <i class="fa-solid fa-comments"></i> @T["Chat"]
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content flex-grow-1" id="customChatTabContent">
+                @* Settings tab *@
+                <div class="tab-pane fade" id="settings-pane" role="tabpanel" aria-labelledby="settings-tab">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">@T["Instance Settings"]</h5>
+                            <div>
+                                <a class="btn btn-primary btn-sm" asp-action="Edit" asp-route-instanceId="@activeInstance.InstanceId">
+                                    <i class="fa-solid fa-edit"></i> @T["Edit"]
+                                </a>
+                                <form asp-action="Delete" asp-route-instanceId="@activeInstance.InstanceId" method="post" class="d-inline" onsubmit="return confirm('@T["Are you sure you want to delete this instance?"]');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="fa-solid fa-trash"></i> @T["Delete"]
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-3">@T["Title"]</dt>
+                                <dd class="col-sm-9">@(string.IsNullOrEmpty(activeInstance.Title) ? T["Not set"] : activeInstance.Title)</dd>
+
+                                <dt class="col-sm-3">@T["Connection"]</dt>
+                                <dd class="col-sm-9">@(string.IsNullOrEmpty(activeInstance.ConnectionName) ? T["Default"] : activeInstance.ConnectionName)</dd>
+
+                                <dt class="col-sm-3">@T["Deployment"]</dt>
+                                <dd class="col-sm-9">@(string.IsNullOrEmpty(activeInstance.DeploymentId) ? T["Default"] : activeInstance.DeploymentId)</dd>
+
+                                <dt class="col-sm-3">@T["System Instructions"]</dt>
+                                <dd class="col-sm-9">@(string.IsNullOrEmpty(activeInstance.SystemMessage) ? T["Not set"] : activeInstance.SystemMessage)</dd>
+
+                                <dt class="col-sm-3">@T["Max Response"]</dt>
+                                <dd class="col-sm-9">@(activeInstance.MaxTokens?.ToString() ?? T["Default"].Value)</dd>
+
+                                <dt class="col-sm-3">@T["Temperature"]</dt>
+                                <dd class="col-sm-9">@(activeInstance.Temperature?.ToString() ?? T["Default"].Value)</dd>
+
+                                <dt class="col-sm-3">@T["Top P"]</dt>
+                                <dd class="col-sm-9">@(activeInstance.TopP?.ToString() ?? T["Default"].Value)</dd>
+
+                                <dt class="col-sm-3">@T["Frequency Penalty"]</dt>
+                                <dd class="col-sm-9">@(activeInstance.FrequencyPenalty?.ToString() ?? T["Default"].Value)</dd>
+
+                                <dt class="col-sm-3">@T["Presence Penalty"]</dt>
+                                <dd class="col-sm-9">@(activeInstance.PresencePenalty?.ToString() ?? T["Default"].Value)</dd>
+
+                                <dt class="col-sm-3">@T["Past Messages"]</dt>
+                                <dd class="col-sm-9">@(activeInstance.PastMessagesCount?.ToString() ?? T["Default"].Value)</dd>
+
+                                <dt class="col-sm-3">@T["Tools"]</dt>
+                                <dd class="col-sm-9">
+                                    @if (activeInstance.ToolNames?.Count > 0)
+                                    {
+                                        @string.Join(", ", activeInstance.ToolNames)
+                                    }
+                                    else
+                                    {
+                                        @T["None selected"]
+                                    }
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+
+                @* Chat tab *@
+                <div class="tab-pane fade show active h-100" id="chat-pane" role="tabpanel" aria-labelledby="chat-tab">
+                    @await Html.PartialAsync("CustomChatSession", activeInstance)
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="text-center p-5">
+                <h3>@T["Welcome to Custom AI Chat"]</h3>
+                <p class="text-muted">@T["Create a custom chat instance to get started."]</p>
+                <a class="btn btn-primary" asp-action="Create">
+                    <i class="fa-solid fa-plus"></i> @T["Create Instance"]
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<style at="Head">
+    .ta-content {
+        height: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        padding-bottom: 0 !important;
+    }
+</style>

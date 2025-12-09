@@ -1,0 +1,63 @@
+@using CrestApps.OrchardCore.AI.Chat.Hubs
+@using CrestApps.OrchardCore.AI.Chat.Models
+@using CrestApps.OrchardCore.SignalR.Core.Services
+@using System.Text.Json
+
+@model AICustomChatInstance
+
+@inject HubRouteManager HubRouteManager
+@{
+    var baseId = $"CustomChat_{Model.InstanceId}";
+    var chatAppHtmlId = $"{baseId}_ChatApp";
+    var buttonHtmlId = $"{baseId}_SendButton";
+    var userPromptHtmlId = $"{baseId}_UserPrompt";
+    var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
+    var chatContainerHtmlId = $"{baseId}_ChatContainer";
+}
+
+<div class="mb-3 mx-3 p-3 overflow-y-auto h-100 rounded-2 border bg-theme" id="@chatContainerHtmlId" style="min-height: 400px;">
+    <div class="list-group list-group-flush w-100">
+        <div id="@placeholderHtmlId" class="text-center p-3">
+            <h1 class="mb-3">@T["What do you want to know?"]</h1>
+        </div>
+        <div id="@chatAppHtmlId"></div>
+    </div>
+</div>
+
+<div class="container-fluid mb-3">
+    <div class="text-bg-light rounded-5 border w-100">
+        <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4"
+                  id="@userPromptHtmlId"
+                  data-instance-id="@Model.InstanceId"
+                  placeholder="@T["Message AI Chat"] ..."
+                  aria-label="@T["Message AI Chat"]"
+                  aria-describedby="@buttonHtmlId"></textarea>
+
+        <div class="d-flex justify-content-end px-3 my-2">
+            <button class="btn btn-dark rounded-circle" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                <i class="fa-solid fa-arrow-up"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script asp-name="CustomChatApp" at="Foot"></script>
+<script at="Foot" depends-on="CustomChatApp">
+    customChatManager.initialize({
+        signalRHubUrl: '@(HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext))',
+        appElementSelector: '#@chatAppHtmlId',
+        chatContainerElementSelector: '#@chatContainerHtmlId',
+        inputElementSelector: '#@userPromptHtmlId',
+        sendButtonElementSelector: '#@buttonHtmlId',
+        placeholderElementSelector: '#@placeholderHtmlId',
+        instanceId: '@Model.InstanceId',
+        messages: []
+    });
+</script>
+
+<style at="Head">
+    .chat-user-prompt-input:focus {
+        border: none;
+        box-shadow: none;
+    }
+</style>

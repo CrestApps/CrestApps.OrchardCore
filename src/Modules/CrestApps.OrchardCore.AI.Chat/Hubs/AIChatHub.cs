@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Models;
+using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
@@ -23,6 +24,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly IAuthorizationService _authorizationService;
     private readonly IAIProfileManager _profileManager;
     private readonly IAIChatSessionManager _sessionManager;
+    private readonly ICustomChatInstanceManager _customChatInstanceManager;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly ISession _session;
     private readonly IAICompletionService _completionService;
@@ -35,6 +37,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         IAuthorizationService authorizationService,
         IAIProfileManager profileManager,
         IAIChatSessionManager sessionManager,
+        ICustomChatInstanceManager customChatInstanceManager,
         ILiquidTemplateManager liquidTemplateManager,
         ISession session,
         IAICompletionService completionService,
@@ -45,6 +48,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _authorizationService = authorizationService;
         _profileManager = profileManager;
         _sessionManager = sessionManager;
+        _customChatInstanceManager = customChatInstanceManager;
         _liquidTemplateManager = liquidTemplateManager;
         _session = session;
         _completionService = completionService;
@@ -539,6 +543,121 @@ public class AIChatHub : Hub<IAIChatHubClient>
             {
                 continue;
             }
+
+            var partialMessage = new CompletionPartialMessage
+            {
+                MessageId = messageId,
+                Content = chunk.Text,
+                References = references,
+            };
+
+            await writer.WriteAsync(partialMessage, cancellationToken);
+        }
+    }
+
+    public ChannelReader<CompletionPartialMessage> SendCustomChatMessage(string instanceId, string prompt, CancellationToken cancellationToken)
+    {
+        var channel = Channel.CreateUnbounded<CompletionPartialMessage>();
+
+        _ = HandleCustomChatPromptAsync(channel.Writer, instanceId, prompt, cancellationToken);
+
+        return channel.Reader;
+    }
+
+    private async Task HandleCustomChatPromptAsync(ChannelWriter<CompletionPartialMessage> writer, string instanceId, string prompt, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(instanceId))
+            {
+                await Clients.Caller.ReceiveError(S["{0} is required.", nameof(instanceId)].Value);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                await Clients.Caller.ReceiveError(S["{0} is required.", nameof(prompt)].Value);
+                return;
+            }
+
+            var httpContext = Context.GetHttpContext();
+
+            if (!await _authorizationService.AuthorizeAsync(httpContext.User, AICustomChatPermissions.ManageOwnCustomChatInstances))
+            {
+                await Clients.Caller.ReceiveError(S["You are not authorized to use custom chat instances."].Value);
+                return;
+            }
+
+            var instance = await _customChatInstanceManager.FindByIdAsync(instanceId);
+
+            if (instance == null)
+            {
+                await Clients.Caller.ReceiveError(S["Custom chat instance not found."].Value);
+                return;
+            }
+
+            await ProcessCustomChatPromptAsync(writer, instance, prompt.Trim(), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while processing the custom chat prompt.");
+
+            var errorMessage = new CompletionPartialMessage
+            {
+                MessageId = IdGenerator.GenerateId(),
+                Content = GetFriendlyErrorMessage(ex).Value,
+            };
+
+            await writer.WriteAsync(errorMessage, cancellationToken);
+        }
+        finally
+        {
+            writer.Complete();
+        }
+    }
+
+    private async Task ProcessCustomChatPromptAsync(ChannelWriter<CompletionPartialMessage> writer, AICustomChatInstance instance, string prompt, CancellationToken cancellationToken)
+    {
+        var messageId = IdGenerator.GenerateId();
+
+        var completionContext = new AICompletionContext
+        {
+            ConnectionName = instance.ConnectionName,
+            DeploymentId = instance.DeploymentId,
+            SystemMessage = instance.SystemMessage,
+            Temperature = instance.Temperature,
+            TopP = instance.TopP,
+            FrequencyPenalty = instance.FrequencyPenalty,
+            PresencePenalty = instance.PresencePenalty,
+            MaxTokens = instance.MaxTokens,
+            PastMessagesCount = instance.PastMessagesCount,
+            ToolNames = instance.ToolNames?.ToArray(),
+            UserMarkdownInResponse = true,
+        };
+
+        var references = new Dictionary<string, AICompletionReference>();
+
+        var builder = new StringBuilder();
+
+        await foreach (var chunk in _completionService.CompleteStreamingAsync(instance.Source, [new ChatMessage(ChatRole.User, prompt)], completionContext, cancellationToken))
+        {
+            if (chunk.AdditionalProperties is not null)
+            {
+                if (chunk.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
+                {
+                    foreach (var (key, value) in referenceItems)
+                    {
+                        references[key] = value;
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(chunk.Text))
+            {
+                continue;
+            }
+
+            builder.Append(chunk.Text);
 
             var partialMessage = new CompletionPartialMessage
             {

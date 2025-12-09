@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Chat.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
+using CrestApps.OrchardCore.AI.Chat.Indexes;
 using CrestApps.OrchardCore.AI.Chat.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.Services;
@@ -12,12 +13,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
+using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.AI.Chat;
 
@@ -27,12 +30,19 @@ public sealed class Startup : StartupBase
     {
         services
             .AddPermissionProvider<ChatSessionPermissionProvider>()
+            .AddPermissionProvider<CustomChatPermissionProvider>()
             .AddDisplayDriver<AIChatSessionListOptions, AIChatSessionListOptionsDisplayDriver>()
             .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileMenuDisplayDriver>()
             .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatAdminMenu>()
-            .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>();
+            .AddNavigationProvider<CustomChatAdminMenu>()
+            .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
+            .AddScoped<ICustomChatInstanceManager, DefaultCustomChatInstanceManager>()
+            .AddIndexProvider<AICustomChatInstanceIndexProvider>()
+            .AddDataMigration<AICustomChatInstanceMigrations>();
+
+        services.Configure<StoreCollectionOptions>(o => o.Collections.Add(AICustomChatConstants.CollectionName));
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

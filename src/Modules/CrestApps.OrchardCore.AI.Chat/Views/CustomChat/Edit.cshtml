@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+
+@model CustomChatInstanceViewModel
+
+<zone Name="Title">
+    <h1>@T["Edit Custom Chat Instance"]</h1>
+</zone>
+
+<form asp-action="Edit" asp-route-instanceId="@Model.InstanceId" method="post">
+    @await Html.PartialAsync("_CustomChatInstanceForm", Model)
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-save"></i> @T["Save"]
+        </button>
+        <a asp-action="Index" asp-route-instanceId="@Model.InstanceId" class="btn btn-secondary">
+            <i class="fa-solid fa-times"></i> @T["Cancel"]
+        </a>
+    </div>
+</form>

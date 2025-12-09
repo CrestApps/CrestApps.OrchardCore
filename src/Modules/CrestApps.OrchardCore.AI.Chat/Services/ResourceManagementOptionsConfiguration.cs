@@ -18,6 +18,12 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.0");
 
         _manifest
+            .DefineScript("CustomChatApp")
+            .SetUrl("~/CrestApps.OrchardCore.AI.Chat/scripts/custom-chat.min.js", "~/CrestApps.OrchardCore.AI.Chat/scripts/custom-chat.js")
+            .SetDependencies("vuejs:3", "signalr", "marked")
+            .SetVersion("1.0.0");
+
+        _manifest
             .DefineScript("marked")
             .SetUrl("~/CrestApps.OrchardCore.AI.Chat/scripts/marked.min.js", "~/CrestApps.OrchardCore.AI.Chat/scripts/marked.js")
             .SetCdn("https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.6/marked.min.js", "https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.6/marked.min.js")
