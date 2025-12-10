@@ -14,7 +14,7 @@ using OrchardCore.Search.Elasticsearch.Core.Models;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch;
 
-public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOptionsConfiguration
+public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOptionsConfiguration, IAzureOpenAIDataSourceHandler
 {
     private const string _titleFieldName = ContentIndexingConstants.DisplayTextKey + ".keyword";
 
@@ -240,6 +240,11 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
         }
 
         return (clusterName, new Uri($"https://{elasticsearchUuid}.{domainName}"));
+    }
+
+    public ValueTask ConfigureSourceAsync(ChatCompletionOptions options, AzureOpenAIDataSourceContext context)
+    {
+        throw new NotImplementedException();
     }
 
     private const string exceptionSuffix = "should be a string in the form of cluster_name:base_64_data";

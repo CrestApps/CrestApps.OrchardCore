@@ -1,4 +1,6 @@
+using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -20,14 +22,18 @@ using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.Services;
 using Fluid;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Json;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
@@ -72,6 +78,8 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<AIProfileDefaultContextMigrations>();
 
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
+
+        services.AddAITool<ListClientsFunction>(ListClientsFunction.TheName);
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -295,3 +303,145 @@ public sealed class ConnectionManagementOCDeploymentsStartup : StartupBase
     }
 }
 #endregion
+
+
+public sealed class ListClientsFunction : AIFunction
+{
+    public const string TheName = "ListClients";
+
+    private readonly IHttpContextAccessor _http;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly DocumentJsonSerializerOptions _options;
+    private readonly PagerOptions _pagerOptions;
+
+    public ListClientsFunction(
+    IHttpContextAccessor http,
+    IAuthorizationService authorizationService,
+    IOptions<DocumentJsonSerializerOptions> options,
+    IOptions<PagerOptions> pagerOptions)
+    {
+        _http = http;
+        _authorizationService = authorizationService;
+        _options = options.Value;
+        _pagerOptions = pagerOptions.Value;
+    }
+
+    public override string Name => TheName;
+
+    public override string Description => "List clients";
+
+    public override JsonElement JsonSchema => JsonSerializer.Deserialize<JsonElement>(
+        """
+         {
+            "type": "object",
+            "properties": {
+                "term": {
+                    "type": "string", "description": "The query string to search for."
+                },
+                "pageNumber": {
+                    "type": "integer",
+                    "description": "The page number of results to return."
+                }
+            },
+            "required": [],
+            "additionalProperties": false
+         }
+         """, JsonSerializerOptions);
+
+    public override JsonElement? ReturnJsonSchema => JsonSerializer.Deserialize<JsonElement>(
+        """
+        {
+          "type": "object",
+          "properties": {
+            "clients": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "Id": { "type": "string" },
+                  "Name": { "type": "string" },
+                  "CreatedByUserId": { "type": "string" }
+                },
+                "required": ["Id", "Name", "CreatedByUserId"]
+              }
+            },
+            "pageSize": { "type": "integer" },
+            "clientsCount": { "type": "integer" },
+            "totalPages": { "type": "integer" },
+            "Error": { "type": ["string", "null"], "description": "Contains an error message if something went wrong; null if no error." }
+          },
+          "required": ["clients", "pageSize", "clientsCount", "totalPages", "Error"],
+          "additionalProperties": false
+        }
+        """, JsonSerializerOptions);
+
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    {
+        ["Strict"] = false,
+    };
+
+    protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+    {
+        var page = arguments.GetFirstValueOrDefault("pageNumber", 1);
+
+        if (page < 1) page = 1;
+
+        var startingIndex = (page - 1) * _pagerOptions.PageSize;
+
+        IEnumerable<InternalClient> clients = new List<InternalClient>()
+        {
+            new() { ItemId = "1", Name = "Client A", OwnerId = "User1" },
+            new InternalClient { ItemId = "2", Name = "Client B", OwnerId = "User2" },
+            new InternalClient { ItemId = "3", Name = "Client C", OwnerId = "User3" },
+            new InternalClient { ItemId = "4", Name = "Client D", OwnerId = "User4" },
+            new InternalClient { ItemId = "5", Name = "Client E", OwnerId = "User5" },
+            new InternalClient { ItemId = "6", Name = "Client F", OwnerId = "User6" },
+            new InternalClient { ItemId = "7", Name = "Client G", OwnerId = "User7" },
+            new InternalClient { ItemId = "8", Name = "Client H", OwnerId = "User8" },
+            new InternalClient { ItemId = "9", Name = "Client I", OwnerId = "User9" },
+            new InternalClient { ItemId = "10", Name = "Client J", OwnerId = "User10" },
+        };
+
+        var count = clients.Count();
+
+        if (arguments.TryGetFirstString("term", out var term))
+        {
+            clients = clients.Where(x => x.Name.Contains(term, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var items = clients.Skip(startingIndex).Take(_pagerOptions.PageSize).Select(x => new
+        {
+            Id = x.ItemId,
+            Name = x.Name,
+            CreatedByUserId = x.OwnerId,
+        }).ToArray();
+
+        return new
+        {
+            clients = items,
+            pageSize = _pagerOptions.PageSize,
+            clientsCount = count,
+            totalPages = (int)Math.Ceiling((double)count / _pagerOptions.PageSize),
+        };
+
+        /*
+        return $$"""
+         {
+         "clients": {{JsonSerializer.Serialize(items, _options.SerializerOptions)}},
+         "pageSize": {{_pagerOptions.PageSize}},
+         "clientsCount": {{count}},
+         "totalPages": {{Math.Ceiling((double)count / _pagerOptions.PageSize)}}
+         }
+         """;
+        */
+    }
+
+    private class InternalClient
+    {
+        public string ItemId { get; set; }
+
+        public string Name { get; set; }
+
+        public string OwnerId { get; set; }
+    }
+}
