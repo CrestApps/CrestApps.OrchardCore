@@ -59,8 +59,7 @@ public sealed class CustomChatController : Controller
             return Forbid();
         }
 
-        var instances = await _instanceManager.GetAllAsync();
-        var instanceList = instances.ToList();
+        var instances = (await _instanceManager.GetAllAsync()).ToList();
 
         AICustomChatInstance activeInstance = null;
 
@@ -69,11 +68,11 @@ public sealed class CustomChatController : Controller
             activeInstance = await _instanceManager.FindByIdAsync(instanceId);
         }
 
-        activeInstance ??= instanceList.FirstOrDefault();
+        activeInstance ??= instances.FirstOrDefault();
 
         var model = new CustomChatIndexViewModel
         {
-            Instances = instanceList,
+            Instances = instances,
             ActiveInstanceId = activeInstance?.InstanceId,
         };
 
