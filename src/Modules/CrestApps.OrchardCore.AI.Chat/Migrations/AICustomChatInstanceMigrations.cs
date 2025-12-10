@@ -9,9 +9,10 @@ internal sealed class AICustomChatInstanceMigrations : DataMigration
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<AICustomChatInstanceIndex>(table => table
-                .Column<string>("InstanceId", column => column.WithLength(26))
+                .Column<string>("ItemId", column => column.WithLength(26))
+                .Column<string>("Source", column => column.WithLength(255))
                 .Column<string>("UserId", column => column.WithLength(26))
-                .Column<string>("Title", column => column.WithLength(255))
+                .Column<string>("DisplayText", column => column.WithLength(255))
                 .Column<DateTime>("CreatedUtc"),
             collection: AICustomChatConstants.CollectionName
         );
@@ -19,10 +20,11 @@ internal sealed class AICustomChatInstanceMigrations : DataMigration
         await SchemaBuilder.AlterIndexTableAsync<AICustomChatInstanceIndex>(table => table
             .CreateIndex("IDX_AICustomChatInstanceIndex_DocumentId",
                 "DocumentId",
-                "InstanceId",
+                "ItemId",
+                "Source",
                 "UserId",
                 "CreatedUtc",
-                "Title"),
+                "DisplayText"),
             collection: AICustomChatConstants.CollectionName
         );
 

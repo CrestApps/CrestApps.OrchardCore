@@ -15,8 +15,9 @@ public sealed class AICustomChatInstanceIndexProvider : IndexProvider<AICustomCh
         context.For<AICustomChatInstanceIndex>()
             .Map(instance => new AICustomChatInstanceIndex
             {
-                InstanceId = instance.InstanceId,
-                Title = instance.Title,
+                ItemId = instance.ItemId,
+                Source = instance.Source,
+                DisplayText = instance.DisplayText,
                 UserId = instance.UserId,
                 CreatedUtc = instance.CreatedUtc,
             });

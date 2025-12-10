@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using CrestApps.OrchardCore.SignalR.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -38,6 +39,9 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<ChatAdminMenu>()
             .AddNavigationProvider<CustomChatAdminMenu>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
+            .AddDisplayDriver<AICustomChatInstance, AICustomChatInstanceDisplayDriver>()
+            .AddScoped<ICustomChatInstanceCatalog, CustomChatInstanceCatalog>()
+            .AddScoped<ISourceCatalog<AICustomChatInstance>>(sp => sp.GetRequiredService<ICustomChatInstanceCatalog>())
             .AddScoped<ICustomChatInstanceManager, DefaultCustomChatInstanceManager>()
             .AddIndexProvider<AICustomChatInstanceIndexProvider>()
             .AddDataMigration<AICustomChatInstanceMigrations>();

@@ -1,21 +1,17 @@
-using OrchardCore.Entities;
+using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI.Chat.Models;
 
 /// <summary>
 /// Represents a custom AI chat instance with user-defined configuration.
 /// </summary>
-public sealed class AICustomChatInstance : Entity
+public sealed class AICustomChatInstance : SourceCatalogEntry, IDisplayTextAwareModel
 {
     /// <summary>
-    /// Gets or sets the unique identifier for the custom chat instance.
+    /// Gets or sets the display text (title) of the custom chat instance.
     /// </summary>
-    public string InstanceId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the title of the custom chat instance.
-    /// </summary>
-    public string Title { get; set; }
+    public string DisplayText { get; set; }
 
     /// <summary>
     /// Gets or sets the connection name to use for this instance.
@@ -73,12 +69,12 @@ public sealed class AICustomChatInstance : Entity
     public string UserId { get; set; }
 
     /// <summary>
-    /// Gets or sets the source provider name.
-    /// </summary>
-    public string Source { get; set; }
-
-    /// <summary>
     /// Gets or sets the UTC date and time when the instance was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
+
+    public override string ToString()
+    {
+        return DisplayText ?? ItemId;
+    }
 }

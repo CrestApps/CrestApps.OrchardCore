@@ -1,12 +1,12 @@
-using YesSql.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Indexes;
 
 namespace CrestApps.OrchardCore.AI.Chat.Indexes;
 
-public sealed class AICustomChatInstanceIndex : MapIndex
+public sealed class AICustomChatInstanceIndex : CatalogItemIndex, ISourceAwareIndex, IDisplayTextAwareIndex
 {
-    public string InstanceId { get; set; }
+    public string Source { get; set; }
 
-    public string Title { get; set; }
+    public string DisplayText { get; set; }
 
     public string UserId { get; set; }
 

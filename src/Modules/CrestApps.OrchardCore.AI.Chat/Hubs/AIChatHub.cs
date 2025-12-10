@@ -588,7 +588,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 return;
             }
 
-            var instance = await _customChatInstanceManager.FindByIdAsync(instanceId);
+            var instance = await _customChatInstanceManager.FindByIdForCurrentUserAsync(instanceId);
 
             if (instance == null)
             {

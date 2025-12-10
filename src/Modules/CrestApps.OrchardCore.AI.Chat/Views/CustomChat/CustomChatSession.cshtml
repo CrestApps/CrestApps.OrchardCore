@@ -7,7 +7,7 @@
 
 @inject HubRouteManager HubRouteManager
 @{
-    var baseId = $"CustomChat_{Model.InstanceId}";
+    var baseId = $"CustomChat_{Model.ItemId}";
     var chatAppHtmlId = $"{baseId}_ChatApp";
     var buttonHtmlId = $"{baseId}_SendButton";
     var userPromptHtmlId = $"{baseId}_UserPrompt";
@@ -28,7 +28,7 @@
     <div class="text-bg-light rounded-5 border w-100">
         <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4"
                   id="@userPromptHtmlId"
-                  data-instance-id="@Model.InstanceId"
+                  data-instance-id="@Model.ItemId"
                   placeholder="@T["Message AI Chat"] ..."
                   aria-label="@T["Message AI Chat"]"
                   aria-describedby="@buttonHtmlId"></textarea>
@@ -50,7 +50,7 @@
         inputElementSelector: '#@userPromptHtmlId',
         sendButtonElementSelector: '#@buttonHtmlId',
         placeholderElementSelector: '#@placeholderHtmlId',
-        instanceId: '@Model.InstanceId',
+        instanceId: '@Model.ItemId',
         messages: []
     });
 </script>

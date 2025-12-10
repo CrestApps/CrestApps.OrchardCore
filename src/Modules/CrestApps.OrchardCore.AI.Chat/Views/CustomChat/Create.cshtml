@@ -1,20 +1,15 @@
-@using CrestApps.OrchardCore.AI.Chat.ViewModels
-
-@model CustomChatInstanceViewModel
+@using CrestApps.OrchardCore.Core.Models
+@model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@T["Create Custom Chat Instance"]</h1>
+    <h1>@RenderTitleSegments(T["New Custom Chat Instance"])</h1>
 </zone>
 
-<form asp-action="Create" method="post">
-    @await Html.PartialAsync("_CustomChatInstanceForm", Model)
+<form method="post" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
 
-    <div class="mb-3">
-        <button type="submit" class="btn btn-primary">
-            <i class="fa-solid fa-save"></i> @T["Create"]
-        </button>
-        <a asp-action="Index" class="btn btn-secondary">
-            <i class="fa-solid fa-times"></i> @T["Cancel"]
-        </a>
-    </div>
+    <button class="btn btn-primary" type="submit">@T["Save"]</button>
+
+    <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
 </form>

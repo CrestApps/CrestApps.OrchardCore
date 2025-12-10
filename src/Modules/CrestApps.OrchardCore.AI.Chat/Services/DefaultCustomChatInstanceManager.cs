@@ -1,55 +1,89 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.AI.Chat.Indexes;
 using CrestApps.OrchardCore.AI.Chat.Models;
+using CrestApps.OrchardCore.Core.Services;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
-using OrchardCore;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
-using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Services;
 
-public sealed class DefaultCustomChatInstanceManager : ICustomChatInstanceManager
+public sealed class DefaultCustomChatInstanceManager : SourceCatalogManager<AICustomChatInstance>, ICustomChatInstanceManager
 {
+    private readonly ICustomChatInstanceCatalog _customCatalog;
     private readonly IClock _clock;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly YesSql.ISession _session;
 
     public DefaultCustomChatInstanceManager(
+        ICustomChatInstanceCatalog catalog,
+        IEnumerable<ICatalogEntryHandler<AICustomChatInstance>> handlers,
         IClock clock,
         IHttpContextAccessor httpContextAccessor,
-        YesSql.ISession session)
+        ILogger<DefaultCustomChatInstanceManager> logger)
+        : base(catalog, handlers, logger)
     {
+        _customCatalog = catalog;
         _clock = clock;
         _httpContextAccessor = httpContextAccessor;
-        _session = session;
     }
 
-    public Task<AICustomChatInstance> NewAsync()
+    public async ValueTask<IEnumerable<AICustomChatInstance>> GetForCurrentUserAsync()
     {
-        var user = _httpContextAccessor.HttpContext?.User;
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return [];
+        }
 
-        if (user?.Identity?.IsAuthenticated != true)
+        var instances = await _customCatalog.GetByUserAsync(userId);
+
+        foreach (var instance in instances)
+        {
+            await LoadAsync(instance);
+        }
+
+        return instances;
+    }
+
+    public async ValueTask<AICustomChatInstance> FindByIdForCurrentUserAsync(string itemId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(itemId);
+
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            return null;
+        }
+
+        var instance = await _customCatalog.FindByIdForUserAsync(itemId, userId);
+
+        if (instance != null)
+        {
+            await LoadAsync(instance);
+        }
+
+        return instance;
+    }
+
+    public override async ValueTask<AICustomChatInstance> NewAsync(string source, System.Text.Json.Nodes.JsonNode data = null)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(userId))
         {
             throw new InvalidOperationException("User must be authenticated to create a custom chat instance.");
         }
 
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        var instance = await base.NewAsync(source, data);
 
-        var instance = new AICustomChatInstance
-        {
-            InstanceId = IdGenerator.GenerateId(),
-            UserId = userId,
-            CreatedUtc = _clock.UtcNow,
-            PastMessagesCount = 10,
-        };
+        instance.UserId = userId;
+        instance.CreatedUtc = _clock.UtcNow;
+        instance.PastMessagesCount = 10;
 
-        return Task.FromResult(instance);
+        return instance;
     }
 
-    public async Task<AICustomChatInstance> FindByIdAsync(string instanceId)
+    private string GetCurrentUserId()
     {
-        ArgumentException.ThrowIfNullOrEmpty(instanceId);
-
         var user = _httpContextAccessor.HttpContext?.User;
 
         if (user?.Identity?.IsAuthenticated != true)
@@ -57,62 +91,6 @@ public sealed class DefaultCustomChatInstanceManager : ICustomChatInstanceManage
             return null;
         }
 
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        if (string.IsNullOrEmpty(userId))
-        {
-            return null;
-        }
-
-        return await _session.Query<AICustomChatInstance, AICustomChatInstanceIndex>(
-            i => i.InstanceId == instanceId && i.UserId == userId,
-            collection: AICustomChatConstants.CollectionName)
-            .FirstOrDefaultAsync();
-    }
-
-    public async Task<IEnumerable<AICustomChatInstance>> GetAllAsync()
-    {
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user?.Identity?.IsAuthenticated != true)
-        {
-            return [];
-        }
-
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        if (string.IsNullOrEmpty(userId))
-        {
-            return [];
-        }
-
-        return await _session.Query<AICustomChatInstance, AICustomChatInstanceIndex>(
-            i => i.UserId == userId,
-            collection: AICustomChatConstants.CollectionName)
-            .OrderByDescending(i => i.CreatedUtc)
-            .ListAsync();
-    }
-
-    public Task SaveAsync(AICustomChatInstance instance)
-    {
-        ArgumentNullException.ThrowIfNull(instance);
-
-        return _session.SaveAsync(instance, collection: AICustomChatConstants.CollectionName);
-    }
-
-    public async Task<bool> DeleteAsync(string instanceId)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(instanceId);
-
-        var instance = await FindByIdAsync(instanceId);
-
-        if (instance == null)
-        {
-            return false;
-        }
-
-        _session.Delete(instance, collection: AICustomChatConstants.CollectionName);
-
-        return true;
+        return user.FindFirstValue(ClaimTypes.NameIdentifier);
     }
 }

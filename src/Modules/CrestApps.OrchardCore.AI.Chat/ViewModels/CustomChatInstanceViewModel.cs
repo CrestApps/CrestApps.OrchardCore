@@ -5,13 +5,11 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.AI.Chat.ViewModels;
 
-public class CustomChatInstanceViewModel
+public class EditCustomChatInstanceViewModel
 {
-    public string InstanceId { get; set; }
-
     [Required]
     [MaxLength(255)]
-    public string Title { get; set; }
+    public string DisplayText { get; set; }
 
     public string ConnectionName { get; set; }
 

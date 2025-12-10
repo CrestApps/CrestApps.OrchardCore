@@ -1,34 +1,20 @@
 using CrestApps.OrchardCore.AI.Chat.Models;
+using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI.Chat.Services;
 
 /// <summary>
 /// Service for managing custom AI chat instances.
 /// </summary>
-public interface ICustomChatInstanceManager
+public interface ICustomChatInstanceManager : ISourceCatalogManager<AICustomChatInstance>
 {
-    /// <summary>
-    /// Creates a new custom chat instance.
-    /// </summary>
-    Task<AICustomChatInstance> NewAsync();
-
-    /// <summary>
-    /// Finds a custom chat instance by its ID.
-    /// </summary>
-    Task<AICustomChatInstance> FindByIdAsync(string instanceId);
-
     /// <summary>
     /// Gets all custom chat instances for the current user.
     /// </summary>
-    Task<IEnumerable<AICustomChatInstance>> GetAllAsync();
+    ValueTask<IEnumerable<AICustomChatInstance>> GetForCurrentUserAsync();
 
     /// <summary>
-    /// Saves a custom chat instance.
+    /// Finds a custom chat instance by its ID for the current user.
     /// </summary>
-    Task SaveAsync(AICustomChatInstance instance);
-
-    /// <summary>
-    /// Deletes a custom chat instance.
-    /// </summary>
-    Task<bool> DeleteAsync(string instanceId);
+    ValueTask<AICustomChatInstance> FindByIdForCurrentUserAsync(string itemId);
 }

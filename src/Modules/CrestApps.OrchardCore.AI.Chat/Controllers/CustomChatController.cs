@@ -2,28 +2,33 @@ using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
-using CrestApps.OrchardCore.AI.Models;
+using OrchardCore.Navigation;
+using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 
 [Admin]
 public sealed class CustomChatController : Controller
 {
+    private const string _optionsSearch = "Options.Search";
+
     private readonly ICustomChatInstanceManager _instanceManager;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly IDisplayManager<AICustomChatInstance> _displayManager;
     private readonly AIOptions _aiOptions;
-    private readonly AIProviderOptions _providerOptions;
-    private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -32,158 +37,236 @@ public sealed class CustomChatController : Controller
     public CustomChatController(
         ICustomChatInstanceManager instanceManager,
         IAuthorizationService authorizationService,
-        IAIDeploymentManager deploymentManager,
+        IUpdateModelAccessor updateModelAccessor,
+        IDisplayManager<AICustomChatInstance> displayManager,
         IOptions<AIOptions> aiOptions,
-        IOptions<AIProviderOptions> providerOptions,
-        IOptions<AIToolDefinitionOptions> toolDefinitions,
         INotifier notifier,
         IHtmlLocalizer<CustomChatController> htmlLocalizer,
         IStringLocalizer<CustomChatController> stringLocalizer)
     {
         _instanceManager = instanceManager;
         _authorizationService = authorizationService;
-        _deploymentManager = deploymentManager;
+        _updateModelAccessor = updateModelAccessor;
+        _displayManager = displayManager;
         _aiOptions = aiOptions.Value;
-        _providerOptions = providerOptions.Value;
-        _toolDefinitions = toolDefinitions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
 
     [Admin("ai/custom-chat", "CustomChatIndex")]
-    public async Task<IActionResult> Index(string instanceId)
+    public async Task<IActionResult> Index(
+        CatalogEntryOptions options,
+        PagerParameters pagerParameters,
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AICustomChatPermissions.ManageOwnCustomChatInstances))
         {
             return Forbid();
         }
 
-        var instances = (await _instanceManager.GetAllAsync()).ToList();
+        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        AICustomChatInstance activeInstance = null;
+        var instances = (await _instanceManager.GetForCurrentUserAsync()).ToList();
 
-        if (!string.IsNullOrEmpty(instanceId))
+        var routeData = new RouteData();
+
+        if (!string.IsNullOrEmpty(options.Search))
         {
-            activeInstance = await _instanceManager.FindByIdAsync(instanceId);
+            routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        activeInstance ??= instances.FirstOrDefault();
-
-        var model = new CustomChatIndexViewModel
+        var viewModel = new ListSourceCatalogEntryViewModel<AICustomChatInstance>
         {
-            Instances = instances,
-            ActiveInstanceId = activeInstance?.InstanceId,
+            Models = [],
+            Options = options,
+            Pager = await shapeFactory.PagerAsync(pager, instances.Count, routeData),
+            Sources = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
         };
 
-        if (activeInstance != null)
+        foreach (var instance in instances.Skip((pager.Page - 1) * pager.PageSize).Take(pager.PageSize))
         {
-            ViewData["ActiveInstance"] = activeInstance;
+            viewModel.Models.Add(new CatalogEntryViewModel<AICustomChatInstance>
+            {
+                Model = instance,
+                Shape = await _displayManager.BuildDisplayAsync(instance, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+            });
         }
 
-        return View(model);
+        viewModel.Options.BulkActions =
+        [
+            new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
+        ];
+
+        return View(viewModel);
     }
 
-    [Admin("ai/custom-chat/create", "CustomChatCreate")]
-    public async Task<IActionResult> Create()
+    [HttpPost]
+    [ActionName(nameof(Index))]
+    [FormValueRequired("submit.Filter")]
+    [Admin("ai/custom-chat", "CustomChatIndex")]
+    public ActionResult IndexFilterPost(ListCatalogEntryViewModel model)
+    {
+        return RedirectToAction(nameof(Index), new RouteValueDictionary
+        {
+            { _optionsSearch, model.Options?.Search },
+        });
+    }
+
+    [Admin("ai/custom-chat/create/{source}", "CustomChatCreate")]
+    public async Task<IActionResult> Create(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AICustomChatPermissions.ManageOwnCustomChatInstances))
         {
             return Forbid();
         }
 
-        var instance = await _instanceManager.NewAsync();
-        var model = await PopulateViewModelAsync(instance, isNew: true);
+        if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
+        {
+            await _notifier.ErrorAsync(H["Unable to find a profile-source that can handle the source '{Source}'.", source]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        var instance = await _instanceManager.NewAsync(source);
+
+        if (instance == null)
+        {
+            await _notifier.ErrorAsync(H["Invalid profile source."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        var model = new EditCatalogEntryViewModel
+        {
+            DisplayName = provider.DisplayName,
+            Editor = await _displayManager.BuildEditorAsync(instance, _updateModelAccessor.ModelUpdater, isNew: true),
+        };
 
         return View(model);
     }
 
     [HttpPost]
-    [Admin("ai/custom-chat/create", "CustomChatCreate")]
-    public async Task<IActionResult> Create(CustomChatInstanceViewModel model)
+    [ActionName(nameof(Create))]
+    [Admin("ai/custom-chat/create/{source}", "CustomChatCreate")]
+    public async Task<IActionResult> CreatePost(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AICustomChatPermissions.ManageOwnCustomChatInstances))
         {
             return Forbid();
         }
 
-        if (!ModelState.IsValid)
+        if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
         {
-            await PopulateDropdownsAsync(model);
-            return View(model);
+            await _notifier.ErrorAsync(H["Unable to find a profile-source that can handle the source '{Source}'.", source]);
+
+            return RedirectToAction(nameof(Index));
         }
 
-        var instance = await _instanceManager.NewAsync();
-        MapToInstance(model, instance);
+        var instance = await _instanceManager.NewAsync(source);
 
-        await _instanceManager.SaveAsync(instance);
+        if (instance == null)
+        {
+            await _notifier.ErrorAsync(H["Invalid profile source."]);
 
-        await _notifier.SuccessAsync(H["Custom chat instance created successfully."]);
+            return RedirectToAction(nameof(Index));
+        }
 
-        return RedirectToAction(nameof(Index), new { instanceId = instance.InstanceId });
+        var model = new EditCatalogEntryViewModel
+        {
+            DisplayName = provider.DisplayName,
+            Editor = await _displayManager.UpdateEditorAsync(instance, _updateModelAccessor.ModelUpdater, isNew: true),
+        };
+
+        if (ModelState.IsValid)
+        {
+            await _instanceManager.CreateAsync(instance);
+
+            await _notifier.SuccessAsync(H["Custom chat instance created successfully."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        return View(model);
     }
 
-    [Admin("ai/custom-chat/edit/{instanceId}", "CustomChatEdit")]
-    public async Task<IActionResult> Edit(string instanceId)
+    [Admin("ai/custom-chat/edit/{id}", "CustomChatEdit")]
+    public async Task<IActionResult> Edit(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AICustomChatPermissions.ManageOwnCustomChatInstances))
         {
             return Forbid();
         }
 
-        var instance = await _instanceManager.FindByIdAsync(instanceId);
+        var instance = await _instanceManager.FindByIdForCurrentUserAsync(id);
 
         if (instance == null)
         {
             return NotFound();
         }
 
-        var model = await PopulateViewModelAsync(instance, isNew: false);
+        var model = new EditCatalogEntryViewModel
+        {
+            DisplayName = instance.DisplayText,
+            Editor = await _displayManager.BuildEditorAsync(instance, _updateModelAccessor.ModelUpdater, isNew: false),
+        };
 
         return View(model);
     }
 
     [HttpPost]
-    [Admin("ai/custom-chat/edit/{instanceId}", "CustomChatEdit")]
-    public async Task<IActionResult> Edit(string instanceId, CustomChatInstanceViewModel model)
+    [ActionName(nameof(Edit))]
+    [Admin("ai/custom-chat/edit/{id}", "CustomChatEdit")]
+    public async Task<IActionResult> EditPost(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AICustomChatPermissions.ManageOwnCustomChatInstances))
         {
             return Forbid();
         }
 
-        var instance = await _instanceManager.FindByIdAsync(instanceId);
+        var instance = await _instanceManager.FindByIdForCurrentUserAsync(id);
 
         if (instance == null)
         {
             return NotFound();
         }
 
-        if (!ModelState.IsValid)
+        var model = new EditCatalogEntryViewModel
         {
-            await PopulateDropdownsAsync(model);
-            return View(model);
+            DisplayName = instance.DisplayText,
+            Editor = await _displayManager.UpdateEditorAsync(instance, _updateModelAccessor.ModelUpdater, isNew: false),
+        };
+
+        if (ModelState.IsValid)
+        {
+            await _instanceManager.UpdateAsync(instance);
+
+            await _notifier.SuccessAsync(H["Custom chat instance updated successfully."]);
+
+            return RedirectToAction(nameof(Index));
         }
 
-        MapToInstance(model, instance);
-
-        await _instanceManager.SaveAsync(instance);
-
-        await _notifier.SuccessAsync(H["Custom chat instance updated successfully."]);
-
-        return RedirectToAction(nameof(Index), new { instanceId = instance.InstanceId });
+        return View(model);
     }
 
     [HttpPost]
-    [Admin("ai/custom-chat/delete/{instanceId}", "CustomChatDelete")]
-    public async Task<IActionResult> Delete(string instanceId)
+    [Admin("ai/custom-chat/delete/{id}", "CustomChatDelete")]
+    public async Task<IActionResult> Delete(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AICustomChatPermissions.ManageOwnCustomChatInstances))
         {
             return Forbid();
         }
 
-        if (await _instanceManager.DeleteAsync(instanceId))
+        var instance = await _instanceManager.FindByIdForCurrentUserAsync(id);
+
+        if (instance == null)
+        {
+            return NotFound();
+        }
+
+        if (await _instanceManager.DeleteAsync(instance))
         {
             await _notifier.SuccessAsync(H["Custom chat instance deleted successfully."]);
         }
@@ -195,115 +278,71 @@ public sealed class CustomChatController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task<CustomChatInstanceViewModel> PopulateViewModelAsync(AICustomChatInstance instance, bool isNew)
+    [HttpPost]
+    [ActionName(nameof(Index))]
+    [FormValueRequired("submit.BulkAction")]
+    [Admin("ai/custom-chat", "CustomChatIndex")]
+    public async Task<ActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
     {
-        var model = new CustomChatInstanceViewModel
+        if (!await _authorizationService.AuthorizeAsync(User, AICustomChatPermissions.ManageOwnCustomChatInstances))
         {
-            InstanceId = instance.InstanceId,
-            Title = instance.Title,
-            ConnectionName = instance.ConnectionName,
-            DeploymentId = instance.DeploymentId,
-            SystemMessage = instance.SystemMessage,
-            MaxTokens = instance.MaxTokens,
-            Temperature = instance.Temperature,
-            TopP = instance.TopP,
-            FrequencyPenalty = instance.FrequencyPenalty,
-            PresencePenalty = instance.PresencePenalty,
-            PastMessagesCount = instance.PastMessagesCount,
-            IsNew = isNew,
-        };
+            return Forbid();
+        }
 
-        await PopulateDropdownsAsync(model, instance);
-
-        return model;
-    }
-
-    private async Task PopulateDropdownsAsync(CustomChatInstanceViewModel model, AICustomChatInstance instance = null)
-    {
-        var connectionNames = new List<SelectListItem>();
-        string providerName = null;
-
-        foreach (var provider in _providerOptions.Providers)
+        if (itemIds?.Count() > 0)
         {
-            foreach (var connection in provider.Value.Connections)
+            switch (options.BulkAction)
             {
-                var displayName = connection.Value.TryGetValue("ConnectionNameAlias", out var alias)
-                    ? alias.ToString()
-                    : connection.Key;
-                connectionNames.Add(new SelectListItem(displayName, connection.Key));
+                case CatalogEntryAction.None:
+                    break;
+                case CatalogEntryAction.Remove:
+                    var counter = 0;
+                    foreach (var id in itemIds)
+                    {
+                        var instance = await _instanceManager.FindByIdForCurrentUserAsync(id);
 
-                if (string.IsNullOrEmpty(providerName))
-                {
-                    providerName = provider.Key;
-                }
+                        if (instance == null)
+                        {
+                            continue;
+                        }
+
+                        if (await _instanceManager.DeleteAsync(instance))
+                        {
+                            counter++;
+                        }
+                    }
+                    if (counter == 0)
+                    {
+                        await _notifier.WarningAsync(H["No instances were removed."]);
+                    }
+                    else
+                    {
+                        await _notifier.SuccessAsync(H.Plural(counter, "1 instance has been removed successfully.", "{0} instances have been removed successfully."));
+                    }
+                    break;
+                default:
+                    return BadRequest();
             }
         }
 
-        model.ConnectionNames = connectionNames;
-        model.ProviderName = providerName;
-
-        var connectionName = model.ConnectionName;
-        if (string.IsNullOrEmpty(connectionName) && connectionNames.Count > 0)
-        {
-            connectionName = connectionNames.First().Value;
-        }
-
-        if (!string.IsNullOrEmpty(connectionName) && !string.IsNullOrEmpty(providerName))
-        {
-            var deployments = await _deploymentManager.GetAllAsync(providerName, connectionName);
-            model.Deployments = deployments.Select(d => new SelectListItem(d.Name, d.ItemId));
-        }
-        else
-        {
-            model.Deployments = [];
-        }
-
-        if (_toolDefinitions.Tools.Count > 0)
-        {
-            var selectedTools = instance?.ToolNames ?? [];
-            model.Tools = _toolDefinitions.Tools
-                .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"].Value)
-                .OrderBy(group => group.Key)
-                .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
-                {
-                    ItemId = entry.Key,
-                    DisplayText = entry.Value.Title,
-                    Description = entry.Value.Description,
-                    IsSelected = selectedTools.Contains(entry.Key),
-                }).OrderBy(entry => entry.DisplayText).ToArray());
-        }
+        return RedirectToAction(nameof(Index));
     }
 
-    private void MapToInstance(CustomChatInstanceViewModel model, AICustomChatInstance instance)
+    [Admin("ai/custom-chat/chat/{id}", "CustomChatChat")]
+    public async Task<IActionResult> Chat(string id)
     {
-        instance.Title = model.Title?.Trim();
-        instance.ConnectionName = model.ConnectionName;
-        instance.DeploymentId = model.DeploymentId;
-        instance.SystemMessage = model.SystemMessage;
-        instance.MaxTokens = model.MaxTokens;
-        instance.Temperature = model.Temperature;
-        instance.TopP = model.TopP;
-        instance.FrequencyPenalty = model.FrequencyPenalty;
-        instance.PresencePenalty = model.PresencePenalty;
-        instance.PastMessagesCount = model.PastMessagesCount;
-
-        // Set the source based on the first available profile source
-        if (string.IsNullOrEmpty(instance.Source) && _aiOptions.ProfileSources.Count > 0)
+        if (!await _authorizationService.AuthorizeAsync(User, AICustomChatPermissions.ManageOwnCustomChatInstances))
         {
-            instance.Source = _aiOptions.ProfileSources.Keys.First();
+            return Forbid();
         }
 
-        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
+        var instance = await _instanceManager.FindByIdForCurrentUserAsync(id);
 
-        if (selectedToolKeys is null || !selectedToolKeys.Any())
+        if (instance == null)
         {
-            instance.ToolNames = [];
+            return NotFound();
         }
-        else
-        {
-            instance.ToolNames = _toolDefinitions.Tools.Keys
-                .Intersect(selectedToolKeys)
-                .ToList();
-        }
+
+        return View(instance);
     }
 }
