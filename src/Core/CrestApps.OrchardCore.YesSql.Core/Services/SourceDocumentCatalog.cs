@@ -14,6 +14,12 @@ public class SourceDocumentCatalog<T, TIndex> : DocumentCatalog<T, TIndex>, ISou
     {
     }
 
+    internal SourceDocumentCatalog(ISession session, string collectionName)
+        : base(session)
+    {
+        CollectionName = collectionName;
+    }
+
     public async ValueTask<IReadOnlyCollection<T>> GetAsync(string source)
     {
         ArgumentException.ThrowIfNullOrEmpty(source);
