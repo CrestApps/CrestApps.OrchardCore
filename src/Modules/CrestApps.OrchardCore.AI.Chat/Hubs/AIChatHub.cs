@@ -193,6 +193,13 @@ public class AIChatHub : Hub<IAIChatHubClient>
         }
         catch (Exception ex)
         {
+            // Don't write error messages if the operation was cancelled (e.g., user navigated away).
+            if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
+            {
+                _logger.LogDebug("Chat prompt processing was cancelled.");
+                return;
+            }
+
             _logger.LogError(ex, "An error occurred while processing the chat prompt.");
 
             var errorMessage = new CompletionPartialMessage
