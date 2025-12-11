@@ -50,7 +50,7 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
                 EnableLogging = true,
                 EnableMessageLogging = true,
                 EnableMessageContentLogging = true,
-            }
+            },
         };
 
         var azureClient = connection.GetAzureAuthenticationType() switch

@@ -265,11 +265,56 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
         var prompts = GetPrompts(context, azureMessages);
 
+        // Accumulate tool call updates across streaming chunks.
+        // Key is the tool call index, value contains the accumulated tool call data.
+        var accumulatedToolCalls = new Dictionary<int, (string ToolCallId, string FunctionName, List<byte> ArgumentBytes)>();
+
         await foreach (var update in chatClient.CompleteChatStreamingAsync(prompts, chatOptions, cancellationToken))
         {
+            // Accumulate tool call updates as they arrive.
+            foreach (var toolCallUpdate in update.ToolCallUpdates)
+            {
+                if (!accumulatedToolCalls.TryGetValue(toolCallUpdate.Index, out var accumulated))
+                {
+                    accumulated = (toolCallUpdate.ToolCallId, toolCallUpdate.FunctionName, new List<byte>());
+                    accumulatedToolCalls[toolCallUpdate.Index] = accumulated;
+                }
+
+                // Update ToolCallId and FunctionName if they are provided in this chunk.
+                if (!string.IsNullOrEmpty(toolCallUpdate.ToolCallId))
+                {
+                    accumulated.ToolCallId = toolCallUpdate.ToolCallId;
+                }
+
+                if (!string.IsNullOrEmpty(toolCallUpdate.FunctionName))
+                {
+                    accumulated.FunctionName = toolCallUpdate.FunctionName;
+                }
+
+                // Append function arguments bytes.
+                if (toolCallUpdate.FunctionArgumentsUpdate is not null)
+                {
+                    accumulated.ArgumentBytes.AddRange(toolCallUpdate.FunctionArgumentsUpdate.ToArray());
+                }
+
+                accumulatedToolCalls[toolCallUpdate.Index] = accumulated;
+            }
+
             if (update.FinishReason == ChatFinishReason.ToolCalls)
             {
-                await ProcessToolCallsAsync(prompts, update.ToolCallUpdates);
+                // Convert accumulated tool call data to ChatToolCall objects.
+                var toolCalls = accumulatedToolCalls.Values
+                    .Where(tc => !string.IsNullOrEmpty(tc.ToolCallId) && !string.IsNullOrEmpty(tc.FunctionName))
+                    .Select(tc => ChatToolCall.CreateFunctionToolCall(
+                        tc.ToolCallId,
+                        tc.FunctionName,
+                        BinaryData.FromBytes(tc.ArgumentBytes.ToArray())))
+                    .ToList();
+
+                await ProcessToolCallsAsync(prompts, toolCalls, functions);
+
+                // Clear accumulated tool calls for the next potential round.
+                accumulatedToolCalls.Clear();
 
                 // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
                 subSequenceContext ??= GetOptions(context, functions);
@@ -367,6 +412,16 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         }
     }
 
+    protected override async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
+    {
+        if (!string.IsNullOrEmpty(content.DeploymentId))
+        {
+            return await _deploymentStore.FindByIdAsync(content.DeploymentId);
+        }
+
+        return null;
+    }
+
     private static async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<ChatToolCall> tollCalls, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
     {
         if (tollCalls is null || !tollCalls.Any())
@@ -402,50 +457,6 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         }
     }
 
-    private async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<StreamingChatToolCallUpdate> tollCallsUpdate)
-    {
-        if (tollCallsUpdate is null || !tollCallsUpdate.Any())
-        {
-            return;
-        }
-
-        _toolsService ??= _serviceProvider.GetService<IAIToolsService>();
-
-        if (_toolsService is null)
-        {
-            return;
-        }
-
-        var tollCalls = tollCallsUpdate.Select(x => ChatToolCall.CreateFunctionToolCall(x.ToolCallId, x.FunctionName, x.FunctionArgumentsUpdate));
-
-        prompts.Add(ChatMessage.CreateAssistantMessage(tollCalls));
-
-        foreach (var toolCall in tollCallsUpdate)
-        {
-            var function = await _toolsService.GetAsync(toolCall.FunctionName) as Microsoft.Extensions.AI.AIFunction;
-
-            if (function is null)
-            {
-                continue;
-            }
-
-            var arguments = toolCall.FunctionArgumentsUpdate.ToObjectFromJson<Microsoft.Extensions.AI.AIFunctionArguments>();
-
-            var result = await function.InvokeAsync(arguments);
-
-            if (result is string str)
-            {
-                prompts.Add(new ToolChatMessage(toolCall.ToolCallId, str));
-            }
-            else
-            {
-                var resultJson = JsonSerializer.Serialize(result);
-
-                prompts.Add(new ToolChatMessage(toolCall.ToolCallId, resultJson));
-            }
-        }
-    }
-
     private AzureOpenAIClient GetChatClient(AIProviderConnectionEntry connection)
     {
         _clientOptions ??= new AzureOpenAIClientOptions()
@@ -476,11 +487,14 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
     {
         var chatOptions = GetOptions(context, functions);
 
-        var dataSourceContext = new AzureOpenAIDataSourceContext(context.DataSourceId, context.DataSourceType);
-
-        foreach (var handler in _azureOpenAIDataSourceHandlers)
+        if (!string.IsNullOrEmpty(context.DataSourceId) && !string.IsNullOrEmpty(context.DataSourceType))
         {
-            await handler.ConfigureSourceAsync(chatOptions, dataSourceContext);
+            var dataSourceContext = new AzureOpenAIDataSourceContext(context.DataSourceId, context.DataSourceType);
+
+            foreach (var handler in _azureOpenAIDataSourceHandlers)
+            {
+                await handler.ConfigureSourceAsync(chatOptions, dataSourceContext);
+            }
         }
 
         return chatOptions;
@@ -612,16 +626,6 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         }
 
         return functions;
-    }
-
-    protected override async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
-    {
-        if (!string.IsNullOrEmpty(content.DeploymentId))
-        {
-            return await _deploymentStore.FindByIdAsync(content.DeploymentId);
-        }
-
-        return null;
     }
 
     private static List<ChatMessage> GetPrompts(AICompletionContext context, List<ChatMessage> azureMessages)

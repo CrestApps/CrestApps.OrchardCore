@@ -194,7 +194,13 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
 
     public async ValueTask ConfigureSourceAsync(ChatCompletionOptions options, AzureOpenAIDataSourceContext context)
     {
-        if (!string.Equals(context.DataSourceType, AzureOpenAIConstants.DataSourceTypes.AzureAISearch, StringComparison.Ordinal) || !_azureAISearchDefaultOptions.ConfigurationExists())
+        if (string.IsNullOrEmpty(context.DataSourceId) || string.IsNullOrEmpty(context.DataSourceType))
+        {
+            return;
+        }
+
+        if (!string.Equals(context.DataSourceType, AzureOpenAIConstants.DataSourceTypes.AzureAISearch, StringComparison.Ordinal) ||
+            !_azureAISearchDefaultOptions.ConfigurationExists())
         {
             return;
         }
@@ -216,11 +222,26 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
         var keyField = indexProfile.As<AzureAISearchIndexMetadata>().IndexMappings?.FirstOrDefault(x => x.IsKey);
 
 #pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        DataSourceAuthentication credentials;
+
+        if (_azureAISearchDefaultOptions.AuthenticationType == AzureAIAuthenticationType.ApiKey)
+        {
+            credentials = DataSourceAuthentication.FromApiKey(_azureAISearchDefaultOptions.Credential.Key);
+        }
+        else if (_azureAISearchDefaultOptions.AuthenticationType == AzureAIAuthenticationType.ManagedIdentity)
+        {
+            credentials = DataSourceAuthentication.FromSystemManagedIdentity();
+        }
+        else
+        {
+            throw new NotSupportedException($"Unsupported authentication type: {_azureAISearchDefaultOptions.AuthenticationType}");
+        }
+
         options.AddDataSource(new AzureSearchChatDataSource()
         {
             Endpoint = new Uri(_azureAISearchDefaultOptions.Endpoint),
             IndexName = indexProfile.IndexFullName,
-            Authentication = DataSourceAuthentication.FromApiKey(_azureAISearchDefaultOptions.Credential.Key),
+            Authentication = credentials,
             Strictness = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
             TopNDocuments = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
             QueryType = DataSourceQueryType.Simple,

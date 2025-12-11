@@ -1,14 +1,18 @@
 using System.Text;
 using System.Text.Json;
+using Azure.AI.OpenAI.Chat;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
 using OrchardCore.Contents.Indexing;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
+using OrchardCore.Search.AzureAI;
 using OrchardCore.Search.Elasticsearch;
 using OrchardCore.Search.Elasticsearch.Core.Models;
 
@@ -21,15 +25,18 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly ElasticsearchConnectionOptions _elasticsearchOptions;
     private readonly IAIDataSourceManager _aIDataSourceManager;
+    private readonly ILogger _logger;
 
     public ElasticsearchOpenAIChatOptionsConfiguration(
         IIndexProfileStore indexProfileStore,
         IOptions<ElasticsearchConnectionOptions> elasticsearchOptions,
-        IAIDataSourceManager aIDataSourceManager)
+        IAIDataSourceManager aIDataSourceManager,
+        ILogger<ElasticsearchOpenAIChatOptionsConfiguration> logger)
     {
         _indexProfileStore = indexProfileStore;
         _elasticsearchOptions = elasticsearchOptions.Value;
         _aIDataSourceManager = aIDataSourceManager;
+        _logger = logger;
     }
 
     public async Task InitializeConfigurationAsync(CompletionServiceConfigureContext context)
@@ -177,6 +184,85 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
 #pragma warning restore SCME0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     }
 
+    public async ValueTask ConfigureSourceAsync(ChatCompletionOptions options, AzureOpenAIDataSourceContext context)
+    {
+        if (string.IsNullOrEmpty(context.DataSourceId) || string.IsNullOrEmpty(context.DataSourceType))
+        {
+            return;
+        }
+
+        if (!string.Equals(context.DataSourceType, AzureOpenAIConstants.DataSourceTypes.Elasticsearch, StringComparison.Ordinal) ||
+            !_elasticsearchOptions.ConfigurationExists())
+        {
+            return;
+        }
+
+        var dataSource = await _aIDataSourceManager.FindByIdAsync(context.DataSourceId);
+
+        if (dataSource is null)
+        {
+            return;
+        }
+
+        if (!dataSource.TryGet<AzureAIProfileAISearchMetadata>(out var dataSourceMetadata))
+        {
+            return;
+        }
+
+        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(dataSourceMetadata.IndexName, AzureAISearchConstants.ProviderName);
+
+        if (indexProfile is null)
+        {
+            _logger.LogWarning("Index named '{IndexName}' set as Elasticsearch data-source but not found in Elasticsearch document manager.", dataSourceMetadata.IndexName);
+            return;
+        }
+
+        Uri uri;
+
+        if (!string.IsNullOrWhiteSpace(_elasticsearchOptions.CloudId))
+        {
+            (_, uri) = ParseCloudId(_elasticsearchOptions.CloudId);
+        }
+        else
+        {
+            uri = new Uri(_elasticsearchOptions.Url);
+        }
+#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        DataSourceAuthentication credentials;
+
+        if (_elasticsearchOptions.AuthenticationType == ElasticsearchAuthenticationType.KeyIdAndKey)
+        {
+            credentials = DataSourceAuthentication.FromKeyAndKeyId(_elasticsearchOptions.Key, _elasticsearchOptions.KeyId);
+        }
+        else if (_elasticsearchOptions.AuthenticationType == ElasticsearchAuthenticationType.Base64ApiKey)
+        {
+            credentials = DataSourceAuthentication.FromEncodedApiKey(_elasticsearchOptions.Base64ApiKey);
+        }
+        else
+        {
+            throw new InvalidOperationException($"The '{_elasticsearchOptions.AuthenticationType}' is not supported as Authentication type for Elasticsearch AI Data Source. Only '{ElasticsearchAuthenticationType.KeyIdAndKey}' and '{ElasticsearchAuthenticationType.Base64ApiKey}' are supported.");
+        }
+
+        options.AddDataSource(new ElasticsearchChatDataSource()
+        {
+            Endpoint = uri,
+            IndexName = indexProfile.IndexFullName,
+            Authentication = credentials,
+            Strictness = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            QueryType = DataSourceQueryType.Simple,
+            InScope = true,
+            OutputContexts = DataSourceOutputContexts.Citations,
+            FieldMappings = new DataSourceFieldMappings()
+            {
+                TitleFieldName = _titleFieldName,
+                FilePathFieldName = ContentIndexingConstants.ContentItemIdKey,
+                ContentFieldSeparator = Environment.NewLine,
+            },
+        });
+#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    }
+
     private bool CanHandle(CompletionServiceConfigureContext context)
     {
         if (!string.Equals(context.ProviderName, AzureOpenAIConstants.ProviderName, StringComparison.Ordinal))
@@ -240,11 +326,6 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
         }
 
         return (clusterName, new Uri($"https://{elasticsearchUuid}.{domainName}"));
-    }
-
-    public ValueTask ConfigureSourceAsync(ChatCompletionOptions options, AzureOpenAIDataSourceContext context)
-    {
-        throw new NotImplementedException();
     }
 
     private const string exceptionSuffix = "should be a string in the form of cluster_name:base_64_data";
