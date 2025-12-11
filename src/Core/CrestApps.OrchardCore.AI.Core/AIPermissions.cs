@@ -20,6 +20,8 @@ public static class AIPermissions
 
     public static readonly Permission DeleteAllChatSessions = new("DeleteAllChatSessions", "Delete all chat sessions");
 
+    public static readonly Permission ManageCustomChatInstances = new("ManageCustomChatInstances", "Manage custom chat instances");
+
     private static readonly Permission _queryAIProfileTemplate = new("QueryAIProfile_{0}", "Query AI profile - {0}", [QueryAnyAIProfile]);
 
     /// <summary>
