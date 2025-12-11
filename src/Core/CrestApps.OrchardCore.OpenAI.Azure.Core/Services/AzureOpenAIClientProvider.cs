@@ -47,9 +47,9 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
             ClientLoggingOptions = new ClientLoggingOptions
             {
                 LoggerFactory = _loggerFactory,
-                EnableLogging = true,
-                EnableMessageLogging = true,
-                EnableMessageContentLogging = true,
+                EnableLogging = connection.GetBooleanOrFalseValue("EnableLogging"),
+                EnableMessageLogging = connection.GetBooleanOrFalseValue("EnableMessageLogging"),
+                EnableMessageContentLogging = connection.GetBooleanOrFalseValue("EnableMessageContentLogging"),
             },
         };
 
