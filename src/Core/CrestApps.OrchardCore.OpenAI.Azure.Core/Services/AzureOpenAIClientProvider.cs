@@ -1,4 +1,5 @@
 using System.ClientModel;
+using System.ClientModel.Primitives;
 using Azure.AI.OpenAI;
 using Azure.Identity;
 using CrestApps.Azure.Core;
@@ -39,13 +40,24 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
             .AsIEmbeddingGenerator();
     }
 
-    private static AzureOpenAIClient GetClient(AIProviderConnectionEntry connection, Uri endpoint)
+    private AzureOpenAIClient GetClient(AIProviderConnectionEntry connection, Uri endpoint)
     {
+        var options = new AzureOpenAIClientOptions
+        {
+            ClientLoggingOptions = new ClientLoggingOptions
+            {
+                LoggerFactory = _loggerFactory,
+                EnableLogging = connection.GetBooleanOrFalseValue("EnableLogging"),
+                EnableMessageLogging = connection.GetBooleanOrFalseValue("EnableMessageLogging"),
+                EnableMessageContentLogging = connection.GetBooleanOrFalseValue("EnableMessageContentLogging"),
+            },
+        };
+
         var azureClient = connection.GetAzureAuthenticationType() switch
         {
-            AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey())),
-            AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential()),
-            AzureAuthenticationType.Default => new AzureOpenAIClient(endpoint, new DefaultAzureCredential()),
+            AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey()), options),
+            AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential(), options),
+            AzureAuthenticationType.Default => new AzureOpenAIClient(endpoint, new DefaultAzureCredential(), options),
             _ => throw new NotSupportedException("The provided authentication type is not supported.")
         };
 

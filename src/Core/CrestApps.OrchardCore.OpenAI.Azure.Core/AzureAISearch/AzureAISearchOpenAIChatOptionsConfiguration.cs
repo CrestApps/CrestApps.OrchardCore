@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Azure.AI.OpenAI.Chat;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
@@ -17,7 +18,7 @@ using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 
-public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOptionsConfiguration
+public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOptionsConfiguration, IAzureOpenAIDataSourceHandler
 {
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IAIDataSourceManager _aIDataSourceManager;
@@ -189,6 +190,73 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
 
         chatCompletionOptions.Patch.Set("$.data_sources"u8, BinaryData.FromObjectAsJson(dataSources));
 #pragma warning restore SCME0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    }
+
+    public async ValueTask ConfigureSourceAsync(ChatCompletionOptions options, AzureOpenAIDataSourceContext context)
+    {
+        if (string.IsNullOrEmpty(context.DataSourceId) || string.IsNullOrEmpty(context.DataSourceType))
+        {
+            return;
+        }
+
+        if (!string.Equals(context.DataSourceType, AzureOpenAIConstants.DataSourceTypes.AzureAISearch, StringComparison.Ordinal) ||
+            !_azureAISearchDefaultOptions.ConfigurationExists())
+        {
+            return;
+        }
+
+        var dataSource = await _aIDataSourceManager.FindByIdAsync(context.DataSourceId);
+
+        if (dataSource is null)
+        {
+            return;
+        }
+
+        if (!dataSource.TryGet<AzureAIProfileAISearchMetadata>(out var dataSourceMetadata))
+        {
+            return;
+        }
+
+        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(dataSourceMetadata.IndexName, AzureAISearchConstants.ProviderName);
+
+        var keyField = indexProfile.As<AzureAISearchIndexMetadata>().IndexMappings?.FirstOrDefault(x => x.IsKey);
+
+#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        DataSourceAuthentication credentials;
+
+        if (_azureAISearchDefaultOptions.AuthenticationType == AzureAIAuthenticationType.ApiKey)
+        {
+            credentials = DataSourceAuthentication.FromApiKey(_azureAISearchDefaultOptions.Credential.Key);
+        }
+        else if (_azureAISearchDefaultOptions.AuthenticationType == AzureAIAuthenticationType.ManagedIdentity)
+        {
+            credentials = DataSourceAuthentication.FromSystemManagedIdentity();
+        }
+        else
+        {
+            throw new NotSupportedException($"Unsupported authentication type: {_azureAISearchDefaultOptions.AuthenticationType}");
+        }
+
+        options.AddDataSource(new AzureSearchChatDataSource()
+        {
+            Endpoint = new Uri(_azureAISearchDefaultOptions.Endpoint),
+            IndexName = indexProfile.IndexFullName,
+            Authentication = credentials,
+            Strictness = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            QueryType = DataSourceQueryType.Simple,
+            InScope = true,
+            SemanticConfiguration = "default",
+            OutputContexts = DataSourceOutputContexts.Citations,
+            Filter = null,
+            FieldMappings = new DataSourceFieldMappings()
+            {
+                TitleFieldName = GetBestTitleField(keyField),
+                FilePathFieldName = keyField?.AzureFieldKey,
+                ContentFieldSeparator = Environment.NewLine,
+            },
+        });
+#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     }
 
     private bool CanHandle(CompletionServiceConfigureContext context)

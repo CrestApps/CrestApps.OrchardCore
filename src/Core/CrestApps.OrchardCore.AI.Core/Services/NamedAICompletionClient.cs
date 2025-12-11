@@ -112,9 +112,9 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         {
             var chatClient = await BuildClientAsync(connectionName, context, deploymentName);
 
-            var chatOptions = await GetChatOptionsAsync(context, deploymentName, false);
-
             var prompts = GetPrompts(messages, context);
+
+            var chatOptions = await GetChatOptionsAsync(context, deploymentName, false);
 
             var response = await chatClient.GetResponseAsync(prompts, chatOptions, cancellationToken);
 

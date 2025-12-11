@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Azure.AI.OpenAI.Chat;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDB;
@@ -10,7 +11,7 @@ using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDb;
 
-public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsConfiguration
+public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsConfiguration, IAzureOpenAIDataSourceHandler
 {
     private readonly IAIDataSourceManager _aIDataSourceManager;
     private readonly IDataProtectionProvider _dataProtectionProvider;
@@ -134,6 +135,65 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
 
         chatCompletionOptions.Patch.Set("$.data_sources"u8, BinaryData.FromObjectAsJson(dataSources));
 #pragma warning restore SCME0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    }
+
+    public async ValueTask ConfigureSourceAsync(ChatCompletionOptions options, AzureOpenAIDataSourceContext context)
+    {
+        if (string.IsNullOrEmpty(context.DataSourceId) || string.IsNullOrEmpty(context.DataSourceType))
+        {
+            return;
+        }
+
+        if (!string.Equals(context.DataSourceType, AzureOpenAIConstants.DataSourceTypes.MongoDB, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var dataSource = await _aIDataSourceManager.FindByIdAsync(context.DataSourceId);
+
+        if (dataSource is null)
+        {
+            return;
+        }
+
+        if (!dataSource.TryGet<AzureAIProfileMongoDBMetadata>(out var dataSourceMetadata))
+        {
+            return;
+        }
+
+#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        DataSourceAuthentication credentials = null;
+
+        if (dataSourceMetadata.Authentication?.Type is not null)
+        {
+            if (string.Equals("username_and_password", dataSourceMetadata.Authentication.Type, StringComparison.OrdinalIgnoreCase))
+            {
+                var protector = _dataProtectionProvider.CreateProtector(AzureOpenAIConstants.MongoDataProtectionPurpose);
+
+                string password = null;
+
+                if (!string.IsNullOrWhiteSpace(dataSourceMetadata.Authentication.Password))
+                {
+                    password = protector.Unprotect(dataSourceMetadata.Authentication.Password);
+                }
+
+                credentials = DataSourceAuthentication.FromUsernameAndPassword(dataSourceMetadata.Authentication.Username, password);
+            }
+        }
+
+        options.AddDataSource(new MongoDBChatDataSource()
+        {
+            EndpointName = dataSourceMetadata.EndpointName,
+            CollectionName = dataSourceMetadata.CollectionName,
+            AppName = dataSourceMetadata.AppName,
+            IndexName = dataSourceMetadata.IndexName,
+            Authentication = credentials,
+            Strictness = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            InScope = true,
+            OutputContexts = DataSourceOutputContexts.Citations,
+        });
+#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     }
 
     private static bool CanHandle(CompletionServiceConfigureContext context)
