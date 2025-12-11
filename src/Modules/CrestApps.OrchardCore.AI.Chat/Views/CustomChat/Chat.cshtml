@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.AI.Chat.Models
+
+@model AICustomChatInstance
+
+<zone Name="Title">
+    <h1>@RenderTitleSegments(T["Chat: {0}", Model.DisplayText ?? T["Untitled"]])</h1>
+</zone>
+
+<zone Name="Actions">
+    <a class="btn btn-secondary" asp-action="Edit" asp-route-id="@Model.ItemId">
+        <i class="fa-solid fa-edit"></i> @T["Edit Settings"]
+    </a>
+    <a class="btn btn-outline-secondary" asp-action="Index">
+        <i class="fa-solid fa-list"></i> @T["Back to List"]
+    </a>
+</zone>
+
+@await Html.PartialAsync("CustomChatSession", Model)

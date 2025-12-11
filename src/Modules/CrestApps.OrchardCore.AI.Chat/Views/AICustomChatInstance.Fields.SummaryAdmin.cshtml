@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.AI.Chat.Models
+
+@model AICustomChatInstance
+
+<div class="d-flex flex-wrap">
+    <div class="me-auto">
+        <a asp-action="Edit" asp-controller="CustomChat" asp-route-id="@Model.ItemId" class="text-break">
+            @(string.IsNullOrEmpty(Model.DisplayText) ? T["Untitled"] : Model.DisplayText)
+        </a>
+    </div>
+    <div>
+        <small class="text-muted">@Model.CreatedUtc.ToString("g")</small>
+    </div>
+</div>
