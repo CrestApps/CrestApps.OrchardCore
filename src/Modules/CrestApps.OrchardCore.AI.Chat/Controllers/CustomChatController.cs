@@ -68,7 +68,7 @@ public sealed class CustomChatController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var instances = (await _instanceManager.GetForCurrentUserAsync()).ToList();
+        var instances = await _instanceManager.GetForCurrentUserAsync();
 
         var routeData = new RouteData();
 
@@ -81,7 +81,7 @@ public sealed class CustomChatController : Controller
         {
             Models = [],
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, instances.Count, routeData),
+            Pager = await shapeFactory.PagerAsync(pager, instances.Count(), routeData),
             Sources = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
         };
 

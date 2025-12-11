@@ -32,8 +32,8 @@
     <ul class="list-group with-checkbox" id="custom-chat-instances-list">
         @if (Model.Models.Count > 0)
         {
-            int startIndex = 0;
-            int endIndex = startIndex + Model.Models.Count - 1;
+            var startIndex = 0;
+            var endIndex = startIndex + Model.Models.Count - 1;
 
             <li class="list-group-item text-bg-theme ignore-elements">
                 <div class="row gx-3">

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.AI;
+
 namespace CrestApps.OrchardCore.AI.Chat.Models;
 
 /// <summary>
@@ -5,7 +7,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Models;
 /// </summary>
 public sealed class ChatMessageEntry
 {
-    public string Role { get; set; }
+    public ChatRole Role { get; set; }
 
     public string Content { get; set; }
 }

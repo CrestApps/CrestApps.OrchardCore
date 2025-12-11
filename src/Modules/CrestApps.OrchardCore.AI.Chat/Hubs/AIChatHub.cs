@@ -649,8 +649,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             foreach (var entry in recentHistory)
             {
-                var role = entry.Role?.ToLowerInvariant() == "user" ? ChatRole.User : ChatRole.Assistant;
-                transcript.Add(new ChatMessage(role, entry.Content ?? string.Empty));
+                transcript.Add(new ChatMessage(entry.Role, entry.Content ?? string.Empty));
             }
         }
 
