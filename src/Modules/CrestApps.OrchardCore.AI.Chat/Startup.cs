@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Chat.Controllers;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Migrations;
@@ -32,7 +33,19 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfileMenuDisplayDriver>()
             .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatAdminMenu>()
-            .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>();
+            .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
+
+
+
+            .AddDisplayDriver<AIChatSession, CustomChatInstanceDisplayDriver>()
+            .AddDisplayDriver<AIChatSession, CustomChatInstanceConfigurationDisplayDriver>()
+
+            .AddScoped<CustomChatSettingsController>()
+            .AddScoped<CustomChatController>();
+
+
+
+
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

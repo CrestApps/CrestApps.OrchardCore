@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.Entities
+
+@model ChatSessionCapsuleViewModel
+
+<div class="card text-bg-theme">
+    <div class="card-body d-flex justify-content-between">
+        <div></div>
+        <div>
+            <a class="btn btn-secondary me-1" asp-action="NewAIChatSession" asp-controller="CustomChat" asp-route-sessionId="@Model.Session.SessionId">
+                @T["New Chat"]
+            </a>
+
+
+            <a class="btn btn-primary" asp-action="History" asp-controller="CustomChat">
+                <i class="fa-solid fa-list"></i> @T["Chat History"]
+            </a>
+        </div>
+    </div>
+</div>
