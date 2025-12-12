@@ -156,13 +156,15 @@ else
 
     <script at="Foot">
         document.addEventListener('DOMContentLoaded', function() {
-            // Handle category select-all checkboxes
+
             document.querySelectorAll('.category-select-all').forEach(function(checkbox) {
+
                 var category = checkbox.dataset.category;
+
                 var toolCheckboxes = document.querySelectorAll('.tool-checkbox[data-category="' + category + '"]');
-                
-                // Set initial state of select-all based on individual checkboxes
+
                 var allChecked = Array.from(toolCheckboxes).every(cb => cb.checked);
+
                 checkbox.checked = allChecked && toolCheckboxes.length > 0;
                 
                 checkbox.addEventListener('change', function() {
@@ -171,7 +173,6 @@ else
                     });
                 });
                 
-                // Update select-all when individual checkboxes change
                 toolCheckboxes.forEach(function(cb) {
                     cb.addEventListener('change', function() {
                         var allChecked = Array.from(toolCheckboxes).every(tcb => tcb.checked);

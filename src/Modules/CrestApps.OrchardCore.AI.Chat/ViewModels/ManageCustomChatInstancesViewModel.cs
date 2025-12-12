@@ -28,6 +28,8 @@ public class ManageCustomChatInstancesViewModel
     /// </summary>
     public IShape ChatContent { get; set; }
 
+    public IList<IShape> History { get; set; }
+
     /// <summary>
     /// Gets or sets whether this is a new instance.
     /// </summary>

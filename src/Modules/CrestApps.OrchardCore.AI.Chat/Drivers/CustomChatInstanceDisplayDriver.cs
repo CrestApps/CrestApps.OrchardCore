@@ -9,9 +9,6 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
-/// <summary>
-/// Display driver for custom chat instances.
-/// </summary>
 public sealed class CustomChatInstanceDisplayDriver : DisplayDriver<AIChatSession>
 {
     private readonly AIOptions _aiOptions;
@@ -19,6 +16,17 @@ public sealed class CustomChatInstanceDisplayDriver : DisplayDriver<AIChatSessio
     public CustomChatInstanceDisplayDriver(IOptions<AIOptions> aiOptions)
     {
         _aiOptions = aiOptions.Value;
+    }
+
+    public override IDisplayResult Display(AIChatSession session, BuildDisplayContext context)
+    {
+        var result = Initialize<DisplayAIChatSessionViewModel>("AIChatSessionListItem_AdminChatSession", model =>
+        {
+            model.Session = session;
+        }).Location(AIConstants.ShapeLocations.SummaryAdmin, "Content")
+        .OnGroup(AIConstants.DisplayGroups.AdminChatSession);
+
+        return result;
     }
 
     public override Task<IDisplayResult> EditAsync(AIChatSession session, BuildEditorContext context)
@@ -30,7 +38,6 @@ public sealed class CustomChatInstanceDisplayDriver : DisplayDriver<AIChatSessio
             return Task.FromResult<IDisplayResult>(null);
         }
 
-        // For custom instances, we need to create a virtual profile representation for the chat UI
         var virtualProfile = new AIProfile
         {
             ItemId = session.ProfileId,
@@ -39,11 +46,10 @@ public sealed class CustomChatInstanceDisplayDriver : DisplayDriver<AIChatSessio
             Type = AIProfileType.Chat,
             ConnectionName = metadata.ConnectionName,
             DeploymentId = metadata.DeploymentId,
-            TitleType = AISessionTitleType.InitialPrompt,
+            TitleType = AISessionTitleType.Generated,
             Source = metadata.Source ?? GetDefaultSource()
         };
 
-        // Add metadata
         virtualProfile.Put(new AIProfileMetadata
         {
             SystemMessage = metadata.SystemMessage,
@@ -56,7 +62,6 @@ public sealed class CustomChatInstanceDisplayDriver : DisplayDriver<AIChatSessio
             UseCaching = metadata.UseCaching
         });
 
-        // Add tool metadata if tools are selected
         if (metadata.ToolNames?.Length > 0)
         {
             virtualProfile.Put(new AIProfileFunctionInvocationMetadata
@@ -65,26 +70,25 @@ public sealed class CustomChatInstanceDisplayDriver : DisplayDriver<AIChatSessio
             });
         }
 
-        var headerResult = Initialize<ChatSessionCapsuleViewModel>("AIChatSessionHeader", model =>
+        var headerResult = Initialize<ChatSessionCapsuleViewModel>("AIChatSessionHeader_AdminChatSession", model =>
         {
             model.Session = session;
             model.Profile = virtualProfile;
             model.IsNew = context.IsNew;
-        }).Location("Header");
+        }).Location("Header").OnGroup(AIConstants.DisplayGroups.AdminChatSession);
 
-        var contentResult = Initialize<ChatSessionCapsuleViewModel>("AIChatSessionChat", model =>
+        var contentResult = Initialize<ChatSessionCapsuleViewModel>("AIChatSessionChat_AdminChatSession", model =>
         {
             model.Session = session;
             model.Profile = virtualProfile;
             model.IsNew = context.IsNew;
-        }).Location("Content");
+        }).Location("Content").OnGroup(AIConstants.DisplayGroups.AdminChatSession);
 
         return Task.FromResult<IDisplayResult>(Combine(headerResult, contentResult));
     }
 
     private string GetDefaultSource()
     {
-        // Get the first available profile source
         return _aiOptions.ProfileSources.Keys.FirstOrDefault();
     }
 }

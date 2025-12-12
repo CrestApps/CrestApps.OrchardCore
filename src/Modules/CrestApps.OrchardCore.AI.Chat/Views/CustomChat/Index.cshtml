@@ -1,40 +1,33 @@
-@using CrestApps.OrchardCore.AI.Chat.Models
-@using CrestApps.OrchardCore.Core.Models
-@using Microsoft.AspNetCore.Mvc.Localization
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using OrchardCore
 
-@model ListCatalogEntryViewModel<AIChatSession>
+@model ManageCustomChatInstancesViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Custom Chat Instances"])</h1></zone>
+<div class="d-flex flex-row h-100">
 
-<div class="card text-bg-theme mb-3 position-sticky action-bar">
-    <div class="card-body">
-        <div class="row gx-3">
-            <div class="col-auto">
-                <a asp-controller="CustomChat" asp-action="Create" class="btn btn-primary" role="button">
-                    <i class="fa-solid fa-plus"></i> @T["Create Instance"]
-                </a>
+    <div class="d-flex flex-column h-100 flex-grow-1">
+        @await DisplayAsync(Model.ChatContent)
+    </div>
+
+    @if (Model.History is not null && Model.History.Count > 0)
+    {
+        <div class="d-none d-md-block flex-shrink-0 bg-theme p-2 border rounded" style="width: 20rem; height: calc(100vh - 2rem - var(--oc-top-nav-height, 0)); overflow-y:auto">
+            <div class="list-group">
+                @foreach (var record in Model.History)
+                {
+                    @await DisplayAsync(record)
+                }
             </div>
         </div>
-    </div>
+    }
+
 </div>
 
-<ul class="list-group">
-    @if (Model.Models.Count > 0)
-    {
-        @foreach (var entry in Model.Models)
-        {
-            <li class="list-group-item">
-                <div class="flex-grow-1">
-                    @await DisplayAsync(entry.Shape)
-                </div>
-            </li>
-        }
+<style at="Head">
+    .ta-content {
+        height: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        padding-bottom: 0 !important;
     }
-    else
-    {
-        <li class="list-group-item list-group-item-info text-center">
-            <i class="fa-solid fa-inbox fa-2x mb-2"></i>
-            <p class="mb-0">@T["<strong>Nothing here!</strong> You haven't created any custom chat instances yet."]</p>
-        </li>
-    }
-</ul>
+</style>

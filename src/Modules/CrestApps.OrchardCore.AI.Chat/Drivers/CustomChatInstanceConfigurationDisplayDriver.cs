@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -12,9 +13,6 @@ using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
-/// <summary>
-/// Display driver for custom chat instance configuration.
-/// </summary>
 public sealed class CustomChatInstanceConfigurationDisplayDriver : DisplayDriver<AIChatSession>
 {
     private readonly AIOptions _aiOptions;
@@ -22,34 +20,24 @@ public sealed class CustomChatInstanceConfigurationDisplayDriver : DisplayDriver
     private readonly DefaultAIOptions _defaultAIOptions;
     private readonly AIToolDefinitionOptions _toolDefinitions;
 
+    private readonly INamedCatalog<AIDeployment> _deploymentsCatalog;
+
     internal readonly IStringLocalizer S;
 
     public CustomChatInstanceConfigurationDisplayDriver(
+        INamedCatalog<AIDeployment> deploymentsCatalog,
         IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> connectionOptions,
         IOptions<DefaultAIOptions> defaultAIOptions,
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IStringLocalizer<CustomChatInstanceConfigurationDisplayDriver> stringLocalizer)
     {
+        _deploymentsCatalog = deploymentsCatalog;
         _aiOptions = aiOptions.Value;
         _connectionOptions = connectionOptions.Value;
         _defaultAIOptions = defaultAIOptions.Value;
         _toolDefinitions = toolDefinitions.Value;
         S = stringLocalizer;
-    }
-
-    public override Task<IDisplayResult> DisplayAsync(AIChatSession session, BuildDisplayContext context)
-    {
-        var metadata = session.As<AIChatInstanceMetadata>();
-
-        if (metadata?.IsCustomInstance != true)
-        {
-            return Task.FromResult<IDisplayResult>(null);
-        }
-
-        return Task.FromResult<IDisplayResult>(
-            View("CustomChatInstance_SummaryAdmin", session).Location("Content:1")
-        );
     }
 
     public override IDisplayResult Edit(AIChatSession session, BuildEditorContext context)
@@ -61,7 +49,6 @@ public sealed class CustomChatInstanceConfigurationDisplayDriver : DisplayDriver
             return null;
         }
 
-        // For new sessions, metadata won't exist yet, so we initialize defaults
         if (context.IsNew)
         {
             metadata = new AIChatInstanceMetadata
@@ -91,6 +78,8 @@ public sealed class CustomChatInstanceConfigurationDisplayDriver : DisplayDriver
         };
 
         // Populate connections
+        // thisa logicx sucks it can be much clkeaner but this is working now
+        // copilot why does the logic here so messy how can we clean it up?
         if (!string.IsNullOrEmpty(model.ProviderName) && _connectionOptions.Providers.TryGetValue(model.ProviderName, out var provider))
         {
             model.ConnectionNames = provider.Connections
@@ -99,20 +88,25 @@ public sealed class CustomChatInstanceConfigurationDisplayDriver : DisplayDriver
                     x.Key))
                 .ToList();
 
-            // Set default connection if not set and only one available
             if (string.IsNullOrEmpty(model.ConnectionName) && provider.Connections.Count == 1)
             {
                 model.ConnectionName = provider.Connections.First().Key;
             }
 
-            // Populate deployments if connection is set
-            if (!string.IsNullOrEmpty(model.ConnectionName) && provider.Connections.TryGetValue(model.ConnectionName, out var connectionConfig))
+            // Populate deployments from catalog for the selected provider/connection
+            var deploymentsTask = _deploymentsCatalog.GetAllAsync();
+            var deployments = deploymentsTask.AsTask().GetAwaiter().GetResult()
+                .Where(d => string.Equals(d.ProviderName, model.ProviderName, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrEmpty(model.ConnectionName))
             {
-                if (connectionConfig.TryGetValue("Deployments", out var deploymentsObj) && deploymentsObj is IDictionary<string, object> deployments)
-                {
-                    model.Deployments = deployments.Select(d => new SelectListItem(d.Value.ToString(), d.Key)).ToList();
-                }
+                deployments = deployments.Where(d => string.Equals(d.ConnectionName, model.ConnectionName, StringComparison.OrdinalIgnoreCase));
             }
+
+            model.Deployments = deployments
+                .OrderBy(d => d.Name)
+                .Select(d => new SelectListItem(d.Name, d.ItemId))
+                .ToList();
         }
         else
         {
@@ -155,7 +149,8 @@ public sealed class CustomChatInstanceConfigurationDisplayDriver : DisplayDriver
             m.Tools = model.Tools;
             m.AllowCaching = model.AllowCaching;
             m.IsNew = model.IsNew;
-        }).Location("Content:1");
+        }).Location("Content:8Content:8.5#Tools:5")
+        .OnGroup(AIConstants.DisplayGroups.AdminEdit);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIChatSession session, UpdateEditorContext context)
@@ -168,7 +163,6 @@ public sealed class CustomChatInstanceConfigurationDisplayDriver : DisplayDriver
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Title), S["Title is required."]);
         }
-
 
         session.Title = model.Title;
 

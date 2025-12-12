@@ -9,10 +9,12 @@ using Fluid;
 using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Entities;
 using OrchardCore.Liquid;
 using YesSql;
 
@@ -131,13 +133,66 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 return;
             }
 
+            //    A virtual profile is required because Custom Chat Instances do not exist in the AIProfile catalog.
+            //    The hub’s completion pipeline requires an AIProfile object to supply model settings, system message,
+            //    temperature, max tokens, tool configuration, and connection metadata.When _profileManager.FindByIdAsync returns null,
+            //    the session’s metadata must be converted into a synthetic AIProfile so the completion context can be built.
+            //    Without this virtual profile, the hub cannot execute streaming completions for custom instances.
+
             var profile = await _profileManager.FindByIdAsync(profileId);
 
             if (profile is null)
             {
-                await Clients.Caller.ReceiveError(S["Profile not found."].Value);
+                var chatSession = await _sessionManager.FindAsync(sessionId);
 
-                return;
+                if (chatSession is null)
+                {
+                    await Clients.Caller.ReceiveError(S["Session not found."].Value);
+
+                    return;
+                }
+
+                var metadata = chatSession.As<AIChatInstanceMetadata>();
+
+                if (metadata?.IsCustomInstance != true)
+                {
+                    await Clients.Caller.ReceiveError(S["Profile not found."].Value);
+
+                    return;
+                }
+
+                // virtual profile
+                profile = new AIProfile
+                {
+                    ItemId = chatSession.ProfileId,
+                    Name = $"custom-{chatSession.SessionId}",
+                    TitleType = AISessionTitleType.Generated,
+                    DisplayText = chatSession.Title,
+                    Type = AIProfileType.Chat,
+                    ConnectionName = metadata.ConnectionName,
+                    DeploymentId = metadata.DeploymentId,
+                    Source = metadata.Source
+                };
+
+                profile.Put(new AIProfileMetadata
+                {
+                    SystemMessage = metadata.SystemMessage,
+                    MaxTokens = metadata.MaxTokens,
+                    Temperature = metadata.Temperature,
+                    TopP = metadata.TopP,
+                    FrequencyPenalty = metadata.FrequencyPenalty,
+                    PresencePenalty = metadata.PresencePenalty,
+                    PastMessagesCount = metadata.PastMessagesCount,
+                    UseCaching = metadata.UseCaching
+                });
+
+                if (metadata.ToolNames?.Length > 0)
+                {
+                    profile.Put(new AIProfileFunctionInvocationMetadata
+                    {
+                        Names = metadata.ToolNames
+                    });
+                }
             }
 
             var httpContext = Context.GetHttpContext();
