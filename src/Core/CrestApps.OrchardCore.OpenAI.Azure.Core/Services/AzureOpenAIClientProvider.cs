@@ -1,5 +1,6 @@
 using System.ClientModel;
 using System.ClientModel.Primitives;
+using Azure.AI.OpenAI;
 using Azure.Identity;
 using CrestApps.Azure.Core;
 using CrestApps.Azure.Core.Models;
@@ -8,7 +9,6 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using OpenAI;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
@@ -26,9 +26,7 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
 
     protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, string deploymentName)
     {
-        var endpoint = new Uri($"{connection.GetEndpoint()}openai/deployments/{deploymentName}?api-version=2025-01-01-preview");
-
-        return GetClient(connection, endpoint)
+        return GetClient(connection, connection.GetEndpoint())
             .GetChatClient(deploymentName)
             .AsIChatClient();
     }
@@ -42,29 +40,27 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
             .AsIEmbeddingGenerator();
     }
 
-    private OpenAIClient GetClient(AIProviderConnectionEntry connection, Uri endpoint)
+    private AzureOpenAIClient GetClient(AIProviderConnectionEntry connection, Uri endpoint)
     {
-        var options = new OpenAIClientOptions
+        var options = new AzureOpenAIClientOptions
         {
-            Endpoint = endpoint,
             ClientLoggingOptions = new ClientLoggingOptions
             {
-                EnableLogging = true,
-                EnableMessageLogging = true,
-                EnableMessageContentLogging = true,
                 LoggerFactory = _loggerFactory,
+                EnableLogging = connection.GetBooleanOrFalseValue("EnableLogging"),
+                EnableMessageLogging = connection.GetBooleanOrFalseValue("EnableMessageLogging"),
+                EnableMessageContentLogging = connection.GetBooleanOrFalseValue("EnableMessageContentLogging"),
             },
         };
 
-        return connection.GetAzureAuthenticationType() switch
+        var azureClient = connection.GetAzureAuthenticationType() switch
         {
-            AzureAuthenticationType.ApiKey => new OpenAIClient(new ApiKeyCredential(connection.GetApiKey()), options),
-
-#pragma warning disable OPENAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-            AzureAuthenticationType.ManagedIdentity => new OpenAIClient(new BearerTokenPolicy(new ManagedIdentityCredential(), "https://ai.azure.com/.default"), options),
-            AzureAuthenticationType.Default => new OpenAIClient(new BearerTokenPolicy(new DefaultAzureCredential(), "https://ai.azure.com/.default"), options),
+            AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey()), options),
+            AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential(), options),
+            AzureAuthenticationType.Default => new AzureOpenAIClient(endpoint, new DefaultAzureCredential(), options),
             _ => throw new NotSupportedException("The provided authentication type is not supported.")
         };
-#pragma warning restore OPENAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
+        return azureClient;
     }
 }

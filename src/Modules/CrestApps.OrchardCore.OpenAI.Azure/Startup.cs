@@ -120,7 +120,9 @@ public sealed class AISearchStartup : StartupBase
         services.AddScoped<ICatalogEntryHandler<AIDataSource>, AzureAISearchAIDataSourceHandler>();
 
         services
-            .AddScoped<IOpenAIChatOptionsConfiguration, AzureAISearchOpenAIChatOptionsConfiguration>()
+            .AddScoped<AzureAISearchOpenAIChatOptionsConfiguration>()
+            .AddScoped<IOpenAIChatOptionsConfiguration>(sp => sp.GetRequiredService<AzureAISearchOpenAIChatOptionsConfiguration>())
+            .AddScoped<IAzureOpenAIDataSourceHandler>(sp => sp.GetRequiredService<AzureAISearchOpenAIChatOptionsConfiguration>())
             .AddAIDataSource(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.AzureAISearch, o =>
             {
                 o.DisplayName = S["Azure OpenAI with Azure AI Search"];
@@ -145,7 +147,9 @@ public sealed class ElasticsearchStartup : StartupBase
         services.AddScoped<ICatalogEntryHandler<AIDataSource>, ElasticsearchAIDataSourceHandler>();
 
         services
-            .AddScoped<IOpenAIChatOptionsConfiguration, ElasticsearchOpenAIChatOptionsConfiguration>()
+            .AddScoped<ElasticsearchOpenAIChatOptionsConfiguration>()
+            .AddScoped<IOpenAIChatOptionsConfiguration>(sp => sp.GetRequiredService<ElasticsearchOpenAIChatOptionsConfiguration>())
+            .AddScoped<IAzureOpenAIDataSourceHandler>(sp => sp.GetRequiredService<ElasticsearchOpenAIChatOptionsConfiguration>())
             .AddAIDataSource(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.Elasticsearch, o =>
             {
                 o.DisplayName = S["Azure OpenAI with Elasticsearch"];
@@ -170,7 +174,9 @@ public sealed class MongoDBStartup : StartupBase
         services.AddScoped<ICatalogEntryHandler<AIDataSource>, MongoDBAIProfileHandler>();
 
         services
-            .AddScoped<IOpenAIChatOptionsConfiguration, MongoDBOpenAIChatOptionsConfiguration>()
+            .AddScoped<MongoDBOpenAIChatOptionsConfiguration>()
+            .AddScoped<IOpenAIChatOptionsConfiguration>(sp => sp.GetRequiredService<MongoDBOpenAIChatOptionsConfiguration>())
+            .AddScoped<IAzureOpenAIDataSourceHandler>(sp => sp.GetRequiredService<MongoDBOpenAIChatOptionsConfiguration>())
             .AddAIDataSource(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.MongoDB, o =>
             {
                 o.DisplayName = S["Azure OpenAI with Mongo DB"];
