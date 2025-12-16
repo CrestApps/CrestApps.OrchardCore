@@ -1,10 +1,10 @@
-using CrestApps.OrchardCore.Models;
-
 namespace CrestApps.OrchardCore.AI.Models;
 
-public sealed class AIChatSessionQueryContext : QueryContext
+public sealed class AIChatSessionQueryContext
 {
     public string ProfileId { get; set; }
 
-    public string UserId { get; set; }
+    public string Name { get; set; }
+
+    public bool Sorted { get; set; }
 }
