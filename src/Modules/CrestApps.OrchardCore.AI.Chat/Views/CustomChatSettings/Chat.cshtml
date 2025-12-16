@@ -9,18 +9,6 @@
         @await DisplayAsync(Model.ChatContent)
     </div>
 
-    @if (Model.History is not null && Model.History.Count > 0)
-    {
-        <div class="d-none d-md-block flex-shrink-0 bg-theme p-2 border rounded" style="width: 20rem; height: calc(100vh - 2rem - var(--oc-top-nav-height, 0)); overflow-y:auto">
-            <div class="list-group">
-                @foreach (var record in Model.History)
-                {
-                    @await DisplayAsync(record)
-                }
-            </div>
-        </div>
-    }
-
 </div>
 
 <style at="Head">

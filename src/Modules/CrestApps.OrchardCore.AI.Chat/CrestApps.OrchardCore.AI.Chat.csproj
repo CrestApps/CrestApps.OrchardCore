@@ -39,8 +39,4 @@
     <ProjectReference Include="..\CrestApps.OrchardCore.SignalR\CrestApps.OrchardCore.SignalR.csproj" PrivateAssets="none" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Views\CustomChat\" />
-  </ItemGroup>
-
 </Project>

@@ -35,17 +35,8 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<ChatAdminMenu>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
 
-
-
             .AddDisplayDriver<AIChatSession, CustomChatInstanceDisplayDriver>()
-            .AddDisplayDriver<AIChatSession, CustomChatInstanceConfigurationDisplayDriver>()
-
-            .AddScoped<CustomChatSettingsController>()
-            .AddScoped<CustomChatController>();
-
-
-
-
+            .AddScoped<CustomChatSettingsController>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

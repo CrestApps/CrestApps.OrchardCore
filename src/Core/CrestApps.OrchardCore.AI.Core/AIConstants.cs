@@ -57,9 +57,9 @@ public static class AIConstants
 
     public static class DisplayGroups
     {
-        public const string AdminEdit = "AdminEdit";
+        public const string AICustomChat = "AICustomChat";
 
-        public const string AdminChatSession = "AdminChatSession";
+        public const string AICustomChatSession = "AICustomChatSession";
     }
 
     public static class ShapeLocations

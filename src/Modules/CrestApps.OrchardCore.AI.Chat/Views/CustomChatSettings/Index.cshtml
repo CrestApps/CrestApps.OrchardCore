@@ -28,7 +28,8 @@
                 <div class="row align-items-center">
                     <div class="col">
                         <h5 class="mb-1">
-                            <a asp-controller="CustomChatSettings" asp-action="Edit" asp-route-sessionId="@entry.Model.SessionId">
+                            <a asp-controller="CustomChatSettings" asp-action="Edit" asp-route-customChatId="@entry.Model.SessionId">
+
                                 @entry.Model.Title
                             </a>
                         </h5>
@@ -39,13 +40,10 @@
 
                     <div class="col-auto">
                         <div class="d-flex align-items-center gap-2">
-                            <a asp-controller="CustomChat" asp-action="Index" asp-route-sessionId="@entry.Model.SessionId" class="btn btn-outline-success btn-sm">
-                                @T["Chat"]
-                            </a>
-                            <a asp-controller="CustomChatSettings" asp-action="Edit" asp-route-sessionId="@entry.Model.SessionId" class="btn btn-outline-primary btn-sm">
+                            <a asp-controller="CustomChatSettings" asp-action="Edit" asp-route-customChatId="@entry.Model.SessionId" class="btn btn-outline-primary btn-sm">
                                 @T["Edit"]
                             </a>
-                            <form asp-controller="CustomChatSettings" asp-action="Delete" asp-route-sessionId="@entry.Model.SessionId" method="post" style="display:inline;">
+                            <form asp-controller="CustomChatSettings" asp-action="Delete" asp-route-customChatId="@entry.Model.SessionId" method="post" style="display:inline;">
                                 <button type="submit" class="btn btn-outline-danger btn-sm">
                                     @T["Delete"]
                                 </button>
