@@ -205,7 +205,12 @@ public sealed class ChatCoreStartup : StartupBase
         services
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
             .AddDataMigration<AIChatSessionIndexMigrations>()
-            .AddIndexProvider<AIChatSessionIndexProvider>();
+            .AddIndexProvider<AIChatSessionIndexProvider>()
+
+
+            .AddDataMigration<CustomChatSessionIndexMigrations>()
+            .AddIndexProvider<CustomChatSessionIndexProvider>();
+        // new code
     }
 }
 

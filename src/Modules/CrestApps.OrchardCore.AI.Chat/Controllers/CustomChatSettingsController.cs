@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
@@ -71,11 +72,10 @@ public sealed class CustomChatSettingsController : Controller
             return Forbid();
         }
 
-        var userId = CurrentUserId();
-
+        // thisa model wont work for custom chat sessions only
         var sessions = await _sessionManager.PageAsync(1, 100, new AIChatSessionQueryContext
         {
-            UserId = userId,
+            UserId = CurrentUserId(),
         });
 
         var customInstances = sessions.Sessions
@@ -84,13 +84,14 @@ public sealed class CustomChatSettingsController : Controller
 
         var viewModel = new ListCatalogEntryViewModel<AIChatSession>
         {
+            // why do we care for model [] if we have custom models?
             Models = [],
             CustomModels = []
         };
 
         foreach (var session in customInstances)
         {
-            var shape = await _sessionDisplayManager.BuildDisplayAsync(session, _updateModelAccessor.ModelUpdater, ShapeLocations.SummaryAdmin, DisplayGroups.AdminEdit);
+            var shape = await _sessionDisplayManager.BuildDisplayAsync(session, _updateModelAccessor.ModelUpdater, ShapeLocations.SummaryAdmin, DisplayGroups.AICustomChatSession);
 
             viewModel.CustomModels.Add(new CatalogEntryViewModel<AIChatSession>
             {
@@ -115,10 +116,11 @@ public sealed class CustomChatSettingsController : Controller
         var session = new AIChatSession
         {
             // this is not how we make IDs Mike
-            SessionId = Guid.NewGuid().ToString("N"),
+            SessionId = IdGenerator.GenerateId(),
             UserId = userId,
             CreatedUtc = DateTime.UtcNow,
-            ProfileId = "custom-" + Guid.NewGuid().ToString("N") // Placeholder profile ID
+            // we no longer use profiles for custom instances
+            // ProfileId = "custom-" + Guid.NewGuid().ToString("N") // Placeholder profile ID
         };
 
         // Mark as custom instance
@@ -127,7 +129,7 @@ public sealed class CustomChatSettingsController : Controller
         var model = new EditCatalogEntryViewModel
         {
             DisplayName = S["New Custom Chat Instance"],
-            Editor = await _sessionDisplayManager.BuildEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: true, groupId: DisplayGroups.AdminEdit),
+            Editor = await _sessionDisplayManager.BuildEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: true, groupId: DisplayGroups.AICustomChatSession),
         };
 
         return View(model);
@@ -147,10 +149,11 @@ public sealed class CustomChatSettingsController : Controller
 
         var session = new AIChatSession
         {
-            SessionId = Guid.NewGuid().ToString("N"),
+            SessionId = IdGenerator.GenerateId(),
             UserId = userId,
             CreatedUtc = DateTime.UtcNow,
-            ProfileId = "custom-" + Guid.NewGuid().ToString("N"),
+            // wew dont use profiles 
+            //  ProfileId = "custom-" + Guid.NewGuid().ToString("N"),
         };
 
         // Mark as custom instance
@@ -159,7 +162,7 @@ public sealed class CustomChatSettingsController : Controller
         var model = new EditCatalogEntryViewModel
         {
             DisplayName = S["New Custom Chat Instance"],
-            Editor = await _sessionDisplayManager.UpdateEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: true, groupId: DisplayGroups.AdminEdit),
+            Editor = await _sessionDisplayManager.UpdateEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: true, groupId: DisplayGroups.AICustomChatSession),
 
         };
 
@@ -207,7 +210,7 @@ public sealed class CustomChatSettingsController : Controller
         var model = new EditCatalogEntryViewModel
         {
             DisplayName = session.Title ?? S["Custom Chat Instance"],
-            Editor = await _sessionDisplayManager.BuildEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: false, groupId: DisplayGroups.AdminEdit),
+            Editor = await _sessionDisplayManager.BuildEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: false, groupId: DisplayGroups.AICustomChatSession),
         };
 
         return View(model);
@@ -247,7 +250,7 @@ public sealed class CustomChatSettingsController : Controller
         var model = new EditCatalogEntryViewModel
         {
             DisplayName = session.Title ?? S["Custom Chat Instance"],
-            Editor = await _sessionDisplayManager.UpdateEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: false, groupId: DisplayGroups.AdminEdit),
+            Editor = await _sessionDisplayManager.UpdateEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: false, groupId: DisplayGroups.AICustomChatSession),
         };
 
         if (ModelState.IsValid)

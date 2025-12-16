@@ -14,7 +14,7 @@ using static CrestApps.OrchardCore.AI.Core.AIConstants;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
-public sealed class CustomChatInstanceDisplayDriver : DisplayDriver<AIChatSession>
+public sealed class CustomChatDisplayDriver : DisplayDriver<AIChatSession>
 {
     private readonly AIOptions _aiOptions;
     private readonly AIProviderOptions _connectionOptions;
@@ -25,13 +25,13 @@ public sealed class CustomChatInstanceDisplayDriver : DisplayDriver<AIChatSessio
 
     internal readonly IStringLocalizer S;
 
-    public CustomChatInstanceDisplayDriver(
+    public CustomChatDisplayDriver(
         INamedCatalog<AIDeployment> deploymentsCatalog,
         IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> connectionOptions,
         IOptions<DefaultAIOptions> defaultAIOptions,
         IOptions<AIToolDefinitionOptions> toolDefinitions,
-        IStringLocalizer<CustomChatInstanceDisplayDriver> stringLocalizer)
+        IStringLocalizer<CustomChatDisplayDriver> stringLocalizer)
     {
         _deploymentsCatalog = deploymentsCatalog;
         _aiOptions = aiOptions.Value;
