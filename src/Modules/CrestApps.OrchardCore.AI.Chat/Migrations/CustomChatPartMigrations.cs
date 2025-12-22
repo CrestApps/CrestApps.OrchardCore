@@ -1,15 +1,15 @@
 using CrestApps.OrchardCore.AI.Chat.Indexes;
-using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Migrations;
 
-internal sealed class CustomChatPartMigrations : DataMigration
+public sealed class CustomChatPartMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<CustomChatPartIndex>(table => table
+            .Column<string>("ContentItemId", c => c.WithLength(26))
             .Column<string>("CustomChatInstanceId", column => column.WithLength(26))
             .Column<string>("SessionId", column => column.WithLength(26))
             .Column<string>("UserId", column => column.WithLength(26))
@@ -17,24 +17,22 @@ internal sealed class CustomChatPartMigrations : DataMigration
             .Column<string>("ProviderName", column => column.WithLength(255))
             .Column<string>("ConnectionName", column => column.WithLength(255))
             .Column<string>("DeploymentId", column => column.WithLength(255))
-            .Column<string>("Title", column => column.WithLength(255))
+            .Column<string>("DisplayText", c => c.WithLength(255))
             .Column<bool>("IsCustomInstance")
             .Column<bool>("UseCaching")
-            .Column<DateTime>("CreatedUtc"),
-            collection: AIConstants.CollectionName
+            .Column<DateTime>("CreatedUtc")
         );
 
         await SchemaBuilder.AlterIndexTableAsync<CustomChatPartIndex>(table => table
             .CreateIndex(
-                "IDX_CustomChatPartIndex_DocumentId",
-                "DocumentId",
-                "CustomChatInstanceId",
-                "SessionId",
-                "UserId",
-                "IsCustomInstance",
-                "CreatedUtc",
-                "Title"),
-            collection: AIConstants.CollectionName
+            "IDX_CustomChatPartIndex_ContentItemId",
+            "ContentItemId",
+            "CustomChatInstanceId",
+            "SessionId",
+            "UserId",
+            "IsCustomInstance",
+            "CreatedUtc",
+            "DisplayText")
         );
 
         return 1;

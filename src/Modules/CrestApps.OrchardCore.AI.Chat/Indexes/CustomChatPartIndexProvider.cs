@@ -1,22 +1,37 @@
-using CrestApps.OrchardCore.AI.Core.Indexes;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Chat.Models;
+using OrchardCore.ContentManagement;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.AI.Chat.Indexes;
 
-public class CustomChatPartIndexProvider : IndexProvider<CustomChatSession>
+public sealed class CustomChatPartIndexProvider : IndexProvider<ContentItem>
 {
-    public override void Describe(DescribeContext<CustomChatSession> context)
+    public override void Describe(DescribeContext<ContentItem> context)
     {
-        context.For<AICustomChatSessionIndex>()
-            .Map(x => new AICustomChatSessionIndex
+        context.For<CustomChatPartIndex>()
+            .Map(contentItem =>
             {
-                SessionId = x.SessionId,
-                CustomChatInstanceId = x.CustomChatInstanceId,
-                UserId = x.UserId,
-                Source = x.Source,
-                DisplayText = x.Title,
-                CreatedUtc = x.CreatedUtc
+                var part = contentItem.As<CustomChatPart>();
+                if (part == null || !part.IsCustomInstance)
+                {
+                    return null;
+                }
+
+                return new CustomChatPartIndex
+                {
+                    ContentItemId = contentItem.ContentItemId,
+                    CustomChatInstanceId = part.CustomChatInstanceId,
+                    SessionId = part.SessionId,
+                    UserId = part.UserId,
+                    Source = part.Source,
+                    ProviderName = part.ProviderName,
+                    ConnectionName = part.ConnectionName,
+                    DeploymentId = part.DeploymentId,
+                    DisplayText = part.Title,
+                    UseCaching = part.UseCaching,
+                    IsCustomInstance = part.IsCustomInstance,
+                    CreatedUtc = part.CreatedUtc
+                };
             });
     }
 }

@@ -1,18 +1,21 @@
-@using CrestApps.OrchardCore.AI.Chat.Models
-@using CrestApps.OrchardCore.AI.Models
 @using CrestApps.OrchardCore.Core.Models
-@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.ContentManagement
+@using CrestApps.OrchardCore.AI.Chat.Models
 
-@model ListCatalogEntryViewModel<AIChatSession>
-@* // jack look here if we use a migration this model will have to change  *@
+@model ListCatalogEntryViewModel<ContentItem>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["Custom Chat Instances"])</h1></zone>
+<zone Name="Title">
+    <h1>@RenderTitleSegments(T["Custom Chat Instances"])</h1>
+</zone>
 
 <div class="card text-bg-theme mb-3 position-sticky action-bar">
     <div class="card-body">
         <div class="row gx-3">
             <div class="col-auto">
-                <a asp-controller="CustomChatSettings" asp-action="Create" class="btn btn-primary" role="button">
+                <a asp-controller="CustomChatSettings"
+                   asp-action="Create"
+                   class="btn btn-primary"
+                   role="button">
                     <i class="fa-solid fa-plus"></i> @T["Create Instance"]
                 </a>
             </div>
@@ -21,47 +24,45 @@
 </div>
 
 <ul class="list-group">
-    @if (Model.CustomModels.Count > 0)
+    @foreach (var item in Model.Models)
     {
-        @foreach (var entry in Model.CustomModels)
-        {
-            <li class="list-group-item">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <h5 class="mb-1">
-                            <a asp-controller="CustomChatSettings" asp-action="Edit" asp-route-customChatId="@entry.Model.SessionId">
+        var part = item.As<CustomChatPart>();
 
-                                @entry.Model.Title
-                            </a>
-                        </h5>
+        <li class="list-group-item">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-1">
+                        <a asp-controller="CustomChatSettings"
+                           asp-action="Edit"
+                           asp-route-contentItemId="@item.ContentItemId">
+                            @part.Title
+                        </a>
+                    </h5>
 
-                        <small class="text-muted">Created: @entry.Model.CreatedUtc.ToLocalTime().ToString("g")</small>
-
-                    </div>
-
-                    <div class="col-auto">
-                        <div class="d-flex align-items-center gap-2">
-                            <a asp-controller="CustomChatSettings" asp-action="Edit" asp-route-customChatId="@entry.Model.SessionId" class="btn btn-outline-primary btn-sm">
-                                @T["Edit"]
-                            </a>
-                            <form asp-controller="CustomChatSettings" asp-action="Delete" asp-route-customChatId="@entry.Model.SessionId" method="post" style="display:inline;">
-                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                    @T["Delete"]
-                                </button>
-                            </form>
-                        </div>
-
-                    </div>
-
+                    <small class="text-muted">
+                        Created: @part.CreatedUtc.ToLocalTime().ToString("g")
+                    </small>
                 </div>
-            </li>
-        }
-    }
-    else
-    {
-        <li class="list-group-item list-group-item-info text-center">
-            <i class="fa-solid fa-inbox fa-2x mb-2"></i>
-            <p class="mb-0">@T["<strong>Nothing here!</strong> You haven't created any custom chat instances yet."]</p>
+
+                <div class="col-auto">
+                    <a asp-controller="CustomChatSettings"
+                       asp-action="Edit"
+                       asp-route-contentItemId="@item.ContentItemId"
+                       class="btn btn-outline-primary btn-sm">
+                        @T["Edit"]
+                    </a>
+
+                    <form asp-controller="CustomChatSettings"
+                          asp-action="Delete"
+                          asp-route-contentItemId="@item.ContentItemId"
+                          method="post"
+                          style="display:inline;">
+                        <button class="btn btn-outline-danger btn-sm">
+                            @T["Delete"]
+                        </button>
+                    </form>
+                </div>
+            </div>
         </li>
     }
 </ul>

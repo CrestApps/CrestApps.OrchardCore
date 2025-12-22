@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.AI.Chat.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Indexes;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.SignalR.Core.Services;
 using Microsoft.AspNetCore.Builder;
@@ -38,12 +39,17 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<ChatAdminMenu>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
 
-            .AddDisplayDriver<AIChatSession, CustomChatDisplayDriver>()
             .AddScoped<CustomChatSettingsController>()
 
 
+            .AddDataMigration<CustomChatMigrations>()
             .AddDataMigration<CustomChatPartMigrations>()
-            .AddIndexProvider<CustomChatPartIndexProvider>();
+            .AddIndexProvider<CustomChatPartIndexProvider>()
+            .AddIndexProvider<CustomChatSessionIndexProvider>();
+
+
+        services.AddContentPart<CustomChatPart>()
+        .UseDisplayDriver<CustomChatDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -51,6 +57,8 @@ public sealed class Startup : StartupBase
         var hubRouteManager = serviceProvider.GetRequiredService<HubRouteManager>();
 
         hubRouteManager.MapHub<AIChatHub>(routes);
+        // custom routes
+        hubRouteManager.MapHub<CustomChatHub>(routes);
     }
 }
 

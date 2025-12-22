@@ -10,6 +10,4 @@ public class ListCatalogEntryViewModel
 public class ListCatalogEntryViewModel<T> : ListCatalogEntryViewModel
 {
     public IList<T> Models { get; set; }
-
-    public IList<CatalogEntryViewModel<T>> CustomModels { get; set; }
 }

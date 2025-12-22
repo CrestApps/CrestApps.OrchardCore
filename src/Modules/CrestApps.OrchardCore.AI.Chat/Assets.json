@@ -7,6 +7,12 @@
   },
   {
     "inputs": [
+      "Assets/js/custom-chat.js"
+    ],
+    "output": "wwwroot/scripts/custom-chat.js"
+  },
+  {
+    "inputs": [
       "./node_modules/marked/marked.min.js"
     ],
     "output": "wwwroot/scripts/marked.js"

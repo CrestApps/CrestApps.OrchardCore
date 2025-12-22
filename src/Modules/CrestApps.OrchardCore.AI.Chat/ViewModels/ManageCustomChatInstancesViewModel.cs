@@ -16,7 +16,7 @@ public class ManageCustomChatInstancesViewModel
     /// <summary>
     /// Gets or sets the configuration for the current instance.
     /// </summary>
-    public CustomChatInstanceViewModel Configuration { get; set; }
+    public CustomChatViewModel Configuration { get; set; }
 
     /// <summary>
     /// Gets or sets the list of all user's custom chat instances.

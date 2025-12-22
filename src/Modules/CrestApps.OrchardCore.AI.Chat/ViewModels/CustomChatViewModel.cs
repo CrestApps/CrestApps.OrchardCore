@@ -1,25 +1,49 @@
 using System.ComponentModel.DataAnnotations;
+using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using CrestApps.OrchardCore.AI.Core.Models;
 
 namespace CrestApps.OrchardCore.AI.Chat.ViewModels;
 
 /// <summary>
 /// ViewModel for editing custom chat instance configuration.
 /// </summary>
-public class CustomChatInstanceViewModel
+public class CustomChatViewModel
 {
+    /// <summary>
+    /// Stable identity of the custom chat instance.
+    /// Used for grouping, routing, and paging.
+    /// </summary>
+    public string CustomChatInstanceId { get; set; }
+
+
     /// <summary>
     /// Gets or sets the session ID (empty for new instances).
     /// </summary>
     public string SessionId { get; set; }
+
+
+    /// <summary>
+    /// Gets or sets the user ID.
+    /// </summary>
+    public string UserId { get; set; }
+
+
+    /// <summary>
+    /// Gets or sets the source.
+    /// </summary>
+    public string Source { get; set; }
 
     /// <summary>
     /// Gets or sets the title of the chat instance.
     /// </summary>
     [Required]
     public string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider name.
+    /// </summary>
+    public string ProviderName { get; set; }
 
     /// <summary>
     /// Gets or sets the connection name.
@@ -81,11 +105,6 @@ public class CustomChatInstanceViewModel
     /// Gets or sets the selected tools (grouped by category).
     /// </summary>
     public Dictionary<string, ToolEntry[]> Tools { get; set; }
-
-    /// <summary>
-    /// Gets or sets the provider name.
-    /// </summary>
-    public string ProviderName { get; set; }
 
     [BindNever]
     public IList<SelectListItem> ConnectionNames { get; set; }

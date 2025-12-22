@@ -1,64 +1,51 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.AI.Chat.Indexes;
+using CrestApps.OrchardCore.AI.Chat.Models;
+using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Admin;
-using OrchardCore.DisplayManagement;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
-using OrchardCore.Entities;
-using static CrestApps.OrchardCore.AI.Core.AIConstants;
+using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 
 [Admin]
 public sealed class CustomChatSettingsController : Controller
 {
-    private readonly IAIChatSessionManager _sessionManager;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IContentManager _contentManager;
+    private readonly ISession _session;
+    private readonly IContentItemDisplayManager _contentDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly IDisplayManager<AIChatSession> _sessionDisplayManager;
     private readonly INotifier _notifier;
-
-    private readonly AIOptions _aiOptions;
-
-    private readonly IAIProfileManager _profileManager;
-
-    private readonly IAICompletionService _completionService;
-    private readonly IAICompletionContextBuilder _contextBuilder;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
     public CustomChatSettingsController(
-        IAIProfileManager profileManager,
-        IAICompletionService completionService,
-        IAICompletionContextBuilder contextBuilder,
-        IOptions<AIOptions> aiOptions,
-        IAIChatSessionManager sessionManager,
         IAuthorizationService authorizationService,
+        ISession session,
+        IContentManager contentManager,
+        IContentItemDisplayManager contentItemDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
-        IDisplayManager<AIChatSession> sessionDisplayManager,
         INotifier notifier,
         IHtmlLocalizer<CustomChatSettingsController> htmlLocalizer,
-        IStringLocalizer<CustomChatSettingsController> stringLocalizer
-        )
+        IStringLocalizer<CustomChatSettingsController> stringLocalizer)
     {
-        _profileManager = profileManager;
-        _completionService = completionService;
-        _contextBuilder = contextBuilder;
-        _sessionManager = sessionManager;
-        _aiOptions = aiOptions.Value;
         _authorizationService = authorizationService;
+        _contentManager = contentManager;
+        _contentDisplayManager = contentItemDisplayManager;
         _updateModelAccessor = updateModelAccessor;
-        _sessionDisplayManager = sessionDisplayManager;
+        _session = session;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -72,36 +59,65 @@ public sealed class CustomChatSettingsController : Controller
             return Forbid();
         }
 
-        // thisa model wont work for custom chat sessions only
-        var sessions = await _sessionManager.PageAsync(1, 100, new AIChatSessionQueryContext
+        var records = await _session.QueryIndex<CustomChatPartIndex>(x => x.IsCustomInstance && x.UserId == CurrentUserId())
+          .OrderByDescending(x => x.CreatedUtc)
+          .ListAsync();
+
+        // I think this is wrong I dont think Mike would Load a content item one by one
+        // what if we have 2,000 custom customChat instances
+        // the content customChat would be large data to pull
+        // is doing this by content ItemID slow or wrong?
+        var customChat = new List<ContentItem>();
+
+        foreach (var record in records)
         {
-            UserId = CurrentUserId(),
-        });
+            var item = await _contentManager.GetAsync(record.ContentItemId);
 
-        var customInstances = sessions.Sessions
-            .Where(x => x.As<AIChatInstanceMetadata>()?.IsCustomInstance == true)
-            .ToList();
-
-        var viewModel = new ListCatalogEntryViewModel<AIChatSession>
-        {
-            // why do we care for model [] if we have custom models?
-            Models = [],
-            CustomModels = []
-        };
-
-        foreach (var session in customInstances)
-        {
-            var shape = await _sessionDisplayManager.BuildDisplayAsync(session, _updateModelAccessor.ModelUpdater, ShapeLocations.SummaryAdmin, DisplayGroups.AICustomChatSession);
-
-            viewModel.CustomModels.Add(new CatalogEntryViewModel<AIChatSession>
+            if (item == null)
             {
-                Model = session,
-                Shape = shape
-            });
+                continue;
+            }
+
+            customChat.Add(item);
         }
 
-        return View(viewModel);
+        return View(new ListCatalogEntryViewModel<ContentItem>
+        {
+            Models = customChat
+        });
     }
+
+
+    [Admin("ai/custom-chat/chat/{contentItemId}")]
+    public async Task<IActionResult> Chat(string contentItemId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageCustomChatInstances))
+        {
+            return Forbid();
+        }
+
+        var contentItem = await _contentManager.GetAsync(contentItemId);
+
+        if (contentItem == null)
+        {
+            return NotFound();
+        }
+
+        var part = contentItem.As<CustomChatPart>();
+
+        if (part.UserId != CurrentUserId())
+        {
+            return Forbid();
+        }
+
+        var shape = await _contentDisplayManager.BuildDisplayAsync(contentItem, _updateModelAccessor.ModelUpdater);
+
+        return View(new ManageCustomChatInstancesViewModel
+        {
+            ChatContent = shape
+        });
+    }
+
 
     [Admin("ai/custom-chat/create")]
     public async Task<IActionResult> Create()
@@ -111,29 +127,26 @@ public sealed class CustomChatSettingsController : Controller
             return Forbid();
         }
 
-        var userId = CurrentUserId();
+        var customChatItem = await _contentManager.NewAsync("CustomChat");
 
-        var session = new AIChatSession
-        {
-            // this is not how we make IDs Mike
-            SessionId = IdGenerator.GenerateId(),
-            UserId = userId,
-            CreatedUtc = DateTime.UtcNow,
-            // we no longer use profiles for custom instances
-            // ProfileId = "custom-" + Guid.NewGuid().ToString("N") // Placeholder profile ID
-        };
+        var part = customChatItem.As<CustomChatPart>();
+        part.CustomChatInstanceId = IdGenerator.GenerateId();
+        part.SessionId = IdGenerator.GenerateId();
+        part.UserId = CurrentUserId();
+        part.CreatedUtc = DateTime.UtcNow;
+        part.IsCustomInstance = true;
 
-        // Mark as custom instance
-        session.Put(new AIChatInstanceMetadata { IsCustomInstance = true });
+        customChatItem.Apply(part);
 
-        var model = new EditCatalogEntryViewModel
+        var editor = await _contentDisplayManager.BuildEditorAsync(customChatItem, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View(new EditCatalogEntryViewModel
         {
             DisplayName = S["New Custom Chat Instance"],
-            Editor = await _sessionDisplayManager.BuildEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: true, groupId: DisplayGroups.AICustomChatSession),
-        };
-
-        return View(model);
+            Editor = editor
+        });
     }
+
 
     [HttpPost]
     [ActionName(nameof(Create))]
@@ -145,164 +158,144 @@ public sealed class CustomChatSettingsController : Controller
             return Forbid();
         }
 
-        var userId = CurrentUserId();
+        var customChatItem = await _contentManager.NewAsync("CustomChat");
 
-        var session = new AIChatSession
+        var editor = await _contentDisplayManager.UpdateEditorAsync(customChatItem, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        if (!ModelState.IsValid)
         {
-            SessionId = IdGenerator.GenerateId(),
-            UserId = userId,
-            CreatedUtc = DateTime.UtcNow,
-            // wew dont use profiles 
-            //  ProfileId = "custom-" + Guid.NewGuid().ToString("N"),
-        };
-
-        // Mark as custom instance
-        session.Put(new AIChatInstanceMetadata { IsCustomInstance = true });
-
-        var model = new EditCatalogEntryViewModel
-        {
-            DisplayName = S["New Custom Chat Instance"],
-            Editor = await _sessionDisplayManager.UpdateEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: true, groupId: DisplayGroups.AICustomChatSession),
-
-        };
-
-        if (ModelState.IsValid)
-        {
-            await _sessionManager.SaveAsync(session);
-
-            await _notifier.SuccessAsync(H["Custom chat instance has been created successfully."]);
-
-            return RedirectToAction(nameof(Index));
+            return View(new EditCatalogEntryViewModel
+            {
+                DisplayName = S["New Custom Chat Instance"],
+                Editor = editor
+            });
         }
 
-        return View(model);
+        var part = customChatItem.As<CustomChatPart>();
+
+        part.UserId = CurrentUserId();
+        part.IsCustomInstance = true;
+        part.CreatedUtc = DateTime.UtcNow;
+
+        if (string.IsNullOrEmpty(part.CustomChatInstanceId))
+        {
+            part.CustomChatInstanceId = IdGenerator.GenerateId();
+        }
+
+        if (string.IsNullOrEmpty(part.SessionId))
+        {
+            part.SessionId = IdGenerator.GenerateId();
+        }
+
+        customChatItem.Apply(part);
+
+        await _contentManager.CreateAsync(customChatItem);
+
+        await _notifier.SuccessAsync(H["Custom chat instance created successfully."]);
+
+        return RedirectToAction(nameof(Index));
     }
 
-    [Admin("ai/custom-chat/edit/{sessionId}")]
-    public async Task<IActionResult> Edit(string sessionId)
+
+    [Admin("ai/custom-chat/edit/{contentItemId}")]
+    public async Task<IActionResult> Edit(string contentItemId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageCustomChatInstances))
         {
             return Forbid();
         }
 
-        var session = await _sessionManager.FindAsync(sessionId);
+        var customChatItem = await _contentManager.GetAsync(contentItemId);
 
-        if (session == null)
+        if (customChatItem == null)
         {
             return NotFound();
         }
 
-        var userId = CurrentUserId();
+        var part = customChatItem.As<CustomChatPart>();
 
-        if (session.UserId != userId)
+        if (part.UserId != CurrentUserId())
         {
             return Forbid();
         }
 
-        var metadata = session.As<AIChatInstanceMetadata>();
+        var editor = await _contentDisplayManager.BuildEditorAsync(customChatItem, _updateModelAccessor.ModelUpdater, isNew: false);
 
-        if (metadata?.IsCustomInstance != true)
+        return View(new EditCatalogEntryViewModel
         {
-            return NotFound();
-        }
-
-        var model = new EditCatalogEntryViewModel
-        {
-            DisplayName = session.Title ?? S["Custom Chat Instance"],
-            Editor = await _sessionDisplayManager.BuildEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: false, groupId: DisplayGroups.AICustomChatSession),
-        };
-
-        return View(model);
+            DisplayName = customChatItem.DisplayText,
+            Editor = editor
+        });
     }
 
     [HttpPost]
     [ActionName(nameof(Edit))]
-    [Admin("ai/custom-chat/edit/{sessionId}")]
-    public async Task<IActionResult> EditPost(string sessionId)
+    [Admin("ai/custom-chat/edit/{contentItemId}")]
+    public async Task<IActionResult> EditPost(string contentItemId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageCustomChatInstances))
         {
             return Forbid();
         }
 
-        var session = await _sessionManager.FindAsync(sessionId);
+        var customChatItem = await _contentManager.GetAsync(contentItemId);
 
-        if (session == null)
+        if (customChatItem == null)
         {
             return NotFound();
         }
 
-        var userId = CurrentUserId();
+        var part = customChatItem.As<CustomChatPart>();
 
-        if (session.UserId != userId)
+        if (part.UserId != CurrentUserId())
         {
             return Forbid();
         }
 
-        var metadata = session.As<AIChatInstanceMetadata>();
+        var editor = await _contentDisplayManager.UpdateEditorAsync(customChatItem, _updateModelAccessor.ModelUpdater, isNew: false);
 
-        if (metadata?.IsCustomInstance != true)
+        if (!ModelState.IsValid)
         {
-            return NotFound();
+            return View(new EditCatalogEntryViewModel
+            {
+                DisplayName = customChatItem.DisplayText,
+                Editor = editor
+            });
         }
 
-        var model = new EditCatalogEntryViewModel
-        {
-            DisplayName = session.Title ?? S["Custom Chat Instance"],
-            Editor = await _sessionDisplayManager.UpdateEditorAsync(session, _updateModelAccessor.ModelUpdater, isNew: false, groupId: DisplayGroups.AICustomChatSession),
-        };
+        await _contentManager.UpdateAsync(customChatItem);
 
-        if (ModelState.IsValid)
-        {
-            await _sessionManager.SaveAsync(session);
+        await _notifier.SuccessAsync(H["Custom chat instance updated successfully."]);
 
-            await _notifier.SuccessAsync(H["Custom chat instance has been updated successfully."]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        return View(model);
+        return RedirectToAction(nameof(Edit));
     }
 
     [HttpPost]
-    [Admin("ai/custom-chat/delete/{sessionId}", "CustomChatDelete")]
-    public async Task<IActionResult> Delete(string sessionId)
+    [Admin("ai/custom-chat/delete/{contentItemId}", "CustomChatDelete")]
+    public async Task<IActionResult> Delete(string contentItemId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageCustomChatInstances))
         {
             return Forbid();
         }
 
-        var session = await _sessionManager.FindAsync(sessionId);
+        var customChatItem = await _contentManager.GetAsync(contentItemId);
 
-        if (session == null)
+        if (customChatItem == null)
         {
             return NotFound();
         }
 
-        var userId = CurrentUserId();
+        var part = customChatItem.As<CustomChatPart>();
 
-        if (session.UserId != userId)
+        if (part.UserId != CurrentUserId())
         {
             return Forbid();
         }
 
-        var metadata = session.As<AIChatInstanceMetadata>();
+        await _contentManager.RemoveAsync(customChatItem);
 
-        if (metadata?.IsCustomInstance != true)
-        {
-            return NotFound();
-        }
-
-        if (await _sessionManager.DeleteAsync(sessionId))
-        {
-            await _notifier.SuccessAsync(H["Custom chat instance has been deleted successfully."]);
-        }
-        else
-        {
-            await _notifier.ErrorAsync(H["Unable to delete the custom chat instance."]);
-        }
+        await _notifier.SuccessAsync(H["Custom chat instance has been deleted successfully."]);
 
         return RedirectToAction(nameof(Index));
     }

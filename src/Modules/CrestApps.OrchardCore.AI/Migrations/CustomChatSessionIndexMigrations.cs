@@ -1,55 +1,47 @@
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
 
-internal sealed class CustomChatSessionIndexMigrations : DataMigration
+public sealed class CustomChatSessionIndexMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {
-        await SchemaBuilder.CreateMapIndexTableAsync<AICustomChatSessionIndex>(table => table
+        await SchemaBuilder.CreateMapIndexTableAsync<CustomChatSessionIndex>(table => table
             .Column<string>("SessionId", column => column.WithLength(26))
             .Column<string>("CustomChatInstanceId", column => column.WithLength(26))
             .Column<string>("UserId", column => column.WithLength(26))
             .Column<string>("Source", column => column.WithLength(255))
             .Column<string>("DisplayText", column => column.WithLength(255))
-            .Column<DateTime>("CreatedUtc"),
-            collection: AIConstants.CollectionName
+            .Column<DateTime>("CreatedUtc")
         );
 
-        await SchemaBuilder.AlterIndexTableAsync<AICustomChatSessionIndex>(table => table
-            .CreateIndex(
-                "IDX_AICustomChatSessionIndex_DocumentId",
+        await SchemaBuilder.AlterIndexTableAsync<CustomChatSessionIndex>(table => table
+            .CreateIndex("IDX_CustomChatSessionIndex_DocumentId",
                 "DocumentId",
                 "SessionId",
                 "CustomChatInstanceId",
                 "UserId",
                 "CreatedUtc",
-                "DisplayText"),
-            collection: AIConstants.CollectionName
+                "DisplayText")
         );
 
-        await SchemaBuilder.AlterIndexTableAsync<AICustomChatSessionIndex>(table => table
-            .CreateIndex(
-                "IDX_AICustomChatSessionIndex_CustomChatInstanceId",
+        await SchemaBuilder.AlterIndexTableAsync<CustomChatSessionIndex>(table => table
+            .CreateIndex("IDX_CustomChatSessionIndex_CustomChatInstanceId",
                 "DocumentId",
                 "CustomChatInstanceId",
                 "CreatedUtc",
-                "DisplayText"),
-            collection: AIConstants.CollectionName
+                "DisplayText")
         );
 
-        await SchemaBuilder.AlterIndexTableAsync<AICustomChatSessionIndex>(table => table
-            .CreateIndex(
-                "IDX_AICustomChatSessionIndex_UserId",
+        await SchemaBuilder.AlterIndexTableAsync<CustomChatSessionIndex>(table => table
+            .CreateIndex("IDX_CustomChatSessionIndex_UserId",
                 "DocumentId",
                 "SessionId",
                 "UserId",
                 "CreatedUtc",
-                "DisplayText"),
-            collection: AIConstants.CollectionName
+                "DisplayText")
         );
 
         return 1;

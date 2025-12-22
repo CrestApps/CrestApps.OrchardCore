@@ -57,13 +57,17 @@ public static class AIConstants
 
     public static class DisplayGroups
     {
-        public const string AICustomChat = "AICustomChat";
+        public const string AICustomChatSettings = "AICustomChatSettings";
 
-        public const string AICustomChatSession = "AICustomChatSession";
+        public const string AICustomChatChat = "AICustomChatChat";
     }
+
 
     public static class ShapeLocations
     {
-        public const string SummaryAdmin = "SummaryAdmin_CustomChat";
+        public const string SummaryAdmin = "SummaryAdmin";
+
+        public const string DetailAdmin = "DetailAdmin";
     }
+
 }

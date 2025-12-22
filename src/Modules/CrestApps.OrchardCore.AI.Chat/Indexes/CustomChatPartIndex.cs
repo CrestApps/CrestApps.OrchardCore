@@ -1,9 +1,12 @@
-using CrestApps.OrchardCore.YesSql.Core.Indexes;
+using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.AI.Chat.Indexes;
 
-public sealed class CustomChatPartIndex : CatalogItemIndex, ISourceAwareIndex, IDisplayTextAwareIndex
+public sealed class CustomChatPartIndex : MapIndex
 {
+    public string ContentItemId { get; set; }
+
+
     public string CustomChatInstanceId { get; set; }
 
 
@@ -29,6 +32,9 @@ public sealed class CustomChatPartIndex : CatalogItemIndex, ISourceAwareIndex, I
 
 
     public bool IsCustomInstance { get; set; }
+
+
+    public bool UseCaching { get; set; }
 
 
     public DateTime CreatedUtc { get; set; }

@@ -1,4 +1,5 @@
 @using CrestApps.OrchardCore.Core.Models
+
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
@@ -9,8 +10,6 @@
     @Html.ValidationSummary()
 
     @await DisplayAsync(Model.Editor)
-
-    <button class="btn btn-primary" type="submit">@T["Create"]</button>
 
     <a class="btn btn-secondary cancel" role="button" asp-controller="CustomChatSettings" asp-action="Index">@T["Cancel"]</a>
 

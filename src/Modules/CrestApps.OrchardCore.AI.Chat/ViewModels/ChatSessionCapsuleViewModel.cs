@@ -9,6 +9,8 @@ public class ChatSessionCapsuleViewModel
 
     public AIProfile Profile { get; set; }
 
+    public CustomChatSession CustomChatSession { get; set; }
+
     [BindNever]
     public bool IsNew { get; set; }
 }

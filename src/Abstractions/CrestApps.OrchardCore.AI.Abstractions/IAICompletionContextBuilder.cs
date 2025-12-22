@@ -25,4 +25,8 @@ public interface IAICompletionContextBuilder
     /// <seealso cref="AICompletionContextBuildingContext"/>
     /// <seealso cref="AICompletionContextBuiltContext"/>
     ValueTask<AICompletionContext> BuildAsync(AIProfile profile, Action<AICompletionContext> configure = null);
+
+    // Callers can set things that should only come from CustomChat metadata
+    ValueTask<AICompletionContext> BuildCustomAsync(CustomChatCompletionContext customContext);
+
 }

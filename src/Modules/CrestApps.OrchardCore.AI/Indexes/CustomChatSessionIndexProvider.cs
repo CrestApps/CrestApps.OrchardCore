@@ -8,8 +8,9 @@ public sealed class CustomChatSessionIndexProvider : IndexProvider<CustomChatSes
 {
     public override void Describe(DescribeContext<CustomChatSession> context)
     {
-        context.For<AICustomChatSessionIndex>()
-            .Map(session => new AICustomChatSessionIndex
+        context
+            .For<CustomChatSessionIndex>()
+            .Map(session => new CustomChatSessionIndex
             {
                 SessionId = session.SessionId,
                 CustomChatInstanceId = session.CustomChatInstanceId,
@@ -20,4 +21,3 @@ public sealed class CustomChatSessionIndexProvider : IndexProvider<CustomChatSes
             });
     }
 }
-

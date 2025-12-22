@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Models;
-using Microsoft.AspNetCore.Http;
 using OrchardCore;
 using OrchardCore.Modules;
 using YesSql;
@@ -11,15 +10,15 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 {
     private readonly IClock _clock;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor _httpContextAccessor;
     private readonly IClientIPAddressAccessor _clientIPAddressAccessor;
-    private readonly YesSql.ISession _session;
+    private readonly ISession _session;
 
     public DefaultAIChatSessionManager(
         IClock clock,
-        IHttpContextAccessor httpContextAccessor,
+        Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor,
         IClientIPAddressAccessor clientIPAddressAccessor,
-        YesSql.ISession session)
+        ISession session)
     {
         _clock = clock;
         _httpContextAccessor = httpContextAccessor;
