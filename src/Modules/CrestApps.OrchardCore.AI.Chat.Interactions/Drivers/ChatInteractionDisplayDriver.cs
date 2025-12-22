@@ -48,6 +48,6 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.IsNew = context.IsNew;
         }).Location("Parameters");
 
-        return Task.FromResult<IDisplayResult>(Combine(headerResult, contentResult, parametersResult));
+        return CombineAsync(headerResult, contentResult, parametersResult);
     }
 }
