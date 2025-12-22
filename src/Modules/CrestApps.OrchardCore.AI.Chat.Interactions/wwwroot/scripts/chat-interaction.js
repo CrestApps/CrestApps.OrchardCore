@@ -55,7 +55,7 @@ window.chatInteractionManager = function () {
           placeholder: null,
           isInteractionStarted: false,
           isPlaceholderVisible: true,
-          isSteaming: false,
+          isStreaming: false,
           isNavigatingAway: false,
           stream: null,
           messages: [],
