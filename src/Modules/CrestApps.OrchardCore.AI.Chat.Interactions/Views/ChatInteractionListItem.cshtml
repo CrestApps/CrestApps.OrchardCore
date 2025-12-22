@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+
+@model DisplayChatInteractionViewModel
+
+@{
+    var isCurrent = false;
+
+    if (ViewContext.HttpContext.Request.RouteValues.TryGetValue("interactionId", out var interactionId))
+    {
+        isCurrent = Model.Interaction.InteractionId == interactionId.ToString();
+    }
+}
+
+<a class="list-group-item list-group-item-action@(isCurrent ? " active" : string.Empty)" aria-current="@(isCurrent ? "true" : "false")" asp-action="Index" asp-controller="Admin" asp-route-interactionId="@Model.Interaction.InteractionId">@(string.IsNullOrEmpty(Model.Interaction.Title) ? T["Untitled"] : Model.Interaction.Title)</a>

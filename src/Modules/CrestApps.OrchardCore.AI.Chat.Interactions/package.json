@@ -1,0 +1,11 @@
+{
+  "name": "crestapps.orchardcore.ai.chat.interactions",
+  "version": "1.0.0",
+  "description": "Provides ad-hoc AI chat interactions",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService
+
+@model ChatInteractionCapsuleViewModel
+
+<div class="card text-bg-theme">
+    <div class="card-body d-flex justify-content-between">
+
+        <div></div>
+
+        <div>
+            <a class="btn btn-secondary me-1" asp-action="Index" asp-controller="Admin" asp-area="@AIConstants.Feature.ChatInteractions">
+                <i class="fa-solid fa-plus"></i> @T["New Interaction"]
+            </a>
+
+            <a class="btn btn-primary" asp-action="History" asp-controller="Admin" asp-area="@AIConstants.Feature.ChatInteractions">
+                <i class="fa-solid fa-list"></i> @T["Interaction History"]
+            </a>
+        </div>
+    </div>
+</div>
