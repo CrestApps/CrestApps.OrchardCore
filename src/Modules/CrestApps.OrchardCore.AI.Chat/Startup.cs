@@ -38,15 +38,11 @@ public sealed class Startup : StartupBase
             .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatAdminMenu>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
-
             .AddScoped<CustomChatSettingsController>()
-
-
             .AddDataMigration<CustomChatMigrations>()
             .AddDataMigration<CustomChatPartMigrations>()
             .AddIndexProvider<CustomChatPartIndexProvider>()
             .AddIndexProvider<CustomChatSessionIndexProvider>();
-
 
         services.AddContentPart<CustomChatPart>()
         .UseDisplayDriver<CustomChatDisplayDriver>();

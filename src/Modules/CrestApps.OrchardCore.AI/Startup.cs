@@ -206,11 +206,9 @@ public sealed class ChatCoreStartup : StartupBase
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
             .AddDataMigration<AIChatSessionIndexMigrations>()
             .AddIndexProvider<AIChatSessionIndexProvider>()
-
-
+            // custom session below
             .AddDataMigration<CustomChatSessionIndexMigrations>()
             .AddIndexProvider<CustomChatSessionIndexProvider>();
-        // new code
     }
 }
 
