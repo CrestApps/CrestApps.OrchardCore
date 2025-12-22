@@ -1,0 +1,52 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using OrchardCore
+
+@model EditChatInteractionViewModel
+
+<h5 class="mb-3">@T["AI Parameters"]</h5>
+
+<div class="mb-3">
+    <label asp-for="SystemMessage" class="form-label">@T["System Instructions"]</label>
+    <textarea asp-for="SystemMessage" class="form-control" rows="4" placeholder="@T["Optional system instructions to guide AI behavior..."]"></textarea>
+    <div class="form-text">@T["Sets the AI's behavior and response style."]</div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="MaxTokens" class="form-label">@T["Max Response Tokens"]</label>
+    <input type="number" class="form-control" asp-for="MaxTokens" step="4" min="4" placeholder="@T["Default"]">
+    <div class="form-text">@T["Limit on tokens per response."]</div>
+</div>
+
+<div class="row">
+    <div class="col-6 mb-3">
+        <label asp-for="Temperature" class="form-label">@T["Temperature"]</label>
+        <input type="number" class="form-control" asp-for="Temperature" step="0.01" min="0" max="2" placeholder="@T["Default"]">
+        <div class="form-text">@T["Controls randomness (0-2)."]</div>
+    </div>
+
+    <div class="col-6 mb-3">
+        <label asp-for="TopP" class="form-label">@T["Top P"]</label>
+        <input type="number" class="form-control" asp-for="TopP" step="0.01" min="0" max="1" placeholder="@T["Default"]">
+        <div class="form-text">@T["Nucleus sampling (0-1)."]</div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-6 mb-3">
+        <label asp-for="FrequencyPenalty" class="form-label">@T["Frequency Penalty"]</label>
+        <input type="number" class="form-control" asp-for="FrequencyPenalty" step="0.01" min="0" max="2" placeholder="@T["Default"]">
+        <div class="form-text">@T["Reduces token repetition."]</div>
+    </div>
+
+    <div class="col-6 mb-3">
+        <label asp-for="PresencePenalty" class="form-label">@T["Presence Penalty"]</label>
+        <input type="number" class="form-control" asp-for="PresencePenalty" step="0.01" min="0" max="2" placeholder="@T["Default"]">
+        <div class="form-text">@T["Encourages new topics."]</div>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="PastMessagesCount" class="form-label">@T["Past Messages"]</label>
+    <input type="number" class="form-control" asp-for="PastMessagesCount" step="1" min="2" max="50" placeholder="@T["Default"]">
+    <div class="form-text">@T["Number of past messages to include for context."]</div>
+</div>
