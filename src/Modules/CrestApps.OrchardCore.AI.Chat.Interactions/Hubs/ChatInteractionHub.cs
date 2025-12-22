@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
