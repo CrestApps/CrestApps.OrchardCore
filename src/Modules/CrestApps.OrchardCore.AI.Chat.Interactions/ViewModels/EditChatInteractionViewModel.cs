@@ -2,7 +2,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 
 public class EditChatInteractionViewModel
 {
-    public string InteractionId { get; set; }
+    public string ItemId { get; set; }
 
     public string Title { get; set; }
 

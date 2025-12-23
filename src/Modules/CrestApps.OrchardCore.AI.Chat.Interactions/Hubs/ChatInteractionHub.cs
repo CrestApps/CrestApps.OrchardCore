@@ -11,7 +11,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
-using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
@@ -19,7 +18,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 {
     private readonly IAuthorizationService _authorizationService;
     private readonly IChatInteractionManager _interactionManager;
-    private readonly ISession _session;
     private readonly IAICompletionService _completionService;
     private readonly ILogger<ChatInteractionHub> _logger;
 
@@ -28,33 +26,31 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     public ChatInteractionHub(
         IAuthorizationService authorizationService,
         IChatInteractionManager interactionManager,
-        ISession session,
         IAICompletionService completionService,
         ILogger<ChatInteractionHub> logger,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
     {
         _authorizationService = authorizationService;
         _interactionManager = interactionManager;
-        _session = session;
         _completionService = completionService;
         _logger = logger;
         S = stringLocalizer;
     }
 
-    public ChannelReader<CompletionPartialMessage> SendMessage(string interactionId, string prompt, CancellationToken cancellationToken)
+    public ChannelReader<CompletionPartialMessage> SendMessage(string itemId, string prompt, CancellationToken cancellationToken)
     {
         var channel = Channel.CreateUnbounded<CompletionPartialMessage>();
 
-        _ = HandlePromptAsync(channel.Writer, interactionId, prompt, cancellationToken);
+        _ = HandlePromptAsync(channel.Writer, itemId, prompt, cancellationToken);
 
         return channel.Reader;
     }
 
-    public async Task LoadInteraction(string interactionId)
+    public async Task LoadInteraction(string itemId)
     {
-        if (string.IsNullOrWhiteSpace(interactionId))
+        if (string.IsNullOrWhiteSpace(itemId))
         {
-            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(interactionId)].Value);
+            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(itemId)].Value);
             return;
         }
 
@@ -66,7 +62,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             return;
         }
 
-        var interaction = await _interactionManager.FindAsync(interactionId);
+        var interaction = await _interactionManager.FindAsync(itemId);
 
         if (interaction == null)
         {
@@ -76,7 +72,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
         await Clients.Caller.LoadInteraction(new
         {
-            interaction.InteractionId,
+            interaction.ItemId,
             Messages = interaction.Prompts.Select(message => new AIChatResponseMessageDetailed
             {
                 Id = message.Id,
@@ -89,7 +85,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         });
     }
 
-    private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string interactionId, string prompt, CancellationToken cancellationToken)
+    private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string itemId, string prompt, CancellationToken cancellationToken)
     {
         try
         {
@@ -101,13 +97,13 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(interactionId))
+            if (string.IsNullOrWhiteSpace(itemId))
             {
                 await Clients.Caller.ReceiveError(S["Interaction ID is required."].Value);
                 return;
             }
 
-            var interaction = await _interactionManager.FindAsync(interactionId);
+            var interaction = await _interactionManager.FindAsync(itemId);
 
             if (interaction == null)
             {
@@ -197,7 +193,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
                 var partialMessage = new CompletionPartialMessage
                 {
-                    SessionId = interaction.InteractionId,
+                    SessionId = interaction.ItemId,
                     MessageId = assistantMessage.Id,
                     Content = chunk.Text,
                     References = references,
@@ -215,8 +211,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 interaction.Prompts.Add(assistantMessage);
             }
 
-            await _interactionManager.SaveAsync(interaction);
-            await _session.SaveChangesAsync(cancellationToken);
+            await _interactionManager.UpdateAsync(interaction);
         }
         catch (Exception ex)
         {
@@ -230,7 +225,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             var errorMessage = new CompletionPartialMessage
             {
-                SessionId = interactionId,
+                SessionId = itemId,
                 MessageId = IdGenerator.GenerateId(),
                 Content = GetFriendlyErrorMessage(ex).Value,
             };

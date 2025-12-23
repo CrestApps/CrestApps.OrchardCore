@@ -5,10 +5,10 @@
 @{
     var isCurrent = false;
 
-    if (ViewContext.HttpContext.Request.RouteValues.TryGetValue("interactionId", out var interactionId))
+    if (ViewContext.HttpContext.Request.RouteValues.TryGetValue("itemId", out var itemId))
     {
-        isCurrent = Model.Interaction.InteractionId == interactionId.ToString();
+        isCurrent = Model.Interaction.ItemId == itemId.ToString();
     }
 }
 
-<a class="list-group-item list-group-item-action@(isCurrent ? " active" : string.Empty)" aria-current="@(isCurrent ? "true" : "false")" asp-action="Index" asp-controller="Admin" asp-route-interactionId="@Model.Interaction.InteractionId">@(string.IsNullOrEmpty(Model.Interaction.Title) ? T["Untitled"] : Model.Interaction.Title)</a>
+<a class="list-group-item list-group-item-action@(isCurrent ? " active" : string.Empty)" aria-current="@(isCurrent ? "true" : "false")" asp-action="Index" asp-controller="Admin" asp-route-itemId="@Model.Interaction.ItemId">@(string.IsNullOrEmpty(Model.Interaction.Title) ? T["Untitled"] : Model.Interaction.Title)</a>

@@ -21,8 +21,9 @@ internal sealed class ChatInteractionIndexProvider : IndexProvider<ChatInteracti
             {
                 return new ChatInteractionIndex
                 {
-                    InteractionId = interaction.InteractionId,
+                    ItemId = interaction.ItemId,
                     UserId = interaction.UserId,
+                    Source = interaction.Source,
                     Title = Str.Truncate(interaction.Title, 255),
                     CreatedUtc = interaction.CreatedUtc,
                     ModifiedUtc = interaction.ModifiedUtc,

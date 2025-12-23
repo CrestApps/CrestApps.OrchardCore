@@ -53,13 +53,13 @@
                         @(string.IsNullOrEmpty(interaction.Title) ? T["Untitled"] : interaction.Title)
                     </div>
                     <div>
-                        <a asp-action="Index" asp-controller="Admin" asp-route-interactionId="@interaction.InteractionId" class="btn btn-sm btn-success">@T["View"]</a>
+                        <a asp-action="Index" asp-controller="Admin" asp-route-itemId="@interaction.ItemId" class="btn btn-sm btn-success">@T["View"]</a>
 
                         @if (canDeleteInteraction)
                         {
                             <a asp-action="Delete"
                                asp-controller="Admin"
-                               asp-route-interactionId="@interaction.InteractionId"
+                               asp-route-itemId="@interaction.ItemId"
                                class="btn btn-danger btn-sm"
                                data-url-af="RemoveUrl UnsafeUrl"
                                data-title="Delete"

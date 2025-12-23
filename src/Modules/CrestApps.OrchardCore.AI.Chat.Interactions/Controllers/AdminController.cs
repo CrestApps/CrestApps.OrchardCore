@@ -14,7 +14,7 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Controllers;
 
-[Admin("ai/chat/interactions/{action}/{interactionId?}", "ChatInteractions{action}")]
+[Admin("ai/chat/interactions/{action}/{itemId?}", "ChatInteractions{action}")]
 public sealed class AdminController : Controller
 {
     private readonly IChatInteractionManager _interactionManager;
@@ -51,7 +51,7 @@ public sealed class AdminController : Controller
     }
 
     public async Task<IActionResult> Index(
-        string interactionId,
+        string itemId,
         string source,
         [FromServices] IOptions<PagerOptions> pagerOptions)
     {
@@ -68,16 +68,16 @@ public sealed class AdminController : Controller
 
         ChatInteraction interaction;
 
-        if (!string.IsNullOrEmpty(interactionId))
+        if (!string.IsNullOrEmpty(itemId))
         {
-            interaction = await _interactionManager.FindAsync(interactionId);
+            interaction = await _interactionManager.FindAsync(itemId);
 
             if (interaction == null)
             {
                 return NotFound();
             }
 
-            model.InteractionId = interactionId;
+            model.ItemId = itemId;
             model.Content = await _interactionDisplayManager.BuildEditorAsync(interaction, _updateModelAccessor.ModelUpdater, isNew: false);
         }
         else if (!string.IsNullOrEmpty(source))
@@ -91,9 +91,9 @@ public sealed class AdminController : Controller
             interaction = await _interactionManager.NewAsync(source);
 
             // Save the interaction immediately so it can be used by the SignalR hub
-            await _interactionManager.SaveAsync(interaction);
+            await _interactionManager.CreateAsync(interaction);
 
-            model.InteractionId = interaction.InteractionId;
+            model.ItemId = interaction.ItemId;
             model.Content = await _interactionDisplayManager.BuildEditorAsync(interaction, _updateModelAccessor.ModelUpdater, isNew: true);
         }
         else
@@ -104,7 +104,7 @@ public sealed class AdminController : Controller
 
         var interactionResult = await _interactionManager.PageAsync(1, pagerOptions.Value.GetPageSize(), new ChatInteractionQueryContext());
 
-        foreach (var item in interactionResult.Interactions)
+        foreach (var item in interactionResult.Entries)
         {
             var summary = await _interactionDisplayManager.BuildDisplayAsync(item, _updateModelAccessor.ModelUpdater, "SummaryAdmin");
             summary.Properties["Interaction"] = item;
@@ -153,7 +153,7 @@ public sealed class AdminController : Controller
 
         var shapeViewModel = await shapeFactory.CreateAsync<ListChatInteractionsViewModel>("ChatInteractionsList", async viewModel =>
         {
-            viewModel.Interactions = interactionResult.Interactions;
+            viewModel.Interactions = interactionResult.Entries;
             viewModel.Pager = pagerShape;
             viewModel.Options = options;
             viewModel.Header = await _optionsDisplayManager.BuildEditorAsync(options, _updateModelAccessor.ModelUpdater, false);
@@ -178,21 +178,21 @@ public sealed class AdminController : Controller
         => RedirectToAction(nameof(Index));
 
     [HttpPost]
-    public async Task<IActionResult> Delete(string interactionId)
+    public async Task<IActionResult> Delete(string itemId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.DeleteChatInteraction))
         {
             return Forbid();
         }
 
-        var interaction = await _interactionManager.FindAsync(interactionId);
+        var interaction = await _interactionManager.FindAsync(itemId);
 
         if (interaction == null)
         {
             return NotFound();
         }
 
-        if (await _interactionManager.DeleteAsync(interactionId))
+        if (await _interactionManager.DeleteAsync(itemId))
         {
             await _notifier.SuccessAsync(H["Chat interaction has been deleted successfully."]);
         }

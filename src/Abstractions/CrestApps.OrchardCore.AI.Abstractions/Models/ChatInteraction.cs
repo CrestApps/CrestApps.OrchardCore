@@ -1,4 +1,4 @@
-using OrchardCore.Entities;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
@@ -6,13 +6,8 @@ namespace CrestApps.OrchardCore.AI.Models;
 /// Represents a chat interaction which combines AI profile configuration and chat session state.
 /// This enables ad-hoc creation and execution of chat profiles without predefined AI Profiles.
 /// </summary>
-public sealed class ChatInteraction : Entity
+public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
 {
-    /// <summary>
-    /// Gets or sets the unique identifier for this chat interaction.
-    /// </summary>
-    public string InteractionId { get; set; }
-
     /// <summary>
     /// Gets or sets the title of the chat interaction.
     /// </summary>

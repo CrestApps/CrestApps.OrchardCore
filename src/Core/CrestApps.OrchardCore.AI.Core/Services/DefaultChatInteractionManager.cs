@@ -1,10 +1,9 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Models;
 using Microsoft.AspNetCore.Http;
 using OrchardCore;
 using OrchardCore.Modules;
-using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
@@ -12,19 +11,19 @@ public sealed class DefaultChatInteractionManager : IChatInteractionManager
 {
     private readonly IClock _clock;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly YesSql.ISession _session;
+    private readonly IChatInteractionCatalog _catalog;
 
     public DefaultChatInteractionManager(
         IClock clock,
         IHttpContextAccessor httpContextAccessor,
-        YesSql.ISession session)
+        IChatInteractionCatalog catalog)
     {
         _clock = clock;
         _httpContextAccessor = httpContextAccessor;
-        _session = session;
+        _catalog = catalog;
     }
 
-    public Task<ChatInteraction> NewAsync(string source)
+    public ValueTask<ChatInteraction> NewAsync(string source)
     {
         ArgumentException.ThrowIfNullOrEmpty(source);
 
@@ -40,133 +39,67 @@ public sealed class DefaultChatInteractionManager : IChatInteractionManager
 
         var interaction = new ChatInteraction
         {
-            InteractionId = IdGenerator.GenerateId(),
+            ItemId = IdGenerator.GenerateId(),
             UserId = userId,
             Source = source,
             CreatedUtc = now,
             ModifiedUtc = now,
         };
 
-        return Task.FromResult(interaction);
+        return ValueTask.FromResult(interaction);
     }
 
-    public async Task<ChatInteractionResult> PageAsync(int page, int pageSize, ChatInteractionQueryContext context)
+    public ValueTask<PageResult<ChatInteraction>> PageAsync(int page, int pageSize, ChatInteractionQueryContext context)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user?.Identity?.IsAuthenticated != true)
-        {
-            return new ChatInteractionResult
-            {
-                Count = 0,
-                Interactions = [],
-            };
-        }
-
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        var query = _session.Query<ChatInteraction, ChatInteractionIndex>(
-            i => i.UserId == userId,
-            collection: AIConstants.CollectionName);
-
-        if (!string.IsNullOrEmpty(context.Title))
-        {
-            query = query.Where(i => i.Title.Contains(context.Title));
-        }
-
-        return new ChatInteractionResult
-        {
-            Count = await query.CountAsync(),
-            Interactions = await query.OrderByDescending(i => i.ModifiedUtc)
-                .ThenByDescending(x => x.Id)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ListAsync()
-        };
+        return _catalog.PageForUserAsync(page, pageSize, context);
     }
 
-    public async Task<ChatInteraction> FindAsync(string interactionId)
+    public ValueTask<ChatInteraction> FindAsync(string itemId)
     {
-        ArgumentException.ThrowIfNullOrEmpty(interactionId);
-
-        var user = _httpContextAccessor.HttpContext?.User;
-
-        if (user?.Identity?.IsAuthenticated != true)
-        {
-            return null;
-        }
-
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        return await _session.Query<ChatInteraction, ChatInteractionIndex>(
-            i => i.InteractionId == interactionId && i.UserId == userId,
-            collection: AIConstants.CollectionName)
-            .FirstOrDefaultAsync();
+        return _catalog.FindByIdForUserAsync(itemId);
     }
 
-    public Task SaveAsync(ChatInteraction interaction)
+    public async ValueTask CreateAsync(ChatInteraction interaction)
     {
         ArgumentNullException.ThrowIfNull(interaction);
 
         interaction.ModifiedUtc = _clock.UtcNow;
 
-        return _session.SaveAsync(interaction, collection: AIConstants.CollectionName);
+        await _catalog.CreateAsync(interaction);
+        await _catalog.SaveChangesAsync();
     }
 
-    public async Task<bool> DeleteAsync(string interactionId)
+    public async ValueTask UpdateAsync(ChatInteraction interaction)
     {
-        ArgumentException.ThrowIfNullOrEmpty(interactionId);
+        ArgumentNullException.ThrowIfNull(interaction);
 
-        var user = _httpContextAccessor.HttpContext?.User;
+        interaction.ModifiedUtc = _clock.UtcNow;
 
-        if (user?.Identity?.IsAuthenticated != true)
-        {
-            return false;
-        }
-
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        var interaction = await _session.Query<ChatInteraction, ChatInteractionIndex>(
-            i => i.InteractionId == interactionId && i.UserId == userId,
-            collection: AIConstants.CollectionName)
-            .FirstOrDefaultAsync();
-
-        if (interaction == null)
-        {
-            return false;
-        }
-
-        _session.Delete(interaction, collection: AIConstants.CollectionName);
-
-        return true;
+        await _catalog.UpdateAsync(interaction);
+        await _catalog.SaveChangesAsync();
     }
 
-    public async Task<int> DeleteAllAsync()
+    public async ValueTask<bool> DeleteAsync(string itemId)
     {
-        var user = _httpContextAccessor.HttpContext?.User;
+        var result = await _catalog.DeleteForUserAsync(itemId);
 
-        if (user?.Identity?.IsAuthenticated != true)
+        if (result)
         {
-            return 0;
+            await _catalog.SaveChangesAsync();
         }
 
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        return result;
+    }
 
-        var interactions = await _session.Query<ChatInteraction, ChatInteractionIndex>(
-            i => i.UserId == userId,
-            collection: AIConstants.CollectionName)
-            .ListAsync();
+    public async ValueTask<int> DeleteAllAsync()
+    {
+        var count = await _catalog.DeleteAllForUserAsync();
 
-        var totalDeleted = 0;
-
-        foreach (var interaction in interactions)
+        if (count > 0)
         {
-            _session.Delete(interaction, collection: AIConstants.CollectionName);
-            totalDeleted++;
+            await _catalog.SaveChangesAsync();
         }
 
-        return totalDeleted;
+        return count;
     }
 }

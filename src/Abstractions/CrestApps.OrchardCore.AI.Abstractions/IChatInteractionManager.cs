@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.AI;
 
@@ -8,44 +9,50 @@ namespace CrestApps.OrchardCore.AI;
 public interface IChatInteractionManager
 {
     /// <summary>
-    /// Asynchronously retrieves an existing chat interaction by its ID.
+    /// Asynchronously retrieves an existing chat interaction by its ID for the current user.
     /// </summary>
-    /// <param name="interactionId">The unique identifier of the chat interaction.</param>
-    /// <returns>The <see cref="ChatInteraction"/> if found, or <c>null</c> if not found.</returns>
-    Task<ChatInteraction> FindAsync(string interactionId);
+    /// <param name="itemId">The unique identifier of the chat interaction.</param>
+    /// <returns>The <see cref="ChatInteraction"/> if found and owned by the current user, or <c>null</c>.</returns>
+    ValueTask<ChatInteraction> FindAsync(string itemId);
 
     /// <summary>
-    /// Asynchronously retrieves a paginated list of chat interactions.
+    /// Asynchronously retrieves a paginated list of chat interactions for the current user.
     /// </summary>
     /// <param name="page">The page number (1-based).</param>
     /// <param name="pageSize">The number of items per page.</param>
     /// <param name="context">The query context for filtering.</param>
-    /// <returns>A <see cref="ChatInteractionResult"/> containing the interactions and total count.</returns>
-    Task<ChatInteractionResult> PageAsync(int page, int pageSize, ChatInteractionQueryContext context);
+    /// <returns>A <see cref="PageResult{ChatInteraction}"/> containing the interactions and total count.</returns>
+    ValueTask<PageResult<ChatInteraction>> PageAsync(int page, int pageSize, ChatInteractionQueryContext context);
 
     /// <summary>
     /// Asynchronously creates a new chat interaction with the specified source.
     /// </summary>
     /// <param name="source">The source/provider name for the interaction.</param>
     /// <returns>A new <see cref="ChatInteraction"/> instance.</returns>
-    Task<ChatInteraction> NewAsync(string source);
+    ValueTask<ChatInteraction> NewAsync(string source);
 
     /// <summary>
-    /// Asynchronously saves or updates the specified chat interaction.
+    /// Asynchronously creates the specified chat interaction in the catalog.
     /// </summary>
-    /// <param name="interaction">The chat interaction to save.</param>
-    Task SaveAsync(ChatInteraction interaction);
+    /// <param name="interaction">The chat interaction to create.</param>
+    ValueTask CreateAsync(ChatInteraction interaction);
 
     /// <summary>
-    /// Asynchronously deletes the specified chat interaction.
+    /// Asynchronously updates the specified chat interaction.
     /// </summary>
-    /// <param name="interactionId">The unique identifier of the chat interaction to delete.</param>
+    /// <param name="interaction">The chat interaction to update.</param>
+    ValueTask UpdateAsync(ChatInteraction interaction);
+
+    /// <summary>
+    /// Asynchronously deletes the specified chat interaction for the current user.
+    /// </summary>
+    /// <param name="itemId">The unique identifier of the chat interaction to delete.</param>
     /// <returns><c>true</c> if the interaction was deleted, <c>false</c> otherwise.</returns>
-    Task<bool> DeleteAsync(string interactionId);
+    ValueTask<bool> DeleteAsync(string itemId);
 
     /// <summary>
     /// Asynchronously deletes all chat interactions for the current user.
     /// </summary>
     /// <returns>The number of interactions deleted.</returns>
-    Task<int> DeleteAllAsync();
+    ValueTask<int> DeleteAllAsync();
 }

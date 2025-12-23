@@ -31,7 +31,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
 
         var parametersResult = Initialize<EditChatInteractionViewModel>("ChatInteractionParameters_Edit", model =>
         {
-            model.InteractionId = interaction.InteractionId;
+            model.ItemId = interaction.ItemId;
             model.Title = interaction.Title;
             model.DeploymentId = interaction.DeploymentId;
             model.ConnectionName = interaction.ConnectionName;

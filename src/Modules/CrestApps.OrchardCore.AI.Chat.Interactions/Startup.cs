@@ -26,6 +26,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
+            .AddScoped<IChatInteractionCatalog, ChatInteractionCatalog>()
             .AddScoped<IChatInteractionManager, DefaultChatInteractionManager>()
             .AddIndexProvider<ChatInteractionIndexProvider>()
             .AddPermissionProvider<ChatInteractionPermissionProvider>()

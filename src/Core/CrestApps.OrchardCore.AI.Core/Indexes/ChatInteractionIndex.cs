@@ -1,12 +1,12 @@
-using YesSql.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Indexes;
 
 namespace CrestApps.OrchardCore.AI.Core.Indexes;
 
-public sealed class ChatInteractionIndex : MapIndex
+public sealed class ChatInteractionIndex : CatalogItemIndex, ISourceAwareIndex
 {
-    public string InteractionId { get; set; }
-
     public string UserId { get; set; }
+
+    public string Source { get; set; }
 
     public string Title { get; set; }
 

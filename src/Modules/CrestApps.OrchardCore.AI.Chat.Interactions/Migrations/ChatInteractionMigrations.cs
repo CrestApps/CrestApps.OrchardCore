@@ -10,8 +10,9 @@ internal sealed class ChatInteractionMigrations : DataMigration
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<ChatInteractionIndex>(table => table
-                .Column<string>("InteractionId", column => column.WithLength(26))
+                .Column<string>("ItemId", column => column.WithLength(26))
                 .Column<string>("UserId", column => column.WithLength(26))
+                .Column<string>("Source", column => column.WithLength(255))
                 .Column<string>("Title", column => column.WithLength(255))
                 .Column<DateTime>("CreatedUtc")
                 .Column<DateTime>("ModifiedUtc"),
@@ -21,8 +22,9 @@ internal sealed class ChatInteractionMigrations : DataMigration
         await SchemaBuilder.AlterIndexTableAsync<ChatInteractionIndex>(table => table
             .CreateIndex("IDX_ChatInteractionIndex_DocumentId",
                 "DocumentId",
-                "InteractionId",
+                "ItemId",
                 "UserId",
+                "Source",
                 "Title",
                 "CreatedUtc",
                 "ModifiedUtc"),

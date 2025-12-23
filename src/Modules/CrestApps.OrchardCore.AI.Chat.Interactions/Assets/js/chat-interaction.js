@@ -87,7 +87,7 @@ window.chatInteractionManager = function () {
                         .build();
 
                     this.connection.on("LoadInteraction", (data) => {
-                        this.initializeInteraction(data.interactionId, true);
+                        this.initializeInteraction(data.itemId, true);
                         this.messages = [];
 
                         (data.messages ?? []).forEach(msg => {
@@ -185,16 +185,16 @@ window.chatInteractionManager = function () {
                     var references = {};
 
                     var messageIndex = this.messages.length;
-                    var currentInteractionId = this.getInteractionId();
+                    var currentItemId = this.getItemId();
 
-                    this.stream = this.connection.stream("SendMessage", currentInteractionId, trimmedPrompt)
+                    this.stream = this.connection.stream("SendMessage", currentItemId, trimmedPrompt)
                         .subscribe({
                             next: (chunk) => {
                                 let message = this.messages[messageIndex];
 
                                 if (!message) {
-                                    if (chunk.sessionId && !currentInteractionId) {
-                                        this.setInteractionId(chunk.sessionId);
+                                    if (chunk.sessionId && !currentItemId) {
+                                        this.setItemId(chunk.sessionId);
                                     }
 
                                     this.hideTypingIndicator();
@@ -320,14 +320,14 @@ window.chatInteractionManager = function () {
                 handleUserInput(event) {
                     this.prompt = event.target.value;
                 },
-                getInteractionId() {
+                getItemId() {
                     return this.inputElement.getAttribute('data-interaction-id');
                 },
-                setInteractionId(interactionId) {
-                    this.inputElement.setAttribute('data-interaction-id', interactionId || '');
+                setItemId(itemId) {
+                    this.inputElement.setAttribute('data-interaction-id', itemId || '');
                 },
                 resetInteraction() {
-                    this.setInteractionId('');
+                    this.setItemId('');
                     this.isInteractionStarted = false;
                     this.messages = [];
                     this.showPlaceholder();
@@ -377,14 +377,14 @@ window.chatInteractionManager = function () {
                         chatInteractionItems[i].addEventListener('click', (e) => {
                             e.preventDefault();
 
-                            var interactionId = e.target.getAttribute('data-interaction-id');
+                            var itemId = e.target.getAttribute('data-interaction-id');
 
-                            if (!interactionId) {
+                            if (!itemId) {
                                 console.error('An element with the class chat-interaction-history-item with no data-interaction-id set.');
                                 return;
                             }
 
-                            this.loadInteraction(interactionId);
+                            this.loadInteraction(itemId);
                         });
                     }
 
@@ -392,15 +392,15 @@ window.chatInteractionManager = function () {
                         this.addMessage(config.messages[i]);
                     }
                 },
-                loadInteraction(interactionId) {
-                    this.connection.invoke("LoadInteraction", interactionId).catch(err => console.error(err));
+                loadInteraction(itemId) {
+                    this.connection.invoke("LoadInteraction", itemId).catch(err => console.error(err));
                 },
-                initializeInteraction(interactionId, force) {
+                initializeInteraction(itemId, force) {
                     if (this.isInteractionStarted && !force) {
                         return;
                     }
-                    this.fireEvent(new CustomEvent("initializingChatInteraction", { detail: { interactionId: interactionId } }));
-                    this.setInteractionId(interactionId);
+                    this.fireEvent(new CustomEvent("initializingChatInteraction", { detail: { itemId: itemId } }));
+                    this.setItemId(itemId);
                     this.isInteractionStarted = true;
                 },
                 copyResponse(message) {
