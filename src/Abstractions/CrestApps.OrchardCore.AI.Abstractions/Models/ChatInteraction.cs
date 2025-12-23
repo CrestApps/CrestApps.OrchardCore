@@ -24,6 +24,11 @@ public sealed class ChatInteraction : Entity
     public string UserId { get; set; }
 
     /// <summary>
+    /// Gets or sets the source/provider name for this interaction.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
     /// Gets or sets the deployment identifier (AI model) to use.
     /// </summary>
     public string DeploymentId { get; set; }

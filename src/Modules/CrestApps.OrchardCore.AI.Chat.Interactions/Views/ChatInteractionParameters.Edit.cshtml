@@ -3,8 +3,6 @@
 
 @model EditChatInteractionViewModel
 
-<h5 class="mb-3">@T["AI Parameters"]</h5>
-
 <div class="mb-3">
     <label asp-for="SystemMessage" class="form-label">@T["System Instructions"]</label>
     <textarea asp-for="SystemMessage" class="form-control" rows="4" placeholder="@T["Optional system instructions to guide AI behavior..."]"></textarea>

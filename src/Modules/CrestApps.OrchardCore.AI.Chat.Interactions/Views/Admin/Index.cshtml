@@ -1,28 +1,105 @@
 @using System.Text.Json
+@using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using Microsoft.Extensions.Options
 @using OrchardCore
 
 @model ChatInteractionViewModel
 
-<div class="d-flex flex-row h-100">
+@inject IOptions<AIOptions> AIOptions
 
-    <div class="d-flex flex-column h-100 flex-grow-1">
-        @await DisplayAsync(Model.Content)
-    </div>
+@if (Model.Content is null)
+{
+    <zone Name="Title"><h1>@RenderTitleSegments(T["Chat Interactions"])</h1></zone>
 
-    @if (Model.History is not null && Model.History.Count > 0)
-    {
-        <div class="d-none d-md-block flex-shrink-0 bg-theme p-2 border rounded" style="width: 20rem; height: calc(100vh - 2rem - var(--oc-top-nav-height, 0)); overflow-y:auto">
-            <div class="list-group">
-                @foreach (var record in Model.History)
-                {
-                    @await DisplayAsync(record)
-                }
+    <div class="card text-bg-theme mb-3">
+        <div class="card-body">
+            <div class="row gx-3">
+                <div class="col"></div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalSelectSource">@T["New Chat"]</button>
+                    <a class="btn btn-primary" asp-action="History" asp-controller="Admin" asp-area="@AIConstants.Feature.ChatInteractions">
+                        <i class="fa-solid fa-list"></i> @T["Interaction History"]
+                    </a>
+                </div>
             </div>
         </div>
-    }
+    </div>
 
-</div>
+    <div class="alert alert-info">
+        @T["Select a source to start a new chat interaction."]
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="modalSelectSource" tabindex="-1" role="dialog" aria-labelledby="available-sources-title" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="available-sources-title">@T["Available Sources"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!Model.Sources.Any())
+                    {
+                        <p class="p-3 mb-2 bg-warning text-white">@T["You need to enable a feature which provides an AI source."]</p>
+                    }
+                    else
+                    {
+                        <div class="row row-cols-1 row-cols-md-3 g-2">
+                            @foreach (var sourceName in Model.Sources)
+                            {
+                                if (!AIOptions.Value.ProfileSources.TryGetValue(sourceName, out var source))
+                                {
+                                    continue;
+                                }
+
+                                <div class="col">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h4>@(source.DisplayName)</h4>
+                                            <p class="hint">@(source.Description)</p>
+                                        </div>
+                                        <div class="card-footer text-muted text-sm-end">
+                                            <a class="btn btn-primary btn-sm"
+                                               asp-action="Index"
+                                               asp-controller="Admin"
+                                               asp-route-source="@sourceName">@T["Start Chat"]</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex flex-row h-100">
+
+        <div class="d-flex flex-column h-100 flex-grow-1">
+            @await DisplayAsync(Model.Content)
+        </div>
+
+        @if (Model.History is not null && Model.History.Count > 0)
+        {
+            <div class="d-none d-md-block flex-shrink-0 bg-theme p-2 ps-3 border rounded" style="width: 20rem; height: calc(100vh - 2rem - var(--oc-top-nav-height, 0)); overflow-y:auto">
+                <div class="list-group">
+                    @foreach (var record in Model.History)
+                    {
+                        @await DisplayAsync(record)
+                    }
+                </div>
+            </div>
+        }
+
+    </div>
+}
 
 <style at="Head">
     .ta-content {

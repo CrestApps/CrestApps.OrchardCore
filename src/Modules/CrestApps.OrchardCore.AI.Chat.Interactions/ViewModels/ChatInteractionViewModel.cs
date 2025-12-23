@@ -10,4 +10,6 @@ public class ChatInteractionViewModel
     public IShape Content { get; set; }
 
     public IList<IShape> History { get; set; }
+
+    public IEnumerable<string> Sources { get; set; } = [];
 }

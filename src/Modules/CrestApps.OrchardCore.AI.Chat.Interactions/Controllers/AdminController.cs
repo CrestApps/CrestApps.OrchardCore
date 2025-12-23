@@ -23,6 +23,7 @@ public sealed class AdminController : Controller
     private readonly IDisplayManager<ChatInteractionListOptions> _optionsDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly INotifier _notifier;
+    private readonly AIOptions _aiOptions;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -34,6 +35,7 @@ public sealed class AdminController : Controller
         IDisplayManager<ChatInteractionListOptions> optionsDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         INotifier notifier,
+        IOptions<AIOptions> aiOptions,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer)
     {
@@ -43,12 +45,14 @@ public sealed class AdminController : Controller
         _optionsDisplayManager = optionsDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _notifier = notifier;
+        _aiOptions = aiOptions.Value;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
 
     public async Task<IActionResult> Index(
         string interactionId,
+        string source,
         [FromServices] IOptions<PagerOptions> pagerOptions)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageChatInteractions))
@@ -58,7 +62,8 @@ public sealed class AdminController : Controller
 
         var model = new ChatInteractionViewModel
         {
-            History = []
+            History = [],
+            Sources = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
         };
 
         ChatInteraction interaction;
@@ -75,10 +80,26 @@ public sealed class AdminController : Controller
             model.InteractionId = interactionId;
             model.Content = await _interactionDisplayManager.BuildEditorAsync(interaction, _updateModelAccessor.ModelUpdater, isNew: false);
         }
+        else if (!string.IsNullOrEmpty(source))
+        {
+            if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
+            {
+                await _notifier.ErrorAsync(H["Unable to find a source that can handle '{0}'.", source]);
+                return RedirectToAction(nameof(Index));
+            }
+
+            interaction = await _interactionManager.NewAsync(source);
+
+            // Save the interaction immediately so it can be used by the SignalR hub
+            await _interactionManager.SaveAsync(interaction);
+
+            model.InteractionId = interaction.InteractionId;
+            model.Content = await _interactionDisplayManager.BuildEditorAsync(interaction, _updateModelAccessor.ModelUpdater, isNew: true);
+        }
         else
         {
-            interaction = await _interactionManager.NewAsync();
-            model.Content = await _interactionDisplayManager.BuildEditorAsync(interaction, _updateModelAccessor.ModelUpdater, isNew: true);
+            // Show source selection dialog
+            return View(model);
         }
 
         var interactionResult = await _interactionManager.PageAsync(1, pagerOptions.Value.GetPageSize(), new ChatInteractionQueryContext());

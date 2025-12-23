@@ -24,10 +24,11 @@ public interface IChatInteractionManager
     Task<ChatInteractionResult> PageAsync(int page, int pageSize, ChatInteractionQueryContext context);
 
     /// <summary>
-    /// Asynchronously creates a new chat interaction.
+    /// Asynchronously creates a new chat interaction with the specified source.
     /// </summary>
+    /// <param name="source">The source/provider name for the interaction.</param>
     /// <returns>A new <see cref="ChatInteraction"/> instance.</returns>
-    Task<ChatInteraction> NewAsync();
+    Task<ChatInteraction> NewAsync(string source);
 
     /// <summary>
     /// Asynchronously saves or updates the specified chat interaction.

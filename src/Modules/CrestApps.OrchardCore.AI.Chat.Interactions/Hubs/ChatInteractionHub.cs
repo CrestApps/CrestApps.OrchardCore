@@ -101,23 +101,18 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 return;
             }
 
-            ChatInteraction interaction;
-            bool isNew = false;
-
-            if (!string.IsNullOrWhiteSpace(interactionId))
+            if (string.IsNullOrWhiteSpace(interactionId))
             {
-                interaction = await _interactionManager.FindAsync(interactionId);
-
-                if (interaction == null)
-                {
-                    await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
-                    return;
-                }
+                await Clients.Caller.ReceiveError(S["Interaction ID is required."].Value);
+                return;
             }
-            else
+
+            var interaction = await _interactionManager.FindAsync(interactionId);
+
+            if (interaction == null)
             {
-                interaction = await _interactionManager.NewAsync();
-                isNew = true;
+                await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+                return;
             }
 
             if (string.IsNullOrWhiteSpace(prompt))
@@ -135,7 +130,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 Content = prompt,
             });
 
-            if (isNew || string.IsNullOrEmpty(interaction.Title))
+            if (string.IsNullOrEmpty(interaction.Title))
             {
                 interaction.Title = Str.Truncate(prompt, 255);
             }

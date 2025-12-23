@@ -24,8 +24,10 @@ public sealed class DefaultChatInteractionManager : IChatInteractionManager
         _session = session;
     }
 
-    public Task<ChatInteraction> NewAsync()
+    public Task<ChatInteraction> NewAsync(string source)
     {
+        ArgumentException.ThrowIfNullOrEmpty(source);
+
         var user = _httpContextAccessor.HttpContext?.User;
 
         if (user?.Identity?.IsAuthenticated != true)
@@ -40,6 +42,7 @@ public sealed class DefaultChatInteractionManager : IChatInteractionManager
         {
             InteractionId = IdGenerator.GenerateId(),
             UserId = userId,
+            Source = source,
             CreatedUtc = now,
             ModifiedUtc = now,
         };
