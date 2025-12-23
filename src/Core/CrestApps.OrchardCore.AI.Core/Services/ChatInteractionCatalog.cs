@@ -2,10 +2,10 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using Microsoft.AspNetCore.Http;
 using YesSql;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
