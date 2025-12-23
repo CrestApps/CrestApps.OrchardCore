@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.Drivers;
+using CrestApps.OrchardCore.AI.Chat.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Indexes;
 using CrestApps.OrchardCore.AI.Chat.Migrations;
@@ -43,6 +44,7 @@ public sealed class Startup : StartupBase
             .AddScoped<ICustomChatInstanceCatalog, CustomChatInstanceCatalog>()
             .AddScoped<ISourceCatalog<AICustomChatInstance>>(sp => sp.GetRequiredService<ICustomChatInstanceCatalog>())
             .AddScoped<ICustomChatInstanceManager, DefaultCustomChatInstanceManager>()
+            .AddScoped<ICatalogEntryHandler<AICustomChatInstance>, AICustomChatInstanceHandler>()
             .AddIndexProvider<AICustomChatInstanceIndexProvider>()
             .AddDataMigration<AICustomChatInstanceMigrations>();
 

@@ -4,26 +4,22 @@ using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Chat.Services;
 
 public sealed class DefaultCustomChatInstanceManager : SourceCatalogManager<AICustomChatInstance>, ICustomChatInstanceManager
 {
     private readonly ICustomChatInstanceCatalog _customCatalog;
-    private readonly IClock _clock;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public DefaultCustomChatInstanceManager(
         ICustomChatInstanceCatalog catalog,
         IEnumerable<ICatalogEntryHandler<AICustomChatInstance>> handlers,
-        IClock clock,
         IHttpContextAccessor httpContextAccessor,
         ILogger<DefaultCustomChatInstanceManager> logger)
         : base(catalog, handlers, logger)
     {
         _customCatalog = catalog;
-        _clock = clock;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -61,23 +57,6 @@ public sealed class DefaultCustomChatInstanceManager : SourceCatalogManager<AICu
         {
             await LoadAsync(instance);
         }
-
-        return instance;
-    }
-
-    public override async ValueTask<AICustomChatInstance> NewAsync(string source, System.Text.Json.Nodes.JsonNode data = null)
-    {
-        var userId = GetCurrentUserId();
-        if (string.IsNullOrEmpty(userId))
-        {
-            throw new InvalidOperationException("User must be authenticated to create a custom chat instance.");
-        }
-
-        var instance = await base.NewAsync(source, data);
-
-        instance.UserId = userId;
-        instance.CreatedUtc = _clock.UtcNow;
-        instance.PastMessagesCount = 10;
 
         return instance;
     }

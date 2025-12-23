@@ -3,7 +3,7 @@
 @model AICustomChatInstance
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Chat: {0}", Model.DisplayText ?? T["Untitled"]])</h1>
+    <h1>@RenderTitleSegments(T["Chat: {0}", Model.DisplayText ?? T["Untitled"].Value])</h1>
 </zone>
 
 <zone Name="Actions">
