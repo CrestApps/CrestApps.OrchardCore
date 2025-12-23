@@ -12,22 +12,24 @@
 {
     <zone Name="Title"><h1>@RenderTitleSegments(T["Chat Interactions"])</h1></zone>
 
-    <div class="card text-bg-theme mb-3">
-        <div class="card-body">
-            <div class="row gx-3">
-                <div class="col"></div>
-                <div class="col-auto">
-                    <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalSelectSource">@T["New Chat"]</button>
-                    <a class="btn btn-primary" asp-action="History" asp-controller="Admin" asp-area="@AIConstants.Feature.ChatInteractions">
-                        <i class="fa-solid fa-list"></i> @T["Interaction History"]
-                    </a>
+    <div class="container-fluid">
+        <div class="card text-bg-theme mb-3">
+            <div class="card-body">
+                <div class="row gx-3">
+                    <div class="col"></div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalSelectSource">@T["New Chat"]</button>
+                        <a class="btn btn-primary" asp-action="History" asp-controller="Admin" asp-area="@AIConstants.Feature.ChatInteractions">
+                            <i class="fa-solid fa-list"></i> @T["Interaction History"]
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="alert alert-info">
-        @T["Select a source to start a new chat interaction."]
+        <div class="alert alert-info">
+            @T["Select a source to start a new chat interaction."]
+        </div>
     </div>
 
     <!-- Modal -->
