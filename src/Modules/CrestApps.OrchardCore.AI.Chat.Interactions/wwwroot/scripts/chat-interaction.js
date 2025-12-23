@@ -77,28 +77,41 @@ window.chatInteractionManager = function () {
                     var _data$messages;
                     _this.initializeInteraction(data.itemId, true);
                     _this.messages = [];
+
+                    // Update the title field if it exists
+                    var titleInput = document.querySelector('input[name="Title"]');
+                    if (titleInput && data.title) {
+                      titleInput.value = data.title;
+                    }
                     ((_data$messages = data.messages) !== null && _data$messages !== void 0 ? _data$messages : []).forEach(function (msg) {
                       _this.addMessage(msg);
                     });
                   });
+                  _this.connection.on("SettingsSaved", function (itemId, title) {
+                    // Update the history list item if it exists
+                    var historyItem = document.querySelector("[data-interaction-id=\"".concat(itemId, "\"]"));
+                    if (historyItem) {
+                      historyItem.textContent = title || 'Untitled';
+                    }
+                  });
                   _this.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
                   });
-                  _context.prev = 3;
-                  _context.next = 6;
+                  _context.prev = 4;
+                  _context.next = 7;
                   return _this.connection.start();
-                case 6:
-                  _context.next = 11;
+                case 7:
+                  _context.next = 12;
                   break;
-                case 8:
-                  _context.prev = 8;
-                  _context.t0 = _context["catch"](3);
+                case 9:
+                  _context.prev = 9;
+                  _context.t0 = _context["catch"](4);
                   console.error("SignalR Connection Error: ", _context.t0);
-                case 11:
+                case 12:
                 case "end":
                   return _context.stop();
               }
-            }, _callee, null, [[3, 8]]);
+            }, _callee, null, [[4, 9]]);
           }))();
         },
         addMessageInternal: function addMessageInternal(message) {
@@ -377,10 +390,45 @@ window.chatInteractionManager = function () {
           for (var _i6 = 0; _i6 < config.messages.length; _i6++) {
             this.addMessage(config.messages[_i6]);
           }
+
+          // Add event listeners for settings fields to save on change
+          var settingsInputs = document.querySelectorAll('input[name="Title"], textarea[name="SystemMessage"], input[name="Temperature"], input[name="TopP"], input[name="FrequencyPenalty"], input[name="PresencePenalty"], input[name="MaxTokens"], input[name="PastMessagesCount"]');
+          settingsInputs.forEach(function (input) {
+            input.addEventListener('blur', function () {
+              return _this6.saveSettings();
+            });
+          });
         },
         loadInteraction: function loadInteraction(itemId) {
           this.connection.invoke("LoadInteraction", itemId)["catch"](function (err) {
             return console.error(err);
+          });
+        },
+        saveSettings: function saveSettings() {
+          var itemId = this.getItemId();
+          if (!itemId) {
+            return;
+          }
+          var titleInput = document.querySelector('input[name="Title"]');
+          var systemMessageInput = document.querySelector('textarea[name="SystemMessage"]');
+          var temperatureInput = document.querySelector('input[name="Temperature"]');
+          var topPInput = document.querySelector('input[name="TopP"]');
+          var frequencyPenaltyInput = document.querySelector('input[name="FrequencyPenalty"]');
+          var presencePenaltyInput = document.querySelector('input[name="PresencePenalty"]');
+          var maxTokensInput = document.querySelector('input[name="MaxTokens"]');
+          var pastMessagesCountInput = document.querySelector('input[name="PastMessagesCount"]');
+          var settings = {
+            title: (titleInput === null || titleInput === void 0 ? void 0 : titleInput.value) || 'Untitled',
+            systemMessage: (systemMessageInput === null || systemMessageInput === void 0 ? void 0 : systemMessageInput.value) || null,
+            temperature: temperatureInput !== null && temperatureInput !== void 0 && temperatureInput.value ? parseFloat(temperatureInput.value) : null,
+            topP: topPInput !== null && topPInput !== void 0 && topPInput.value ? parseFloat(topPInput.value) : null,
+            frequencyPenalty: frequencyPenaltyInput !== null && frequencyPenaltyInput !== void 0 && frequencyPenaltyInput.value ? parseFloat(frequencyPenaltyInput.value) : null,
+            presencePenalty: presencePenaltyInput !== null && presencePenaltyInput !== void 0 && presencePenaltyInput.value ? parseFloat(presencePenaltyInput.value) : null,
+            maxTokens: maxTokensInput !== null && maxTokensInput !== void 0 && maxTokensInput.value ? parseInt(maxTokensInput.value) : null,
+            pastMessagesCount: pastMessagesCountInput !== null && pastMessagesCountInput !== void 0 && pastMessagesCountInput.value ? parseInt(pastMessagesCountInput.value) : null
+          };
+          this.connection.invoke("SaveSettings", itemId, settings.title, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount)["catch"](function (err) {
+            return console.error('Error saving settings:', err);
           });
         },
         initializeInteraction: function initializeInteraction(itemId, force) {

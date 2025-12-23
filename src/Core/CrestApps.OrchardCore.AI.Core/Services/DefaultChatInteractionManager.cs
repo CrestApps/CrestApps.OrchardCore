@@ -40,6 +40,7 @@ public sealed class DefaultChatInteractionManager : IChatInteractionManager
         var interaction = new ChatInteraction
         {
             ItemId = IdGenerator.GenerateId(),
+            Title = "Untitled",
             UserId = userId,
             Source = source,
             CreatedUtc = now,

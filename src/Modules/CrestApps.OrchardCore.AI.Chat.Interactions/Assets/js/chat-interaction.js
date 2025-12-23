@@ -89,10 +89,24 @@ window.chatInteractionManager = function () {
                     this.connection.on("LoadInteraction", (data) => {
                         this.initializeInteraction(data.itemId, true);
                         this.messages = [];
+                        
+                        // Update the title field if it exists
+                        const titleInput = document.querySelector('input[name="Title"]');
+                        if (titleInput && data.title) {
+                            titleInput.value = data.title;
+                        }
 
                         (data.messages ?? []).forEach(msg => {
                             this.addMessage(msg);
                         });
+                    });
+
+                    this.connection.on("SettingsSaved", (itemId, title) => {
+                        // Update the history list item if it exists
+                        const historyItem = document.querySelector(`[data-interaction-id="${itemId}"]`);
+                        if (historyItem) {
+                            historyItem.textContent = title || 'Untitled';
+                        }
                     });
 
                     this.connection.on("ReceiveError", (error) => {
@@ -391,9 +405,54 @@ window.chatInteractionManager = function () {
                     for (let i = 0; i < config.messages.length; i++) {
                         this.addMessage(config.messages[i]);
                     }
+
+                    // Add event listeners for settings fields to save on change
+                    const settingsInputs = document.querySelectorAll('input[name="Title"], textarea[name="SystemMessage"], input[name="Temperature"], input[name="TopP"], input[name="FrequencyPenalty"], input[name="PresencePenalty"], input[name="MaxTokens"], input[name="PastMessagesCount"]');
+                    settingsInputs.forEach(input => {
+                        input.addEventListener('blur', () => this.saveSettings());
+                    });
                 },
                 loadInteraction(itemId) {
                     this.connection.invoke("LoadInteraction", itemId).catch(err => console.error(err));
+                },
+                saveSettings() {
+                    const itemId = this.getItemId();
+                    if (!itemId) {
+                        return;
+                    }
+
+                    const titleInput = document.querySelector('input[name="Title"]');
+                    const systemMessageInput = document.querySelector('textarea[name="SystemMessage"]');
+                    const temperatureInput = document.querySelector('input[name="Temperature"]');
+                    const topPInput = document.querySelector('input[name="TopP"]');
+                    const frequencyPenaltyInput = document.querySelector('input[name="FrequencyPenalty"]');
+                    const presencePenaltyInput = document.querySelector('input[name="PresencePenalty"]');
+                    const maxTokensInput = document.querySelector('input[name="MaxTokens"]');
+                    const pastMessagesCountInput = document.querySelector('input[name="PastMessagesCount"]');
+
+                    const settings = {
+                        title: titleInput?.value || 'Untitled',
+                        systemMessage: systemMessageInput?.value || null,
+                        temperature: temperatureInput?.value ? parseFloat(temperatureInput.value) : null,
+                        topP: topPInput?.value ? parseFloat(topPInput.value) : null,
+                        frequencyPenalty: frequencyPenaltyInput?.value ? parseFloat(frequencyPenaltyInput.value) : null,
+                        presencePenalty: presencePenaltyInput?.value ? parseFloat(presencePenaltyInput.value) : null,
+                        maxTokens: maxTokensInput?.value ? parseInt(maxTokensInput.value) : null,
+                        pastMessagesCount: pastMessagesCountInput?.value ? parseInt(pastMessagesCountInput.value) : null
+                    };
+
+                    this.connection.invoke(
+                        "SaveSettings",
+                        itemId,
+                        settings.title,
+                        settings.systemMessage,
+                        settings.temperature,
+                        settings.topP,
+                        settings.frequencyPenalty,
+                        settings.presencePenalty,
+                        settings.maxTokens,
+                        settings.pastMessagesCount
+                    ).catch(err => console.error('Error saving settings:', err));
                 },
                 initializeInteraction(itemId, force) {
                     if (this.isInteractionStarted && !force) {

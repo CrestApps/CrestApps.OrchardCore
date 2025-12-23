@@ -73,6 +73,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         await Clients.Caller.LoadInteraction(new
         {
             interaction.ItemId,
+            interaction.Title,
             Messages = interaction.Prompts.Select(message => new AIChatResponseMessageDetailed
             {
                 Id = message.Id,
@@ -83,6 +84,53 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 References = message.References,
             })
         });
+    }
+
+    public async Task SaveSettings(
+        string itemId,
+        string title,
+        string systemMessage,
+        float? temperature,
+        float? topP,
+        float? frequencyPenalty,
+        float? presencePenalty,
+        int? maxTokens,
+        int? pastMessagesCount)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(itemId)].Value);
+            return;
+        }
+
+        var httpContext = Context.GetHttpContext();
+
+        if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageChatInteractions))
+        {
+            await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+            return;
+        }
+
+        var interaction = await _interactionManager.FindAsync(itemId);
+
+        if (interaction == null)
+        {
+            await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+            return;
+        }
+
+        interaction.Title = title ?? "Untitled";
+        interaction.SystemMessage = systemMessage;
+        interaction.Temperature = temperature;
+        interaction.TopP = topP;
+        interaction.FrequencyPenalty = frequencyPenalty;
+        interaction.PresencePenalty = presencePenalty;
+        interaction.MaxTokens = maxTokens;
+        interaction.PastMessagesCount = pastMessagesCount;
+
+        await _interactionManager.UpdateAsync(interaction);
+
+        await Clients.Caller.SettingsSaved(interaction.ItemId, interaction.Title);
     }
 
     private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string itemId, string prompt, CancellationToken cancellationToken)
