@@ -14,4 +14,9 @@ public class ChatInteractionQueryContext
     /// Gets or sets a text filter for the interaction title.
     /// </summary>
     public string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets the source to filter interactions by.
+    /// </summary>
+    public string Source { get; set; }
 }

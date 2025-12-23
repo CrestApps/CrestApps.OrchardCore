@@ -1,13 +1,13 @@
-<div class="container-fluid">
-    <div class="d-flex flex-row h-100">
+<div class="container-fluid px-0">
+    <div class="d-flex flex-column flex-lg-row h-100">
         @if (Model.Parameters is not null)
         {
-            <div class="d-none d-lg-block flex-shrink-0 bg-theme p-3 border rounded" style="width: 22rem; height: calc(100vh - 2rem - var(--oc-top-nav-height, 0)); overflow-y:auto">
+            <div class="flex-shrink-0 bg-theme p-3 border rounded mb-3 mb-lg-0" style="width: 100%; max-width: 22rem; height: auto; overflow-y: auto;">
                 @await DisplayAsync(Model.Parameters)
             </div>
         }
 
-        <div class="d-flex flex-column h-100 flex-grow-1 ps-3">
+        <div class="d-flex flex-column h-100 flex-grow-1 ps-lg-3">
             @if (Model.Header is not null)
             {
                 <div class="mb-3">
@@ -18,3 +18,12 @@
         </div>
     </div>
 </div>
+
+<style at="Head">
+    @@media (min-width: 992px) {
+        .flex-shrink-0.bg-theme {
+            max-width: 22rem !important;
+            height: calc(100vh - 2rem - var(--oc-top-nav-height, 0)) !important;
+        }
+    }
+</style>

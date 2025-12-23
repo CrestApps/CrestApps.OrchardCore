@@ -7,6 +7,8 @@ public class ChatInteractionViewModel
 {
     public string ItemId { get; set; }
 
+    public string Source { get; set; }
+
     public IShape Content { get; set; }
 
     public IList<IShape> History { get; set; }

@@ -67,6 +67,7 @@ public sealed class AdminController : Controller
         };
 
         ChatInteraction interaction;
+        string currentSource = null;
 
         if (!string.IsNullOrEmpty(itemId))
         {
@@ -78,6 +79,8 @@ public sealed class AdminController : Controller
             }
 
             model.ItemId = itemId;
+            model.Source = interaction.Source;
+            currentSource = interaction.Source;
             model.Content = await _interactionDisplayManager.BuildEditorAsync(interaction, _updateModelAccessor.ModelUpdater, isNew: false);
         }
         else if (!string.IsNullOrEmpty(source))
@@ -94,11 +97,19 @@ public sealed class AdminController : Controller
             await _interactionManager.CreateAsync(interaction);
 
             model.ItemId = interaction.ItemId;
+            model.Source = source;
+            currentSource = source;
             model.Content = await _interactionDisplayManager.BuildEditorAsync(interaction, _updateModelAccessor.ModelUpdater, isNew: true);
         }
 
-        // Always load history for the view
-        var interactionResult = await _interactionManager.PageAsync(1, pagerOptions.Value.GetPageSize(), new ChatInteractionQueryContext());
+        // Load history - filter by source if viewing an active chat session
+        var queryContext = new ChatInteractionQueryContext();
+        if (!string.IsNullOrEmpty(currentSource))
+        {
+            queryContext.Source = currentSource;
+        }
+
+        var interactionResult = await _interactionManager.PageAsync(1, pagerOptions.Value.GetPageSize(), queryContext);
 
         foreach (var item in interactionResult.Entries)
         {

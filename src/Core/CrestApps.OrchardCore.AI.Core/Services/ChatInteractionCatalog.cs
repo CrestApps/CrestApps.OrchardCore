@@ -65,6 +65,11 @@ public sealed class ChatInteractionCatalog : SourceDocumentCatalog<ChatInteracti
             query = query.Where(i => i.Title.Contains(context.Title));
         }
 
+        if (!string.IsNullOrEmpty(context.Source))
+        {
+            query = query.Where(i => i.Source == context.Source);
+        }
+
         var skip = (page - 1) * pageSize;
 
         return new PageResult<ChatInteraction>

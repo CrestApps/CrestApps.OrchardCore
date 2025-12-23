@@ -11,12 +11,12 @@
         <div></div>
 
         <div>
-            <a class="btn btn-secondary me-1" asp-action="Index" asp-controller="Admin" asp-area="@AIConstants.Feature.ChatInteractions">
-                <i class="fa-solid fa-plus"></i> @T["New Interaction"]
+            <a class="btn btn-secondary me-1" asp-action="Index" asp-controller="Admin" asp-route-source="@Model.Interaction.Source" asp-area="@AIConstants.Feature.ChatInteractions">
+                <i class="fa-solid fa-plus"></i> @T["New Chat"]
             </a>
 
-            <a class="btn btn-primary" asp-action="History" asp-controller="Admin" asp-area="@AIConstants.Feature.ChatInteractions">
-                <i class="fa-solid fa-list"></i> @T["Interaction History"]
+            <a class="btn btn-primary" asp-action="Index" asp-controller="Admin" asp-area="@AIConstants.Feature.ChatInteractions">
+                <i class="fa-solid fa-list"></i> @T["Chat Interactions"]
             </a>
         </div>
     </div>
