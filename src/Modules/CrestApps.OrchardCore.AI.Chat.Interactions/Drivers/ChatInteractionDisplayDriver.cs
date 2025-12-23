@@ -1,5 +1,8 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -7,12 +10,28 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
 public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction>
 {
-    public override IDisplayResult Display(ChatInteraction interaction, BuildDisplayContext context)
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public ChatInteractionDisplayDriver(
+        IAuthorizationService authorizationService,
+        IHttpContextAccessor httpContextAccessor)
     {
-        return Initialize<DisplayChatInteractionViewModel>("ChatInteractionListItem", model =>
-        {
-            model.Interaction = interaction;
-        }).Location("SummaryAdmin", "Content");
+        _authorizationService = authorizationService;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public override Task<IDisplayResult> DisplayAsync(ChatInteraction interaction, BuildDisplayContext context)
+    {
+        return CombineAsync(
+            View("ChatInteraction_Fields_SummaryAdmin", interaction).Location("Content:1"),
+            View("ChatInteraction_Buttons_SummaryAdmin", interaction).Location("Actions:5"),
+            View("ChatInteraction_DefaultTags_SummaryAdmin", interaction).Location("Tags:5"),
+            View("ChatInteraction_DefaultMeta_SummaryAdmin", interaction).Location("Meta:5"),
+            View("ChatInteraction_ActionsMenu_SummaryAdmin", interaction)
+                .Location("ActionsMenu:10")
+                .RenderWhen(async () => await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.DeleteChatInteraction, interaction))
+        );
     }
 
     public override Task<IDisplayResult> EditAsync(ChatInteraction interaction, BuildEditorContext context)

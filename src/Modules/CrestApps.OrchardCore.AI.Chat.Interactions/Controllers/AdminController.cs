@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -27,7 +28,6 @@ public sealed class AdminController : Controller
     private readonly ISourceCatalogManager<ChatInteraction> _interactionManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDisplayManager<ChatInteraction> _interactionDisplayManager;
-    private readonly IDisplayManager<ChatInteractionListOptions> _optionsDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly INotifier _notifier;
     private readonly AIOptions _aiOptions;
@@ -39,7 +39,6 @@ public sealed class AdminController : Controller
         ISourceCatalogManager<ChatInteraction> interactionManager,
         IAuthorizationService authorizationService,
         IDisplayManager<ChatInteraction> interactionDisplayManager,
-        IDisplayManager<ChatInteractionListOptions> optionsDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         INotifier notifier,
         IOptions<AIOptions> aiOptions,
@@ -49,7 +48,6 @@ public sealed class AdminController : Controller
         _interactionManager = interactionManager;
         _authorizationService = authorizationService;
         _interactionDisplayManager = interactionDisplayManager;
-        _optionsDisplayManager = optionsDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _notifier = notifier;
         _aiOptions = aiOptions.Value;
@@ -59,22 +57,30 @@ public sealed class AdminController : Controller
 
     [Admin("ai/chat-interactions", "AIInteractionsIndex")]
     public async Task<IActionResult> Index(
-        string itemId,
-        string source,
         CatalogEntryOptions options,
         PagerParameters pagerParameters,
-        [FromServices] IOptions<PagerOptions> pagerOptions)
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ListChatInteractions))
         {
             return Forbid();
         }
 
-        var model = new ChatInteractionViewModel
+        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+
+        var queryContext = new ChatInteractionQueryContext
         {
-            History = [],
-            Sources = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
+            Title = options.Search,
         };
+
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ListChatInteractionsForOthers))
+        {
+            // User cannot view all interactions.
+            queryContext.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+
+        var result = await _interactionManager.PageAsync(pager.Page, pager.PageSize, queryContext);
 
         // Maintain previous route data when generating page links.
         var routeData = new RouteData();
@@ -84,14 +90,115 @@ public sealed class AdminController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
+        var viewModel = new ListSourceCatalogEntryViewModel<ChatInteraction>
+        {
+            Models = [],
+            Options = options,
+            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Sources = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
+        };
+
+        foreach (var model in result.Entries)
+        {
+            viewModel.Models.Add(new CatalogEntryViewModel<ChatInteraction>
+            {
+                Model = model,
+                Shape = await _interactionDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+            });
+        }
+
+        viewModel.Options.BulkActions =
+        [
+            new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
+        ];
+
+        return View(viewModel);
+    }
+
+    [HttpPost]
+    [ActionName(nameof(Index))]
+    [FormValueRequired("submit.Filter")]
+    [Admin("ai/chat-interactions", "AIInteractionsIndex")]
+    public ActionResult IndexFilterPost(ListCatalogEntryViewModel model)
+    {
+        return RedirectToAction(nameof(Index), new RouteValueDictionary
+        {
+            { _optionsSearch, model.Options?.Search },
+        });
+    }
+
+    [HttpPost]
+    [ActionName(nameof(Index))]
+    [FormValueRequired("submit.BulkAction")]
+    [Admin("ai/chat-interactions", "AIInteractionsIndex")]
+    public async Task<ActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ListChatInteractions))
+        {
+            return Forbid();
+        }
+
+        if (itemIds?.Count() > 0)
+        {
+            switch (options.BulkAction)
+            {
+                case CatalogEntryAction.None:
+                    break;
+                case CatalogEntryAction.Remove:
+                    var counter = 0;
+                    foreach (var id in itemIds)
+                    {
+                        var interaction = await _interactionManager.FindByIdAsync(id);
+
+                        if (interaction == null)
+                        {
+                            continue;
+                        }
+
+                        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.DeleteChatInteraction, interaction))
+                        {
+                            continue;
+                        }
+
+                        if (await _interactionManager.DeleteAsync(interaction))
+                        {
+                            counter++;
+                        }
+                    }
+                    if (counter == 0)
+                    {
+                        await _notifier.WarningAsync(H["No chat interactions were removed."]);
+                    }
+                    else
+                    {
+                        await _notifier.SuccessAsync(H.Plural(counter, "1 chat interaction has been removed successfully.", "{0} chat interactions have been removed successfully."));
+                    }
+                    break;
+                default:
+                    return BadRequest();
+            }
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [Admin("ai/chat/interaction/edit/{source}/{itemId?}", "ChatInteractionsEdit")]
+    public async Task<ActionResult> Edit(string source, string itemId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions))
+        {
+            return Forbid();
+        }
+
         ChatInteraction interaction;
-        string currentSource = null;
+        bool isNew;
 
         if (!string.IsNullOrEmpty(itemId))
         {
+            // Editing existing interaction
             interaction = await _interactionManager.FindByIdAsync(itemId);
 
-            if (interaction is null)
+            if (interaction == null)
             {
                 return NotFound();
             }
@@ -101,13 +208,11 @@ public sealed class AdminController : Controller
                 return Forbid();
             }
 
-            model.ItemId = itemId;
-            model.Source = interaction.Source;
-            currentSource = interaction.Source;
-            model.Content = await _interactionDisplayManager.BuildEditorAsync(interaction, _updateModelAccessor.ModelUpdater, isNew: false);
+            isNew = false;
         }
-        else if (!string.IsNullOrEmpty(source))
+        else
         {
+            // Creating new interaction
             if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
             {
                 await _notifier.ErrorAsync(H["Unable to find a source that can handle '{0}'.", source]);
@@ -125,113 +230,19 @@ public sealed class AdminController : Controller
             // Save the interaction immediately so it can be used by the SignalR hub
             await _interactionManager.CreateAsync(interaction);
 
-            model.ItemId = interaction.ItemId;
-            model.Source = source;
-            currentSource = source;
-            model.Content = await _interactionDisplayManager.BuildEditorAsync(interaction, _updateModelAccessor.ModelUpdater, isNew: true);
+            isNew = true;
         }
 
-        var queryContext = new ChatInteractionQueryContext();
-
-        if (!string.IsNullOrEmpty(currentSource))
+        var model = new EditChatInteractionEntryViewModel
         {
-            queryContext.Source = currentSource;
-        }
-
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ListChatInteractionsForOthers))
-        {
-            // At this point the user cannot view all interactions.
-            queryContext.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        }
-
-        var interactionResult = await _interactionManager.PageAsync(1, pagerOptions.Value.GetPageSize(), queryContext);
-
-        foreach (var item in interactionResult.Entries)
-        {
-            var summary = await _interactionDisplayManager.BuildDisplayAsync(item, _updateModelAccessor.ModelUpdater, "SummaryAdmin");
-            summary.Properties["Interaction"] = item;
-
-            model.History.Add(summary);
-        }
+            ItemId = interaction.ItemId,
+            Source = interaction.Source,
+            DisplayName = isNew ? _aiOptions.ProfileSources[interaction.Source].DisplayName : (interaction.Title ?? "Untitled"),
+            Editor = await _interactionDisplayManager.BuildEditorAsync(interaction, _updateModelAccessor.ModelUpdater, isNew: isNew),
+        };
 
         return View(model);
     }
-
-    [HttpPost]
-    [ActionName(nameof(Index))]
-    [FormValueRequired("submit.Filter")]
-    [Admin("ai/chat-interactions", "AIInteractionsIndex")]
-    public ActionResult IndexFilterPost(ListCatalogEntryViewModel model)
-    {
-        return RedirectToAction(nameof(Index), new RouteValueDictionary
-        {
-            { _optionsSearch, model.Options?.Search },
-        });
-    }
-
-    /*
-    public async Task<IActionResult> History(
-        PagerParameters pagerParameters,
-        ChatInteractionListOptions options,
-        [FromServices] IOptions<PagerOptions> pagerOptions,
-        [FromServices] IShapeFactory shapeFactory)
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageChatInteractions))
-        {
-            return Forbid();
-        }
-
-        if (!string.IsNullOrWhiteSpace(options.SearchText))
-        {
-            options.RouteValues.TryAdd("q", options.SearchText);
-        }
-
-        var page = 1;
-
-        if (pagerParameters.Page.HasValue && pagerParameters.Page.Value > 0)
-        {
-            page = pagerParameters.Page.Value;
-        }
-
-        var interactionResult = await _interactionManager.PageAsync(page, pagerOptions.Value.GetPageSize(), new ChatInteractionQueryContext
-        {
-            Title = options.SearchText
-        });
-
-        var itemsPerPage = pagerOptions.Value.MaxPagedCount > 0
-            ? pagerOptions.Value.MaxPagedCount
-            : interactionResult.Count;
-
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
-
-        var pagerShape = await shapeFactory.PagerAsync(pager, itemsPerPage, options.RouteValues);
-
-        var shapeViewModel = await shapeFactory.CreateAsync<ListChatInteractionsViewModel>("ChatInteractionsList", async viewModel =>
-        {
-            viewModel.Interactions = interactionResult.Entries;
-            viewModel.Pager = pagerShape;
-            viewModel.Options = options;
-            viewModel.Header = await _optionsDisplayManager.BuildEditorAsync(options, _updateModelAccessor.ModelUpdater, false);
-        });
-
-        return View(shapeViewModel);
-    }
-
-    [HttpPost]
-    [ActionName(nameof(History))]
-    public async Task<ActionResult> HistoryPost()
-    {
-        var options = new ChatInteractionListOptions();
-        await _optionsDisplayManager.UpdateEditorAsync(options, _updateModelAccessor.ModelUpdater, false);
-
-        options.RouteValues.TryAdd("q", options.SearchText);
-
-        return RedirectToAction(nameof(History), options.RouteValues);
-    }
-    */
-
-    public IActionResult Chat()
-        => RedirectToAction(nameof(Index));
 
     [HttpPost]
     public async Task<IActionResult> Delete(string itemId)
