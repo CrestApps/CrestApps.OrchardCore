@@ -96,12 +96,8 @@ public sealed class AdminController : Controller
             model.ItemId = interaction.ItemId;
             model.Content = await _interactionDisplayManager.BuildEditorAsync(interaction, _updateModelAccessor.ModelUpdater, isNew: true);
         }
-        else
-        {
-            // Show source selection dialog
-            return View(model);
-        }
 
+        // Always load history for the view
         var interactionResult = await _interactionManager.PageAsync(1, pagerOptions.Value.GetPageSize(), new ChatInteractionQueryContext());
 
         foreach (var item in interactionResult.Entries)
