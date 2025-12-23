@@ -1,29 +1,55 @@
-<div class="container-fluid px-0">
-    <div class="d-flex flex-column flex-lg-row h-100">
+<div class="container-fluid px-0 chat-interaction-container">
+    <div class="d-flex flex-column flex-lg-row">
         @if (Model.Parameters is not null)
         {
-            <div class="flex-shrink-0 bg-theme p-3 border rounded mb-3 mb-lg-0" style="width: 100%; max-width: 22rem; height: auto; overflow-y: auto;">
+            <div class="chat-parameters-panel flex-shrink-0 bg-theme p-3 border rounded mb-3 mb-lg-0">
                 @await DisplayAsync(Model.Parameters)
             </div>
         }
 
-        <div class="d-flex flex-column h-100 flex-grow-1 px-3">
+        <div class="d-flex flex-column flex-grow-1 ps-lg-3 chat-content-area">
             @if (Model.Header is not null)
             {
-                <div class="mb-3">
+                <div class="mb-3 chat-header-area">
                     @await DisplayAsync(Model.Header)
                 </div>
             }
-            @await DisplayAsync(Model.Content)
+            <div class="chat-main-area flex-grow-1 d-flex flex-column">
+                @await DisplayAsync(Model.Content)
+            </div>
         </div>
     </div>
 </div>
 
 <style at="Head">
+    .chat-interaction-container {
+        height: calc(100vh - var(--oc-top-nav-height, 56px) - 120px);
+        min-height: 400px;
+    }
+
+    .chat-parameters-panel {
+        width: 100%;
+        max-width: 100%;
+        overflow-y: auto;
+    }
+
+    .chat-content-area {
+        min-height: 0;
+    }
+
+    .chat-main-area {
+        min-height: 0;
+        overflow: hidden;
+    }
+
     @@media (min-width: 992px) {
-        .flex-shrink-0.bg-theme {
-            max-width: 22rem !important;
-            height: calc(100vh - 2rem - var(--oc-top-nav-height, 0)) !important;
+        .chat-parameters-panel {
+            max-width: 22rem;
+            height: 100%;
+        }
+
+        .chat-interaction-container {
+            height: calc(100vh - var(--oc-top-nav-height, 56px) - 120px);
         }
     }
 </style>

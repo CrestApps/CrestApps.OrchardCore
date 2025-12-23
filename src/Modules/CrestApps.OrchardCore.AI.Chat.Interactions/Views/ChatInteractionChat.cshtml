@@ -20,33 +20,34 @@
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
 }
 
-<div class="p-3 overflow-y-auto h-100 rounded-2 border bg-theme mb-3" id="@chatContainerHtmlId">
-    <div class="list-group list-group-flush w-100">
-        @if (Model.Interaction.Prompts.Count == 0)
-        {
-            <div id="@placeholderHtmlId" class="text-center p-3">
-                <h1>
-                    @T["What do you want to know?"]
-                </h1>
-            </div>
-        }
+<div class="d-flex flex-column h-100">
+    <div class="flex-grow-1 overflow-y-auto rounded-2 border bg-theme p-3 mb-3" id="@chatContainerHtmlId">
+        <div class="list-group list-group-flush w-100">
+            @if (Model.Interaction.Prompts.Count == 0)
+            {
+                <div id="@placeholderHtmlId" class="text-center p-3">
+                    <h1>
+                        @T["What do you want to know?"]
+                    </h1>
+                </div>
+            }
 
-        <div id="@chatAppHtmlId"></div>
+            <div id="@chatAppHtmlId"></div>
+        </div>
     </div>
-</div>
 
-<div class="container-fluid px-0">
+    <div class="flex-shrink-0">
+        <div class="text-bg-light rounded border w-100">
+            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-interaction-id="@Model.Interaction.ItemId" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
 
-    <div class="text-bg-light rounded border w-100">
-        <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-interaction-id="@Model.Interaction.ItemId" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
+            <div class="d-flex justify-content-between px-3 my-2">
+                <div></div>
 
-        <div class="d-flex justify-content-between px-3 my-2">
-            <div></div>
-
-            <div>
-                <button class="btn btn-dark" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
-                    <i class="fa-solid fa-arrow-up"></i>
-                </button>
+                <div>
+                    <button class="btn btn-dark" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
