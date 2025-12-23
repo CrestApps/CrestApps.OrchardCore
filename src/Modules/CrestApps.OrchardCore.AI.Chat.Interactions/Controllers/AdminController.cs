@@ -71,7 +71,7 @@ public sealed class AdminController : Controller
 
         var queryContext = new ChatInteractionQueryContext
         {
-            Title = options.Search,
+            Name = options.Search,
         };
 
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ListChatInteractionsForOthers))
@@ -182,8 +182,8 @@ public sealed class AdminController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [Admin("ai/chat/interaction/edit/{source}/{itemId?}", "ChatInteractionsEdit")]
-    public async Task<ActionResult> Edit(string source, string itemId)
+    [Admin("ai/chat/interaction/chat/{source}/{itemId?}", "ChatInteractionsChat")]
+    public async Task<ActionResult> Chat(string source, string itemId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions))
         {
@@ -195,7 +195,7 @@ public sealed class AdminController : Controller
 
         if (!string.IsNullOrEmpty(itemId))
         {
-            // Editing existing interaction
+            // Editing existing interaction.
             interaction = await _interactionManager.FindByIdAsync(itemId);
 
             if (interaction == null)
@@ -212,7 +212,7 @@ public sealed class AdminController : Controller
         }
         else
         {
-            // Creating new interaction
+            // Creating new interaction.
             if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
             {
                 await _notifier.ErrorAsync(H["Unable to find a source that can handle '{0}'.", source]);
@@ -227,7 +227,7 @@ public sealed class AdminController : Controller
                 return Forbid();
             }
 
-            // Save the interaction immediately so it can be used by the SignalR hub
+            // Save the interaction immediately so it can be used by the SignalR hub.
             await _interactionManager.CreateAsync(interaction);
 
             isNew = true;

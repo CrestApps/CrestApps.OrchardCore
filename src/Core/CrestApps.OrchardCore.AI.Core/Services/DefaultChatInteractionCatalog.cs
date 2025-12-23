@@ -11,6 +11,7 @@ public sealed class DefaultChatInteractionCatalog : SourceDocumentCatalog<ChatIn
     public DefaultChatInteractionCatalog(ISession session)
         : base(session)
     {
+        CollectionName = AIConstants.CollectionName;
     }
 
     protected override ValueTask PagingAsync<TQuery>(IQuery<ChatInteraction> query, TQuery context)
