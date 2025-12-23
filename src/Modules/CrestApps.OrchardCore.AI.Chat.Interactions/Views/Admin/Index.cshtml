@@ -4,16 +4,14 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.Extensions.Options
 @using OrchardCore
+@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.OrchardCore.Services
 
 @model ChatInteractionViewModel
 
 @inject IOptions<AIOptions> AIOptions
 @inject IAuthorizationService AuthorizationService
-
-@{
-    var canDeleteInteraction = await AuthorizationService.AuthorizeAsync(User, AIPermissions.DeleteChatInteraction);
-    var canDeleteAllInteractions = await AuthorizationService.AuthorizeAsync(User, AIPermissions.DeleteAllChatInteractions);
-}
+@inject ISourceCatalogManager<ChatInteraction> SourceCatalogManager
 
 @if (Model.Content is null)
 {
@@ -25,22 +23,15 @@
                 <div class="row gx-3">
                     <div class="col"></div>
                     <div class="col-auto">
-                        <button type="button" class="btn btn-primary create" role="button" data-bs-toggle="modal" data-bs-target="#modalSelectSource">
-                            <i class="fa-solid fa-plus"></i> @T["New Chat"]
-                        </button>
-                        @if (canDeleteAllInteractions && Model.History is not null && Model.History.Count > 0)
+                        @{
+                            var dummyInteraction = await SourceCatalogManager.NewAsync("DummySource");
+                        }
+
+                        @if (await AuthorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions, dummyInteraction))
                         {
-                            <a asp-action="DeleteAll"
-                               asp-controller="Admin"
-                               asp-area="@AIConstants.Feature.ChatInteractions"
-                               class="btn btn-danger"
-                               data-url-af="RemoveUrl UnsafeUrl"
-                               data-title="Delete"
-                               data-message="@T["Are you sure you want to delete all chat interactions?"]"
-                               data-ok-text="@T["Yes"]"
-                               data-cancel-text="@T["Cancel"]">
-                                <i class="fa-solid fa-trash"></i> @T["Delete All"]
-                            </a>
+                            <button type="button" class="btn btn-primary create" role="button" data-bs-toggle="modal" data-bs-target="#modalSelectSource">
+                                <i class="fa-solid fa-plus"></i> @T["New Chat"]
+                            </button>
                         }
                     </div>
                 </div>
@@ -63,7 +54,7 @@
                                 <div>
                                     <a asp-action="Index" asp-controller="Admin" asp-route-itemId="@interaction.ItemId" class="btn btn-sm btn-success">@T["View"]</a>
 
-                                    @if (canDeleteInteraction)
+                                    @if (await AuthorizationService.AuthorizeAsync(User, AIPermissions.DeleteChatInteraction, interaction))
                                     {
                                         <a asp-action="Delete"
                                            asp-controller="Admin"
@@ -140,7 +131,7 @@
 }
 else
 {
-    <div class="d-flex flex-row h-100">
+    <div class="d-flex flex-row h-100 mx-3">
 
         <div class="d-flex flex-column h-100 flex-grow-1">
             @await DisplayAsync(Model.Content)

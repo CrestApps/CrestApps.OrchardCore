@@ -20,11 +20,17 @@ public static class AIPermissions
 
     public static readonly Permission DeleteAllChatSessions = new("DeleteAllChatSessions", "Delete all chat sessions");
 
-    public static readonly Permission ManageChatInteractions = new("ManageChatInteractions", "Manage chat interactions");
+    public static readonly Permission ListChatInteractionsForOthers = new("ListChatInteractionsForOthers", "List chat interactions for others");
+
+    public static readonly Permission ListChatInteractions = new("ListChatInteractions", "List chat interactions", [ListChatInteractionsForOthers]);
+
+    public static readonly Permission EditChatInteractions = new("EditChatInteractions", "Edit any chat interactions");
+
+    public static readonly Permission EditOwnChatInteractions = new("EditOwnChatInteractions", "Edit own chat interactions", [EditChatInteractions]);
 
     public static readonly Permission DeleteChatInteraction = new("DeleteChatInteraction", "Delete chat interaction");
 
-    public static readonly Permission DeleteAllChatInteractions = new("DeleteAllChatInteractions", "Delete all chat interactions");
+    public static readonly Permission DeleteOwnChatInteraction = new("DeleteOwnChatInteraction", "Delete own chat interaction", [DeleteChatInteraction]);
 
     private static readonly Permission _queryAIProfileTemplate = new("QueryAIProfile_{0}", "Query AI profile - {0}", [QueryAnyAIProfile]);
 

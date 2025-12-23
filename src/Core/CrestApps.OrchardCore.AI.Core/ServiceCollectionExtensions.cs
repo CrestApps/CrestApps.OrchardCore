@@ -29,7 +29,7 @@ public static class ServiceCollectionExtensions
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileHandler>();
 
         services
-            .AddScoped<IAuthorizationHandler, AIProfileAuthenticationHandler>()
+            .AddScoped<IAuthorizationHandler, AIProfileAuthorizationHandler>()
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.CollectionName));
 
         services

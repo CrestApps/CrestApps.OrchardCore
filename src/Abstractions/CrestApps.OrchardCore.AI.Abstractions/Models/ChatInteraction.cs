@@ -16,7 +16,12 @@ public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
     /// <summary>
     /// Gets or sets the user identifier who owns this interaction.
     /// </summary>
-    public string UserId { get; set; }
+    public string OwnerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user identifier who owns this interaction.
+    /// </summary>
+    public string Author { get; set; }
 
     /// <summary>
     /// Gets or sets the source/provider name for this interaction.

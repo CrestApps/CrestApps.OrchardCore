@@ -19,9 +19,9 @@ public sealed class ChatInteractionsAdminMenu : AdminNavigationProvider
            .Add(S["Artificial Intelligence"], artificialIntelligence =>
            {
                artificialIntelligence
-                   .Add(S["Chat Interactions"], "chatinteractions", chatInteractions => chatInteractions
+                   .Add(S["Chat Interactions"], S["Chat Interactions"].PrefixPosition(), chatInteractions => chatInteractions
                        .Action("Index", "Admin", AIConstants.Feature.ChatInteractions)
-                       .Permission(AIPermissions.ManageChatInteractions)
+                       .Permission(AIPermissions.ListChatInteractions)
                        .LocalNav()
                    );
            });

@@ -5,11 +5,6 @@
 
 @model ListChatInteractionsViewModel
 
-@{
-    var canDeleteInteraction = await AuthorizationService.AuthorizeAsync(User, AIPermissions.DeleteChatInteraction);
-    var canDeleteAllInteractions = await AuthorizationService.AuthorizeAsync(User, AIPermissions.DeleteAllChatInteractions);
-}
-
 <!-- Hidden submit button do not remove -->
 <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
 
@@ -24,21 +19,6 @@
                     <a class="btn btn-secondary" asp-action="Index" asp-controller="Admin" asp-area="@AIConstants.Feature.ChatInteractions">
                         @T["Chat Interactions"]
                     </a>
-
-                    @if (canDeleteAllInteractions)
-                    {
-                        <a asp-action="DeleteAll"
-                           asp-controller="Admin"
-                           asp-area="@AIConstants.Feature.ChatInteractions"
-                           class="btn btn-danger"
-                           data-url-af="RemoveUrl UnsafeUrl"
-                           data-title="Delete"
-                           data-message="@T["Are you sure you want to delete all chat interactions?"]"
-                           data-ok-text="@T["Yes"]"
-                           data-cancel-text="@T["Cancel"]">
-                            <i class="fa-solid fa-trash"></i> @T["Delete All"]
-                        </a>
-                    }
                 </div>
             </div>
         </div>
@@ -56,7 +36,7 @@
                         <div>
                             <a asp-action="Index" asp-controller="Admin" asp-route-itemId="@interaction.ItemId" class="btn btn-sm btn-success">@T["View"]</a>
 
-                            @if (canDeleteInteraction)
+                            @if (await AuthorizationService.AuthorizeAsync(User, AIPermissions.DeleteChatInteraction, interaction))
                             {
                                 <a asp-action="Delete"
                                    asp-controller="Admin"

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -17,7 +18,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 {
     private readonly IAuthorizationService _authorizationService;
-    private readonly IChatInteractionManager _interactionManager;
+    private readonly ISourceCatalogManager<ChatInteraction> _interactionManager;
     private readonly IAICompletionService _completionService;
     private readonly ILogger<ChatInteractionHub> _logger;
 
@@ -25,7 +26,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
     public ChatInteractionHub(
         IAuthorizationService authorizationService,
-        IChatInteractionManager interactionManager,
+        ISourceCatalogManager<ChatInteraction> interactionManager,
         IAICompletionService completionService,
         ILogger<ChatInteractionHub> logger,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
@@ -56,17 +57,19 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
         var httpContext = Context.GetHttpContext();
 
-        if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageChatInteractions))
+        var interaction = await _interactionManager.FindByIdAsync(itemId);
+
+        if (interaction is null)
         {
-            await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+            await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+
             return;
         }
 
-        var interaction = await _interactionManager.FindAsync(itemId);
-
-        if (interaction == null)
+        if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
         {
-            await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+            await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+
             return;
         }
 
@@ -103,19 +106,20 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             return;
         }
 
-        var httpContext = Context.GetHttpContext();
-
-        if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageChatInteractions))
-        {
-            await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
-            return;
-        }
-
-        var interaction = await _interactionManager.FindAsync(itemId);
+        var interaction = await _interactionManager.FindByIdAsync(itemId);
 
         if (interaction == null)
         {
             await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+            return;
+        }
+
+        var httpContext = Context.GetHttpContext();
+
+        if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
+        {
+            await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+
             return;
         }
 
@@ -137,31 +141,35 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     {
         try
         {
-            var httpContext = Context.GetHttpContext();
-
-            if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageChatInteractions))
-            {
-                await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
-                return;
-            }
-
             if (string.IsNullOrWhiteSpace(itemId))
             {
                 await Clients.Caller.ReceiveError(S["Interaction ID is required."].Value);
+
                 return;
             }
 
-            var interaction = await _interactionManager.FindAsync(itemId);
+            var interaction = await _interactionManager.FindByIdAsync(itemId);
 
             if (interaction == null)
             {
                 await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+
+                return;
+            }
+
+            var httpContext = Context.GetHttpContext();
+
+            if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
+            {
+                await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(prompt))
             {
                 await Clients.Caller.ReceiveError(S["{0} is required.", nameof(prompt)].Value);
+
                 return;
             }
 
