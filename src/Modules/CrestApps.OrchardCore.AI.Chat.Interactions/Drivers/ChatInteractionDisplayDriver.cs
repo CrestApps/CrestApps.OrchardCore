@@ -21,9 +21,9 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public override Task<IDisplayResult> DisplayAsync(ChatInteraction interaction, BuildDisplayContext context)
+    public override IDisplayResult Display(ChatInteraction interaction, BuildDisplayContext context)
     {
-        return CombineAsync(
+        return Combine(
             View("ChatInteraction_Fields_SummaryAdmin", interaction).Location("Content:1"),
             View("ChatInteraction_Buttons_SummaryAdmin", interaction).Location("Actions:5"),
             View("ChatInteraction_DefaultTags_SummaryAdmin", interaction).Location("Tags:5"),

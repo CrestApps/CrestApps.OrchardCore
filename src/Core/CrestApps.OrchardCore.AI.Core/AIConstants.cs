@@ -55,5 +55,9 @@ public static class AIConstants
         public const string GetDeploymentsByConnectionRouteName = "GetDeploymentsByConnection";
 
         public const string GetConnectionsByProviderRouteName = "GetConnectionsByProvider";
+
+        public const string ChatInteractionUploadDocument = "ChatInteractionUploadDocument";
+
+        public const string ChatInteractionRemoveDocument = "ChatInteractionRemoveDocument";
     }
 }

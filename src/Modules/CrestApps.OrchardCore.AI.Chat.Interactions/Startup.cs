@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Endpoints;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Indexes;
@@ -49,5 +50,9 @@ public sealed class Startup : StartupBase
         var hubRouteManager = serviceProvider.GetRequiredService<HubRouteManager>();
 
         hubRouteManager.MapHub<ChatInteractionHub>(routes);
+
+        routes
+            .AddUploadDocumentEndpoint()
+            .AddRemoveDocumentEndpoint();
     }
 }

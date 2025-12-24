@@ -3,11 +3,6 @@
 
 @model EditChatInteractionToolsViewModel
 
-@if (Model.Tools is null || Model.Tools.Count == 0)
-{
-    return;
-}
-
 <div class="mb-3">
     @foreach (var tools in Model.Tools)
     {
