@@ -25,8 +25,8 @@
 
 <style at="Head">
     .chat-interaction-container {
-        height: calc(100vh - 170px);
-        min-height: 500px;
+        height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px);
+        min-height: 100%;
     }
 
     .chat-parameters-panel {
@@ -34,7 +34,7 @@
         max-width: 100%;
         display: flex;
         flex-direction: column;
-        max-height: 400px;
+        max-height: 100%;
     }
 
     .chat-parameters-content {
@@ -65,7 +65,7 @@
         }
 
         .chat-interaction-container {
-            height: calc(100vh - 170px);
+            height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px);
         }
     }
 </style>
