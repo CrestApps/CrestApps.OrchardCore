@@ -240,6 +240,11 @@ public sealed class ToolsStartup : StartupBase
         services.AddPermissionProvider<AIToolPermissionProvider>();
 
         services.AddAIToolSource<ProfileAwareAIToolSource>(ProfileAwareAIToolSource.ToolSource);
+        // my tool below
+        services.AddAIToolSource<CustomChatToolSource>(CustomChatToolSource.ToolSource);
+        services.AddDisplayDriver<AIToolInstance, CustomChatToolMetadataDisplayDriver>();
+
+        // my tool above
         services.AddScoped<IAICompletionServiceHandler, FunctionInstancesAICompletionServiceHandler>();
     }
 }
