@@ -1,0 +1,227 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using OrchardCore
+
+@model EditChatInteractionDocumentsViewModel
+
+<div class="mb-3">
+    <label class="form-label">
+        @T["Attached Documents"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Upload documents (PDF, Word, Excel, TXT, etc.) to chat against your own data. The content will be extracted and used as context for AI responses."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    
+    <div class="border rounded p-3 bg-light">
+        <div class="mb-3">
+            <input type="file" 
+                   class="form-control" 
+                   id="documentUpload-@Model.ItemId" 
+                   accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.md,.json,.xml,.html,.htm"
+                   multiple />
+            <div class="form-text">
+                @T["Supported formats: PDF, Word (.doc, .docx), Excel (.xls, .xlsx), Text (.txt), CSV, Markdown (.md), JSON, XML, HTML"]
+            </div>
+        </div>
+        
+        <div id="documentsList-@Model.ItemId" class="document-list">
+            @if (Model.Documents != null && Model.Documents.Any())
+            {
+                foreach (var doc in Model.Documents)
+                {
+                    <div class="document-item d-flex align-items-center justify-content-between border-bottom py-2" data-document-id="@doc.DocumentId">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fa-solid fa-file-lines text-secondary"></i>
+                            <div>
+                                <div class="fw-medium">@doc.FileName</div>
+                                <small class="text-muted">
+                                    @FormatFileSize(doc.FileSize) • 
+                                    @T["Uploaded"] @doc.UploadedUtc.ToLocalTime().ToString("g")
+                                </small>
+                            </div>
+                        </div>
+                        <button type="button" 
+                                class="btn btn-sm btn-outline-danger remove-document" 
+                                data-document-id="@doc.DocumentId"
+                                title="@T["Remove document"]">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center text-muted py-3 no-documents">
+                    <i class="fa-solid fa-file-circle-plus fa-2x mb-2"></i>
+                    <div>@T["No documents attached. Upload documents to chat against your own data."]</div>
+                </div>
+            }
+        </div>
+        
+        <div id="uploadProgress-@Model.ItemId" class="mt-3" style="display: none;">
+            <div class="progress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                     role="progressbar" 
+                     style="width: 0%"></div>
+            </div>
+            <small class="text-muted upload-status">@T["Uploading..."]</small>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+(function() {
+    const itemId = '@Model.ItemId';
+    const fileInput = document.getElementById('documentUpload-' + itemId);
+    const documentsList = document.getElementById('documentsList-' + itemId);
+    const uploadProgress = document.getElementById('uploadProgress-' + itemId);
+    
+    if (fileInput) {
+        fileInput.addEventListener('change', async function(e) {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+            
+            uploadProgress.style.display = 'block';
+            const progressBar = uploadProgress.querySelector('.progress-bar');
+            const statusText = uploadProgress.querySelector('.upload-status');
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const progress = ((i + 1) / files.length) * 100;
+                progressBar.style.width = progress + '%';
+                statusText.textContent = '@T["Uploading"]' + ' ' + file.name + '...';
+                
+                try {
+                    await uploadDocument(file);
+                } catch (error) {
+                    console.error('Upload failed:', error);
+                    alert('@T["Failed to upload"]' + ' ' + file.name + ': ' + error.message);
+                }
+            }
+            
+            progressBar.style.width = '100%';
+            statusText.textContent = '@T["Upload complete!"]';
+            
+            setTimeout(function() {
+                uploadProgress.style.display = 'none';
+                progressBar.style.width = '0%';
+            }, 2000);
+            
+            fileInput.value = '';
+        });
+    }
+    
+    async function uploadDocument(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('itemId', itemId);
+        
+        const response = await fetch('@Url.Action("UploadDocument", "Admin", new { area = "CrestApps.OrchardCore.AI.Chat.Interactions" })', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            }
+        });
+        
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(error || 'Upload failed');
+        }
+        
+        const doc = await response.json();
+        addDocumentToList(doc);
+    }
+    
+    function addDocumentToList(doc) {
+        // Remove "no documents" message if present
+        const noDocsMessage = documentsList.querySelector('.no-documents');
+        if (noDocsMessage) {
+            noDocsMessage.remove();
+        }
+        
+        const docItem = document.createElement('div');
+        docItem.className = 'document-item d-flex align-items-center justify-content-between border-bottom py-2';
+        docItem.setAttribute('data-document-id', doc.documentId);
+        docItem.innerHTML = `
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-file-lines text-secondary"></i>
+                <div>
+                    <div class="fw-medium">${escapeHtml(doc.fileName)}</div>
+                    <small class="text-muted">
+                        ${formatFileSize(doc.fileSize)} • 
+                        @T["Uploaded"] just now
+                    </small>
+                </div>
+            </div>
+            <button type="button" 
+                    class="btn btn-sm btn-outline-danger remove-document" 
+                    data-document-id="${doc.documentId}"
+                    title="@T["Remove document"]">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
+        `;
+        documentsList.appendChild(docItem);
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Handle document removal
+    documentsList.addEventListener('click', async function(e) {
+        const removeBtn = e.target.closest('.remove-document');
+        if (!removeBtn) return;
+        
+        const documentId = removeBtn.getAttribute('data-document-id');
+        if (!confirm('@T["Are you sure you want to remove this document?"]')) return;
+        
+        try {
+            const response = await fetch('@Url.Action("RemoveDocument", "Admin", new { area = "CrestApps.OrchardCore.AI.Chat.Interactions" })', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({ itemId: itemId, documentId: documentId })
+            });
+            
+            if (response.ok) {
+                const docItem = documentsList.querySelector(`[data-document-id="${documentId}"]`);
+                if (docItem) docItem.remove();
+                
+                // Show "no documents" message if list is empty
+                if (documentsList.querySelectorAll('.document-item').length === 0) {
+                    documentsList.innerHTML = `
+                        <div class="text-center text-muted py-3 no-documents">
+                            <i class="fa-solid fa-file-circle-plus fa-2x mb-2"></i>
+                            <div>@T["No documents attached. Upload documents to chat against your own data."]</div>
+                        </div>
+                    `;
+                }
+            } else {
+                alert('@T["Failed to remove document"]');
+            }
+        } catch (error) {
+            console.error('Remove failed:', error);
+            alert('@T["Failed to remove document"]');
+        }
+    });
+})();
+</script>
+
+@functions {
+    string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024):F1} MB";
+    }
+}

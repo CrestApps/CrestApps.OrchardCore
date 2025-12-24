@@ -1,10 +1,12 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -270,4 +272,128 @@ public sealed class AdminController : Controller
 
         return RedirectToAction(nameof(Index));
     }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadDocument(
+        string itemId, 
+        IFormFile file,
+        [FromServices] IDocumentTextExtractor textExtractor)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions))
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrEmpty(itemId))
+        {
+            return BadRequest("Item ID is required.");
+        }
+
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest("No file uploaded.");
+        }
+
+        var interaction = await _interactionManager.FindByIdAsync(itemId);
+        if (interaction == null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions, interaction))
+        {
+            return Forbid();
+        }
+
+        // Check if file type is supported
+        if (!textExtractor.IsSupported(file.FileName, file.ContentType))
+        {
+            return BadRequest(S["File type '{0}' is not supported. Please upload text-based files (TXT, CSV, MD, JSON, XML, HTML).", Path.GetExtension(file.FileName)]);
+        }
+
+        // Extract text from document
+        string content;
+        using (var stream = file.OpenReadStream())
+        {
+            content = await textExtractor.ExtractTextAsync(stream, file.FileName, file.ContentType);
+        }
+
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return BadRequest(S["Could not extract text content from the document."]);
+        }
+
+        // Create document entry
+        var document = new ChatInteractionDocument
+        {
+            DocumentId = Guid.NewGuid().ToString("N"),
+            FileName = file.FileName,
+            ContentType = file.ContentType,
+            Content = content,
+            FileSize = file.Length,
+            UploadedUtc = DateTime.UtcNow
+        };
+
+        // Add to interaction
+        interaction.Documents ??= [];
+        interaction.Documents.Add(document);
+
+        // Save the interaction
+        await _interactionManager.UpdateAsync(interaction);
+
+        return Json(new
+        {
+            documentId = document.DocumentId,
+            fileName = document.FileName,
+            fileSize = document.FileSize,
+            uploadedUtc = document.UploadedUtc
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveDocument([FromBody] RemoveDocumentRequest request)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions))
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrEmpty(request?.ItemId) || string.IsNullOrEmpty(request?.DocumentId))
+        {
+            return BadRequest("Item ID and Document ID are required.");
+        }
+
+        var interaction = await _interactionManager.FindByIdAsync(request.ItemId);
+        if (interaction == null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions, interaction))
+        {
+            return Forbid();
+        }
+
+        // Find and remove the document
+        var document = interaction.Documents?.FirstOrDefault(d => d.DocumentId == request.DocumentId);
+        if (document == null)
+        {
+            return NotFound("Document not found.");
+        }
+
+        interaction.Documents.Remove(document);
+
+        // Save the interaction
+        await _interactionManager.UpdateAsync(interaction);
+
+        return Ok();
+    }
+}
+
+public sealed class RemoveDocumentRequest
+{
+    public string ItemId { get; set; }
+    public string DocumentId { get; set; }
 }
