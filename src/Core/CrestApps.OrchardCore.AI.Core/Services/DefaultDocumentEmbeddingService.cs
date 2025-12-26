@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -68,10 +67,10 @@ public sealed class DefaultDocumentEmbeddingService : IDocumentEmbeddingService
         var chunks = new List<DocumentChunk>();
         var now = DateTime.UtcNow;
 
-        for (int i = 0; i < textChunks.Count; i++)
+        for (var i = 0; i < textChunks.Count; i++)
         {
-            var embedding = await embeddingGenerator.GenerateEmbeddingAsync(textChunks[i], cancellationToken: cancellationToken);
-            
+            var embedding = await embeddingGenerator.GenerateAsync(textChunks[i], cancellationToken: cancellationToken);
+
             chunks.Add(new DocumentChunk
             {
                 ChunkId = $"{documentId}_{i}",
@@ -153,8 +152,8 @@ public sealed class DefaultDocumentEmbeddingService : IDocumentEmbeddingService
             return [];
         }
 
-        var queryEmbedding = await embeddingGenerator.GenerateEmbeddingAsync(query, cancellationToken: cancellationToken);
-        
+        var queryEmbedding = await embeddingGenerator.GenerateAsync(query, cancellationToken: cancellationToken);
+
         var allResults = new List<DocumentChunkSearchResult>();
 
         foreach (var handler in _indexHandlers)
@@ -177,7 +176,7 @@ public sealed class DefaultDocumentEmbeddingService : IDocumentEmbeddingService
     private static List<string> ChunkText(string text)
     {
         var chunks = new List<string>();
-        
+
         if (string.IsNullOrWhiteSpace(text))
         {
             return chunks;
@@ -207,7 +206,7 @@ public sealed class DefaultDocumentEmbeddingService : IDocumentEmbeddingService
                 if (currentChunk.Length > 0)
                 {
                     chunks.Add(currentChunk.ToString());
-                    
+
                     // Start new chunk with overlap from previous
                     var overlapText = GetOverlapText(currentChunk.ToString(), ChunkOverlap);
                     currentChunk.Clear();
@@ -264,7 +263,7 @@ public sealed class DefaultDocumentEmbeddingService : IDocumentEmbeddingService
     private static List<string> SplitLongParagraph(string paragraph)
     {
         var chunks = new List<string>();
-        
+
         // Split by sentences
         var sentences = Regex.Split(paragraph, @"(?<=[.!?])\s+")
             .Where(s => !string.IsNullOrWhiteSpace(s))
@@ -289,7 +288,7 @@ public sealed class DefaultDocumentEmbeddingService : IDocumentEmbeddingService
                     chunks.Add(currentChunk.ToString());
                     currentChunk.Clear();
                 }
-                
+
                 // If a single sentence is too long, just add it as is
                 if (sentence.Length > ChunkSize)
                 {

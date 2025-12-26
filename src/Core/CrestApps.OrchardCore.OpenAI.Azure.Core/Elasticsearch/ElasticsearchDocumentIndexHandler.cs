@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
 using Elastic.Clients.Elasticsearch;
+using Elastic.Clients.Elasticsearch.Mapping;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +15,7 @@ public sealed class ElasticsearchDocumentIndexHandler : IDocumentIndexHandler
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<ElasticsearchDocumentIndexHandler> _logger;
-    
+
     private const string IndexName = "chat-interaction-documents";
     private ElasticsearchClient _client;
     private bool _initialized;
@@ -47,7 +48,7 @@ public sealed class ElasticsearchDocumentIndexHandler : IDocumentIndexHandler
 
             // Check if index exists
             var existsResponse = await client.Indices.ExistsAsync(IndexName, cancellationToken);
-            
+
             if (!existsResponse.Exists)
             {
                 // Create index with mappings for vector search
@@ -59,11 +60,11 @@ public sealed class ElasticsearchDocumentIndexHandler : IDocumentIndexHandler
                             { "documentId", new KeywordProperty() },
                             { "sessionId", new KeywordProperty() },
                             { "content", new TextProperty() },
-                            { "embedding", new DenseVectorProperty 
-                            { 
+                            { "embedding", new DenseVectorProperty
+                            {
                                 Dims = 1536, // Default for text-embedding-ada-002
                                 Index = true,
-                                Similarity = DenseVectorIndexOptionsSimilarity.Cosine
+                                Similarity = DenseVectorSimilarity.Cosine
                             }},
                             { "chunkIndex", new IntegerNumberProperty() },
                             { "fileName", new KeywordProperty() },
@@ -213,7 +214,7 @@ public sealed class ElasticsearchDocumentIndexHandler : IDocumentIndexHandler
         try
         {
             var searchResponse = await client.SearchAsync<Dictionary<string, object>>(s => s
-                .Index(IndexName)
+                .Indices(IndexName)
                 .Size(topK)
                 .Query(q => q
                     .Bool(b => b
