@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Endpoints;
 
@@ -28,6 +29,9 @@ internal static class UploadDocumentEndpoint
         IHttpContextAccessor httpContextAccessor,
         ISourceCatalogManager<ChatInteraction> interactionManager,
         IDocumentTextExtractor textExtractor,
+        IDocumentEmbeddingService embeddingService,
+        IOptions<AIOptions> aiOptions,
+        IOptions<AIProviderOptions> providerOptions,
         IStringLocalizer<Startup> S)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.EditChatInteractions))
@@ -95,6 +99,45 @@ internal static class UploadDocumentEndpoint
 
         // Save the interaction
         await interactionManager.UpdateAsync(interaction);
+
+        // Index the document for vector search if embedding service is available
+        try
+        {
+            var options = aiOptions.Value;
+            var providers = providerOptions.Value;
+
+            if (options.ProfileSources.TryGetValue(interaction.Source, out var profileSource))
+            {
+                var providerName = profileSource.ProviderName;
+                var connectionName = interaction.ConnectionName;
+                
+                // Fall back to default connection if none specified
+                if (string.IsNullOrEmpty(connectionName) && providers.Providers.TryGetValue(providerName, out var provider))
+                {
+                    connectionName = provider.DefaultConnectionName;
+                }
+
+                // Use deployment or fall back to a default embedding model
+                var deploymentName = interaction.DeploymentId ?? "text-embedding-ada-002";
+
+                if (!string.IsNullOrEmpty(connectionName))
+                {
+                    await embeddingService.IndexDocumentAsync(
+                        interaction.ItemId,
+                        document.DocumentId,
+                        document.FileName,
+                        content,
+                        providerName,
+                        connectionName,
+                        deploymentName);
+                }
+            }
+        }
+        catch
+        {
+            // Embedding/indexing failure should not block document upload
+            // The document is still saved in the interaction
+        }
 
         return TypedResults.Ok(new
         {

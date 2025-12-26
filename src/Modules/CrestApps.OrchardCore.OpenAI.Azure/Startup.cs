@@ -146,6 +146,9 @@ public sealed class ElasticsearchStartup : StartupBase
         services.AddDisplayDriver<AIDataSource, AzureOpenAIElasticsearchDataSourceDisplayDriver>();
         services.AddScoped<ICatalogEntryHandler<AIDataSource>, ElasticsearchAIDataSourceHandler>();
 
+        // Register Elasticsearch document index handler for chat interaction document embeddings
+        services.AddScoped<IDocumentIndexHandler, ElasticsearchDocumentIndexHandler>();
+
         services
             .AddScoped<ElasticsearchOpenAIChatOptionsConfiguration>()
             .AddScoped<IOpenAIChatOptionsConfiguration>(sp => sp.GetRequiredService<ElasticsearchOpenAIChatOptionsConfiguration>())

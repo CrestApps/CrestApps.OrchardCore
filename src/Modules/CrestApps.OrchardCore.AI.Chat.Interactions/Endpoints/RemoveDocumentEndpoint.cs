@@ -25,7 +25,8 @@ internal static class RemoveDocumentEndpoint
         RemoveDocumentRequest request,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
-        ISourceCatalogManager<ChatInteraction> interactionManager)
+        ISourceCatalogManager<ChatInteraction> interactionManager,
+        IDocumentEmbeddingService embeddingService)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.EditChatInteractions))
         {
@@ -59,6 +60,16 @@ internal static class RemoveDocumentEndpoint
 
         // Save the interaction
         await interactionManager.UpdateAsync(interaction);
+
+        // Remove document from the index
+        try
+        {
+            await embeddingService.RemoveDocumentAsync(interaction.ItemId, request.DocumentId);
+        }
+        catch
+        {
+            // Index removal failure should not block document removal from interaction
+        }
 
         return TypedResults.Ok();
     }
