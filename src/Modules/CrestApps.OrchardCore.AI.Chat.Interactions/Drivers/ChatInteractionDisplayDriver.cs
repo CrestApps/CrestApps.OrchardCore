@@ -54,7 +54,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.ItemId = interaction.ItemId;
             model.Title = interaction.Title;
             model.IsNew = context.IsNew;
-        }).Location("Parameters:1#Settings;mb-0:1");
+        }).Location("Parameters:1#Settings:1");
 
         // Connection/Deployment comes after title (position 2) - handled by ChatInteractionConnectionDisplayDriver
 
@@ -76,7 +76,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.ToolInstanceIds = interaction.ToolInstanceIds?.ToArray();
             model.McpConnectionIds = interaction.McpConnectionIds?.ToArray();
             model.IsNew = context.IsNew;
-        }).Location("Parameters:1#Settings;mb-0:3");
+        }).Location("Parameters:1#Settings:3");
 
         return CombineAsync(headerResult, contentResult, titleResult, parametersResult);
     }

@@ -90,7 +90,7 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
                         .Select(x => new SelectListItem(x.Name, x.ItemId));
                 }
             }
-        }).Location("Parameters:1#Settings;mb-0:2");
+        }).Location("Parameters:1#Settings:2");
 
         return connectionResult;
     }

@@ -33,7 +33,7 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
         {
             model.ItemId = interaction.ItemId;
             model.Documents = interaction.Documents ?? [];
-        }).Location("Parameters:3#Documents;mb-0:3");
+        }).Location("Parameters:3#Documents:3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
