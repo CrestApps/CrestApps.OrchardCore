@@ -1,4 +1,5 @@
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using CrestApps.OrchardCore.AI.Core
 @using OrchardCore
 
 @model EditChatInteractionDocumentsViewModel
@@ -74,6 +75,8 @@
     const fileInput = document.getElementById('documentUpload-' + itemId);
     const documentsList = document.getElementById('documentsList-' + itemId);
     const uploadProgress = document.getElementById('uploadProgress-' + itemId);
+    const uploadUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionUploadDocument)';
+    const removeUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionRemoveDocument)';
     
     if (fileInput) {
         fileInput.addEventListener('change', async function(e) {
@@ -115,12 +118,9 @@
         formData.append('file', file);
         formData.append('itemId', itemId);
         
-        const response = await fetch('@Url.Action("UploadDocument", "Admin", new { area = "CrestApps.OrchardCore.AI.Chat.Interactions" })', {
+        const response = await fetch(uploadUrl, {
             method: 'POST',
-            body: formData,
-            headers: {
-                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-            }
+            body: formData
         });
         
         if (!response.ok) {
@@ -184,11 +184,10 @@
         if (!confirm('@T["Are you sure you want to remove this document?"]')) return;
         
         try {
-            const response = await fetch('@Url.Action("RemoveDocument", "Admin", new { area = "CrestApps.OrchardCore.AI.Chat.Interactions" })', {
+            const response = await fetch(removeUrl, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ itemId: itemId, documentId: documentId })
             });
@@ -225,3 +224,4 @@
         return $"{bytes / (1024.0 * 1024):F1} MB";
     }
 }
+

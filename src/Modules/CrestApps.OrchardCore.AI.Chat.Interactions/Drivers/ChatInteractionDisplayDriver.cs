@@ -48,6 +48,17 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.IsNew = context.IsNew;
         }).Location("Content");
 
+        // Title is placed first in Settings tab (position 1)
+        var titleResult = Initialize<EditChatInteractionTitleViewModel>("ChatInteractionTitle_Edit", model =>
+        {
+            model.ItemId = interaction.ItemId;
+            model.Title = interaction.Title;
+            model.IsNew = context.IsNew;
+        }).Location("Parameters:1#Settings;mb-0:1");
+
+        // Connection/Deployment comes after title (position 2) - handled by ChatInteractionConnectionDisplayDriver
+
+        // Parameters come after connection (position 3)
         var parametersResult = Initialize<EditChatInteractionViewModel>("ChatInteractionParameters_Edit", model =>
         {
             model.ItemId = interaction.ItemId;
@@ -65,8 +76,8 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.ToolInstanceIds = interaction.ToolInstanceIds?.ToArray();
             model.McpConnectionIds = interaction.McpConnectionIds?.ToArray();
             model.IsNew = context.IsNew;
-        }).Location("Parameters:1#Settings:1");
+        }).Location("Parameters:1#Settings;mb-0:3");
 
-        return CombineAsync(headerResult, contentResult, parametersResult);
+        return CombineAsync(headerResult, contentResult, titleResult, parametersResult);
     }
 }

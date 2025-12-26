@@ -4,16 +4,6 @@
 @model EditChatInteractionViewModel
 
 <div class="mb-3">
-    <label asp-for="Title" class="form-label">
-        @T["Title"]
-        <span class="text-muted" data-bs-toggle="tooltip" title="@T["A descriptive name for this chat interaction. Helps you identify and find this conversation in your history."]">
-            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-        </span>
-    </label>
-    <input asp-for="Title" class="form-control" placeholder="@T["Enter a title for this interaction..."]" />
-</div>
-
-<div class="mb-3">
     <label asp-for="SystemMessage" class="form-label">
         @T["System Instructions"]
         <span class="text-muted" data-bs-toggle="tooltip" title="@T["Provides instructions to the AI on how to behave, what role to play, and what style to use in responses. This is the 'persona' or 'context' that guides all AI responses."]">
