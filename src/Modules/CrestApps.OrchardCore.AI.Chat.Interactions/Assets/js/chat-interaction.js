@@ -407,9 +407,13 @@ window.chatInteractionManager = function () {
                     }
 
                     // Add event listeners for settings fields to save on change
-                    const settingsInputs = document.querySelectorAll('input[name="Title"], textarea[name="SystemMessage"], input[name="Temperature"], input[name="TopP"], input[name="FrequencyPenalty"], input[name="PresencePenalty"], input[name="MaxTokens"], input[name="PastMessagesCount"]');
+                    const settingsInputs = document.querySelectorAll('input[name="Title"], select[name="ConnectionName"], select[name="DeploymentId"], textarea[name="SystemMessage"], input[name="Temperature"], input[name="TopP"], input[name="FrequencyPenalty"], input[name="PresencePenalty"], input[name="MaxTokens"], input[name="PastMessagesCount"]');
                     settingsInputs.forEach(input => {
                         input.addEventListener('blur', () => this.saveSettings());
+                        // Also save on change for select elements
+                        if (input.tagName === 'SELECT') {
+                            input.addEventListener('change', () => this.saveSettings());
+                        }
                     });
                 },
                 loadInteraction(itemId) {
@@ -422,6 +426,8 @@ window.chatInteractionManager = function () {
                     }
 
                     const titleInput = document.querySelector('input[name="Title"]');
+                    const connectionNameInput = document.querySelector('select[name="ConnectionName"]');
+                    const deploymentIdInput = document.querySelector('select[name="DeploymentId"]');
                     const systemMessageInput = document.querySelector('textarea[name="SystemMessage"]');
                     const temperatureInput = document.querySelector('input[name="Temperature"]');
                     const topPInput = document.querySelector('input[name="TopP"]');
@@ -432,6 +438,8 @@ window.chatInteractionManager = function () {
 
                     const settings = {
                         title: titleInput?.value || 'Untitled',
+                        connectionName: connectionNameInput?.value || null,
+                        deploymentId: deploymentIdInput?.value || null,
                         systemMessage: systemMessageInput?.value || null,
                         temperature: temperatureInput?.value ? parseFloat(temperatureInput.value) : null,
                         topP: topPInput?.value ? parseFloat(topPInput.value) : null,
@@ -445,6 +453,8 @@ window.chatInteractionManager = function () {
                         "SaveSettings",
                         itemId,
                         settings.title,
+                        settings.connectionName,
+                        settings.deploymentId,
                         settings.systemMessage,
                         settings.temperature,
                         settings.topP,

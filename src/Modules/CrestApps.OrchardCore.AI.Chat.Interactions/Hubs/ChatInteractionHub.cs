@@ -75,6 +75,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         {
             interaction.ItemId,
             interaction.Title,
+            interaction.ConnectionName,
+            interaction.DeploymentId,
             Messages = interaction.Prompts.Select(message => new AIChatResponseMessageDetailed
             {
                 Id = message.Id,
@@ -90,6 +92,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     public async Task SaveSettings(
         string itemId,
         string title,
+        string connectionName,
+        string deploymentId,
         string systemMessage,
         float? temperature,
         float? topP,
@@ -121,6 +125,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         }
 
         interaction.Title = title ?? "Untitled";
+        interaction.ConnectionName = connectionName;
+        interaction.DeploymentId = deploymentId;
         interaction.SystemMessage = systemMessage;
         interaction.Temperature = temperature;
         interaction.TopP = topP;

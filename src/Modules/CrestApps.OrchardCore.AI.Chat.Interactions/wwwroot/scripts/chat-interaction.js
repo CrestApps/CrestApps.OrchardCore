@@ -392,11 +392,17 @@ window.chatInteractionManager = function () {
           }
 
           // Add event listeners for settings fields to save on change
-          var settingsInputs = document.querySelectorAll('input[name="Title"], textarea[name="SystemMessage"], input[name="Temperature"], input[name="TopP"], input[name="FrequencyPenalty"], input[name="PresencePenalty"], input[name="MaxTokens"], input[name="PastMessagesCount"]');
+          var settingsInputs = document.querySelectorAll('input[name="Title"], select[name="ConnectionName"], select[name="DeploymentId"], textarea[name="SystemMessage"], input[name="Temperature"], input[name="TopP"], input[name="FrequencyPenalty"], input[name="PresencePenalty"], input[name="MaxTokens"], input[name="PastMessagesCount"]');
           settingsInputs.forEach(function (input) {
             input.addEventListener('blur', function () {
               return _this6.saveSettings();
             });
+            // Also save on change for select elements
+            if (input.tagName === 'SELECT') {
+              input.addEventListener('change', function () {
+                return _this6.saveSettings();
+              });
+            }
           });
         },
         loadInteraction: function loadInteraction(itemId) {
@@ -410,6 +416,8 @@ window.chatInteractionManager = function () {
             return;
           }
           var titleInput = document.querySelector('input[name="Title"]');
+          var connectionNameInput = document.querySelector('select[name="ConnectionName"]');
+          var deploymentIdInput = document.querySelector('select[name="DeploymentId"]');
           var systemMessageInput = document.querySelector('textarea[name="SystemMessage"]');
           var temperatureInput = document.querySelector('input[name="Temperature"]');
           var topPInput = document.querySelector('input[name="TopP"]');
@@ -419,6 +427,8 @@ window.chatInteractionManager = function () {
           var pastMessagesCountInput = document.querySelector('input[name="PastMessagesCount"]');
           var settings = {
             title: (titleInput === null || titleInput === void 0 ? void 0 : titleInput.value) || 'Untitled',
+            connectionName: (connectionNameInput === null || connectionNameInput === void 0 ? void 0 : connectionNameInput.value) || null,
+            deploymentId: (deploymentIdInput === null || deploymentIdInput === void 0 ? void 0 : deploymentIdInput.value) || null,
             systemMessage: (systemMessageInput === null || systemMessageInput === void 0 ? void 0 : systemMessageInput.value) || null,
             temperature: temperatureInput !== null && temperatureInput !== void 0 && temperatureInput.value ? parseFloat(temperatureInput.value) : null,
             topP: topPInput !== null && topPInput !== void 0 && topPInput.value ? parseFloat(topPInput.value) : null,
@@ -427,7 +437,7 @@ window.chatInteractionManager = function () {
             maxTokens: maxTokensInput !== null && maxTokensInput !== void 0 && maxTokensInput.value ? parseInt(maxTokensInput.value) : null,
             pastMessagesCount: pastMessagesCountInput !== null && pastMessagesCountInput !== void 0 && pastMessagesCountInput.value ? parseInt(pastMessagesCountInput.value) : null
           };
-          this.connection.invoke("SaveSettings", itemId, settings.title, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount)["catch"](function (err) {
+          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount)["catch"](function (err) {
             return console.error('Error saving settings:', err);
           });
         },

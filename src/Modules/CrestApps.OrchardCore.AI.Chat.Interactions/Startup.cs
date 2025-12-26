@@ -37,6 +37,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<ChatInteractionIndexProvider>()
             .AddPermissionProvider<ChatInteractionPermissionProvider>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionDisplayDriver>()
+            .AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionToolsDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>()
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
