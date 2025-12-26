@@ -28,7 +28,7 @@ internal static class UploadDocumentEndpoint
         IHttpContextAccessor httpContextAccessor,
         ISourceCatalogManager<ChatInteraction> interactionManager,
         IDocumentTextExtractor textExtractor,
-        IStringLocalizer<UploadDocumentEndpoint> S)
+        IStringLocalizer<Startup> S)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.EditChatInteractions))
         {

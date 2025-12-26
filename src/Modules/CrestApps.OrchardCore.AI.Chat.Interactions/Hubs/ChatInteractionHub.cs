@@ -216,7 +216,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             var contentItemIds = new HashSet<string>();
             var references = new Dictionary<string, AICompletionReference>();
 
-            await foreach (var chunk in _completionService.CompleteStreamingAsync(interaction.ConnectionName, transcript, completionContext, cancellationToken))
+            await foreach (var chunk in _completionService.CompleteStreamingAsync(interaction.Source, transcript, completionContext, cancellationToken))
             {
                 if (chunk.AdditionalProperties is not null)
                 {
