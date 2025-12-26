@@ -293,8 +293,8 @@ public sealed class DefaultDocumentEmbeddingService : IDocumentEmbeddingService
                 // If a single sentence is too long, just add it as is
                 if (sentence.Length > ChunkSize)
                 {
-                    chunks.Add(sentence[..ChunkSize]);
-                    var remaining = sentence[ChunkSize..];
+                    chunks.Add(sentence.Substring(0, Math.Min(sentence.Length, ChunkSize)));
+                    var remaining = sentence.Substring(Math.Min(sentence.Length, ChunkSize));
                     if (!string.IsNullOrWhiteSpace(remaining))
                     {
                         currentChunk.Append(remaining);

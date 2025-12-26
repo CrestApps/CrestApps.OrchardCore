@@ -249,7 +249,7 @@ public sealed class ElasticsearchDocumentIndexHandler : IDocumentIndexHandler
                         Content = source["content"]?.ToString(),
                         ChunkIndex = source.TryGetValue("chunkIndex", out var idx) && int.TryParse(idx?.ToString(), out var i) ? i : 0,
                         FileName = source["fileName"]?.ToString(),
-                        IndexedUtc = source.TryGetValue("indexedUtc", out var dt) && DateTime.TryParse(dt?.ToString(), out var d) ? d : DateTime.UtcNow
+                        IndexedUtc = source.TryGetValue("indexedUtc", out var dt) && DateTime.TryParse(dt?.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal, out var d) ? d.ToUniversalTime() : DateTime.UtcNow
                     },
                     Score = (float)(hit.Score ?? 0)
                 };
