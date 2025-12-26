@@ -1,0 +1,37 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using Microsoft.AspNetCore.Authorization
+@using OrchardCore.ContentManagement.Metadata
+@using OrchardCore.Contents
+
+@model ContactNavigationAdminShapeViewModel
+
+@inject IAuthorizationService AuthorizationService
+@inject IContentDefinitionManager ContentDefinitionManager
+
+<div class="card text-bg-theme text-right mb-3 second-action-bar">
+    <div class="card-body">
+        <div class="d-flex justify-content-end">
+
+            @if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ListContactActivities, Model.ContactContentItem))
+            {
+                <a class="btn btn-secondary me-1" asp-action="List" asp-controller="Activities" asp-route-contentItemId="@Model.ContactContentItem.ContentItemId" asp-route-area="@OmnichannelConstants.Features.Managements">@T["List Activities"]</a>
+            }
+
+            @if (Model.ShowEdit && await AuthorizationService.AuthorizeAsync(User, CommonPermissions.EditContent, Model.ContactContentItem))
+            {
+                var defintion = Model.Definition ?? await ContentDefinitionManager.GetTypeDefinitionAsync(Model.ContactContentItem.ContentType);
+
+                <a class="btn btn-primary me-1" asp-action="Edit" asp-controller="Admin" asp-route-contentItemId="@Model.ContactContentItem.ContentItemId" asp-route-area="OrchardCore.Contents">
+                    @T["Edit {0}", defintion?.DisplayName]
+                </a>
+            }
+
+            @if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity))
+            {
+                <a class="btn btn-secondary me-1" asp-action="Create" asp-controller="Activities" asp-route-contentItemId="@Model.ContactContentItem.ContentItemId" asp-route-area="@OmnichannelConstants.Features.Managements">@T["New Activity"]</a>
+            }
+
+        </div>
+    </div>
+</div>
