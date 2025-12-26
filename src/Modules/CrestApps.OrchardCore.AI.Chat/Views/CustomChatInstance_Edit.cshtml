@@ -1,0 +1,184 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore
+
+@model CustomChatInstanceViewModel
+
+<div class="mb-3">
+    <label asp-for="Title" class="form-label">@T["Instance Title"]</label>
+    <input asp-for="Title" class="form-control" placeholder="@T["My Custom Chat"]" />
+    <span asp-validation-for="Title" class="text-danger"></span>
+    <div class="form-text">@T["Give your chat instance a descriptive name."]</div>
+</div>
+
+<input type="hidden" asp-for="ProviderName" value="@Model.ProviderName" />
+
+@if (Model.ConnectionNames?.Any() == true)
+{
+    <div class="mb-3">
+        <label asp-for="ConnectionName" class="form-label">@T["Connection"]</label>
+        <select asp-for="ConnectionName" asp-items="Model.ConnectionNames" class="form-select" id="connectionSelect">
+            <option value="">@T["Default connection"]</option>
+        </select>
+        <span asp-validation-for="ConnectionName" class="text-danger"></span>
+        <div class="form-text">@T["Select the AI provider connection to use."]</div>
+    </div>
+}
+else
+{
+    <input type="hidden" asp-for="ConnectionName" />
+}
+
+<div class="mb-3">
+    <label asp-for="DeploymentId" class="form-label">@T["Deployment"]</label>
+    <select asp-for="DeploymentId" asp-items="Model.Deployments" class="form-select" id="deploymentSelect">
+        <option value="">@T["Default deployment"]</option>
+    </select>
+    <span asp-validation-for="DeploymentId" class="text-danger"></span>
+    <div class="form-text">@T["Select the AI model deployment to use."]</div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="SystemMessage" class="form-label">@T["System Instructions"]</label>
+    <textarea asp-for="SystemMessage" class="form-control" rows="5" placeholder="@T["You are a helpful AI assistant..."]"></textarea>
+    <span asp-validation-for="SystemMessage" class="text-danger"></span>
+    <div class="form-text">@T["Define how the AI should behave and respond."]</div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label asp-for="MaxTokens" class="form-label">@T["Max Response Tokens"]</label>
+            <input asp-for="MaxTokens" type="number" class="form-control" />
+            <span asp-validation-for="MaxTokens" class="text-danger"></span>
+            <div class="form-text">@T["Maximum number of tokens in the AI's response."]</div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label asp-for="Temperature" class="form-label">@T["Temperature"]</label>
+            <input asp-for="Temperature" type="number" step="0.1" class="form-control" />
+            <span asp-validation-for="Temperature" class="text-danger"></span>
+            <div class="form-text">@T["Controls randomness (0.0-1.0). Higher = more creative."]</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label asp-for="TopP" class="form-label">@T["Top P"]</label>
+            <input asp-for="TopP" type="number" step="0.1" class="form-control" />
+            <span asp-validation-for="TopP" class="text-danger"></span>
+            <div class="form-text">@T["Controls diversity via nucleus sampling (0.0-1.0)."]</div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label asp-for="FrequencyPenalty" class="form-label">@T["Frequency Penalty"]</label>
+            <input asp-for="FrequencyPenalty" type="number" step="0.1" class="form-control" />
+            <span asp-validation-for="FrequencyPenalty" class="text-danger"></span>
+            <div class="form-text">@T["Reduces repetition (0.0-1.0)."]</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label asp-for="PresencePenalty" class="form-label">@T["Presence Penalty"]</label>
+            <input asp-for="PresencePenalty" type="number" step="0.1" class="form-control" />
+            <span asp-validation-for="PresencePenalty" class="text-danger"></span>
+            <div class="form-text">@T["Encourages new topics (0.0-1.0)."]</div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label asp-for="PastMessagesCount" class="form-label">@T["Include Past Messages"]</label>
+            <input asp-for="PastMessagesCount" type="number" class="form-control" />
+            <span asp-validation-for="PastMessagesCount" class="text-danger"></span>
+            <div class="form-text">@T["Number of previous messages to include for context."]</div>
+        </div>
+    </div>
+</div>
+
+@if (Model.AllowCaching)
+{
+    <div class="mb-3">
+        <div class="form-check">
+            <input asp-for="UseCaching" type="checkbox" class="form-check-input" />
+            <label asp-for="UseCaching" class="form-check-label">@T["Enable Caching"]</label>
+            <div class="form-text">@T["Cache responses to improve performance."]</div>
+        </div>
+    </div>
+}
+
+@if (Model.Tools?.Any() == true)
+{
+    <div class="mb-3">
+        <label class="form-label">@T["Tools"]</label>
+        <div class="form-text mb-2">@T["Select tools the AI can use during conversations."]</div>
+        
+        @foreach (var category in Model.Tools)
+        {
+            <div class="card mb-2">
+                <div class="card-header">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input category-select-all" data-category="@category.Key" id="category-@category.Key.Replace(" ", "-")" />
+                        <label class="form-check-label fw-bold" for="category-@category.Key.Replace(" ", "-")">
+                            @category.Key
+                        </label>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @foreach (var tool in category.Value)
+                    {
+                        var fieldName = $"Tools[{category.Key}][{Array.IndexOf(category.Value, tool)}].IsSelected";
+                        var idFieldName = $"Tools[{category.Key}][{Array.IndexOf(category.Value, tool)}].ItemId";
+                        var uniqueId = $"tool-{category.Key.Replace(" ", "-")}-{tool.ItemId}";
+                        
+                        <div class="form-check">
+                            <input type="hidden" name="@idFieldName" value="@tool.ItemId" />
+                            <input type="checkbox" name="@fieldName" value="true" class="form-check-input tool-checkbox" data-category="@category.Key" id="@uniqueId" @(tool.IsSelected ? "checked" : "") />
+                            <label class="form-check-label" for="@uniqueId">
+                                <strong>@tool.DisplayText</strong>
+                                @if (!string.IsNullOrEmpty(tool.Description))
+                                {
+                                    <br /><small class="text-muted">@tool.Description</small>
+                                }
+                            </label>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <script at="Foot">
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle category select-all checkboxes
+            document.querySelectorAll('.category-select-all').forEach(function(checkbox) {
+                var category = checkbox.dataset.category;
+                var toolCheckboxes = document.querySelectorAll('.tool-checkbox[data-category="' + category + '"]');
+                
+                // Set initial state of select-all based on individual checkboxes
+                var allChecked = Array.from(toolCheckboxes).every(cb => cb.checked);
+                checkbox.checked = allChecked && toolCheckboxes.length > 0;
+                
+                checkbox.addEventListener('change', function() {
+                    toolCheckboxes.forEach(function(cb) {
+                        cb.checked = checkbox.checked;
+                    });
+                });
+                
+                // Update select-all when individual checkboxes change
+                toolCheckboxes.forEach(function(cb) {
+                    cb.addEventListener('change', function() {
+                        var allChecked = Array.from(toolCheckboxes).every(tcb => tcb.checked);
+                        checkbox.checked = allChecked;
+                    });
+                });
+            });
+        });
+    </script>
+}
