@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.AI.Chat.Models
+
+@model AICustomChatInstance
+
+<div class="dropdown">
+    <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        @T["Actions"]
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+            <a class="dropdown-item" asp-controller="CustomChat" asp-action="Edit" asp-route-id="@Model.ItemId">
+                <i class="fa-solid fa-edit me-1"></i> @T["Edit"]
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item" asp-controller="CustomChat" asp-action="Chat" asp-route-id="@Model.ItemId">
+                <i class="fa-solid fa-comments me-1"></i> @T["Chat"]
+            </a>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+            <form asp-controller="CustomChat" asp-action="Delete" asp-route-id="@Model.ItemId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="dropdown-item text-danger" onclick="return confirm('@T["Are you sure you want to delete this instance?"]');">
+                    <i class="fa-solid fa-trash me-1"></i> @T["Delete"]
+                </button>
+            </form>
+        </li>
+    </ul>
+</div>
