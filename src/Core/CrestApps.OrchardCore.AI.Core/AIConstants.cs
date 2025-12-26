@@ -54,4 +54,20 @@ public static class AIConstants
 
         public const string GetConnectionsByProviderRouteName = "GetConnectionsByProvider";
     }
+
+    public static class DisplayGroups
+    {
+        public const string AICustomChatSettings = "AICustomChatSettings";
+
+        public const string AICustomChatChat = "AICustomChatChat";
+    }
+
+
+    public static class ShapeLocations
+    {
+        public const string SummaryAdmin = "SummaryAdmin";
+
+        public const string DetailAdmin = "DetailAdmin";
+    }
+
 }

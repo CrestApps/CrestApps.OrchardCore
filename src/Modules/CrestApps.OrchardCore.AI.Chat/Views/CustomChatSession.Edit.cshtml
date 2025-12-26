@@ -1,0 +1,103 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.OrchardCore.AI.Chat.Hubs
+@using CrestApps.OrchardCore.Services
+@using CrestApps.OrchardCore.SignalR.Core.Services
+@using OrchardCore.DisplayManagement
+@using OrchardCore.DisplayManagement.ModelBinding
+@using OrchardCore.Environment.Shell
+@using System.Text.Json
+
+@model ChatSessionCapsuleViewModel
+
+@inject IUpdateModelAccessor UpdateModelAccessor
+@inject HubRouteManager HubRouteManager
+
+@{
+    var baseId = Html.IdForModel();
+    var chatAppHtmlId = $"{baseId}_ChatApp";
+    var buttonHtmlId = $"{baseId}_SendButton";
+    var userPromptHtmlId = $"{baseId}_UserPrompt";
+    var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
+    var chatContainerHtmlId = $"{baseId}_ChatContainer";
+}
+
+<div class="mb-3 mx-3 p-3 overflow-y-auto h-100 rounded-2 border bg-theme"
+     id="@chatContainerHtmlId">
+    <div class="list-group list-group-flush w-100">
+
+        @if (Model.CustomChatSession?.Prompts?.Count == 0)
+        {
+            <div id="@placeholderHtmlId" class="text-center p-3">
+                <h1 class="mb-3">@T["What do you want to know?"]</h1>
+            </div>
+        }
+
+        <div id="@chatAppHtmlId"></div>
+
+    </div>
+</div>
+
+<div class="container-fluid mb-3">
+    <div class="text-bg-light rounded-5 border w-100">
+
+        <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4"
+                  id="@userPromptHtmlId"
+                  data-session-id="@(Model.IsNew ? string.Empty : Model.CustomChatSession.SessionId)"
+                  data-custom-chat-instance-id="@Model.CustomChatSession.CustomChatInstanceId"
+                  aria-label="@T["Message AI Chat"]"
+                  aria-describedby="@buttonHtmlId">
+        </textarea>
+
+        <div class="d-flex justify-content-end px-3 my-2">
+            <button class="btn btn-dark rounded-circle"
+                    type="button"
+                    id="@buttonHtmlId"
+                    disabled
+                    data-start-icon="<i class='fa-solid fa-arrow-up'></i>"
+                    data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                <i class="fa-solid fa-arrow-up"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+@{
+    var prompts = new List<object>();
+
+    if (Model.CustomChatSession?.Prompts != null)
+    {
+        foreach (var prompt in Model.CustomChatSession.Prompts)
+        {
+            prompts.Add(new
+            {
+                prompt.Id,
+                Role = prompt.Role.Value,
+                prompt.Content,
+                prompt.Title,
+                prompt.IsGeneratedPrompt,
+                prompt.References
+            });
+        }
+    }
+}
+
+<script asp-name="custom-chat" at="Foot"></script>
+
+<script at="Foot" depends-on="custom-chat">
+    customChatManager.initialize({
+        signalRHubUrl: '@(HubRouteManager.GetUriByHub<CustomChatHub>(ViewContext.HttpContext))',
+        appElementSelector: '#@chatAppHtmlId',
+        chatContainerElementSelector: '#@chatContainerHtmlId',
+        inputElementSelector: '#@userPromptHtmlId',
+        sendButtonElementSelector: '#@buttonHtmlId',
+        placeholderElementSelector: '#@placeholderHtmlId',
+        messages: @Html.Raw(JsonSerializer.Serialize(prompts, JOptions.CamelCase))
+    });
+</script>
+
+<style at="Head">
+    .chat-user-prompt-input:focus {
+        border: none;
+        box-shadow: none;
+    }
+</style>

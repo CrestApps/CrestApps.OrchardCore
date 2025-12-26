@@ -57,4 +57,38 @@ public sealed class DefaultAICompletionContextBuilder : IAICompletionContextBuil
 
         return context;
     }
+
+    // Custom Chat Completion Context
+    // maybe a new file?
+    public ValueTask<AICompletionContext> BuildCustomAsync(CustomChatCompletionContext customContext)
+    {
+        ArgumentNullException.ThrowIfNull(customContext);
+        ArgumentNullException.ThrowIfNull(customContext.Session);
+        // piggy back on session metadata
+        var context = new AICompletionContext();
+
+        var metadata = customContext.Session.As<AIChatInstanceMetadata>();
+
+        if (metadata != null)
+        {
+            context.SystemMessage = metadata.SystemMessage;
+            context.Temperature = metadata.Temperature;
+            context.TopP = metadata.TopP;
+            context.FrequencyPenalty = metadata.FrequencyPenalty;
+            context.PresencePenalty = metadata.PresencePenalty;
+            context.MaxTokens = metadata.MaxTokens;
+            context.PastMessagesCount = metadata.PastMessagesCount;
+            context.UseCaching = metadata.UseCaching;
+            // think about tabs such as Tools
+            context.ToolNames = metadata.ToolNames;
+            context.ConnectionName = metadata.ConnectionName;
+            context.DeploymentId = metadata.DeploymentId;
+        }
+
+        context.InstanceIds = [customContext.CustomChatInstanceId];
+
+        // mike has handler Flag idea.
+
+        return ValueTask.FromResult(context);
+    }
 }

@@ -33,6 +33,15 @@ public sealed class ChatAdminMenu : AdminNavigationProvider
         builder
            .Add(S["Artificial Intelligence"], artificialIntelligence =>
            {
+               // Add Custom Index Instances menu item
+               artificialIntelligence
+                   .Add(S["Custom Chat"], "0", CustomChatSettings => CustomChatSettings
+                       .AddClass("custom-chat")
+                       .Action("Index", "CustomChatSettings", AIConstants.Feature.Chat)
+                       .Permission(AIPermissions.ManageCustomChatInstances)
+                       .LocalNav()
+                   );
+
                var i = 1;
                foreach (var profile in profiles.OrderBy(p => p.DisplayText))
                {

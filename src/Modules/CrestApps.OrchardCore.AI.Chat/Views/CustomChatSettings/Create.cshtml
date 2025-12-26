@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.Core.Models
+
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <h1>@RenderTitleSegments(T["New Custom Chat Instance"])</h1>
+</zone>
+
+<form method="post" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    @await DisplayAsync(Model.Editor)
+
+    <a class="btn btn-secondary cancel" role="button" asp-controller="CustomChatSettings" asp-action="Index">@T["Cancel"]</a>
+
+</form>
