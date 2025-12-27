@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -9,7 +8,8 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
 /// <summary>
 /// Display driver for document uploads in chat interactions.
-/// Only shows for AzureOpenAIOwnData source to enable "chat against own data" functionality.
+/// Shows for all providers to enable RAG (Retrieval Augmented Generation) functionality.
+/// Documents are embedded and indexed, then searched during chat to provide context.
 /// </summary>
 internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<ChatInteraction>
 {
@@ -23,12 +23,7 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
 
     public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
     {
-        // Only show documents tab for AzureOpenAIOwnData source
-        if (!string.Equals(interaction.Source, AzureOpenAIConstants.AzureOpenAIOwnData, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
+        // Show documents tab for all providers - documents are embedded and used for RAG
         return Initialize<EditChatInteractionDocumentsViewModel>("ChatInteractionDocuments_Edit", model =>
         {
             model.ItemId = interaction.ItemId;
@@ -36,16 +31,10 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
         }).Location("Parameters:3#Documents:3");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
+    public override Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
     {
-        // Only process for AzureOpenAIOwnData source
-        if (!string.Equals(interaction.Source, AzureOpenAIConstants.AzureOpenAIOwnData, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        // Documents are uploaded via SignalR, so we just return the current view
-        // The actual document handling happens in ChatInteractionHub
-        return Edit(interaction, context);
+        // Documents are uploaded via minimal API endpoints, so we just return the current view
+        // The actual document handling happens in UploadDocumentEndpoint and RemoveDocumentEndpoint
+        return Task.FromResult(Edit(interaction, context));
     }
 }
