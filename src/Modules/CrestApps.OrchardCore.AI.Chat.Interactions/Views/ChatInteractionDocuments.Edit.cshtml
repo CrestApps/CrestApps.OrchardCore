@@ -182,7 +182,7 @@
             } catch (error) {
                 console.error('Upload failed:', error);
                 uploadFailCount++;
-                statusText.textContent = '@T["Failed to upload"]' + ' ' + file.name + ': ' + error.message;
+                statusText.textContent = '@T["Failed to upload {0}: {1}"]'.replace('{0}', file.name).replace('{1}', error.message);
                 statusText.classList.add('text-danger');
             }
         }
@@ -190,11 +190,13 @@
         progressBar.style.width = '100%';
         
         if (uploadFailCount === 0) {
-            statusText.textContent = '@T["Upload complete!"]' + ' (' + uploadSuccessCount + ' @T["file(s)"])';
+            statusText.textContent = uploadSuccessCount === 1 
+                ? '@T["1 file uploaded successfully"]'
+                : '@T["{0} files uploaded successfully"]'.replace('{0}', uploadSuccessCount);
             statusText.classList.remove('text-danger');
             statusText.classList.add('text-success');
         } else if (uploadSuccessCount > 0) {
-            statusText.textContent = uploadSuccessCount + ' @T["file(s) uploaded,"]' + ' ' + uploadFailCount + ' @T["failed"]';
+            statusText.textContent = '@T["{0} file(s) uploaded, {1} failed"]'.replace('{0}', uploadSuccessCount).replace('{1}', uploadFailCount);
             statusText.classList.add('text-warning');
         } else {
             statusText.textContent = '@T["All uploads failed"]';

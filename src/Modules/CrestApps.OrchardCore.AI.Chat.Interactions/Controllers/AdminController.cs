@@ -99,12 +99,12 @@ public sealed class AdminController : Controller
         };
 
         // Build display shapes for each interaction
-        viewModel.Models = await Task.WhenAll(result.Entries.Select(async model =>
+        viewModel.Models = (await Task.WhenAll(result.Entries.Select(async model =>
             new CatalogEntryViewModel<ChatInteraction>
             {
                 Model = model,
                 Shape = await _interactionDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            })).ContinueWith(t => t.Result.ToList());
+            }))).ToList();
 
         viewModel.Options.BulkActions =
         [
