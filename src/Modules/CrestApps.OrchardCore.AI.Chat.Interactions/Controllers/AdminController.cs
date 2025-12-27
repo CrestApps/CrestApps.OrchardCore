@@ -98,14 +98,13 @@ public sealed class AdminController : Controller
             Sources = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
         };
 
-        foreach (var model in result.Entries)
-        {
-            viewModel.Models.Add(new CatalogEntryViewModel<ChatInteraction>
+        // Build display shapes for each interaction
+        viewModel.Models = await Task.WhenAll(result.Entries.Select(async model =>
+            new CatalogEntryViewModel<ChatInteraction>
             {
                 Model = model,
                 Shape = await _interactionDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            });
-        }
+            })).ContinueWith(t => t.Result.ToList());
 
         viewModel.Options.BulkActions =
         [

@@ -57,16 +57,11 @@ internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInte
 
         var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
 
-        if (selectedToolKeys is null || !selectedToolKeys.Any())
-        {
-            interaction.ToolNames = [];
-        }
-        else
-        {
-            interaction.ToolNames = _toolDefinitions.Tools.Keys
+        interaction.ToolNames = selectedToolKeys is null || !selectedToolKeys.Any()
+            ? []
+            : _toolDefinitions.Tools.Keys
                 .Intersect(selectedToolKeys)
                 .ToList();
-        }
 
         return Edit(interaction, context);
     }

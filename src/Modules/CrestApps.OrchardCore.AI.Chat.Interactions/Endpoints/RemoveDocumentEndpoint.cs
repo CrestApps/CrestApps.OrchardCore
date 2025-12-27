@@ -33,7 +33,12 @@ internal static class RemoveDocumentEndpoint
             return TypedResults.Forbid();
         }
 
-        if (string.IsNullOrEmpty(request?.ItemId) || string.IsNullOrEmpty(request?.DocumentId))
+        if (request == null)
+        {
+            return TypedResults.BadRequest("Request body is required.");
+        }
+
+        if (string.IsNullOrEmpty(request.ItemId) || string.IsNullOrEmpty(request.DocumentId))
         {
             return TypedResults.BadRequest("Item ID and Document ID are required.");
         }

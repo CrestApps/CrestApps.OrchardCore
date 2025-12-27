@@ -137,7 +137,7 @@ window.chatInteractionManager = function () {
                             processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
                             processedContent += '<br><br>';
 
-                            for (const [key, value] of Object.entries(message.references)) {
+                            for (const value of Object.values(message.references)) {
                                 processedContent += `**${value.index}**. [${value.text}](${value.link})<br>`;
                             }
                         }
@@ -289,7 +289,7 @@ window.chatInteractionManager = function () {
 
                         message.content = (message.content?.trim() + '<br><br>' || '');
 
-                        for (const [key, value] of Object.entries(references)) {
+                        for (const value of Object.values(references)) {
                             message.content += `**${value.index}**. [${value.text}](${value.link})<br>`;
                         }
 

@@ -143,10 +143,8 @@ window.chatInteractionManager = function () {
               }
               processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
               processedContent += '<br><br>';
-              for (var _i2 = 0, _Object$entries2 = Object.entries(message.references); _i2 < _Object$entries2.length; _i2++) {
-                var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
-                  _key = _Object$entries2$_i[0],
-                  _value = _Object$entries2$_i[1];
+              for (var _i2 = 0, _Object$values = Object.values(message.references); _i2 < _Object$values.length; _i2++) {
+                var _value = _Object$values[_i2];
                 processedContent += "**".concat(_value.index, "**. [").concat(_value.text, "](").concat(_value.link, ")<br>");
               }
             }
@@ -222,20 +220,20 @@ window.chatInteractionManager = function () {
                 message = newMessage;
               }
               if (chunk.references && _typeof(chunk.references) === "object" && Object.keys(chunk.references).length) {
-                for (var _i3 = 0, _Object$entries3 = Object.entries(chunk.references); _i3 < _Object$entries3.length; _i3++) {
-                  var _Object$entries3$_i = _slicedToArray(_Object$entries3[_i3], 2),
-                    key = _Object$entries3$_i[0],
-                    value = _Object$entries3$_i[1];
+                for (var _i3 = 0, _Object$entries2 = Object.entries(chunk.references); _i3 < _Object$entries2.length; _i3++) {
+                  var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i3], 2),
+                    key = _Object$entries2$_i[0],
+                    value = _Object$entries2$_i[1];
                   references[key] = value;
                 }
               }
               if (chunk.content) {
                 var processedContent = chunk.content;
-                for (var _i4 = 0, _Object$entries4 = Object.entries(references); _i4 < _Object$entries4.length; _i4++) {
-                  var _Object$entries4$_i = _slicedToArray(_Object$entries4[_i4], 2),
-                    _key2 = _Object$entries4$_i[0],
-                    _value2 = _Object$entries4$_i[1];
-                  processedContent = processedContent.replaceAll(_key2, "<sup><strong>".concat(_value2.index, "</strong></sup>"));
+                for (var _i4 = 0, _Object$entries3 = Object.entries(references); _i4 < _Object$entries3.length; _i4++) {
+                  var _Object$entries3$_i = _slicedToArray(_Object$entries3[_i4], 2),
+                    _key = _Object$entries3$_i[0],
+                    _value2 = _Object$entries3$_i[1];
+                  processedContent = processedContent.replaceAll(_key, "<sup><strong>".concat(_value2.index, "</strong></sup>"));
                 }
                 content += processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
               }
@@ -284,10 +282,8 @@ window.chatInteractionManager = function () {
             var _message$content;
             var message = this.messages[messageIndex];
             message.content = ((_message$content = message.content) === null || _message$content === void 0 ? void 0 : _message$content.trim()) + '<br><br>' || '';
-            for (var _i5 = 0, _Object$entries5 = Object.entries(references); _i5 < _Object$entries5.length; _i5++) {
-              var _Object$entries5$_i = _slicedToArray(_Object$entries5[_i5], 2),
-                key = _Object$entries5$_i[0],
-                value = _Object$entries5$_i[1];
+            for (var _i5 = 0, _Object$values2 = Object.values(references); _i5 < _Object$values2.length; _i5++) {
+              var value = _Object$values2[_i5];
               message.content += "**".concat(value.index, "**. [").concat(value.text, "](").concat(value.link, ")<br>");
             }
             message.htmlContent = marked.parse(message.content, {
