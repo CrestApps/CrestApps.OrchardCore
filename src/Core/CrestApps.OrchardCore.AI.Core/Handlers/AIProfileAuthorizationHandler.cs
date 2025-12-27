@@ -5,13 +5,13 @@ using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
-public sealed class AIProfileAuthenticationHandler : AuthorizationHandler<PermissionRequirement>
+public sealed class AIProfileAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
     private readonly IServiceProvider _serviceProvider;
 
     private IAuthorizationService _authorizationService;
 
-    public AIProfileAuthenticationHandler(IServiceProvider serviceProvider)
+    public AIProfileAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
     }

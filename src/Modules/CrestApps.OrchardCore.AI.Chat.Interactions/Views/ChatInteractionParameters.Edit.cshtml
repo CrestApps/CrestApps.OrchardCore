@@ -1,0 +1,78 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using OrchardCore
+
+@model EditChatInteractionViewModel
+
+<div class="mb-3">
+    <label asp-for="SystemMessage" class="form-label">
+        @T["System Instructions"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Provides instructions to the AI on how to behave, what role to play, and what style to use in responses. This is the 'persona' or 'context' that guides all AI responses."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <textarea asp-for="SystemMessage" class="form-control" rows="4" placeholder="@T["Optional system instructions to guide AI behavior..."]"></textarea>
+</div>
+
+<div class="mb-3">
+    <label asp-for="MaxTokens" class="form-label">
+        @T["Max Response Tokens"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["The maximum number of tokens (roughly words or word fragments) the AI can generate in a single response. Lower values produce shorter responses and reduce costs. Higher values allow for more detailed answers."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <input type="number" class="form-control" asp-for="MaxTokens" step="4" min="4" placeholder="@T["Default"]">
+</div>
+
+<div class="row">
+    <div class="col-6 mb-3">
+        <label asp-for="Temperature" class="form-label">
+            @T["Temperature"]
+            <span class="text-muted" data-bs-toggle="tooltip" title="@T["Controls the randomness of AI responses. Lower values (closer to 0) make responses more focused and deterministic. Higher values (up to 2) make responses more creative and varied."]">
+                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+            </span>
+        </label>
+        <input type="number" class="form-control" asp-for="Temperature" step="0.01" min="0" max="2" placeholder="@T["Default"]">
+    </div>
+
+    <div class="col-6 mb-3">
+        <label asp-for="TopP" class="form-label">
+            @T["Top P"]
+            <span class="text-muted" data-bs-toggle="tooltip" title="@T["Also called 'nucleus sampling'. Controls diversity by limiting the AI to consider only the most probable tokens that sum to this value. Lower values (e.g., 0.1) are more focused, higher values (e.g., 0.9) are more diverse."]">
+                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+            </span>
+        </label>
+        <input type="number" class="form-control" asp-for="TopP" step="0.01" min="0" max="1" placeholder="@T["Default"]">
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-6 mb-3">
+        <label asp-for="FrequencyPenalty" class="form-label">
+            @T["Frequency Penalty"]
+            <span class="text-muted" data-bs-toggle="tooltip" title="@T["Penalizes tokens based on how frequently they appear in the response so far. Higher values (up to 2) reduce repetition of the same words and phrases."]">
+                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+            </span>
+        </label>
+        <input type="number" class="form-control" asp-for="FrequencyPenalty" step="0.01" min="0" max="2" placeholder="@T["Default"]">
+    </div>
+
+    <div class="col-6 mb-3">
+        <label asp-for="PresencePenalty" class="form-label">
+            @T["Presence Penalty"]
+            <span class="text-muted" data-bs-toggle="tooltip" title="@T["Penalizes tokens based on whether they have appeared at all. Higher values (up to 2) encourage the AI to introduce new topics and ideas rather than staying on the same subjects."]">
+                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+            </span>
+        </label>
+        <input type="number" class="form-control" asp-for="PresencePenalty" step="0.01" min="0" max="2" placeholder="@T["Default"]">
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="PastMessagesCount" class="form-label">
+        @T["Past Messages"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["The number of previous messages from the conversation to include as context. More messages provide better context but increase token usage and costs."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <input type="number" class="form-control" asp-for="PastMessagesCount" step="1" min="2" max="50" placeholder="@T["Default"]">
+</div>

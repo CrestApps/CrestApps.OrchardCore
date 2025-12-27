@@ -26,10 +26,11 @@ public static class ServiceCollectionExtensions
             .AddScoped<IAICompletionService, DefaultAICompletionService>()
             .AddScoped<IAICompletionContextBuilder, DefaultAICompletionContextBuilder>()
             .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
-            .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileHandler>();
+            .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileHandler>()
+            .AddScoped<IDocumentEmbeddingService, DefaultDocumentEmbeddingService>();
 
         services
-            .AddScoped<IAuthorizationHandler, AIProfileAuthenticationHandler>()
+            .AddScoped<IAuthorizationHandler, AIProfileAuthorizationHandler>()
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.CollectionName));
 
         services
