@@ -76,7 +76,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.ToolInstanceIds = interaction.ToolInstanceIds?.ToArray();
             model.McpConnectionIds = interaction.McpConnectionIds?.ToArray();
             model.IsNew = context.IsNew;
-        }).Location("Parameters:1#Settings:3");
+        }).Location("Parameters:4#Settings:5");
 
         return CombineAsync(headerResult, contentResult, titleResult, parametersResult);
     }

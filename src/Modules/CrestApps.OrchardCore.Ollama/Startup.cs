@@ -21,7 +21,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IAIClientProvider, OllamaAIClientProvider>();
         services.AddAIProfile<OllamaAIChatCompletionClient>(OllamaConstants.ImplementationName, OllamaConstants.ProviderName, o =>
         {
-            o.DisplayName = S["Ollama AI Chat"];
+            o.DisplayName = S["Ollama"];
             o.Description = S["Provides AI profiles using Ollama AI Chat."];
         });
     }
