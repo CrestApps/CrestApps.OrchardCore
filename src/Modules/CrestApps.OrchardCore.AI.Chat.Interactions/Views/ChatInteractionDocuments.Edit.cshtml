@@ -14,17 +14,18 @@
     
     <div class="border rounded p-3 bg-light">
         <!-- Drag and drop zone -->
-        <div id="dropZone-@Model.ItemId" class="drop-zone border-2 border-dashed rounded p-4 mb-3 text-center bg-white">
-            <div class="drop-zone-content">
-                <i class="fa-solid fa-cloud-arrow-up fa-3x text-muted mb-3"></i>
-                <div class="text-muted mb-2">@T["Drag and drop files here or"]</div>
-                <label for="documentUpload-@Model.ItemId" class="btn btn-outline-primary">
+        <div id="dropZone-@Model.ItemId" class="drop-zone border rounded p-4 mb-3 text-center bg-white" style="border: 2px dashed #dee2e6 !important; cursor: pointer; transition: all 0.2s ease;">
+            <div class="drop-zone-content" id="dropZoneContent-@Model.ItemId">
+                <i class="fa-solid fa-cloud-arrow-up fa-3x text-muted mb-3 d-block"></i>
+                <div class="text-muted mb-2">@T["Drag and drop files here"]</div>
+                <div class="text-muted mb-2">@T["or"]</div>
+                <button type="button" class="btn btn-primary" id="browseBtn-@Model.ItemId">
                     <i class="fa-solid fa-folder-open me-1"></i>
                     @T["Browse Files"]
-                </label>
+                </button>
             </div>
-            <div class="drop-zone-active d-none">
-                <i class="fa-solid fa-file-arrow-down fa-3x text-primary mb-2"></i>
+            <div class="drop-zone-active d-none" id="dropZoneActive-@Model.ItemId">
+                <i class="fa-solid fa-file-arrow-down fa-3x text-primary mb-2 d-block"></i>
                 <div class="text-primary fw-bold">@T["Drop files to upload"]</div>
             </div>
         </div>
@@ -106,41 +107,89 @@
     const documentsList = document.getElementById('documentsList-' + itemId);
     const uploadProgress = document.getElementById('uploadProgress-' + itemId);
     const dropZone = document.getElementById('dropZone-' + itemId);
+    const dropZoneContent = document.getElementById('dropZoneContent-' + itemId);
+    const dropZoneActive = document.getElementById('dropZoneActive-' + itemId);
+    const browseBtn = document.getElementById('browseBtn-' + itemId);
     const uploadUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionUploadDocument)';
     const removeUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionRemoveDocument)';
     
     let uploadSuccessCount = 0;
     let uploadFailCount = 0;
+    let dragCounter = 0;
+    
+    // Browse button click handler
+    if (browseBtn && fileInput) {
+        browseBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            fileInput.click();
+        });
+    }
+    
+    // Make the whole drop zone clickable
+    if (dropZone && fileInput) {
+        dropZone.addEventListener('click', function(e) {
+            if (e.target === browseBtn || e.target.closest('#browseBtn-' + itemId)) {
+                return; // Let the button handler deal with it
+            }
+            fileInput.click();
+        });
+    }
     
     // Drag and drop handlers
     if (dropZone) {
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, preventDefaults, false);
-            document.body.addEventListener(eventName, preventDefaults, false);
-        });
+        // Prevent default behavior for the whole document to allow drops
+        document.addEventListener('dragover', function(e) {
+            e.preventDefault();
+        }, false);
         
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, highlight, false);
-        });
+        document.addEventListener('drop', function(e) {
+            e.preventDefault();
+        }, false);
         
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, unhighlight, false);
-        });
+        dropZone.addEventListener('dragenter', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter++;
+            highlight();
+        }, false);
         
-        dropZone.addEventListener('drop', handleDrop, false);
-    }
-    
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'copy';
+        }, false);
+        
+        dropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter--;
+            if (dragCounter === 0) {
+                unhighlight();
+            }
+        }, false);
+        
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter = 0;
+            unhighlight();
+            handleDrop(e);
+        }, false);
     }
     
     function highlight() {
-        dropZone.classList.add('drag-over');
+        dropZone.style.borderColor = '#0d6efd';
+        dropZone.style.backgroundColor = '#f0f7ff';
+        if (dropZoneContent) dropZoneContent.classList.add('d-none');
+        if (dropZoneActive) dropZoneActive.classList.remove('d-none');
     }
     
     function unhighlight() {
-        dropZone.classList.remove('drag-over');
+        dropZone.style.borderColor = '#dee2e6';
+        dropZone.style.backgroundColor = '#fff';
+        if (dropZoneContent) dropZoneContent.classList.remove('d-none');
+        if (dropZoneActive) dropZoneActive.classList.add('d-none');
     }
     
     async function handleDrop(e) {
