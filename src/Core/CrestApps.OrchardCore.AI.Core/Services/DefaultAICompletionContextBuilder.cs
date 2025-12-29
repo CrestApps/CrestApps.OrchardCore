@@ -1,3 +1,4 @@
+using System.Text;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Logging;
@@ -58,13 +59,11 @@ public sealed class DefaultAICompletionContextBuilder : IAICompletionContextBuil
         return context;
     }
 
-    // Custom Chat Completion Context
-    // maybe a new file?
-    public ValueTask<AICompletionContext> BuildCustomAsync(CustomChatCompletionContext customContext)
+    public async ValueTask<AICompletionContext> BuildCustomAsync(CustomChatCompletionContext customContext)
     {
         ArgumentNullException.ThrowIfNull(customContext);
         ArgumentNullException.ThrowIfNull(customContext.Session);
-        // piggy back on session metadata
+
         var context = new AICompletionContext();
 
         var metadata = customContext.Session.As<AIChatInstanceMetadata>();
@@ -79,7 +78,6 @@ public sealed class DefaultAICompletionContextBuilder : IAICompletionContextBuil
             context.MaxTokens = metadata.MaxTokens;
             context.PastMessagesCount = metadata.PastMessagesCount;
             context.UseCaching = metadata.UseCaching;
-            // think about tabs such as Tools
             context.ToolNames = metadata.ToolNames;
             context.ConnectionName = metadata.ConnectionName;
             context.DeploymentId = metadata.DeploymentId;
@@ -87,8 +85,40 @@ public sealed class DefaultAICompletionContextBuilder : IAICompletionContextBuil
 
         context.InstanceIds = [customContext.CustomChatInstanceId];
 
-        // mike has handler Flag idea.
+        var documents = customContext.Session.Documents?.Items;
 
-        return ValueTask.FromResult(context);
+        if (documents?.Any() == true)
+        {
+            var builder = new StringBuilder();
+
+            builder.AppendLine("The user uploaded the following documents.");
+            builder.AppendLine("Use this content as authoritative context when answering questions.");
+            builder.AppendLine();
+
+            foreach (var document in documents)
+            {
+                if (string.IsNullOrWhiteSpace(document.TempFilePath))
+                {
+                    continue;
+                }
+
+                if (!File.Exists(document.TempFilePath))
+                {
+                    continue;
+                }
+
+                builder.AppendLine($"--- {document.FileName} ---");
+
+                var text = await File.ReadAllTextAsync(document.TempFilePath);
+                builder.AppendLine(text);
+                builder.AppendLine();
+            }
+
+            context.SystemMessage = string.IsNullOrWhiteSpace(context.SystemMessage) ? builder.ToString() : $"{context.SystemMessage}\n\n{builder}";
+        }
+
+        return context;
     }
+
+
 }

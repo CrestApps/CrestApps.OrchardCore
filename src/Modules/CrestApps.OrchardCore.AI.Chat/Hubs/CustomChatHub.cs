@@ -5,43 +5,47 @@ using CrestApps.OrchardCore.AI.Chat.Indexes;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.ContentManagement;
+using OrchardCore.Entities;
 using YesSql;
+using YesSqlSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 
 public class CustomChatHub : Hub<IAIChatHubClient>
 {
     private readonly IAICustomChatSessionManager _sessionManager;
-    private readonly ISession _session;
+    private readonly YesSqlSession _session;
     private readonly IAICompletionService _completionService;
     private readonly IAICompletionContextBuilder _aICompletionContextBuilder;
     private readonly IContentManager _contentManager;
-
-    private readonly ILogger<CustomChatHub> _logger;
+    private readonly CustomChatTempDocumentStore _docStore;
+    private readonly SessionDocumentRetriever _documentRetriever;
 
     protected readonly IStringLocalizer S;
 
     public CustomChatHub(
+        SessionDocumentRetriever documentRetriever,
+        CustomChatTempDocumentStore docStore,
         IContentManager contentManager,
         IAICustomChatSessionManager sessionManager,
-        ISession session,
+        YesSqlSession session,
         IAICompletionService completionService,
         IAICompletionContextBuilder aICompletionContextBuilder,
-        ILogger<CustomChatHub> logger,
         IStringLocalizer<CustomChatHub> stringLocalizer)
     {
+        _documentRetriever = documentRetriever;
+        _docStore = docStore;
         _contentManager = contentManager;
         _sessionManager = sessionManager;
         _session = session;
         _completionService = completionService;
         _aICompletionContextBuilder = aICompletionContextBuilder;
-        _logger = logger;
         S = stringLocalizer;
     }
 
@@ -70,7 +74,6 @@ public class CustomChatHub : Hub<IAIChatHubClient>
             return;
         }
 
-        // call customchatID at load time no sessionID yet
         var customChatSession = await _sessionManager.FindByCustomChatInstanceIdAsync(customChatInstanceId);
 
         if (customChatSession == null)
@@ -104,12 +107,7 @@ public class CustomChatHub : Hub<IAIChatHubClient>
         });
     }
 
-
-    private async Task HandleCustomChatPromptAsync(ChannelWriter<CompletionPartialMessage> writer,
-     string customChatInstanceId,
-     string prompt,
-     string sessionId,
-     CancellationToken cancellationToken)
+    private async Task HandleCustomChatPromptAsync(ChannelWriter<CompletionPartialMessage> writer, string customChatInstanceId, string prompt, string sessionId, CancellationToken cancellationToken)
     {
         try
         {
@@ -138,16 +136,13 @@ public class CustomChatHub : Hub<IAIChatHubClient>
                 customChatSession = await _sessionManager.FindByCustomChatInstanceIdAsync(customChatInstanceId);
             }
 
-            if (customChatSession == null)
+            customChatSession ??= new CustomChatSession
             {
-                customChatSession = new CustomChatSession
-                {
-                    SessionId = IdGenerator.GenerateId(),
-                    CustomChatInstanceId = customChatInstanceId,
-                    UserId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value,
-                    CreatedUtc = DateTime.UtcNow
-                };
-            }
+                SessionId = IdGenerator.GenerateId(),
+                CustomChatInstanceId = customChatInstanceId,
+                UserId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+                CreatedUtc = DateTime.UtcNow
+            };
 
             customChatSession.Prompts.Add(new AIChatSessionPrompt
             {
@@ -156,7 +151,21 @@ public class CustomChatHub : Hub<IAIChatHubClient>
                 Content = prompt
             });
 
-            var transcript = customChatSession.Prompts.Select(x => new ChatMessage(x.Role, x.Content)).ToArray();
+            var documentContext = _documentRetriever.Retrieve(customChatSession.Documents, prompt);
+
+            var messages = new List<ChatMessage>();
+
+            if (documentContext.Count > 0)
+            {
+                messages.Add(new ChatMessage(ChatRole.System,
+                    "You are answering questions using the following private document context.\n\n"
+                    + string.Join("\n\n---\n\n", documentContext)
+                ));
+            }
+
+            messages.AddRange(customChatSession.Prompts.Select(x => new ChatMessage(x.Role, x.Content)));
+
+            var transcript = messages.ToArray();
 
             var index = await _session.QueryIndex<CustomChatPartIndex>(x =>
                  x.CustomChatInstanceId == customChatInstanceId).FirstOrDefaultAsync(cancellationToken);
@@ -193,7 +202,8 @@ public class CustomChatHub : Hub<IAIChatHubClient>
             var completionContext = await _aICompletionContextBuilder.BuildCustomAsync(new CustomChatCompletionContext
             {
                 CustomChatInstanceId = customChatSession.CustomChatInstanceId,
-                Session = customChatSession
+                Session = customChatSession,
+                DocumentContext = documentContext
             });
 
             var assistantPrompt = new AIChatSessionPrompt
@@ -232,10 +242,8 @@ public class CustomChatHub : Hub<IAIChatHubClient>
 
             await _sessionManager.SaveCustomChatAsync(customChatSession, CancellationToken.None);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _logger.LogDebug(ex, "Custom chat streaming error.");
-
             await writer.WriteAsync(new CompletionPartialMessage
             {
                 Content = "The service is currently unavailable."

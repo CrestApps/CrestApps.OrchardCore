@@ -2,14 +2,17 @@ using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
+using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
@@ -17,22 +20,24 @@ public sealed class CustomChatDisplayDriver : ContentPartDisplayDriver<CustomCha
 {
     private readonly AIProviderOptions _providerOptions;
     private readonly DefaultAIOptions _defaultOptions;
-    private readonly AIToolDefinitionOptions _toolOptions;
+    private readonly ISession _session;
     private readonly INamedCatalog<AIDeployment> _deployments;
-
+    private readonly IContentManager _contentManager;
     private readonly IStringLocalizer S;
 
     public CustomChatDisplayDriver(
+        ISession session,
+        IContentManager contentManager,
         INamedCatalog<AIDeployment> deployments,
         IOptions<AIProviderOptions> providerOptions,
         IOptions<DefaultAIOptions> defaultOptions,
-        IOptions<AIToolDefinitionOptions> toolOptions,
         IStringLocalizer<CustomChatDisplayDriver> localizer)
     {
+        _session = session;
+        _contentManager = contentManager;
         _deployments = deployments;
         _providerOptions = providerOptions.Value;
         _defaultOptions = defaultOptions.Value;
-        _toolOptions = toolOptions.Value;
         S = localizer;
     }
 
@@ -81,16 +86,21 @@ public sealed class CustomChatDisplayDriver : ContentPartDisplayDriver<CustomCha
             model.Deployments = deployments.OrderBy(d => d.Name).Select(d => new SelectListItem(d.Name, d.ItemId)).ToList();
         }
 
-        if (_toolOptions.Tools.Count > 0)
+        var toolDocument = await _session.Query<DictionaryDocument<AIToolInstance>>().FirstOrDefaultAsync();
+
+        if (toolDocument != null)
         {
-            model.Tools = _toolOptions.Tools.GroupBy(t => t.Value.Category ?? S["Miscellaneous"].Value)
-                .ToDictionary(x => x.Key, j => j.Select(t => new ToolEntry
+            model.Tools = toolDocument.Records.Values.GroupBy(x => x.Source ?? S["Miscellaneous"].Value)
+                .ToDictionary(x => x.Key, x => x.Select(x => new ToolEntry
                 {
-                    ItemId = t.Key,
-                    DisplayText = t.Value.Title,
-                    Description = t.Value.Description,
-                    IsSelected = part.ToolNames?.Contains(t.Key) ?? false
+                    ItemId = x.ItemId,
+                    DisplayText = x.DisplayText,
+                    IsSelected = part.ToolNames?.Contains(x.ItemId) ?? false
                 }).ToArray());
+        }
+        else
+        {
+            model.Tools = null;
         }
 
         var MetaData = Initialize<CustomChatViewModel>("CustomChatSessionSettings_Edit", vm =>
@@ -130,9 +140,17 @@ public sealed class CustomChatDisplayDriver : ContentPartDisplayDriver<CustomCha
             };
 
             vm.IsNew = context.IsNew;
-        }).Location("Content:1#Chat");
+        }).Location("Content:2#Chat");
 
-        return Combine(Chat, MetaData);
+        var Tools = Initialize<CustomChatViewModel>("CustomChatSessionTools_Edit", vm =>
+        {
+            vm.CustomChatInstanceId = model.CustomChatInstanceId;
+            vm.SessionId = model.SessionId;
+            vm.Tools = model.Tools;
+        })
+        .Location("Content:3#Tools");
+
+        return Combine(Chat, MetaData, Tools);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(CustomChatPart part, UpdatePartEditorContext context)

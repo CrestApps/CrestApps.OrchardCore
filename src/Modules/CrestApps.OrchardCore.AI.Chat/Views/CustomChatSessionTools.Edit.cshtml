@@ -1,0 +1,125 @@
+@model CrestApps.OrchardCore.AI.Chat.ViewModels.CustomChatViewModel
+
+@using OrchardCore.Mvc.Utilities
+
+<div class="tab-pane" id="tools" role="tabpanel">
+
+    @if (Model.Tools == null || Model.Tools.Count == 0)
+    {
+        <p class="text-muted">@T["No tools are available."]</p>
+    }
+    else
+    {
+        foreach (var item in Model.Tools)
+        {
+            <div class="mb-3">
+                @for (var i = 0; i < item.Value.Length; i++)
+                {
+                    var tool = item.Value[i];
+
+                    <div class="form-check">
+                        <input type="hidden"
+                               name="@($"{Html.NameFor(m => m.Tools)}[{item.Key}][{i}].ItemId")"
+                               value="@tool.ItemId" />
+
+                        <input type="hidden"
+                               name="@($"{Html.NameFor(m => m.Tools)}[{item.Key}][{i}].DisplayText")"
+                               value="@tool.DisplayText" />
+
+                        <input type="checkbox"
+                               class="form-check-input custom-chat-tool-checkbox"
+                               id="@tool.ItemId"
+                               data-tool-category="@item.Key"
+                               name="@($"{Html.NameFor(m => m.Tools)}[{item.Key}][{i}].IsSelected")"
+                               value="true" @(tool.IsSelected ? "checked" : null) />
+
+                        <label class="form-check-label" for="@tool.ItemId">
+                            <strong>@tool.DisplayText</strong>
+                            @if (!string.IsNullOrWhiteSpace(tool.Description))
+                            {
+                                <span class="text-muted">
+                                    — @tool.Description
+                                </span>
+                            }
+                        </label>
+                    </div>
+                }
+            </div>
+        }
+    }
+
+    <hr />
+    <div id="documentReaderUploadContainer" class="form-group d-none">
+        <label class="form-label">@T["Upload document"]</label>
+        <input type="file" class="form-control" id="customChatDocumentUpload" />
+        <small class="text-muted">
+            @T["Upload a document so the AI can reference it during this chat session."]
+        </small>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const uploadContainer = document.getElementById("documentReaderUploadContainer");
+
+        const toolCheckboxes = document.querySelectorAll(".custom-chat-tool-checkbox");
+
+        if (uploadContainer) {
+            const toggleUploadVisibility = () => {
+                let enabled = false;
+
+                toolCheckboxes.forEach(function (checkbox) {
+                    if (checkbox.dataset.toolCategory === "DocumentReader" && checkbox.checked) {
+                        enabled = true;
+                    }
+                });
+
+                if (enabled) {
+                    uploadContainer.classList.remove("d-none");
+                } else {
+                    uploadContainer.classList.add("d-none");
+                }
+            };
+
+            toolCheckboxes.forEach(function (checkbox) {
+                checkbox.addEventListener("change", toggleUploadVisibility);
+            });
+
+            toggleUploadVisibility();
+        }
+
+        const input = document.getElementById("customChatDocumentUpload");
+
+        if (!input) {
+            return;
+        }
+
+        const uploadUrl = '@Url.Action("Upload", "CustomChatDocument", new { area = "CrestApps.OrchardCore.AI.Chat" })';
+
+        input.addEventListener("change", async function () {
+            if (!this.files || this.files.length === 0) {
+                return;
+            }
+
+            const file = this.files[0];
+
+            const formData = new FormData();
+
+            formData.append("file", file);
+
+            formData.append("customChatInstanceId", "@Model.CustomChatInstanceId");
+
+            try {
+                const response = await fetch(uploadUrl, { method: "POST", body: formData });
+
+                if (!response.ok) {
+                    return;
+                }
+            } catch (error) {
+                console.debug("[CustomChat][Upload] Upload error:", error);
+            } finally {
+                this.value = "";
+            }
+        });
+    })();
+</script>
