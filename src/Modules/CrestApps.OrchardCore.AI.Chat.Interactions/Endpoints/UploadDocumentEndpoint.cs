@@ -74,7 +74,7 @@ internal static class UploadDocumentEndpoint
         string content;
         using (var stream = file.OpenReadStream())
         {
-            content = await textExtractor.ExtractTextAsync(stream, file.FileName, file.ContentType);
+            content = await textExtractor.ExtractAsync(stream, file.FileName, file.ContentType);
         }
 
         if (string.IsNullOrWhiteSpace(content))
@@ -110,7 +110,7 @@ internal static class UploadDocumentEndpoint
             {
                 var providerName = profileSource.ProviderName;
                 var connectionName = interaction.ConnectionName;
-                
+
                 // Fall back to default connection if none specified
                 if (string.IsNullOrEmpty(connectionName) && providers.Providers.TryGetValue(providerName, out var provider))
                 {

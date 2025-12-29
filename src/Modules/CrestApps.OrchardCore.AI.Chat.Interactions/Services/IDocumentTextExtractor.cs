@@ -12,7 +12,7 @@ public interface IDocumentTextExtractor
     /// <param name="fileName">The original file name with extension.</param>
     /// <param name="contentType">The content type of the file.</param>
     /// <returns>The extracted text content.</returns>
-    Task<string> ExtractTextAsync(Stream stream, string fileName, string contentType);
+    Task<string> ExtractAsync(Stream stream, string fileName, string contentType);
 
     /// <summary>
     /// Checks if the file type is supported for text extraction.
@@ -32,7 +32,16 @@ public sealed class DefaultDocumentTextExtractor : IDocumentTextExtractor
 {
     private static readonly HashSet<string> _supportedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".txt", ".csv", ".md", ".json", ".xml", ".html", ".htm", ".log", ".yaml", ".yml"
+        ".txt",
+        ".csv",
+        ".md",
+        ".json",
+        ".xml",
+        ".html",
+        ".htm",
+        ".log",
+        ".yaml",
+        ".yml",
     };
 
     private static readonly HashSet<string> _supportedContentTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -43,23 +52,25 @@ public sealed class DefaultDocumentTextExtractor : IDocumentTextExtractor
         "text/html",
         "text/xml",
         "application/json",
-        "application/xml"
+        "application/xml",
     };
 
     public bool IsSupported(string fileName, string contentType)
     {
         var extension = Path.GetExtension(fileName);
+
         return _supportedExtensions.Contains(extension) || _supportedContentTypes.Contains(contentType);
     }
 
-    public async Task<string> ExtractTextAsync(Stream stream, string fileName, string contentType)
+    public async Task<string> ExtractAsync(Stream stream, string fileName, string contentType)
     {
-        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        var extension = Path.GetExtension(fileName);
 
         // For text-based files, read directly
         if (IsTextFile(extension, contentType))
         {
             using var reader = new StreamReader(stream);
+
             return await reader.ReadToEndAsync();
         }
 
@@ -70,7 +81,7 @@ public sealed class DefaultDocumentTextExtractor : IDocumentTextExtractor
 
     private static bool IsTextFile(string extension, string contentType)
     {
-        return _supportedExtensions.Contains(extension) || 
+        return _supportedExtensions.Contains(extension) ||
                contentType?.StartsWith("text/", StringComparison.OrdinalIgnoreCase) == true ||
                _supportedContentTypes.Contains(contentType);
     }
