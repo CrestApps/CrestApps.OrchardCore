@@ -115,7 +115,6 @@
     
     let uploadSuccessCount = 0;
     let uploadFailCount = 0;
-    let dragCounter = 0;
     
     // Browse button click handler
     if (browseBtn && fileInput) {
@@ -136,49 +135,48 @@
         });
     }
     
-    // Drag and drop handlers
+    // Drag and drop handlers - simplified and more reliable approach
     if (dropZone) {
-        // Prevent default behavior for the whole document to allow drops
-        document.addEventListener('dragover', function(e) {
-            e.preventDefault();
-        }, false);
+        // Prevent default browser behavior globally
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
         
-        document.addEventListener('drop', function(e) {
-            e.preventDefault();
-        }, false);
-        
-        dropZone.addEventListener('dragenter', function(e) {
+        function preventDefaults(e) {
             e.preventDefault();
             e.stopPropagation();
-            dragCounter++;
-            highlight();
-        }, false);
+        }
         
-        dropZone.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.dataTransfer.dropEffect = 'copy';
-        }, false);
+        // Handle drag enter/over on the drop zone
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, function(e) {
+                preventDefaults(e);
+                highlight();
+            }, false);
+        });
         
-        dropZone.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            dragCounter--;
-            if (dragCounter === 0) {
+        // Handle drag leave
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, function(e) {
+                preventDefaults(e);
                 unhighlight();
-            }
-        }, false);
+            }, false);
+        });
         
+        // Handle drop
         dropZone.addEventListener('drop', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            dragCounter = 0;
+            preventDefaults(e);
             unhighlight();
-            handleDrop(e);
+            
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files.length > 0) {
+                uploadFiles(dt.files);
+            }
         }, false);
     }
     
     function highlight() {
+        dropZone.classList.add('drag-over');
         dropZone.style.borderColor = '#0d6efd';
         dropZone.style.backgroundColor = '#f0f7ff';
         if (dropZoneContent) dropZoneContent.classList.add('d-none');
@@ -186,19 +184,11 @@
     }
     
     function unhighlight() {
+        dropZone.classList.remove('drag-over');
         dropZone.style.borderColor = '#dee2e6';
         dropZone.style.backgroundColor = '#fff';
         if (dropZoneContent) dropZoneContent.classList.remove('d-none');
         if (dropZoneActive) dropZoneActive.classList.add('d-none');
-    }
-    
-    async function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        
-        if (files && files.length > 0) {
-            await uploadFiles(files);
-        }
     }
     
     if (fileInput) {
