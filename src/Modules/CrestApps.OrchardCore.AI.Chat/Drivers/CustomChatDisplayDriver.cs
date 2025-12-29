@@ -45,7 +45,6 @@ public sealed class CustomChatDisplayDriver : ContentPartDisplayDriver<CustomCha
 
         var model = new CustomChatViewModel
         {
-            // build AI Settings
             CustomChatInstanceId = part.CustomChatInstanceId,
             SessionId = part.SessionId,
             Title = part.Title,
@@ -94,13 +93,13 @@ public sealed class CustomChatDisplayDriver : ContentPartDisplayDriver<CustomCha
                 }).ToArray());
         }
 
-        var MetaData = Initialize<CustomChatViewModel>("CustomChatMetaData_Edit", vm =>
+        var MetaData = Initialize<CustomChatViewModel>("CustomChatSessionSettings_Edit", vm =>
         {
-            // map the model
             vm.CustomChatInstanceId = model.CustomChatInstanceId;
             vm.SessionId = model.SessionId;
             vm.Title = model.Title;
             vm.ProviderName = model.ProviderName;
+            vm.ConnectionNames = model.ConnectionNames;
             vm.ConnectionName = model.ConnectionName;
             vm.DeploymentId = model.DeploymentId;
             vm.SystemMessage = model.SystemMessage;
@@ -113,7 +112,6 @@ public sealed class CustomChatDisplayDriver : ContentPartDisplayDriver<CustomCha
             vm.UseCaching = model.UseCaching;
             vm.AllowCaching = model.AllowCaching;
             vm.Tools = model.Tools;
-            vm.ConnectionNames = model.ConnectionNames;
             vm.Deployments = model.Deployments;
             vm.IsNew = model.IsNew;
         }).Location("Content:1#Settings");
@@ -122,7 +120,6 @@ public sealed class CustomChatDisplayDriver : ContentPartDisplayDriver<CustomCha
         {
             vm.CustomChatSession = new CustomChatSession
             {
-                // map the model Chat
                 SessionId = part.SessionId,
                 CustomChatInstanceId = part.CustomChatInstanceId,
                 UserId = part.UserId,

@@ -63,7 +63,7 @@ public sealed class CustomChatSettingsController : Controller
           .OrderByDescending(x => x.CreatedUtc)
           .ListAsync();
 
-        // I think this is wrong I dont think Mike would Load a content item one by one
+        // I think this is wrong I dont think Mike would Load a content widget one by one
         // what if we have 2,000 custom customChat instances
         // the content customChat would be large data to pull
         // is doing this by content ItemID slow or wrong?
@@ -71,14 +71,14 @@ public sealed class CustomChatSettingsController : Controller
 
         foreach (var record in records)
         {
-            var item = await _contentManager.GetAsync(record.ContentItemId);
+            var widget = await _contentManager.GetAsync(record.ContentItemId);
 
-            if (item == null)
+            if (widget == null)
             {
                 continue;
             }
 
-            customChat.Add(item);
+            customChat.Add(widget);
         }
 
         return View(new ListCatalogEntryViewModel<ContentItem>
@@ -86,7 +86,6 @@ public sealed class CustomChatSettingsController : Controller
             Models = customChat
         });
     }
-
 
     [Admin("ai/custom-chat/chat/{contentItemId}")]
     public async Task<IActionResult> Chat(string contentItemId)
@@ -110,7 +109,7 @@ public sealed class CustomChatSettingsController : Controller
             return Forbid();
         }
 
-        var shape = await _contentDisplayManager.BuildDisplayAsync(contentItem, _updateModelAccessor.ModelUpdater);
+        var shape = await _contentDisplayManager.BuildEditorAsync(contentItem, _updateModelAccessor.ModelUpdater, isNew: false);
 
         return View(new ManageCustomChatInstancesViewModel
         {

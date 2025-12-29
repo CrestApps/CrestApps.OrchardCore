@@ -83,9 +83,7 @@ public class CustomChatHub : Hub<IAIChatHubClient>
                 CreatedUtc = DateTime.UtcNow
             };
 
-            await _sessionManager.SaveCustomChatAsync(customChatSession);
-            // this is dumb and needs fixed or tested 
-            await _session.SaveChangesAsync();
+            await _sessionManager.SaveCustomChatAsync(customChatSession, CancellationToken.None);
         }
 
         await Clients.Caller.LoadSession(new
@@ -140,7 +138,6 @@ public class CustomChatHub : Hub<IAIChatHubClient>
                 customChatSession = await _sessionManager.FindByCustomChatInstanceIdAsync(customChatInstanceId);
             }
 
-            // here we were passing the wrong ids
             if (customChatSession == null)
             {
                 customChatSession = new CustomChatSession
@@ -164,27 +161,19 @@ public class CustomChatHub : Hub<IAIChatHubClient>
             var index = await _session.QueryIndex<CustomChatPartIndex>(x =>
                  x.CustomChatInstanceId == customChatInstanceId).FirstOrDefaultAsync(cancellationToken);
 
-            if (index == null)
+            var customChatItem = index != null ? await _contentManager.GetAsync(index.ContentItemId) : null;
+
+            var part = customChatItem?.As<CustomChatPart>();
+
+            if (index == null || customChatItem == null || string.IsNullOrWhiteSpace(part.ConnectionName) || string.IsNullOrWhiteSpace(part.DeploymentId))
             {
-                await Clients.Caller.ReceiveError("Chat configuration not found.");
+                await Clients.Caller.ReceiveError("Chat is not configured.");
 
                 return;
             }
-
-            var customChatItem = await _contentManager.GetAsync(index.ContentItemId);
-
-            if (customChatItem == null)
-            {
-                await Clients.Caller.ReceiveError("Chat configuration missing.");
-
-                return;
-            }
-
-            var part = customChatItem.As<CustomChatPart>();
 
             var metadata = new AIChatInstanceMetadata
             {
-                // pass the meta data from the part
                 ProviderName = part.ProviderName,
                 Source = part.ProviderName,
                 ConnectionName = part.ConnectionName,
@@ -200,7 +189,6 @@ public class CustomChatHub : Hub<IAIChatHubClient>
                 UseCaching = part.UseCaching,
                 IsCustomInstance = true
             };
-
 
             var completionContext = await _aICompletionContextBuilder.BuildCustomAsync(new CustomChatCompletionContext
             {
@@ -242,9 +230,7 @@ public class CustomChatHub : Hub<IAIChatHubClient>
 
             customChatSession.Prompts.Add(assistantPrompt);
 
-            await _sessionManager.SaveCustomChatAsync(customChatSession);
-            // this is dumb and needs fixed 
-            await _session.SaveChangesAsync(cancellationToken);
+            await _sessionManager.SaveCustomChatAsync(customChatSession, CancellationToken.None);
         }
         catch (Exception ex)
         {

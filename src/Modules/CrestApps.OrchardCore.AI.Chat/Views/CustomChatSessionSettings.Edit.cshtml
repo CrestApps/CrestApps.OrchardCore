@@ -1,0 +1,170 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore
+
+@model CustomChatViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Title" class="@Orchard.GetLabelClasses()">@T["Instance Title"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="Title" class="form-control" placeholder="@T["My Custom Chat"]" />
+        <span asp-validation-for="Title"></span>
+        <div class="hint">@T["Give your chat instance a descriptive name."]</div>
+    </div>
+</div>
+@* must round-trip through POST *@
+<input type="hidden" asp-for="ProviderName" value="@Model.ProviderName" />
+<input type="hidden" asp-for="SessionId" />
+<input type="hidden" asp-for="CustomChatInstanceId" />
+
+@if (Model.ConnectionNames?.Any() == true)
+{
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <select asp-for="ConnectionName" asp-items="Model.ConnectionNames" class="form-select" id="connectionSelect">
+                <option value="">@T["Default connection"]</option>
+            </select>
+            <span asp-validation-for="ConnectionName"></span>
+            <div class="hint">@T["Select the AI provider connection to use."]</div>
+        </div>
+    </div>
+}
+else
+{
+    <input type="hidden" asp-for="ConnectionName" />
+}
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DeploymentId" class="@Orchard.GetLabelClasses()">@T["Deployment"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DeploymentId" asp-items="Model.Deployments" class="form-select" id="deploymentSelect">
+            <option value="">@T["Default deployment"]</option>
+        </select>
+        <span asp-validation-for="DeploymentId"></span>
+        <div class="hint">@T["Select the AI model deployment to use."]</div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System Instructions"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="SystemMessage" class="form-control" rows="5" placeholder="@T["You are a helpful AI assistant..."]"></textarea>
+        <span asp-validation-for="SystemMessage"></span>
+        <div class="hint">@T["Define how the AI should behave and respond."]</div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="@Orchard.GetWrapperClasses()">
+            <label asp-for="MaxTokens" class="@Orchard.GetLabelClasses()">@T["Max Response Tokens"]</label>
+            <div class="@Orchard.GetEndClasses()">
+                <input asp-for="MaxTokens" type="number" class="form-control" />
+                <span asp-validation-for="MaxTokens"></span>
+                <div class="hint">@T["Maximum number of tokens in the AI's response."]</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="@Orchard.GetWrapperClasses()">
+            <label asp-for="Temperature" class="@Orchard.GetLabelClasses()">@T["Temperature"]</label>
+            <div class="@Orchard.GetEndClasses()">
+                <input asp-for="Temperature" type="number" step="0.1" class="form-control" />
+                <span asp-validation-for="Temperature"></span>
+                <div class="hint">@T["Controls randomness (0.0–1.0). Higher = more creative."]</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="@Orchard.GetWrapperClasses()">
+            <label asp-for="TopP" class="@Orchard.GetLabelClasses()">@T["Top P"]</label>
+            <div class="@Orchard.GetEndClasses()">
+                <input asp-for="TopP" type="number" step="0.1" class="form-control" />
+                <span asp-validation-for="TopP"></span>
+                <div class="hint">@T["Controls diversity via nucleus sampling (0.0–1.0)."]</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="@Orchard.GetWrapperClasses()">
+            <label asp-for="FrequencyPenalty" class="@Orchard.GetLabelClasses()">@T["Frequency Penalty"]</label>
+            <div class="@Orchard.GetEndClasses()">
+                <input asp-for="FrequencyPenalty" type="number" step="0.1" class="form-control" />
+                <span asp-validation-for="FrequencyPenalty"></span>
+                <div class="hint">@T["Reduces repetition (0.0–1.0)."]</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="@Orchard.GetWrapperClasses()">
+            <label asp-for="PresencePenalty" class="@Orchard.GetLabelClasses()">@T["Presence Penalty"]</label>
+            <div class="@Orchard.GetEndClasses()">
+                <input asp-for="PresencePenalty" type="number" step="0.1" class="form-control" />
+                <span asp-validation-for="PresencePenalty"></span>
+                <div class="hint">@T["Encourages new topics (0.0–1.0)."]</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="@Orchard.GetWrapperClasses()">
+            <label asp-for="PastMessagesCount" class="@Orchard.GetLabelClasses()">@T["Include Past Messages"]</label>
+            <div class="@Orchard.GetEndClasses()">
+                <input asp-for="PastMessagesCount" type="number" class="form-control" />
+                <span asp-validation-for="PastMessagesCount"></span>
+                <div class="hint">@T["Number of previous messages to include for context."]</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.AllowCaching)
+{
+    <div class="@Orchard.GetWrapperClasses()">
+        <div class="@Orchard.GetEndClasses(true)">
+            <span class="form-check">
+                <input asp-for="UseCaching" type="checkbox" class="form-check-input" />
+                <label asp-for="UseCaching" class="form-check-label">@T["Enable Caching"]</label>
+            </span>
+            <div class="hint">@T["Cache responses to improve performance."]</div>
+        </div>
+    </div>
+}
+@* soon to be tools *@
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function() {
+
+        document.querySelectorAll('.category-select-all').forEach(function(checkbox) {
+
+            var category = checkbox.dataset.category;
+
+            var toolCheckboxes = document.querySelectorAll('.tool-checkbox[data-category="' + category + '"]');
+
+            var allChecked = Array.from(toolCheckboxes).every(cb => cb.checked);
+
+            checkbox.checked = allChecked && toolCheckboxes.length > 0;
+
+            checkbox.addEventListener('change', function() {
+                toolCheckboxes.forEach(function(cb) {
+                    cb.checked = checkbox.checked;
+                });
+            });
+
+            toolCheckboxes.forEach(function(cb) {
+                cb.addEventListener('change', function() {
+                    var allChecked = Array.from(toolCheckboxes).every(tcb => tcb.checked);
+                    checkbox.checked = allChecked;
+                });
+            });
+        });
+    });
+</script>

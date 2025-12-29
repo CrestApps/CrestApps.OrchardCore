@@ -23,13 +23,6 @@ internal class CustomChatMigrations : DataMigration
 
         await _contentDefinitionManager.AlterTypeDefinitionAsync("CustomChat", type => type
             .WithPart("CustomChatPart")
-            .WithPart("TitlePart", part => part.WithSettings(new
-            {
-                Options = new
-                {
-                    RenderTitle = false
-                }
-            }))
             .DisplayedAs("Artificial Intelligence Custom Chat")
             .Draftable(false)
             .Listable(false)

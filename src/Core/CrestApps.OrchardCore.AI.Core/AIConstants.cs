@@ -37,6 +37,8 @@ public static class AIConstants
 
         public const string Chat = "CrestApps.OrchardCore.AI.Chat";
 
+        public const string CustomChat = "CrestApps.OrchardCore.AI.CustomChat";
+
         public const string DataSources = "CrestApps.OrchardCore.AI.DataSources";
 
         public const string ChatApi = "CrestApps.OrchardCore.AI.Chat.Api";
@@ -53,21 +55,6 @@ public static class AIConstants
         public const string GetDeploymentsByConnectionRouteName = "GetDeploymentsByConnection";
 
         public const string GetConnectionsByProviderRouteName = "GetConnectionsByProvider";
-    }
-
-    public static class DisplayGroups
-    {
-        public const string AICustomChatSettings = "AICustomChatSettings";
-
-        public const string AICustomChatChat = "AICustomChatChat";
-    }
-
-
-    public static class ShapeLocations
-    {
-        public const string SummaryAdmin = "SummaryAdmin";
-
-        public const string DetailAdmin = "DetailAdmin";
     }
 
 }

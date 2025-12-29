@@ -24,16 +24,7 @@
 <div class="mb-3 mx-3 p-3 overflow-y-auto h-100 rounded-2 border bg-theme"
      id="@chatContainerHtmlId">
     <div class="list-group list-group-flush w-100">
-
-        @if (Model.CustomChatSession?.Prompts?.Count == 0)
-        {
-            <div id="@placeholderHtmlId" class="text-center p-3">
-                <h1 class="mb-3">@T["What do you want to know?"]</h1>
-            </div>
-        }
-
         <div id="@chatAppHtmlId"></div>
-
     </div>
 </div>
 
@@ -45,8 +36,7 @@
                   data-session-id="@(Model.IsNew ? string.Empty : Model.CustomChatSession.SessionId)"
                   data-custom-chat-instance-id="@Model.CustomChatSession.CustomChatInstanceId"
                   aria-label="@T["Message AI Chat"]"
-                  aria-describedby="@buttonHtmlId">
-        </textarea>
+                  aria-describedby="@buttonHtmlId"></textarea>
 
         <div class="d-flex justify-content-end px-3 my-2">
             <button class="btn btn-dark rounded-circle"
@@ -94,10 +84,3 @@
         messages: @Html.Raw(JsonSerializer.Serialize(prompts, JOptions.CamelCase))
     });
 </script>
-
-<style at="Head">
-    .chat-user-prompt-input:focus {
-        border: none;
-        box-shadow: none;
-    }
-</style>

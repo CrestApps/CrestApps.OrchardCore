@@ -38,12 +38,6 @@ window.customChatManager = function () {
               while (1) switch (_context.prev = _context.next) {
                 case 0:
                   _this.connection = new signalR.HubConnectionBuilder().withUrl(config.signalRHubUrl).withAutomaticReconnect().build();
-                  requestAnimationFrame(function () {
-                    if (_this.inputElement) {
-                      _this.inputElement.placeholder = 'How can we help you today?';
-                      _this.inputElement.focus();
-                    }
-                  });
                   _this.connection.on("LoadSession", function (data) {
                     var _data$messages;
                     _this.setSessionId(data.sessionId);
@@ -59,11 +53,15 @@ window.customChatManager = function () {
                     });
                   });
                   _this.connection.on("ReceiveError", function (err) {
-                    console.error("[CustomChat] Hub error:", err);
+                    _this.hideTypingIndicator();
+                    _this.addMessage({
+                      role: 'assistant',
+                      content: err
+                    });
                   });
-                  _context.next = 6;
+                  _context.next = 5;
                   return _this.connection.start();
-                case 6:
+                case 5:
                 case "end":
                   return _context.stop();
               }

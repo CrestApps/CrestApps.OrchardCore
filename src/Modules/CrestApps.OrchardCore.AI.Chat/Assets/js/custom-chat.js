@@ -32,7 +32,6 @@ window.customChatManager = function () {
             `<div class="spinner-grow spinner-grow-sm" role="status"></div>`
     };
 
-
     const initialize = (instanceConfig) => {
 
         const config = Object.assign({}, defaultConfig, instanceConfig);
@@ -75,9 +74,14 @@ window.customChatManager = function () {
                         });
                     });
 
-
                     this.connection.on("ReceiveError", (err) => {
-                        console.error("[CustomChat] Hub error:", err);
+
+                        this.hideTypingIndicator();
+
+                        this.addMessage({
+                            role: 'assistant',
+                            content: err
+                        });
                     });
 
                     await this.connection.start();
@@ -107,8 +111,11 @@ window.customChatManager = function () {
                 },
 
                 streamMessage(prompt) {
+
                     if (this.stream) {
+
                         this.stream.dispose();
+
                         this.stream = null;
                     }
 
@@ -240,6 +247,7 @@ window.customChatManager = function () {
                     this.loadSession(customChatInstanceId);
                 }
             },
+
             template: config.messageTemplate
         });
 

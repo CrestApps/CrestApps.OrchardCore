@@ -8,7 +8,7 @@ public interface IAICustomChatSessionManager
 
     Task<CustomChatSession> FindCustomChatSessionAsync(string sessionId);
 
-    Task SaveCustomChatAsync(CustomChatSession customChatSession);
+    Task SaveCustomChatAsync(CustomChatSession customChatSession, CancellationToken cancellationToken);
 
     Task<bool> DeleteCustomChatAsync(string sessionId);
 }

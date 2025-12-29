@@ -52,12 +52,12 @@ public sealed class CustomChatSessionManager : IAICustomChatSessionManager
             .FirstOrDefaultAsync();
     }
 
-
-    public Task SaveCustomChatAsync(CustomChatSession customChatSession)
+    public async Task SaveCustomChatAsync(CustomChatSession customChatSession, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(customChatSession);
 
-        return _session.SaveAsync(customChatSession);
+        await _session.SaveAsync(customChatSession, cancellationToken: cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<bool> DeleteCustomChatAsync(string sessionId)

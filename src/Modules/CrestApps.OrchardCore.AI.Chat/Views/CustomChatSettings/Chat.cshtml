@@ -3,19 +3,4 @@
 
 @model ManageCustomChatInstancesViewModel
 
-<div class="d-flex flex-row h-100">
-
-    <div class="d-flex flex-column h-100 flex-grow-1">
-        @await DisplayAsync(Model.ChatContent)
-    </div>
-
-</div>
-
-<style at="Head">
-    .ta-content {
-        height: 100% !important;
-        padding-left: 0 !important;
-        padding-right: 0 !important;
-        padding-bottom: 0 !important;
-    }
-</style>
+@await DisplayAsync(Model.ChatContent)
