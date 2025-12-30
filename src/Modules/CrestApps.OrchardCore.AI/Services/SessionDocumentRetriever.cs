@@ -4,8 +4,18 @@ namespace CrestApps.OrchardCore.AI.Services;
 
 public sealed class SessionDocumentRetriever
 {
-    private const int ChunkSize = 1000;
-    private const int MaxChunks = 6;
+    private readonly int _chunkSize;
+    private readonly int _maxChunks;
+
+    public SessionDocumentRetriever() : this(chunkSize: 1000, maxChunks: 6)
+    {
+    }
+
+    public SessionDocumentRetriever(int chunkSize, int maxChunks)
+    {
+        _chunkSize = chunkSize > 0 ? chunkSize : 1000;
+        _maxChunks = maxChunks > 0 ? maxChunks : 6;
+    }
 
     public IReadOnlyList<string> Retrieve(CustomChatSessionDocuments SessionDocuments, string userPrompt)
     {
@@ -36,26 +46,23 @@ public sealed class SessionDocumentRetriever
             }
         }
 
-        return chunks.OrderByDescending(x => x.Score).Take(MaxChunks).Select(x => x.Text).ToArray();
+        return chunks
+            .OrderByDescending(x => x.Score)
+            .Take(_maxChunks)
+            .Select(x => x.Text)
+            .ToArray();
     }
 
-    private static IEnumerable<string> Chunk(string text)
+    private IEnumerable<string> Chunk(string text)
     {
-        for (var i = 0; i < text.Length; i += ChunkSize)
+        for (var i = 0; i < text.Length; i += _chunkSize)
         {
-            //   lazy sequence yield
-            //   Each call returns one value and pauses execution,
-            //   preserving local state. Execution resumes on the next iteration.
-            yield return text.Substring(i, Math.Min(ChunkSize, text.Length - i));
+            yield return text.Substring(i, Math.Min(_chunkSize, text.Length - i));
         }
     }
 
     private static int Score(string chunk, string prompt)
     {
-        // Split prompt into terms on spaces, ignoring empties.
-        // For each term, check if it appears anywhere in chunk, case -insensitive.
-        // Increment once per matching term.
-        // Score equals number of distinct prompt terms found.
         var score = 0;
 
         foreach (var term in prompt.Split(' ', StringSplitOptions.RemoveEmptyEntries))

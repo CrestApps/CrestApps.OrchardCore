@@ -46,9 +46,9 @@
                                                 <span class="fw-bold">@tool.DisplayText</span>
                                                 @if (!string.IsNullOrWhiteSpace(tool.Description))
                                                 {
-                                                    <div class="text-muted small mt-1">
+                                                    <span class="text-muted small mt-1">
                                                         @tool.Description
-                                                    </div>
+                                                    </span>
                                                 }
                                             </label>
                                         </div>
@@ -66,6 +66,11 @@
                                             @* File name display after successful upload *@
                                             <div class="mt-2">
                                                 <span class="badge text-bg-secondary d-none" id="uploadedFileNameBadge"></span>
+                                            </div>
+
+                                            @* List of all uploaded documents *@
+                                            <div class="mt-2">
+                                                <ul class="list-group" id="uploadedFilesList"></ul>
                                             </div>
                                         </div>
                                     }
@@ -113,6 +118,8 @@
             });
 
             toggleUploadVisibility();
+        } else {
+            console.warn("[CustomChat][Init] Upload container not found.");
         }
 
         const input = document.getElementById("customChatDocumentUpload");
@@ -122,6 +129,8 @@
         }
 
         const uploadUrl = '@Url.Action("Upload", "CustomChatDocument", new { area = "CrestApps.OrchardCore.AI.Chat" })';
+
+        const filesList = document.getElementById("uploadedFilesList");
 
         input.addEventListener("change", async function () {
             if (!this.files || this.files.length === 0) {
@@ -140,6 +149,7 @@
                 const response = await fetch(uploadUrl, { method: "POST", body: formData });
 
                 if (!response.ok) {
+                    console.error("[CustomChat][Upload] Upload failed. Status:", response.status);
                     return;
                 }
 
@@ -148,11 +158,30 @@
                 if (badge) {
                     badge.textContent = file.name;
                     badge.classList.remove("d-none");
+                } else {
+                    console.warn("[CustomChat][UI] Badge element not found.");
+                }
+
+                if (filesList) {
+                    const li = document.createElement("li");
+                    li.className = "list-group-item d-flex justify-content-between align-items-center";
+                    li.textContent = file.name;
+
+                    const small = document.createElement("small");
+                    small.className = "text-muted";
+                    small.textContent = new Date().toLocaleString();
+
+                    li.appendChild(small);
+                    filesList.appendChild(li);
+                    console.log("[CustomChat][UI] Appended to uploaded files list:", file.name);
+                } else {
+                    console.warn("[CustomChat][UI] Uploaded files list element not found.");
                 }
             } catch (error) {
                 console.debug("[CustomChat][Upload] Upload error:", error);
             } finally {
                 this.value = "";
+                console.log("[CustomChat][Upload] Input reset after upload.");
             }
         });
     })();

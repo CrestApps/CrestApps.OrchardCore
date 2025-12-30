@@ -39,17 +39,17 @@ public sealed class CustomChatDocumentController : Controller
             return NotFound();
         }
 
-        var tempFilePath = await _documentStore.SaveAsync(session.SessionId, file, cancellationToken);
+        var filePath = await _documentStore.SaveAsync(session.SessionId, file, cancellationToken);
 
         var documents = session.Documents ?? new CustomChatSessionDocuments();
 
         documents.Items.Add(new CustomChatSessionDocumentEntry
         {
-            DocumentId = Path.GetFileName(tempFilePath),
+            DocumentId = Path.GetFileName(filePath),
             FileName = file.FileName,
             ContentType = file.ContentType,
             Length = file.Length,
-            TempFilePath = tempFilePath,
+            TempFilePath = filePath,
             CreatedUtc = DateTime.UtcNow
         });
 
@@ -60,7 +60,13 @@ public sealed class CustomChatDocumentController : Controller
         return Ok(new
         {
             FileName = file.FileName,
-            Size = file.Length
+            Size = file.Length,
+            Documents = session.Documents.Items.Select(x => new
+            {
+                x.DocumentId,
+                x.FileName,
+                x.CreatedUtc
+            })
         });
     }
 }

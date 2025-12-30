@@ -104,6 +104,13 @@ public class CustomChatHub : Hub<IAIChatHubClient>
                 x.Title,
                 x.IsGeneratedPrompt,
                 x.References
+            }),
+
+            Documents = customChatSession.Documents?.Items.Select(x => new
+            {
+                x.DocumentId,
+                x.FileName,
+                x.CreatedUtc
             })
         });
     }
