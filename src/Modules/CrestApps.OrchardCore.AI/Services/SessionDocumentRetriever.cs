@@ -7,23 +7,23 @@ public sealed class SessionDocumentRetriever
     private const int ChunkSize = 1000;
     private const int MaxChunks = 6;
 
-    public IReadOnlyList<string> Retrieve(CustomChatSessionDocuments docs, string userPrompt)
+    public IReadOnlyList<string> Retrieve(CustomChatSessionDocuments SessionDocuments, string userPrompt)
     {
-        if (docs?.Items == null || docs.Items.Count == 0 || string.IsNullOrWhiteSpace(userPrompt))
+        if (SessionDocuments?.Items == null || SessionDocuments.Items.Count == 0 || string.IsNullOrWhiteSpace(userPrompt))
         {
             return [];
         }
 
         var chunks = new List<(string Text, int Score)>();
 
-        foreach (var doc in docs.Items)
+        foreach (var document in SessionDocuments.Items)
         {
-            if (!File.Exists(doc.TempFilePath))
+            if (!File.Exists(document.TempFilePath))
             {
                 continue;
             }
 
-            var text = File.ReadAllText(doc.TempFilePath);
+            var text = File.ReadAllText(document.TempFilePath);
 
             foreach (var chunk in Chunk(text))
             {
@@ -43,13 +43,21 @@ public sealed class SessionDocumentRetriever
     {
         for (var i = 0; i < text.Length; i += ChunkSize)
         {
+            //   lazy sequence yield
+            //   Each call returns one value and pauses execution,
+            //   preserving local state. Execution resumes on the next iteration.
             yield return text.Substring(i, Math.Min(ChunkSize, text.Length - i));
         }
     }
 
     private static int Score(string chunk, string prompt)
     {
+        // Split prompt into terms on spaces, ignoring empties.
+        // For each term, check if it appears anywhere in chunk, case -insensitive.
+        // Increment once per matching term.
+        // Score equals number of distinct prompt terms found.
         var score = 0;
+
         foreach (var term in prompt.Split(' ', StringSplitOptions.RemoveEmptyEntries))
         {
             if (chunk.Contains(term, StringComparison.OrdinalIgnoreCase))

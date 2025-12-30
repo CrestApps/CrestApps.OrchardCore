@@ -1,7 +1,17 @@
-@model CrestApps.OrchardCore.AI.Tools.Models.DocumentReaderToolMetadata
+@using CrestApps.OrchardCore.AI.Tools.Models
+@using OrchardCore
 
-<div class="mb-3">
-    <label asp-for="MaxWords" class="form-label"></label>
-    <input asp-for="MaxWords" class="form-control" type="number" min="1" />
-    <span class="hint"> Maximum number of words the AI may read from the document.</span>
+@model DocumentReaderToolMetadata
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="@Orchard.GetWrapperClasses()">
+            <label asp-for="MaxWords" class="@Orchard.GetLabelClasses()">Max Words</label>
+            <div class="@Orchard.GetEndClasses()">
+                <input asp-for="MaxWords" type="number" class="form-control" min="1" />
+                <span asp-validation-for="MaxWords"></span>
+                <div class="hint"> Maximum number of words the AI may read from the document.</div>
+            </div>
+        </div>
+    </div>
 </div>

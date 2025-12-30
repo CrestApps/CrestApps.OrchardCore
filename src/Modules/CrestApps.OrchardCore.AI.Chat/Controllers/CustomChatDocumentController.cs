@@ -11,9 +11,7 @@ public sealed class CustomChatDocumentController : Controller
     private readonly IAICustomChatSessionManager _sessionManager;
     private readonly CustomChatTempDocumentStore _documentStore;
 
-    public CustomChatDocumentController(
-        IAICustomChatSessionManager sessionManager,
-        CustomChatTempDocumentStore documentStore)
+    public CustomChatDocumentController(IAICustomChatSessionManager sessionManager, CustomChatTempDocumentStore documentStore)
     {
         _sessionManager = sessionManager;
         _documentStore = documentStore;

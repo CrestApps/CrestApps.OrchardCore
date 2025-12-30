@@ -124,7 +124,7 @@ public sealed class CustomChatDisplayDriver : ContentPartDisplayDriver<CustomCha
             vm.Tools = model.Tools;
             vm.Deployments = model.Deployments;
             vm.IsNew = model.IsNew;
-        }).Location("Content:1#Settings");
+        }).Location("Content:2#Settings");
 
         var Chat = Initialize<ChatSessionCapsuleViewModel>("CustomChatSession_Edit", vm =>
         {
@@ -140,7 +140,7 @@ public sealed class CustomChatDisplayDriver : ContentPartDisplayDriver<CustomCha
             };
 
             vm.IsNew = context.IsNew;
-        }).Location("Content:2#Chat");
+        }).Location("Content:1#Chat");
 
         var Tools = Initialize<CustomChatViewModel>("CustomChatSessionTools_Edit", vm =>
         {

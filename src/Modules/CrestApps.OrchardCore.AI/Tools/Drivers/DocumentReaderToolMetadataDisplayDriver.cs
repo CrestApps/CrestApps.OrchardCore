@@ -7,7 +7,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 
-internal sealed class DocumentReaderToolMetadataDisplayDriver : DisplayDriver<AIToolInstance>
+public sealed class DocumentReaderToolMetadataDisplayDriver : DisplayDriver<AIToolInstance>
 {
     private readonly IStringLocalizer S;
 
@@ -24,12 +24,12 @@ internal sealed class DocumentReaderToolMetadataDisplayDriver : DisplayDriver<AI
         }
 
         return Initialize<DocumentReaderToolMetadata>("DocumentReaderToolMetadata_Edit", model =>
-            {
-                var metadata = instance.As<DocumentReaderToolMetadata>();
+        {
+            var metadata = instance.As<DocumentReaderToolMetadata>();
 
-                model.MaxWords = metadata?.MaxWords ?? 200;
+            model.MaxWords = metadata?.MaxWords ?? 200;
 
-            }).Location("Content:3");
+        }).Location("Content:5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIToolInstance instance, UpdateEditorContext context)
@@ -48,7 +48,10 @@ internal sealed class DocumentReaderToolMetadataDisplayDriver : DisplayDriver<AI
             context.Updater.ModelState.AddModelError(nameof(model.MaxWords), S["Max words must be greater than zero."]);
         }
 
-        instance.Put(model);
+        instance.Put(new DocumentReaderToolMetadata
+        {
+            MaxWords = model.MaxWords
+        });
 
         return Edit(instance, context);
     }

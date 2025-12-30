@@ -13,49 +13,76 @@
         foreach (var item in Model.Tools)
         {
             <div class="mb-3">
-                @for (var i = 0; i < item.Value.Length; i++)
-                {
-                    var tool = item.Value[i];
+                <h6 class="text-uppercase text-muted mb-2">@item.Key</h6>
 
-                    <div class="form-check">
-                        <input type="hidden"
-                               name="@($"{Html.NameFor(m => m.Tools)}[{item.Key}][{i}].ItemId")"
-                               value="@tool.ItemId" />
+                <div class="row g-3">
+                    @for (var i = 0; i < item.Value.Length; i++)
+                    {
+                        var tool = item.Value[i];
 
-                        <input type="hidden"
-                               name="@($"{Html.NameFor(m => m.Tools)}[{item.Key}][{i}].DisplayText")"
-                               value="@tool.DisplayText" />
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-start">
+                                        <div class="form-check me-2">
+                                            <input type="hidden"
+                                                   name="@($"{Html.NameFor(m => m.Tools)}[{item.Key}][{i}].ItemId")"
+                                                   value="@tool.ItemId" />
 
-                        <input type="checkbox"
-                               class="form-check-input custom-chat-tool-checkbox"
-                               id="@tool.ItemId"
-                               data-tool-category="@item.Key"
-                               name="@($"{Html.NameFor(m => m.Tools)}[{item.Key}][{i}].IsSelected")"
-                               value="true" @(tool.IsSelected ? "checked" : null) />
+                                            <input type="hidden"
+                                                   name="@($"{Html.NameFor(m => m.Tools)}[{item.Key}][{i}].DisplayText")"
+                                                   value="@tool.DisplayText" />
 
-                        <label class="form-check-label" for="@tool.ItemId">
-                            <strong>@tool.DisplayText</strong>
-                            @if (!string.IsNullOrWhiteSpace(tool.Description))
-                            {
-                                <span class="text-muted">
-                                    — @tool.Description
-                                </span>
-                            }
-                        </label>
-                    </div>
-                }
+                                            <input type="checkbox"
+                                                   class="form-check-input custom-chat-tool-checkbox"
+                                                   id="@tool.ItemId"
+                                                   data-tool-category="@item.Key"
+                                                   name="@($"{Html.NameFor(m => m.Tools)}[{item.Key}][{i}].IsSelected")"
+                                                   value="true" @(tool.IsSelected ? "checked" : null) />
+                                        </div>
+
+                                        <div class="flex-grow-1">
+                                            <label class="form-check-label d-block" for="@tool.ItemId">
+                                                <span class="fw-bold">@tool.DisplayText</span>
+                                                @if (!string.IsNullOrWhiteSpace(tool.Description))
+                                                {
+                                                    <div class="text-muted small mt-1">
+                                                        @tool.Description
+                                                    </div>
+                                                }
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    @if (string.Equals(item.Key, "DocumentReader", System.StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <div id="documentReaderUploadContainer" class="form-group d-none mt-3">
+                                            <label class="form-label">@T["Upload document"]</label>
+                                            <input type="file" class="form-control" id="customChatDocumentUpload" />
+                                            <small class="text-muted d-block">
+                                                @T["Upload a document so the AI can reference it during this chat session."]
+                                            </small>
+
+                                            @* File name display after successful upload *@
+                                            <div class="mt-2">
+                                                <span class="badge text-bg-secondary d-none" id="uploadedFileNameBadge"></span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                                    <span class="badge text-bg-light">@item.Key</span>
+                                    <span class="text-muted small">@T["Tool"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
             </div>
         }
     }
 
-    <hr />
-    <div id="documentReaderUploadContainer" class="form-group d-none">
-        <label class="form-label">@T["Upload document"]</label>
-        <input type="file" class="form-control" id="customChatDocumentUpload" />
-        <small class="text-muted">
-            @T["Upload a document so the AI can reference it during this chat session."]
-        </small>
-    </div>
 </div>
 
 <script>
@@ -115,10 +142,17 @@
                 if (!response.ok) {
                     return;
                 }
+
+                const badge = document.getElementById("uploadedFileNameBadge");
+
+                if (badge) {
+                    badge.textContent = file.name;
+                    badge.classList.remove("d-none");
+                }
             } catch (error) {
                 console.debug("[CustomChat][Upload] Upload error:", error);
             } finally {
-                this.value = "";
+                this.value = badge;
             }
         });
     })();

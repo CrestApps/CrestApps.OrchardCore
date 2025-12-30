@@ -63,10 +63,6 @@ public sealed class CustomChatSettingsController : Controller
           .OrderByDescending(x => x.CreatedUtc)
           .ListAsync();
 
-        // I think this is wrong I dont think Mike would Load a content widget one by one
-        // what if we have 2,000 custom customChat instances
-        // the content customChat would be large data to pull
-        // is doing this by content ItemID slow or wrong?
         var customChat = new List<ContentItem>();
 
         foreach (var record in records)
