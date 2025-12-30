@@ -21,6 +21,7 @@ public class CustomChatHub : Hub<IAIChatHubClient>
 {
     private readonly IAICustomChatSessionManager _sessionManager;
     private readonly YesSqlSession _session;
+    // this change will break the singleRHub YesSqlSession
     private readonly IAICompletionService _completionService;
     private readonly IAICompletionContextBuilder _aICompletionContextBuilder;
     private readonly IContentManager _contentManager;
