@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Indexes;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
@@ -33,17 +34,26 @@ public sealed class Startup : StartupBase
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()
             .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionHandler>()
             .AddScoped<ISourceCatalog<ChatInteraction>, DefaultChatInteractionCatalog>()
-            .AddScoped<IDocumentTextExtractor, DefaultDocumentTextExtractor>()
             .AddIndexProvider<ChatInteractionIndexProvider>()
             .AddPermissionProvider<ChatInteractionPermissionProvider>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionToolsDisplayDriver>()
-            .AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>()
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
             .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatInteractionsAdminMenu>()
             .AddDataMigration<ChatInteractionMigrations>();
+    }
+}
+
+[Feature(AIConstants.Feature.ChatDocuments)]
+public sealed class DocumentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddDocumentTextExtractor<DefaultDocumentTextExtractor>()
+            .AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

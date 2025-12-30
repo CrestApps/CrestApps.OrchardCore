@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.9.34728.123
+# Visual Studio Version 18
+VisualStudioVersion = 18.1.11304.174 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}"
 EndProject
@@ -94,6 +94,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Recipes", "src\Modules\CrestApps.OrchardCore.Recipes\CrestApps.OrchardCore.Recipes.csproj", "{DE1D88FF-3F04-4620-9F83-7437447F4FC8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions", "src\Modules\CrestApps.OrchardCore.AI.Chat.Interactions\CrestApps.OrchardCore.AI.Chat.Interactions.csproj", "{A7EE7F53-ECD1-4752-9191-C52B7D73E0C0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions.Pdf", "src\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Pdf\CrestApps.OrchardCore.AI.Chat.Interactions.Pdf.csproj", "{BAE70115-40DC-4452-9F88-89DF44A8AB45}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml", "src\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml\CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml.csproj", "{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -513,6 +517,30 @@ Global
 		{A7EE7F53-ECD1-4752-9191-C52B7D73E0C0}.Release|x64.Build.0 = Release|Any CPU
 		{A7EE7F53-ECD1-4752-9191-C52B7D73E0C0}.Release|x86.ActiveCfg = Release|Any CPU
 		{A7EE7F53-ECD1-4752-9191-C52B7D73E0C0}.Release|x86.Build.0 = Release|Any CPU
+		{BAE70115-40DC-4452-9F88-89DF44A8AB45}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BAE70115-40DC-4452-9F88-89DF44A8AB45}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BAE70115-40DC-4452-9F88-89DF44A8AB45}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BAE70115-40DC-4452-9F88-89DF44A8AB45}.Debug|x64.Build.0 = Debug|Any CPU
+		{BAE70115-40DC-4452-9F88-89DF44A8AB45}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BAE70115-40DC-4452-9F88-89DF44A8AB45}.Debug|x86.Build.0 = Debug|Any CPU
+		{BAE70115-40DC-4452-9F88-89DF44A8AB45}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BAE70115-40DC-4452-9F88-89DF44A8AB45}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BAE70115-40DC-4452-9F88-89DF44A8AB45}.Release|x64.ActiveCfg = Release|Any CPU
+		{BAE70115-40DC-4452-9F88-89DF44A8AB45}.Release|x64.Build.0 = Release|Any CPU
+		{BAE70115-40DC-4452-9F88-89DF44A8AB45}.Release|x86.ActiveCfg = Release|Any CPU
+		{BAE70115-40DC-4452-9F88-89DF44A8AB45}.Release|x86.Build.0 = Release|Any CPU
+		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Debug|x64.Build.0 = Debug|Any CPU
+		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Debug|x86.Build.0 = Debug|Any CPU
+		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Release|x64.ActiveCfg = Release|Any CPU
+		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Release|x64.Build.0 = Release|Any CPU
+		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Release|x86.ActiveCfg = Release|Any CPU
+		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -552,6 +580,8 @@ Global
 		{778ECABA-481F-494F-887C-433EF577C650} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
 		{DE1D88FF-3F04-4620-9F83-7437447F4FC8} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{A7EE7F53-ECD1-4752-9191-C52B7D73E0C0} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{BAE70115-40DC-4452-9F88-89DF44A8AB45} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0E9F9B00-7078-4EA8-87A9-0B2E74375F1E}

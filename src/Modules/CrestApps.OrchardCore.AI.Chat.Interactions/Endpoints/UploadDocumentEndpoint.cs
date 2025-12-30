@@ -1,5 +1,6 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Services;
+using System.Text;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Endpoints;
 
@@ -28,7 +30,8 @@ internal static class UploadDocumentEndpoint
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         ISourceCatalogManager<ChatInteraction> interactionManager,
-        IDocumentTextExtractor textExtractor,
+        IEnumerable<IDocumentTextExtractor> textExtractors,
+        IOptions<DocumentTextExtractorOptions> extractorOptions,
         IDocumentEmbeddingService embeddingService,
         IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> providerOptions,
@@ -65,30 +68,45 @@ internal static class UploadDocumentEndpoint
         }
 
         // Check if file type is supported
-        if (!textExtractor.IsSupported(file.FileName, file.ContentType))
+        if (!extractorOptions.Value.AllowedFileExtensions.Contains(file.FileName))
         {
             return TypedResults.BadRequest(S["File type '{0}' is not supported. Please upload text-based files (TXT, CSV, MD, JSON, XML, HTML).", Path.GetExtension(file.FileName)].Value);
         }
 
-        // Extract text from document
-        string content;
-        using (var stream = file.OpenReadStream())
+        // Extract text from document.
+        var content = new StringBuilder();
+
+        if (textExtractors.Any())
         {
-            content = await textExtractor.ExtractAsync(stream, file.FileName, file.ContentType);
+            using var stream = file.OpenReadStream();
+
+            foreach (var textExtractor in textExtractors)
+            {
+                var text = await textExtractor.ExtractAsync(stream, file.FileName, file.ContentType);
+
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    continue;
+                }
+
+                content.AppendLine(text);
+            }
         }
 
-        if (string.IsNullOrWhiteSpace(content))
+        if (content.Length == 0)
         {
             return TypedResults.BadRequest(S["Could not extract text content from the document."].Value);
         }
 
+        var textContent = content.ToString();
+
         // Create document entry
         var document = new ChatInteractionDocument
         {
-            DocumentId = Guid.NewGuid().ToString("N"),
+            DocumentId = IdGenerator.GenerateId(),
             FileName = file.FileName,
             ContentType = file.ContentType,
-            Content = content,
+            Content = textContent,
             FileSize = file.Length,
             UploadedUtc = DateTime.UtcNow
         };
@@ -126,7 +144,7 @@ internal static class UploadDocumentEndpoint
                         interaction.ItemId,
                         document.DocumentId,
                         document.FileName,
-                        content,
+                        textContent,
                         providerName,
                         connectionName,
                         deploymentName);

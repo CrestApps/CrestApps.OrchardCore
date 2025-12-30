@@ -1,0 +1,145 @@
+using System.Text;
+using DocumentFormat.OpenXml.Drawing;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
+
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml;
+
+public sealed class OpenXmlDocumentTextExtractor : IDocumentTextExtractor
+{
+    private static readonly HashSet<string> _supportedExtensions =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".docx",
+            ".xlsx",
+            ".pptx",
+        };
+
+    public async Task<string> ExtractAsync(
+        Stream stream,
+        string fileName,
+        string contentType)
+    {
+        var extension = System.IO.Path.GetExtension(fileName);
+
+        if (!_supportedExtensions.Contains(extension))
+        {
+            return string.Empty;
+        }
+
+        return extension switch
+        {
+            ".docx" => await ExtractWordAsync(stream),
+            ".xlsx" => await ExtractExcelAsync(stream),
+            ".pptx" => await ExtractPowerPointAsync(stream),
+            _ => string.Empty
+        };
+    }
+
+    private static async Task<string> ExtractWordAsync(Stream stream)
+    {
+        return await Task.Run(() =>
+        {
+            using var memory = CopyToMemory(stream);
+            using var document = WordprocessingDocument.Open(memory, false);
+
+            var body = document.MainDocumentPart?.Document?.Body;
+            if (body == null) return string.Empty;
+
+            var sb = new StringBuilder();
+            foreach (var paragraph in body.Descendants<Paragraph>())
+            {
+                if (!string.IsNullOrWhiteSpace(paragraph.InnerText))
+                    sb.AppendLine(paragraph.InnerText);
+            }
+
+            return sb.ToString();
+        });
+    }
+
+    private static async Task<string> ExtractExcelAsync(Stream stream)
+    {
+        return await Task.Run(() =>
+        {
+            using var memory = CopyToMemory(stream);
+            using var document = SpreadsheetDocument.Open(memory, false);
+
+            var workbook = document.WorkbookPart;
+            if (workbook == null) return string.Empty;
+
+            var sharedStrings = workbook.SharedStringTablePart?.SharedStringTable;
+            var sb = new StringBuilder();
+
+            foreach (var sheet in workbook.WorksheetParts)
+            {
+                var data = sheet.Worksheet.GetFirstChild<SheetData>();
+                if (data == null) continue;
+
+                foreach (var row in data.Elements<Row>())
+                {
+                    var values = row.Elements<Cell>()
+                        .Select(c => GetCellValue(c, sharedStrings))
+                        .Where(v => !string.IsNullOrEmpty(v));
+
+                    if (values.Any())
+                        sb.AppendLine(string.Join("\t", values));
+                }
+
+                sb.AppendLine();
+            }
+
+            return sb.ToString();
+        });
+    }
+
+    private static async Task<string> ExtractPowerPointAsync(Stream stream)
+    {
+        return await Task.Run(() =>
+        {
+            using var memory = CopyToMemory(stream);
+            using var document = PresentationDocument.Open(memory, false);
+
+            var presentation = document.PresentationPart;
+            if (presentation == null) return string.Empty;
+
+            var sb = new StringBuilder();
+
+            foreach (var slide in presentation.SlideParts)
+            {
+                foreach (var text in slide.Slide.Descendants<DocumentFormat.OpenXml.Drawing.Text>())
+                {
+                    if (!string.IsNullOrWhiteSpace(text.Text))
+                        sb.AppendLine(text.Text);
+                }
+
+                sb.AppendLine();
+            }
+
+            return sb.ToString();
+        });
+    }
+
+    private static MemoryStream CopyToMemory(Stream stream)
+    {
+        var memory = new MemoryStream();
+        stream.CopyTo(memory);
+        memory.Position = 0;
+        return memory;
+    }
+
+    private static string GetCellValue(Cell cell, SharedStringTable table)
+    {
+        if (cell.CellValue == null)
+            return string.Empty;
+
+        var value = cell.CellValue.InnerText;
+
+        if (cell.DataType?.Value == CellValues.SharedString &&
+            int.TryParse(value, out var index))
+        {
+            return table?.ElementAtOrDefault(index)?.InnerText ?? value;
+        }
+
+        return value;
+    }
+}

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core.Handlers;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core;
@@ -115,6 +116,22 @@ public static class ServiceCollectionExtensions
             {
                 o.AddDataSource(profileSource, type, configure);
             });
+
+        return services;
+    }
+
+    public static IServiceCollection AddDocumentTextExtractor<T>(this IServiceCollection services, params string[] supportedExtensions)
+        where T : class, IDocumentTextExtractor
+    {
+        services.Configure<DocumentTextExtractorOptions>(options =>
+        {
+            foreach (var extension in supportedExtensions)
+            {
+                options.Add(extension);
+            }
+        });
+
+        services.AddScoped<IDocumentTextExtractor, T>();
 
         return services;
     }

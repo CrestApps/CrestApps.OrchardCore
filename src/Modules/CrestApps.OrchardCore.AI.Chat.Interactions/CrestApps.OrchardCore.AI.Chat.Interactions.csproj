@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
@@ -20,8 +20,6 @@
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
-    <PackageReference Include="DocumentFormat.OpenXml" />
-    <PackageReference Include="PdfPig" />
   </ItemGroup>
 
   <ItemGroup>

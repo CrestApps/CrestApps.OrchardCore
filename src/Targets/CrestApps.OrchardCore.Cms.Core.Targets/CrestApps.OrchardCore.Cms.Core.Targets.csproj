@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <!-- NuGet properties-->
@@ -14,6 +14,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Agent\CrestApps.OrchardCore.AI.Agent.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions\CrestApps.OrchardCore.AI.Chat.Interactions.csproj" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Pdf\CrestApps.OrchardCore.AI.Chat.Interactions.Pdf.csproj" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml\CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat\CrestApps.OrchardCore.AI.Chat.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Mcp\CrestApps.OrchardCore.AI.Mcp.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
