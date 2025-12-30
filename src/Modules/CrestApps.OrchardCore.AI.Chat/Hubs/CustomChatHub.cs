@@ -25,14 +25,14 @@ public class CustomChatHub : Hub<IAIChatHubClient>
     private readonly IAICompletionService _completionService;
     private readonly IAICompletionContextBuilder _aICompletionContextBuilder;
     private readonly IContentManager _contentManager;
-    private readonly CustomChatTempDocumentStore _docStore;
+    private readonly CustomChatDocumentStore _docStore;
     private readonly SessionDocumentRetriever _documentRetriever;
 
     protected readonly IStringLocalizer S;
 
     public CustomChatHub(
         SessionDocumentRetriever documentRetriever,
-        CustomChatTempDocumentStore docStore,
+        CustomChatDocumentStore docStore,
         IContentManager contentManager,
         IAICustomChatSessionManager sessionManager,
         YesSqlSession session,

@@ -232,7 +232,7 @@ public sealed class ToolsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<SessionDocumentRetriever>();
-        services.AddScoped<CustomChatTempDocumentStore>();
+        services.AddScoped<CustomChatDocumentStore>();
 
         services.AddScoped<IAICompletionContextBuilderHandler, ToolInstancesAICompletionContextBuilderHandler>();
         services.AddDisplayDriver<AIProfile, AIProfileToolInstancesDisplayDriver>();
@@ -243,21 +243,7 @@ public sealed class ToolsStartup : StartupBase
         services.AddPermissionProvider<AIToolPermissionProvider>();
 
         services.AddAIToolSource<ProfileAwareAIToolSource>(ProfileAwareAIToolSource.ToolSource);
-        // my tool below
-
         services.AddAIToolSource<DocumentReaderToolSource>(DocumentReaderToolSource.ToolSource);
-        services.AddDisplayDriver<AIToolInstance, DocumentReaderToolMetadataDisplayDriver>();
-
-        //services.AddAITool<DocumentReaderTool>(DocumentReaderToolSource.ToolSource, o =>
-        //{
-        //    o.Title = "Document Reader";
-        //    o.Description = "Reads uploaded documents in the current chat session.";
-        //    o.Category = "Documents";
-        //});
-
-
-
-        // my tool above
         services.AddScoped<IAICompletionServiceHandler, FunctionInstancesAICompletionServiceHandler>();
     }
 }

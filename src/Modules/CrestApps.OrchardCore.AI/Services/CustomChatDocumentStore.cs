@@ -3,11 +3,11 @@ using Microsoft.AspNetCore.Http;
 
 namespace CrestApps.OrchardCore.AI.Services;
 
-public sealed class CustomChatTempDocumentStore
+public sealed class CustomChatDocumentStore
 {
     private readonly string _root;
 
-    public CustomChatTempDocumentStore(IWebHostEnvironment env)
+    public CustomChatDocumentStore(IWebHostEnvironment env)
     {
         _root = Path.Combine(env.ContentRootPath, "App_Data", "CustomChat");
         Directory.CreateDirectory(_root);
@@ -15,13 +15,13 @@ public sealed class CustomChatTempDocumentStore
 
     public async Task<string> SaveAsync(string sessionId, IFormFile file, CancellationToken ct)
     {
-        var dir = Path.Combine(_root, sessionId);
+        var directoryPath = Path.Combine(_root, sessionId);
 
-        Directory.CreateDirectory(dir);
+        Directory.CreateDirectory(directoryPath);
 
         var fileId = Path.GetRandomFileName();
 
-        var path = Path.Combine(dir, fileId);
+        var path = Path.Combine(directoryPath, fileId);
 
         await using var fs = File.Create(path);
 

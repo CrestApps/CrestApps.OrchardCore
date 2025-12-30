@@ -9,9 +9,9 @@ namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 public sealed class CustomChatDocumentController : Controller
 {
     private readonly IAICustomChatSessionManager _sessionManager;
-    private readonly CustomChatTempDocumentStore _documentStore;
+    private readonly CustomChatDocumentStore _documentStore;
 
-    public CustomChatDocumentController(IAICustomChatSessionManager sessionManager, CustomChatTempDocumentStore documentStore)
+    public CustomChatDocumentController(IAICustomChatSessionManager sessionManager, CustomChatDocumentStore documentStore)
     {
         _sessionManager = sessionManager;
         _documentStore = documentStore;

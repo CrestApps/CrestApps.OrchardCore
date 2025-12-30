@@ -1,9 +1,7 @@
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
@@ -26,16 +24,6 @@ public sealed class AIChatSessionDisplayDriver : DisplayDriver<AIChatSession>
 
     public override async Task<IDisplayResult> EditAsync(AIChatSession session, BuildEditorContext context)
     {
-        if (context.IsNew)
-        {
-            return null;
-        }
-
-        if (session.As<AIChatInstanceMetadata>()?.IsCustomInstance == true)
-        {
-            return null;
-        }
-
         var profile = await _openAIChatProfileManager.FindByIdAsync(session.ProfileId);
 
         if (profile == null)

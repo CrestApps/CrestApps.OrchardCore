@@ -12,9 +12,7 @@ public sealed class DocumentReaderToolSource : IAIToolSource
 
     private readonly SessionDocumentRetriever _documentRetriever;
 
-    public DocumentReaderToolSource(
-        SessionDocumentRetriever documentRetriever,
-        IStringLocalizer<DocumentReaderToolSource> S)
+    public DocumentReaderToolSource(SessionDocumentRetriever documentRetriever, IStringLocalizer<DocumentReaderToolSource> S)
     {
         _documentRetriever = documentRetriever;
         DisplayName = S["Document Reader"];
@@ -31,8 +29,7 @@ public sealed class DocumentReaderToolSource : IAIToolSource
 
     public Task<AITool> CreateAsync(AIToolInstance instance)
     {
-        return Task.FromResult<AITool>(
-            new DocumentReaderFunction(instance, _documentRetriever));
+        return Task.FromResult<AITool>(new DocumentReaderFunction(instance, _documentRetriever));
     }
 
     private sealed class DocumentReaderFunction : AIFunction
@@ -43,6 +40,7 @@ public sealed class DocumentReaderToolSource : IAIToolSource
         public DocumentReaderFunction(AIToolInstance instance, SessionDocumentRetriever documentRetriever)
         {
             _documentRetriever = documentRetriever;
+
             _sessionId = instance.ItemId;
 
             Name = instance.ItemId;

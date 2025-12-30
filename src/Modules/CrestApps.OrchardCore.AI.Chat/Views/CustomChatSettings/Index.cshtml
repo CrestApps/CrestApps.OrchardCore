@@ -45,13 +45,6 @@
                 </div>
 
                 <div class="col-auto">
-                    @* <a asp-controller="CustomChatSettings"
-                       asp-action="Edit"
-                       asp-route-contentItemId="@item.ContentItemId"
-                       class="btn btn-outline-primary btn-sm">
-                        @T["Edit"]
-                    </a> *@
-
                     <form asp-controller="CustomChatSettings"
                           asp-action="Delete"
                           asp-route-contentItemId="@item.ContentItemId"

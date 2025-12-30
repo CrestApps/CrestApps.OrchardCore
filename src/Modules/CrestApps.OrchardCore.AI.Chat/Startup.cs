@@ -44,8 +44,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CustomChatPartIndexProvider>()
             .AddIndexProvider<CustomChatSessionIndexProvider>();
 
-        services.AddContentPart<CustomChatPart>()
-        .UseDisplayDriver<CustomChatDisplayDriver>();
+        services.AddContentPart<CustomChatPart>().UseDisplayDriver<CustomChatDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
