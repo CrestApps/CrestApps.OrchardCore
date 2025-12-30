@@ -1,10 +1,8 @@
 using System.Text;
 using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Presentation;
 using DocumentFormat.OpenXml.Spreadsheet;
 using DocumentFormat.OpenXml.Wordprocessing;
 using UglyToad.PdfPig;
-using UglyToad.PdfPig.Content;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 
@@ -168,7 +166,7 @@ public sealed class DefaultDocumentTextExtractor : IDocumentTextExtractor
                 using var document = PdfDocument.Open(memoryStream);
                 var sb = new StringBuilder();
 
-                foreach (Page page in document.GetPages())
+                foreach (var page in document.GetPages())
                 {
                     var text = page.Text;
                     if (!string.IsNullOrWhiteSpace(text))
@@ -213,7 +211,7 @@ public sealed class DefaultDocumentTextExtractor : IDocumentTextExtractor
                 }
 
                 var sb = new StringBuilder();
-                foreach (var paragraph in body.Descendants<DocumentFormat.OpenXml.Wordprocessing.Paragraph>())
+                foreach (var paragraph in body.Descendants<Paragraph>())
                 {
                     var text = paragraph.InnerText;
                     if (!string.IsNullOrWhiteSpace(text))
