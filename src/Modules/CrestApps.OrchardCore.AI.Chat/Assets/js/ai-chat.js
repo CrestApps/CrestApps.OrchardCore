@@ -83,12 +83,16 @@ window.openAIChatManager = function () {
                     audioSubject: null,
                     audioSubjectCompleted: false,
                     audioInvokePromise: null,
+                    isNavigatingAway: false,
                     stream: null,
                     messages: [],
                     prompt: ''
                 };
             },
             methods: {
+                handleBeforeUnload() {
+                    this.isNavigatingAway = true;
+                },
                 async startConnection() {
                     this.connection = new signalR.HubConnectionBuilder()
                         .withUrl(config.signalRHubUrl)
@@ -287,7 +291,10 @@ window.openAIChatManager = function () {
                                 this.streamingFinished();
 
                                 this.hideTypingIndicator();
-                                this.addMessage(this.getServiceDownMessage());
+
+                                if (!this.isNavigatingAway) {
+                                    this.addMessage(this.getServiceDownMessage());
+                                }
 
                                 this.stream?.dispose();
                                 this.stream = null;
@@ -800,11 +807,16 @@ window.openAIChatManager = function () {
                         this.initializeWidget();
                     }
                 })();
+
+                window.addEventListener('beforeunload', this.handleBeforeUnload);
             },
             beforeUnmount() {
                 if (this.isRecording) {
                     this.stopRecording();
                 }
+                
+                window.removeEventListener('beforeunload', this.handleBeforeUnload);
+
                 if (this.stream) {
                     this.stream.dispose();
                     this.stream = null;

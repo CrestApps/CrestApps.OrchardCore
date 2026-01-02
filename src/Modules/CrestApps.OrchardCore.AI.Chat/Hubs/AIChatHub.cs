@@ -14,7 +14,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
-using OrchardCore.Entities;
 using OrchardCore.Liquid;
 using YesSql;
 
@@ -350,6 +349,13 @@ public class AIChatHub : Hub<IAIChatHubClient>
         }
         catch (Exception ex)
         {
+            // Don't write error messages if the operation was cancelled (e.g., user navigated away).
+            if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
+            {
+                _logger.LogDebug("Chat prompt processing was cancelled.");
+                return;
+            }
+
             _logger.LogError(ex, "An error occurred while processing the chat prompt.");
 
             var errorMessage = new CompletionPartialMessage
@@ -474,34 +480,42 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         if (profile.TitleType == AISessionTitleType.Generated)
         {
-            var profileClone = profile.Clone();
-
-            profileClone.Alter<AIProfileMetadata>(m =>
-            {
-                m.SystemMessage = null;
-                m.MaxTokens = 64; // 64 token to generate about 255 characters.
-            });
-
-            var context = await _aICompletionContextBuilder.BuildAsync(profileClone, c =>
-            {
-                c.SystemMessage = AIConstants.TitleGeneratorSystemMessage;
-            });
-
-            var titleResponse = await _completionService.CompleteAsync(profile.Source,
-            [
-                new (ChatRole.User, userPrompt),
-            ], context);
-
-            // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
-            chatSession.Title = titleResponse.Messages.Count > 0
-                ? Str.Truncate(titleResponse.Messages.First().Text, 255)
-                : Str.Truncate(userPrompt, 255);
+            chatSession.Title = await GetGeneratedTitleAsync(profile, userPrompt);
         }
 
         if (string.IsNullOrEmpty(chatSession.Title))
         {
             chatSession.Title = Str.Truncate(userPrompt, 255);
         }
+    }
+
+    private async Task<string> GetGeneratedTitleAsync(AIProfile profile, string userPrompt)
+    {
+        var context = await _aICompletionContextBuilder.BuildAsync(profile, c =>
+        {
+            c.SystemMessage = AIConstants.TitleGeneratorSystemMessage;
+            c.FrequencyPenalty = 0;
+            c.PresencePenalty = 0;
+            c.TopP = 1;
+            c.Temperature = 0;
+            c.MaxTokens = 64; // 64 token to generate about 255 characters.
+            c.UserMarkdownInResponse = false;
+
+            // Avoid using tools or any data sources when generating title to reduce the used tokens.
+            c.DataSourceId = null;
+            c.DataSourceType = null;
+            c.DisableTools = true;
+        });
+
+        var titleResponse = await _completionService.CompleteAsync(profile.Source,
+        [
+            new (ChatRole.User, userPrompt),
+        ], context);
+
+        // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
+        return titleResponse.Messages.Count > 0
+            ? Str.Truncate(titleResponse.Messages.First().Text, 255)
+            : Str.Truncate(userPrompt, 255);
     }
 
     private async Task ProcessChatPromptAsync(ChannelWriter<CompletionPartialMessage> writer, AIProfile profile, string sessionId, string prompt, CancellationToken cancellationToken)

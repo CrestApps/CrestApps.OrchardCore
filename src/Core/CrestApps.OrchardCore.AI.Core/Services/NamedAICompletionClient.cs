@@ -44,8 +44,14 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
     protected abstract string ProviderName { get; }
 
+    [Obsolete("This method is obsolete and will be removed in future releases. Please use ConfigureChatOptionsAsync instead")]
     protected virtual void ConfigureChatOptions(ChatOptions options, string modelName)
     {
+    }
+
+    protected virtual ValueTask ConfigureChatOptionsAsync(CompletionServiceConfigureContext configureContext)
+    {
+        return ValueTask.CompletedTask;
     }
 
     protected virtual void ConfigureFunctionInvocation(FunctionInvokingChatClient client)
@@ -63,6 +69,14 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
     }
 
     protected virtual void ConfigureOpenTelemetry(OpenTelemetryChatClient client)
+    {
+    }
+
+    protected virtual void ProcessChatResponseUpdate(ChatResponseUpdate update, IEnumerable<ChatMessage> prompts)
+    {
+    }
+
+    protected virtual void ProcessChatResponse(ChatResponse response, IEnumerable<ChatMessage> prompts)
     {
     }
 
@@ -98,11 +112,15 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         {
             var chatClient = await BuildClientAsync(connectionName, context, deploymentName);
 
-            var chatOptions = await GetChatOptionsAsync(context, deploymentName);
-
             var prompts = GetPrompts(messages, context);
 
-            return await chatClient.GetResponseAsync(prompts, chatOptions, cancellationToken);
+            var chatOptions = await GetChatOptionsAsync(context, deploymentName, false);
+
+            var response = await chatClient.GetResponseAsync(prompts, chatOptions, cancellationToken);
+
+            ProcessChatResponse(response, prompts);
+
+            return response;
         }
         catch (Exception ex)
         {
@@ -142,12 +160,14 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         var chatClient = await BuildClientAsync(connectionName, context, deploymentName);
 
-        var chatOptions = await GetChatOptionsAsync(context, deploymentName);
+        var chatOptions = await GetChatOptionsAsync(context, deploymentName, true);
 
         var prompts = GetPrompts(messages, context);
 
         await foreach (var update in chatClient.GetStreamingResponseAsync(prompts, chatOptions, cancellationToken))
         {
+            ProcessChatResponseUpdate(update, prompts);
+
             yield return update;
         }
     }
@@ -179,7 +199,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         return prompts;
     }
 
-    private async Task<ChatOptions> GetChatOptionsAsync(AICompletionContext context, string deploymentName)
+    private async Task<ChatOptions> GetChatOptionsAsync(AICompletionContext context, string deploymentName, bool isStreaming)
     {
         var chatOptions = new ChatOptions()
         {
@@ -192,7 +212,13 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         var supportFunctions = SupportFunctionInvocation(context, deploymentName);
 
-        var configureContext = new CompletionServiceConfigureContext(chatOptions, context, supportFunctions);
+        var configureContext = new CompletionServiceConfigureContext(chatOptions, context, supportFunctions)
+        {
+            DeploymentName = deploymentName,
+            ProviderName = ProviderName,
+            ImplemenationName = Name,
+            IsStreaming = isStreaming,
+        };
 
         await _handlers.InvokeAsync((handler, ctx) => handler.ConfigureAsync(ctx), configureContext, Logger);
 
@@ -201,7 +227,11 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             chatOptions.Tools = null;
         }
 
+#pragma warning disable CS0618 // Type or member is obsolete
         ConfigureChatOptions(chatOptions, deploymentName);
+#pragma warning restore CS0618 // Type or member is obsolete
+
+        await ConfigureChatOptionsAsync(configureContext);
 
         return chatOptions;
     }
