@@ -7,11 +7,6 @@ namespace CrestApps.OrchardCore.AI;
 public interface IDocumentIndexHandler
 {
     /// <summary>
-    /// Gets the priority of this handler. Lower values run first.
-    /// </summary>
-    int Priority => 0;
-
-    /// <summary>
     /// Initializes the index if it doesn't exist.
     /// Called during application startup or when the feature is enabled.
     /// </summary>
@@ -53,46 +48,4 @@ public interface IDocumentIndexHandler
         float[] queryEmbedding,
         int topK = 5,
         CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// Context for document indexing operations.
-/// </summary>
-public sealed class DocumentIndexContext
-{
-    /// <summary>
-    /// Gets or sets the session/interaction identifier.
-    /// </summary>
-    public string SessionId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the document identifier.
-    /// </summary>
-    public string DocumentId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the original file name.
-    /// </summary>
-    public string FileName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the document chunks with embeddings.
-    /// </summary>
-    public IList<AI.Models.DocumentChunk> Chunks { get; set; } = [];
-}
-
-/// <summary>
-/// Represents a search result from the document index.
-/// </summary>
-public sealed class DocumentChunkSearchResult
-{
-    /// <summary>
-    /// Gets or sets the document chunk.
-    /// </summary>
-    public AI.Models.DocumentChunk Chunk { get; set; }
-
-    /// <summary>
-    /// Gets or sets the similarity score.
-    /// </summary>
-    public float Score { get; set; }
 }

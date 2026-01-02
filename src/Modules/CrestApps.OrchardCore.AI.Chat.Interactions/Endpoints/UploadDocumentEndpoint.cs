@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 
@@ -35,6 +36,7 @@ internal static class UploadDocumentEndpoint
         IDocumentEmbeddingService embeddingService,
         IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> providerOptions,
+        ILogger<Startup> logger,
         IStringLocalizer<Startup> S)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.EditChatInteractions))
@@ -67,8 +69,10 @@ internal static class UploadDocumentEndpoint
             return TypedResults.Forbid();
         }
 
+        var extension = Path.GetExtension(file.FileName);
+
         // Check if file type is supported
-        if (!extractorOptions.Value.AllowedFileExtensions.Contains(file.FileName))
+        if (!extractorOptions.Value.AllowedFileExtensions.Contains(extension))
         {
             return TypedResults.BadRequest(S["File type '{0}' is not supported. Please upload text-based files (TXT, CSV, MD, JSON, XML, HTML).", Path.GetExtension(file.FileName)].Value);
         }
@@ -151,10 +155,11 @@ internal static class UploadDocumentEndpoint
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
             // Embedding/indexing failure should not block document upload
             // The document is still saved in the interaction
+            logger.LogError(ex, "Failed to index uploaded document '{FileName}' for interaction '{ItemId}'.", document.FileName, interaction.ItemId);
         }
 
         return TypedResults.Ok(new

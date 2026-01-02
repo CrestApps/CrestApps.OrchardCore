@@ -20,8 +20,6 @@ public sealed class ElasticsearchDocumentIndexHandler : IDocumentIndexHandler
     private ElasticsearchClient _client;
     private bool _initialized;
 
-    public int Priority => 10;
-
     public ElasticsearchDocumentIndexHandler(
         IConfiguration configuration,
         ILogger<ElasticsearchDocumentIndexHandler> logger)

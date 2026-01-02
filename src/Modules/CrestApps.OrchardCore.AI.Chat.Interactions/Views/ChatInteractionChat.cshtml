@@ -80,7 +80,7 @@
 </style>
 
 <script asp-name="ChatInteractionApp" at="Foot"></script>
-<script>
+<script depends-on="ChatInteractionApp" at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
         chatInteractionManager.initialize({
             signalRHubUrl: '@(HubRouteManager.GetUriByHub<ChatInteractionHub>(ViewContext.HttpContext))',
