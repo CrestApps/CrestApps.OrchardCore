@@ -42,6 +42,13 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<ChatInteractionsAdminMenu>()
             .AddDataMigration<ChatInteractionMigrations>();
     }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        var hubRouteManager = serviceProvider.GetRequiredService<HubRouteManager>();
+
+        hubRouteManager.MapHub<ChatInteractionHub>(routes);
+    }
 }
 
 [Feature(AIConstants.Feature.ChatDocuments)]
@@ -56,10 +63,6 @@ public sealed class DocumentsStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        var hubRouteManager = serviceProvider.GetRequiredService<HubRouteManager>();
-
-        hubRouteManager.MapHub<ChatInteractionHub>(routes);
-
         routes
             .AddUploadDocumentEndpoint()
             .AddRemoveDocumentEndpoint();
