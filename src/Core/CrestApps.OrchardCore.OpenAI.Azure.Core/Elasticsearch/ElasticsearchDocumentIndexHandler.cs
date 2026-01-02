@@ -4,6 +4,7 @@ using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Mapping;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Search.Elasticsearch;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch;
 
@@ -27,6 +28,8 @@ public sealed class ElasticsearchDocumentIndexHandler : IDocumentIndexHandler
         _configuration = configuration;
         _logger = logger;
     }
+
+    public string Name => ElasticsearchConstants.ProviderName;
 
     public async Task InitializeIndexAsync(CancellationToken cancellationToken = default)
     {

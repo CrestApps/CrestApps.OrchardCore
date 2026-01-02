@@ -6,6 +6,8 @@ namespace CrestApps.OrchardCore.AI;
 /// </summary>
 public interface IDocumentIndexHandler
 {
+    string Name { get; }
+
     /// <summary>
     /// Initializes the index if it doesn't exist.
     /// Called during application startup or when the feature is enabled.

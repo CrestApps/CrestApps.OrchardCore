@@ -32,7 +32,7 @@ internal static class UploadDocumentEndpoint
         IHttpContextAccessor httpContextAccessor,
         ISourceCatalogManager<ChatInteraction> interactionManager,
         IEnumerable<IDocumentTextExtractor> textExtractors,
-        IOptions<DocumentTextExtractorOptions> extractorOptions,
+        IOptions<ChatInteractionsOptions> extractorOptions,
         IDocumentEmbeddingService embeddingService,
         IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> providerOptions,

@@ -1,6 +1,6 @@
 namespace CrestApps.OrchardCore.AI.Core.Models;
 
-public sealed class DocumentTextExtractorOptions
+public sealed class ChatInteractionsOptions
 {
     private readonly HashSet<string> _allowedFileExtensions = new(StringComparer.OrdinalIgnoreCase);
 

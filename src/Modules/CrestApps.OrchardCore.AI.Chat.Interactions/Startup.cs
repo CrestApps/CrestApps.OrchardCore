@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch;
 using CrestApps.OrchardCore.Services;
 using CrestApps.OrchardCore.SignalR.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -66,5 +67,15 @@ public sealed class DocumentsStartup : StartupBase
         routes
             .AddUploadDocumentEndpoint()
             .AddRemoveDocumentEndpoint();
+    }
+}
+
+[RequireFeatures("OrchardCore.Elasticsearch")]
+public sealed class ElasticsearchStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Register Elasticsearch document index handler for chat interaction document embeddings
+        services.AddScoped<IDocumentIndexHandler, ElasticsearchDocumentIndexHandler>();
     }
 }
