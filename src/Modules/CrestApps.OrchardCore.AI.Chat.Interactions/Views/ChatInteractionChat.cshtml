@@ -72,22 +72,24 @@
     }
 }
 
-<script asp-name="ChatInteractionApp" at="Foot"></script>
-<script at="Foot" depends-on="ChatInteractionApp">
-    chatInteractionManager.initialize({
-        signalRHubUrl: '@(HubRouteManager.GetUriByHub<ChatInteractionHub>(ViewContext.HttpContext))',
-        appElementSelector: '#@chatAppHtmlId',
-        chatContainerElementSelector: '#@chatContainerHtmlId',
-        inputElementSelector: '#@userPromptHtmlId',
-        sendButtonElementSelector: '#@buttonHtmlId',
-        placeholderElementSelector: '#@placeholderHtmlId',
-        messages: @Html.Raw(JsonSerializer.Serialize(prompts, JOptions.CamelCase))
-    });
-</script>
-
 <style at="Head">
     .chat-user-prompt-input:focus {
         border: none;
         box-shadow: none;
     }
 </style>
+
+<script asp-name="ChatInteractionApp" at="Foot"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        chatInteractionManager.initialize({
+            signalRHubUrl: '@(HubRouteManager.GetUriByHub<ChatInteractionHub>(ViewContext.HttpContext))',
+            appElementSelector: '#@chatAppHtmlId',
+            chatContainerElementSelector: '#@chatContainerHtmlId',
+            inputElementSelector: '#@userPromptHtmlId',
+            sendButtonElementSelector: '#@buttonHtmlId',
+            placeholderElementSelector: '#@placeholderHtmlId',
+            messages: @Html.Raw(JsonSerializer.Serialize(prompts ?? [], JOptions.CamelCase))
+        });
+    });
+</script>

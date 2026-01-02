@@ -27,7 +27,6 @@ using OrchardCore.Liquid;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes.Services;
-using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Users;
 using OrchardCore.Users.Handlers;
@@ -135,7 +134,7 @@ public sealed class AvatarStartup : StartupBase
 
         services.AddContentPart<UserAvatarPart>();
         services.AddScoped<IDisplayDriver<User>, UserAvatarPartDisplayDriver>();
-        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, AvatarResourceManagementOptionsConfiguration>();
+        services.AddResourceConfiguration<AvatarResourceManagementOptionsConfiguration>();
         services.Configure<MvcOptions>(options =>
         {
             options.Filters.Add<AvatarStylesFilter>();

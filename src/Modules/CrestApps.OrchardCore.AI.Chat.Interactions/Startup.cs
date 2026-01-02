@@ -15,13 +15,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions;
@@ -40,7 +38,7 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionToolsDisplayDriver>()
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
-            .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()
+            .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatInteractionsAdminMenu>()
             .AddDataMigration<ChatInteractionMigrations>();
     }
