@@ -72,8 +72,8 @@
     }
 }
 
-<script asp-name="ChatInteractionApp" at="Foot"></script>
-<script at="Foot" depends-on="ChatInteractionApp">
+<script asp-name="ChatInteractionApp"></script>
+<script depends-on="ChatInteractionApp">
     chatInteractionManager.initialize({
         signalRHubUrl: '@(HubRouteManager.GetUriByHub<ChatInteractionHub>(ViewContext.HttpContext))',
         appElementSelector: '#@chatAppHtmlId',

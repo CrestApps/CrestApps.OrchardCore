@@ -14,7 +14,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
         _manifest
             .DefineScript("ChatInteractionApp")
             .SetUrl("~/CrestApps.OrchardCore.AI.Chat.Interactions/scripts/chat-interaction.min.js", "~/CrestApps.OrchardCore.AI.Chat.Interactions/scripts/chat-interaction.js")
-            .SetDependencies("vuejs:3", "signalr", "marked")
+            .SetDependencies("vuejs:3", "signalr", "marked", "font-awesome")
             .SetVersion("1.0.0");
     }
 

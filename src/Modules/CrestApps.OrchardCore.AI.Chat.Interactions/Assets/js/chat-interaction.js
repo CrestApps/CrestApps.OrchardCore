@@ -89,7 +89,7 @@ window.chatInteractionManager = function () {
                     this.connection.on("LoadInteraction", (data) => {
                         this.initializeInteraction(data.itemId, true);
                         this.messages = [];
-                        
+
                         // Update the title field if it exists
                         const titleInput = document.querySelector('input[name="Title"]');
                         if (titleInput && data.title) {
@@ -407,7 +407,7 @@ window.chatInteractionManager = function () {
                     }
 
                     // Add event listeners for settings fields to save on change
-                    const settingsInputs = document.querySelectorAll('input[name="Title"], select[name="ConnectionName"], select[name="DeploymentId"], textarea[name="SystemMessage"], input[name="Temperature"], input[name="TopP"], input[name="FrequencyPenalty"], input[name="PresencePenalty"], input[name="MaxTokens"], input[name="PastMessagesCount"]');
+                    const settingsInputs = document.querySelectorAll('input[name="ChatInteraction.Title"], input[name="ChatInteraction.ConnectionName"], select[name="ChatInteraction.DeploymentId"], textarea[name="ChatInteraction.SystemMessage"], input[name="ChatInteraction.Temperature"], input[name="ChatInteraction.TopP"], input[name="ChatInteraction.FrequencyPenalty"], input[name="ChatInteraction.PresencePenalty"], input[name="ChatInteraction.MaxTokens"], input[name="ChatInteraction.PastMessagesCount"]');
                     settingsInputs.forEach(input => {
                         input.addEventListener('blur', () => this.saveSettings());
                         // Also save on change for select elements
@@ -425,16 +425,16 @@ window.chatInteractionManager = function () {
                         return;
                     }
 
-                    const titleInput = document.querySelector('input[name="Title"]');
-                    const connectionNameInput = document.querySelector('select[name="ConnectionName"]');
-                    const deploymentIdInput = document.querySelector('select[name="DeploymentId"]');
-                    const systemMessageInput = document.querySelector('textarea[name="SystemMessage"]');
-                    const temperatureInput = document.querySelector('input[name="Temperature"]');
-                    const topPInput = document.querySelector('input[name="TopP"]');
-                    const frequencyPenaltyInput = document.querySelector('input[name="FrequencyPenalty"]');
-                    const presencePenaltyInput = document.querySelector('input[name="PresencePenalty"]');
-                    const maxTokensInput = document.querySelector('input[name="MaxTokens"]');
-                    const pastMessagesCountInput = document.querySelector('input[name="PastMessagesCount"]');
+                    const titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
+                    const connectionNameInput = document.querySelector('input[name="ChatInteraction.ConnectionName"]');
+                    const deploymentIdInput = document.querySelector('select[name="ChatInteraction.DeploymentId"]');
+                    const systemMessageInput = document.querySelector('textarea[name="ChatInteraction.SystemMessage"]');
+                    const temperatureInput = document.querySelector('input[name="ChatInteraction.Temperature"]');
+                    const topPInput = document.querySelector('input[name="ChatInteraction.TopP"]');
+                    const frequencyPenaltyInput = document.querySelector('input[name="ChatInteraction.FrequencyPenalty"]');
+                    const presencePenaltyInput = document.querySelector('input[name="ChatInteraction.PresencePenalty"]');
+                    const maxTokensInput = document.querySelector('input[name="ChatInteraction.MaxTokens"]');
+                    const pastMessagesCountInput = document.querySelector('input[name="ChatInteraction.PastMessagesCount"]');
 
                     const settings = {
                         title: titleInput?.value || 'Untitled',
