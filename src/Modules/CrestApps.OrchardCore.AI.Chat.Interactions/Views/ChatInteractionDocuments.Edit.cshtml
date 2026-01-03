@@ -28,7 +28,7 @@ else if (!Model.HasEmbeddingSearchService)
 <div class="mb-3">
     <label class="form-label">
         @T["Top N Results"]
-        <span class="text-muted" data-bs-toggle="tooltip" title="@T["The number of top matching document chunks to include as context for the AI model. Higher values provide more context but may increase costs and response time."]">
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["The number of top matching document chunks to include as context for the AI model. Higher values provide more context but may increase costs and response time."]" aria-label="@T["Help: Top N Results explanation"]">
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
     </label>
@@ -39,7 +39,7 @@ else if (!Model.HasEmbeddingSearchService)
 <div class="mb-3">
     <label class="form-label">
         @T["Attached Documents"]
-        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Upload documents (PDF, Word, Excel, TXT, etc.) to chat against your own data. The content will be extracted and used as context for AI responses."]">
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Upload documents (PDF, Word, Excel, TXT, etc.) to chat against your own data. The content will be extracted and used as context for AI responses."]" aria-label="@T["Help: Attached Documents explanation"]">
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
     </label>
@@ -271,13 +271,11 @@ else if (!Model.HasEmbeddingSearchService)
             const failCount = result.failed ? result.failed.length : 0;
             
             if (failCount === 0 && successCount > 0) {
-                statusText.textContent = successCount === 1 
-                    ? '@T["1 file uploaded successfully"]'
-                    : successCount + ' @T["files uploaded successfully"]';
+                statusText.textContent = '@T["Upload complete"]' + ': ' + successCount + ' @T["file(s)"]';
                 statusText.classList.remove('text-danger', 'text-warning');
                 statusText.classList.add('text-success');
             } else if (successCount > 0 && failCount > 0) {
-                statusText.textContent = successCount + ' @T["uploaded"]' + ', ' + failCount + ' @T["failed"]';
+                statusText.textContent = '@T["Partial success"]' + ': ' + successCount + ' @T["succeeded"]' + ', ' + failCount + ' @T["failed"]';
                 statusText.classList.remove('text-success', 'text-danger');
                 statusText.classList.add('text-warning');
             } else if (failCount > 0) {

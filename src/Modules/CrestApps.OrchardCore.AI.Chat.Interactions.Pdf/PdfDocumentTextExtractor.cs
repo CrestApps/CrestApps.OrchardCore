@@ -16,7 +16,7 @@ public sealed class PdfDocumentTextExtractor : IDocumentTextExtractor
             return Task.FromResult(string.Empty);
         }
 
-        if (!extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase) &&
+        if (!extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(contentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
         {
             return Task.FromResult(string.Empty);

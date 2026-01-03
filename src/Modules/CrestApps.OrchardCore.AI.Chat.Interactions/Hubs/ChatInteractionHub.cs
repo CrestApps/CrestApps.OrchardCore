@@ -230,7 +230,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             if (!string.IsNullOrEmpty(documentContext))
             {
                 // Prepend document context to the system message
-                var contextPrefix = "The following is relevant context from uploaded documents. Use this information to answer the user's question:\n\n" + documentContext + "\n\n";
+                var contextPrefix = S["The following is relevant context from uploaded documents. Use this information to answer the user's question:"].Value + "\n\n" + documentContext + "\n\n";
                 systemMessage = contextPrefix + systemMessage;
             }
 
