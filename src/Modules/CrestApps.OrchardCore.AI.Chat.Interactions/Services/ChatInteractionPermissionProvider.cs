@@ -9,6 +9,7 @@ internal sealed class ChatInteractionPermissionProvider : IPermissionProvider
     private readonly IEnumerable<Permission> _allPermissions =
     [
         AIPermissions.ListChatInteractions,
+        AIPermissions.ManageChatInteractionSettings,
         AIPermissions.ListChatInteractionsForOthers,
         AIPermissions.DeleteChatInteraction,
         AIPermissions.DeleteOwnChatInteraction,

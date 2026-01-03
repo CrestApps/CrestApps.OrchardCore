@@ -8,11 +8,16 @@ public sealed class PdfDocumentTextExtractor : IDocumentTextExtractor
     public async Task<string> ExtractAsync(
         Stream stream,
         string fileName,
-        string contentType)
+        string extension,
+        string contentType
+        )
     {
-        var extension = Path.GetExtension(fileName);
+        if (stream is null || stream.Length == 0 || string.IsNullOrEmpty(extension) || string.IsNullOrEmpty(contentType))
+        {
+            return string.Empty;
+        }
 
-        if (!extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase) &&
+        if (!extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase) ||
             !string.Equals(contentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
         {
             return string.Empty;

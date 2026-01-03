@@ -7,27 +7,19 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml;
 
 public sealed class OpenXmlDocumentTextExtractor : IDocumentTextExtractor
 {
-    private static readonly HashSet<string> _supportedExtensions =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ".docx",
-            ".xlsx",
-            ".pptx",
-        };
-
     public async Task<string> ExtractAsync(
         Stream stream,
         string fileName,
-        string contentType)
+        string extension,
+        string contentType
+        )
     {
-        var extension = System.IO.Path.GetExtension(fileName);
-
-        if (!_supportedExtensions.Contains(extension))
+        if (stream is null || stream.Length == 0 || string.IsNullOrEmpty(extension))
         {
             return string.Empty;
         }
 
-        return extension switch
+        return extension.ToLowerInvariant() switch
         {
             ".docx" => await ExtractWordAsync(stream),
             ".xlsx" => await ExtractExcelAsync(stream),
@@ -44,7 +36,11 @@ public sealed class OpenXmlDocumentTextExtractor : IDocumentTextExtractor
             using var document = WordprocessingDocument.Open(memory, false);
 
             var body = document.MainDocumentPart?.Document?.Body;
-            if (body == null) return string.Empty;
+
+            if (body == null)
+            {
+                return string.Empty;
+            }
 
             var sb = new StringBuilder();
             foreach (var paragraph in body.Descendants<Paragraph>())

@@ -14,11 +14,16 @@ public sealed class DefaultDocumentTextExtractor : IDocumentTextExtractor
     public async Task<string> ExtractAsync(
         Stream stream,
         string fileName,
-        string contentType)
+        string extension,
+        string contentType
+        )
     {
-        var extension = Path.GetExtension(fileName);
+        if (stream is null || stream.Length == 0 || string.IsNullOrEmpty(extension))
+        {
+            return string.Empty;
+        }
 
-        if (!_supportedExtensions.Contains(extension) &&
+        if (!_supportedExtensions.Contains(extension) ||
             contentType?.StartsWith("text/", StringComparison.OrdinalIgnoreCase) != true)
         {
             return string.Empty;

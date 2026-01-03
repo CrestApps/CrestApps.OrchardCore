@@ -9,18 +9,21 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch;
 using CrestApps.OrchardCore.Services;
 using CrestApps.OrchardCore.SignalR.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Indexing;
+using OrchardCore.Indexing.Core;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Search.Elasticsearch;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions;
@@ -59,7 +62,15 @@ public sealed class DocumentsStartup : StartupBase
     {
         services
             .AddDocumentTextExtractor<DefaultDocumentTextExtractor>()
-            .AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>();
+            .AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>()
+            .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
+            .AddNavigationProvider<ChatInteractionDocumentsAdminMenu>();
+
+        // Add Indexing Services.
+        services.AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionIndexingHandler>()
+            .AddScoped<ChatInteractionIndexingService>()
+            .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionHandler>()
+            .AddIndexProfileHandler<ChatInteractionIndexProfileHandler>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -70,12 +81,27 @@ public sealed class DocumentsStartup : StartupBase
     }
 }
 
-[RequireFeatures("OrchardCore.Elasticsearch")]
+[RequireFeatures(AIConstants.Feature.ChatDocuments, "OrchardCore.Search.Elasticsearch")]
 public sealed class ElasticsearchStartup : StartupBase
 {
+    internal readonly IStringLocalizer S;
+
+    public ElasticsearchStartup(IStringLocalizer<ElasticsearchStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddIndexProfileHandler<ChatInteractionElasticsearchIndexProfileHandler>();
+
         // Register Elasticsearch document index handler for chat interaction document embeddings
-        services.AddScoped<IDocumentIndexHandler, ElasticsearchDocumentIndexHandler>();
+        services.AddScoped<IDocumentIndexHandler, ChatInteractionDocumentIndexHandler>();
+
+        services.AddElasticsearchIndexingSource(ChatInteractionsConstants.IndexingTaskType, o =>
+        {
+            o.DisplayName = S["Chat Interaction Documents (Elasticsearch)"];
+            o.Description = S["Create an Elasticsearch index for chat interaction documents."];
+        });
     }
 }

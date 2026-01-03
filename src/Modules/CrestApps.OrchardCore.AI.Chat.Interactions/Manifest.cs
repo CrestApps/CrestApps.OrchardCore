@@ -33,5 +33,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AIConstants.Feature.ChatInteractions,
+        "OrchardCore.Indexing",
     ]
 )]

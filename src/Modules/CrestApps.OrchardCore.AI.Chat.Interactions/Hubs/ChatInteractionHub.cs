@@ -202,6 +202,16 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             var builder = new StringBuilder();
 
+            // TODO: if interaction.Documents.Count > 0, we need to embed the prompt, search for relevant documents, and add them as system prompts as context
+            // to ensure that the model has the necessary context to answer the user's query accurately.
+            // Use ISiteService to get the InteractionDocumentSettings and find out the index Profile Name to use for embedding and searching.
+            // If there is no index profile name, we can skip this step but log a warning so that the site owner knows that documents won't be used for context.
+            // IIndexProfileStore should be used to find the index we should query.
+            // Then introduce a new interface for searching using embedding. For example in Orchard Core we have multiple implementation of ISearchService
+            // which we register by key and resolve it like this var searchService = _serviceProvider.GetKeyedService<ISearchService>(indexProfile.ProviderName);
+            // The same patten can be used to register service for the provides that support embedding. an Ideas is IEmbeddingSearchService where
+            // We can add Elasticsearch implementation and register it like this services.AddKeyedScoped<IEmbeddingSearchService, ElasticsearchEmbeddingSearchService>(ElasticsearchConstants.ProviderName).
+
             var completionContext = new AICompletionContext
             {
                 ConnectionName = interaction.ConnectionName,

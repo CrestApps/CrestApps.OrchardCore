@@ -1,0 +1,15 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using OrchardCore
+
+@model InteractionDocumentSettingsViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="IndexProfileName" class="@Orchard.GetLabelClasses()">@T["Index profile"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="IndexProfileName" asp-items="Model.IndexProfiles" class="form-select">
+            <option value="">@T["Select a profile"]</option>
+        </select>
+        <span class="hint">@T["The index profile used to index documents for chat interactions."]</span>
+    </div>
+</div>
+

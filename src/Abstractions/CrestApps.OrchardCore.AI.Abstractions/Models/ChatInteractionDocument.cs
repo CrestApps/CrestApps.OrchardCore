@@ -35,4 +35,6 @@ public sealed class ChatInteractionDocument
     /// Gets or sets the UTC date and time when the document was uploaded.
     /// </summary>
     public DateTime UploadedUtc { get; set; }
+
+    public List<DocumentChunk> ContentChunks { get; set; }
 }

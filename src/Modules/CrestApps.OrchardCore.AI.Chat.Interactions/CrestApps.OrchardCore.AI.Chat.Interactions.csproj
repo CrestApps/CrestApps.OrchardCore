@@ -21,6 +21,7 @@
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.ResourceManagement" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

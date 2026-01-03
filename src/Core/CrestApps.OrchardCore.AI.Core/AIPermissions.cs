@@ -20,6 +20,8 @@ public static class AIPermissions
 
     public static readonly Permission DeleteAllChatSessions = new("DeleteAllChatSessions", "Delete all chat sessions");
 
+    public static readonly Permission ManageChatInteractionSettings = new("ManageChatInteractionSettings", "Manage chat interaction settings");
+
     public static readonly Permission ListChatInteractionsForOthers = new("ListChatInteractionsForOthers", "List chat interactions for others");
 
     public static readonly Permission ListChatInteractions = new("ListChatInteractions", "List chat interactions", [ListChatInteractionsForOthers]);
