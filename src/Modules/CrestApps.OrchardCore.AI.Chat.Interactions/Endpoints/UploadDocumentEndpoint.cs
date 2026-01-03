@@ -52,16 +52,26 @@ internal static class UploadDocumentEndpoint
 
         var form = await request.ReadFormAsync();
         var itemId = form["itemId"].ToString();
-        var file = form.Files.GetFile("file");
+        var files = form.Files.GetFiles("files");
+
+        // For backward compatibility, also support single file upload
+        if (!files.Any())
+        {
+            var singleFile = form.Files.GetFile("file");
+            if (singleFile != null)
+            {
+                files = new FormFileCollection { singleFile };
+            }
+        }
 
         if (string.IsNullOrEmpty(itemId))
         {
             return TypedResults.BadRequest("Item ID is required.");
         }
 
-        if (file == null || file.Length == 0)
+        if (!files.Any())
         {
-            return TypedResults.BadRequest("No file uploaded.");
+            return TypedResults.BadRequest("No files uploaded.");
         }
 
         var interaction = await interactionManager.FindByIdAsync(itemId);
@@ -73,14 +83,6 @@ internal static class UploadDocumentEndpoint
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.EditChatInteractions, interaction))
         {
             return TypedResults.Forbid();
-        }
-
-        var extension = Path.GetExtension(file.FileName);
-
-        // Check if file type is supported
-        if (!extractorOptions.Value.AllowedFileExtensions.Contains(extension))
-        {
-            return TypedResults.BadRequest(S["File type '{0}' is not supported. Please upload text-based files (TXT, CSV, MD, JSON, XML, HTML).", Path.GetExtension(file.FileName)].Value);
         }
 
         var providerName = interaction.Source;
@@ -103,7 +105,7 @@ internal static class UploadDocumentEndpoint
 
         if (string.IsNullOrEmpty(deploymentName))
         {
-            logger.LogError("Unable to find Embedding Deployment Name for the");
+            logger.LogError("Unable to find Embedding Deployment Name for the provider {Provider}", providerName);
 
             return TypedResults.InternalServerError();
         }
@@ -118,77 +120,126 @@ internal static class UploadDocumentEndpoint
             return TypedResults.InternalServerError();
         }
 
-        // Extract text from document.
-        var content = new StringBuilder();
+        var now = clock.UtcNow;
+        interaction.Documents ??= [];
 
-        if (textExtractors.Any())
+        var uploadedDocuments = new List<object>();
+        var failedFiles = new List<object>();
+
+        foreach (var file in files)
         {
-            using var stream = file.OpenReadStream();
-
-            foreach (var textExtractor in textExtractors)
+            if (file == null || file.Length == 0)
             {
-                stream.Seek(0, SeekOrigin.Begin);
+                continue;
+            }
 
-                var extractedContent = await textExtractor.ExtractAsync(stream, file.FileName, file.ContentType, Path.GetExtension(file.FileName));
+            var extension = Path.GetExtension(file.FileName);
 
-                if (string.IsNullOrWhiteSpace(extractedContent))
+            // Check if file type is supported
+            if (!extractorOptions.Value.AllowedFileExtensions.Contains(extension))
+            {
+                failedFiles.Add(new
                 {
+                    fileName = file.FileName,
+                    error = S["File type '{0}' is not supported.", extension].Value
+                });
+                continue;
+            }
+
+            try
+            {
+                // Extract text from document.
+                var content = new StringBuilder();
+
+                if (textExtractors.Any())
+                {
+                    using var stream = file.OpenReadStream();
+
+                    foreach (var textExtractor in textExtractors)
+                    {
+                        stream.Seek(0, SeekOrigin.Begin);
+
+                        var extractedContent = await textExtractor.ExtractAsync(stream, file.FileName, file.ContentType, extension);
+
+                        if (string.IsNullOrWhiteSpace(extractedContent))
+                        {
+                            continue;
+                        }
+
+                        content.AppendLine(extractedContent);
+                    }
+                }
+
+                if (content.Length == 0)
+                {
+                    failedFiles.Add(new
+                    {
+                        fileName = file.FileName,
+                        error = S["Could not extract text content from the document."].Value
+                    });
                     continue;
                 }
 
-                content.AppendLine(extractedContent);
-            }
-        }
+                var text = content.ToString();
 
-        if (content.Length == 0)
-        {
-            return TypedResults.BadRequest(S["Could not extract text content from the document."].Value);
-        }
-
-        var now = clock.UtcNow;
-
-        var text = content.ToString();
-
-        interaction.Documents ??= [];
-
-        var document = new ChatInteractionDocument
-        {
-            DocumentId = $"{interaction.ItemId}_{interaction.DocumentIndex++}",
-            FileName = file.FileName,
-            ContentType = file.ContentType,
-            FileSize = file.Length,
-            Content = text,
-            UploadedUtc = now,
-            ContentChunks = [],
-        };
-
-        var textChunks = ChunkText(text);
-
-        if (textChunks.Count > 0)
-        {
-            var embedding = await embeddingGenerator.GenerateAsync(textChunks);
-
-            for (var i = 0; i < textChunks.Count; i++)
-            {
-                document.ContentChunks.Add(new DocumentChunk
+                var document = new ChatInteractionDocument
                 {
-                    Content = textChunks[i],
-                    Embedding = embedding[i].Vector.ToArray(),
-                    Index = i,
+                    DocumentId = $"{interaction.ItemId}_{interaction.DocumentIndex++}",
+                    FileName = file.FileName,
+                    ContentType = file.ContentType,
+                    FileSize = file.Length,
+                    Content = text,
+                    UploadedUtc = now,
+                    ContentChunks = [],
+                };
+
+                var textChunks = ChunkText(text);
+
+                if (textChunks.Count > 0)
+                {
+                    var embedding = await embeddingGenerator.GenerateAsync(textChunks);
+
+                    for (var i = 0; i < textChunks.Count; i++)
+                    {
+                        document.ContentChunks.Add(new DocumentChunk
+                        {
+                            Content = textChunks[i],
+                            Embedding = embedding[i].Vector.ToArray(),
+                            Index = i,
+                        });
+                    }
+                }
+
+                interaction.Documents.Add(document);
+
+                uploadedDocuments.Add(new
+                {
+                    documentId = document.DocumentId,
+                    fileName = document.FileName,
+                    fileSize = document.FileSize,
+                    uploadedUtc = document.UploadedUtc,
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to process file {FileName}", file.FileName);
+                failedFiles.Add(new
+                {
+                    fileName = file.FileName,
+                    error = S["Failed to process file."].Value
                 });
             }
         }
 
-        interaction.Documents.Add(document);
-
-        await interactionManager.UpdateAsync(interaction);
+        if (uploadedDocuments.Count > 0)
+        {
+            await interactionManager.UpdateAsync(interaction);
+        }
 
         return TypedResults.Ok(new
         {
-            documentId = document.DocumentId,
-            fileName = document.FileName,
-            fileSize = document.FileSize,
-            uploadedUtc = document.UploadedUtc,
+            uploaded = uploadedDocuments,
+            failed = failedFiles,
         });
     }
 

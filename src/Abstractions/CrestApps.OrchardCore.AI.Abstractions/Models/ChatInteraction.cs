@@ -74,6 +74,12 @@ public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
     public int? PastMessagesCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of top matching document chunks to include in AI context.
+    /// Default is 3 if not specified.
+    /// </summary>
+    public int? DocumentTopN { get; set; }
+
+    /// <summary>
     /// Gets or sets the list of AI tool names to use.
     /// </summary>
     public IList<string> ToolNames { get; set; } = [];

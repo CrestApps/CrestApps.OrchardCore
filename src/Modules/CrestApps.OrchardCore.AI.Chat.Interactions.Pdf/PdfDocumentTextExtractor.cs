@@ -5,50 +5,48 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Pdf;
 
 public sealed class PdfDocumentTextExtractor : IDocumentTextExtractor
 {
-    public async Task<string> ExtractAsync(
+    public Task<string> ExtractAsync(
         Stream stream,
         string fileName,
         string extension,
-        string contentType
-        )
+        string contentType)
     {
         if (stream is null || stream.Length == 0 || string.IsNullOrEmpty(extension) || string.IsNullOrEmpty(contentType))
         {
-            return string.Empty;
+            return Task.FromResult(string.Empty);
         }
 
-        if (!extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase) ||
+        if (!extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(contentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
         {
-            return string.Empty;
+            return Task.FromResult(string.Empty);
         }
 
-        return await Task.Run(() =>
+        try
         {
-            try
+            // PdfPig is CPU-bound synchronous code. Since extraction is typically fast
+            // and we're already in an async context, we extract synchronously.
+            using var memory = new MemoryStream();
+            stream.CopyTo(memory);
+            memory.Position = 0;
+
+            using var document = PdfDocument.Open(memory);
+            var sb = new StringBuilder();
+
+            foreach (var page in document.GetPages())
             {
-                using var memory = new MemoryStream();
-                stream.CopyTo(memory);
-                memory.Position = 0;
-
-                using var document = PdfDocument.Open(memory);
-                var sb = new StringBuilder();
-
-                foreach (var page in document.GetPages())
+                if (!string.IsNullOrWhiteSpace(page.Text))
                 {
-                    if (!string.IsNullOrWhiteSpace(page.Text))
-                    {
-                        sb.AppendLine(page.Text);
-                        sb.AppendLine();
-                    }
+                    sb.AppendLine(page.Text);
+                    sb.AppendLine();
                 }
+            }
 
-                return sb.ToString();
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        });
+            return Task.FromResult(sb.ToString());
+        }
+        catch
+        {
+            return Task.FromResult(string.Empty);
+        }
     }
 }

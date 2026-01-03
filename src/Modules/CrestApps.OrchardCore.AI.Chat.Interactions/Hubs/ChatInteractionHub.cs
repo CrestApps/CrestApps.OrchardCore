@@ -1,5 +1,7 @@
 using System.Text;
 using System.Threading.Channels;
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -9,9 +11,13 @@ using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore;
+using OrchardCore.Indexing;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
@@ -20,6 +26,11 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private readonly IAuthorizationService _authorizationService;
     private readonly ISourceCatalogManager<ChatInteraction> _interactionManager;
     private readonly IAICompletionService _completionService;
+    private readonly ISiteService _siteService;
+    private readonly IIndexProfileStore _indexProfileStore;
+    private readonly IAIClientFactory _aIClientFactory;
+    private readonly IOptions<AIProviderOptions> _providerOptions;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ChatInteractionHub> _logger;
 
     protected readonly IStringLocalizer S;
@@ -28,12 +39,22 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         IAuthorizationService authorizationService,
         ISourceCatalogManager<ChatInteraction> interactionManager,
         IAICompletionService completionService,
+        ISiteService siteService,
+        IIndexProfileStore indexProfileStore,
+        IAIClientFactory aIClientFactory,
+        IOptions<AIProviderOptions> providerOptions,
+        IServiceProvider serviceProvider,
         ILogger<ChatInteractionHub> logger,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
     {
         _authorizationService = authorizationService;
         _interactionManager = interactionManager;
         _completionService = completionService;
+        _siteService = siteService;
+        _indexProfileStore = indexProfileStore;
+        _aIClientFactory = aIClientFactory;
+        _providerOptions = providerOptions;
+        _serviceProvider = serviceProvider;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -202,21 +223,22 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             var builder = new StringBuilder();
 
-            // TODO: if interaction.Documents.Count > 0, we need to embed the prompt, search for relevant documents, and add them as system prompts as context
-            // to ensure that the model has the necessary context to answer the user's query accurately.
-            // Use ISiteService to get the InteractionDocumentSettings and find out the index Profile Name to use for embedding and searching.
-            // If there is no index profile name, we can skip this step but log a warning so that the site owner knows that documents won't be used for context.
-            // IIndexProfileStore should be used to find the index we should query.
-            // Then introduce a new interface for searching using embedding. For example in Orchard Core we have multiple implementation of ISearchService
-            // which we register by key and resolve it like this var searchService = _serviceProvider.GetKeyedService<ISearchService>(indexProfile.ProviderName);
-            // The same patten can be used to register service for the provides that support embedding. an Ideas is IEmbeddingSearchService where
-            // We can add Elasticsearch implementation and register it like this services.AddKeyedScoped<IEmbeddingSearchService, ElasticsearchEmbeddingSearchService>(ElasticsearchConstants.ProviderName).
+            // Retrieve document context for RAG if documents are attached
+            var documentContext = await GetDocumentContextAsync(interaction, prompt, cancellationToken);
+
+            var systemMessage = interaction.SystemMessage ?? string.Empty;
+            if (!string.IsNullOrEmpty(documentContext))
+            {
+                // Prepend document context to the system message
+                var contextPrefix = "The following is relevant context from uploaded documents. Use this information to answer the user's question:\n\n" + documentContext + "\n\n";
+                systemMessage = contextPrefix + systemMessage;
+            }
 
             var completionContext = new AICompletionContext
             {
                 ConnectionName = interaction.ConnectionName,
                 DeploymentId = interaction.DeploymentId,
-                SystemMessage = interaction.SystemMessage,
+                SystemMessage = systemMessage,
                 Temperature = interaction.Temperature,
                 TopP = interaction.TopP,
                 FrequencyPenalty = interaction.FrequencyPenalty,
@@ -338,5 +360,127 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         }
 
         return S["Our service is currently unavailable. Please try again later."];
+    }
+
+    /// <summary>
+    /// Retrieves relevant document context for RAG by embedding the user prompt and searching for similar chunks.
+    /// </summary>
+    private async Task<string> GetDocumentContextAsync(ChatInteraction interaction, string prompt, CancellationToken cancellationToken)
+    {
+        // Check if there are documents attached
+        if (interaction.Documents == null || interaction.Documents.Count == 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            // Get the document settings to find the index profile
+            var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
+
+            if (string.IsNullOrEmpty(settings.IndexProfileName))
+            {
+                _logger.LogWarning("Documents are attached but no index profile is configured. Document context will not be used.");
+                return null;
+            }
+
+            // Find the index profile
+            var indexProfile = await _indexProfileStore.FindByNameAsync(settings.IndexProfileName);
+
+            if (indexProfile == null)
+            {
+                _logger.LogWarning("Index profile '{IndexProfileName}' not found. Document context will not be used.", settings.IndexProfileName);
+                return null;
+            }
+
+            // Get the embedding search service for this provider
+            var searchService = _serviceProvider.GetKeyedService<IEmbeddingSearchService>(indexProfile.ProviderName);
+
+            if (searchService == null)
+            {
+                _logger.LogWarning("No embedding search service registered for provider '{ProviderName}'. Document context will not be used.", indexProfile.ProviderName);
+                return null;
+            }
+
+            // Get embedding for the user's prompt
+            var providerName = interaction.Source;
+            var connectionName = interaction.ConnectionName;
+            string deploymentName = null;
+
+            if (_providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
+            {
+                if (string.IsNullOrEmpty(connectionName))
+                {
+                    connectionName = provider.DefaultConnectionName;
+                }
+
+                if (!string.IsNullOrEmpty(connectionName) && provider.Connections.TryGetValue(connectionName, out var connection))
+                {
+                    deploymentName = connection.GetDefaultEmbeddingDeploymentName(false);
+                }
+            }
+
+            if (string.IsNullOrEmpty(deploymentName))
+            {
+                _logger.LogWarning("No embedding deployment configured. Document context will not be used.");
+                return null;
+            }
+
+            var embeddingGenerator = await _aIClientFactory.CreateEmbeddingGeneratorAsync(providerName, connectionName, deploymentName);
+
+            if (embeddingGenerator == null)
+            {
+                _logger.LogWarning("Failed to create embedding generator. Document context will not be used.");
+                return null;
+            }
+
+            // Generate embedding for the prompt
+            var embedding = await embeddingGenerator.GenerateAsync(prompt, cancellationToken: cancellationToken);
+
+            if (embedding?.Vector == null || embedding.Vector.Length == 0)
+            {
+                _logger.LogWarning("Failed to generate embedding for prompt. Document context will not be used.");
+                return null;
+            }
+
+            // Search for similar document chunks
+            var topN = interaction.DocumentTopN ?? settings.TopN;
+
+            if (topN <= 0)
+            {
+                topN = 3;
+            }
+
+            var results = await searchService.SearchAsync(
+                indexProfile.IndexName,
+                embedding.Vector.ToArray(),
+                interaction.ItemId,
+                topN,
+                cancellationToken);
+
+            if (results == null || !results.Any())
+            {
+                return null;
+            }
+
+            // Combine the relevant chunks into context
+            var contextBuilder = new StringBuilder();
+
+            foreach (var result in results)
+            {
+                if (result.Chunk != null && !string.IsNullOrWhiteSpace(result.Chunk.Content))
+                {
+                    contextBuilder.AppendLine("---");
+                    contextBuilder.AppendLine(result.Chunk.Content);
+                }
+            }
+
+            return contextBuilder.ToString();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving document context. Document context will not be used.");
+            return null;
+        }
     }
 }

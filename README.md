@@ -43,6 +43,14 @@ Provides services for all AI modules and provide the interface for managing AI p
 #### AI Chat Module
 Provides interface for interacting with AI chat models like **ChatGPT** and others. See the [AI Chat Module README](src/Modules/CrestApps.OrchardCore.AI.Chat/README.md) for more details.  
 
+#### AI Chat Interactions Module
+Enables ad-hoc AI chat experiences with configurable parameters, document upload, and RAG (Retrieval Augmented Generation) support. Users can chat with AI models without predefined profiles and upload documents to chat against their own data. See the [AI Chat Interactions README](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/README.md) for more details.
+
+**Extension modules:**
+- [AI Chat Interactions - Documents](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/README-Documents.md) - Document upload and RAG support
+- [AI Chat Interactions - PDF](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions.Pdf/README.md) - PDF document support
+- [AI Chat Interactions - OpenXml](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml/README.md) - Word, Excel, PowerPoint support
+
 #### Orchard Core AI Agent Module
 Enhances the **AI Module** by providing AI Agents to perform tasks on your Orchard Core site. For more details, see the [Orchard Core AI Agent Module README](src/Modules/CrestApps.OrchardCore.AI.Agent/README.md).
 

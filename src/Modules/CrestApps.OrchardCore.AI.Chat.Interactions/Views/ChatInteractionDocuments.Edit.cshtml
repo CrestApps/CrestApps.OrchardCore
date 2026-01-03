@@ -4,6 +4,38 @@
 
 @model EditChatInteractionDocumentsViewModel
 
+@if (!Model.HasIndexProfile)
+{
+    <div class="alert alert-warning" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+        <strong>@T["Index Not Configured"]</strong>
+        <p class="mb-0">
+            @T["No document index is configured. Please navigate to Settings > Chat Interaction and select an index profile to enable document embedding."]
+        </p>
+    </div>
+}
+else if (!Model.HasEmbeddingSearchService)
+{
+    <div class="alert alert-warning" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+        <strong>@T["Embedding Search Service Not Available"]</strong>
+        <p class="mb-0">
+            @T["The configured index profile \"{0}\" does not have a registered embedding search service. Currently, only Elasticsearch is supported as an embedding service provider.", Model.IndexProfileName]
+        </p>
+    </div>
+}
+
+<div class="mb-3">
+    <label class="form-label">
+        @T["Top N Results"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["The number of top matching document chunks to include as context for the AI model. Higher values provide more context but may increase costs and response time."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <input type="number" class="form-control" name="@Html.NameFor(m => m.TopN)" value="@Model.TopN" min="1" max="20" />
+    <div class="form-text">@T["Default: 3. Recommended range: 1-10."]</div>
+</div>
+
 <div class="mb-3">
     <label class="form-label">
         @T["Attached Documents"]
@@ -113,9 +145,6 @@
     const uploadUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionUploadDocument)';
     const removeUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionRemoveDocument)';
     
-    let uploadSuccessCount = 0;
-    let uploadFailCount = 0;
-    
     // Browse button click handler
     if (browseBtn && fileInput) {
         browseBtn.addEventListener('click', function(e) {
@@ -206,39 +235,62 @@
         const progressBar = uploadProgress.querySelector('.progress-bar');
         const statusText = uploadProgress.querySelector('.upload-status');
         
-        uploadSuccessCount = 0;
-        uploadFailCount = 0;
+        statusText.textContent = '@T["Uploading"]' + ' ' + files.length + ' @T["files"]...';
+        progressBar.style.width = '50%';
         
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const progress = ((i + 1) / files.length) * 100;
-            progressBar.style.width = progress + '%';
-            statusText.textContent = '@T["Uploading"]' + ' ' + file.name + '...';
+        try {
+            const formData = new FormData();
+            formData.append('itemId', itemId);
             
-            try {
-                await uploadDocument(file);
-                uploadSuccessCount++;
-            } catch (error) {
-                console.error('Upload failed:', error);
-                uploadFailCount++;
-                statusText.textContent = '@T["Failed to upload"]' + ': ' + file.name + ' - ' + error.message;
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+            
+            const response = await fetch(uploadUrl, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error || '@T["Upload failed"]');
+            }
+            
+            const result = await response.json();
+            progressBar.style.width = '100%';
+            
+            // Handle successful uploads
+            if (result.uploaded && result.uploaded.length > 0) {
+                for (const doc of result.uploaded) {
+                    addDocumentToList(doc);
+                }
+            }
+            
+            // Show status message
+            const successCount = result.uploaded ? result.uploaded.length : 0;
+            const failCount = result.failed ? result.failed.length : 0;
+            
+            if (failCount === 0 && successCount > 0) {
+                statusText.textContent = successCount === 1 
+                    ? '@T["1 file uploaded successfully"]'
+                    : successCount + ' @T["files uploaded successfully"]';
+                statusText.classList.remove('text-danger', 'text-warning');
+                statusText.classList.add('text-success');
+            } else if (successCount > 0 && failCount > 0) {
+                statusText.textContent = successCount + ' @T["uploaded"]' + ', ' + failCount + ' @T["failed"]';
+                statusText.classList.remove('text-success', 'text-danger');
+                statusText.classList.add('text-warning');
+            } else if (failCount > 0) {
+                statusText.textContent = '@T["All uploads failed"]';
+                statusText.classList.remove('text-success', 'text-warning');
                 statusText.classList.add('text-danger');
             }
-        }
-        
-        progressBar.style.width = '100%';
-        
-        if (uploadFailCount === 0) {
-            statusText.textContent = uploadSuccessCount === 1 
-                ? '@T["1 file uploaded successfully"]'
-                : uploadSuccessCount + ' @T["files uploaded successfully"]';
-            statusText.classList.remove('text-danger');
-            statusText.classList.add('text-success');
-        } else if (uploadSuccessCount > 0) {
-            statusText.textContent = uploadSuccessCount + ' @T["uploaded"]' + ', ' + uploadFailCount + ' @T["failed"]';
-            statusText.classList.add('text-warning');
-        } else {
-            statusText.textContent = '@T["All uploads failed"]';
+            
+        } catch (error) {
+            console.error('Upload failed:', error);
+            progressBar.style.width = '100%';
+            statusText.textContent = '@T["Upload failed"]' + ': ' + error.message;
+            statusText.classList.remove('text-success', 'text-warning');
             statusText.classList.add('text-danger');
         }
         
@@ -247,25 +299,6 @@
             progressBar.style.width = '0%';
             statusText.classList.remove('text-success', 'text-danger', 'text-warning');
         }, 3000);
-    }
-    
-    async function uploadDocument(file) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('itemId', itemId);
-        
-        const response = await fetch(uploadUrl, {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(error || 'Upload failed');
-        }
-        
-        const doc = await response.json();
-        addDocumentToList(doc);
     }
     
     function addDocumentToList(doc) {
