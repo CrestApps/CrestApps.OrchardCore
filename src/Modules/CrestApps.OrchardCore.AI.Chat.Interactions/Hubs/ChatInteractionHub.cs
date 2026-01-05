@@ -76,6 +76,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         if (string.IsNullOrWhiteSpace(itemId))
         {
             await Clients.Caller.ReceiveError(S["{0} is required.", nameof(itemId)].Value);
+
             return;
         }
 
@@ -86,12 +87,14 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         if (interaction is null)
         {
             await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+
             return;
         }
 
         if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
         {
             await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+
             return;
         }
 
@@ -160,6 +163,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         interaction.PastMessagesCount = pastMessagesCount;
 
         await _interactionManager.UpdateAsync(interaction);
+        await _session.SaveChangesAsync();
 
         await Clients.Caller.SettingsSaved(interaction.ItemId, interaction.Title);
     }

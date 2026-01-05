@@ -388,7 +388,7 @@ window.chatInteractionManager = function () {
           }
 
           // Add event listeners for settings fields to save on change
-          var settingsInputs = document.querySelectorAll('input[name="Title"], select[name="ConnectionName"], select[name="DeploymentId"], textarea[name="SystemMessage"], input[name="Temperature"], input[name="TopP"], input[name="FrequencyPenalty"], input[name="PresencePenalty"], input[name="MaxTokens"], input[name="PastMessagesCount"]');
+          var settingsInputs = document.querySelectorAll('input[name="ChatInteraction.Title"], select[name="ChatInteraction.ConnectionName"], select[name="ChatInteraction.DeploymentId"], textarea[name="ChatInteraction.SystemMessage"], input[name="ChatInteraction.Temperature"], input[name="ChatInteraction.TopP"], input[name="ChatInteraction.FrequencyPenalty"], input[name="ChatInteraction.PresencePenalty"], input[name="ChatInteraction.MaxTokens"], input[name="ChatInteraction.PastMessagesCount"]');
           settingsInputs.forEach(function (input) {
             input.addEventListener('blur', function () {
               return _this6.saveSettings();
@@ -411,16 +411,16 @@ window.chatInteractionManager = function () {
           if (!itemId) {
             return;
           }
-          var titleInput = document.querySelector('input[name="Title"]');
-          var connectionNameInput = document.querySelector('select[name="ConnectionName"]');
-          var deploymentIdInput = document.querySelector('select[name="DeploymentId"]');
-          var systemMessageInput = document.querySelector('textarea[name="SystemMessage"]');
-          var temperatureInput = document.querySelector('input[name="Temperature"]');
-          var topPInput = document.querySelector('input[name="TopP"]');
-          var frequencyPenaltyInput = document.querySelector('input[name="FrequencyPenalty"]');
-          var presencePenaltyInput = document.querySelector('input[name="PresencePenalty"]');
-          var maxTokensInput = document.querySelector('input[name="MaxTokens"]');
-          var pastMessagesCountInput = document.querySelector('input[name="PastMessagesCount"]');
+          var titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
+          var connectionNameInput = document.querySelector('select[name="ChatInteraction.ConnectionName"]');
+          var deploymentIdInput = document.querySelector('select[name="ChatInteraction.DeploymentId"]');
+          var systemMessageInput = document.querySelector('textarea[name="ChatInteraction.SystemMessage"]');
+          var temperatureInput = document.querySelector('input[name="ChatInteraction.Temperature"]');
+          var topPInput = document.querySelector('input[name="ChatInteraction.TopP"]');
+          var frequencyPenaltyInput = document.querySelector('input[name="ChatInteraction.FrequencyPenalty"]');
+          var presencePenaltyInput = document.querySelector('input[name="ChatInteraction.PresencePenalty"]');
+          var maxTokensInput = document.querySelector('input[name="ChatInteraction.MaxTokens"]');
+          var pastMessagesCountInput = document.querySelector('input[name="ChatInteraction.PastMessagesCount"]');
           var settings = {
             title: (titleInput === null || titleInput === void 0 ? void 0 : titleInput.value) || 'Untitled',
             connectionName: (connectionNameInput === null || connectionNameInput === void 0 ? void 0 : connectionNameInput.value) || null,
