@@ -68,6 +68,7 @@ Below is an example configuration:
             "<!-- Connection name goes here -->": {
               "DefaultDeploymentName": "<!-- The default deployment name for this connection -->"
               "Type": "Chat", // Valid values are 'Chat', 'Embedding' or 'SpeechToText'
+
               // Provider-specific settings go here
             }
           }
@@ -149,6 +150,7 @@ For provider-specific configuration examples, see:
 
 ---
 
+
 ### Provider Configuration
 
 The following providers are supported **out of the box**:
@@ -167,6 +169,7 @@ Each provider requires its own connection and deployment settings. The `DefaultC
 The AI module is built on top of [Microsoft.Extensions.AI](https://www.nuget.org/packages/Microsoft.Extensions.AI), making it easy to integrate AI services into your application. We provide the `IAIClientFactory` service, which allows you to easily create standard services such as `IChatClient`,  `IEmbeddingGenerator` and `ISpeechToTextClient` for any of your configured providers and connections.
 
 Simply inject `IAIClientFactory` into your service and use the `CreateChatClientAsync`, `CreateEmbeddingGeneratorAsync` or `CreateISpeechToTextClientAsync` methods to obtain the required client.
+
 
 ### AI Deployments Feature
 

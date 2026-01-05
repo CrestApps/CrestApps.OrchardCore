@@ -269,6 +269,7 @@ public sealed class ConnectionManagementStartup : StartupBase
     {
         services.AddScoped<ICatalogEntryHandler<AIProviderConnection>, AIProviderConnectionHandler>();
         services.AddScoped<IAIProviderConnectionHandler, SpeechToTextAIProviderConnectionHandler>();
+
         services.AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderConnectionsOptionsConfiguration>();
         services.AddDisplayDriver<AIProviderConnection, AIProviderConnectionDisplayDriver>();
         services.AddNavigationProvider<AIConnectionsAdminMenu>();

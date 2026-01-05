@@ -10,6 +10,7 @@
 @using CrestApps.OrchardCore.Services
 @using OrchardCore.Entities
 
+
 @inject INamedCatalog<AIProfile> ProfileCatalog
 @inject IAuthorizationService AuthorizationService
 @inject ShellSettings ShellSettings
@@ -42,6 +43,7 @@
 
     var speechToTextMetadata = profile.As<SpeechToTextMetadata>();
     var showMicrophone = speechToTextMetadata?.UseMicrophone ?? false;
+
 
     var baseId = $"Widget_{contentItem.ContentItemId}";
     var chatAppHtmlId = $"{baseId}_ChatApp";
@@ -137,6 +139,7 @@
                             <i class="fa-solid fa-microphone"></i>
                         </button>
                     }
+
                     <button class="btn btn-dark rounded-circle" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                         <i class="fa-solid fa-arrow-up"></i>
                     </button>
@@ -174,6 +177,7 @@
         {
                                     <text>microphoneButtonElementSelector: '#@(baseId)_MicrophoneButton',</text>
         }
+
         placeholderElementSelector: '#@placeholderHtmlId',
         messages: [],
         messageTemplate: `
@@ -300,4 +304,5 @@
             box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
         }
     }
+
 </style>

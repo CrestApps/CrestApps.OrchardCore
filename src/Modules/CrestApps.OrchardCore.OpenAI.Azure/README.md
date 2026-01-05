@@ -102,6 +102,7 @@ Azure OpenAI supports multiple connection types for different capabilities:
 
 If no `Type` is specified, `Chat` is used as the default.
 
+
 ### How to Retrieve Azure OpenAI Credentials
 
 #### Get the API Key and Endpoint

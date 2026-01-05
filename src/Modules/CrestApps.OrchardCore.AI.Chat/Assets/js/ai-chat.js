@@ -66,6 +66,7 @@ window.openAIChatManager = function () {
                     inputElement: null,
                     buttonElement: null,
                     microphoneButton: null,
+
                     chatContainer: null,
                     placeholder: null,
                     isSessionStarted: false,
@@ -83,6 +84,7 @@ window.openAIChatManager = function () {
                     audioSubject: null,
                     audioSubjectCompleted: false,
                     audioInvokePromise: null,
+
                     isNavigatingAway: false,
                     stream: null,
                     messages: [],
@@ -427,6 +429,7 @@ window.openAIChatManager = function () {
                             });
                         }
                     }
+
 
                     this.inputElement.addEventListener('keyup', event => {
 
@@ -797,6 +800,7 @@ window.openAIChatManager = function () {
                         }
                         this.recordingMessageId = null;
                     }
+
                 }
             },
             mounted() {
@@ -815,6 +819,7 @@ window.openAIChatManager = function () {
                     this.stopRecording();
                 }
                 
+
                 window.removeEventListener('beforeunload', this.handleBeforeUnload);
 
                 if (this.stream) {

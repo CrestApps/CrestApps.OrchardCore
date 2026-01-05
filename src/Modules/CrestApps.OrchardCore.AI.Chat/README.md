@@ -53,6 +53,7 @@ Configuration example:
 - When you stop recording, the complete transcription is placed in the input field for review
 - You can edit the transcribed text before sending if needed
 
+
 ### Here is a Screen cast of the Admin Chat User Interface
 
 ![Screen cast of the admin chat](../../../docs/images/admin-ui-sample.gif)

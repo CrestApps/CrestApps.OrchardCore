@@ -14,6 +14,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
+using OrchardCore.Entities;
 using OrchardCore.Liquid;
 using YesSql;
 
@@ -81,7 +82,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         if (string.IsNullOrWhiteSpace(sessionId))
         {
-            await Clients.Caller.ReceiveError(S[$"{0} is required.", nameof(sessionId)].Value);
+            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionId)].Value);
 
             return;
         }
@@ -259,7 +260,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
                 if (isNewSession)
                 {
-                    await SetTitleAync(profile, chatSession, transcribedText);
+                    await SetTitleAsync(profile, chatSession, transcribedText);
                 }
 
                 await _sessionManager.SaveAsync(chatSession);
@@ -282,7 +283,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         {
             if (string.IsNullOrWhiteSpace(profileId))
             {
-                await Clients.Caller.ReceiveError(S[$"{0} is required.", nameof(sessionId)].Value);
+                await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionId)].Value);
 
                 return;
             }
@@ -410,10 +411,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         // Authentication errors.
         if (message.Contains("401", StringComparison.OrdinalIgnoreCase) ||
-        message.Contains("403", StringComparison.OrdinalIgnoreCase) ||
-        message.Contains("unauthorized", StringComparison.OrdinalIgnoreCase) ||
-        message.Contains("invalid api key", StringComparison.OrdinalIgnoreCase) ||
-        ex.GetType().Name.Contains("Authentication", StringComparison.OrdinalIgnoreCase))
+            message.Contains("403", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("unauthorized", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("invalid api key", StringComparison.OrdinalIgnoreCase) ||
+            ex.GetType().Name.Contains("Authentication", StringComparison.OrdinalIgnoreCase))
         {
             return S["Authentication failed. Please check your API credentials."];
         }
@@ -471,12 +472,12 @@ public class AIChatHub : Hub<IAIChatHubClient>
         // At this point, we need to create a new session.
         var chatSession = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
 
-        await SetTitleAync(profile, chatSession, userPrompt);
+        await SetTitleAsync(profile, chatSession, userPrompt);
 
         return (chatSession, true);
     }
 
-    private async Task SetTitleAync(AIProfile profile, AIChatSession chatSession, string userPrompt)
+    private async Task SetTitleAsync(AIProfile profile, AIChatSession chatSession, string userPrompt)
     {
         if (profile.TitleType == AISessionTitleType.Generated)
         {

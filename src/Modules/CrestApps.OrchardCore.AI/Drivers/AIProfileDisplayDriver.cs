@@ -162,6 +162,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             }
         }).Location("Content:7");
 
+
         var parametersResult = Initialize<ProfileMetadataViewModel>("AIProfileParameters_Edit", model =>
         {
             var metadata = profile.As<AIProfileMetadata>();
@@ -180,6 +181,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         }).Location("Content:10");
 
         return Combine(mainFieldsResult, connectionFieldResult, fieldsResult, speechToTextResult, parametersResult);
+
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
@@ -306,12 +308,13 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         };
 
         // ProviderName will be set by the connection handler during initialization
-        if (_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
+        if (_aiOptions.ProfileSources.TryGetValue(profile.Source, out var speechToTextProfileSource))
         {
-            speechToTextMetadata.ProviderName = profileSource.ProviderName;
+            speechToTextMetadata.ProviderName = speechToTextProfileSource.ProviderName;
         }
 
         profile.Put(speechToTextMetadata);
+
 
         return Edit(profile, context);
     }

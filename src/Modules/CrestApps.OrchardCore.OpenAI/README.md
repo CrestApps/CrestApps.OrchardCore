@@ -85,6 +85,7 @@ If no `Type` is specified, `Chat` is used as the default.
 
 ---
 
+
 ### Using AI Deployments  
 
 If the **AI Deployments** feature is enabled, you can create multiple deployments under the same connection. This allows different AI profiles to utilize different models while sharing the same connection.  
