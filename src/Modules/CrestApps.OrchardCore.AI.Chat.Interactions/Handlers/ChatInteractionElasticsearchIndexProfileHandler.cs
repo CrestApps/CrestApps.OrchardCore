@@ -4,6 +4,7 @@ using Elastic.Clients.Elasticsearch.Mapping;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
+using OrchardCore.Infrastructure.Entities;
 using OrchardCore.Search.Elasticsearch;
 using OrchardCore.Search.Elasticsearch.Core.Models;
 using OrchardCore.Search.Elasticsearch.Models;

@@ -6,6 +6,7 @@
         // Check if there are any real embedding connections (excluding the placeholder)
         var hasEmbeddingConnections = Model.EmbeddingConnections.Count() > 1;
     }
+
     @if (!hasEmbeddingConnections)
     {
         <div class="alert alert-warning">
@@ -15,22 +16,21 @@
     }
     else
     {
-        @{
-            // Find the currently selected value if it exists
-            var selectedValue = string.Empty;
-            if (!string.IsNullOrEmpty(Model.EmbeddingProviderName) &&
-                !string.IsNullOrEmpty(Model.EmbeddingConnectionName) &&
-                !string.IsNullOrEmpty(Model.EmbeddingDeploymentName))
-            {
-                selectedValue = $"{Model.EmbeddingProviderName}|{Model.EmbeddingConnectionName}|{Model.EmbeddingDeploymentName}";
-            }
-
-            // Mark the correct item as selected
-            foreach (var item in Model.EmbeddingConnections)
-            {
-                item.Selected = item.Value == selectedValue;
-            }
+        // Find the currently selected value if it exists
+        var selectedValue = string.Empty;
+        if (!string.IsNullOrEmpty(Model.EmbeddingProviderName) &&
+        !string.IsNullOrEmpty(Model.EmbeddingConnectionName) &&
+        !string.IsNullOrEmpty(Model.EmbeddingDeploymentName))
+        {
+            selectedValue = $"{Model.EmbeddingProviderName}|{Model.EmbeddingConnectionName}|{Model.EmbeddingDeploymentName}";
         }
+
+        // Mark the correct item as selected
+        foreach (var item in Model.EmbeddingConnections)
+        {
+            item.Selected = item.Value == selectedValue;
+        }
+
         <select asp-for="EmbeddingConnectionName" asp-items="Model.EmbeddingConnections" class="form-select"></select>
         <span class="hint">@T["Select the embedding connection to use for generating document embeddings. This determines the vector dimensions for the index."]</span>
     }
