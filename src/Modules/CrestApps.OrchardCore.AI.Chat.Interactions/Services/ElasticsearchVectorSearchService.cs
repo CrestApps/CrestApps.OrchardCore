@@ -67,7 +67,7 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
                     .NumCandidates(topN * 10) // Search more candidates for better accuracy
                     .InnerHits(ih => ih
                         .Size(topN)
-                        .Source(false)
+                        .Source(true) // Include source so we can access chunk content
                     )
                 )
                 .Size(topN)
