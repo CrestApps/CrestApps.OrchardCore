@@ -87,12 +87,6 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
                     Kind = SpeechToTextResponseUpdateKind.TextUpdating,
                 };
             }
-
-            yield return new SpeechToTextResponseUpdate
-            {
-                ResponseId = responseId,
-                Contents = null,
-            };
         }
     }
 

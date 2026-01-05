@@ -96,7 +96,6 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
         else
         {
             connection.Type = model.Type.Value;
-
         }
 
         connection.DisplayText = model.DisplayText;

@@ -245,7 +245,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
                     if (update is not null && !string.IsNullOrEmpty(update.Text))
                     {
                         builder.Append(update.Text);
-                        // Optionally stream partial transcript to caller here
                     }
                 }
 
@@ -268,12 +267,12 @@ public class AIChatHub : Hub<IAIChatHubClient>
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error transcribing audio chunk");
+                _logger.LogWarning(ex, "Error transcribing audio for profile '{ProfileId}'. The speech-to-text client failed to process the audio stream.", profileId);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing audio chunk");
+            _logger.LogError(ex, "Error processing audio chunk for profile '{ProfileId}'. Failed during initial audio validation or speech-to-text client creation.", profileId);
         }
     }
 
