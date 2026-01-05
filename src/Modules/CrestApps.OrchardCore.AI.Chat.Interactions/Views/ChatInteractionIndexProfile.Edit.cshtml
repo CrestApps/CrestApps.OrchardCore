@@ -2,7 +2,11 @@
 
 <div class="mb-3">
     <label asp-for="EmbeddingConnectionName" class="form-label">@T["Embedding Connection"]</label>
-    @if (!Model.EmbeddingConnections.Skip(1).Any())
+    @{
+        // Check if there are any real embedding connections (excluding the placeholder)
+        var hasEmbeddingConnections = Model.EmbeddingConnections.Count() > 1;
+    }
+    @if (!hasEmbeddingConnections)
     {
         <div class="alert alert-warning">
             <i class="fa-solid fa-exclamation-triangle" aria-hidden="true"></i>

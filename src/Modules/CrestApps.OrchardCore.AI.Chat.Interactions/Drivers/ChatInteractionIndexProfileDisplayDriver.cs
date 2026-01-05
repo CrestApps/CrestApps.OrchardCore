@@ -20,9 +20,11 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 /// </summary>
 public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<IndexProfile>
 {
-    private readonly AIProviderOptions _providerOptions;
+    private const char Separator = '|';
+    private const int ExpectedPartsCount = 3;
 
-    internal readonly IStringLocalizer S;
+    private readonly AIProviderOptions _providerOptions;
+    private readonly IStringLocalizer S;
 
     public ChatInteractionIndexProfileDisplayDriver(
         IOptions<AIProviderOptions> providerOptions,
@@ -66,7 +68,7 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
                     }
 
                     // Create a unique key combining provider, connection, and deployment
-                    var key = $"{providerName}|{connectionName}|{embeddingDeploymentName}";
+                    var key = string.Join(Separator, providerName, connectionName, embeddingDeploymentName);
 
                     // Display name: Connection alias or name (Provider)
                     var displayName = connection.TryGetValue("ConnectionNameAlias", out var alias)
@@ -97,9 +99,9 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
         // Parse the selected embedding connection (format: providerName|connectionName|deploymentName)
         if (!string.IsNullOrEmpty(model.EmbeddingConnectionName))
         {
-            var parts = model.EmbeddingConnectionName.Split('|');
+            var parts = model.EmbeddingConnectionName.Split(Separator);
 
-            if (parts.Length == 3)
+            if (parts.Length == ExpectedPartsCount)
             {
                 metadata.EmbeddingProviderName = parts[0];
                 metadata.EmbeddingConnectionName = parts[1];
