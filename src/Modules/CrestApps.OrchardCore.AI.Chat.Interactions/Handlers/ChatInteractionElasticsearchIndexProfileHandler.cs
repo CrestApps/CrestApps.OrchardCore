@@ -120,9 +120,11 @@ public sealed class ChatInteractionElasticsearchIndexProfileHandler : IndexProfi
                 }
             }
         }
-        catch
+        catch (Exception)
         {
-            // If we can't determine dimensions dynamically, fall back to default
+            // If we can't determine dimensions dynamically (e.g., no embedding provider configured,
+            // no valid connection, or API error), silently fall back to default dimensions.
+            // This is expected behavior during index creation before AI connections are fully configured.
         }
 
         return defaultDimensions;
