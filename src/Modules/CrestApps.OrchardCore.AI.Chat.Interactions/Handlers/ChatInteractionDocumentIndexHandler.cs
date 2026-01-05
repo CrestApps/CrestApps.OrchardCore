@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.Indexing;
 
@@ -18,10 +19,10 @@ public sealed class ChatInteractionDocumentIndexHandler : IDocumentIndexHandler
             return Task.CompletedTask;
         }
 
-        context.DocumentIndex.Set("documentId", chatInteractionDocument.DocumentId, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set("InteractionId", interaction.ItemId, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set("fileName", chatInteractionDocument.FileName, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set("chunks", chatInteractionDocument.ContentChunks, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.DocumentId, chatInteractionDocument.DocumentId, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.InteractionId, interaction.ItemId, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.FileName, chatInteractionDocument.FileName, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.Chunks, chatInteractionDocument.ContentChunks, DocumentIndexOptions.Store);
 
         return Task.CompletedTask;
     }

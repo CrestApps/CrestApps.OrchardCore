@@ -9,7 +9,7 @@ public sealed class DocumentChunk
     /// <summary>
     /// Gets or sets the text content of this chunk.
     /// </summary>
-    public string Content { get; set; }
+    public string Text { get; set; }
 
     /// <summary>
     /// Gets or sets the embedding vector for this chunk.

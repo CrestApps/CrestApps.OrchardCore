@@ -55,12 +55,13 @@ internal static class UploadDocumentEndpoint
         var files = form.Files.GetFiles("files");
 
         // For backward compatibility, also support single file upload
-        if (!files.Any())
+        if (files.Count == 0)
         {
             var singleFile = form.Files.GetFile("file");
+
             if (singleFile != null)
             {
-                files = new FormFileCollection { singleFile };
+                files = [singleFile];
             }
         }
 
@@ -69,7 +70,7 @@ internal static class UploadDocumentEndpoint
             return TypedResults.BadRequest("Item ID is required.");
         }
 
-        if (!files.Any())
+        if (files.Count == 0)
         {
             return TypedResults.BadRequest("No files uploaded.");
         }
@@ -159,7 +160,7 @@ internal static class UploadDocumentEndpoint
                     {
                         stream.Seek(0, SeekOrigin.Begin);
 
-                        var extractedContent = await textExtractor.ExtractAsync(stream, file.FileName, file.ContentType, extension);
+                        var extractedContent = await textExtractor.ExtractAsync(stream, file.FileName, extension, file.ContentType);
 
                         if (string.IsNullOrWhiteSpace(extractedContent))
                         {
@@ -203,7 +204,7 @@ internal static class UploadDocumentEndpoint
                     {
                         document.ContentChunks.Add(new DocumentChunk
                         {
-                            Content = textChunks[i],
+                            Text = textChunks[i],
                             Embedding = embedding[i].Vector.ToArray(),
                             Index = i,
                         });

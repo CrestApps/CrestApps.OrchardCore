@@ -2,10 +2,8 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Core.Search;
-using Elastic.Clients.Elasticsearch.QueryDsl;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing.Models;
-using OrchardCore.Search.Elasticsearch;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 
@@ -48,22 +46,22 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
             // Build a nested k-NN query to search for similar document chunks
             // The documents are stored with nested "chunks" that contain the embedding vectors
             var response = await _elasticClient.SearchAsync<Dictionary<string, object>>(s => s
-                .Index(indexProfile.IndexFullName)
+                .Indices(indexProfile.IndexFullName)
                 .Query(q => q
                     .Bool(b => b
                         .Must(
                             // Filter by interaction/session ID
                             m => m.Term(t => t
-                                .Field("interactionId")
+                                .Field(ChatInteractionsConstants.ColumnNames.InteractionId)
                                 .Value(sessionId)
                             )
                         )
                     )
                 )
                 .Knn(k => k
-                    .Field("chunks.embedding")
+                    .Field(ChatInteractionsConstants.ColumnNames.ChunksEmbedding)
                     .QueryVector(embedding)
-                    .k(topN)
+                    .K(topN)
                     .NumCandidates(topN * 10) // Search more candidates for better accuracy
                     .InnerHits(ih => ih
                         .Size(topN)
@@ -76,6 +74,7 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
             if (!response.IsValidResponse)
             {
                 _logger.LogWarning("Elasticsearch vector search failed: {Error}", response.DebugInformation);
+
                 return [];
             }
 
@@ -89,11 +88,11 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
                 }
 
                 // Process inner hits from the nested chunks
-                if (hit.InnerHits != null && hit.InnerHits.TryGetValue("chunks", out var innerHits))
+                if (hit.InnerHits != null && hit.InnerHits.TryGetValue(ChatInteractionsConstants.ColumnNames.Chunks, out var innerHits))
                 {
                     foreach (var innerHit in innerHits.Hits.Hits)
                     {
-                        var chunkResult = ExtractChunkFromInnerHit(hit.Source, innerHit, hit.Score);
+                        var chunkResult = ExtractChunkFromInnerHit(innerHit, hit.Score);
                         if (chunkResult != null)
                         {
                             results.Add(chunkResult);
@@ -117,28 +116,28 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error performing vector search in Elasticsearch index '{IndexName}'", indexProfile.IndexFullName);
+
             return [];
         }
     }
 
-    private DocumentChunkSearchResult ExtractChunkFromInnerHit(
-        Dictionary<string, object> source,
-        Hit<object> innerHit,
-        double? parentScore)
+    private static DocumentChunkSearchResult ExtractChunkFromInnerHit(Hit<object> innerHit, double? parentScore)
     {
         try
         {
             // Get the chunk text from the nested hit
             string chunkText = null;
-            int chunkIndex = 0;
+            var chunkIndex = 0;
 
             if (innerHit.Source is Dictionary<string, object> chunkSource)
             {
-                chunkText = chunkSource.TryGetValue("text", out var text) ? text?.ToString() : null;
+                chunkText = chunkSource.TryGetValue(ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Text, out var text)
+                    ? text?.ToString()
+                    : null;
 
-                if (chunkSource.TryGetValue("chunkIndex", out var idx) && idx != null)
+                if (chunkSource.TryGetValue(ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Index, out var idx) && idx != null)
                 {
-                    int.TryParse(idx.ToString(), out chunkIndex);
+                    _ = int.TryParse(idx.ToString(), out chunkIndex);
                 }
             }
 
@@ -151,7 +150,7 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
             {
                 Chunk = new DocumentChunk
                 {
-                    Content = chunkText,
+                    Text = chunkText,
                     Index = chunkIndex
                 },
                 Score = (float)(innerHit.Score ?? parentScore ?? 0.0)
@@ -163,51 +162,47 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
         }
     }
 
-    private IEnumerable<DocumentChunkSearchResult> ExtractChunksFromSource(
+    private static List<DocumentChunkSearchResult> ExtractChunksFromSource(
         Dictionary<string, object> source,
         double? score)
     {
         var results = new List<DocumentChunkSearchResult>();
 
-        try
+        if (!source.TryGetValue(ChatInteractionsConstants.ColumnNames.Chunks, out var chunksObj) || chunksObj is not IEnumerable<object> chunks)
         {
-            if (!source.TryGetValue("chunks", out var chunksObj) || chunksObj is not IEnumerable<object> chunks)
-            {
-                return results;
-            }
-
-            foreach (var chunk in chunks)
-            {
-                if (chunk is not Dictionary<string, object> chunkDict)
-                {
-                    continue;
-                }
-
-                var chunkText = chunkDict.TryGetValue("text", out var text) ? text?.ToString() : null;
-                int chunkIndex = 0;
-
-                if (chunkDict.TryGetValue("chunkIndex", out var idx) && idx != null)
-                {
-                    int.TryParse(idx.ToString(), out chunkIndex);
-                }
-
-                if (!string.IsNullOrEmpty(chunkText))
-                {
-                    results.Add(new DocumentChunkSearchResult
-                    {
-                        Chunk = new DocumentChunk
-                        {
-                            Content = chunkText,
-                            Index = chunkIndex
-                        },
-                        Score = (float)(score ?? 0.0)
-                    });
-                }
-            }
+            return results;
         }
-        catch (Exception)
+
+        foreach (var chunk in chunks)
         {
-            // Ignore parsing errors
+            if (chunk is not Dictionary<string, object> chunkDict)
+            {
+                continue;
+            }
+
+            var chunkText = chunkDict.TryGetValue(ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Text, out var text)
+                ? text?.ToString()
+                : null;
+
+            var chunkIndex = 0;
+
+            if (chunkDict.TryGetValue(ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Index, out var idx) && idx != null)
+            {
+                _ = int.TryParse(idx.ToString(), out chunkIndex);
+            }
+
+            if (!string.IsNullOrEmpty(chunkText))
+            {
+                results.Add(new DocumentChunkSearchResult
+                {
+                    Chunk = new DocumentChunk
+                    {
+                        Text = chunkText,
+                        Index = chunkIndex
+                    },
+                    Score = (float)(score ?? 0.0)
+                });
+            }
         }
 
         return results;

@@ -36,26 +36,24 @@ public sealed class ChatInteractionElasticsearchIndexProfileHandler : IndexProfi
         metadata.IndexMappings.Mapping.Properties ??= [];
         metadata.IndexMappings.Mapping.Meta ??= new Dictionary<string, object>();
 
-        metadata.IndexMappings.KeyFieldName = "documentId";
-        metadata.IndexMappings.Mapping.Properties["documentId"] = new KeywordProperty();
-        metadata.IndexMappings.Mapping.Properties["interactionId"] = new KeywordProperty();
-        metadata.IndexMappings.Mapping.Properties["fileName"] = new KeywordProperty();
-        metadata.IndexMappings.Mapping.Properties["chunks"] = new NestedProperty()
+        metadata.IndexMappings.KeyFieldName = ChatInteractionsConstants.ColumnNames.DocumentId;
+        metadata.IndexMappings.Mapping.Properties[ChatInteractionsConstants.ColumnNames.DocumentId] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[ChatInteractionsConstants.ColumnNames.InteractionId] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[ChatInteractionsConstants.ColumnNames.FileName] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[ChatInteractionsConstants.ColumnNames.Chunks] = new NestedProperty()
         {
             Properties = new Properties()
             {
-                { "chunkId", new KeywordProperty() },
-                { "text", new TextProperty() },
-                { "embedding", new DenseVectorProperty
+                { ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Text, new TextProperty() },
+                { ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Embedding, new DenseVectorProperty
                     {
                         Dims = 1536,
                         Index = true,
                     }
                 },
-                { "chunkIndex", new IntegerNumberProperty() },
+                { ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Index, new IntegerNumberProperty() },
             },
         };
-
 
         indexProfile.Put(metadata);
 
