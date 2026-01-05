@@ -27,17 +27,6 @@ else if (!Model.HasVectorSearchService)
 
 <div class="mb-3">
     <label class="form-label">
-        @T["Top N Results"]
-        <span class="text-muted" data-bs-toggle="tooltip" title="@T["The number of top matching document chunks to include as context for the AI model. Higher values provide more context but may increase costs and response time."]" aria-label="@T["Help: Top N Results explanation"]">
-            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-        </span>
-    </label>
-    <input type="number" class="form-control" name="@Html.NameFor(m => m.TopN)" value="@Model.TopN" min="1" max="20" />
-    <div class="form-text">@T["Default: 3. Recommended range: 1-10."]</div>
-</div>
-
-<div class="mb-3">
-    <label class="form-label">
         @T["Attached Documents"]
         <span class="text-muted" data-bs-toggle="tooltip" title="@T["Upload documents (PDF, Word, Excel, TXT, etc.) to chat against your own data. The content will be extracted and used as context for AI responses."]" aria-label="@T["Help: Attached Documents explanation"]">
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
@@ -47,8 +36,8 @@ else if (!Model.HasVectorSearchService)
     <div class="border rounded p-3 bg-light">
         <!-- Drag and drop zone -->
         <div id="dropZone-@Model.ItemId" class="drop-zone border rounded p-4 mb-3 text-center bg-white" style="border: 2px dashed #dee2e6 !important; cursor: pointer; transition: all 0.2s ease;">
-            <div class="drop-zone-content" id="dropZoneContent-@Model.ItemId">
-                <i class="fa-solid fa-cloud-arrow-up fa-3x text-muted mb-3 d-block"></i>
+            <div class="drop-zone-content d-flex flex-column align-items-center" id="dropZoneContent-@Model.ItemId">
+                <i class="fa-solid fa-cloud-arrow-up fa-3x text-muted mb-3"></i>
                 <div class="text-muted mb-2">@T["Drag and drop files here"]</div>
                 <div class="text-muted mb-2">@T["or"]</div>
                 <button type="button" class="btn btn-primary" id="browseBtn-@Model.ItemId">
@@ -56,8 +45,8 @@ else if (!Model.HasVectorSearchService)
                     @T["Browse Files"]
                 </button>
             </div>
-            <div class="drop-zone-active d-none" id="dropZoneActive-@Model.ItemId">
-                <i class="fa-solid fa-file-arrow-down fa-3x text-primary mb-2 d-block"></i>
+            <div class="drop-zone-active d-none d-flex flex-column align-items-center" id="dropZoneActive-@Model.ItemId">
+                <i class="fa-solid fa-file-arrow-down fa-3x text-primary mb-2"></i>
                 <div class="text-primary fw-bold">@T["Drop files to upload"]</div>
             </div>
         </div>
@@ -113,6 +102,17 @@ else if (!Model.HasVectorSearchService)
             <small class="text-muted upload-status">@T["Uploading..."]</small>
         </div>
     </div>
+</div>
+
+<div class="mb-3">
+    <label class="form-label">
+        @T["Top N Results"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["The number of top matching document chunks to include as context for the AI model. Higher values provide more context but may increase costs and response time."]" aria-label="@T["Help: Top N Results explanation"]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <input type="number" class="form-control" name="@Html.NameFor(m => m.TopN)" value="@Model.TopN" min="1" max="20" />
+    <div class="form-text">@T["Default: 3. Recommended range: 1-10."]</div>
 </div>
 
 <style at="Head">

@@ -25,6 +25,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Search.Elasticsearch;
 using OrchardCore.Security.Permissions;
+using ElasticsearchConstants = OrchardCore.Search.Elasticsearch.ElasticsearchConstants;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions;
 
@@ -97,6 +98,9 @@ public sealed class ElasticsearchStartup : StartupBase
 
         // Register Elasticsearch document index handler for chat interaction document embeddings
         services.AddScoped<IDocumentIndexHandler, ChatInteractionDocumentIndexHandler>();
+
+        // Register Elasticsearch vector search service as a keyed service
+        services.AddKeyedScoped<IVectorSearchService, ElasticsearchVectorSearchService>(ElasticsearchConstants.ProviderName);
 
         services.AddElasticsearchIndexingSource(ChatInteractionsConstants.IndexingTaskType, o =>
         {
