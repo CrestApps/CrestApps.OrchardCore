@@ -51,7 +51,7 @@ internal static class UploadDocumentEndpoint
         }
 
         var form = await request.ReadFormAsync();
-        var itemId = form["itemId"].ToString();
+        var chatInteractionId = form["chatInteractionId"].ToString();
         var files = form.Files.GetFiles("files");
 
         // For backward compatibility, also support single file upload
@@ -65,9 +65,9 @@ internal static class UploadDocumentEndpoint
             }
         }
 
-        if (string.IsNullOrEmpty(itemId))
+        if (string.IsNullOrEmpty(chatInteractionId))
         {
-            return TypedResults.BadRequest("Item ID is required.");
+            return TypedResults.BadRequest("Chat Interaction ID is required.");
         }
 
         if (files.Count == 0)
@@ -75,7 +75,7 @@ internal static class UploadDocumentEndpoint
             return TypedResults.BadRequest("No files uploaded.");
         }
 
-        var interaction = await interactionManager.FindByIdAsync(itemId);
+        var interaction = await interactionManager.FindByIdAsync(chatInteractionId);
         if (interaction == null)
         {
             return TypedResults.NotFound();

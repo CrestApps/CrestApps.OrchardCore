@@ -64,23 +64,20 @@ else if (!Model.HasVectorSearchService)
             {
                 foreach (var doc in Model.Documents)
                 {
-                    <div class="document-item d-flex align-items-center justify-content-between border-bottom py-2" data-document-id="@doc.DocumentId">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="fa-solid fa-file-lines text-secondary"></i>
-                            <div>
-                                <div class="fw-medium">@doc.FileName</div>
-                                <small class="text-muted">
-                                    @FormatFileSize(doc.FileSize) •
-                                    @T["Uploaded"] @doc.UploadedUtc.ToLocalTime().ToString("g")
-                                </small>
-                            </div>
-                        </div>
+                    <div class="document-item d-flex align-items-center border-bottom py-2" data-document-id="@doc.DocumentId">
                         <button type="button"
-                                class="btn btn-sm btn-outline-danger remove-document"
+                                class="btn btn-sm btn-outline-danger remove-document me-2 flex-shrink-0"
                                 data-document-id="@doc.DocumentId"
                                 title="@T["Remove document"]">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
+                        <div class="text-truncate">
+                            <div class="fw-medium small text-truncate">@doc.FileName</div>
+                            <small class="text-muted" style="font-size: 0.75rem;">
+                                @FormatFileSize(doc.FileSize) •
+                                @T["Uploaded"] @doc.UploadedUtc.ToLocalTime().ToString("g")
+                            </small>
+                        </div>
                     </div>
                 }
             }
@@ -243,7 +240,7 @@ else if (!Model.HasVectorSearchService)
 
             try {
                 const formData = new FormData();
-                formData.append('itemId', itemId);
+                formData.append('chatInteractionId', itemId);
 
                 for (let i = 0; i < files.length; i++) {
                     formData.append('files', files[i]);
@@ -310,25 +307,22 @@ else if (!Model.HasVectorSearchService)
             }
 
             const docItem = document.createElement('div');
-            docItem.className = 'document-item d-flex align-items-center justify-content-between border-bottom py-2';
+            docItem.className = 'document-item d-flex align-items-center border-bottom py-2';
             docItem.setAttribute('data-document-id', doc.documentId);
             docItem.innerHTML = `
-                <div class="d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-file-lines text-secondary"></i>
-                    <div>
-                        <div class="fw-medium">${escapeHtml(doc.fileName)}</div>
-                        <small class="text-muted">
-                            ${formatFileSize(doc.fileSize)} •
-                            @T["Uploaded"] just now
-                        </small>
-                    </div>
-                </div>
                 <button type="button"
-                        class="btn btn-sm btn-outline-danger remove-document"
+                        class="btn btn-sm btn-outline-danger remove-document me-2 flex-shrink-0"
                         data-document-id="${doc.documentId}"
                         title="@T["Remove document"]">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
+                <div class="text-truncate">
+                    <div class="fw-medium small text-truncate">${escapeHtml(doc.fileName)}</div>
+                    <small class="text-muted" style="font-size: 0.75rem;">
+                        ${formatFileSize(doc.fileSize)} •
+                        @T["Uploaded"] just now
+                    </small>
+                </div>
             `;
             documentsList.appendChild(docItem);
         }
