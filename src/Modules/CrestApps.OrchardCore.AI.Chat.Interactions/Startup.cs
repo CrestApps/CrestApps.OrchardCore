@@ -21,6 +21,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
+using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Search.Elasticsearch;
@@ -95,6 +96,9 @@ public sealed class ElasticsearchStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddIndexProfileHandler<ChatInteractionElasticsearchIndexProfileHandler>();
+
+        // Register display driver for Chat Interaction index profile embedding configuration
+        services.AddDisplayDriver<IndexProfile, ChatInteractionIndexProfileDisplayDriver>();
 
         // Register Elasticsearch document index handler for chat interaction document embeddings
         services.AddScoped<IDocumentIndexHandler, ChatInteractionDocumentIndexHandler>();
