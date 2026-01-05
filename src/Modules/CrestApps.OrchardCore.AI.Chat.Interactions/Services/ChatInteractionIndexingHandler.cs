@@ -19,33 +19,33 @@ internal sealed class ChatInteractionIndexingHandler : CatalogEntryHandlerBase<C
         _indexingTaskManager = indexingTaskManager;
     }
 
-    public override Task CreatedAsync(CreatedContext<ChatInteraction> context)
+    public override async Task CreatedAsync(CreatedContext<ChatInteraction> context)
     {
         if (!_updatedIndexIds.Add(context.Model.ItemId))
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        return _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, ChatInteractionsConstants.IndexingTaskType, RecordIndexingTaskTypes.Update));
+        await _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, ChatInteractionsConstants.IndexingTaskType, RecordIndexingTaskTypes.Update));
     }
 
-    public override Task UpdatedAsync(UpdatedContext<ChatInteraction> context)
+    public override async Task UpdatedAsync(UpdatedContext<ChatInteraction> context)
     {
         if (!_updatedIndexIds.Add(context.Model.ItemId))
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        return _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, ChatInteractionsConstants.IndexingTaskType, RecordIndexingTaskTypes.Update));
+        await _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, ChatInteractionsConstants.IndexingTaskType, RecordIndexingTaskTypes.Update));
     }
 
-    public override Task DeletedAsync(DeletedContext<ChatInteraction> context)
+    public override async Task DeletedAsync(DeletedContext<ChatInteraction> context)
     {
         if (!_deletedIndexIds.Add(context.Model.ItemId))
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        return _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, ChatInteractionsConstants.IndexingTaskType, RecordIndexingTaskTypes.Delete));
+        await _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, ChatInteractionsConstants.IndexingTaskType, RecordIndexingTaskTypes.Delete));
     }
 }
