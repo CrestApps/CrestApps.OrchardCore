@@ -51,6 +51,7 @@ window.openAIChatManager = function () {
         return {
           inputElement: null,
           buttonElement: null,
+          microphoneButton: null,
           chatContainer: null,
           placeholder: null,
           isSessionStarted: false,
@@ -60,6 +61,14 @@ window.openAIChatManager = function () {
           chatHistorySection: null,
           widgetIsInitialized: false,
           isSteaming: false,
+          isRecording: false,
+          mediaRecorder: null,
+          audioChunks: [],
+          audioStream: null,
+          recordingMessageId: null,
+          audioSubject: null,
+          audioSubjectCompleted: false,
+          audioInvokePromise: null,
           isNavigatingAway: false,
           stream: null,
           messages: [],
@@ -386,6 +395,18 @@ window.openAIChatManager = function () {
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
           this.placeholder = document.querySelector(config.placeholderElementSelector);
+          if (config.microphoneButtonElementSelector) {
+            this.microphoneButton = document.querySelector(config.microphoneButtonElementSelector);
+            if (this.microphoneButton) {
+              this.microphoneButton.addEventListener('click', function () {
+                if (_this7.isRecording) {
+                  _this7.stopRecording();
+                } else {
+                  _this7.startRecording();
+                }
+              });
+            }
+          }
           this.inputElement.addEventListener('keyup', function (event) {
             if (_this7.stream != null) {
               return;
@@ -555,30 +576,294 @@ window.openAIChatManager = function () {
         },
         copyResponse: function copyResponse(message) {
           navigator.clipboard.writeText(message);
+        },
+        startRecording: function startRecording() {
+          var _this9 = this;
+          return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
+            var stream;
+            return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+              while (1) switch (_context4.prev = _context4.next) {
+                case 0:
+                  if (!(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)) {
+                    _context4.next = 4;
+                    break;
+                  }
+                  console.error('Media devices not supported');
+                  alert('Your browser does not support audio recording. Please use a modern browser like Chrome, Edge, or Firefox.');
+                  return _context4.abrupt("return");
+                case 4:
+                  _context4.prev = 4;
+                  _context4.next = 7;
+                  return navigator.mediaDevices.getUserMedia({
+                    audio: true
+                  });
+                case 7:
+                  stream = _context4.sent;
+                  _this9.mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm'
+                  });
+                  _this9.audioChunks = [];
+                  _this9.audioStream = stream;
+                  _this9.recordingMessageId = null;
+                  _this9.audioSubjectCompleted = false;
+
+                  // Create a SignalR Subject for client-to-server streaming and invoke hub method once
+                  _this9.audioSubject = new signalR.Subject();
+                  _this9.audioInvokePromise = _this9.connection.invoke("SendAudioChunk", _this9.getProfileId(), _this9.getSessionId(), _this9.audioSubject)["catch"](function (err) {
+                    console.error('Error sending audio stream:', err);
+                    return {
+                      transcript: '',
+                      sessionId: _this9.getSessionId()
+                    };
+                  });
+                  _this9.mediaRecorder.ondataavailable = /*#__PURE__*/function () {
+                    var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(event) {
+                      var arrayBuffer, uint8Array, binary, i, base64;
+                      return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+                        while (1) switch (_context2.prev = _context2.next) {
+                          case 0:
+                            if (!(!_this9.audioSubject || _this9.audioSubjectCompleted)) {
+                              _context2.next = 2;
+                              break;
+                            }
+                            return _context2.abrupt("return");
+                          case 2:
+                            if (!(event.data && event.data.size > 0)) {
+                              _context2.next = 17;
+                              break;
+                            }
+                            _context2.prev = 3;
+                            _context2.next = 6;
+                            return event.data.arrayBuffer();
+                          case 6:
+                            arrayBuffer = _context2.sent;
+                            uint8Array = new Uint8Array(arrayBuffer);
+                            binary = '';
+                            for (i = 0; i < uint8Array.length; i++) {
+                              binary += String.fromCharCode(uint8Array[i]);
+                            }
+                            base64 = btoa(binary);
+                            if (_this9.audioSubject && !_this9.audioSubjectCompleted) {
+                              _this9.audioSubject.next(base64);
+                            }
+                            _context2.next = 17;
+                            break;
+                          case 14:
+                            _context2.prev = 14;
+                            _context2.t0 = _context2["catch"](3);
+                            console.error('Error encoding audio chunk:', _context2.t0);
+                          case 17:
+                          case "end":
+                            return _context2.stop();
+                        }
+                      }, _callee2, null, [[3, 14]]);
+                    }));
+                    return function (_x) {
+                      return _ref.apply(this, arguments);
+                    };
+                  }();
+                  _this9.mediaRecorder.onstop = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+                    var _this9$audioSubject, result, finalTranscript, returnedSessionId, message;
+                    return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+                      while (1) switch (_context3.prev = _context3.next) {
+                        case 0:
+                          // Complete the stream and wait for the final transcript
+                          try {
+                            _this9.audioSubjectCompleted = true;
+                            (_this9$audioSubject = _this9.audioSubject) === null || _this9$audioSubject === void 0 || _this9$audioSubject.complete();
+                          } catch (_unused) {}
+                          _context3.prev = 1;
+                          _context3.next = 4;
+                          return _this9.audioInvokePromise;
+                        case 4:
+                          result = _context3.sent;
+                          finalTranscript = (result === null || result === void 0 ? void 0 : result.transcript) || '';
+                          returnedSessionId = result === null || result === void 0 ? void 0 : result.sessionId;
+                          if (returnedSessionId) {
+                            _this9.setSessionId(returnedSessionId);
+                          }
+                          if (_this9.recordingMessageId !== null) {
+                            message = _this9.messages[_this9.recordingMessageId];
+                            if (message) {
+                              message.content = finalTranscript || message.content || '';
+                              message.htmlContent = marked.parse(message.content, {
+                                renderer: renderer
+                              });
+                              _this9.messages[_this9.recordingMessageId] = message;
+                              _this9.scrollToBottom();
+                            }
+                          }
+                          _context3.next = 14;
+                          break;
+                        case 11:
+                          _context3.prev = 11;
+                          _context3.t0 = _context3["catch"](1);
+                          console.error('Error finalizing audio stream:', _context3.t0);
+                        case 14:
+                          _context3.prev = 14;
+                          _this9.audioSubject = null;
+                          _this9.audioInvokePromise = null;
+                          _this9.audioSubjectCompleted = false;
+                          return _context3.finish(14);
+                        case 19:
+                          // Stop all tracks to release the microphone
+                          if (_this9.audioStream) {
+                            _this9.audioStream.getTracks().forEach(function (track) {
+                              return track.stop();
+                            });
+                            _this9.audioStream = null;
+                          }
+
+                          // Finish UI finalize
+                          _context3.next = 22;
+                          return _this9.finalizeRecording();
+                        case 22:
+                        case "end":
+                          return _context3.stop();
+                      }
+                    }, _callee3, null, [[1, 11, 14, 19]]);
+                  }));
+
+                  // Start recording with 1-second timeslice for chunked processing
+                  _this9.mediaRecorder.start(1000);
+                  _this9.isRecording = true;
+
+                  // Show initial transcription message
+                  _this9.recordingMessageId = _this9.messages.length;
+                  _this9.addMessage({
+                    role: 'user',
+                    content: '...',
+                    // placeholder until transcript arrives
+                    isTranscribing: true
+                  });
+                  if (_this9.microphoneButton) {
+                    _this9.microphoneButton.classList.add('btn-danger');
+                    _this9.microphoneButton.classList.remove('btn-outline-secondary');
+                    _this9.microphoneButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
+                  }
+                  _context4.next = 28;
+                  break;
+                case 24:
+                  _context4.prev = 24;
+                  _context4.t0 = _context4["catch"](4);
+                  console.error('Error accessing microphone:', _context4.t0);
+                  alert('Unable to access microphone. Please check your browser permissions and try again.');
+                case 28:
+                case "end":
+                  return _context4.stop();
+              }
+            }, _callee4, null, [[4, 24]]);
+          }))();
+        },
+        stopRecording: function stopRecording() {
+          if (this.mediaRecorder && this.isRecording) {
+            this.mediaRecorder.stop();
+            this.isRecording = false;
+            if (this.microphoneButton) {
+              this.microphoneButton.classList.remove('btn-danger');
+              this.microphoneButton.classList.add('btn-outline-secondary');
+              this.microphoneButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+            }
+          }
+        },
+        sendAudioChunk: function sendAudioChunk(audioBlob) {
+          var _this10 = this;
+          return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
+            var arrayBuffer, uint8Array, binary, i, base64;
+            return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+              while (1) switch (_context5.prev = _context5.next) {
+                case 0:
+                  _context5.prev = 0;
+                  if (!(!_this10.audioSubject || _this10.audioSubjectCompleted)) {
+                    _context5.next = 3;
+                    break;
+                  }
+                  return _context5.abrupt("return");
+                case 3:
+                  _context5.next = 5;
+                  return audioBlob.arrayBuffer();
+                case 5:
+                  arrayBuffer = _context5.sent;
+                  uint8Array = new Uint8Array(arrayBuffer);
+                  binary = '';
+                  for (i = 0; i < uint8Array.length; i++) {
+                    binary += String.fromCharCode(uint8Array[i]);
+                  }
+                  base64 = btoa(binary);
+                  if (_this10.audioSubject && !_this10.audioSubjectCompleted) {
+                    _this10.audioSubject.next(base64);
+                  }
+                  _context5.next = 16;
+                  break;
+                case 13:
+                  _context5.prev = 13;
+                  _context5.t0 = _context5["catch"](0);
+                  console.error('Error processing audio chunk:', _context5.t0);
+                case 16:
+                case "end":
+                  return _context5.stop();
+              }
+            }, _callee5, null, [[0, 13]]);
+          }))();
+        },
+        finalizeRecording: function finalizeRecording() {
+          var _this11 = this;
+          return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
+            var message;
+            return _regeneratorRuntime().wrap(function _callee6$(_context6) {
+              while (1) switch (_context6.prev = _context6.next) {
+                case 0:
+                  if (_this11.recordingMessageId !== null) {
+                    message = _this11.messages[_this11.recordingMessageId];
+                    if (message) {
+                      // Remove the transcribing flag
+                      delete message.isTranscribing;
+
+                      // If we got transcription, keep it and enable send button
+                      if (message.content && message.content !== '...') {
+                        _this11.inputElement.value = message.content;
+                        _this11.prompt = message.content;
+                        _this11.buttonElement.removeAttribute('disabled');
+                      } else {
+                        // No transcription received, remove the empty message
+                        _this11.messages.splice(_this11.recordingMessageId, 1);
+                      }
+                    }
+                    _this11.recordingMessageId = null;
+                  }
+                case 1:
+                case "end":
+                  return _context6.stop();
+              }
+            }, _callee6);
+          }))();
         }
       },
       mounted: function mounted() {
-        var _this9 = this;
-        _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
-          return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-            while (1) switch (_context2.prev = _context2.next) {
+        var _this12 = this;
+        _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee7() {
+          return _regeneratorRuntime().wrap(function _callee7$(_context7) {
+            while (1) switch (_context7.prev = _context7.next) {
               case 0:
-                _context2.next = 2;
-                return _this9.startConnection();
+                _context7.next = 2;
+                return _this12.startConnection();
               case 2:
-                _this9.initializeApp();
+                _this12.initializeApp();
                 if (config.widget) {
-                  _this9.initializeWidget();
+                  _this12.initializeWidget();
                 }
               case 4:
               case "end":
-                return _context2.stop();
+                return _context7.stop();
             }
-          }, _callee2);
+          }, _callee7);
         }))();
         window.addEventListener('beforeunload', this.handleBeforeUnload);
       },
       beforeUnmount: function beforeUnmount() {
+        if (this.isRecording) {
+          this.stopRecording();
+        }
         window.removeEventListener('beforeunload', this.handleBeforeUnload);
         if (this.stream) {
           this.stream.dispose();

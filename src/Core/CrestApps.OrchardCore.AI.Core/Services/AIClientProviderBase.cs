@@ -38,9 +38,30 @@ public abstract class AIClientProviderBase : IAIClientProvider
         return ValueTask.FromResult(GetEmbeddingGenerator(connection, deploymentName));
     }
 
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    public ValueTask<ISpeechToTextClient> GetSpeechToTextClientAsync(AIProviderConnectionEntry connection, string deploymentName = null)
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    {
+        if (string.IsNullOrEmpty(deploymentName))
+        {
+            deploymentName = connection.GetDefaultSpeechToTextDeploymentName(false);
+        }
+
+        if (string.IsNullOrEmpty(deploymentName))
+        {
+            throw new ArgumentException("A Speech-to-text deployment name must be provided, either directly or as a default in the connection settings.");
+        }
+
+        return ValueTask.FromResult(GetSpeechToTextClient(connection, deploymentName));
+    }
+
     protected abstract string GetProviderName();
 
     protected abstract IChatClient GetChatClient(AIProviderConnectionEntry connection, string deploymentName);
 
     protected abstract IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator(AIProviderConnectionEntry connection, string deploymentName);
+
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    protected abstract ISpeechToTextClient GetSpeechToTextClient(AIProviderConnectionEntry connection, string deploymentName);
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 }

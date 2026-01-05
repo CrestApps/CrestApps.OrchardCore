@@ -120,6 +120,49 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             ];
         }).Location("Content:5");
 
+        var speechToTextResult = Initialize<SpeechToTextMetadataViewModel>("AIProfileSpeechToText_Edit", model =>
+        {
+            var speechToTextMetadata = profile.As<SpeechToTextMetadata>();
+
+            model.UseMicrophone = speechToTextMetadata?.UseMicrophone ?? false;
+            model.ServiceConnectionName = speechToTextMetadata?.ConnectionName;
+            model.DeploymentId = speechToTextMetadata?.DeploymentId;
+
+            if (_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
+            {
+                model.ProviderName = profileSource.ProviderName;
+
+                if (_connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
+                {
+                    model.Connections = provider.Connections.Where(x => x.Value.GetConnectionType() == AIProviderConnectionType.SpeechToText)
+                        .Select(x => new SelectListItem(x.Value.TryGetValue("ConnectionNameAlias", out var a) ? a.ToString() : x.Key, x.Key));
+
+                    // Populate deployments if a connection is selected
+                    if (!string.IsNullOrEmpty(speechToTextMetadata?.ConnectionName) &&
+                        provider.Connections.TryGetValue(speechToTextMetadata.ConnectionName, out var connection))
+                    {
+                        var deployments = connection.GetStringValue("Deployments");
+                        if (!string.IsNullOrEmpty(deployments))
+                        {
+                            model.Deployments = deployments.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(d => new SelectListItem(d.Trim(), d.Trim()));
+                        }
+                    }
+                }
+                else
+                {
+                    model.Connections = [];
+                    model.Deployments = [];
+                }
+            }
+            else
+            {
+                model.Connections = [];
+                model.Deployments = [];
+            }
+        }).Location("Content:7");
+
+
         var parametersResult = Initialize<ProfileMetadataViewModel>("AIProfileParameters_Edit", model =>
         {
             var metadata = profile.As<AIProfileMetadata>();
@@ -137,7 +180,8 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.IsSystemMessageLocked = profile.GetSettings<AIProfileSettings>().LockSystemMessage;
         }).Location("Content:10");
 
-        return Combine(mainFieldsResult, connectionFieldResult, fieldsResult, parametersResult);
+        return Combine(mainFieldsResult, connectionFieldResult, fieldsResult, speechToTextResult, parametersResult);
+
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
@@ -246,6 +290,31 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         }
 
         profile.Put(metadata);
+
+        // Handle speech-to-text metadata
+        var speechToTextModel = new SpeechToTextMetadataViewModel();
+        await context.Updater.TryUpdateModelAsync(speechToTextModel, Prefix);
+
+        if (speechToTextModel.UseMicrophone && string.IsNullOrEmpty(speechToTextModel.ServiceConnectionName))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(speechToTextModel.ServiceConnectionName), S["The Speech-to-text Connection is required when using microphone."]);
+        }
+
+        var speechToTextMetadata = new SpeechToTextMetadata
+        {
+            UseMicrophone = speechToTextModel.UseMicrophone,
+            ConnectionName = speechToTextModel.ServiceConnectionName,
+            DeploymentId = speechToTextModel.DeploymentId
+        };
+
+        // ProviderName will be set by the connection handler during initialization
+        if (_aiOptions.ProfileSources.TryGetValue(profile.Source, out var speechToTextProfileSource))
+        {
+            speechToTextMetadata.ProviderName = speechToTextProfileSource.ProviderName;
+        }
+
+        profile.Put(speechToTextMetadata);
+
 
         return Edit(profile, context);
     }

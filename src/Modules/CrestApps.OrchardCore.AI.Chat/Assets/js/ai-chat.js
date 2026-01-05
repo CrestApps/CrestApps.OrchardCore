@@ -65,6 +65,8 @@ window.openAIChatManager = function () {
                 return {
                     inputElement: null,
                     buttonElement: null,
+                    microphoneButton: null,
+
                     chatContainer: null,
                     placeholder: null,
                     isSessionStarted: false,
@@ -74,6 +76,15 @@ window.openAIChatManager = function () {
                     chatHistorySection: null,
                     widgetIsInitialized: false,
                     isSteaming: false,
+                    isRecording: false,
+                    mediaRecorder: null,
+                    audioChunks: [],
+                    audioStream: null,
+                    recordingMessageId: null,
+                    audioSubject: null,
+                    audioSubjectCompleted: false,
+                    audioInvokePromise: null,
+
                     isNavigatingAway: false,
                     stream: null,
                     messages: [],
@@ -405,6 +416,21 @@ window.openAIChatManager = function () {
                     this.chatContainer = document.querySelector(config.chatContainerElementSelector);
                     this.placeholder = document.querySelector(config.placeholderElementSelector);
 
+                    if (config.microphoneButtonElementSelector) {
+                        this.microphoneButton = document.querySelector(config.microphoneButtonElementSelector);
+
+                        if (this.microphoneButton) {
+                            this.microphoneButton.addEventListener('click', () => {
+                                if (this.isRecording) {
+                                    this.stopRecording();
+                                } else {
+                                    this.startRecording();
+                                }
+                            });
+                        }
+                    }
+
+
                     this.inputElement.addEventListener('keyup', event => {
 
                         if (this.stream != null) {
@@ -612,6 +638,169 @@ window.openAIChatManager = function () {
                 },
                 copyResponse(message) {
                     navigator.clipboard.writeText(message);
+                },
+                async startRecording() {
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        console.error('Media devices not supported');
+                        alert('Your browser does not support audio recording. Please use a modern browser like Chrome, Edge, or Firefox.');
+                        return;
+                    }
+
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                        this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                        this.audioChunks = [];
+                        this.audioStream = stream;
+                        this.recordingMessageId = null;
+                        this.audioSubjectCompleted = false;
+
+                        // Create a SignalR Subject for client-to-server streaming and invoke hub method once
+                        this.audioSubject = new signalR.Subject();
+                        this.audioInvokePromise = this.connection.invoke(
+                            "SendAudioChunk",
+                            this.getProfileId(),
+                            this.getSessionId(),
+                            this.audioSubject
+                        ).catch(err => {
+                            console.error('Error sending audio stream:', err);
+                            return { transcript: '', sessionId: this.getSessionId() };
+                        });
+
+                        this.mediaRecorder.ondataavailable = async (event) => {
+                            if (!this.audioSubject || this.audioSubjectCompleted) {
+                                return;
+                            }
+                            if (event.data && event.data.size > 0) {
+                                try {
+                                    const arrayBuffer = await event.data.arrayBuffer();
+                                    const uint8Array = new Uint8Array(arrayBuffer);
+                                    let binary = '';
+                                    for (let i = 0; i < uint8Array.length; i++) {
+                                        binary += String.fromCharCode(uint8Array[i]);
+                                    }
+                                    const base64 = btoa(binary);
+                                    if (this.audioSubject && !this.audioSubjectCompleted) {
+                                        this.audioSubject.next(base64);
+                                    }
+                                } catch (e) {
+                                    console.error('Error encoding audio chunk:', e);
+                                }
+                            }
+                        };
+
+                        this.mediaRecorder.onstop = async () => {
+                            // Complete the stream and wait for the final transcript
+                            try { this.audioSubjectCompleted = true; this.audioSubject?.complete(); } catch { }
+
+                            try {
+                                const result = await this.audioInvokePromise;
+                                const finalTranscript = result?.transcript || '';
+                                const returnedSessionId = result?.sessionId;
+                                if (returnedSessionId) {
+                                    this.setSessionId(returnedSessionId);
+                                }
+                                if (this.recordingMessageId !== null) {
+                                    const message = this.messages[this.recordingMessageId];
+                                    if (message) {
+                                        message.content = finalTranscript || message.content || '';
+                                        message.htmlContent = marked.parse(message.content, { renderer });
+                                        this.messages[this.recordingMessageId] = message;
+                                        this.scrollToBottom();
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Error finalizing audio stream:', e);
+                            } finally {
+                                this.audioSubject = null;
+                                this.audioInvokePromise = null;
+                                this.audioSubjectCompleted = false;
+                            }
+
+                            // Stop all tracks to release the microphone
+                            if (this.audioStream) {
+                                this.audioStream.getTracks().forEach(track => track.stop());
+                                this.audioStream = null;
+                            }
+
+                            // Finish UI finalize
+                            await this.finalizeRecording();
+                        };
+
+                        // Start recording with 1-second timeslice for chunked processing
+                        this.mediaRecorder.start(1000);
+                        this.isRecording = true;
+
+                        // Show initial transcription message
+                        this.recordingMessageId = this.messages.length;
+                        this.addMessage({
+                            role: 'user',
+                            content: '...', // placeholder until transcript arrives
+                            isTranscribing: true
+                        });
+
+                        if (this.microphoneButton) {
+                            this.microphoneButton.classList.add('btn-danger');
+                            this.microphoneButton.classList.remove('btn-outline-secondary');
+                            this.microphoneButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
+                        }
+                    } catch (error) {
+                        console.error('Error accessing microphone:', error);
+                        alert('Unable to access microphone. Please check your browser permissions and try again.');
+                    }
+                },
+                stopRecording() {
+                    if (this.mediaRecorder && this.isRecording) {
+                        this.mediaRecorder.stop();
+                        this.isRecording = false;
+
+                        if (this.microphoneButton) {
+                            this.microphoneButton.classList.remove('btn-danger');
+                            this.microphoneButton.classList.add('btn-outline-secondary');
+                            this.microphoneButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+                        }
+                    }
+                },
+                async sendAudioChunk(audioBlob) {
+                    // Deprecated per-chunk invoke; now using client-to-server streaming
+                    try {
+                        if (!this.audioSubject || this.audioSubjectCompleted) {
+                            return;
+                        }
+                        const arrayBuffer = await audioBlob.arrayBuffer();
+                        const uint8Array = new Uint8Array(arrayBuffer);
+                        let binary = '';
+                        for (let i = 0; i < uint8Array.length; i++) {
+                            binary += String.fromCharCode(uint8Array[i]);
+                        }
+                        const base64 = btoa(binary);
+                        if (this.audioSubject && !this.audioSubjectCompleted) {
+                            this.audioSubject.next(base64);
+                        }
+                    } catch (error) {
+                        console.error('Error processing audio chunk:', error);
+                    }
+                },
+                async finalizeRecording() {
+                    if (this.recordingMessageId !== null) {
+                        let message = this.messages[this.recordingMessageId];
+                        if (message) {
+                            // Remove the transcribing flag
+                            delete message.isTranscribing;
+
+                            // If we got transcription, keep it and enable send button
+                            if (message.content && message.content !== '...') {
+                                this.inputElement.value = message.content;
+                                this.prompt = message.content;
+                                this.buttonElement.removeAttribute('disabled');
+                            } else {
+                                // No transcription received, remove the empty message
+                                this.messages.splice(this.recordingMessageId, 1);
+                            }
+                        }
+                        this.recordingMessageId = null;
+                    }
+
                 }
             },
             mounted() {
@@ -626,6 +815,11 @@ window.openAIChatManager = function () {
                 window.addEventListener('beforeunload', this.handleBeforeUnload);
             },
             beforeUnmount() {
+                if (this.isRecording) {
+                    this.stopRecording();
+                }
+                
+
                 window.removeEventListener('beforeunload', this.handleBeforeUnload);
 
                 if (this.stream) {

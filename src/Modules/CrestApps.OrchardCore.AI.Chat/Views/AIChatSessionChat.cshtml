@@ -1,5 +1,7 @@
 @using CrestApps.OrchardCore.AI
 @using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.Models
+
 @using CrestApps.OrchardCore.AI.Core.Services
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.OrchardCore.AI.Models
@@ -27,6 +29,10 @@
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
 
     var promptGeneratedProfiles = await ProfilesCatalog.GetAsync(AIProfileType.TemplatePrompt);
+    
+    var speechToTextMetadata = Model.Profile?.As<SpeechToTextMetadata>();
+    var showMicrophone = speechToTextMetadata?.UseMicrophone ?? false;
+
 }
 
 <div class="mb-3 mx-3 p-3 overflow-y-auto h-100 rounded-2 border bg-theme" id="@chatContainerHtmlId">
@@ -72,6 +78,13 @@
             </div>
 
             <div>
+                @if (showMicrophone)
+                {
+                    <button class="btn btn-outline-secondary rounded-circle me-2 microphone-button" type="button" id="@(baseId)_MicrophoneButton" title="@T["Record voice message"]">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+                }
+
                 <button class="btn btn-dark rounded-circle" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                     <i class="fa-solid fa-arrow-up"></i>
                 </button>
@@ -107,6 +120,11 @@
         chatContainerElementSelector: '#@chatContainerHtmlId',
         inputElementSelector: '#@userPromptHtmlId',
         sendButtonElementSelector: '#@buttonHtmlId',
+        @if (showMicrophone)
+        {
+            <text>microphoneButtonElementSelector: '#@(baseId)_MicrophoneButton',</text>
+        }
+
         placeholderElementSelector: '#@placeholderHtmlId',
         messages: @Html.Raw(JsonSerializer.Serialize(prompts, JOptions.CamelCase))
     });
@@ -117,4 +135,22 @@
         border: none;
         box-shadow: none;
     }
+
+    .microphone-button {
+        transition: all 0.3s ease;
+    }
+
+        .microphone-button.btn-danger {
+            animation: pulse-red 1.5s infinite;
+        }
+
+    @@keyframes pulse-red {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+        }
+        50% {
+            box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+        }
+    }
+
 </style>

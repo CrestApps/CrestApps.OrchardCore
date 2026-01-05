@@ -52,6 +52,8 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
             [
                 new(S["Chat"], nameof(AIProviderConnectionType.Chat)),
                 new(S["Embedding"], nameof(AIProviderConnectionType.Embedding)),
+                new(S["Speech to text"], nameof(AIProviderConnectionType.SpeechToText)),
+
             ];
 
         }).Location("Content:1");
@@ -93,7 +95,7 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
         }
         else
         {
-            model.Type = model.Type.Value;
+            connection.Type = model.Type.Value;
         }
 
         connection.DisplayText = model.DisplayText;

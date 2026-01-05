@@ -53,6 +53,56 @@ Add the following section to your `appsettings.json` to configure Azure OpenAI:
 
 Valid values for `AuthenticationType` are: `Default`, `ManagedIdentity`, or `ApiKey`. If using `ApiKey`, the `ApiKey` field is required.
 
+### Complete Configuration Example with Multiple Connection Types
+
+Azure OpenAI supports multiple connection types for different capabilities:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Providers": {
+        "Azure": {
+          "DefaultConnectionName": "azure-openai",
+          "DefaultDeploymentName": "gpt-4o",
+          "Connections": {
+            "azure-openai": {
+              "Type": "Chat",
+              "Endpoint": "https://<!-- Your Azure Resource Name -->.openai.azure.com/",
+              "AuthenticationType": "ApiKey",
+              "ApiKey": "<!-- API Key for your Azure AI instance -->",
+              "DefaultDeploymentName": "gpt-4o"
+            },
+            "azure-embeddings": {
+              "Type": "Embedding",
+              "Endpoint": "https://<!-- Your Azure Resource Name -->.openai.azure.com/",
+              "AuthenticationType": "ApiKey",
+              "ApiKey": "<!-- API Key for your Azure AI instance -->",
+              "DefaultDeploymentName": "text-embedding-3-small"
+            },
+            "azure-whisper": {
+              "Type": "SpeechToText",
+              "Endpoint": "https://<!-- Your Azure Resource Name -->.openai.azure.com/",
+              "AuthenticationType": "ApiKey",
+              "ApiKey": "<!-- API Key for your Azure AI instance -->",
+              "DefaultDeploymentName": "whisper"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Connection Types:**
+- `Chat` - For chat/completion models (gpt-4, gpt-4o, etc.)
+- `Embedding` - For embedding models (text-embedding-3-small, text-embedding-3-large, etc.)
+- `SpeechToText` - For speech-to-text models (whisper)
+
+If no `Type` is specified, `Chat` is used as the default.
+
+
 ### How to Retrieve Azure OpenAI Credentials
 
 #### Get the API Key and Endpoint
