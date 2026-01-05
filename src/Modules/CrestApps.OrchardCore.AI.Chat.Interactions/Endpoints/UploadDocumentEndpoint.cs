@@ -189,9 +189,9 @@ internal static class UploadDocumentEndpoint
                     FileName = file.FileName,
                     ContentType = file.ContentType,
                     FileSize = file.Length,
-                    Content = text,
+                    Text = text,
                     UploadedUtc = now,
-                    ContentChunks = [],
+                    Chunks = [],
                 };
 
                 var textChunks = ChunkText(text);
@@ -202,7 +202,7 @@ internal static class UploadDocumentEndpoint
 
                     for (var i = 0; i < textChunks.Count; i++)
                     {
-                        document.ContentChunks.Add(new DocumentChunk
+                        document.Chunks.Add(new ChatInteractionDocumentChunk
                         {
                             Text = textChunks[i],
                             Embedding = embedding[i].Vector.ToArray(),

@@ -14,14 +14,14 @@ public interface IVectorSearchService
     /// </summary>
     /// <param name="indexName">The name of the index to search.</param>
     /// <param name="embedding">The embedding vector to search for similar documents.</param>
-    /// <param name="sessionId">The session/interaction ID to filter results by.</param>
+    /// <param name="interactionId">The session/interaction ID to filter results by.</param>
     /// <param name="topN">The maximum number of results to return.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A collection of matching document chunks with their similarity scores.</returns>
     Task<IEnumerable<DocumentChunkSearchResult>> SearchAsync(
         IndexProfile indexProfile,
         float[] embedding,
-        string sessionId,
+        string interactionId,
         int topN,
         CancellationToken cancellationToken = default);
 }

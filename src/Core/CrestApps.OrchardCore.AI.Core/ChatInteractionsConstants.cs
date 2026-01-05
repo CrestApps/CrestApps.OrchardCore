@@ -8,6 +8,8 @@ public static class ChatInteractionsConstants
     {
         public const string Chunks = "chunks";
 
+        public const string Text = "text";
+
         public const string DocumentId = "documentId";
 
         public const string FileName = "fileName";

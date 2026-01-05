@@ -24,7 +24,7 @@ public sealed class ChatInteractionDocument
     /// <summary>
     /// Gets or sets the extracted text content from the document.
     /// </summary>
-    public string Content { get; set; }
+    public string Text { get; set; }
 
     /// <summary>
     /// Gets or sets the size of the original file in bytes.
@@ -36,5 +36,8 @@ public sealed class ChatInteractionDocument
     /// </summary>
     public DateTime UploadedUtc { get; set; }
 
-    public List<DocumentChunk> ContentChunks { get; set; }
+    /// <summary>
+    /// Gets or sets the extracted text as chunks from the document.
+    /// </summary>
+    public List<ChatInteractionDocumentChunk> Chunks { get; set; }
 }

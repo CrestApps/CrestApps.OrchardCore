@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.AI.Models;
 /// Represents a document chunk for embedding and indexing.
 /// Each chunk contains a paragraph or section of the original document.
 /// </summary>
-public sealed class DocumentChunk
+public sealed class ChatInteractionDocumentChunk
 {
     /// <summary>
     /// Gets or sets the text content of this chunk.

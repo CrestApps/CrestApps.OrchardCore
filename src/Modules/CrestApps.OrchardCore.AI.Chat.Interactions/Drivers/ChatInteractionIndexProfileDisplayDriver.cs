@@ -45,15 +45,8 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
         {
             var metadata = indexProfile.As<ChatInteractionIndexProfileMetadata>();
 
-            model.EmbeddingProviderName = metadata.EmbeddingProviderName;
-            model.EmbeddingConnectionName = metadata.EmbeddingConnectionName;
-            model.EmbeddingDeploymentName = metadata.EmbeddingDeploymentName;
-
             // Build the list of available embedding connections across all providers
-            var embeddingConnections = new List<SelectListItem>
-            {
-                new(S["-- Select an embedding connection --"], string.Empty)
-            };
+            var embeddingConnections = new List<SelectListItem>();
 
             foreach (var (providerName, provider) in _providerOptions.Providers)
             {
@@ -75,7 +68,16 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
                         ? $"{alias} ({providerName})"
                         : $"{connectionName} ({providerName})";
 
-                    embeddingConnections.Add(new SelectListItem(displayName, key));
+                    var isSelected = metadata.EmbeddingProviderName == providerName &&
+                                metadata.EmbeddingDeploymentName == embeddingDeploymentName &&
+                                metadata.EmbeddingConnectionName == connectionName;
+
+                    if (isSelected)
+                    {
+                        model.EmbeddingConnection = key;
+                    }
+
+                    embeddingConnections.Add(new SelectListItem(displayName, key, isSelected));
                 }
             }
 
@@ -96,24 +98,26 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
 
         var metadata = indexProfile.As<ChatInteractionIndexProfileMetadata>();
 
+        var isSet = false;
+
         // Parse the selected embedding connection (format: providerName|connectionName|deploymentName)
-        if (!string.IsNullOrEmpty(model.EmbeddingConnectionName))
+        if (!string.IsNullOrEmpty(model.EmbeddingConnection))
         {
-            var parts = model.EmbeddingConnectionName.Split(Separator);
+            var parts = model.EmbeddingConnection.Split(Separator);
 
             if (parts.Length == ExpectedPartsCount)
             {
                 metadata.EmbeddingProviderName = parts[0];
                 metadata.EmbeddingConnectionName = parts[1];
                 metadata.EmbeddingDeploymentName = parts[2];
+
+                isSet = true;
             }
         }
-        else
+
+        if (!isSet)
         {
-            // Clear the metadata if no connection is selected
-            metadata.EmbeddingProviderName = null;
-            metadata.EmbeddingConnectionName = null;
-            metadata.EmbeddingDeploymentName = null;
+            context.Updater.ModelState.AddModelError(Prefix, S["Embedding connection is required."]);
         }
 
         indexProfile.Put(metadata);

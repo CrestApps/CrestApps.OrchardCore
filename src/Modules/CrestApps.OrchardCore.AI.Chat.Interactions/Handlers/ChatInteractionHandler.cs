@@ -117,15 +117,17 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
                 {
                     var document = new DocumentIndex(doc.DocumentId);
 
-                    var buildIndexContext = new BuildDocumentIndexContext(document, interaction, [doc.DocumentId], documentIndexManager.GetContentIndexSettings())
+                    var buildIndexContext = new BuildDocumentIndexContext(document, doc, [doc.DocumentId], documentIndexManager.GetContentIndexSettings())
                     {
                         AdditionalProperties = new Dictionary<string, object>
                         {
                             { nameof(IndexProfile), indexProfile },
-                            { "ChatInteractionDocument", doc },
+                            { "Interaction", interaction },
                         }
                     };
+
                     await documentIndexHandlers.InvokeAsync(x => x.BuildIndexAsync(buildIndexContext), logger);
+
                     documents.Add(document);
                 }
             }

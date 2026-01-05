@@ -156,10 +156,11 @@ public sealed class ChatInteractionIndexingService
                     {
                         var document = new DocumentIndex(doc.DocumentId);
 
-                        var buildIndexContext = new BuildDocumentIndexContext(document, doc, [], entry.DocumentIndexManager.GetContentIndexSettings())
+                        var buildIndexContext = new BuildDocumentIndexContext(document, doc, [doc.DocumentId], entry.DocumentIndexManager.GetContentIndexSettings())
                         {
                             AdditionalProperties =
                             {
+                                { nameof(IndexProfile), entry.IndexProfile },
                                 { "Interaction", interaction },
                             }
                         };

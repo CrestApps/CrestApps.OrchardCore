@@ -8,22 +8,12 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 public class EditChatInteractionIndexProfileViewModel
 {
     /// <summary>
-    /// Gets or sets the provider name for the embedding service.
-    /// </summary>
-    public string EmbeddingProviderName { get; set; }
-
-    /// <summary>
     /// Gets or sets the connection name for the embedding service.
     /// </summary>
-    public string EmbeddingConnectionName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the deployment name for the embedding service.
-    /// </summary>
-    public string EmbeddingDeploymentName { get; set; }
+    public string EmbeddingConnection { get; set; }
 
     /// <summary>
     /// Gets or sets the available embedding connections.
     /// </summary>
-    public IEnumerable<SelectListItem> EmbeddingConnections { get; set; } = [];
+    public IList<SelectListItem> EmbeddingConnections { get; set; } = [];
 }

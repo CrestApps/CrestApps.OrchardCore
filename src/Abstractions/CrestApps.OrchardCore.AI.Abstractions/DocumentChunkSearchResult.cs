@@ -8,7 +8,7 @@ public sealed class DocumentChunkSearchResult
     /// <summary>
     /// Gets or sets the document chunk.
     /// </summary>
-    public Models.DocumentChunk Chunk { get; set; }
+    public Models.ChatInteractionDocumentChunk Chunk { get; set; }
 
     /// <summary>
     /// Gets or sets the similarity score.

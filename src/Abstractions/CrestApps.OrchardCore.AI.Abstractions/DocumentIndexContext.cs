@@ -25,5 +25,5 @@ public sealed class DocumentIndexContext
     /// <summary>
     /// Gets or sets the document chunks with embeddings.
     /// </summary>
-    public IList<DocumentChunk> Chunks { get; set; } = [];
+    public IList<ChatInteractionDocumentChunk> Chunks { get; set; } = [];
 }

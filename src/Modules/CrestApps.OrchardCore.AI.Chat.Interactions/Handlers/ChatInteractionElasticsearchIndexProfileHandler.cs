@@ -43,7 +43,6 @@ public sealed class ChatInteractionElasticsearchIndexProfileHandler : IndexProfi
         metadata.IndexMappings ??= new ElasticsearchIndexMap();
         metadata.IndexMappings.Mapping ??= new TypeMapping();
         metadata.IndexMappings.Mapping.Properties ??= [];
-        metadata.IndexMappings.Mapping.Meta ??= new Dictionary<string, object>();
 
         // Get embedding connection from index profile metadata
         var interactionMetadata = indexProfile.As<ChatInteractionIndexProfileMetadata>();
@@ -53,6 +52,7 @@ public sealed class ChatInteractionElasticsearchIndexProfileHandler : IndexProfi
 
         metadata.IndexMappings.KeyFieldName = ChatInteractionsConstants.ColumnNames.DocumentId;
         metadata.IndexMappings.Mapping.Properties[ChatInteractionsConstants.ColumnNames.DocumentId] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[ChatInteractionsConstants.ColumnNames.Text] = new TextProperty();
         metadata.IndexMappings.Mapping.Properties[ChatInteractionsConstants.ColumnNames.InteractionId] = new KeywordProperty();
         metadata.IndexMappings.Mapping.Properties[ChatInteractionsConstants.ColumnNames.FileName] = new KeywordProperty();
         metadata.IndexMappings.Mapping.Properties[ChatInteractionsConstants.ColumnNames.Chunks] = new NestedProperty()
