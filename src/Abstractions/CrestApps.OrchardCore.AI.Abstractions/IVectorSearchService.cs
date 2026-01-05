@@ -1,3 +1,5 @@
+using OrchardCore.Indexing.Models;
+
 namespace CrestApps.OrchardCore.AI;
 
 /// <summary>
@@ -5,7 +7,7 @@ namespace CrestApps.OrchardCore.AI;
 /// Implementations should be registered as keyed services using the provider name.
 /// For example: services.AddKeyedScoped&lt;IEmbeddingSearchService, ElasticsearchEmbeddingSearchService&gt;(ElasticsearchConstants.ProviderName)
 /// </summary>
-public interface IEmbeddingSearchService
+public interface IVectorSearchService
 {
     /// <summary>
     /// Searches for document chunks that are similar to the provided embedding vector.
@@ -17,7 +19,7 @@ public interface IEmbeddingSearchService
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A collection of matching document chunks with their similarity scores.</returns>
     Task<IEnumerable<DocumentChunkSearchResult>> SearchAsync(
-        string indexName,
+        IndexProfile indexProfile,
         float[] embedding,
         string sessionId,
         int topN,

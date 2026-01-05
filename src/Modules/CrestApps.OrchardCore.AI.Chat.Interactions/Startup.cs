@@ -34,7 +34,7 @@ public sealed class Startup : StartupBase
     {
         services
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()
-            .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionHandler>()
+            .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionEntryHandler>()
             .AddScoped<ISourceCatalog<ChatInteraction>, DefaultChatInteractionCatalog>()
             .AddIndexProvider<ChatInteractionIndexProvider>()
             .AddPermissionProvider<ChatInteractionPermissionProvider>()

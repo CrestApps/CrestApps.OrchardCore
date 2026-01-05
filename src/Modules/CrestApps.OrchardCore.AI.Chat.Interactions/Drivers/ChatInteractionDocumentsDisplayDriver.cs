@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -56,8 +55,8 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
                 if (indexProfile != null)
                 {
                     // Check if there's a keyed service registered for this provider
-                    var searchService = _serviceProvider.GetKeyedService<IEmbeddingSearchService>(indexProfile.ProviderName);
-                    model.HasEmbeddingSearchService = searchService != null;
+                    var searchService = _serviceProvider.GetKeyedService<IVectorSearchService>(indexProfile.ProviderName);
+                    model.HasVectorSearchService = searchService != null;
                 }
             }
         }).Location("Parameters:3#Documents:3");

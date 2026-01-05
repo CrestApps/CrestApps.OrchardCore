@@ -26,5 +26,5 @@ public class EditChatInteractionDocumentsViewModel
     /// <summary>
     /// Gets or sets whether the configured index profile has a valid embedding search service.
     /// </summary>
-    public bool HasEmbeddingSearchService { get; set; }
+    public bool HasVectorSearchService { get; set; }
 }

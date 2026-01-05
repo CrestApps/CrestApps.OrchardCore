@@ -1,6 +1,5 @@
 using System.Text;
 using System.Threading.Channels;
-using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -394,11 +393,12 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             }
 
             // Get the embedding search service for this provider
-            var searchService = _serviceProvider.GetKeyedService<IEmbeddingSearchService>(indexProfile.ProviderName);
+            var searchService = _serviceProvider.GetKeyedService<IVectorSearchService>(indexProfile.ProviderName);
 
             if (searchService == null)
             {
                 _logger.LogWarning("No embedding search service registered for provider '{ProviderName}'. Document context will not be used.", indexProfile.ProviderName);
+
                 return null;
             }
 
@@ -452,7 +452,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             }
 
             var results = await searchService.SearchAsync(
-                indexProfile.IndexName,
+                indexProfile,
                 embedding.Vector.ToArray(),
                 interaction.ItemId,
                 topN,
@@ -480,6 +480,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving document context. Document context will not be used.");
+
             return null;
         }
     }
