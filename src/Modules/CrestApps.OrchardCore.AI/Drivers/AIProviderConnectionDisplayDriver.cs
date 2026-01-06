@@ -91,10 +91,6 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Type), S["A connection type is required."]);
         }
-        else
-        {
-            model.Type = model.Type.Value;
-        }
 
         connection.DisplayText = model.DisplayText;
         connection.DefaultDeploymentName = model.DefaultDeploymentName;
