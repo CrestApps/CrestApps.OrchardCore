@@ -93,12 +93,11 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
         }
         else
         {
-            model.Type = model.Type.Value;
+            connection.Type = model.Type.Value;
         }
 
         connection.DisplayText = model.DisplayText;
         connection.DefaultDeploymentName = model.DefaultDeploymentName;
-        connection.Type = model.Type.Value;
         connection.IsDefault = model.IsDefault;
 
         _shellReleaseManager.RequestRelease();
