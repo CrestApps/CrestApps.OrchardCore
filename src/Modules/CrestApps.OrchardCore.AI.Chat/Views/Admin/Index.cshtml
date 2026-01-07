@@ -4,7 +4,7 @@
 
 @model ChatSessionViewModel
 
-<div class="d-flex flex-row h-100">
+<div class="d-flex flex-row h-100 gap-3">
 
     <div class="d-flex flex-column h-100 flex-grow-1">
         @await DisplayAsync(Model.Content)
@@ -12,7 +12,7 @@
 
     @if (Model.History is not null && Model.History.Count > 0)
     {
-        <div class="d-none d-md-block flex-shrink-0 bg-theme p-2 border rounded ms-3 me-3" style="width: 20rem; height: calc(100vh - 2rem - var(--oc-top-nav-height, 0)); overflow-y:auto">
+        <div class="d-none d-md-block flex-shrink-0 bg-theme p-2 border rounded" style="width: 20rem; height: calc(100vh - 2rem - var(--oc-top-nav-height, 0)); overflow-y:auto">
             <div class="list-group">
                 @foreach (var record in Model.History)
                 {
