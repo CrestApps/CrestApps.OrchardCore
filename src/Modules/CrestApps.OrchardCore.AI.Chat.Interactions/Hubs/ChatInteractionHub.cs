@@ -352,6 +352,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             }
 
             await _interactionManager.UpdateAsync(interaction);
+            await _session.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {
