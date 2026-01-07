@@ -79,7 +79,7 @@ window.chatInteractionManager = function () {
                     _this.messages = [];
 
                     // Update the title field if it exists
-                    var titleInput = document.querySelector('input[name="Title"]');
+                    var titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
                     if (titleInput && data.title) {
                       titleInput.value = data.title;
                     }
