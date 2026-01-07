@@ -160,6 +160,13 @@ window.chatInteractionManager = function () {
 
                     this.addMessageInternal(message);
                     this.hidePlaceholder();
+                    
+                    // Show clear history button when messages exist
+                    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+                    if (clearHistoryBtn && message.role !== 'indicator') {
+                        clearHistoryBtn.style.display = '';
+                    }
+                    
                     this.$nextTick(() => {
                         this.scrollToBottom();
                     });
@@ -443,6 +450,9 @@ window.chatInteractionManager = function () {
                     this.connection.invoke("LoadInteraction", itemId).catch(err => console.error(err));
                 },
                 clearHistory(itemId) {
+                    if (!confirm('Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved.')) {
+                        return;
+                    }
                     this.connection.invoke("ClearHistory", itemId).catch(err => console.error('Error clearing history:', err));
                 },
                 saveSettings() {

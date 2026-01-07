@@ -24,9 +24,10 @@
 </div>
 
 <style at="Head">
+    /* Default for smaller screens - use auto height for scrollable layout */
     .chat-interaction-container {
-        height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px);
-        min-height: 100%;
+        min-height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px);
+        height: auto;
     }
 
     .chat-parameters-panel {
@@ -34,7 +35,6 @@
         max-width: 100%;
         display: flex;
         flex-direction: column;
-        max-height: 100%;
     }
 
     .chat-parameters-content {
@@ -44,12 +44,12 @@
     }
 
     .chat-content-area {
-        min-height: 0;
+        min-height: 400px;
         flex: 1;
     }
 
     .chat-main-area {
-        min-height: 0;
+        min-height: 300px;
         overflow: hidden;
     }
 
@@ -57,15 +57,25 @@
         min-height: 0;
     }
 
+    /* Larger screens - fixed height layout */
     @@media (min-width: 992px) {
+        .chat-interaction-container {
+            height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px);
+            min-height: 100%;
+        }
+
         .chat-parameters-panel {
             max-width: 22rem;
             max-height: none;
             height: 100%;
         }
 
-        .chat-interaction-container {
-            height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px);
+        .chat-content-area {
+            min-height: 0;
+        }
+
+        .chat-main-area {
+            min-height: 0;
         }
     }
 </style>

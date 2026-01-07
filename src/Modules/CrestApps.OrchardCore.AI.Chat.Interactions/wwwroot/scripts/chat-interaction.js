@@ -166,6 +166,12 @@ window.chatInteractionManager = function () {
           }
           this.addMessageInternal(message);
           this.hidePlaceholder();
+
+          // Show clear history button when messages exist
+          var clearHistoryBtn = document.getElementById('clearHistoryBtn');
+          if (clearHistoryBtn && message.role !== 'indicator') {
+            clearHistoryBtn.style.display = '';
+          }
           this.$nextTick(function () {
             _this3.scrollToBottom();
           });
@@ -429,6 +435,9 @@ window.chatInteractionManager = function () {
           });
         },
         clearHistory: function clearHistory(itemId) {
+          if (!confirm('Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved.')) {
+            return;
+          }
           this.connection.invoke("ClearHistory", itemId)["catch"](function (err) {
             return console.error('Error clearing history:', err);
           });
