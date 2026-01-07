@@ -81,11 +81,14 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
         {
             var dataSource = await _dataSourceStore.FindByIdAsync(model.DataSourceId);
 
-            interaction.Put(new ChatInteractionDataSourceMetadata
+            if (dataSource != null)
             {
-                DataSourceType = dataSource?.Type,
-                DataSourceId = model.DataSourceId,
-            });
+                interaction.Put(new ChatInteractionDataSourceMetadata
+                {
+                    DataSourceType = dataSource.Type,
+                    DataSourceId = dataSource.ItemId,
+                });
+            }
         }
         else
         {
