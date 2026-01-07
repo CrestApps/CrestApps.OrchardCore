@@ -16,7 +16,14 @@
 <div class="card text-bg-theme">
     <div class="card-body d-flex justify-content-between">
 
-        <div></div>
+        <div>
+            @if (Model.Interaction.Prompts?.Count > 0)
+            {
+                <button type="button" class="btn btn-outline-danger me-1" id="clearHistoryBtn" data-interaction-id="@Model.Interaction.ItemId" title="@T["Clear chat history while keeping documents, parameters, and tools"]">
+                    <i class="fa-solid fa-eraser"></i> @T["Clear History"]
+                </button>
+            }
+        </div>
 
         <div>
             <a class="btn btn-secondary me-1" asp-action="Edit" asp-controller="Admin" asp-route-source="@Model.Interaction.Source" asp-area="@AIConstants.Feature.ChatInteractions">

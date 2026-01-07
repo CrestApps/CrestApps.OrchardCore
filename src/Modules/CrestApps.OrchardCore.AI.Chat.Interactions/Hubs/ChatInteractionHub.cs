@@ -166,6 +166,44 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         await Clients.Caller.SettingsSaved(interaction.ItemId, interaction.Title);
     }
 
+    /// <summary>
+    /// Clears the chat history (prompts) while keeping documents, parameters, and tools intact.
+    /// </summary>
+    public async Task ClearHistory(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(itemId)].Value);
+
+            return;
+        }
+
+        var interaction = await _interactionManager.FindByIdAsync(itemId);
+
+        if (interaction == null)
+        {
+            await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+
+            return;
+        }
+
+        var httpContext = Context.GetHttpContext();
+
+        if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
+        {
+            await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+
+            return;
+        }
+
+        // Clear prompts but keep everything else
+        interaction.Prompts.Clear();
+
+        await _interactionManager.UpdateAsync(interaction);
+
+        await Clients.Caller.HistoryCleared(interaction.ItemId);
+    }
+
     private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string itemId, string prompt, CancellationToken cancellationToken)
     {
         try

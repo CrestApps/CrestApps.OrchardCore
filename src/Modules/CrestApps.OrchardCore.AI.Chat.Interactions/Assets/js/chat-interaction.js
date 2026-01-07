@@ -113,6 +113,18 @@ window.chatInteractionManager = function () {
                         console.error("SignalR Error: ", error);
                     });
 
+                    this.connection.on("HistoryCleared", (itemId) => {
+                        // Clear messages and show placeholder
+                        this.messages = [];
+                        this.showPlaceholder();
+                        
+                        // Hide the clear history button since there's no history now
+                        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+                        if (clearHistoryBtn) {
+                            clearHistoryBtn.style.display = 'none';
+                        }
+                    });
+
                     try {
                         await this.connection.start();
                     } catch (err) {
@@ -415,9 +427,23 @@ window.chatInteractionManager = function () {
                             input.addEventListener('change', () => this.saveSettings());
                         }
                     });
+
+                    // Add event listener for clear history button
+                    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+                    if (clearHistoryBtn) {
+                        clearHistoryBtn.addEventListener('click', () => {
+                            const itemId = clearHistoryBtn.getAttribute('data-interaction-id');
+                            if (itemId) {
+                                this.clearHistory(itemId);
+                            }
+                        });
+                    }
                 },
                 loadInteraction(itemId) {
                     this.connection.invoke("LoadInteraction", itemId).catch(err => console.error(err));
+                },
+                clearHistory(itemId) {
+                    this.connection.invoke("ClearHistory", itemId).catch(err => console.error('Error clearing history:', err));
                 },
                 saveSettings() {
                     const itemId = this.getItemId();

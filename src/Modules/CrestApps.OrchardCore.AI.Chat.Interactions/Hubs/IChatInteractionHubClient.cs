@@ -7,4 +7,6 @@ public interface IChatInteractionHubClient
     Task LoadInteraction(object data);
 
     Task SettingsSaved(string itemId, string title);
+
+    Task HistoryCleared(string itemId);
 }

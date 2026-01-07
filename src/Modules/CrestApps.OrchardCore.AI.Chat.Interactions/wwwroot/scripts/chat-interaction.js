@@ -97,21 +97,32 @@ window.chatInteractionManager = function () {
                   _this.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
                   });
-                  _context.prev = 4;
-                  _context.next = 7;
+                  _this.connection.on("HistoryCleared", function (itemId) {
+                    // Clear messages and show placeholder
+                    _this.messages = [];
+                    _this.showPlaceholder();
+
+                    // Hide the clear history button since there's no history now
+                    var clearHistoryBtn = document.getElementById('clearHistoryBtn');
+                    if (clearHistoryBtn) {
+                      clearHistoryBtn.style.display = 'none';
+                    }
+                  });
+                  _context.prev = 5;
+                  _context.next = 8;
                   return _this.connection.start();
-                case 7:
-                  _context.next = 12;
+                case 8:
+                  _context.next = 13;
                   break;
-                case 9:
-                  _context.prev = 9;
-                  _context.t0 = _context["catch"](4);
+                case 10:
+                  _context.prev = 10;
+                  _context.t0 = _context["catch"](5);
                   console.error("SignalR Connection Error: ", _context.t0);
-                case 12:
+                case 13:
                 case "end":
                   return _context.stop();
               }
-            }, _callee, null, [[4, 9]]);
+            }, _callee, null, [[5, 10]]);
           }))();
         },
         addMessageInternal: function addMessageInternal(message) {
@@ -400,10 +411,26 @@ window.chatInteractionManager = function () {
               });
             }
           });
+
+          // Add event listener for clear history button
+          var clearHistoryBtn = document.getElementById('clearHistoryBtn');
+          if (clearHistoryBtn) {
+            clearHistoryBtn.addEventListener('click', function () {
+              var itemId = clearHistoryBtn.getAttribute('data-interaction-id');
+              if (itemId) {
+                _this6.clearHistory(itemId);
+              }
+            });
+          }
         },
         loadInteraction: function loadInteraction(itemId) {
           this.connection.invoke("LoadInteraction", itemId)["catch"](function (err) {
             return console.error(err);
+          });
+        },
+        clearHistory: function clearHistory(itemId) {
+          this.connection.invoke("ClearHistory", itemId)["catch"](function (err) {
+            return console.error('Error clearing history:', err);
           });
         },
         saveSettings: function saveSettings() {
