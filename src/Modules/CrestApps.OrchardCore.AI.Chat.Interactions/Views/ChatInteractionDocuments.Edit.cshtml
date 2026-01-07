@@ -253,7 +253,7 @@ else if (!Model.HasVectorSearchService)
 
                 if (!response.ok) {
                     const error = await response.text();
-                    throw new Error(error || '@T["Upload failed"]');
+                    throw new Error(stripHtml(error) || '@T["Upload failed"]');
                 }
 
                 const result = await response.json();
@@ -337,6 +337,16 @@ else if (!Model.HasVectorSearchService)
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function stripHtml(html) {
+            // If the text looks like HTML (contains tags), extract text content only
+            if (html && typeof html === 'string' && /<[^>]+>/.test(html)) {
+                const div = document.createElement('div');
+                div.innerHTML = html;
+                return div.textContent || div.innerText || '@T["An error occurred"]';
+            }
+            return html;
         }
 
         // Handle document removal

@@ -103,7 +103,8 @@ window.chatInteractionManager = function () {
 
                     this.connection.on("SettingsSaved", (itemId, title) => {
                         // Update the history list item if it exists
-                        const historyItem = document.querySelector(`[data-interaction-id="${itemId}"]`);
+                        // Use a more specific selector to only target history list items, not other elements like the Clear History button
+                        const historyItem = document.querySelector(`.chat-interaction-history-item[data-interaction-id="${itemId}"]`);
                         if (historyItem) {
                             historyItem.textContent = title || 'Untitled';
                         }
