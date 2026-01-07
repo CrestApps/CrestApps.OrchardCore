@@ -26,7 +26,6 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Search.Elasticsearch;
 using OrchardCore.Security.Permissions;
-using ElasticsearchConstants = OrchardCore.Search.Elasticsearch.ElasticsearchConstants;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions;
 
