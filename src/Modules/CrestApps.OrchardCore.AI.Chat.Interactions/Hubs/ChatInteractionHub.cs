@@ -17,6 +17,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Indexing;
 using OrchardCore.Settings;
+using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
@@ -31,6 +32,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private readonly IOptions<AIProviderOptions> _providerOptions;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ChatInteractionHub> _logger;
+    private readonly ISession _session;
 
     protected readonly IStringLocalizer S;
 
@@ -44,6 +46,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         IOptions<AIProviderOptions> providerOptions,
         IServiceProvider serviceProvider,
         ILogger<ChatInteractionHub> logger,
+        ISession session,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
     {
         _authorizationService = authorizationService;
@@ -55,6 +58,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         _providerOptions = providerOptions;
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _session = session;
         S = stringLocalizer;
     }
 
@@ -162,6 +166,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         interaction.PastMessagesCount = pastMessagesCount;
 
         await _interactionManager.UpdateAsync(interaction);
+        await _session.SaveChangesAsync();
 
         await Clients.Caller.SettingsSaved(interaction.ItemId, interaction.Title);
     }
@@ -200,6 +205,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         interaction.Prompts.Clear();
 
         await _interactionManager.UpdateAsync(interaction);
+        await _session.SaveChangesAsync();
 
         await Clients.Caller.HistoryCleared(interaction.ItemId);
     }

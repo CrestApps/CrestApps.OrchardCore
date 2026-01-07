@@ -1,8 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.SignalR.Core;
-using CrestApps.OrchardCore.SignalR.Filters;
 using CrestApps.OrchardCore.SignalR.Services;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 
@@ -15,10 +13,7 @@ public sealed class Startup : StartupBase
         services.AddSignalRServices();
 
         services
-            .AddSignalR(options =>
-            {
-                options.AddFilter<SessionHubFilter>();
-            })
+            .AddSignalR()
             .AddJsonProtocol(options =>
             {
                 options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
