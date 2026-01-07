@@ -29,20 +29,20 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Type" class="@Orchard.GetLabelClasses()">@T["Type"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <select asp-for="Type" asp-items="Model.Types" class="form-select"></select>
-        <span asp-validation-for="Type" class="text-danger"></span>
-        <span class="hint">@T["The connection's type."]</span>
-    </div>
-</div>
-
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultDeploymentName" class="@Orchard.GetLabelClasses()">@T["Deployment name"]</label>
+    <label asp-for="DefaultDeploymentName" class="@Orchard.GetLabelClasses()">@T["Chat deployment name"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="text" asp-for="DefaultDeploymentName" class="form-control" />
         <span asp-validation-for="DefaultDeploymentName" class="text-danger"></span>
         <span class="hint">@T["The default deployment or model name used by the provider for this connection."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DefaultEmbeddingDeploymentName" class="@Orchard.GetLabelClasses()">@T["Embedding deployment name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" asp-for="DefaultEmbeddingDeploymentName" class="form-control" />
+        <span asp-validation-for="DefaultEmbeddingDeploymentName" class="text-danger"></span>
+        <span class="hint">@T["The default embedding deployment or model name used by the provider for this connection."]</span>
     </div>
 </div>
 

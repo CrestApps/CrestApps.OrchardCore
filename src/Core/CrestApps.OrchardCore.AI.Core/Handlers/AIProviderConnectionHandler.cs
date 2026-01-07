@@ -106,13 +106,6 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
             connection.DefaultDeploymentName = defaultDeploymentName;
         }
 
-        var typeText = data[nameof(AIProviderConnection.Type)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(typeText) && Enum.TryParse<AIProviderConnectionType>(typeText, out var type))
-        {
-            connection.Type = type;
-        }
-
         var isDefault = data[nameof(AIProviderConnection.IsDefault)]?.GetValue<bool>();
 
         if (isDefault == true)
