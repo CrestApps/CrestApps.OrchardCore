@@ -2,7 +2,7 @@ namespace CrestApps.OrchardCore.AI.Core;
 
 public static class ChatInteractionsConstants
 {
-    public static readonly string IndexingTaskType = "ChatInteractionsDocumentIndex";
+    public static readonly string IndexingTaskType = "ChatInteractionsDocument";
 
     public static class ColumnNames
     {

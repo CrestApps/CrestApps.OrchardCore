@@ -19,14 +19,14 @@ internal sealed class ChatInteractionIndexingHandler : CatalogEntryHandlerBase<C
         _indexingTaskManager = indexingTaskManager;
     }
 
-    public override async Task CreatedAsync(CreatedContext<ChatInteraction> context)
+    public override Task CreatedAsync(CreatedContext<ChatInteraction> context)
     {
         if (!_updatedIndexIds.Add(context.Model.ItemId))
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        await _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, ChatInteractionsConstants.IndexingTaskType, RecordIndexingTaskTypes.Update));
+        return _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, ChatInteractionsConstants.IndexingTaskType, RecordIndexingTaskTypes.Update));
     }
 
     public override async Task UpdatedAsync(UpdatedContext<ChatInteraction> context)
@@ -39,13 +39,13 @@ internal sealed class ChatInteractionIndexingHandler : CatalogEntryHandlerBase<C
         await _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, ChatInteractionsConstants.IndexingTaskType, RecordIndexingTaskTypes.Update));
     }
 
-    public override async Task DeletedAsync(DeletedContext<ChatInteraction> context)
+    public override Task DeletedAsync(DeletedContext<ChatInteraction> context)
     {
         if (!_deletedIndexIds.Add(context.Model.ItemId))
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        await _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, ChatInteractionsConstants.IndexingTaskType, RecordIndexingTaskTypes.Delete));
+        return _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, ChatInteractionsConstants.IndexingTaskType, RecordIndexingTaskTypes.Delete));
     }
 }

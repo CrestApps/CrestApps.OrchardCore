@@ -17,7 +17,6 @@ using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Indexing;
 using OrchardCore.Settings;
-using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
@@ -29,7 +28,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private readonly ISiteService _siteService;
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IAIClientFactory _aIClientFactory;
-    private readonly ISession _session;
     private readonly IOptions<AIProviderOptions> _providerOptions;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ChatInteractionHub> _logger;
@@ -43,7 +41,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         ISiteService siteService,
         IIndexProfileStore indexProfileStore,
         IAIClientFactory aIClientFactory,
-        ISession session,
         IOptions<AIProviderOptions> providerOptions,
         IServiceProvider serviceProvider,
         ILogger<ChatInteractionHub> logger,
@@ -55,7 +52,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         _siteService = siteService;
         _indexProfileStore = indexProfileStore;
         _aIClientFactory = aIClientFactory;
-        _session = session;
         _providerOptions = providerOptions;
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -166,7 +162,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         interaction.PastMessagesCount = pastMessagesCount;
 
         await _interactionManager.UpdateAsync(interaction);
-        await _session.SaveChangesAsync();
 
         await Clients.Caller.SettingsSaved(interaction.ItemId, interaction.Title);
     }
@@ -313,7 +308,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             }
 
             await _interactionManager.UpdateAsync(interaction);
-            await _session.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {
