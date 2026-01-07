@@ -29,7 +29,7 @@
     var promptGeneratedProfiles = await ProfilesCatalog.GetAsync(AIProfileType.TemplatePrompt);
 }
 
-<div class="p-3 overflow-y-auto flex-grow-1 rounded-2 border bg-theme mb-3" id="@chatContainerHtmlId">
+<div class="mb-3 mx-3 p-3 overflow-y-auto h-100 rounded-2 border bg-theme" id="@chatContainerHtmlId">
     <div class="list-group list-group-flush w-100">
         @if (Model.Session.Prompts.Count == 0)
         {
@@ -44,35 +44,38 @@
     </div>
 </div>
 
-<div class="text-bg-light rounded border w-100">
-    <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
+<div class="container-fluid mb-3">
 
-    <div class="d-flex justify-content-between px-3 my-2">
-        <div>
-            @if (promptGeneratedProfiles.Any())
-            {
-                <div class="d-flex justify-content-center">
-                    <div class="dropdown">
-                        <button class="btn btn-outline-secondary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fa-solid fa-screwdriver-wrench"></i>
-                        </button>
-                        <ul class="dropdown-menu">
-                            @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
-                            {
-                                <li>
-                                    <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.ItemId">@promptGeneratedProfile.DisplayText</button>
-                                </li>
-                            }
-                        </ul>
+    <div class="text-bg-light rounded border w-100">
+        <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
+
+        <div class="d-flex justify-content-between px-3 my-2">
+            <div>
+                @if (promptGeneratedProfiles.Any())
+                {
+                    <div class="d-flex justify-content-center">
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fa-solid fa-screwdriver-wrench"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
+                                {
+                                    <li>
+                                        <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.ItemId">@promptGeneratedProfile.DisplayText</button>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
                     </div>
-                </div>
-            }
-        </div>
+                }
+            </div>
 
-        <div>
-            <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
-                <i class="fa-solid fa-arrow-up"></i>
-            </button>
+            <div>
+                <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                    <i class="fa-solid fa-arrow-up"></i>
+                </button>
+            </div>
         </div>
     </div>
 </div>
