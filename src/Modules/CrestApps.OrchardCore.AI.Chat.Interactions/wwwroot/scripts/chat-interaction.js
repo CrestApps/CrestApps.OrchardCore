@@ -435,11 +435,19 @@ window.chatInteractionManager = function () {
           });
         },
         clearHistory: function clearHistory(itemId) {
-          if (!confirm('Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved.')) {
-            return;
-          }
-          this.connection.invoke("ClearHistory", itemId)["catch"](function (err) {
-            return console.error('Error clearing history:', err);
+          var self = this;
+          confirmDialog({
+            title: 'Clear History',
+            message: 'Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved.',
+            okText: 'Yes',
+            cancelText: 'Cancel',
+            callback: function callback(confirmed) {
+              if (confirmed) {
+                self.connection.invoke("ClearHistory", itemId)["catch"](function (err) {
+                  return console.error('Error clearing history:', err);
+                });
+              }
+            }
           });
         },
         saveSettings: function saveSettings() {
