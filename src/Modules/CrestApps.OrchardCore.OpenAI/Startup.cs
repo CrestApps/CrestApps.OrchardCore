@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.OpenAI.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Drivers;
 using CrestApps.OrchardCore.OpenAI.Handlers;
+using CrestApps.OrchardCore.OpenAI.Templates;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -36,6 +37,10 @@ public sealed class Startup : StartupBase
             o.DisplayName = S["OpenAI"];
             o.Description = S["OpenAI model deployments."];
         });
+
+        // Register AI Profile Templates
+        services.AddAIProfileTemplate<AutoCompleteAIProfileTemplate>();
+        services.AddAIProfileTemplate<GeneralChatAssistantTemplate>();
     }
 }
 
