@@ -4,25 +4,29 @@
 
 ## Project Overview
 
-CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core CMS**, a modular application framework built on **ASP.NET Core/.NET 9**. The repository contains AI modules, user management enhancements, content access control, and other CMS extensions.
+CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core CMS**, a modular application framework built on **ASP.NET Core/.NET 10**. The repository contains AI modules, user management enhancements, content access control, and other CMS extensions.
+
+**License**: MIT  
+**Target Framework**: .NET 10.0 (net10.0)  
+**Architecture**: Modular, multi-tenant application framework
 
 ## Working Effectively
 
 ### Prerequisites and Environment Setup
 
-Install .NET 9.0 SDK first:
+Install .NET 10.0 SDK first:
 ```bash
 # Add Microsoft package repository (Ubuntu/Debian)
 wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
 sudo dpkg -i packages-microsoft-prod.deb
 rm packages-microsoft-prod.deb
 
-# Install .NET 9.0 SDK - TAKES 1-2 MINUTES
+# Install .NET 10.0 SDK - TAKES 1-2 MINUTES
 sudo apt-get update
-sudo apt-get install -y dotnet-sdk-9.0
+sudo apt-get install -y dotnet-sdk-10.0
 
 # Verify installation
-dotnet --version  # Should show 9.0.x
+dotnet --version  # Should show 10.0.x
 ```
 
 ### Build Process
@@ -118,11 +122,12 @@ tests/
 
 ### Important Files
 - `CrestApps.OrchardCore.sln` - Main solution file
-- `global.json` - .NET SDK version (9.0.100)
+- `global.json` - .NET SDK version (10.0.100)
 - `Directory.Build.props` - Common MSBuild properties
 - `NuGet.config` - Package source configuration (includes CloudSmith feed)
 - `package.json` - npm dependencies and scripts
 - `gulpfile.js` - Asset build configuration
+- `.editorconfig` - Code style and formatting rules
 
 ## Common Development Tasks
 
@@ -154,7 +159,7 @@ tests/
 
 ### Build Issues
 - **NU1301 errors**: Network connectivity to CloudSmith required, expected in restricted environments
-- **SDK version errors**: Ensure .NET 9.0.100+ is installed via `dotnet --version`
+- **SDK version errors**: Ensure .NET 10.0.100+ is installed via `dotnet --version`
 - **npm install failures**: Node.js 15+ required (check with `node --version`)
 
 ### Runtime Issues  
@@ -169,6 +174,135 @@ This project requires network access to:
 
 If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 
+## Coding Standards and Conventions
+
+### C# Code Style (enforced via .editorconfig)
+
+#### Naming Conventions
+- **Interfaces**: Prefix with `I` (e.g., `IAICompletionService`, `IUserCacheService`)
+- **Services**: Suffix with `Service` for service implementations (e.g., `DefaultAIToolsService`, `DefaultUserCacheService`)
+- **Drivers**: Suffix with `Driver` for display drivers (e.g., `AIProfileDisplayDriver`, `AIToolInstanceDisplayDriver`)
+- **Handlers**: Suffix with `Handler` for handlers (e.g., `AIProviderConnectionHandler`, `FunctionInvocationAICompletionServiceHandler`)
+- **Providers**: Suffix with `Provider` for providers (e.g., `AIConnectionsAdminMenu`, `AIPermissionsProvider`)
+- **Tests**: Suffix test classes with `Tests` (e.g., `OrchardCoreHelpersTests`)
+
+#### Code Formatting
+- **Indentation**: 4 spaces for C#, 2 spaces for JSON/YAML/XML
+- **Line endings**: CRLF
+- **Charset**: UTF-8
+- **Braces**: Always use braces for code blocks, opening brace on new line (Allman style)
+- **var usage**: Prefer `var` everywhere (built-in types, apparent types, and elsewhere)
+- **this.**: Avoid using `this.` qualifier unless necessary
+- **Language keywords**: Use language keywords (e.g., `int`, `string`) over framework types (e.g., `Int32`, `String`)
+- **Namespaces**: Use file-scoped namespace declarations (C# 10+)
+- **Using statements**: 
+  - Sort System directives first
+  - Prefer simple using statements over braces when possible
+  
+#### Code Preferences  
+- **Range/Index operators**: Avoid using range/index operators (enforced as warning)
+- **Code Analysis**: `AnalysisLevel` is set to `latest-Recommended`
+- **Implicit usings**: Enabled globally
+
+### Module Structure Conventions
+
+Every Orchard Core module in this repository follows a standard structure:
+
+```
+CrestApps.OrchardCore.{ModuleName}/
+├── Assets/              # Frontend assets (JS, CSS, SCSS)
+├── Controllers/         # MVC Controllers
+├── Drivers/            # Display drivers
+├── Handlers/           # Event handlers
+├── Indexes/            # YesSql indexes
+├── Migrations/         # Data migrations
+├── Models/             # Domain models
+├── Recipes/            # Recipe steps
+├── Services/           # Business logic services
+├── ViewModels/         # View models
+├── Views/              # Razor views
+├── Workflows/          # Workflow activities (if applicable)
+├── Manifest.cs         # Module manifest (required)
+├── Startup.cs          # Service registration (required)
+├── README.md           # Module documentation
+├── package.json        # npm dependencies (if has assets)
+└── wwwroot/            # Compiled static files
+```
+
+### Startup Class Patterns
+
+Modules use `StartupBase` classes for service registration:
+- Main `Startup` class for core services
+- Feature-specific startup classes with `[Feature("FeatureName")]` attribute
+- `[RequireFeatures()]` attribute for conditional features
+- Separate startup classes for Recipes, Deployment, Workflows integrations
+
+Example pattern:
+```csharp
+public sealed class Startup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Register services
+    }
+}
+
+[Feature(Constants.Feature.FeatureName)]
+public sealed class FeatureStartup : StartupBase
+{
+    // Feature-specific registration
+}
+```
+
+### Namespace Conventions
+
+- Namespace matches folder structure
+- Pattern: `CrestApps.OrchardCore.{ModuleName}.{FolderName}`
+- Examples:
+  - `CrestApps.OrchardCore.AI.Services`
+  - `CrestApps.OrchardCore.AI.Recipes`
+  - `CrestApps.OrchardCore.Users.Core`
+
+## Testing Practices
+
+### Test Structure
+- Tests are located in `tests/CrestApps.OrchardCore.Tests/`
+- Use xUnit for all tests
+- Test class naming: `{ClassUnderTest}Tests`
+- Use `[Theory]` and `[InlineData]` for parameterized tests
+- Use `sealed` modifier for test classes
+
+### Test Naming
+- Test method pattern: `{MethodName}_{Scenario}_{ExpectedBehavior}`
+- Example: `IsVersionGreaterOrEqual_WhenVersionIsGreater_ShouldReturnTrue`
+- Be descriptive and explicit about what is being tested
+
+### Test Organization
+- Group related tests in nested folders matching source structure
+- Mock interfaces with test implementations (e.g., `TestCatalogEntryHandler<T>`)
+- Use Func<> delegates for flexible test behavior
+
+### Test Coverage
+- Add tests for new features and bug fixes
+- Focus on business logic and service implementations
+- Test edge cases and error conditions
+
+## Documentation Standards
+
+### Module README Files
+Every module MUST have a README.md file with:
+- Module purpose and features
+- Installation instructions
+- Configuration details
+- Usage examples
+- Dependencies on other modules
+
+### Code Documentation
+- XML documentation comments for public APIs
+- Inline comments for complex logic only
+- Keep comments up-to-date with code changes
+- Avoid obvious comments that duplicate code
+
 ## CI/CD Integration
 
 Before committing:
@@ -182,3 +316,139 @@ The CI pipeline validates builds on both Ubuntu and Windows, so test locally on 
 ---
 
 **Remember: Always build and validate your changes thoroughly. The modular architecture means changes can affect multiple modules, so comprehensive testing is essential.**
+
+## Frontend Development Guidelines
+
+### Asset Management
+- Frontend assets are managed using **Gulp** build system
+- Assets are defined in `Assets.json` files within each module
+- Built assets are output to `wwwroot/` directory
+
+### Build Commands
+```bash
+# Install dependencies (run once or when package.json changes)
+npm install
+
+# Build assets incrementally (only changed files)
+npm run build
+
+# Full rebuild (all assets)
+npm run rebuild
+
+# Watch mode for development (auto-rebuild on changes)
+npm run watch
+```
+
+### Supported Asset Types
+- **JavaScript**: Transpiled with Babel, minified with Terser
+- **TypeScript**: Compiled to JavaScript
+- **SCSS/Sass**: Compiled to CSS with Dart Sass
+- **LESS**: Compiled to CSS
+- **CSS**: PostCSS with RTL support
+
+### Asset Build Process
+1. Source files are in module `Assets/` directory
+2. Gulp processes files based on `Assets.json` configuration
+3. Compiled output goes to module `wwwroot/` directory
+4. Source maps are generated for debugging
+5. Minification is applied to production builds
+
+### Frontend Best Practices
+- Always run `npm run rebuild` after modifying frontend code
+- Commit compiled assets (wwwroot) along with source files
+- Use `npm run watch` during active development
+- Check for TypeScript/JavaScript errors before committing
+- Follow existing patterns for module-specific assets
+
+## Pull Request Guidelines
+
+### Before Submitting
+1. **Build Validation**: Ensure both .NET and asset builds succeed
+2. **Test Coverage**: Add tests for new features and bug fixes
+3. **Code Quality**: Follow coding standards and conventions
+4. **Documentation**: Update README files and code comments
+5. **Commit Messages**: Write clear, descriptive commit messages
+6. **Branch Naming**: Use descriptive branch names (e.g., `feature/ai-chat-improvements`, `fix/user-avatar-bug`)
+
+### PR Description Template
+- Link to related issue using `Fix #issue_number` or `Closes #issue_number`
+- Describe what changed and why
+- Include screenshots for UI changes
+- List any breaking changes
+- Note any migration or deployment considerations
+
+### Review Process
+- Address feedback promptly
+- Don't manually resolve conversations - let reviewers do that
+- Use "Re-request review" when changes are ready
+- Keep discussions within the PR thread
+- Allow maintainers to edit your PR branch
+
+## Security Considerations
+
+### Secure Coding Practices
+- Validate all user inputs
+- Use parameterized queries (YesSql handles this)
+- Implement proper authentication and authorization checks
+- Never commit secrets or sensitive data
+- Follow OWASP guidelines for web security
+
+### Permission Checks
+- Always check permissions before accessing restricted resources
+- Use `IAuthorizationService` for authorization
+- Define permissions in `PermissionProvider` classes
+- Test permission boundaries
+
+### Sensitive Data
+- Never log sensitive information
+- Use secure storage for secrets (e.g., Azure Key Vault, environment variables)
+- Encrypt sensitive data at rest and in transit
+
+## Common Patterns
+
+### Service Registration
+```csharp
+services.AddScoped<IMyService, MyService>();        // Scoped per request
+services.AddTransient<IMyService, MyService>();     // New instance each time
+services.AddSingleton<IMyService, MyService>();     // Single instance
+```
+
+### Display Drivers
+```csharp
+services.AddDisplayDriver<TModel, TDriver>();
+```
+
+### Handlers
+```csharp
+services.AddScoped<IEventHandler, MyEventHandler>();
+```
+
+### Migrations
+```csharp
+services.AddDataMigration<MyMigrations>();
+```
+
+### Navigation
+```csharp
+services.AddNavigationProvider<MyAdminMenu>();
+```
+
+## Anti-Patterns to Avoid
+
+- ❌ Don't use static mutable state
+- ❌ Don't create tight coupling between modules
+- ❌ Don't bypass Orchard Core's dependency injection
+- ❌ Don't hardcode connection strings or secrets
+- ❌ Don't use synchronous I/O operations (use async/await)
+- ❌ Don't ignore compiler warnings (TreatWarningsAsErrors is enabled)
+- ❌ Don't skip writing tests for new features
+- ❌ Don't commit commented-out code
+- ❌ Don't use `System.Range` or `System.Index` operators (enforced as warning)
+
+## Useful Resources
+
+- [Orchard Core Documentation](https://docs.orchardcore.net/)
+- [Orchard Core GitHub](https://github.com/OrchardCMS/OrchardCore)
+- [Project Repository](https://github.com/CrestApps/CrestApps.OrchardCore)
+- [Contributing Guidelines](.github/CONTRIBUTING.md)
+- [MIT License](https://opensource.org/licenses/MIT)
