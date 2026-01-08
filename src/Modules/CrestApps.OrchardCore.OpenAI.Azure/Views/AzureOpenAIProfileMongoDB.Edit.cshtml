@@ -21,6 +21,14 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DatabaseName" class="@Orchard.GetLabelClasses()">@T["Database name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" class="form-control" asp-for="DatabaseName" />
+        <span class="hint">@T["The Mongo DB database name."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
     <label asp-for="CollectionName" class="@Orchard.GetLabelClasses()">@T["Collection name"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="text" class="form-control" asp-for="CollectionName" />
@@ -55,7 +63,7 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="Strictness" class="@Orchard.GetLabelClasses()">@T["Strictness"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <input type="number" class="form-control" asp-for="Strictness " step="1" min="1" max="5" />
+        <input type="number" class="form-control" asp-for="Strictness" step="1" min="1" max="5" />
         <span class="hint">@T["Strictness sets the threshold to categorize documents as relevant to your queries. Raising strictness means a higher threshold for relevance and filtering out more documents that are less relevant for responses. Very high strictness could cause failure to generate responses due to limited available documents. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultStrictness]</span>
     </div>
 </div>
@@ -63,7 +71,7 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="TopNDocuments" class="@Orchard.GetLabelClasses()">@T["Total retrieved documents"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <input type="number" class="form-control" asp-for="TopNDocuments " step="1" min="3" max="20">
+        <input type="number" class="form-control" asp-for="TopNDocuments" step="1" min="3" max="20">
         <span class="hint">@T["This specifies the number of top-scoring documents from your data index used to generate responses. You want to increase the value when you have short documents or want to provide more context. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultTopNDocuments]</span>
     </div>
 </div>
