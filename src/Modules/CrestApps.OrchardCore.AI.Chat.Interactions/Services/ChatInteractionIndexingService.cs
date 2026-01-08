@@ -31,7 +31,7 @@ public sealed class ChatInteractionIndexingService
         ISourceCatalog<ChatInteraction> sourceCatalog,
         IEnumerable<IDocumentIndexHandler> documentIndexHandlers,
         IServiceProvider serviceProvider,
-        ILogger logger)
+        ILogger<ChatInteractionIndexingService> logger)
     {
         _indexProfileStore = indexProfileStore;
         _indexingTaskManager = indexingTaskManager;
