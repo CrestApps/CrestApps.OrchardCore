@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+
+@model EditChatInteractionEntryViewModel
+
+<zone Name="Title">
+    <h1>@RenderTitleSegments(T["Chat: {0}", Model.DisplayName])</h1>
+</zone>
+
+@await DisplayAsync(Model.Editor)
