@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 /// <summary>
 /// Default implementation of the AI profile template manager.
 /// </summary>
-internal sealed class DefaultAIProfileTemplateManager : IAIProfileTemplateManager
+public sealed class DefaultAIProfileTemplateManager : IAIProfileTemplateManager
 {
     private readonly IEnumerable<IAIProfileTemplate> _templates;
 
