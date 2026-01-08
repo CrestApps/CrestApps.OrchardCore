@@ -11,9 +11,9 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
 
     public string DisplayText { get; set; }
 
-    public AIProviderConnectionType Type { get; set; }
-
     public string DefaultDeploymentName { get; set; }
+
+    public string DefaultEmbeddingDeploymentName { get; set; }
 
     public bool IsDefault { get; set; }
 
@@ -48,6 +48,7 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
             DisplayText = DisplayText,
             IsDefault = IsDefault,
             DefaultDeploymentName = DefaultDeploymentName,
+            DefaultEmbeddingDeploymentName = DefaultEmbeddingDeploymentName,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,

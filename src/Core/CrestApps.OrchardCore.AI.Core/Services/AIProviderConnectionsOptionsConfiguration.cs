@@ -65,6 +65,7 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
                 }
 
                 mappingContext.Values["DefaultDeploymentName"] = connection.DefaultDeploymentName;
+                mappingContext.Values["DefaultEmbeddingDeploymentName"] = connection.DefaultEmbeddingDeploymentName;
                 mappingContext.Values["ConnectionNameAlias"] = connection.Name;
                 mappingContext.Values["Type"] = connection.Type;
 
