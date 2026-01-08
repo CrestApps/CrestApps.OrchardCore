@@ -38,7 +38,8 @@ public sealed class DefaultAICompletionService : IAICompletionService
 
         var client = _serviceProvider.GetService(clientType) as IAICompletionClient;
 
-        var response = await client.CompleteAsync(messages, context, cancellationToken);
+        var response = await client.CompleteAsync(messages, context, cancellationToken)
+            ?? throw new InvalidOperationException("Unable to generate a response. Ensure that the connection, and the deployment names are correct.");
 
         var updateContext = new ReceivedMessageContext(response);
 

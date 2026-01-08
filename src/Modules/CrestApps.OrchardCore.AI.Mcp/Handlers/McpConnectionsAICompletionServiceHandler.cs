@@ -3,8 +3,6 @@ using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Client;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 
@@ -26,14 +24,10 @@ public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServ
 
     public async Task ConfigureAsync(CompletionServiceConfigureContext context)
     {
-        if (!context.IsFunctionInvocationSupported)
-        {
-            return;
-        }
-
-        var mcpMetadata = context.Profile.As<AIProfileMcpMetadata>();
-
-        if (mcpMetadata.ConnectionIds is null || mcpMetadata.ConnectionIds.Length == 0)
+        if (!context.IsFunctionInvocationSupported ||
+            context.CompletionContext is null ||
+            context.CompletionContext.McpConnectionIds is null ||
+            context.CompletionContext.McpConnectionIds.Length == 0)
         {
             return;
         }
@@ -48,9 +42,9 @@ public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServ
 
         context.ChatOptions.Tools ??= [];
 
-        foreach (var connectionId in mcpMetadata.ConnectionIds)
+        foreach (var mcpConnectionId in context.CompletionContext.McpConnectionIds)
         {
-            if (!connections.TryGetValue(connectionId, out var connection))
+            if (!connections.TryGetValue(mcpConnectionId, out var connection))
             {
                 continue;
             }

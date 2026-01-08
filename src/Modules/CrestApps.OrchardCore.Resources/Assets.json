@@ -26,5 +26,11 @@
       "node_modules/easymde/dist/easymde.min.css"
     ],
     "output": "wwwroot/vendors/easymde/css/easymde.min.css"
+  },
+  {
+    "inputs": [
+      "./node_modules/marked/marked.min.js"
+    ],
+    "output": "wwwroot/scripts/marked.js"
   }
 ]

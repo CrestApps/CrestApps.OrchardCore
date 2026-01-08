@@ -1,0 +1,81 @@
+<div class="container-fluid px-0 chat-interaction-container">
+    <div class="d-flex flex-column flex-lg-row h-100">
+        @if (Model.Parameters is not null)
+        {
+            <div class="chat-parameters-panel flex-shrink-0 bg-theme border rounded mb-3 mb-lg-0">
+                <div class="chat-parameters-content p-3">
+                    @await DisplayAsync(Model.Parameters)
+                </div>
+            </div>
+        }
+
+        <div class="d-flex flex-column flex-grow-1 ps-lg-3 chat-content-area">
+            @if (Model.Header is not null)
+            {
+                <div class="mb-3 chat-header-area flex-shrink-0">
+                    @await DisplayAsync(Model.Header)
+                </div>
+            }
+            <div class="chat-main-area flex-grow-1 d-flex flex-column min-h-0">
+                @await DisplayAsync(Model.Content)
+            </div>
+        </div>
+    </div>
+</div>
+
+<style at="Head">
+    /* Default for smaller screens - use auto height for scrollable layout */
+    .chat-interaction-container {
+        min-height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px);
+        height: auto;
+    }
+
+    .chat-parameters-panel {
+        width: 100%;
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-parameters-content {
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .chat-content-area {
+        min-height: 400px;
+        flex: 1;
+    }
+
+    .chat-main-area {
+        min-height: 300px;
+        overflow: hidden;
+    }
+
+    .min-h-0 {
+        min-height: 0;
+    }
+
+    /* Larger screens - fixed height layout */
+    @@media (min-width: 992px) {
+        .chat-interaction-container {
+            height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px);
+            min-height: 100%;
+        }
+
+        .chat-parameters-panel {
+            max-width: 22rem;
+            max-height: none;
+            height: 100%;
+        }
+
+        .chat-content-area {
+            min-height: 0;
+        }
+
+        .chat-main-area {
+            min-height: 0;
+        }
+    }
+</style>

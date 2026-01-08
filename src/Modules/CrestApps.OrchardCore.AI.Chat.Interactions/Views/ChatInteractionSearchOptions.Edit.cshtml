@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+
+@model ChatInteractionListOptions
+
+<div class="input-group">
+    <input asp-for="SearchText" type="text" class="form-control" placeholder="@T["Interaction search"]" autofocus />
+    <button type="submit" class="btn btn-primary">@T["Search"]</button>
+</div>

@@ -9,7 +9,6 @@ using CrestApps.Azure.Core;
 using CrestApps.Azure.Core.Models;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
@@ -19,22 +18,17 @@ using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ModelContextProtocol.Client;
 using OpenAI.Chat;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
 public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceBase, IAICompletionClient
 {
-    private static readonly AIProfileMetadata _defaultMetadata = new();
-
     private readonly INamedCatalog<AIDeployment> _deploymentStore;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IAILinkGenerator _linkGenerator;
     private readonly IEnumerable<IAzureOpenAIDataSourceHandler> _azureOpenAIDataSourceHandlers;
-    private readonly DefaultAIOptions _defaultOptions;
     private readonly ILogger _logger;
 
     private IAIToolsService _toolsService;
@@ -50,7 +44,6 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         ILoggerFactory loggerFactory,
         IAILinkGenerator linkGenerator,
         IEnumerable<IAzureOpenAIDataSourceHandler> azureOpenAIDataSourceHandlers,
-        IOptions<DefaultAIOptions> defaultOptions,
         ILogger<AzureOpenAICompletionClient> logger)
         : base(providerOptions.Value)
     {
@@ -59,7 +52,6 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         _loggerFactory = loggerFactory;
         _linkGenerator = linkGenerator;
         _azureOpenAIDataSourceHandlers = azureOpenAIDataSourceHandlers;
-        _defaultOptions = defaultOptions.Value;
         _logger = logger;
     }
 
@@ -71,11 +63,32 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
 
-        (var connection, var deploymentName) = await GetConnectionAsync(context, AzureOpenAIConstants.ProviderName);
-
-        if (connection is null)
+        if (!ProviderOptions.Providers.TryGetValue(AzureOpenAIConstants.ProviderName, out var provider))
         {
-            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.ItemId);
+            throw new ArgumentException($"Provider '{AzureOpenAIConstants.ProviderName}' not found.");
+        }
+
+        var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
+
+        if (string.IsNullOrEmpty(connectionName))
+        {
+            _logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' or the default connection", context.ConnectionName);
+
+            return null;
+        }
+
+        if (!provider.Connections.TryGetValue(connectionName, out var connectionProperties))
+        {
+            _logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}'", context.ConnectionName);
+
+            return null;
+        }
+
+        var deploymentName = GetDefaultDeploymentName(provider, connectionName);
+
+        if (string.IsNullOrEmpty(deploymentName))
+        {
+            _logger.LogWarning("Unable to chat. Unable to find a deployment id '{DeploymentId}' or the default deployment", context.DeploymentId);
 
             return null;
         }
@@ -102,27 +115,14 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
             }
         }
 
-        if (context.Profile is null || !context.Profile.TryGet<AIProfileMetadata>(out var metadata))
-        {
-            metadata = _defaultMetadata;
-        }
+        var prompts = GetPrompts(context, azureMessages);
 
-        var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
-        var skip = GetTotalMessagesToSkip(azureMessages.Count, pastMessageCount);
-
-        var prompts = new List<ChatMessage>
-        {
-            new SystemChatMessage(GetSystemMessage(context, metadata)),
-        };
-
-        prompts.AddRange(azureMessages.Skip(skip).Take(pastMessageCount));
-
-        var azureClient = GetChatClient(connection);
+        var azureClient = GetChatClient(connectionProperties);
 
         var chatClient = azureClient.GetChatClient(deploymentName);
 
-        var functions = !context.DisableTools && context.Profile is not null
-            ? await GetFunctionsAsync(context.Profile)
+        var functions = !context.DisableTools
+            ? await GetFunctionsAsync(context.ToolNames, context.InstanceIds, context.McpConnectionIds)
             : [];
 
         var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
@@ -222,7 +222,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
         if (connection is null)
         {
-            _logger.LogWarning("Unable to chat. Unable to find the deployment associated with the profile with id '{ProfileId}' or a default DefaultDeploymentName.", context.Profile?.ItemId);
+            _logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' or the default connection", context.ConnectionName);
 
             yield break;
         }
@@ -249,27 +249,12 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
             }
         }
 
-        if (context.Profile is null || !context.Profile.TryGet<AIProfileMetadata>(out var metadata))
-        {
-            metadata = _defaultMetadata;
-        }
-
-        var pastMessageCount = metadata.PastMessagesCount ?? _defaultOptions.PastMessagesCount;
-        var skip = GetTotalMessagesToSkip(azureMessages.Count, pastMessageCount);
-
-        var prompts = new List<ChatMessage>
-        {
-            new SystemChatMessage(GetSystemMessage(context, metadata)),
-        };
-
-        prompts.AddRange(azureMessages.Skip(skip).Take(pastMessageCount));
-
         var azureClient = GetChatClient(connection);
 
         var chatClient = azureClient.GetChatClient(deploymentName);
 
-        var functions = !context.DisableTools && context.Profile is not null
-            ? await GetFunctionsAsync(context.Profile)
+        var functions = !context.DisableTools
+            ? await GetFunctionsAsync(context.ToolNames, context.InstanceIds, context.McpConnectionIds)
             : [];
 
         var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
@@ -278,11 +263,58 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
         ChatCompletionOptions subSequenceContext = null;
 
+        var prompts = GetPrompts(context, azureMessages);
+
+        // Accumulate tool call updates across streaming chunks.
+        // Key is the tool call index, value contains the accumulated tool call data.
+        var accumulatedToolCalls = new Dictionary<int, (string ToolCallId, string FunctionName, List<byte> ArgumentBytes)>();
+
         await foreach (var update in chatClient.CompleteChatStreamingAsync(prompts, chatOptions, cancellationToken))
         {
+            // Accumulate tool call updates as they arrive.
+            foreach (var toolCallUpdate in update.ToolCallUpdates)
+            {
+                if (!accumulatedToolCalls.TryGetValue(toolCallUpdate.Index, out var accumulated))
+                {
+                    accumulated = (toolCallUpdate.ToolCallId, toolCallUpdate.FunctionName, new List<byte>());
+                    accumulatedToolCalls[toolCallUpdate.Index] = accumulated;
+                }
+
+                // Update ToolCallId and FunctionName if they are provided in this chunk.
+                if (!string.IsNullOrEmpty(toolCallUpdate.ToolCallId))
+                {
+                    accumulated.ToolCallId = toolCallUpdate.ToolCallId;
+                }
+
+                if (!string.IsNullOrEmpty(toolCallUpdate.FunctionName))
+                {
+                    accumulated.FunctionName = toolCallUpdate.FunctionName;
+                }
+
+                // Append function arguments bytes.
+                if (toolCallUpdate.FunctionArgumentsUpdate is not null)
+                {
+                    accumulated.ArgumentBytes.AddRange(toolCallUpdate.FunctionArgumentsUpdate.ToArray());
+                }
+
+                accumulatedToolCalls[toolCallUpdate.Index] = accumulated;
+            }
+
             if (update.FinishReason == ChatFinishReason.ToolCalls)
             {
-                await ProcessToolCallsAsync(prompts, update.ToolCallUpdates);
+                // Convert accumulated tool call data to ChatToolCall objects.
+                var toolCalls = accumulatedToolCalls.Values
+                    .Where(tc => !string.IsNullOrEmpty(tc.ToolCallId) && !string.IsNullOrEmpty(tc.FunctionName))
+                    .Select(tc => ChatToolCall.CreateFunctionToolCall(
+                        tc.ToolCallId,
+                        tc.FunctionName,
+                        BinaryData.FromBytes(tc.ArgumentBytes.ToArray())))
+                    .ToList();
+
+                await ProcessToolCallsAsync(prompts, toolCalls, functions);
+
+                // Clear accumulated tool calls for the next potential round.
+                accumulatedToolCalls.Clear();
 
                 // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
                 subSequenceContext ??= GetOptions(context, functions);
@@ -380,8 +412,23 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         }
     }
 
+    protected override async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
+    {
+        if (!string.IsNullOrEmpty(content.DeploymentId))
+        {
+            return await _deploymentStore.FindByIdAsync(content.DeploymentId);
+        }
+
+        return null;
+    }
+
     private static async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<ChatToolCall> tollCalls, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
     {
+        if (tollCalls is null || !tollCalls.Any())
+        {
+            return;
+        }
+
         prompts.Add(ChatMessage.CreateAssistantMessage(tollCalls));
 
         foreach (var toolCall in tollCalls)
@@ -410,45 +457,6 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         }
     }
 
-    private async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<StreamingChatToolCallUpdate> tollCallsUpdate)
-    {
-        _toolsService ??= _serviceProvider.GetService<IAIToolsService>();
-
-        if (_toolsService is null)
-        {
-            return;
-        }
-
-        var tollCalls = tollCallsUpdate.Select(x => ChatToolCall.CreateFunctionToolCall(x.ToolCallId, x.FunctionName, x.FunctionArgumentsUpdate));
-
-        prompts.Add(ChatMessage.CreateAssistantMessage(tollCalls));
-
-        foreach (var toolCall in tollCallsUpdate)
-        {
-            var function = await _toolsService.GetAsync(toolCall.FunctionName) as Microsoft.Extensions.AI.AIFunction;
-
-            if (function is null)
-            {
-                continue;
-            }
-
-            var arguments = toolCall.FunctionArgumentsUpdate.ToObjectFromJson<Microsoft.Extensions.AI.AIFunctionArguments>();
-
-            var result = await function.InvokeAsync(arguments);
-
-            if (result is string str)
-            {
-                prompts.Add(new ToolChatMessage(toolCall.ToolCallId, str));
-            }
-            else
-            {
-                var resultJson = JsonSerializer.Serialize(result);
-
-                prompts.Add(new ToolChatMessage(toolCall.ToolCallId, resultJson));
-            }
-        }
-    }
-
     private AzureOpenAIClient GetChatClient(AIProviderConnectionEntry connection)
     {
         _clientOptions ??= new AzureOpenAIClientOptions()
@@ -463,6 +471,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         };
 
         var endpoint = connection.GetEndpoint();
+
         var azureClient = connection.GetAzureAuthenticationType() switch
         {
             AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey()), _clientOptions),
@@ -476,117 +485,103 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
     private async Task<ChatCompletionOptions> GetOptionsWithDataSourceAsync(AICompletionContext context, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
     {
-        if (context.Profile is null)
-        {
-            throw new InvalidOperationException();
-        }
-
         var chatOptions = GetOptions(context, functions);
 
-        if (!context.Profile.TryGet<AIProfileDataSourceMetadata>(out var dataSourceMetadata) ||
-            string.IsNullOrEmpty(dataSourceMetadata.DataSourceType))
+        if (!string.IsNullOrEmpty(context.DataSourceId) && !string.IsNullOrEmpty(context.DataSourceType))
         {
-            return chatOptions;
-        }
+            var dataSourceContext = new AzureOpenAIDataSourceContext(context.DataSourceId, context.DataSourceType);
 
-        if (context.Profile is null || !context.Profile.TryGet<AIProfileDataSourceMetadata>(out var metadata))
-        {
-            return chatOptions;
-        }
-
-        var dataSourceContext = new AzureOpenAIDataSourceContext(context.Profile);
-
-        foreach (var handler in _azureOpenAIDataSourceHandlers)
-        {
-            if (!handler.CanHandle(dataSourceMetadata.DataSourceType))
+            foreach (var handler in _azureOpenAIDataSourceHandlers)
             {
-                continue;
+                await handler.ConfigureSourceAsync(chatOptions, dataSourceContext);
             }
-
-            await handler.ConfigureSourceAsync(chatOptions, dataSourceContext);
         }
 
         return chatOptions;
     }
 
-    private ChatCompletionOptions GetOptions(AICompletionContext context, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
+    private static ChatCompletionOptions GetOptions(AICompletionContext context, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
     {
-        if (context.Profile is null || !context.Profile.TryGet<AIProfileMetadata>(out var metadata))
-        {
-            metadata = _defaultMetadata;
-        }
-
         var chatOptions = new ChatCompletionOptions()
         {
-            Temperature = metadata.Temperature ?? _defaultOptions.Temperature,
-            TopP = metadata.TopP ?? _defaultOptions.TopP,
-            FrequencyPenalty = metadata.FrequencyPenalty ?? _defaultOptions.FrequencyPenalty,
-            PresencePenalty = metadata.PresencePenalty ?? _defaultOptions.PresencePenalty,
-            MaxOutputTokenCount = metadata.MaxTokens ?? _defaultOptions.MaxOutputTokens,
+            Temperature = context.Temperature,
+            TopP = context.TopP,
+            FrequencyPenalty = context.FrequencyPenalty,
+            PresencePenalty = context.PresencePenalty,
+            MaxOutputTokenCount = context.MaxTokens,
         };
 
-        foreach (var function in functions)
+        if (!context.DisableTools)
         {
-            chatOptions.Tools.Add(function.ToChatTool());
-        }
+            foreach (var function in functions)
+            {
+                chatOptions.Tools.Add(function.ToChatTool());
+            }
 
-        if (chatOptions.Tools.Count > 0)
-        {
-            chatOptions.ToolChoice = ChatToolChoice.CreateAutoChoice();
+            if (chatOptions.Tools.Count > 0)
+            {
+                chatOptions.ToolChoice = ChatToolChoice.CreateAutoChoice();
+            }
         }
 
         return chatOptions;
     }
 
-    private async Task<IEnumerable<Microsoft.Extensions.AI.AIFunction>> GetFunctionsAsync(AIProfile profile)
+    private async Task<IEnumerable<Microsoft.Extensions.AI.AIFunction>> GetFunctionsAsync(string[] toolNames, string[] instanceIds, string[] mcpConnectionIds)
     {
+        var totalToolNames = toolNames?.Length ?? 0;
+        var totalInstanceIds = instanceIds?.Length ?? 0;
+        var totalMcpConnectionIds = mcpConnectionIds?.Length ?? 0;
+
+        if (totalToolNames == 0 && totalInstanceIds == 0 && totalMcpConnectionIds == 0)
+        {
+            return [];
+        }
+
+        _toolsService ??= _serviceProvider.GetService<IAIToolsService>();
+
+        if (_toolsService is null)
+        {
+            return [];
+        }
+
         var functions = new List<Microsoft.Extensions.AI.AIFunction>();
 
-        if (profile.TryGet<AIProfileFunctionInvocationMetadata>(out var funcMetadata))
+        if (totalToolNames > 0)
         {
-            _toolsService ??= _serviceProvider.GetService<IAIToolsService>();
-
-            if (_toolsService is not null && funcMetadata.Names is not null && funcMetadata.Names.Length > 0)
+            foreach (var name in toolNames)
             {
-                foreach (var name in funcMetadata.Names)
+                var tool = await _toolsService.GetByNameAsync(name);
+
+                if (tool is null || tool is not Microsoft.Extensions.AI.AIFunction function)
                 {
-                    var tool = await _toolsService.GetByNameAsync(name);
-
-                    if (tool is null || tool is not Microsoft.Extensions.AI.AIFunction function)
-                    {
-                        continue;
-                    }
-
-                    functions.Add(function);
-
                     continue;
                 }
+
+                functions.Add(function);
+
+                continue;
             }
         }
 
-        if (profile.TryGet<AIProfileFunctionInstancesMetadata>(out var instancesMetadata))
+        if (totalInstanceIds > 0)
         {
-            if (_toolsService is not null && instancesMetadata.InstanceIds is not null && instancesMetadata.InstanceIds.Length > 0)
+            foreach (var instanceId in instanceIds)
             {
-                foreach (var instanceId in instancesMetadata.InstanceIds)
+                var tool = await _toolsService.GetByInstanceIdAsync(instanceId);
+
+                if (tool is null || tool is not Microsoft.Extensions.AI.AIFunction function)
                 {
-                    var tool = await _toolsService.GetByInstanceIdAsync(instanceId);
-
-                    if (tool is null || tool is not Microsoft.Extensions.AI.AIFunction function)
-                    {
-                        continue;
-                    }
-
-                    functions.Add(function);
-
                     continue;
                 }
+
+                functions.Add(function);
+
+                continue;
             }
         }
 
-        if (profile.TryGet<AIProfileMcpMetadata>(out var mcpMetadata) &&
-            mcpMetadata.ConnectionIds is not null &&
-            mcpMetadata.ConnectionIds.Length > 0)
+        if (totalMcpConnectionIds > 0)
         {
             // Lazily load MCP services in case the MCP feature is disabled.
             _mcpConnectionsStore ??= _serviceProvider.GetService<ICatalog<McpConnection>>();
@@ -600,9 +595,9 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
                     var connections = (await _mcpConnectionsStore.GetAllAsync())
                         .ToDictionary(x => x.ItemId);
 
-                    foreach (var connectionId in mcpMetadata.ConnectionIds)
+                    foreach (var mcpConnectionId in mcpConnectionIds)
                     {
-                        if (!connections.TryGetValue(connectionId, out var connection))
+                        if (!connections.TryGetValue(mcpConnectionId, out var connection))
                         {
                             continue;
                         }
@@ -633,14 +628,29 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         return functions;
     }
 
-    protected override async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
+    private static List<ChatMessage> GetPrompts(AICompletionContext context, List<ChatMessage> azureMessages)
     {
-        if (!string.IsNullOrEmpty(content.Profile.DeploymentId))
+        var prompts = new List<ChatMessage>();
+
+        var systemMessage = GetSystemMessage(context);
+
+        if (!string.IsNullOrEmpty(systemMessage))
         {
-            return await _deploymentStore.FindByIdAsync(content.Profile.DeploymentId);
+            prompts.Add(new SystemChatMessage(systemMessage));
         }
 
-        return null;
+        if (context.PastMessagesCount > 1)
+        {
+            var skip = GetTotalMessagesToSkip(azureMessages.Count, context.PastMessagesCount.Value);
+
+            prompts.AddRange(azureMessages.Skip(skip).Take(context.PastMessagesCount.Value));
+        }
+        else
+        {
+            prompts.AddRange(azureMessages);
+        }
+
+        return prompts;
     }
 
     private async Task<(AIProviderConnectionEntry, string)> GetConnectionAsync(AICompletionContext context, string providerName)
@@ -649,7 +659,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
         if (ProviderOptions.Providers.TryGetValue(providerName, out var provider))
         {
-            var connectionName = GetDefaultConnectionName(provider, context.Profile);
+            var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
 
             deploymentName = GetDefaultDeploymentName(provider, connectionName);
 

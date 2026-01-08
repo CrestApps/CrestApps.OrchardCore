@@ -8,7 +8,7 @@ using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
-public sealed class AIDeploymentProfileHandler : ModelHandlerBase<AIProfile>
+public sealed class AIDeploymentProfileHandler : CatalogEntryHandlerBase<AIProfile>
 {
     private readonly INamedCatalog<AIDeployment> _deploymentsCatalog;
 

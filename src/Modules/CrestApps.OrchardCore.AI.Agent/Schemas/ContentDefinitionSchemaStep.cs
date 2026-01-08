@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.AI.Agent.Services;
+using CrestApps.OrchardCore.Recipes.Core;
 using Json.Schema;
-using Parlot.Fluent;
 
 namespace CrestApps.OrchardCore.AI.Agent.Schemas;
 

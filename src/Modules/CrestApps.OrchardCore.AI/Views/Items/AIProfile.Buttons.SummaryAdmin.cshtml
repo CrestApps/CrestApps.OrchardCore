@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Models
+@using Microsoft.AspNetCore.Authorization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProfile>
+
+<a asp-action="Edit"
+   asp-route-id="@Model.Value.ItemId"
+   class="btn btn-primary btn-sm">@T["Edit"]</a>

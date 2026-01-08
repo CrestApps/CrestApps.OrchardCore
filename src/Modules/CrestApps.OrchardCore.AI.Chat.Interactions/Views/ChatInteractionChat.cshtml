@@ -1,0 +1,92 @@
+@using CrestApps.OrchardCore.AI
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using CrestApps.OrchardCore.SignalR.Core.Services
+@using OrchardCore.DisplayManagement
+@using OrchardCore.DisplayManagement.ModelBinding
+@using System.Text.Json
+
+@model ChatInteractionCapsuleViewModel
+
+@inject IUpdateModelAccessor UpdateModelAccessor
+@inject HubRouteManager HubRouteManager
+@{
+    var baseId = Html.IdForModel();
+    var chatAppHtmlId = $"{baseId}_ChatApp";
+    var buttonHtmlId = $"{baseId}_SendButton";
+    var userPromptHtmlId = $"{baseId}_UserPrompt";
+    var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
+    var chatContainerHtmlId = $"{baseId}_ChatContainer";
+}
+
+<div class="d-flex flex-column h-100">
+    <div class="flex-grow-1 overflow-y-auto rounded-2 border bg-theme p-3 mb-3" id="@chatContainerHtmlId">
+        <div class="list-group list-group-flush w-100">
+            <div id="@placeholderHtmlId" class="text-center p-3 @(Model.Interaction.Prompts.Count > 0 ? "d-none" : "")">
+                <h1>
+                    @T["What do you want to know?"]
+                </h1>
+            </div>
+
+            <div id="@chatAppHtmlId"></div>
+        </div>
+    </div>
+
+    <div class="flex-shrink-0">
+        <div class="text-bg-light rounded border w-100">
+            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-interaction-id="@Model.Interaction.ItemId" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
+
+            <div class="d-flex justify-content-between px-3 my-2">
+                <div></div>
+
+                <div>
+                    <button class="btn btn-dark" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@{
+    var prompts = new List<object>();
+
+    if (Model.Interaction.Prompts != null)
+    {
+        foreach (var prompt in Model.Interaction.Prompts)
+        {
+            prompts.Add(new
+            {
+                prompt.Id,
+                prompt.Role,
+                prompt.Content,
+                prompt.Title,
+                prompt.IsGeneratedPrompt,
+                prompt.References,
+            });
+        }
+    }
+}
+
+<style at="Head">
+    .chat-user-prompt-input:focus {
+        border: none;
+        box-shadow: none;
+    }
+</style>
+
+<script asp-name="ChatInteractionApp" at="Foot"></script>
+<script depends-on="ChatInteractionApp" at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        chatInteractionManager.initialize({
+            signalRHubUrl: '@(HubRouteManager.GetUriByHub<ChatInteractionHub>(ViewContext.HttpContext))',
+            appElementSelector: '#@chatAppHtmlId',
+            chatContainerElementSelector: '#@chatContainerHtmlId',
+            inputElementSelector: '#@userPromptHtmlId',
+            sendButtonElementSelector: '#@buttonHtmlId',
+            placeholderElementSelector: '#@placeholderHtmlId',
+            messages: @Html.Raw(JsonSerializer.Serialize(prompts ?? [], JOptions.CamelCase))
+        });
+    });
+</script>

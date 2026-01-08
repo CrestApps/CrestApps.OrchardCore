@@ -59,11 +59,11 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
+        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
 
         var metadata = new AIProfileFunctionInvocationMetadata();
 
-        if (selectedToolKeys is null || selectedToolKeys.Length == 0)
+        if (selectedToolKeys is null || !selectedToolKeys.Any())
         {
             metadata.Names = [];
         }

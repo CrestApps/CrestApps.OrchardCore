@@ -1,0 +1,8 @@
+[
+  {
+    "inputs": [
+      "Assets/js/chat-interaction.js"
+    ],
+    "output": "wwwroot/scripts/chat-interaction.js"
+  }
+]
