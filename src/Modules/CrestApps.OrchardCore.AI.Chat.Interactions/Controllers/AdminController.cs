@@ -72,6 +72,7 @@ public sealed class AdminController : Controller
         var queryContext = new ChatInteractionQueryContext
         {
             Name = options.Search,
+            Sorted = true,
         };
 
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ListChatInteractionsForOthers))
