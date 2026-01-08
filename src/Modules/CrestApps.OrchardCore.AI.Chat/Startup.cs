@@ -9,14 +9,12 @@ using CrestApps.OrchardCore.SignalR.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat;
@@ -30,7 +28,7 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIChatSessionListOptions, AIChatSessionListOptionsDisplayDriver>()
             .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileMenuDisplayDriver>()
-            .AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>()
+            .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatAdminMenu>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>();
     }

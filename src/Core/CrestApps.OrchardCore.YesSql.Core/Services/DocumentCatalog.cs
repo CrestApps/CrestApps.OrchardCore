@@ -94,6 +94,8 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
             {
                 query = query.With<ISourceAwareIndex>(x => x.Source == context.Name);
             }
+
+            await PagingAsync(query, context);
         }
 
         var skip = (page - 1) * pageSize;
@@ -103,6 +105,12 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
             Count = await query.CountAsync(),
             Entries = (await query.Skip(skip).Take(pageSize).ListAsync()).ToArray()
         };
+    }
+
+    protected virtual ValueTask PagingAsync<TQuery>(IQuery<T> query, TQuery context)
+        where TQuery : QueryContext
+    {
+        return ValueTask.CompletedTask;
     }
 
     public async ValueTask<IReadOnlyCollection<T>> GetAllAsync()

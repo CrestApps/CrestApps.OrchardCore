@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.AI.Core
+@using Microsoft.Extensions.Options
+
+@inject IOptions<AIOptions> AIOptions
+
+@{
+    string sourceName = Model.Source;
+
+    if (!AIOptions.Value.ProfileSources.TryGetValue(sourceName, out var source))
+    {
+        return;
+    }
+}
+
+<div class="col">
+    <div class="card h-100">
+        <div class="card-body">
+            <h4>@(source.DisplayName)</h4>
+            <p class="hint">@(source.Description)</p>
+        </div>
+        <div class="card-footer text-muted text-sm-end">
+            <a class="btn btn-primary btn-sm"
+               asp-route-action="Chat"
+               asp-route-controller="Admin"
+               asp-route-source="@sourceName">@T["Start Chat"]</a>
+        </div>
+    </div>
+</div>
