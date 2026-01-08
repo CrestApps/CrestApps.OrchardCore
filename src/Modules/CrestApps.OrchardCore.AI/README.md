@@ -10,6 +10,7 @@
   - [AI Connection Management](#ai-connection-management)
   - [AI Data Source Management](#ai-data-source-management)
   - [Defining Chat Profiles Using Code](#defining-chat-profiles-using-code)
+  - [AI Profile Templates](#ai-profile-templates)
 - [AI Tool Management Feature](#ai-tool-management-feature)
   - [Extending AI Chat with Custom Functions](#extending-ai-chat-with-custom-functions)
   - [Using AI Tool Sources](#using-ai-tool-sources)
@@ -274,6 +275,115 @@ public sealed class SystemDefinedAIProfileMigrations : DataMigration
 ```
 
 > **Note**: If a profile with the same name already exists, creating a new profile through a migration class will update the existing one. Always use a unique name for new profiles to avoid conflicts.
+
+---
+
+### AI Profile Templates
+
+**AI Profile Templates** provide a way to create reusable, pre-configured AI profile settings that users can select when creating new profiles. Templates streamline the profile creation process by pre-filling essential settings such as system messages, parameters, and model configurations.
+
+#### Benefits of AI Profile Templates
+
+- **Rapid profile creation** - Pre-fill settings instead of configuring each parameter manually
+- **Standardization** - Offer consistent, tested configurations for common use cases
+- **Improved user experience** - Guide users with pre-configured templates
+- **Flexibility** - Users can customize template settings after selection
+
+#### Creating Custom AI Profile Templates
+
+To create a custom template, implement the `IAIProfileTemplate` interface:
+
+```csharp
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.Localization;
+using OrchardCore.Entities;
+
+namespace MyModule.Templates;
+
+public sealed class MyCustomTemplate : IAIProfileTemplate
+{
+    private readonly IStringLocalizer<MyCustomTemplate> _localizer;
+
+    public MyCustomTemplate(IStringLocalizer<MyCustomTemplate> localizer)
+    {
+        _localizer = localizer;
+    }
+
+    // Unique identifier for the template
+    public string Name => "MyCustomTemplate";
+
+    // Display name shown in the UI
+    public LocalizedString DisplayName => _localizer["My Custom Template"];
+
+    // Description shown in the UI
+    public LocalizedString Description => _localizer["Optimized for specific use case."];
+
+    // Profile source compatibility (null = compatible with all sources)
+    public string ProfileSource => "OpenAI"; // or null for universal compatibility
+
+    // Apply template configuration to the profile
+    public Task ApplyAsync(AIProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        // Configure profile type
+        profile.Type = AIProfileType.Chat;
+        profile.TitleType = AISessionTitleType.Generated;
+        profile.WelcomeMessage = "Hello! How can I help you?";
+
+        // Configure AI parameters
+        var metadata = profile.As<AIProfileMetadata>();
+        metadata.SystemMessage = "You are a helpful assistant.";
+        metadata.Temperature = 0.7f;
+        metadata.MaxTokens = 2000;
+        metadata.TopP = 1.0f;
+        metadata.FrequencyPenalty = 0.0f;
+        metadata.PresencePenalty = 0.0f;
+        metadata.PastMessagesCount = 10;
+
+        profile.Put(metadata);
+
+        return Task.CompletedTask;
+    }
+}
+```
+
+#### Registering AI Profile Templates
+
+Register your template in the module's `Startup` class:
+
+```csharp
+public sealed class Startup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Register the template
+        services.AddAIProfileTemplate<MyCustomTemplate>();
+    }
+}
+```
+
+#### Using Templates in the UI
+
+Once registered, templates appear in a dropdown when creating new AI profiles:
+
+1. Navigate to **Artificial Intelligence** → **Profiles** in the admin menu
+2. Click **Add Profile** and select a provider
+3. Select a template from the **Template** dropdown (optional)
+4. The profile form will be pre-filled with the template's settings
+5. Customize any settings as needed
+6. Save the profile
+
+#### Example Templates
+
+The OpenAI module includes example templates:
+
+- **AutoComplete** - Optimized for code completion with lower temperature and token limits
+- **General Chat Assistant** - Balanced settings for conversational AI
+
+These templates demonstrate best practices for creating reusable profile configurations.
 
 ---
 
