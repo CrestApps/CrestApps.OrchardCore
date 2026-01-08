@@ -14,6 +14,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
+using OrchardCore.Entities;
 using OrchardCore.Liquid;
 using YesSql;
 
@@ -183,7 +184,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
                     return;
                 }
 
-                speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, speechToTextConnection, connection.GetDefaultDeploymentName() ?? connection.GetDefaultSpeechToTextDeploymentName());
+                speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, speechToTextConnection, connection.GetDefaultSpeechToTextDeploymentName());
             }
             catch (Exception ex)
             {
@@ -259,7 +260,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
                 if (isNewSession)
                 {
-                    await SetTitleAync(profile, chatSession, transcribedText);
+                    await SetTitleAsync(profile, chatSession, transcribedText);
                 }
 
                 await _sessionManager.SaveAsync(chatSession);
@@ -471,12 +472,12 @@ public class AIChatHub : Hub<IAIChatHubClient>
         // At this point, we need to create a new session.
         var chatSession = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
 
-        await SetTitleAync(profile, chatSession, userPrompt);
+        await SetTitleAsync(profile, chatSession, userPrompt);
 
         return (chatSession, true);
     }
 
-    private async Task SetTitleAync(AIProfile profile, AIChatSession chatSession, string userPrompt)
+    private async Task SetTitleAsync(AIProfile profile, AIChatSession chatSession, string userPrompt)
     {
         if (profile.TitleType == AISessionTitleType.Generated)
         {
@@ -487,35 +488,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
         {
             chatSession.Title = Str.Truncate(userPrompt, 255);
         }
-    }
-
-    private async Task<string> GetGeneratedTitleAsync(AIProfile profile, string userPrompt)
-    {
-        var context = await _aICompletionContextBuilder.BuildAsync(profile, c =>
-        {
-            c.SystemMessage = AIConstants.TitleGeneratorSystemMessage;
-            c.FrequencyPenalty = 0;
-            c.PresencePenalty = 0;
-            c.TopP = 1;
-            c.Temperature = 0;
-            c.MaxTokens = 64; // 64 token to generate about 255 characters.
-            c.UserMarkdownInResponse = false;
-
-            // Avoid using tools or any data sources when generating title to reduce the used tokens.
-            c.DataSourceId = null;
-            c.DataSourceType = null;
-            c.DisableTools = true;
-        });
-
-        var titleResponse = await _completionService.CompleteAsync(profile.Source,
-        [
-            new (ChatRole.User, userPrompt),
-        ], context);
-
-        // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
-        return titleResponse.Messages.Count > 0
-            ? Str.Truncate(titleResponse.Messages.First().Text, 255)
-            : Str.Truncate(userPrompt, 255);
     }
 
     private async Task<string> GetGeneratedTitleAsync(AIProfile profile, string userPrompt)

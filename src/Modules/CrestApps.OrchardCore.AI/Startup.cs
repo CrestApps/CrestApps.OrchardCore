@@ -268,7 +268,7 @@ public sealed class ConnectionManagementStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ICatalogEntryHandler<AIProviderConnection>, AIProviderConnectionHandler>();
-        services.AddScoped<IAIProviderConnectionHandler, SpeechToTextAIProviderConnectionHandler>();
+        services.AddTransient<IAIProviderConnectionHandler, SpeechToTextAIProviderConnectionHandler>();
         services.AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderConnectionsOptionsConfiguration>();
         services.AddDisplayDriver<AIProviderConnection, AIProviderConnectionDisplayDriver>();
         services.AddNavigationProvider<AIConnectionsAdminMenu>();

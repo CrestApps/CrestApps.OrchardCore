@@ -134,7 +134,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
                 if (_connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
                 {
-                    model.Connections = provider.Connections.Where(x => x.Value.GetConnectionType() == AIProviderConnectionType.SpeechToText)
+                    model.Connections = provider.Connections.Where(x => !string.IsNullOrEmpty(x.Value.GetDefaultSpeechToTextDeploymentName(false)))
                         .Select(x => new SelectListItem(x.Value.TryGetValue("ConnectionNameAlias", out var a) ? a.ToString() : x.Key, x.Key));
 
                     // Populate deployments if a connection is selected
@@ -306,9 +306,9 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         };
 
         // ProviderName will be set by the connection handler during initialization
-        if (_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
+        if (_aiOptions.ProfileSources.TryGetValue(profile.Source, out var ps))
         {
-            speechToTextMetadata.ProviderName = profileSource.ProviderName;
+            speechToTextMetadata.ProviderName = ps.ProviderName;
         }
 
         profile.Put(speechToTextMetadata);

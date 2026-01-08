@@ -1,7 +1,5 @@
 using CrestApps.OrchardCore.AI.Core.Handlers;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Handlers;
 
@@ -17,14 +15,6 @@ public sealed class SpeechToTextAIProviderConnectionHandler : AIProviderConnecti
         // This handler ensures that speech-to-text metadata is properly initialized
         // when the connection is used in the AI Chat hub
 
-        var connectionType = context.Connection.Values.GetConnectionType();
-
-        // Only process if this is a SpeechToText connection
-        if (connectionType != AIProviderConnectionType.SpeechToText)
-        {
-            return;
-        }
-
         // The connection values should already have the basic properties set
         // We ensure that ProviderName is available in the context
         if (!context.Values.ContainsKey("ProviderName"))
@@ -39,7 +29,8 @@ public sealed class SpeechToTextAIProviderConnectionHandler : AIProviderConnecti
         }
 
         // Get deployment from connection if available
-        var deployment = context.Connection.Values.GetDefaultSpeechToTextDeploymentName();
+        var deployment = context.Connection.DefaultSpeechToTextDeploymentName;
+
         if (!string.IsNullOrEmpty(deployment) && !context.Values.ContainsKey("DeploymentId"))
         {
             context.Values["DeploymentId"] = deployment;
