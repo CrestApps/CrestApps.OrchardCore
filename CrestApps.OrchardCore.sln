@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.1.11304.174 d18.0
+VisualStudioVersion = 18.1.11304.174
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}"
 EndProject
@@ -98,6 +98,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions.Pdf", "src\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Pdf\CrestApps.OrchardCore.AI.Chat.Interactions.Pdf.csproj", "{BAE70115-40DC-4452-9F88-89DF44A8AB45}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml", "src\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml\CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml.csproj", "{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules", "Modules", "{EC447DCF-ABFA-6E24-52A5-D7FD48A5C558}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.SmartFields", "src\Modules\CrestApps.OrchardCore.AI.SmartFields\CrestApps.OrchardCore.AI.SmartFields.csproj", "{3BB5D32C-5FD3-42EA-A7B6-6B024C27FB50}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -541,6 +547,18 @@ Global
 		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Release|x64.Build.0 = Release|Any CPU
 		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Release|x86.ActiveCfg = Release|Any CPU
 		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}.Release|x86.Build.0 = Release|Any CPU
+		{3BB5D32C-5FD3-42EA-A7B6-6B024C27FB50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3BB5D32C-5FD3-42EA-A7B6-6B024C27FB50}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3BB5D32C-5FD3-42EA-A7B6-6B024C27FB50}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3BB5D32C-5FD3-42EA-A7B6-6B024C27FB50}.Debug|x64.Build.0 = Debug|Any CPU
+		{3BB5D32C-5FD3-42EA-A7B6-6B024C27FB50}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3BB5D32C-5FD3-42EA-A7B6-6B024C27FB50}.Debug|x86.Build.0 = Debug|Any CPU
+		{3BB5D32C-5FD3-42EA-A7B6-6B024C27FB50}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3BB5D32C-5FD3-42EA-A7B6-6B024C27FB50}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3BB5D32C-5FD3-42EA-A7B6-6B024C27FB50}.Release|x64.ActiveCfg = Release|Any CPU
+		{3BB5D32C-5FD3-42EA-A7B6-6B024C27FB50}.Release|x64.Build.0 = Release|Any CPU
+		{3BB5D32C-5FD3-42EA-A7B6-6B024C27FB50}.Release|x86.ActiveCfg = Release|Any CPU
+		{3BB5D32C-5FD3-42EA-A7B6-6B024C27FB50}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -582,6 +600,8 @@ Global
 		{A7EE7F53-ECD1-4752-9191-C52B7D73E0C0} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{BAE70115-40DC-4452-9F88-89DF44A8AB45} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{EC447DCF-ABFA-6E24-52A5-D7FD48A5C558} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{3BB5D32C-5FD3-42EA-A7B6-6B024C27FB50} = {EC447DCF-ABFA-6E24-52A5-D7FD48A5C558}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0E9F9B00-7078-4EA8-87A9-0B2E74375F1E}

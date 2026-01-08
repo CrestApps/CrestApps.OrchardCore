@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore AI Smart Fields Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Provides AI-enhanced editors for TextField and MultiTextField with autocomplete functionality.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS AI SmartFields</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.ContentFields" />
+    <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 
+      Ensure this module directly depends on the AI package so that when someone installs it, 
+      they won't need to manually include the AI package. 
+      This guarantees the module functions correctly and resolves the feature dependency.
+    -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

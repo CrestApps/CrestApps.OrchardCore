@@ -1,0 +1,14 @@
+[
+  {
+    "inputs": [
+      "Assets/js/smart-text-field.js"
+    ],
+    "output": "wwwroot/scripts/smart-text-field.js"
+  },
+  {
+    "inputs": [
+      "Assets/css/smart-text-field.css"
+    ],
+    "output": "wwwroot/styles/smart-text-field.css"
+  }
+]
