@@ -10,7 +10,7 @@
     <PackageVersion Include="JsonSchema.Net" Version="7.4.0" />
     <PackageVersion Include="NuGet.Versioning" Version="7.0.1" />
     <PackageVersion Include="OllamaSharp" Version="5.4.11" />
-    <PackageVersion Include="YesSql.Abstractions" Version="5.4.8" />
+    <PackageVersion Include="YesSql.Abstractions" Version="5.4.7" />
     <PackageVersion Include="YesSql.Core" Version="5.4.7" />
     <PackageVersion Include="ModelContextProtocol" Version="0.4.0-preview.3" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.4.0-preview.4" />
