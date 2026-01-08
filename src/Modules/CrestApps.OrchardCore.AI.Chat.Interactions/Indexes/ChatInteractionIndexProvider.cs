@@ -26,7 +26,6 @@ internal sealed class ChatInteractionIndexProvider : IndexProvider<ChatInteracti
                     Source = interaction.Source,
                     Title = Str.Truncate(interaction.Title, 255),
                     CreatedUtc = interaction.CreatedUtc,
-                    ModifiedUtc = interaction.ModifiedUtc,
                 };
             });
     }
