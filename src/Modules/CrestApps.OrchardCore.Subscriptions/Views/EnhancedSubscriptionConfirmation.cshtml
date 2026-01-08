@@ -1,0 +1,172 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@model SubscriptionConfirmationViewModel
+
+<div class="subscription-confirmation-details card mt-4">
+    <div class="card-header bg-success text-white">
+        <h4 class="mb-0">
+            <i class="fa fa-check-circle me-2"></i>
+            @T["Subscription Confirmed"]
+        </h4>
+    </div>
+    
+    <div class="card-body">
+        <div class="alert alert-success">
+            <strong>@T["Congratulations, {0}!", Model.OwnerName]</strong>
+            <p class="mb-0">@T["Your subscription has been successfully activated. Below are the details of your subscription."]</p>
+        </div>
+
+        <div class="row">
+            <!-- Subscription Information -->
+            <div class="col-md-6">
+                <h5 class="border-bottom pb-2 mb-3">@T["Subscription Information"]</h5>
+                
+                <dl class="row">
+                    <dt class="col-sm-5">@T["Service Plan"]:</dt>
+                    <dd class="col-sm-7"><strong>@Model.ServicePlanTitle</strong></dd>
+                    
+                    <dt class="col-sm-5">@T["Subscription Amount"]:</dt>
+                    <dd class="col-sm-7"><strong>@Model.SubscriptionAmount.ToString("C")</strong> / @Model.BillingDuration</dd>
+                    
+                    <dt class="col-sm-5">@T["Start Date"]:</dt>
+                    <dd class="col-sm-7">@Model.StartDate.ToString("MMMM dd, yyyy")</dd>
+                    
+                    @if (Model.NextPaymentDate.HasValue)
+                    {
+                        <dt class="col-sm-5">@T["Next Payment Date"]:</dt>
+                        <dd class="col-sm-7">@Model.NextPaymentDate.Value.ToString("MMMM dd, yyyy")</dd>
+                    }
+                    
+                    @if (!string.IsNullOrEmpty(Model.PaymentMethod))
+                    {
+                        <dt class="col-sm-5">@T["Payment Method"]:</dt>
+                        <dd class="col-sm-7">@Model.PaymentMethod</dd>
+                    }
+                </dl>
+
+                @if (Model.InitialPaymentAmount.HasValue && Model.InitialPaymentAmount.Value > 0)
+                {
+                    <div class="alert alert-info mt-3">
+                        <strong>@T["Initial Payment"]:</strong> @Model.InitialPaymentAmount.Value.ToString("C")
+                        @if (!string.IsNullOrEmpty(Model.InitialPaymentDescription))
+                        {
+                            <br /><small>@Model.InitialPaymentDescription</small>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Account Information -->
+            <div class="col-md-6">
+                <h5 class="border-bottom pb-2 mb-3">@T["Account Information"]</h5>
+                
+                <dl class="row">
+                    <dt class="col-sm-5">@T["Your Name"]:</dt>
+                    <dd class="col-sm-7">@Model.OwnerName</dd>
+                    
+                    @if (!string.IsNullOrEmpty(Model.OwnerEmail))
+                    {
+                        <dt class="col-sm-5">@T["Email"]:</dt>
+                        <dd class="col-sm-7">@Model.OwnerEmail</dd>
+                    }
+
+                    <dt class="col-sm-5">@T["Session ID"]:</dt>
+                    <dd class="col-sm-7"><code>@Model.SessionId</code></dd>
+                </dl>
+
+                @if (!string.IsNullOrEmpty(Model.TenantName))
+                {
+                    <h5 class="border-bottom pb-2 mb-3 mt-4">@T["New Site Information"]</h5>
+                    <dl class="row">
+                        <dt class="col-sm-5">@T["Site Name"]:</dt>
+                        <dd class="col-sm-7"><strong>@Model.TenantName</strong></dd>
+                        
+                        @if (!string.IsNullOrEmpty(Model.TenantUrl))
+                        {
+                            <dt class="col-sm-5">@T["Site URL"]:</dt>
+                            <dd class="col-sm-7">
+                                <a href="@Model.TenantUrl" target="_blank">@Model.TenantUrl</a>
+                            </dd>
+                        }
+                        
+                        @if (!string.IsNullOrEmpty(Model.SiteAdminUsername))
+                        {
+                            <dt class="col-sm-5">@T["Admin Username"]:</dt>
+                            <dd class="col-sm-7"><code>@Model.SiteAdminUsername</code></dd>
+                            
+                            @if (!string.IsNullOrEmpty(Model.SiteAdminEmail))
+                            {
+                                <dt class="col-sm-5">@T["Admin Email"]:</dt>
+                                <dd class="col-sm-7">@Model.SiteAdminEmail</dd>
+                            }
+                            
+                            <dd class="col-sm-12 mt-2">
+                                <div class="alert alert-warning small">
+                                    <i class="fa fa-exclamation-triangle me-1"></i>
+                                    @T["Please save your admin credentials securely. For security reasons, the password is not displayed here."]
+                                </div>
+                            </dd>
+                        }
+                    </dl>
+                }
+            </div>
+        </div>
+
+        <!-- Management Instructions -->
+        <div class="mt-4 pt-4 border-top">
+            <h5 class="mb-3">@T["Managing Your Subscription"]</h5>
+            <div class="row">
+                <div class="col-md-8">
+                    <p>@T["You can manage your subscription, view invoices, and update payment information at any time through your dashboard."]</p>
+                    
+                    <div class="d-flex gap-2">
+                        @if (!string.IsNullOrEmpty(Model.ManagementUrl))
+                        {
+                            <a href="@Model.ManagementUrl" class="btn btn-primary">
+                                <i class="fa fa-dashboard me-1"></i> @T["Go to Dashboard"]
+                            </a>
+                        }
+                        
+                        @if (!string.IsNullOrEmpty(Model.TenantUrl))
+                        {
+                            <a href="@Model.TenantUrl" class="btn btn-success" target="_blank">
+                                <i class="fa fa-external-link me-1"></i> @T["Visit Your Site"]
+                            </a>
+                        }
+                    </div>
+                </div>
+                
+                @if (!string.IsNullOrEmpty(Model.SupportEmail))
+                {
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">@T["Need Help?"]</h6>
+                                <p class="card-text small mb-2">@T["If you have any questions, please contact our support team."]</p>
+                                <a href="mailto:@Model.SupportEmail" class="btn btn-sm btn-outline-primary">
+                                    <i class="fa fa-envelope me-1"></i> @T["Contact Support"]
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Important Notes -->
+        <div class="alert alert-info mt-4">
+            <h6 class="alert-heading"><i class="fa fa-info-circle me-1"></i> @T["Important Notes"]</h6>
+            <ul class="mb-0">
+                <li>@T["A confirmation email has been sent to your registered email address."]</li>
+                @if (Model.NextPaymentDate.HasValue)
+                {
+                    <li>@T["Your next payment will be processed automatically on {0}.", Model.NextPaymentDate.Value.ToString("MMMM dd, yyyy")]</li>
+                }
+                <li>@T["You can cancel or modify your subscription at any time from your dashboard."]</li>
+                @if (!string.IsNullOrEmpty(Model.TenantName))
+                {
+                    <li>@T["Your new site may take a few moments to fully activate. Please allow up to 5 minutes."]</li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
