@@ -15,6 +15,8 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
 
     public string DefaultEmbeddingDeploymentName { get; set; }
 
+    public string DefaultSpeechToTextDeploymentName { get; set; }
+
     public bool IsDefault { get; set; }
 
     [JsonIgnore]
@@ -44,11 +46,11 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
             ItemId = ItemId,
             Source = Source,
             Name = Name,
-            Type = Type,
             DisplayText = DisplayText,
             IsDefault = IsDefault,
             DefaultDeploymentName = DefaultDeploymentName,
             DefaultEmbeddingDeploymentName = DefaultEmbeddingDeploymentName,
+            DefaultSpeechToTextDeploymentName = DefaultSpeechToTextDeploymentName,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,
