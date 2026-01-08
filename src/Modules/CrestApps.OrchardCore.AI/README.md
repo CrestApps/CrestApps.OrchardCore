@@ -315,7 +315,7 @@ public sealed class MyCustomTemplate : IAIProfileTemplate
     public string Name => "MyCustomTemplate";
 
     // Display name shown in the UI
-    public LocalizedString DisplayName => _localizer["My Custom Template"];
+    public LocalizedString DisplayName => S["My Custom Template"];
 
     // Description shown in the UI
     public LocalizedString Description => _localizer["Optimized for specific use case."];

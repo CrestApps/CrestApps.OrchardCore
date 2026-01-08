@@ -152,12 +152,22 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.IsSystemMessageLocked = profile.GetSettings<AIProfileSettings>().LockSystemMessage;
         }).Location("Content:10");
 
+        // Build the list of display results
+        var results = new List<IDisplayResult>
+        {
+            mainFieldsResult,
+            connectionFieldResult,
+            fieldsResult,
+            parametersResult
+        };
+
+        // Insert template result after main fields if creating a new profile
         if (context.IsNew && templateResult != null)
         {
-            return Combine(mainFieldsResult, templateResult, connectionFieldResult, fieldsResult, parametersResult);
+            results.Insert(1, templateResult);
         }
 
-        return Combine(mainFieldsResult, connectionFieldResult, fieldsResult, parametersResult);
+        return Combine(results.ToArray());
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
