@@ -104,6 +104,16 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
     {
         ArgumentNullException.ThrowIfNull(audioSpeechStream);
 
+        if (audioSpeechStream.Length == 0)
+        {
+            yield return new SpeechToTextResponseUpdate
+            {
+                ResponseId = Guid.NewGuid().ToString(),
+                Kind = SpeechToTextResponseUpdateKind.SessionClose,
+            };
+            yield break;
+        }
+
         // Configure language if specified
         if (!string.IsNullOrEmpty(options?.TextLanguage))
         {
@@ -112,6 +122,12 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
         else
         {
             _speechConfig.SpeechRecognitionLanguage = DefaultLanguage;
+        }
+
+        // Seek to beginning if possible
+        if (audioSpeechStream.CanSeek)
+        {
+            audioSpeechStream.Seek(0, SeekOrigin.Begin);
         }
 
         // Detect audio format if stream is seekable
@@ -131,43 +147,38 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
         using var audioConfig = AudioConfig.FromStreamInput(audioInputStream);
         using var recognizer = new SpeechRecognizer(_speechConfig, audioConfig);
 
-        var tcs = new TaskCompletionSource<bool>();
         var responseId = Guid.NewGuid().ToString();
-        var recognizedTexts = new List<string>();
+        var recognitionComplete = new TaskCompletionSource<bool>();
+        var combinedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var recognizedText = new System.Text.StringBuilder();
 
         // Subscribe to recognition events
-        recognizer.Recognizing += (s, e) =>
-        {
-            if (e.Result.Reason == ResultReason.RecognizingSpeech && !string.IsNullOrEmpty(e.Result.Text))
-            {
-                // Intermediate results
-                recognizedTexts.Add(e.Result.Text);
-            }
-        };
-
         recognizer.Recognized += (s, e) =>
         {
             if (e.Result.Reason == ResultReason.RecognizedSpeech && !string.IsNullOrEmpty(e.Result.Text))
             {
-                // Final result for this utterance
-                recognizedTexts.Add(e.Result.Text);
+                // Accumulate final result for this utterance
+                recognizedText.Append(e.Result.Text);
+                recognizedText.Append(' ');
             }
         };
 
         recognizer.SessionStopped += (s, e) =>
         {
-            tcs.TrySetResult(true);
+            combinedCancellation.Cancel(); // Signal to stop the infinite wait
+            recognitionComplete.TrySetResult(true);
         };
 
         recognizer.Canceled += (s, e) =>
         {
+            combinedCancellation.Cancel(); // Signal to stop the infinite wait
             if (e.Reason == CancellationReason.Error)
             {
-                tcs.TrySetException(new InvalidOperationException($"Speech recognition error: {e.ErrorDetails}"));
+                recognitionComplete.TrySetException(new InvalidOperationException($"Speech recognition error: {e.ErrorDetails}"));
             }
             else
             {
-                tcs.TrySetResult(true);
+                recognitionComplete.TrySetResult(true);
             }
         };
 
@@ -183,52 +194,54 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
             {
                 audioInputStream.Write(buffer, bytesRead);
 
-                // Yield any recognized text
-                while (recognizedTexts.Count > 0)
-                {
-                    var text = recognizedTexts[0];
-                    recognizedTexts.RemoveAt(0);
-
-                    yield return new SpeechToTextResponseUpdate(text)
-                    {
-                        ResponseId = responseId,
-                        Kind = SpeechToTextResponseUpdateKind.TextUpdating,
-                    };
-                }
-
                 if (cancellationToken.IsCancellationRequested)
                 {
                     break;
                 }
             }
 
+            // Close the audio stream to signal end of input
             audioInputStream.Close();
-            await tcs.Task.ConfigureAwait(false);
 
-            // Yield any remaining recognized text
-            while (recognizedTexts.Count > 0)
-            {
-                var text = recognizedTexts[0];
-                recognizedTexts.RemoveAt(0);
-
-                yield return new SpeechToTextResponseUpdate(text)
-                {
-                    ResponseId = responseId,
-                    Kind = SpeechToTextResponseUpdateKind.TextUpdating,
-                };
-            }
-
-            // Signal completion
-            yield return new SpeechToTextResponseUpdate
-            {
-                ResponseId = responseId,
-                Kind = SpeechToTextResponseUpdateKind.SessionClose,
-            };
+            // Wait for recognition to complete - this is critical!
+            // Without this wait, the method returns before recognition finishes
+            // The infinite delay will be cancelled by the SessionStopped/Canceled event handlers
+            await Task.Delay(Timeout.Infinite, combinedCancellation.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when recognition completes or is cancelled via combinedCancellation
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error during speech recognition: {ex.Message}", ex);
         }
         finally
         {
             await recognizer.StopContinuousRecognitionAsync().ConfigureAwait(false);
+            combinedCancellation.Dispose();
         }
+
+        // Wait for recognition to complete
+        await recognitionComplete.Task.ConfigureAwait(false);
+
+        // Yield the accumulated recognized text
+        var finalText = recognizedText.ToString().Trim();
+        if (!string.IsNullOrEmpty(finalText))
+        {
+            yield return new SpeechToTextResponseUpdate(finalText)
+            {
+                ResponseId = responseId,
+                Kind = SpeechToTextResponseUpdateKind.TextUpdating,
+            };
+        }
+
+        // Signal completion
+        yield return new SpeechToTextResponseUpdate
+        {
+            ResponseId = responseId,
+            Kind = SpeechToTextResponseUpdateKind.SessionClose,
+        };
     }
 
     public void Dispose()
