@@ -80,12 +80,10 @@ Azure OpenAI supports multiple connection types for different capabilities:
               "ApiKey": "<!-- API Key for your Azure AI instance -->",
               "DefaultDeploymentName": "text-embedding-3-small"
             },
-            "azure-whisper": {
+            "azure-speech": {
               "Type": "SpeechToText",
-              "Endpoint": "https://<!-- Your Azure Resource Name -->.openai.azure.com/",
-              "AuthenticationType": "ApiKey",
-              "ApiKey": "<!-- API Key for your Azure AI instance -->",
-              "DefaultDeploymentName": "whisper"
+              "SpeechRegion": "westus",
+              "SpeechSubscriptionKey": "<!-- Azure Cognitive Services Speech API key -->"
             }
           }
         }
@@ -98,9 +96,27 @@ Azure OpenAI supports multiple connection types for different capabilities:
 **Connection Types:**
 - `Chat` - For chat/completion models (gpt-4, gpt-4o, etc.)
 - `Embedding` - For embedding models (text-embedding-3-small, text-embedding-3-large, etc.)
-- `SpeechToText` - For speech-to-text models (whisper)
+- `SpeechToText` - For speech-to-text using Azure Cognitive Services Speech (**Note**: Uses Azure Speech service, not Azure OpenAI Whisper)
 
 If no `Type` is specified, `Chat` is used as the default.
+
+#### Speech-to-Text Configuration Details
+
+Azure Speech-to-Text uses **Azure Cognitive Services Speech** rather than Azure OpenAI Whisper. This provides more reliable and feature-rich speech recognition capabilities. The configuration requires:
+
+- **SpeechRegion**: Azure region where your Speech service is deployed (e.g., "westus", "eastus", "westeurope")
+- **SpeechSubscriptionKey**: Subscription key for your Azure Cognitive Services Speech resource
+
+**To get Speech service credentials:**
+1. Create an Azure Cognitive Services Speech resource in the Azure Portal
+2. Navigate to **Keys and Endpoint**
+3. Copy the **Region** (e.g., "westus")
+4. Copy one of the **API keys**
+
+**Why Azure Speech instead of Azure OpenAI Whisper?**
+- Azure OpenAI Whisper API has compatibility issues with the standard speech-to-text interface
+- Azure Speech service provides better reliability and streaming support
+- Azure Speech is Microsoft's recommended solution for production speech recognition
 
 ### How to Retrieve Azure OpenAI Credentials
 

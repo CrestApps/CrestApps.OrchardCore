@@ -44,11 +44,23 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
     protected override ISpeechToTextClient GetSpeechToTextClient(AIProviderConnectionEntry connection, string deploymentName)
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     {
-        var azureClient = GetClient(connection, connection.GetEndpoint());
+        // Azure Speech-to-Text uses Azure Cognitive Services Speech SDK
+        // Extract region and subscription key from connection
+        // Expected connection format:
+        // - SpeechRegion: Azure region (e.g., "westus", "eastus")
+        // - SpeechSubscriptionKey: Subscription key for Azure Speech service
+        
+        var region = connection.GetStringValue("SpeechRegion");
+        var subscriptionKey = connection.GetStringValue("SpeechSubscriptionKey");
 
-        // Azure Whisper deployments do not expose the standard /audio/speech-to-text API.
-        // Instead, they use /audio/transcriptions, which requires a custom implementation.
-        return new AzureSpeechToTextClient(azureClient, deploymentName);
+        if (string.IsNullOrEmpty(region) || string.IsNullOrEmpty(subscriptionKey))
+        {
+            throw new InvalidOperationException(
+                "Azure Speech-to-Text requires 'SpeechRegion' and 'SpeechSubscriptionKey' to be configured in the connection. " +
+                "These are separate from Azure OpenAI settings and use the Azure Cognitive Services Speech service.");
+        }
+
+        return new AzureSpeechToTextClient(region, subscriptionKey);
     }
 
     private AzureOpenAIClient GetClient(AIProviderConnectionEntry connection, Uri endpoint)
