@@ -78,11 +78,21 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         if (context.IsNew)
         {
             // Show template selection only when creating a new profile
-            templateResult = Initialize<EditProfileTemplateViewModel>("AIProfileTemplate_Edit", model =>
+            try
             {
                 var templates = _templateManager.GetTemplatesForSource(profile.Source);
-                model.AvailableTemplates = templates.Select(t => new SelectListItem(t.DisplayName.Value, t.Name));
-            }).Location("Content:1.5");
+                var templatesList = templates.Select(t => new SelectListItem(t.DisplayName.Value, t.Name)).ToList();
+                
+                templateResult = Initialize<EditProfileTemplateViewModel>("AIProfileTemplate_Edit", model =>
+                {
+                    model.AvailableTemplates = templatesList;
+                }).Location("Content:1.5");
+            }
+            catch
+            {
+                // If template initialization fails, continue without it
+                templateResult = null;
+            }
         }
 
         var connectionFieldResult = Initialize<EditConnectionProfileViewModel>("AIProfileConnection_Edit", model =>
