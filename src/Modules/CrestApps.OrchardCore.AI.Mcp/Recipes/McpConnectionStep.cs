@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -39,7 +40,9 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
 
             var id = token[nameof(McpConnection.ItemId)]?.GetValue<string>();
 
-            if (!string.IsNullOrEmpty(id))
+            var hasId = !string.IsNullOrEmpty(id);
+
+            if (hasId)
             {
                 connection = await _manager.FindByIdAsync(id);
             }
@@ -67,6 +70,11 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
                 }
 
                 connection = await _manager.NewAsync(sourceName, token);
+
+                if (hasId && IdValidator.IsValid(id))
+                {
+                    connection.ItemId = id;
+                }
             }
 
             var validationResult = await _manager.ValidateAsync(connection);

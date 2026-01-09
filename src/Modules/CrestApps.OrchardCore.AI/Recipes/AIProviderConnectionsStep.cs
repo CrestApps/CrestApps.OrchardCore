@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -38,11 +39,13 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
         {
             AIProviderConnection connection = null;
 
-            var itemId = token[nameof(AIProviderConnection.ItemId)]?.GetValue<string>();
+            var id = token[nameof(AIProviderConnection.ItemId)]?.GetValue<string>();
 
-            if (!string.IsNullOrEmpty(itemId))
+            var hasId = !string.IsNullOrEmpty(id);
+
+            if (!string.IsNullOrEmpty(id))
             {
-                connection = await _manager.FindByIdAsync(itemId);
+                connection = await _manager.FindByIdAsync(id);
             }
 
             var sourceName = token[nameof(AIProviderConnection.Source)]?.GetValue<string>();
@@ -86,6 +89,11 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
                 }
 
                 connection = await _manager.NewAsync(sourceName, token);
+
+                if (hasId && IdValidator.IsValid(id))
+                {
+                    connection.ItemId = id;
+                }
             }
 
             var validationResult = await _manager.ValidateAsync(connection);

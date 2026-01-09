@@ -131,10 +131,10 @@
     </div>
 </div>
 
-<script asp-name="ai-admin-ui" at="Foot"></script>
+<script asp-name="list-management-ui" at="Foot"></script>
 
-<script at="Foot" depends-on="ai-admin-ui">
+<script at="Foot" depends-on="list-management-ui">
     document.addEventListener('DOMContentLoaded', () => {
-        aiChatProfileAdmin.initialize('@T["selected"]');
+        listManagementUI.initialize('@T["selected"]', { clientSideSearch: true });
     });
 </script>

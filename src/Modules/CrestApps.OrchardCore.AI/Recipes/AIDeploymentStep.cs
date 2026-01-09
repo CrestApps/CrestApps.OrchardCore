@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
@@ -39,7 +40,9 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 
             var id = token[nameof(AIDeployment.ItemId)]?.GetValue<string>();
 
-            if (!string.IsNullOrEmpty(id))
+            var hasId = !string.IsNullOrEmpty(id);
+
+            if (hasId)
             {
                 deployment = await _manager.FindByIdAsync(id);
             }
@@ -92,6 +95,11 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
                 }
 
                 deployment = await _manager.NewAsync(sourceName, token);
+
+                if (hasId && IdValidator.IsValid(id))
+                {
+                    deployment.ItemId = id;
+                }
             }
 
             var validationResult = await _manager.ValidateAsync(deployment);
