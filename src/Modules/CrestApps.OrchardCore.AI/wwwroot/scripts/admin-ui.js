@@ -10,7 +10,11 @@ function _defineProperty(obj, key, value) { key = _toPropertyKey(key); if (key i
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 aiChatProfileAdmin = function () {
-  var initialize = function initialize(selectedLabel) {
+  var defaultOptions = {
+    clientSideSearch: true
+  };
+  var initialize = function initialize(selectedLabel, options) {
+    var config = Object.assign({}, defaultOptions, options);
     var searchBox = document.getElementById('search-box');
     var filterElements = document.querySelectorAll('[data-filter-value]');
 
@@ -19,52 +23,63 @@ aiChatProfileAdmin = function () {
       var searchAlert = document.getElementById('list-alert');
       searchBox.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
-          e.preventDefault();
-        }
-      });
-      searchBox.addEventListener('keyup', function (e) {
-        var search = e.target.value.toLowerCase();
-        // On ESC, clear the search box and display all rules.
-        if (e.key == 'Escape' || search == '') {
-          searchAlert.classList.add('d-none');
-          searchBox.value = '';
-          for (var i = 0; i < filterElements.length; i++) {
-            filterElements[i].classList.remove("d-none");
-            filterElements[i].classList.remove("first-child-visible");
-            filterElements[i].classList.remove("last-child-visible");
-          }
-          if (filterElements.length > 0) {
-            filterElements[0].classList.add('first-child-visible');
-            filterElements[filterElements.length - 1].classList.add('last-child-visible');
-          }
-        } else {
-          var visibleElements = [];
-          for (var _i = 0; _i < filterElements.length; _i++) {
-            var filter = filterElements[_i];
-            var text = filter.getAttribute('data-filter-value');
-            if (!text) {
-              filter.classList.add("d-none");
-              continue;
-            }
-            var found = text.indexOf(search) > -1;
-            if (found) {
-              filter.classList.remove("d-none");
-              filter.classList.remove("first-child-visible");
-              filter.classList.remove("last-child-visible");
-              visibleElements.push(filter);
-            } else {
-              filter.classList.add("d-none");
-            }
-          }
-          if (visibleElements.length > 0) {
-            visibleElements[0].classList.add('first-child-visible');
-            visibleElements[visibleElements.length - 1].classList.add('last-child-visible');
-            searchAlert.classList.add('d-none');
+          if (config.clientSideSearch) {
+            e.preventDefault();
           } else {
-            searchAlert.classList.remove('d-none');
+            // Submit the filter form for server-side search
+            e.preventDefault();
+            var submitFilter = document.getElementById('submitFilter');
+            if (submitFilter) {
+              submitFilter.click();
+            }
           }
         }
       });
+      if (config.clientSideSearch) {
+        searchBox.addEventListener('keyup', function (e) {
+          var search = e.target.value.toLowerCase();
+          // On ESC, clear the search box and display all rules.
+          if (e.key == 'Escape' || search == '') {
+            searchAlert.classList.add('d-none');
+            searchBox.value = '';
+            for (var i = 0; i < filterElements.length; i++) {
+              filterElements[i].classList.remove("d-none");
+              filterElements[i].classList.remove("first-child-visible");
+              filterElements[i].classList.remove("last-child-visible");
+            }
+            if (filterElements.length > 0) {
+              filterElements[0].classList.add('first-child-visible');
+              filterElements[filterElements.length - 1].classList.add('last-child-visible');
+            }
+          } else {
+            var visibleElements = [];
+            for (var _i = 0; _i < filterElements.length; _i++) {
+              var filter = filterElements[_i];
+              var text = filter.getAttribute('data-filter-value');
+              if (!text) {
+                filter.classList.add("d-none");
+                continue;
+              }
+              var found = text.indexOf(search) > -1;
+              if (found) {
+                filter.classList.remove("d-none");
+                filter.classList.remove("first-child-visible");
+                filter.classList.remove("last-child-visible");
+                visibleElements.push(filter);
+              } else {
+                filter.classList.add("d-none");
+              }
+            }
+            if (visibleElements.length > 0) {
+              visibleElements[0].classList.add('first-child-visible');
+              visibleElements[visibleElements.length - 1].classList.add('last-child-visible');
+              searchAlert.classList.add('d-none');
+            } else {
+              searchAlert.classList.remove('d-none');
+            }
+          }
+        });
+      }
     }
     var actions = document.getElementById('actions');
     var items = document.getElementById('items');

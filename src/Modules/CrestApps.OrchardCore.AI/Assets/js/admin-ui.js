@@ -1,6 +1,12 @@
 aiChatProfileAdmin = function () {
 
-    const initialize = (selectedLabel) => {
+    const defaultOptions = {
+        clientSideSearch: true
+    };
+
+    const initialize = (selectedLabel, options) => {
+
+        const config = Object.assign({}, defaultOptions, options);
 
         let searchBox = document.getElementById('search-box');
 
@@ -12,60 +18,71 @@ aiChatProfileAdmin = function () {
 
             searchBox.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                    e.preventDefault();
-                }
-            });
-
-            searchBox.addEventListener('keyup', e => {
-
-                let search = e.target.value.toLowerCase();
-                // On ESC, clear the search box and display all rules.
-                if (e.key == 'Escape' || search == '') {
-                    searchAlert.classList.add('d-none');
-                    searchBox.value = '';
-                    for (let i = 0; i < filterElements.length; i++) {
-                        filterElements[i].classList.remove("d-none");
-                        filterElements[i].classList.remove("first-child-visible");
-                        filterElements[i].classList.remove("last-child-visible");
-                    }
-
-                    if (filterElements.length > 0) {
-                        filterElements[0].classList.add('first-child-visible');
-                        filterElements[filterElements.length - 1].classList.add('last-child-visible');
-                    }
-                } else {
-                    let visibleElements = [];
-                    for (let i = 0; i < filterElements.length; i++) {
-                        let filter = filterElements[i];
-
-                        let text = filter.getAttribute('data-filter-value');
-
-                        if (!text) {
-                            filter.classList.add("d-none");
-                            continue;
-                        }
-
-                        let found = text.indexOf(search) > -1;
-
-                        if (found) {
-                            filter.classList.remove("d-none");
-                            filter.classList.remove("first-child-visible");
-                            filter.classList.remove("last-child-visible");
-                            visibleElements.push(filter);
-                        } else {
-                            filter.classList.add("d-none");
-                        }
-                    }
-
-                    if (visibleElements.length > 0) {
-                        visibleElements[0].classList.add('first-child-visible');
-                        visibleElements[visibleElements.length - 1].classList.add('last-child-visible');
-                        searchAlert.classList.add('d-none');
+                    if (config.clientSideSearch) {
+                        e.preventDefault();
                     } else {
-                        searchAlert.classList.remove('d-none');
+                        // Submit the filter form for server-side search
+                        e.preventDefault();
+                        let submitFilter = document.getElementById('submitFilter');
+                        if (submitFilter) {
+                            submitFilter.click();
+                        }
                     }
                 }
             });
+
+            if (config.clientSideSearch) {
+                searchBox.addEventListener('keyup', e => {
+
+                    let search = e.target.value.toLowerCase();
+                    // On ESC, clear the search box and display all rules.
+                    if (e.key == 'Escape' || search == '') {
+                        searchAlert.classList.add('d-none');
+                        searchBox.value = '';
+                        for (let i = 0; i < filterElements.length; i++) {
+                            filterElements[i].classList.remove("d-none");
+                            filterElements[i].classList.remove("first-child-visible");
+                            filterElements[i].classList.remove("last-child-visible");
+                        }
+
+                        if (filterElements.length > 0) {
+                            filterElements[0].classList.add('first-child-visible');
+                            filterElements[filterElements.length - 1].classList.add('last-child-visible');
+                        }
+                    } else {
+                        let visibleElements = [];
+                        for (let i = 0; i < filterElements.length; i++) {
+                            let filter = filterElements[i];
+
+                            let text = filter.getAttribute('data-filter-value');
+
+                            if (!text) {
+                                filter.classList.add("d-none");
+                                continue;
+                            }
+
+                            let found = text.indexOf(search) > -1;
+
+                            if (found) {
+                                filter.classList.remove("d-none");
+                                filter.classList.remove("first-child-visible");
+                                filter.classList.remove("last-child-visible");
+                                visibleElements.push(filter);
+                            } else {
+                                filter.classList.add("d-none");
+                            }
+                        }
+
+                        if (visibleElements.length > 0) {
+                            visibleElements[0].classList.add('first-child-visible');
+                            visibleElements[visibleElements.length - 1].classList.add('last-child-visible');
+                            searchAlert.classList.add('d-none');
+                        } else {
+                            searchAlert.classList.remove('d-none');
+                        }
+                    }
+                });
+            }
         }
 
         let actions = document.getElementById('actions');
