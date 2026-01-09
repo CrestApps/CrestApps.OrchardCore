@@ -90,7 +90,7 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 
                 connection = await _manager.NewAsync(sourceName, token);
 
-                if (hasId && IdValidator.IsValidId(id))
+                if (hasId && IdValidator.IsValid(id))
                 {
                     connection.ItemId = id;
                 }

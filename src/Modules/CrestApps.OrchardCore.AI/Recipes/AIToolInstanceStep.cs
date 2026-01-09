@@ -67,7 +67,7 @@ internal sealed class AIToolInstanceStep : NamedRecipeStepHandler
                     continue;
                 }
 
-                if (hasId && IdValidator.IsValidId(id))
+                if (hasId && IdValidator.IsValid(id))
                 {
                     instance.ItemId = id;
                 }

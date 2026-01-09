@@ -96,7 +96,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 
                 deployment = await _manager.NewAsync(sourceName, token);
 
-                if (hasId && IdValidator.IsValidId(id))
+                if (hasId && IdValidator.IsValid(id))
                 {
                     deployment.ItemId = id;
                 }

@@ -80,7 +80,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
 
                 dataSource = await _dataManager.NewAsync(profileSource, type, token);
 
-                if (hasId && IdValidator.IsValidId(id))
+                if (hasId && IdValidator.IsValid(id))
                 {
                     dataSource.ItemId = id;
                 }

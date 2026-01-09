@@ -81,7 +81,7 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
 
                 profile = await _profileManager.NewAsync(sourceName, token);
 
-                if (hasId && IdValidator.IsValidId(id))
+                if (hasId && IdValidator.IsValid(id))
                 {
                     profile.ItemId = id;
                 }

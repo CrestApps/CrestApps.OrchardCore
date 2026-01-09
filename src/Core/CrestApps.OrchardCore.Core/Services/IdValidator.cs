@@ -10,7 +10,7 @@ public static class IdValidator
     private static readonly HashSet<char> _allowedChars =
         _encode32Alphabet.ToHashSet();
 
-    public static bool IsValidId(string id)
+    public static bool IsValid(string id)
     {
         if (string.IsNullOrEmpty(id))
         {
