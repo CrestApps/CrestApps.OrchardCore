@@ -11,6 +11,7 @@
     <PackageReference Include="Moq" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="YesSql.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
