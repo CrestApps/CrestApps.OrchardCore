@@ -12,7 +12,7 @@ public static class IdValidator
 
     public static bool IsValid(string id)
     {
-        if (string.IsNullOrEmpty(id))
+        if (id is null)
         {
             return false;
         }
@@ -22,14 +22,6 @@ public static class IdValidator
             return false;
         }
 
-        foreach (var c in id)
-        {
-            if (!_allowedChars.Contains(c))
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return id.All(_allowedChars.Contains);
     }
 }
