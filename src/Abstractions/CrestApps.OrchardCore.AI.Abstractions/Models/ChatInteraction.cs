@@ -111,9 +111,7 @@ public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
     public DateTime CreatedUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets the UTC date and time when the interaction was last modified.
+    /// Gets or sets the last document index.
     /// </summary>
-    public DateTime ModifiedUtc { get; set; }
-
     public int DocumentIndex { get; set; }
 }

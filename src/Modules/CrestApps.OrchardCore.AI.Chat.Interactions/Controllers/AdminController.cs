@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
@@ -72,6 +73,7 @@ public sealed class AdminController : Controller
         var queryContext = new ChatInteractionQueryContext
         {
             Name = options.Search,
+            Sorted = true,
         };
 
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ListChatInteractionsForOthers))
@@ -243,6 +245,59 @@ public sealed class AdminController : Controller
         return View(model);
     }
 
+    [Admin("ai/chat/interaction/new-chat/{source}", "NewInteractionsChat")]
+    public async Task<ActionResult> New(string source)
+        => RedirectToAction(nameof(Chat), new { source });
+
+    [Admin("ai/chat/interaction/clone-chat/{itemId}", "CloneInteractionsChat")]
+    public async Task<ActionResult> Clone(string itemId)
+    {
+        var interaction = await _interactionManager.FindByIdAsync(itemId);
+
+        if (interaction is null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions, interaction))
+        {
+            return Forbid();
+        }
+
+        var clonedInteraction = await _interactionManager.NewAsync(interaction.Source, interaction.Properties);
+        clonedInteraction.Title = GetNextTitle(interaction.Title);
+        clonedInteraction.DeploymentId = interaction.DeploymentId;
+        clonedInteraction.ConnectionName = interaction.ConnectionName;
+        clonedInteraction.SystemMessage = interaction.SystemMessage;
+        clonedInteraction.Temperature = interaction.Temperature;
+        clonedInteraction.TopP = interaction.TopP;
+        clonedInteraction.FrequencyPenalty = interaction.FrequencyPenalty;
+        clonedInteraction.PresencePenalty = interaction.PresencePenalty;
+        clonedInteraction.MaxTokens = interaction.MaxTokens;
+        clonedInteraction.PastMessagesCount = interaction.PastMessagesCount;
+        clonedInteraction.DocumentTopN = interaction.DocumentTopN;
+        clonedInteraction.ToolNames = interaction.ToolNames.ToList();
+        clonedInteraction.ToolInstanceIds = interaction.ToolInstanceIds.ToList();
+        clonedInteraction.McpConnectionIds = interaction.McpConnectionIds.ToList();
+        clonedInteraction.Documents = interaction.Documents.ToList();
+        clonedInteraction.Prompts = []; // Start with no prompts in the cloned interaction.
+        clonedInteraction.DocumentIndex = interaction.Documents.Count; // Set the document index based on the cloned documents.
+
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions, clonedInteraction))
+        {
+            return Forbid();
+        }
+
+        // Save the interaction immediately so it can be used by the SignalR hub.
+        await _interactionManager.CreateAsync(clonedInteraction);
+
+        return RedirectToAction(nameof(Chat), new
+        {
+            source = clonedInteraction.Source,
+            itemId = clonedInteraction.ItemId,
+        });
+    }
+
     [HttpPost]
     public async Task<IActionResult> Delete(string itemId)
     {
@@ -268,5 +323,29 @@ public sealed class AdminController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    private static readonly Regex PostfixRegex = new Regex(@"\s*\((\d+)\)$", RegexOptions.Compiled);
+
+    private static string GetNextTitle(string title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return "Untitled (1)";
+        }
+
+        var match = PostfixRegex.Match(title);
+
+        if (match.Success)
+        {
+            // Extract number and increment
+            var number = int.Parse(match.Groups[1].Value);
+            var baseTitle = title.Substring(0, match.Index).TrimEnd();
+
+            return $"{baseTitle} ({number + 1})";
+        }
+
+        // No postfix found → start at (1)
+        return $"{title} (1)";
     }
 }

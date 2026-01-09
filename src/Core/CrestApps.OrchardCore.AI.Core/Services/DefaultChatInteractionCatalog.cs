@@ -21,6 +21,18 @@ public sealed class DefaultChatInteractionCatalog : SourceDocumentCatalog<ChatIn
             query = query.With<ChatInteractionIndex>(x => x.UserId == c.UserId);
         }
 
+        if (context.Sorted)
+        {
+            query = query.With<ChatInteractionIndex>()
+                .OrderByDescending(x => x.CreatedUtc)
+                .ThenBy(x => x.Id);
+        }
+        else
+        {
+            query = query.With<ChatInteractionIndex>()
+                .OrderBy(x => x.Id);
+        }
+
         return ValueTask.CompletedTask;
     }
 }
