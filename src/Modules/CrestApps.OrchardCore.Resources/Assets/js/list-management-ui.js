@@ -1,20 +1,26 @@
-aiChatProfileAdmin = function () {
+listManagementUI = function () {
 
     const defaultOptions = {
-        clientSideSearch: true
+        clientSideSearch: true,
+        itemInputName: 'itemIds',
+        bulkActionInputName: 'Options.BulkAction',
+        submitBulkActionName: 'submit.BulkAction',
+        searchBoxId: 'search-box',
+        listAlertId: 'list-alert',
+        actionsId: 'actions'
     };
 
     const initialize = (selectedLabel, options) => {
 
         const config = Object.assign({}, defaultOptions, options);
 
-        let searchBox = document.getElementById('search-box');
+        let searchBox = document.getElementById(config.searchBoxId);
 
         const filterElements = document.querySelectorAll('[data-filter-value]');
 
         // If the user press Enter, don't submit.
         if (searchBox) {
-            let searchAlert = document.getElementById('list-alert');
+            let searchAlert = document.getElementById(config.listAlertId);
 
             searchBox.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -85,30 +91,42 @@ aiChatProfileAdmin = function () {
             }
         }
 
-        let actions = document.getElementById('actions');
+        let actions = document.getElementById(config.actionsId);
         let items = document.getElementById('items');
         let filters = document.querySelectorAll('.filter');
         let selectedItems = document.getElementById('selected-items');
 
         function displayActionsOrFilters() {
-            // Select all checked checkboxes with name 'itemIds'
-            let checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='itemIds']:checked");
+            // Select all checked checkboxes with the configured name
+            let checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked");
 
             if (checkedCheckboxes.length > 1) {
-                actions.classList.remove('d-none');
+                if (actions) {
+                    actions.classList.remove('d-none');
+                }
                 for (let i = 0; i < filters.length; i++) {
                     filters[i].classList.add('d-none');
                 }
-                selectedItems.classList.remove('d-none');
-                items.classList.add('d-none');
+                if (selectedItems) {
+                    selectedItems.classList.remove('d-none');
+                }
+                if (items) {
+                    items.classList.add('d-none');
+                }
             } else {
-                actions.classList.add('d-none');
+                if (actions) {
+                    actions.classList.add('d-none');
+                }
 
                 for (let i = 0; i < filters.length; i++) {
                     filters[i].classList.remove('d-none');
                 }
-                selectedItems.classList.add('d-none');
-                items.classList.remove('d-none');
+                if (selectedItems) {
+                    selectedItems.classList.add('d-none');
+                }
+                if (items) {
+                    items.classList.remove('d-none');
+                }
             }
         }
 
@@ -123,7 +141,7 @@ aiChatProfileAdmin = function () {
 
             item.addEventListener("click", () => {
                 // Get all checked checkboxes
-                let checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='itemIds']:checked");
+                let checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked");
 
                 // Check if more than one checkbox is checked
                 if (checkedCheckboxes.length > 1) {
@@ -135,9 +153,9 @@ aiChatProfileAdmin = function () {
                         callback: (r) => {
                             if (r) {
                                 // Set the value of the BulkAction option
-                                document.querySelector("[name='Options.BulkAction']").value = actionData.action;
+                                document.querySelector("[name='" + config.bulkActionInputName + "']").value = actionData.action;
                                 // Trigger the submit action
-                                document.querySelector("[name='submit.BulkAction']").click();
+                                document.querySelector("[name='" + config.submitBulkActionName + "']").click();
                             }
                         }
                     });
@@ -147,10 +165,10 @@ aiChatProfileAdmin = function () {
         });
 
         let selectAllCtrl = document.getElementById('select-all');
-        let itemsCheckboxes = document.querySelectorAll("input[type='checkbox'][name='itemIds']");
+        let itemsCheckboxes = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']");
 
         if (selectAllCtrl) {
-            selectAllCtrl.addEventListener("click", () => {
+            selectAllCtrl.addEventListener("change", () => {
                 itemsCheckboxes.forEach((checkbox) => {
                     if (checkbox !== selectAllCtrl) {
                         checkbox.checked = selectAllCtrl.checked; // Set the checked state of all checkboxes
@@ -165,13 +183,15 @@ aiChatProfileAdmin = function () {
 
         // Event listener for individual checkboxes
         itemsCheckboxes.forEach((checkbox) => {
-            checkbox.addEventListener("click", () => {
+            checkbox.addEventListener("change", () => {
                 let itemsCount = itemsCheckboxes.length;
-                let selectedItemsCount = document.querySelectorAll("input[type='checkbox'][name='itemIds']:checked").length;
+                let selectedItemsCount = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked").length;
 
                 // Update selectAllCtrl state
-                selectAllCtrl.checked = selectedItemsCount === itemsCount;
-                selectAllCtrl.indeterminate = selectedItemsCount > 0 && selectedItemsCount < itemsCount;
+                if (selectAllCtrl) {
+                    selectAllCtrl.checked = selectedItemsCount === itemsCount;
+                    selectAllCtrl.indeterminate = selectedItemsCount > 0 && selectedItemsCount < itemsCount;
+                }
 
                 // Update the selected items text
                 updateSelectedItemsText();
@@ -181,8 +201,10 @@ aiChatProfileAdmin = function () {
 
         // Function to update selected items text
         function updateSelectedItemsText() {
-            let selectedCount = document.querySelectorAll("input[type='checkbox'][name='itemIds']:checked").length;
-            selectedItems.textContent = selectedCount + ' ' + selectedLabel;
+            let selectedCount = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked").length;
+            if (selectedItems) {
+                selectedItems.textContent = selectedCount + ' ' + selectedLabel;
+            }
         }
     }
 

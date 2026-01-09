@@ -9,18 +9,24 @@ function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t =
 function _defineProperty(obj, key, value) { key = _toPropertyKey(key); if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-aiChatProfileAdmin = function () {
+listManagementUI = function () {
   var defaultOptions = {
-    clientSideSearch: true
+    clientSideSearch: true,
+    itemInputName: 'itemIds',
+    bulkActionInputName: 'Options.BulkAction',
+    submitBulkActionName: 'submit.BulkAction',
+    searchBoxId: 'search-box',
+    listAlertId: 'list-alert',
+    actionsId: 'actions'
   };
   var initialize = function initialize(selectedLabel, options) {
     var config = Object.assign({}, defaultOptions, options);
-    var searchBox = document.getElementById('search-box');
+    var searchBox = document.getElementById(config.searchBoxId);
     var filterElements = document.querySelectorAll('[data-filter-value]');
 
     // If the user press Enter, don't submit.
     if (searchBox) {
-      var searchAlert = document.getElementById('list-alert');
+      var searchAlert = document.getElementById(config.listAlertId);
       searchBox.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
           if (config.clientSideSearch) {
@@ -81,27 +87,39 @@ aiChatProfileAdmin = function () {
         });
       }
     }
-    var actions = document.getElementById('actions');
+    var actions = document.getElementById(config.actionsId);
     var items = document.getElementById('items');
     var filters = document.querySelectorAll('.filter');
     var selectedItems = document.getElementById('selected-items');
     function displayActionsOrFilters() {
-      // Select all checked checkboxes with name 'itemIds'
-      var checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='itemIds']:checked");
+      // Select all checked checkboxes with the configured name
+      var checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked");
       if (checkedCheckboxes.length > 1) {
-        actions.classList.remove('d-none');
+        if (actions) {
+          actions.classList.remove('d-none');
+        }
         for (var i = 0; i < filters.length; i++) {
           filters[i].classList.add('d-none');
         }
-        selectedItems.classList.remove('d-none');
-        items.classList.add('d-none');
+        if (selectedItems) {
+          selectedItems.classList.remove('d-none');
+        }
+        if (items) {
+          items.classList.add('d-none');
+        }
       } else {
-        actions.classList.add('d-none');
+        if (actions) {
+          actions.classList.add('d-none');
+        }
         for (var _i2 = 0; _i2 < filters.length; _i2++) {
           filters[_i2].classList.remove('d-none');
         }
-        selectedItems.classList.add('d-none');
-        items.classList.remove('d-none');
+        if (selectedItems) {
+          selectedItems.classList.add('d-none');
+        }
+        if (items) {
+          items.classList.remove('d-none');
+        }
       }
     }
     var dropdownItems = document.querySelectorAll(".dropdown-menu .dropdown-item");
@@ -114,7 +132,7 @@ aiChatProfileAdmin = function () {
       }
       item.addEventListener("click", function () {
         // Get all checked checkboxes
-        var checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='itemIds']:checked");
+        var checkedCheckboxes = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked");
 
         // Check if more than one checkbox is checked
         if (checkedCheckboxes.length > 1) {
@@ -124,9 +142,9 @@ aiChatProfileAdmin = function () {
             callback: function callback(r) {
               if (r) {
                 // Set the value of the BulkAction option
-                document.querySelector("[name='Options.BulkAction']").value = actionData.action;
+                document.querySelector("[name='" + config.bulkActionInputName + "']").value = actionData.action;
                 // Trigger the submit action
-                document.querySelector("[name='submit.BulkAction']").click();
+                document.querySelector("[name='" + config.submitBulkActionName + "']").click();
               }
             }
           }));
@@ -134,9 +152,9 @@ aiChatProfileAdmin = function () {
       });
     });
     var selectAllCtrl = document.getElementById('select-all');
-    var itemsCheckboxes = document.querySelectorAll("input[type='checkbox'][name='itemIds']");
+    var itemsCheckboxes = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']");
     if (selectAllCtrl) {
-      selectAllCtrl.addEventListener("click", function () {
+      selectAllCtrl.addEventListener("change", function () {
         itemsCheckboxes.forEach(function (checkbox) {
           if (checkbox !== selectAllCtrl) {
             checkbox.checked = selectAllCtrl.checked; // Set the checked state of all checkboxes
@@ -151,13 +169,15 @@ aiChatProfileAdmin = function () {
 
     // Event listener for individual checkboxes
     itemsCheckboxes.forEach(function (checkbox) {
-      checkbox.addEventListener("click", function () {
+      checkbox.addEventListener("change", function () {
         var itemsCount = itemsCheckboxes.length;
-        var selectedItemsCount = document.querySelectorAll("input[type='checkbox'][name='itemIds']:checked").length;
+        var selectedItemsCount = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked").length;
 
         // Update selectAllCtrl state
-        selectAllCtrl.checked = selectedItemsCount === itemsCount;
-        selectAllCtrl.indeterminate = selectedItemsCount > 0 && selectedItemsCount < itemsCount;
+        if (selectAllCtrl) {
+          selectAllCtrl.checked = selectedItemsCount === itemsCount;
+          selectAllCtrl.indeterminate = selectedItemsCount > 0 && selectedItemsCount < itemsCount;
+        }
 
         // Update the selected items text
         updateSelectedItemsText();
@@ -167,8 +187,10 @@ aiChatProfileAdmin = function () {
 
     // Function to update selected items text
     function updateSelectedItemsText() {
-      var selectedCount = document.querySelectorAll("input[type='checkbox'][name='itemIds']:checked").length;
-      selectedItems.textContent = selectedCount + ' ' + selectedLabel;
+      var selectedCount = document.querySelectorAll("input[type='checkbox'][name='" + config.itemInputName + "']:checked").length;
+      if (selectedItems) {
+        selectedItems.textContent = selectedCount + ' ' + selectedLabel;
+      }
     }
   };
   return {

@@ -12,6 +12,14 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
         _manifest = new ResourceManifest();
 
         _manifest
+            .DefineScript("list-management-ui")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/list-management-ui.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/list-management-ui.js"
+            )
+            .SetVersion("1.0.0");
+
+        _manifest
             .DefineScript("easymde")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/js/easymde.min.js",
