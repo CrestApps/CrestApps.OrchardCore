@@ -22,7 +22,7 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
         Mulaw,
         AmrNb,
         AmrWb,
-        WebM
+        WebM,
     }
 
     private const string DefaultLanguage = "en-US";
@@ -31,8 +31,6 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
     private const byte DefaultChannels = 1;
 
     private readonly SpeechConfig _speechConfig;
-    private readonly string _region;
-    private readonly string _subscriptionKey;
 
     /// <summary>
     /// Initializes a new instance of the AzureSpeechToTextClient.
@@ -44,9 +42,212 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
         ArgumentException.ThrowIfNullOrEmpty(region);
         ArgumentException.ThrowIfNullOrEmpty(subscriptionKey);
 
-        _region = region;
-        _subscriptionKey = subscriptionKey;
         _speechConfig = SpeechConfig.FromSubscription(subscriptionKey, region);
+    }
+
+    public async Task<SpeechToTextResponse> GetTextAsync(Stream audioSpeechStream, SpeechToTextOptions options, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(audioSpeechStream);
+
+        if (audioSpeechStream.Length == 0)
+        {
+            return new SpeechToTextResponse(string.Empty);
+        }
+
+        // Configure language if specified
+        if (!string.IsNullOrEmpty(options?.TextLanguage))
+        {
+            _speechConfig.SpeechRecognitionLanguage = options.TextLanguage;
+        }
+        else
+        {
+            _speechConfig.SpeechRecognitionLanguage = DefaultLanguage;
+        }
+
+        // Copy stream to memory for Azure Speech SDK
+        using var memoryStream = new MemoryStream();
+        await audioSpeechStream.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
+        memoryStream.Position = 0;
+
+        // Detect audio format from stream header
+        var detectedFormat = DetectAudioFormat(memoryStream);
+        memoryStream.Position = 0;
+
+        // Create appropriate audio format based on detection
+        var audioFormat = CreateAudioStreamFormat(detectedFormat);
+
+        using var audioInputStream = AudioInputStream.CreatePushStream(audioFormat);
+        using var audioConfig = AudioConfig.FromStreamInput(audioInputStream);
+        using var recognizer = new SpeechRecognizer(_speechConfig, audioConfig);
+
+        // Write audio data to the push stream
+        var buffer = memoryStream.ToArray();
+        audioInputStream.Write(buffer);
+        audioInputStream.Close();
+
+        // Perform recognition
+        var result = await recognizer.RecognizeOnceAsync().ConfigureAwait(false);
+
+        return result.Reason switch
+        {
+            ResultReason.RecognizedSpeech => new SpeechToTextResponse(result.Text),
+            ResultReason.NoMatch => new SpeechToTextResponse(string.Empty),
+            ResultReason.Canceled => throw new InvalidOperationException($"Speech recognition canceled: {CancellationDetails.FromResult(result).ErrorDetails}"),
+            _ => throw new InvalidOperationException($"Unexpected result reason: {result.Reason}")
+        };
+    }
+
+    public async IAsyncEnumerable<SpeechToTextResponseUpdate> GetStreamingTextAsync(
+        Stream audioSpeechStream,
+        SpeechToTextOptions options,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(audioSpeechStream);
+
+        // Configure language if specified
+        if (!string.IsNullOrEmpty(options?.TextLanguage))
+        {
+            _speechConfig.SpeechRecognitionLanguage = options.TextLanguage;
+        }
+        else
+        {
+            _speechConfig.SpeechRecognitionLanguage = DefaultLanguage;
+        }
+
+        // Detect audio format if stream is seekable
+        AudioFormat detectedFormat = AudioFormat.Unknown;
+        if (audioSpeechStream.CanSeek)
+        {
+            detectedFormat = DetectAudioFormat(audioSpeechStream);
+            audioSpeechStream.Position = 0;
+        }
+
+        // Create appropriate audio format based on detection or default to PCM WAV
+        var audioFormat = detectedFormat != AudioFormat.Unknown
+            ? CreateAudioStreamFormat(detectedFormat)
+            : AudioStreamFormat.GetWaveFormatPCM(DefaultSamplesPerSecond, DefaultBitsPerSample, DefaultChannels);
+
+        using var audioInputStream = AudioInputStream.CreatePushStream(audioFormat);
+        using var audioConfig = AudioConfig.FromStreamInput(audioInputStream);
+        using var recognizer = new SpeechRecognizer(_speechConfig, audioConfig);
+
+        var tcs = new TaskCompletionSource<bool>();
+        var responseId = Guid.NewGuid().ToString();
+        var recognizedTexts = new List<string>();
+
+        // Subscribe to recognition events
+        recognizer.Recognizing += (s, e) =>
+        {
+            if (e.Result.Reason == ResultReason.RecognizingSpeech && !string.IsNullOrEmpty(e.Result.Text))
+            {
+                // Intermediate results
+                recognizedTexts.Add(e.Result.Text);
+            }
+        };
+
+        recognizer.Recognized += (s, e) =>
+        {
+            if (e.Result.Reason == ResultReason.RecognizedSpeech && !string.IsNullOrEmpty(e.Result.Text))
+            {
+                // Final result for this utterance
+                recognizedTexts.Add(e.Result.Text);
+            }
+        };
+
+        recognizer.SessionStopped += (s, e) =>
+        {
+            tcs.TrySetResult(true);
+        };
+
+        recognizer.Canceled += (s, e) =>
+        {
+            if (e.Reason == CancellationReason.Error)
+            {
+                tcs.TrySetException(new InvalidOperationException($"Speech recognition error: {e.ErrorDetails}"));
+            }
+            else
+            {
+                tcs.TrySetResult(true);
+            }
+        };
+
+        // Start continuous recognition
+        await recognizer.StartContinuousRecognitionAsync().ConfigureAwait(false);
+
+        try
+        {
+            // Stream audio data
+            var buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = await audioSpeechStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
+            {
+                audioInputStream.Write(buffer, bytesRead);
+
+                // Yield any recognized text
+                while (recognizedTexts.Count > 0)
+                {
+                    var text = recognizedTexts[0];
+                    recognizedTexts.RemoveAt(0);
+
+                    yield return new SpeechToTextResponseUpdate(text)
+                    {
+                        ResponseId = responseId,
+                        Kind = SpeechToTextResponseUpdateKind.TextUpdating,
+                    };
+                }
+
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+            }
+
+            audioInputStream.Close();
+            await tcs.Task.ConfigureAwait(false);
+
+            // Yield any remaining recognized text
+            while (recognizedTexts.Count > 0)
+            {
+                var text = recognizedTexts[0];
+                recognizedTexts.RemoveAt(0);
+
+                yield return new SpeechToTextResponseUpdate(text)
+                {
+                    ResponseId = responseId,
+                    Kind = SpeechToTextResponseUpdateKind.TextUpdating,
+                };
+            }
+
+            // Signal completion
+            yield return new SpeechToTextResponseUpdate
+            {
+                ResponseId = responseId,
+                Kind = SpeechToTextResponseUpdateKind.SessionClose,
+            };
+        }
+        finally
+        {
+            await recognizer.StopContinuousRecognitionAsync().ConfigureAwait(false);
+        }
+    }
+
+    public void Dispose()
+    {
+    }
+
+    public object GetService(Type serviceType, object serviceKey = null)
+    {
+        if (serviceType == null)
+        {
+            return null;
+        }
+
+        if (serviceType.IsAssignableFrom(typeof(SpeechConfig)))
+        {
+            return _speechConfig;
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -104,15 +305,15 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
             }
 
             // Check for AMR-NB
-            if (bytesRead >= 6 && header[0] == 0x23 && header[1] == 0x21 && header[2] == 0x41 && 
+            if (bytesRead >= 6 && header[0] == 0x23 && header[1] == 0x21 && header[2] == 0x41 &&
                 header[3] == 0x4D && header[4] == 0x52 && header[5] == 0x0A)
             {
                 return AudioFormat.AmrNb;
             }
 
             // Check for AMR-WB
-            if (bytesRead >= 9 && header[0] == 0x23 && header[1] == 0x21 && header[2] == 0x41 && 
-                header[3] == 0x4D && header[4] == 0x52 && header[5] == 0x2D && header[6] == 0x57 && 
+            if (bytesRead >= 9 && header[0] == 0x23 && header[1] == 0x21 && header[2] == 0x41 &&
+                header[3] == 0x4D && header[4] == 0x52 && header[5] == 0x2D && header[6] == 0x57 &&
                 header[7] == 0x42 && header[8] == 0x0A)
             {
                 return AudioFormat.AmrWb;
@@ -144,212 +345,6 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
             AudioFormat.WebM => AudioStreamFormat.GetCompressedFormat(AudioStreamContainerFormat.OGG_OPUS), // WebM often uses Opus codec
             _ => AudioStreamFormat.GetWaveFormatPCM(DefaultSamplesPerSecond, DefaultBitsPerSample, DefaultChannels) // Default fallback
         };
-    }
-
-    public async Task<SpeechToTextResponse> GetTextAsync(Stream audioSpeechStream, SpeechToTextOptions options, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(audioSpeechStream);
-
-        if (audioSpeechStream.Length == 0)
-        {
-            return new SpeechToTextResponse(string.Empty);
-        }
-
-        // Configure language if specified
-        if (!string.IsNullOrEmpty(options?.TextLanguage))
-        {
-            _speechConfig.SpeechRecognitionLanguage = options.TextLanguage;
-        }
-        else
-        {
-            _speechConfig.SpeechRecognitionLanguage = DefaultLanguage;
-        }
-
-        // Copy stream to memory for Azure Speech SDK
-        using var memoryStream = new MemoryStream();
-        await audioSpeechStream.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
-        memoryStream.Position = 0;
-
-        // Detect audio format from stream header
-        var detectedFormat = DetectAudioFormat(memoryStream);
-        memoryStream.Position = 0;
-
-        // Create appropriate audio format based on detection
-        var audioFormat = CreateAudioStreamFormat(detectedFormat);
-        
-        using var audioInputStream = AudioInputStream.CreatePushStream(audioFormat);
-        using var audioConfig = AudioConfig.FromStreamInput(audioInputStream);
-        using var recognizer = new SpeechRecognizer(_speechConfig, audioConfig);
-
-        // Write audio data to the push stream
-        var buffer = memoryStream.ToArray();
-        audioInputStream.Write(buffer);
-        audioInputStream.Close();
-
-        // Perform recognition
-        var result = await recognizer.RecognizeOnceAsync().ConfigureAwait(false);
-
-        return result.Reason switch
-        {
-            ResultReason.RecognizedSpeech => new SpeechToTextResponse(result.Text),
-            ResultReason.NoMatch => new SpeechToTextResponse(string.Empty),
-            ResultReason.Canceled => throw new InvalidOperationException($"Speech recognition canceled: {CancellationDetails.FromResult(result).ErrorDetails}"),
-            _ => throw new InvalidOperationException($"Unexpected result reason: {result.Reason}")
-        };
-    }
-
-    public async IAsyncEnumerable<SpeechToTextResponseUpdate> GetStreamingTextAsync(
-        Stream audioSpeechStream,
-        SpeechToTextOptions options,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(audioSpeechStream);
-
-        // Configure language if specified
-        if (!string.IsNullOrEmpty(options?.TextLanguage))
-        {
-            _speechConfig.SpeechRecognitionLanguage = options.TextLanguage;
-        }
-        else
-        {
-            _speechConfig.SpeechRecognitionLanguage = DefaultLanguage;
-        }
-
-        // Detect audio format if stream is seekable
-        AudioFormat detectedFormat = AudioFormat.Unknown;
-        if (audioSpeechStream.CanSeek)
-        {
-            detectedFormat = DetectAudioFormat(audioSpeechStream);
-            audioSpeechStream.Position = 0;
-        }
-
-        // Create appropriate audio format based on detection or default to PCM WAV
-        var audioFormat = detectedFormat != AudioFormat.Unknown 
-            ? CreateAudioStreamFormat(detectedFormat)
-            : AudioStreamFormat.GetWaveFormatPCM(DefaultSamplesPerSecond, DefaultBitsPerSample, DefaultChannels);
-
-        using var audioInputStream = AudioInputStream.CreatePushStream(audioFormat);
-        using var audioConfig = AudioConfig.FromStreamInput(audioInputStream);
-        using var recognizer = new SpeechRecognizer(_speechConfig, audioConfig);
-
-        var tcs = new TaskCompletionSource<bool>();
-        var responseId = Guid.NewGuid().ToString();
-        var recognizedTexts = new List<string>();
-
-        // Subscribe to recognition events
-        recognizer.Recognizing += (s, e) =>
-        {
-            if (e.Result.Reason == ResultReason.RecognizingSpeech && !string.IsNullOrEmpty(e.Result.Text))
-            {
-                // Intermediate results
-                recognizedTexts.Add(e.Result.Text);
-            }
-        };
-
-        recognizer.Recognized += (s, e) =>
-        {
-            if (e.Result.Reason == ResultReason.RecognizedSpeech && !string.IsNullOrEmpty(e.Result.Text))
-            {
-                // Final result for this utterance
-                recognizedTexts.Add(e.Result.Text);
-            }
-        };
-
-        recognizer.SessionStopped += (s, e) =>
-        {
-            tcs.TrySetResult(true);
-        };
-
-        recognizer.Canceled += (s, e) =>
-        {
-            if (e.Reason == CancellationReason.Error)
-            {
-                tcs.TrySetException(new InvalidOperationException($"Speech recognition error: {e.ErrorDetails}"));
-            }
-            else
-            {
-                tcs.TrySetResult(true);
-            }
-        };
-
-        // Start continuous recognition
-        await recognizer.StartContinuousRecognitionAsync().ConfigureAwait(false);
-
-        try
-        {
-            // Stream audio data
-            var buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = await audioSpeechStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false)) > 0)
-            {
-                audioInputStream.Write(buffer, bytesRead);
-
-                // Yield any recognized text
-                while (recognizedTexts.Count > 0)
-                {
-                    var text = recognizedTexts[0];
-                    recognizedTexts.RemoveAt(0);
-
-                    yield return new SpeechToTextResponseUpdate(text)
-                    {
-                        ResponseId = responseId,
-                        Kind = SpeechToTextResponseUpdateKind.TextUpdating,
-                    };
-                }
-
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    break;
-                }
-            }
-
-            audioInputStream.Close();
-            await tcs.Task.ConfigureAwait(false);
-
-            // Yield any remaining recognized text
-            while (recognizedTexts.Count > 0)
-            {
-                var text = recognizedTexts[0];
-                recognizedTexts.RemoveAt(0);
-
-                yield return new SpeechToTextResponseUpdate(text)
-                {
-                    ResponseId = responseId,
-                    Kind = SpeechToTextResponseUpdateKind.TextUpdating,
-                };
-            }
-
-            // Signal completion
-            yield return new SpeechToTextResponseUpdate
-            {
-                ResponseId = responseId,
-                Kind = SpeechToTextResponseUpdateKind.SessionClose,
-            };
-        }
-        finally
-        {
-            await recognizer.StopContinuousRecognitionAsync().ConfigureAwait(false);
-        }
-    }
-
-    public void Dispose()
-    {
-        _speechConfig?.Dispose();
-    }
-
-    public object GetService(Type serviceType, object serviceKey = null)
-    {
-        if (serviceType == null)
-        {
-            return null;
-        }
-
-        if (serviceType.IsAssignableFrom(typeof(SpeechConfig)))
-        {
-            return _speechConfig;
-        }
-
-        return null;
     }
 }
 #pragma warning restore MEAI001

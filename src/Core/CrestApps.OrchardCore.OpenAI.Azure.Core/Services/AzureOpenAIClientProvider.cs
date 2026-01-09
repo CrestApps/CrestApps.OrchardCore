@@ -49,7 +49,7 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
         // Expected connection format:
         // - SpeechRegion: Azure region (e.g., "westus", "eastus")
         // - SpeechSubscriptionKey: Subscription key for Azure Speech service
-        
+
         var region = connection.GetStringValue("SpeechRegion");
         var subscriptionKey = connection.GetStringValue("SpeechSubscriptionKey");
 
