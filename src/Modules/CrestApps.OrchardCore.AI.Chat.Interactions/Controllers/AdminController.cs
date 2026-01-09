@@ -291,15 +291,11 @@ public sealed class AdminController : Controller
         // Save the interaction immediately so it can be used by the SignalR hub.
         await _interactionManager.CreateAsync(clonedInteraction);
 
-        var model = new EditChatInteractionEntryViewModel
+        return RedirectToAction(nameof(Chat), new
         {
-            ItemId = clonedInteraction.ItemId,
-            Source = clonedInteraction.Source,
-            DisplayName = clonedInteraction.Title,
-            Editor = await _interactionDisplayManager.BuildEditorAsync(clonedInteraction, _updateModelAccessor.ModelUpdater, isNew: true),
-        };
-
-        return View(nameof(Chat), model);
+            source = clonedInteraction.Source,
+            itemId = clonedInteraction.ItemId,
+        });
     }
 
     [HttpPost]
