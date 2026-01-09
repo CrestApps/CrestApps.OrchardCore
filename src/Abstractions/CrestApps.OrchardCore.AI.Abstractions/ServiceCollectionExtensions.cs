@@ -30,4 +30,13 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    public static IServiceCollection AddAIProfileTemplate<TTemplate>(this IServiceCollection services)
+        where TTemplate : class, IAIProfileTemplate
+    {
+        services.AddScoped<TTemplate>();
+        services.AddScoped<IAIProfileTemplate>(sp => sp.GetRequiredService<TTemplate>());
+
+        return services;
+    }
 }

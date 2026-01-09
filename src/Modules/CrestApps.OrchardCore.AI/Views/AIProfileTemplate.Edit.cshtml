@@ -1,0 +1,17 @@
+@model CrestApps.OrchardCore.AI.ViewModels.EditProfileTemplateViewModel
+
+@if (Model.AvailableTemplates.Any())
+{
+    <div class="mb-3" asp-validation-class-for="SelectedTemplate">
+        <label asp-for="SelectedTemplate" class="form-label">@T["Template"]</label>
+        <select asp-for="SelectedTemplate" class="form-select">
+            <option value="">@T["-- None (Start from scratch) --"]</option>
+            @foreach (var template in Model.AvailableTemplates)
+            {
+                <option value="@template.Value">@template.Text</option>
+            }
+        </select>
+        <span asp-validation-for="SelectedTemplate" class="text-danger"></span>
+        <span class="form-text text-muted">@T["Select a template to pre-fill the profile settings."]</span>
+    </div>
+}
