@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.AI.SmartFields.ViewModels
+
+@model SmartTextFieldAutocompleteSettingsViewModel
+
+<div class="mb-3" asp-validation-class-for="ProfileId">
+    <label asp-for="ProfileId" class="form-label">@T["AI Profile"]</label>
+    <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select">
+        <option value="">@T["Select an AI profile..."]</option>
+    </select>
+    <span asp-validation-for="ProfileId"></span>
+    <span class="hint">@T["Select the Utility AI profile to use for generating autocomplete suggestions."]</span>
+</div>
+
+<div class="mb-3" asp-validation-class-for="Hint">
+    <label asp-for="Hint" class="form-label">@T["Hint"]</label>
+    <input type="text" class="form-control" asp-for="Hint" />
+    <span asp-validation-for="Hint"></span>
+    <span class="hint dashed">@T["The hint text to display for this field."]</span>
+</div>
