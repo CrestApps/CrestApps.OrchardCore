@@ -40,7 +40,9 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
 
             var id = token[nameof(AIProfile.ItemId)]?.GetValue<string>();
 
-            if (!string.IsNullOrEmpty(id))
+            var hasId = !string.IsNullOrEmpty(id);
+
+            if (hasId)
             {
                 profile = await _profileManager.FindByIdAsync(id);
             }
@@ -79,7 +81,7 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
 
                 profile = await _profileManager.NewAsync(sourceName, token);
 
-                if (!string.IsNullOrEmpty(id) && IdValidator.IsValidId(id))
+                if (hasId && IdValidator.IsValidId(id))
                 {
                     profile.ItemId = id;
                 }

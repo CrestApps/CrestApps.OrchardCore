@@ -40,7 +40,9 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
 
             var id = token[nameof(AIDataSource.ItemId)]?.GetValue<string>();
 
-            if (!string.IsNullOrEmpty(id))
+            var hasId = !string.IsNullOrEmpty(id);
+
+            if (hasId)
             {
                 dataSource = await _dataManager.FindByIdAsync(id);
             }
@@ -78,7 +80,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
 
                 dataSource = await _dataManager.NewAsync(profileSource, type, token);
 
-                if (!string.IsNullOrEmpty(id) && IdValidator.IsValidId(id))
+                if (hasId && IdValidator.IsValidId(id))
                 {
                     dataSource.ItemId = id;
                 }

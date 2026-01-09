@@ -40,7 +40,9 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
 
             var id = token[nameof(McpConnection.ItemId)]?.GetValue<string>();
 
-            if (!string.IsNullOrEmpty(id))
+            var hasId = !string.IsNullOrEmpty(id);
+
+            if (hasId)
             {
                 connection = await _manager.FindByIdAsync(id);
             }
@@ -69,7 +71,7 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
 
                 connection = await _manager.NewAsync(sourceName, token);
 
-                if (!string.IsNullOrEmpty(id) && IdValidator.IsValidId(id))
+                if (hasId && IdValidator.IsValidId(id))
                 {
                     connection.ItemId = id;
                 }

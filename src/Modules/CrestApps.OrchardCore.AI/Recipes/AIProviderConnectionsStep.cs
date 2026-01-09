@@ -41,6 +41,8 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 
             var id = token[nameof(AIProviderConnection.ItemId)]?.GetValue<string>();
 
+            var hasId = !string.IsNullOrEmpty(id);
+
             if (!string.IsNullOrEmpty(id))
             {
                 connection = await _manager.FindByIdAsync(id);
@@ -88,7 +90,7 @@ internal sealed class AIProviderConnectionsStep : NamedRecipeStepHandler
 
                 connection = await _manager.NewAsync(sourceName, token);
 
-                if (!string.IsNullOrEmpty(id) && IdValidator.IsValidId(id))
+                if (hasId && IdValidator.IsValidId(id))
                 {
                     connection.ItemId = id;
                 }

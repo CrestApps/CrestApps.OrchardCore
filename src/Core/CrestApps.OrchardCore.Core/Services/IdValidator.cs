@@ -2,7 +2,7 @@ namespace CrestApps.OrchardCore.Core.Services;
 
 public static class IdValidator
 {
-    private const int IdLength = 26;
+    private const int _idLength = 26;
 
     // Same alphabet used by GenerateId
     private static readonly string _encode32Alphabet = "0123456789abcdefghjkmnpqrstvwxyz";
@@ -17,7 +17,7 @@ public static class IdValidator
             return false;
         }
 
-        if (id.Length != IdLength)
+        if (id.Length != _idLength)
         {
             return false;
         }

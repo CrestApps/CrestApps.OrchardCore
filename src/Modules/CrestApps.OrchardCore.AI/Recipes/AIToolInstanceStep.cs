@@ -36,7 +36,9 @@ internal sealed class AIToolInstanceStep : NamedRecipeStepHandler
 
             var id = token[nameof(AIProfile.ItemId)]?.GetValue<string>();
 
-            if (!string.IsNullOrEmpty(id))
+            var hasId = !string.IsNullOrEmpty(id);
+
+            if (hasId)
             {
                 instance = await _manager.FindByIdAsync(id);
             }
@@ -65,7 +67,7 @@ internal sealed class AIToolInstanceStep : NamedRecipeStepHandler
                     continue;
                 }
 
-                if (!string.IsNullOrEmpty(id) && IdValidator.IsValidId(id))
+                if (hasId && IdValidator.IsValidId(id))
                 {
                     instance.ItemId = id;
                 }

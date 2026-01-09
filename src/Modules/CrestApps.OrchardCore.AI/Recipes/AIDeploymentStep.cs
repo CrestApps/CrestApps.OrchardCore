@@ -40,7 +40,9 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 
             var id = token[nameof(AIDeployment.ItemId)]?.GetValue<string>();
 
-            if (!string.IsNullOrEmpty(id))
+            var hasId = !string.IsNullOrEmpty(id);
+
+            if (hasId)
             {
                 deployment = await _manager.FindByIdAsync(id);
             }
@@ -94,7 +96,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 
                 deployment = await _manager.NewAsync(sourceName, token);
 
-                if (!string.IsNullOrEmpty(id) && IdValidator.IsValidId(id))
+                if (hasId && IdValidator.IsValidId(id))
                 {
                     deployment.ItemId = id;
                 }
