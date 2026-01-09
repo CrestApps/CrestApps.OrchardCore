@@ -47,16 +47,16 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
         // Azure Speech-to-Text uses Azure Cognitive Services Speech SDK
         // Extract region and subscription key from connection
         // Expected connection format:
-        // - SpeechRegion: Azure region (e.g., "westus", "eastus")
-        // - SpeechSubscriptionKey: Subscription key for Azure Speech service
+        // - SpeechRegion: Azure region aka location (e.g., "westus", "eastus")
+        // - SpeechAPIKey: Subscription key for Azure Speech service
 
         var region = connection.GetStringValue("SpeechRegion");
-        var subscriptionKey = connection.GetStringValue("SpeechSubscriptionKey");
+        var subscriptionKey = connection.GetStringValue("SpeechAPIKey");
 
         if (string.IsNullOrEmpty(region) || string.IsNullOrEmpty(subscriptionKey))
         {
             throw new InvalidOperationException(
-                "Azure Speech-to-Text requires 'SpeechRegion' and 'SpeechSubscriptionKey' to be configured in the connection. " +
+                "Azure Speech-to-Text requires 'SpeechRegion' and 'SpeechAPIKey' to be configured in the connection. " +
                 "These are separate from Azure OpenAI settings and use the Azure Cognitive Services Speech service.");
         }
 

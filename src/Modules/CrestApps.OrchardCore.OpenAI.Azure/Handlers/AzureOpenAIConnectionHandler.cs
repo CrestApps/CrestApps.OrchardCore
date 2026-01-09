@@ -50,12 +50,22 @@ public sealed class AzureOpenAIConnectionHandler : IAIProviderConnectionHandler
         context.Values["EnableLogging"] = metadata.EnableLogging;
         context.Values["EnableMessageLogging"] = metadata.EnableLogging;
         context.Values["EnableMessageContentLogging"] = metadata.EnableLogging;
+        context.Values["SpeechRegion"] = metadata.SpeechRegion;
+
+        IDataProtector protector = null;
 
         if (!string.IsNullOrEmpty(metadata.ApiKey))
         {
-            var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+            protector ??= _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
 
             context.Values["ApiKey"] = protector.Unprotect(metadata.ApiKey);
+        }
+
+        if (!string.IsNullOrEmpty(metadata.SpeechAPIKey))
+        {
+            protector ??= _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+
+            context.Values["SpeechAPIKey"] = protector.Unprotect(metadata.SpeechAPIKey);
         }
     }
 }

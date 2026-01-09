@@ -14,9 +14,14 @@ public class AzureOpenAIConnectionViewModel
 
     public bool EnableLogging { get; set; }
 
+    public string SpeechRegion { get; set; }
+
+    public string SpeechAPIKey { get; set; }
+
     [BindNever]
     public bool HasApiKey { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> AuthenticationTypes { get; set; }
+    public bool HasSpeechAPIKey { get; internal set; }
 }
