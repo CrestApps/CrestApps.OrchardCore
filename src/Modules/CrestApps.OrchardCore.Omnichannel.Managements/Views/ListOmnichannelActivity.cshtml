@@ -1,0 +1,78 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore.ContentManagement.Metadata
+@model ListOmnichannelActivity
+
+@inject IContentDefinitionManager ContentDefinitionManager
+
+@{
+    var shape = new ContactNavigationAdminShapeViewModel
+    {
+        ContactContentItem = Model.ContactContentItem,
+        ShowEdit = true,
+    };
+}
+
+@await DisplayAsync(shape)
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">
+        @T["Scheduled Activities"]
+    </div>
+    <div class="card-body">
+        @if (Model.ScheduledContainers.Count == 0)
+        {
+            <div class="alert alert-info mb-0 text-center">
+                @T["No scheduled activities."]
+            </div>
+        }
+        else
+        {
+            <ul class="list-group with-checkbox">
+
+                @foreach (var container in Model.ScheduledContainers)
+                {
+                    <li class="list-group-item list-group-item-action list-group-striped">
+                        @await DisplayAsync(container)
+                    </li>
+                }
+            </ul>
+
+            @if (Model.ScheduledPager is not null)
+            {
+                @await DisplayAsync(Model.ScheduledPager)
+            }
+        }
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">
+        @T["Completed Activities"]
+    </div>
+    <div class="card-body">
+
+        @if (Model.CompletedContainers.Count == 0)
+        {
+            <div class="alert alert-info mb-0 text-center">
+                @T["No completed activities."]
+            </div>
+        }
+        else
+        {
+            <ul class="list-group with-checkbox">
+
+                @foreach (var container in Model.CompletedContainers)
+                {
+                    <li class="list-group-item list-group-item-action list-group-striped">
+                        @await DisplayAsync(container)
+                    </li>
+                }
+            </ul>
+
+            @if (Model.CompletedPager is not null)
+            {
+                @await DisplayAsync(Model.CompletedPager)
+            }
+        }
+    </div>
+</div>

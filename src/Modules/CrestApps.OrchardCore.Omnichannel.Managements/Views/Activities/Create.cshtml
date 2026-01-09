@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore.ContentManagement
+<zone Name="Title">
+    <h1>@RenderTitleSegments(T["New Activity"])</h1>
+</zone>
+
+@{
+    var contentItemId = ViewContext.HttpContext.Request.RouteValues["id"];
+}
+
+@{
+    var shape = new ContactNavigationAdminShapeViewModel
+    {
+        ContactContentItem = ViewData["Contact"] as ContentItem,
+        ShowEdit = true,
+    };
+}
+
+@await DisplayAsync(shape)
+
+<form method="post" asp-route-contentItemId="@contentItemId" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Content)
+
+    <button class="btn btn-primary" type="submit">@T["Save"]</button>
+
+    <a class="btn btn-secondary cancel" role="button" asp-route-action="List" asp-route-contentItemId="@contentItemId">@T["Cancel"]</a>
+</form>

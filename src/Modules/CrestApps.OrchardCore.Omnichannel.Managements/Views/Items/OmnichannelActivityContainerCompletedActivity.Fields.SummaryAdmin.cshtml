@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using Microsoft.AspNetCore.Html
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OmnichannelActivityContainer>
+
+<h5 class="mb-0">
+    <a asp-action="Complete" asp-route-id="@Model.Value.Activity.ItemId">
+        @(Model.Value.SubjectContentTypeDefinition?.DisplayName ?? T["Unknown Subject"].Value)
+    </a>
+</h5>
