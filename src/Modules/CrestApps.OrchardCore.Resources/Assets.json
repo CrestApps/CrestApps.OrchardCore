@@ -1,5 +1,11 @@
 [
   {
+    "inputs": [
+      "Assets/js/list-management-ui.js"
+    ],
+    "output": "wwwroot/scripts/list-management-ui.js"
+  },
+  {
     "copy": true,
     "inputs": [
       "node_modules/easymde/dist/easymde.min.js"

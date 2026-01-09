@@ -37,10 +37,11 @@
   <ItemGroup>
     <!-- 
       Ensure this module directly depends on the required package so that when someone installs it, 
-      they won't need to manually include the AI. 
+      they won't need to manually include the AI and Resources packages. 
       This guarantees the module functions correctly and resolves the feature dependency.
     -->
     <ProjectReference Include="..\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>
