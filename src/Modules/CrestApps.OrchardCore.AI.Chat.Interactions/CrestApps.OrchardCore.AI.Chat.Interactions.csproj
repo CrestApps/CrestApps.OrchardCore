@@ -22,6 +22,7 @@
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.Search.AzureAI.Core" />
   </ItemGroup>
 
   <ItemGroup>
