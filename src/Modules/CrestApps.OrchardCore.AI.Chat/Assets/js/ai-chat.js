@@ -654,7 +654,7 @@ window.openAIChatManager = function () {
 
                         // Create a SignalR Subject for client-to-server streaming and invoke hub method once
                         this.audioSubject = new signalR.Subject();
-                        this.audioInvokePromise = this.connection.invoke(
+                        this.audioInvokePromise = this.connection.send(
                             "SendAudioChunk",
                             this.getProfileId(),
                             this.getSessionId(),
@@ -814,7 +814,7 @@ window.openAIChatManager = function () {
                 if (this.isRecording) {
                     this.stopRecording();
                 }
-                
+
                 window.removeEventListener('beforeunload', this.handleBeforeUnload);
 
                 if (this.stream) {

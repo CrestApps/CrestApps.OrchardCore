@@ -609,7 +609,7 @@ window.openAIChatManager = function () {
 
                   // Create a SignalR Subject for client-to-server streaming and invoke hub method once
                   _this9.audioSubject = new signalR.Subject();
-                  _this9.audioInvokePromise = _this9.connection.invoke("SendAudioChunk", _this9.getProfileId(), _this9.getSessionId(), _this9.audioSubject)["catch"](function (err) {
+                  _this9.audioInvokePromise = _this9.connection.send("SendAudioChunk", _this9.getProfileId(), _this9.getSessionId(), _this9.audioSubject)["catch"](function (err) {
                     console.error('Error sending audio stream:', err);
                     return {
                       transcript: '',

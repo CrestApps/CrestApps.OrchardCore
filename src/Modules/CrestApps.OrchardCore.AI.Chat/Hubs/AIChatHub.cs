@@ -1,4 +1,5 @@
 using System.Text;
+using System.IO.Pipelines;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -194,34 +195,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             try
             {
-                // Accumulate the streamed base64 chunks into a single audio stream
-                using var audioStream = new MemoryStream();
-                long totalBytes = 0;
-
-                await foreach (var base64 in stream.WithCancellation(Context.ConnectionAborted))
-                {
-                    if (string.IsNullOrWhiteSpace(base64))
-                    {
-                        continue;
-                    }
-
-                    byte[] bytes;
-                    try
-                    {
-                        bytes = Convert.FromBase64String(base64);
-                    }
-                    catch (FormatException)
-                    {
-                        // Ignore malformed chunk
-                        continue;
-                    }
-
-                    totalBytes += bytes.Length;
-
-                    await audioStream.WriteAsync(bytes, Context.ConnectionAborted);
-                }
-
-                audioStream.Position = 0;
+                // Use a pipe to enable concurrent reading and writing.
+                // The producer writes incoming base64-decoded audio chunks to the pipe,
+                // while the consumer (speech-to-text client) reads from the pipe as a stream in real-time.
+                var pipe = new Pipe();
 
                 var builder = new StringBuilder();
                 var messageId = IdGenerator.GenerateId();
@@ -240,14 +217,25 @@ public class AIChatHub : Hub<IAIChatHubClient>
                     isNewSession = true;
                 }
 
-                await foreach (var update in speechToTextClient.GetStreamingTextAsync(audioStream, cancellationToken: Context.ConnectionAborted))
+                // Start the producer task that writes audio chunks to the pipe concurrently.
+                // This task runs in parallel with the consumer below - do not await it here.
+                var producerTask = WriteAudioChunksToPipeAsync(pipe.Writer, stream, Context.ConnectionAborted);
+
+                // Read from the pipe as a stream and transcribe in real-time.
+                // The pipe reader will block on read until data is available and return
+                // end-of-stream when the writer calls CompleteAsync().
+                await using var pipeReaderStream = pipe.Reader.AsStream();
+
+                await foreach (var update in speechToTextClient.GetStreamingTextAsync(pipeReaderStream, cancellationToken: Context.ConnectionAborted))
                 {
                     if (update is not null && !string.IsNullOrEmpty(update.Text))
                     {
                         builder.Append(update.Text);
-                        // Optionally stream partial transcript to caller here
                     }
                 }
+
+                // Ensure the producer task completes and propagate any exceptions
+                await producerTask;
 
                 var transcribedText = builder.ToString().Trim() ?? string.Empty;
 
@@ -264,7 +252,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 }
 
                 await _sessionManager.SaveAsync(chatSession);
-
             }
             catch (Exception ex)
             {
@@ -274,6 +261,44 @@ public class AIChatHub : Hub<IAIChatHubClient>
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing audio chunk");
+        }
+    }
+
+    private static async Task WriteAudioChunksToPipeAsync(PipeWriter writer, IAsyncEnumerable<string> stream, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await foreach (var base64 in stream.WithCancellation(cancellationToken))
+            {
+                if (string.IsNullOrWhiteSpace(base64))
+                {
+                    continue;
+                }
+
+                byte[] bytes;
+                try
+                {
+                    bytes = Convert.FromBase64String(base64);
+                }
+                catch (FormatException)
+                {
+                    // Ignore malformed chunk
+                    continue;
+                }
+
+                await writer.WriteAsync(bytes, cancellationToken);
+                // Flush to ensure data is available to the reader immediately
+                await writer.FlushAsync(cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Connection was aborted, that's expected
+        }
+        finally
+        {
+            // Signal that no more data will be written
+            await writer.CompleteAsync();
         }
     }
 

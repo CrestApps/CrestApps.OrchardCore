@@ -104,7 +104,8 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
     {
         ArgumentNullException.ThrowIfNull(audioSpeechStream);
 
-        if (audioSpeechStream.Length == 0)
+        // Only check length for seekable streams - pipe streams don't support Length
+        if (audioSpeechStream.CanSeek && audioSpeechStream.Length == 0)
         {
             yield return new SpeechToTextResponseUpdate
             {
@@ -131,7 +132,7 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
         }
 
         // Detect audio format if stream is seekable
-        AudioFormat detectedFormat = AudioFormat.Unknown;
+        var detectedFormat = AudioFormat.Unknown;
         if (audioSpeechStream.CanSeek)
         {
             detectedFormat = DetectAudioFormat(audioSpeechStream);
