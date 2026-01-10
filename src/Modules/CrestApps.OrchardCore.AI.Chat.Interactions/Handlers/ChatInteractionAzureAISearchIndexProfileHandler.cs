@@ -1,6 +1,8 @@
+using Azure.Search.Documents.Indexes.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using OrchardCore.Entities;
+using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Infrastructure.Entities;
@@ -49,8 +51,7 @@ public sealed class ChatInteractionAzureAISearchIndexProfileHandler : IndexProfi
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = ChatInteractionsConstants.ColumnNames.DocumentId,
-            IndexedFieldName = ChatInteractionsConstants.ColumnNames.DocumentId,
-            Type = AzureFieldType.String,
+            Type = DocumentIndex.Types.Text,
             IsKey = true,
             IsFilterable = true,
         });
@@ -59,8 +60,7 @@ public sealed class ChatInteractionAzureAISearchIndexProfileHandler : IndexProfi
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = ChatInteractionsConstants.ColumnNames.Text,
-            IndexedFieldName = ChatInteractionsConstants.ColumnNames.Text,
-            Type = AzureFieldType.String,
+            Type = DocumentIndex.Types.Text,
             IsSearchable = true,
         });
 
@@ -68,8 +68,7 @@ public sealed class ChatInteractionAzureAISearchIndexProfileHandler : IndexProfi
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = ChatInteractionsConstants.ColumnNames.InteractionId,
-            IndexedFieldName = ChatInteractionsConstants.ColumnNames.InteractionId,
-            Type = AzureFieldType.String,
+            Type = DocumentIndex.Types.Text,
             IsFilterable = true,
         });
 
@@ -77,8 +76,7 @@ public sealed class ChatInteractionAzureAISearchIndexProfileHandler : IndexProfi
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = ChatInteractionsConstants.ColumnNames.FileName,
-            IndexedFieldName = ChatInteractionsConstants.ColumnNames.FileName,
-            Type = AzureFieldType.String,
+            Type = DocumentIndex.Types.Text,
             IsFilterable = true,
         });
 
@@ -87,30 +85,29 @@ public sealed class ChatInteractionAzureAISearchIndexProfileHandler : IndexProfi
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = ChatInteractionsConstants.ColumnNames.Chunks,
-            IndexedFieldName = ChatInteractionsConstants.ColumnNames.Chunks,
-            Type = AzureFieldType.Complex,
+            Type = DocumentIndex.Types.Complex,
             Fields =
             [
                 new AzureAISearchIndexMap
                 {
                     AzureFieldKey = ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Text,
-                    IndexedFieldName = ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Text,
-                    Type = AzureFieldType.String,
+                    Type = DocumentIndex.Types.Text,
                     IsSearchable = true,
                 },
                 new AzureAISearchIndexMap
                 {
                     AzureFieldKey = ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Embedding,
-                    IndexedFieldName = ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Embedding,
-                    Type = AzureFieldType.Collection,
-                    VectorSearchDimensions = embeddingDimensions,
-                    VectorSearchProfileName = "default",
+                    Type = DocumentIndex.Types.Number,
+                    VectorInfo = new AzureAISearchIndexMapVectorInfo
+                    {
+                        Dimensions = embeddingDimensions,
+                        IsCollection = true,
+                    },
                 },
                 new AzureAISearchIndexMap
                 {
                     AzureFieldKey = ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Index,
-                    IndexedFieldName = ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Index,
-                    Type = AzureFieldType.Int32,
+                    Type = DocumentIndex.Types.Integer,
                 },
             ]
         });

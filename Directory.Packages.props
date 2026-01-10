@@ -72,6 +72,7 @@
     <!-- Microsoft Packages -->
     <PackageVersion Include="Azure.AI.OpenAI" Version="2.7.0-beta.2" />
     <PackageVersion Include="Azure.Identity" Version="1.17.1" />
+    <PackageVersion Include="Azure.Search.Documents" Version="11.7.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.0.1" />

@@ -23,6 +23,7 @@
     <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
     <PackageReference Include="OrchardCore.Search.AzureAI.Core" />
+    <PackageReference Include="Azure.Search.Documents" />
   </ItemGroup>
 
   <ItemGroup>
