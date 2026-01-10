@@ -12,11 +12,6 @@ using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
-/// <summary>
-/// Display driver for Chat Interaction Index Profile that adds embedding connection selection.
-/// Only applies when IndexProfile.Type is ChatInteractionsConstants.IndexingTaskType
-/// and ProviderName is ElasticsearchConstants.ProviderName or AzureAISearchConstants.ProviderName.
-/// </summary>
 public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<IndexProfile>
 {
     private const char Separator = '|';

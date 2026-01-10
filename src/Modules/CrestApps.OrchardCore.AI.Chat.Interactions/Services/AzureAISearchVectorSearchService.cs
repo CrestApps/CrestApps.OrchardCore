@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 public sealed class AzureAISearchVectorSearchService : IVectorSearchService
 {
     private readonly SearchIndexClient _searchIndexClient;
-    private readonly ILogger<AzureAISearchVectorSearchService> _logger;
+    private readonly ILogger _logger;
 
     public AzureAISearchVectorSearchService(
         SearchIndexClient searchIndexClient,
@@ -48,11 +48,14 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
             var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
 
             // Build vector search options
-            var vectorQuery = new VectorizedQuery(embedding.Select(x => (float)x).ToArray())
+            var vectorQuery = new VectorizedQuery(embedding)
             {
                 // Target the nested embedding field within chunks
                 KNearestNeighborsCount = topN,
-                Fields = { ChatInteractionsConstants.ColumnNames.ChunksEmbedding }
+                Fields =
+                {
+                    ChatInteractionsConstants.ColumnNames.ChunksEmbedding,
+                }
             };
 
             var searchOptions = new SearchOptions
@@ -66,11 +69,11 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
                     ChatInteractionsConstants.ColumnNames.DocumentId,
                     ChatInteractionsConstants.ColumnNames.InteractionId,
                     ChatInteractionsConstants.ColumnNames.FileName,
-                    ChatInteractionsConstants.ColumnNames.Chunks
+                    ChatInteractionsConstants.ColumnNames.Chunks,
                 },
                 VectorSearch = new VectorSearchOptions
                 {
-                    Queries = { vectorQuery }
+                    Queries = { vectorQuery },
                 }
             };
 
@@ -120,7 +123,7 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
                                 Chunk = new ChatInteractionDocumentChunk
                                 {
                                     Text = chunkText,
-                                    Index = chunkIndex
+                                    Index = chunkIndex,
                                 },
                                 // Azure AI Search returns scores as double, convert to float
                                 Score = (float)(result.Score ?? 0.0)
