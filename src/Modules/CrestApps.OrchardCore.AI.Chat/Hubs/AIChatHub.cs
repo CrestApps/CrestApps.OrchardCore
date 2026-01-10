@@ -1,4 +1,5 @@
 using System.Text;
+using System.IO.Pipelines;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -12,7 +13,9 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore;
+using OrchardCore.Entities;
 using OrchardCore.Liquid;
 using YesSql;
 
@@ -26,6 +29,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly ISession _session;
     private readonly IAICompletionService _completionService;
+    private readonly IAIClientFactory _clientFactory;
+    private readonly AIProviderOptions _aiProviderOptions;
     private readonly IAICompletionContextBuilder _aICompletionContextBuilder;
     private readonly ILogger<AIChatHub> _logger;
 
@@ -38,6 +43,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
         ILiquidTemplateManager liquidTemplateManager,
         ISession session,
         IAICompletionService completionService,
+        IAIClientFactory clientFactory,
+        IOptions<AIProviderOptions> aiProviderOptions,
         IAICompletionContextBuilder aICompletionContextBuilder,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
@@ -48,9 +55,17 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _liquidTemplateManager = liquidTemplateManager;
         _session = session;
         _completionService = completionService;
+        _clientFactory = clientFactory;
+        _aiProviderOptions = aiProviderOptions.Value;
         _aICompletionContextBuilder = aICompletionContextBuilder;
         _logger = logger;
         S = stringLocalizer;
+    }
+
+    public sealed class TranscriptResponse
+    {
+        public string Transcript { get; set; }
+        public string SessionId { get; set; }
     }
 
     public ChannelReader<CompletionPartialMessage> SendMessage(string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
@@ -68,7 +83,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         if (string.IsNullOrWhiteSpace(sessionId))
         {
-            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionId)].Value);
+            await Clients.Caller.ReceiveError(S[$"{0} is required.", nameof(sessionId)].Value);
 
             return;
         }
@@ -120,13 +135,180 @@ public class AIChatHub : Hub<IAIChatHubClient>
         });
     }
 
+    // Accept a client-to-server streamed parameter of base64-encoded audio chunks
+    public async Task SendAudioChunk(string profileId, string sessionId, IAsyncEnumerable<string> stream)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(profileId))
+            {
+                return;
+            }
+
+            if (stream == null)
+            {
+                return;
+            }
+
+            var profile = await _profileManager.FindByIdAsync(profileId);
+
+            if (profile is null)
+            {
+                return;
+            }
+
+            var httpContext = Context.GetHttpContext();
+
+            if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+            {
+                return;
+            }
+
+            // Get the speech-to-text client using the dedicated connection from profile metadata
+            var speechToTextMetadata = profile.As<SpeechToTextMetadata>();
+            var speechToTextConnection = speechToTextMetadata?.ConnectionName ?? profile.ConnectionName;
+
+#pragma warning disable MEAI001
+            ISpeechToTextClient speechToTextClient;
+#pragma warning restore MEAI001
+            try
+            {
+                if (!_aiProviderOptions.Providers.TryGetValue(profile.Source, out var provider))
+                {
+                    _logger.LogWarning("AI provider '{ProviderName}' not found", profile.Source);
+                    return;
+                }
+
+                if (!provider.Connections.TryGetValue(speechToTextConnection, out var connection))
+                {
+                    _logger.LogWarning("Speech-to-text connection '{ConnectionName}' not found for provider '{ProviderName}'", speechToTextConnection, profile.Source);
+                    return;
+                }
+
+                speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, speechToTextConnection, connection.GetDefaultSpeechToTextDeploymentName());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to create speech-to-text client for chunk");
+                return;
+            }
+
+            try
+            {
+                // Use a pipe to enable concurrent reading and writing.
+                // The producer writes incoming base64-decoded audio chunks to the pipe,
+                // while the consumer (speech-to-text client) reads from the pipe as a stream in real-time.
+                var pipe = new Pipe();
+
+                var builder = new StringBuilder();
+                var messageId = IdGenerator.GenerateId();
+
+                AIChatSession chatSession = null;
+                var isNewSession = false;
+
+                if (!string.IsNullOrWhiteSpace(sessionId))
+                {
+                    chatSession = await _sessionManager.FindAsync(sessionId);
+                }
+
+                if (chatSession is null)
+                {
+                    chatSession = await _sessionManager.NewAsync(profile, new NewAIChatSessionContext());
+                    isNewSession = true;
+                }
+
+                // Start the producer task that writes audio chunks to the pipe concurrently.
+                // This task runs in parallel with the consumer below - do not await it here.
+                var producerTask = WriteAudioChunksToPipeAsync(pipe.Writer, stream, Context.ConnectionAborted);
+
+                // Read from the pipe as a stream and transcribe in real-time.
+                // The pipe reader will block on read until data is available and return
+                // end-of-stream when the writer calls CompleteAsync().
+                await using var pipeReaderStream = pipe.Reader.AsStream();
+
+                await foreach (var update in speechToTextClient.GetStreamingTextAsync(pipeReaderStream, cancellationToken: Context.ConnectionAborted))
+                {
+                    if (update is not null && !string.IsNullOrEmpty(update.Text))
+                    {
+                        builder.Append(update.Text);
+                    }
+                }
+
+                // Ensure the producer task completes and propagate any exceptions
+                await producerTask;
+
+                var transcribedText = builder.ToString().Trim() ?? string.Empty;
+
+                chatSession.Prompts.Add(new AIChatSessionPrompt
+                {
+                    Id = messageId,
+                    Role = ChatRole.User,
+                    Content = transcribedText,
+                });
+
+                if (isNewSession)
+                {
+                    await SetTitleAsync(profile, chatSession, transcribedText);
+                }
+
+                await _sessionManager.SaveAsync(chatSession);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error transcribing audio chunk");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing audio chunk");
+        }
+    }
+
+    private static async Task WriteAudioChunksToPipeAsync(PipeWriter writer, IAsyncEnumerable<string> stream, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await foreach (var base64 in stream.WithCancellation(cancellationToken))
+            {
+                if (string.IsNullOrWhiteSpace(base64))
+                {
+                    continue;
+                }
+
+                byte[] bytes;
+                try
+                {
+                    bytes = Convert.FromBase64String(base64);
+                }
+                catch (FormatException)
+                {
+                    // Ignore malformed chunk
+                    continue;
+                }
+
+                await writer.WriteAsync(bytes, cancellationToken);
+                // Flush to ensure data is available to the reader immediately
+                await writer.FlushAsync(cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Connection was aborted, that's expected
+        }
+        finally
+        {
+            // Signal that no more data will be written
+            await writer.CompleteAsync();
+        }
+    }
+
     private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(profileId))
             {
-                await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionId)].Value);
+                await Clients.Caller.ReceiveError(S[$"{0} is required.", nameof(sessionId)].Value);
 
                 return;
             }
@@ -254,10 +436,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         // Authentication errors.
         if (message.Contains("401", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("403", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("unauthorized", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("invalid api key", StringComparison.OrdinalIgnoreCase) ||
-            ex.GetType().Name.Contains("Authentication", StringComparison.OrdinalIgnoreCase))
+        message.Contains("403", StringComparison.OrdinalIgnoreCase) ||
+        message.Contains("unauthorized", StringComparison.OrdinalIgnoreCase) ||
+        message.Contains("invalid api key", StringComparison.OrdinalIgnoreCase) ||
+        ex.GetType().Name.Contains("Authentication", StringComparison.OrdinalIgnoreCase))
         {
             return S["Authentication failed. Please check your API credentials."];
         }
@@ -315,6 +497,13 @@ public class AIChatHub : Hub<IAIChatHubClient>
         // At this point, we need to create a new session.
         var chatSession = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
 
+        await SetTitleAsync(profile, chatSession, userPrompt);
+
+        return (chatSession, true);
+    }
+
+    private async Task SetTitleAsync(AIProfile profile, AIChatSession chatSession, string userPrompt)
+    {
         if (profile.TitleType == AISessionTitleType.Generated)
         {
             chatSession.Title = await GetGeneratedTitleAsync(profile, userPrompt);
@@ -324,8 +513,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
         {
             chatSession.Title = Str.Truncate(userPrompt, 255);
         }
-
-        return (chatSession, true);
     }
 
     private async Task<string> GetGeneratedTitleAsync(AIProfile profile, string userPrompt)

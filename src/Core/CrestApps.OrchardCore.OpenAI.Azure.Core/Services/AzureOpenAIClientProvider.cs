@@ -40,6 +40,29 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
             .AsIEmbeddingGenerator();
     }
 
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    protected override ISpeechToTextClient GetSpeechToTextClient(AIProviderConnectionEntry connection, string deploymentName)
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    {
+        // Azure Speech-to-Text uses Azure Cognitive Services Speech SDK
+        // Extract region and subscription key from connection
+        // Expected connection format:
+        // - SpeechRegion: Azure region aka location (e.g., "westus", "eastus")
+        // - SpeechAPIKey: Subscription key for Azure Speech service
+
+        var region = connection.GetStringValue("SpeechRegion");
+        var subscriptionKey = connection.GetStringValue("SpeechAPIKey");
+
+        if (string.IsNullOrEmpty(region) || string.IsNullOrEmpty(subscriptionKey))
+        {
+            throw new InvalidOperationException(
+                "Azure Speech-to-Text requires 'SpeechRegion' and 'SpeechAPIKey' to be configured in the connection. " +
+                "These are separate from Azure OpenAI settings and use the Azure Cognitive Services Speech service.");
+        }
+
+        return new AzureSpeechToTextClient(region, subscriptionKey);
+    }
+
     private AzureOpenAIClient GetClient(AIProviderConnectionEntry connection, Uri endpoint)
     {
         var options = new AzureOpenAIClientOptions

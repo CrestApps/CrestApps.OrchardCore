@@ -44,6 +44,24 @@
     </div>
 </div>
 
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="SpeechRegion" class="@Orchard.GetLabelClasses()">@T["Speech-to-text service"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="SpeechRegion" class="form-control" />
+        <span asp-validation-for="SpeechRegion" class="text-danger"></span>
+        <span class="hint">@T["Azure Speech-to-Text does not support OpenAI. Please provide your Speech-to-Text service region."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="SpeechAPIKey" class="@Orchard.GetLabelClasses()">@T["Speech-to-text service API key"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="SpeechAPIKey" class="form-control" autocomplete="new-password" placeholder="@(Model.HasSpeechAPIKey? T["A key is securely stored. Provider a new one to replace it or leave it blank."] : T["The speech-to-text service API key"])" />
+        <span asp-validation-for="SpeechAPIKey" class="text-danger"></span>
+        <span class="hint">@T["Azure Speech-to-Text does not support OpenAI. Please provide your Speech-to-Text service API key."]</span>
+    </div>
+</div>
+
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', () => {
 

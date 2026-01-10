@@ -49,6 +49,8 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
             model.EnableLogging = metadata.EnableLogging;
             model.AuthenticationType = metadata.AuthenticationType;
             model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
+            model.SpeechRegion = metadata.SpeechRegion;
+            model.HasSpeechAPIKey = !string.IsNullOrEmpty(metadata.SpeechAPIKey);
         }).Location("Content:5");
     }
 
@@ -76,6 +78,7 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
         metadata.AuthenticationType = model.AuthenticationType;
 
+        IDataProtector protector = null;
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
 
         if (model.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(metadata.ApiKey) && !hasNewKey)
@@ -85,10 +88,21 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
         if (hasNewKey)
         {
-            var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+            protector ??= _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
 
             metadata.ApiKey = protector.Protect(model.ApiKey);
         }
+
+        var hasNewSpeechAPIKey = !string.IsNullOrWhiteSpace(model.SpeechAPIKey);
+
+        if (hasNewSpeechAPIKey)
+        {
+            protector ??= _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+
+            metadata.SpeechAPIKey = protector.Protect(model.SpeechAPIKey);
+        }
+
+        metadata.SpeechRegion = model.SpeechRegion;
 
         metadata.EnableLogging = model.EnableLogging;
 
