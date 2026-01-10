@@ -25,6 +25,7 @@ using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Search.AzureAI;
+using OrchardCore.Search.AzureAI.Core;
 using OrchardCore.Search.Elasticsearch;
 using OrchardCore.Security.Permissions;
 
@@ -73,7 +74,8 @@ public sealed class DocumentsStartup : StartupBase
         services.AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionIndexingHandler>()
             .AddScoped<ChatInteractionIndexingService>()
             .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionHandler>()
-            .AddIndexProfileHandler<ChatInteractionIndexProfileHandler>();
+            .AddIndexProfileHandler<ChatInteractionIndexProfileHandler>()
+            .AddDisplayDriver<IndexProfile, ChatInteractionIndexProfileDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -98,11 +100,8 @@ public sealed class ElasticsearchStartup : StartupBase
     {
         services.AddIndexProfileHandler<ChatInteractionElasticsearchIndexProfileHandler>();
 
-        // Register display driver for Chat Interaction index profile embedding configuration
-        services.AddDisplayDriver<IndexProfile, ChatInteractionIndexProfileDisplayDriver>();
-
         // Register Elasticsearch document index handler for chat interaction document embeddings
-        services.AddScoped<IDocumentIndexHandler, ChatInteractionDocumentIndexHandler>();
+        services.AddScoped<IDocumentIndexHandler, ChatInteractionElasticsearchDocumentIndexHandler>();
 
         // Register Elasticsearch vector search service as a keyed service
         services.AddKeyedScoped<IVectorSearchService, ElasticsearchVectorSearchService>(ElasticsearchConstants.ProviderName);
@@ -129,11 +128,8 @@ public sealed class AzureAISearchStartup : StartupBase
     {
         services.AddIndexProfileHandler<ChatInteractionAzureAISearchIndexProfileHandler>();
 
-        // Register display driver for Chat Interaction index profile embedding configuration
-        services.AddDisplayDriver<IndexProfile, ChatInteractionIndexProfileDisplayDriver>();
-
         // Register Azure AI Search document index handler for chat interaction document embeddings
-        services.AddScoped<IDocumentIndexHandler, ChatInteractionDocumentIndexHandler>();
+        services.AddScoped<IDocumentIndexHandler, ChatInteractionAzureAISearchDocumentIndexHandler>();
 
         // Register Azure AI Search vector search service as a keyed service
         services.AddKeyedScoped<IVectorSearchService, AzureAISearchVectorSearchService>(AzureAISearchConstants.ProviderName);

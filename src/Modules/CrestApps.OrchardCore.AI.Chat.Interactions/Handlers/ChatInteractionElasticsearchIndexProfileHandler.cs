@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using Elastic.Clients.Elasticsearch.Mapping;
 using OrchardCore.Entities;
-using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Infrastructure.Entities;
 using OrchardCore.Search.Elasticsearch;
@@ -12,14 +11,11 @@ using OrchardCore.Search.Elasticsearch.Models;
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
 
 
-public sealed class ChatInteractionElasticsearchIndexProfileHandler : IndexProfileHandlerBase
+public sealed class ChatInteractionElasticsearchIndexProfileHandler : ChatInteractionsIndexProfileHandlerBase
 {
-    private readonly IAIClientFactory _aiClientFactory;
-
-    public ChatInteractionElasticsearchIndexProfileHandler(
-        IAIClientFactory aiClientFactory)
+    public ChatInteractionElasticsearchIndexProfileHandler(IAIClientFactory aiClientFactory)
+        : base(ElasticsearchConstants.ProviderName, aiClientFactory)
     {
-        _aiClientFactory = aiClientFactory;
     }
 
     public override Task InitializingAsync(InitializingContext<IndexProfile> context)
@@ -71,53 +67,5 @@ public sealed class ChatInteractionElasticsearchIndexProfileHandler : IndexProfi
         };
 
         indexProfile.Put(metadata);
-    }
-
-    private async Task<int> GetEmbeddingDimensionsAsync(ChatInteractionIndexProfileMetadata interactionMetadata)
-    {
-        // Default to 1536 (OpenAI text-embedding-ada-002) if we can't determine dynamically
-        const int defaultDimensions = 1536;
-
-        // Use the embedding connection configured in the index profile
-        if (string.IsNullOrEmpty(interactionMetadata?.EmbeddingProviderName) ||
-            string.IsNullOrEmpty(interactionMetadata.EmbeddingConnectionName) ||
-            string.IsNullOrEmpty(interactionMetadata.EmbeddingDeploymentName))
-        {
-            return defaultDimensions;
-        }
-
-        try
-        {
-            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-                interactionMetadata.EmbeddingProviderName,
-                interactionMetadata.EmbeddingConnectionName,
-                interactionMetadata.EmbeddingDeploymentName);
-
-            if (embeddingGenerator == null)
-            {
-                return defaultDimensions;
-            }
-
-            // Generate embedding for a sample text to determine dimensions
-            var embedding = await embeddingGenerator.GenerateAsync(["Sample"]);
-
-            if (embedding?.Count > 0 && embedding[0].Vector.Length > 0)
-            {
-                return embedding[0].Vector.Length;
-            }
-        }
-        catch (Exception)
-        {
-            // If we can't determine dimensions dynamically (e.g., invalid connection or API error),
-            // silently fall back to default dimensions.
-        }
-
-        return defaultDimensions;
-    }
-
-    private static bool CanHandle(IndexProfile indexProfile)
-    {
-        return string.Equals(ElasticsearchConstants.ProviderName, indexProfile.ProviderName, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(ChatInteractionsConstants.IndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase);
     }
 }

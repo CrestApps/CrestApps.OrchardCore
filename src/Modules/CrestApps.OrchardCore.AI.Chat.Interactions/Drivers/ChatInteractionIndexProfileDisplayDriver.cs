@@ -9,8 +9,6 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Models;
-using OrchardCore.Search.AzureAI;
-using OrchardCore.Search.Elasticsearch;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
@@ -25,7 +23,8 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
     private const int ExpectedPartsCount = 3;
 
     private readonly AIProviderOptions _providerOptions;
-    private readonly IStringLocalizer S;
+
+    internal readonly IStringLocalizer S;
 
     public ChatInteractionIndexProfileDisplayDriver(
         IOptions<AIProviderOptions> providerOptions,
@@ -128,10 +127,6 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
 
     private static bool CanHandle(IndexProfile indexProfile)
     {
-        var isElasticsearch = string.Equals(ElasticsearchConstants.ProviderName, indexProfile.ProviderName, StringComparison.OrdinalIgnoreCase);
-        var isAzureAISearch = string.Equals(AzureAISearchConstants.ProviderName, indexProfile.ProviderName, StringComparison.OrdinalIgnoreCase);
-        var isChatInteractionType = string.Equals(ChatInteractionsConstants.IndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase);
-
-        return (isElasticsearch || isAzureAISearch) && isChatInteractionType;
+        return string.Equals(ChatInteractionsConstants.IndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase);
     }
 }

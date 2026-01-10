@@ -67,12 +67,11 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
                     ChatInteractionsConstants.ColumnNames.InteractionId,
                     ChatInteractionsConstants.ColumnNames.FileName,
                     ChatInteractionsConstants.ColumnNames.Chunks
+                },
+                VectorSearch = new VectorSearchOptions
+                {
+                    Queries = { vectorQuery }
                 }
-            };
-
-            searchOptions.VectorSearch = new VectorSearchOptions
-            {
-                Queries = { vectorQuery }
             };
 
             var response = await searchClient.SearchAsync<SearchDocument>(
