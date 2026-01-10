@@ -9,7 +9,7 @@ using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Handlers;
 
 public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInteraction>
 {

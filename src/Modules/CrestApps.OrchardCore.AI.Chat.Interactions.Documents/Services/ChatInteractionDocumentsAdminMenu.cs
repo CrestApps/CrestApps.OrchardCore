@@ -1,10 +1,10 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Drivers;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Services;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Services;
 
 public sealed class ChatInteractionDocumentsAdminMenu : AdminNavigationProvider
 {

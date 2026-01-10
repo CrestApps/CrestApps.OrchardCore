@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Endpoints;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Endpoints;
 
 internal static class UploadDocumentEndpoint
 {

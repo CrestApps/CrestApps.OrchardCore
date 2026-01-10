@@ -3,11 +3,11 @@
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
-    <Title>CrestApps OrchardCore AI Chat Interactions Module</Title>
+    <Title>CrestApps OrchardCore AI Chat Interactions Documents Module</Title>
     <Description>
       $(CrestAppsDescription)
 
-      Provides ad-hoc AI chat interactions without predefined profiles.
+      Provides documents interaction capabilities for chat interactions.
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS AI Chat Interactions</PackageTags>
   </PropertyGroup>
@@ -22,6 +22,8 @@
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.Search.AzureAI.Core" />
+    <PackageReference Include="Azure.Search.Documents" />
   </ItemGroup>
 
   <ItemGroup>
@@ -38,6 +40,7 @@
     -->
     <ProjectReference Include="..\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\CrestApps.OrchardCore.AI.Chat\CrestApps.OrchardCore.AI.Chat.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.AI.Chat.Interactions\CrestApps.OrchardCore.AI.Chat.Interactions.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\CrestApps.OrchardCore.SignalR\CrestApps.OrchardCore.SignalR.csproj" PrivateAssets="none" />
   </ItemGroup>

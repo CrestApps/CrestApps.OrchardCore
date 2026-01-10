@@ -8,7 +8,7 @@ using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Services;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Services;
 
 public sealed class ChatInteractionIndexingService
 {

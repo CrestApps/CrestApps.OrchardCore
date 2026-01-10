@@ -7,7 +7,7 @@ using OrchardCore.Infrastructure.Entities;
 using OrchardCore.Search.AzureAI;
 using OrchardCore.Search.AzureAI.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Handlers;
 
 public sealed class ChatInteractionAzureAISearchIndexProfileHandler : ChatInteractionsIndexProfileHandlerBase
 {

@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Handlers;
 
 public abstract class ChatInteractionsIndexProfileHandlerBase : IndexProfileHandlerBase
 {
@@ -61,7 +61,7 @@ public abstract class ChatInteractionsIndexProfileHandlerBase : IndexProfileHand
 
     protected bool CanHandle(IndexProfile indexProfile)
     {
-        return string.Equals(ProviderName, indexProfile.ProviderName, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(ChatInteractionsConstants.IndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(ChatInteractionsConstants.IndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(ProviderName, indexProfile.ProviderName, StringComparison.OrdinalIgnoreCase);
     }
 }

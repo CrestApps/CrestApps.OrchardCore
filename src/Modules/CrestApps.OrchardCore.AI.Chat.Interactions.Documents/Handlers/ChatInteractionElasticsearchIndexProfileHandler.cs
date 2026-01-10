@@ -8,7 +8,7 @@ using OrchardCore.Search.Elasticsearch;
 using OrchardCore.Search.Elasticsearch.Core.Models;
 using OrchardCore.Search.Elasticsearch.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Handlers;
 
 
 public sealed class ChatInteractionElasticsearchIndexProfileHandler : ChatInteractionsIndexProfileHandlerBase

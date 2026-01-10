@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.Indexing;
 using OrchardCore.Search.AzureAI;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Handlers;
 
 public sealed class ChatInteractionAzureAISearchDocumentIndexHandler : IDocumentIndexHandler
 {

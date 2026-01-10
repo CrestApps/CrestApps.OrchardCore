@@ -1,4 +1,5 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.ViewModels;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -7,7 +8,7 @@ using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Indexing;
 using OrchardCore.Settings;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Drivers;
 
 /// <summary>
 /// Display driver for document uploads in chat interactions.

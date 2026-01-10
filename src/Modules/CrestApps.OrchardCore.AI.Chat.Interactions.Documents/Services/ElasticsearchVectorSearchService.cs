@@ -7,7 +7,7 @@ using Elastic.Clients.Elasticsearch.Core.Search;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Services;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Services;
 
 /// <summary>
 /// Elasticsearch implementation of <see cref="IVectorSearchService"/> for searching document embeddings.

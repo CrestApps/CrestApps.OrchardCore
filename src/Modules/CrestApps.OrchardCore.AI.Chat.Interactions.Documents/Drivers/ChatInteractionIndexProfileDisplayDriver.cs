@@ -10,7 +10,7 @@ using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Drivers;
 
 public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<IndexProfile>
 {

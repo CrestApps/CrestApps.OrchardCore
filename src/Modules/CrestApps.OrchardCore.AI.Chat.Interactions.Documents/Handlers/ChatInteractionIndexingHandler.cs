@@ -5,7 +5,7 @@ using CrestApps.OrchardCore.Models;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Services;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Handlers;
 
 internal sealed class ChatInteractionIndexingHandler : CatalogEntryHandlerBase<ChatInteraction>
 {

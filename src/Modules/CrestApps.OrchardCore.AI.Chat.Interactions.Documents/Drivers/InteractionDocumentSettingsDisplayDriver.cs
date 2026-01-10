@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -11,7 +12,7 @@ using OrchardCore.Indexing;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Drivers;
 
 public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver<InteractionDocumentSettings>
 {

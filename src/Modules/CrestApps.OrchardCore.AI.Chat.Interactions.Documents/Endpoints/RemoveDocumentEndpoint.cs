@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Endpoints;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Endpoints;
 
 internal static class RemoveDocumentEndpoint
 {
