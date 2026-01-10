@@ -9,6 +9,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Models;
+using OrchardCore.Search.AzureAI;
 using OrchardCore.Search.Elasticsearch;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
@@ -16,7 +17,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 /// <summary>
 /// Display driver for Chat Interaction Index Profile that adds embedding connection selection.
 /// Only applies when IndexProfile.Type is ChatInteractionsConstants.IndexingTaskType
-/// and ProviderName is ElasticsearchConstants.ProviderName.
+/// and ProviderName is ElasticsearchConstants.ProviderName or AzureAISearchConstants.ProviderName.
 /// </summary>
 public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<IndexProfile>
 {
@@ -127,7 +128,10 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
 
     private static bool CanHandle(IndexProfile indexProfile)
     {
-        return string.Equals(ElasticsearchConstants.ProviderName, indexProfile.ProviderName, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(ChatInteractionsConstants.IndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase);
+        var isElasticsearch = string.Equals(ElasticsearchConstants.ProviderName, indexProfile.ProviderName, StringComparison.OrdinalIgnoreCase);
+        var isAzureAISearch = string.Equals(AzureAISearchConstants.ProviderName, indexProfile.ProviderName, StringComparison.OrdinalIgnoreCase);
+        var isChatInteractionType = string.Equals(ChatInteractionsConstants.IndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase);
+
+        return (isElasticsearch || isAzureAISearch) && isChatInteractionType;
     }
 }

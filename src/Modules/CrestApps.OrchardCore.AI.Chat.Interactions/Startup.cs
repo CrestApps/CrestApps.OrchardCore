@@ -24,6 +24,7 @@ using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Search.AzureAI;
 using OrchardCore.Search.Elasticsearch;
 using OrchardCore.Security.Permissions;
 
@@ -110,6 +111,37 @@ public sealed class ElasticsearchStartup : StartupBase
         {
             o.DisplayName = S["Chat Interaction Documents (Elasticsearch)"];
             o.Description = S["Create an Elasticsearch index for chat interaction documents."];
+        });
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.ChatDocuments, "OrchardCore.Search.AzureAI")]
+public sealed class AzureAISearchStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public AzureAISearchStartup(IStringLocalizer<AzureAISearchStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddIndexProfileHandler<ChatInteractionAzureAISearchIndexProfileHandler>();
+
+        // Register display driver for Chat Interaction index profile embedding configuration
+        services.AddDisplayDriver<IndexProfile, ChatInteractionIndexProfileDisplayDriver>();
+
+        // Register Azure AI Search document index handler for chat interaction document embeddings
+        services.AddScoped<IDocumentIndexHandler, ChatInteractionDocumentIndexHandler>();
+
+        // Register Azure AI Search vector search service as a keyed service
+        services.AddKeyedScoped<IVectorSearchService, AzureAISearchVectorSearchService>(AzureAISearchConstants.ProviderName);
+
+        services.AddAzureAISearchIndexingSource(ChatInteractionsConstants.IndexingTaskType, o =>
+        {
+            o.DisplayName = S["Chat Interaction Documents (Azure AI Search)"];
+            o.Description = S["Create an Azure AI Search index for chat interaction documents."];
         });
     }
 }
