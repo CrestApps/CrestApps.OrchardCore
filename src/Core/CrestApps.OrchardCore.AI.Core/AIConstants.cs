@@ -40,10 +40,6 @@ public static class AIConstants
         public const string DataSources = "CrestApps.OrchardCore.AI.DataSources";
 
         public const string ChatApi = "CrestApps.OrchardCore.AI.Chat.Api";
-
-        public const string ChatInteractions = "CrestApps.OrchardCore.AI.Chat.Interactions";
-
-        public const string ChatDocuments = "CrestApps.OrchardCore.AI.Chat.Interactions.Documents";
     }
 
     public static class RouteNames

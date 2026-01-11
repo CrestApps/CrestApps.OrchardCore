@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,7 +8,7 @@ using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Services;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Services;
 
 public sealed class ChatInteractionIndexingService
 {

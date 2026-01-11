@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.AI.Core.Models;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 
 /// <summary>
 /// Metadata for Chat Interaction document index profiles that stores embedding configuration.

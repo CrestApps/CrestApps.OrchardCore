@@ -322,7 +322,7 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
         var elasticsearchUuid = parts[1].Trim();
         if (string.IsNullOrWhiteSpace(elasticsearchUuid))
         {
-            throw new ArgumentException($"Parameter {nameof(cloudId)} decoded base_64_data contains no elasticsearch UUID, {exceptionSuffix}", nameof(cloudId));
+            throw new ArgumentException($"Parameter {nameof(cloudId)} decoded base_64_data contains no Elasticsearch UUID, {exceptionSuffix}", nameof(cloudId));
         }
 
         return (clusterName, new Uri($"https://{elasticsearchUuid}.{domainName}"));

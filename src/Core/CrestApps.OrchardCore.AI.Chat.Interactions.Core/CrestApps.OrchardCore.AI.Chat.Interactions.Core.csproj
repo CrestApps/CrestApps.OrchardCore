@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore AI Chat Interactions Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services project for the AI Chat Integrations module.
+    </Description>
+    <PackageTags>$(PackageTags) AI</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Indexing.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.AI.Abstractions\CrestApps.OrchardCore.AI.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

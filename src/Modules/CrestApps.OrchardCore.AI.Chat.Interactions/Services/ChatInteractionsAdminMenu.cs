@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
@@ -20,7 +21,7 @@ public sealed class ChatInteractionsAdminMenu : AdminNavigationProvider
            {
                artificialIntelligence
                    .Add(S["Chat Interactions"], S["Chat Interactions"].PrefixPosition(), chatInteractions => chatInteractions
-                       .Action("Index", "Admin", AIConstants.Feature.ChatInteractions)
+                       .Action("Index", "Admin", ChatInteractionsConstants.Feature.ChatInteractions)
                        .Permission(AIPermissions.ListChatInteractions)
                        .LocalNav()
                    );

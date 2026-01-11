@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.AI.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.ViewModels;
 
 public class EditChatInteractionDocumentsViewModel
 {

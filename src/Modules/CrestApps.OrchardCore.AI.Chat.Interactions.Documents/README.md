@@ -15,16 +15,18 @@ This feature extends the AI Chat Interactions module with document upload and RA
 
 ### Prerequisites
 
-1. **Elasticsearch Feature**: Currently, only Elasticsearch is supported as an embedding service provider. Enable the Elasticsearch feature first.
+1. **Indexing Provider**: This feature supports Elasticsearch and Azure AI Search as embedding/search providers. Enable the provider feature that matches your environment:
+   - For Elasticsearch: enable the `Elasticsearch` feature
+   - For Azure AI Search: enable the `OrchardCore.Search.AzureAI` (Azure AI Search) feature
 2. **Create an Index**: Navigate to **Search > Indexing** and create a new index for storing user documents. You can name it anything you want.
 3. **Configure Settings**: Navigate to **Settings > Chat Interaction** and select your new index as the default index for document embedding.
 
 ### Setup Steps
 
-1. Enable the `Elasticsearch` feature in Orchard Core admin
+1. Enable the appropriate search feature in Orchard Core admin (Elasticsearch or Azure AI Search)
 2. Navigate to **Search > Indexing** and add a new index
    - Give it a descriptive name (e.g., "ChatDocuments")
-   - Select Elasticsearch as the provider
+   - Select the provider (Elasticsearch or Azure AI Search) as the provider
 3. Navigate to **Settings > Chat Interaction**
 4. Select your new index as the default document index
 5. Enable the `AI Chat Interactions - Documents` feature
@@ -62,7 +64,7 @@ Navigate to **Settings > Chat Interaction** to configure:
 
 | Setting | Description |
 |---------|-------------|
-| Index Profile | The Elasticsearch index to use for document embedding and search |
+| Index Profile | The index to use for document embedding and search |
 
 ## How It Works
 
@@ -70,7 +72,7 @@ Navigate to **Settings > Chat Interaction** to configure:
 2. **Extract**: Text is extracted from the document using the appropriate extractor
 3. **Chunk**: Text is split into overlapping chunks (approximately 500 tokens each)
 4. **Embed**: Each chunk is converted to a vector embedding using the AI provider
-5. **Store**: Embeddings are stored in Elasticsearch with the session ID and document ID
+5. **Store**: Embeddings are stored in the chosen index with the session ID and document ID
 6. **Search**: When chatting, the user's query is embedded and similar chunks are retrieved
 7. **Context**: Top N matching chunks are added to the AI prompt as context
 
@@ -85,6 +87,9 @@ For PDF support:
 
 For Office document support:
 - `CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml`
+
+For Azure AI Search support:
+- `OrchardCore.Search.AzureAI` feature
 
 ## Permissions
 
@@ -119,13 +124,13 @@ If you see this warning, navigate to **Settings > Chat Interaction** and select 
 
 ### "Embedding Search Service Not Available" Warning
 
-This means the configured index profile doesn't have a registered embedding search service. Currently, only Elasticsearch is supported. Make sure:
-1. The Elasticsearch feature is enabled
-2. Your index is configured to use Elasticsearch as the provider
+This means the configured index profile doesn't have a registered embedding/search service. Supported providers include Elasticsearch and Azure AI Search. Make sure:
+1. The corresponding feature is enabled (Elasticsearch or Azure AI Search)
+2. Your index is configured to use a supported provider
 
 ### Documents Not Being Used in Chat
 
 Check that:
 1. An index profile is configured in settings
-2. The index profile uses a supported provider (Elasticsearch)
+2. The index profile uses a supported provider (Elasticsearch or Azure AI Search)
 3. Documents have been successfully uploaded (check for errors in the Documents tab)

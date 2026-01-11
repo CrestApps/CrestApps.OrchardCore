@@ -1,6 +1,7 @@
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -9,22 +10,17 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Models;
-using OrchardCore.Search.Elasticsearch;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Drivers;
 
-/// <summary>
-/// Display driver for Chat Interaction Index Profile that adds embedding connection selection.
-/// Only applies when IndexProfile.Type is ChatInteractionsConstants.IndexingTaskType
-/// and ProviderName is ElasticsearchConstants.ProviderName.
-/// </summary>
 public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<IndexProfile>
 {
     private const char Separator = '|';
     private const int ExpectedPartsCount = 3;
 
     private readonly AIProviderOptions _providerOptions;
-    private readonly IStringLocalizer S;
+
+    internal readonly IStringLocalizer S;
 
     public ChatInteractionIndexProfileDisplayDriver(
         IOptions<AIProviderOptions> providerOptions,
@@ -127,7 +123,6 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
 
     private static bool CanHandle(IndexProfile indexProfile)
     {
-        return string.Equals(ElasticsearchConstants.ProviderName, indexProfile.ProviderName, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(ChatInteractionsConstants.IndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(ChatInteractionsConstants.IndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase);
     }
 }

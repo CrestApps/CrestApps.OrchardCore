@@ -1,12 +1,12 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Services;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundJobs;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Handlers;
 
 public sealed class ChatInteractionIndexProfileHandler : IndexProfileHandlerBase
 {

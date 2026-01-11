@@ -1,5 +1,5 @@
-@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Core
 
-<form method="post" asp-action="History" asp-controller="Admin" asp-area="@AIConstants.Feature.ChatInteractions">
+<form method="post" asp-action="History" asp-controller="Admin" asp-area="@ChatInteractionsConstants.Feature.ChatInteractions">
     @await DisplayAsync(Model.Content)
 </form>

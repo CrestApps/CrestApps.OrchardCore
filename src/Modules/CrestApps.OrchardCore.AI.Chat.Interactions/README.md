@@ -32,6 +32,8 @@ This module requires:
 
 For document upload and RAG (Retrieval Augmented Generation) support, see the [Documents feature documentation](./README-Documents.md).
 
+The Documents feature supports Elasticsearch and Azure AI Search as embedding and search providers, ensure you enable the corresponding feature for your chosen provider in Orchard Core admin.
+
 ## Configuration
 
 ### Settings Tab Parameters

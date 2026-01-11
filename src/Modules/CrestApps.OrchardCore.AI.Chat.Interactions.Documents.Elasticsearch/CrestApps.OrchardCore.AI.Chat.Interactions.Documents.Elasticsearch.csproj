@@ -2,13 +2,13 @@
 
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
-    <Title>CrestApps OrchardCore AI Chat Interactions OpenXml Module</Title>
+    <Title>CrestApps OrchardCore AI Chat Interactions Documents - Elasticsearch</Title>
     <Description>
       $(CrestAppsDescription)
 
-      Provides ad-hoc AI chat interactions against uploaded OpenXml files.
+      Elasticsearch support for chat interaction documents.
     </Description>
-    <PackageTags>$(PackageTags) OrchardCoreCMS AI Chat Interactions</PackageTags>
+    <PackageTags>$(PackageTags) OrchardCoreCMS AI Chat Interactions Elasticsearch</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,16 +16,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DocumentFormat.OpenXml" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Search.Elasticsearch.Core" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
