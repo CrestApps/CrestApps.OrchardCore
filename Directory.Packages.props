@@ -15,7 +15,6 @@
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.4.0-preview.4" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.3.0" />
     <PackageVersion Include="PdfPig" Version="0.1.13" />
-
   </ItemGroup>
   <ItemGroup>
     <!-- OrchardCore Packages -->
@@ -50,6 +49,7 @@
     <PackageVersion Include="OrchardCore.Search.AzureAI.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Search.Elasticsearch.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Indexing.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Indexing.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Setup.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Sms.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Tenants" Version="$(OrchardCoreVersion)" />
@@ -72,6 +72,7 @@
     <!-- Microsoft Packages -->
     <PackageVersion Include="Azure.AI.OpenAI" Version="2.7.0-beta.2" />
     <PackageVersion Include="Azure.Identity" Version="1.17.1" />
+    <PackageVersion Include="Azure.Search.Documents" Version="11.7.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.1" />
     <PackageVersion Include="Microsoft.CognitiveServices.Speech" Version="1.44.0" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.0.1" />

@@ -13,10 +13,6 @@ This module extends the AI Chat Interactions Documents feature with PDF document
 2. Upload PDF files in the Documents tab of your chat interactions
 3. Text content will be automatically extracted and used for RAG
 
-## Dependencies
-
-This module requires:
-- `CrestApps.OrchardCore.AI.Chat.Interactions.Documents`
 
 ## Technical Details
 
@@ -35,3 +31,5 @@ This module uses the [PdfPig](https://github.com/UglyToad/PdfPig) library for PD
 | Extension | MIME Type |
 |-----------|-----------|
 | .pdf | application/pdf |
+
+> Note: The `AI Chat Interactions - Documents` feature is provided on demand and is only enabled when another feature that requires it is enabled. To configure document indexing you must enable either the `AI Chat Interactions - Documents - Azure AI Search` feature (`CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI`) or the `AI Chat Interactions - Documents - Elasticsearch` feature (`CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch`) in Orchard Core admin.
