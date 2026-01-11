@@ -1,4 +1,4 @@
-# AI Chat Interactions - Documents - Azure AI Search
+# AI Chat Interactions - Documents (Azure AI Search)
 
 This module integrates Azure AI Search as an embedding and search provider for the AI Chat Interactions Documents feature.
 
@@ -9,9 +9,9 @@ This module integrates Azure AI Search as an embedding and search provider for t
 
 ## Getting Started
 
-1. Enable the `AI Chat Interactions - Documents - Azure AI Search` feature in Orchard Core admin
-2. Configure an Azure AI Search connection and create an index
-3. Enable `AI Chat Interactions - Documents` and select the index in **Settings > Chat Interaction**
+1. Enable the `AI Chat Interactions - Documents (Azure AI Search)` feature in Orchard Core admin
+2. Configure an Azure AI Search connection and create an index **Search > Indexing**. Add a new "Chat Interaction Documents (Elasticsearch)" index.
+3. Select the index in **Settings > Chat Interaction**
 
 ## Notes
 

@@ -1,4 +1,4 @@
-# AI Chat Interactions - Documents - Elasticsearch
+# AI Chat Interactions - Documents (Elasticsearch)
 
 This module integrates Elasticsearch as an embedding and search provider for the AI Chat Interactions Documents feature.
 
@@ -9,15 +9,9 @@ This module integrates Elasticsearch as an embedding and search provider for the
 
 ## Getting Started
 
-1. Enable the `AI Chat Interactions - Documents - Elasticsearch` feature in Orchard Core admin
-2. Configure an Elasticsearch connection and create an index
-3. Enable `AI Chat Interactions - Documents` and select the index in **Settings > Chat Interaction**
-
-## Dependencies
-
-This module requires:
-- `CrestApps.OrchardCore.AI.Chat.Interactions.Documents`
-- `Elasticsearch` feature
+1. Enable the `AI Chat Interactions - Documents (Elasticsearch)` feature in Orchard Core admin
+2. Configure an Elasticsearch connection and create an index **Search > Indexing**. Add a new "Chat Interaction Documents (Elasticsearch)" index.
+3. Select the index in **Settings > Chat Interaction**
 
 ## Notes
 

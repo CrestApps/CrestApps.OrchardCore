@@ -11,7 +11,7 @@ Name = "AI Chat Interactions - Documents (Elasticsearch)",
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        "OrchardCore.Search.Elasticsearch",
         ChatInteractionsConstants.Feature.ChatDocuments,
+        "OrchardCore.Search.Elasticsearch",
     ]
 )]

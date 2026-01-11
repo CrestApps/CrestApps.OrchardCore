@@ -11,11 +11,10 @@ using OrchardCore.Search.AzureAI.Core;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI;
 
-[RequireFeatures(ChatInteractionsConstants.Feature.ChatDocuments, "OrchardCore.Search.AzureAI")]
-public sealed class AzureAISearchStartup : StartupBase
+public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
-    public AzureAISearchStartup(IStringLocalizer<AzureAISearchStartup> stringLocalizer)
+    public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
     }
