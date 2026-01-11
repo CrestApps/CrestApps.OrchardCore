@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.SignalR.Core\CrestApps.OrchardCore.SignalR.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.OpenAI.Azure.Core\CrestApps.OrchardCore.OpenAI.Azure.Core.csproj" />

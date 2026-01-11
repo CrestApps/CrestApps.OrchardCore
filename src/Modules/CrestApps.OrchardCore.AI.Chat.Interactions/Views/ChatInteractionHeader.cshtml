@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Core
 @using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
 @using Microsoft.AspNetCore.Authorization
@@ -31,13 +32,13 @@
                 <ul class="actions-menu dropdown-menu dropdown-menu-end">
 
                     <li>
-                        <a class="dropdown-item" asp-action="New" asp-controller="Admin" asp-route-source="@Model.Interaction.Source" asp-area="@AIConstants.Feature.ChatInteractions">
+                        <a class="dropdown-item" asp-action="New" asp-controller="Admin" asp-route-source="@Model.Interaction.Source" asp-area="@ChatInteractionsConstants.Feature.ChatInteractions">
                             <i class="fa-solid fa-plus"></i> @T["Empty Chat"]
                         </a>
                     </li>
 
                     <li>
-                        <a class="dropdown-item" asp-action="Clone" asp-controller="Admin" asp-route-itemId="@Model.Interaction.ItemId" asp-area="@AIConstants.Feature.ChatInteractions">
+                        <a class="dropdown-item" asp-action="Clone" asp-controller="Admin" asp-route-itemId="@Model.Interaction.ItemId" asp-area="@ChatInteractionsConstants.Feature.ChatInteractions">
                             <i class="fa-solid fa-plus"></i> @T["Chat with Preset Settings"]
                         </a>
                     </li>
@@ -45,7 +46,7 @@
                 </ul>
             </div>
 
-            <a class="btn btn-primary" asp-action="Index" asp-controller="Admin" asp-area="@AIConstants.Feature.ChatInteractions">
+            <a class="btn btn-primary" asp-action="Index" asp-controller="Admin" asp-area="@ChatInteractionsConstants.Feature.ChatInteractions">
                 <i class="fa-solid fa-list"></i> @T["Chat Interactions"]
             </a>
         </div>
