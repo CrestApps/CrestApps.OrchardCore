@@ -2,12 +2,12 @@ using Azure;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Indexes;
 using Azure.Search.Documents.Models;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Services;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI.Services;
 
 /// <summary>
 /// Azure AI Search implementation of <see cref="IVectorSearchService"/> for searching document embeddings.

@@ -1,9 +1,8 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Handlers;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
 
 public abstract class ChatInteractionsIndexProfileHandlerBase : IndexProfileHandlerBase
 {

@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.AI.Core;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 
 public static class ChatInteractionsConstants
 {
@@ -30,6 +30,8 @@ public static class ChatInteractionsConstants
 
     public static class Feature
     {
-        public const string ModuleName = "CrestApps.OrchardCore.AI.Chat.Interactions";
+        public const string ChatInteractions = "CrestApps.OrchardCore.AI.Chat.Interactions";
+
+        public const string ChatDocuments = "CrestApps.OrchardCore.AI.Chat.Interactions.Documents";
     }
 }

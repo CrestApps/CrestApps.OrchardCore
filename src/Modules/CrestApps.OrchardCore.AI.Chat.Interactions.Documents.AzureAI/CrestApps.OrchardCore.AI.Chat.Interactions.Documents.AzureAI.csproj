@@ -1,14 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
-    <Title>CrestApps OrchardCore AI Chat Interactions OpenXml Module</Title>
+    <Title>CrestApps OrchardCore AI Chat Interactions Documents - Azure AI</Title>
     <Description>
       $(CrestAppsDescription)
 
-      Provides ad-hoc AI chat interactions against uploaded OpenXml files.
+      Azure AI Search support for chat interaction documents.
     </Description>
-    <PackageTags>$(PackageTags) OrchardCoreCMS AI Chat Interactions</PackageTags>
+    <PackageTags>$(PackageTags) OrchardCoreCMS AI Chat Interactions AzureAI</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,16 +16,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DocumentFormat.OpenXml" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Search.AzureAI.Core" />
+    <PackageReference Include="Azure.Search.Documents" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.OpenAI.Azure.Core\CrestApps.OrchardCore.OpenAI.Azure.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

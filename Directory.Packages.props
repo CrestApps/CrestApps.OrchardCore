@@ -22,6 +22,7 @@
     <PackageVersion Include="OrchardCore.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Admin.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Application.Cms.Core.Targets" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Application.Cms.Core.Targets" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentFields" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentManagement" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ContentManagement.Abstractions" Version="$(OrchardCoreVersion)" />
@@ -50,6 +51,7 @@
     <PackageVersion Include="OrchardCore.Search.AzureAI.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Search.Elasticsearch.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Indexing.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Indexing.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Setup.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Sms.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Tenants" Version="$(OrchardCoreVersion)" />

@@ -1,5 +1,5 @@
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Services;
-using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundJobs;
 using OrchardCore.Environment.Shell.Scope;

@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -10,13 +10,14 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = AIConstants.Feature.ChatDocuments,
+    Id = ChatInteractionsConstants.Feature.ChatDocuments,
     Name = "AI Chat Interactions - Documents",
     Description = "Extends the ad-hoc AI chat interactions with a way to upload documents and chat against uploaded documents.",
     Category = "Artificial Intelligence",
+    EnabledByDependencyOnly = true,
     Dependencies =
     [
-        AIConstants.Feature.ChatInteractions,
+        ChatInteractionsConstants.Feature.ChatInteractions,
         "OrchardCore.Indexing",
     ]
 )]

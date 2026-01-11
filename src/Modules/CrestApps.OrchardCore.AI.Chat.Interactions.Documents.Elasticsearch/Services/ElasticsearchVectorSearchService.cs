@@ -1,13 +1,13 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Core.Search;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Services;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch.Services;
 
 /// <summary>
 /// Elasticsearch implementation of <see cref="IVectorSearchService"/> for searching document embeddings.

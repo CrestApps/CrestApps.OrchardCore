@@ -1,9 +1,9 @@
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.Indexing;
 using OrchardCore.Search.AzureAI;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Handlers;
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI.Handlers;
 
 public sealed class ChatInteractionAzureAISearchDocumentIndexHandler : IDocumentIndexHandler
 {

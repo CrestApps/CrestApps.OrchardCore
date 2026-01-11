@@ -15,6 +15,8 @@
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Agent\CrestApps.OrchardCore.AI.Agent.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions\CrestApps.OrchardCore.AI.Chat.Interactions.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Documents\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.csproj" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI.csproj" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Pdf\CrestApps.OrchardCore.AI.Chat.Interactions.Pdf.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml\CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml.csproj" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat\CrestApps.OrchardCore.AI.Chat.csproj" PrivateAssets="none" />
