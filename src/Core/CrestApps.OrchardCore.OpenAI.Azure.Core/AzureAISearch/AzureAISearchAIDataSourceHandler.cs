@@ -66,26 +66,7 @@ public sealed class AzureAISearchAIDataSourceHandler : CatalogEntryHandlerBase<A
                 return false;
             }
 
-            // Validate parentheses order (opening before closing)
-            var balance = 0;
-            foreach (var ch in filter)
-            {
-                if (ch == '(')
-                {
-                    balance++;
-                }
-                else if (ch == ')')
-                {
-                    balance--;
-                    if (balance < 0)
-                    {
-                        // Closing parenthesis before opening
-                        return false;
-                    }
-                }
-            }
-
-            return balance == 0;
+            return IsParenthesesBalanced(filter);
         }
 
         // Check for balanced quotes
@@ -95,18 +76,23 @@ public sealed class AzureAISearchAIDataSourceHandler : CatalogEntryHandlerBase<A
             return false;
         }
 
-        // Check for balanced parentheses with proper order
-        var parenBalance = 0;
-        foreach (var ch in filter)
+        return IsParenthesesBalanced(filter);
+    }
+
+    private static bool IsParenthesesBalanced(string input)
+    {
+        var balance = 0;
+
+        foreach (var ch in input)
         {
             if (ch == '(')
             {
-                parenBalance++;
+                balance++;
             }
             else if (ch == ')')
             {
-                parenBalance--;
-                if (parenBalance < 0)
+                balance--;
+                if (balance < 0)
                 {
                     // Closing parenthesis before opening
                     return false;
@@ -114,6 +100,6 @@ public sealed class AzureAISearchAIDataSourceHandler : CatalogEntryHandlerBase<A
             }
         }
 
-        return parenBalance == 0;
+        return balance == 0;
     }
 }
