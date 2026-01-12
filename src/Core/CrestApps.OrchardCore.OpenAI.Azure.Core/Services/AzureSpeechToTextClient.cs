@@ -184,7 +184,6 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
         _logger.LogDebug("GetStreamingTextAsync called. CanSeek={CanSeek}", audioSpeechStream.CanSeek);
 
         // For streaming scenarios from MediaRecorder API, we know the format is Ogg Opus
-        // Don't try to detect format as it can cause timeouts with producer-consumer streams
         var detectedFormat = AudioFormat.OggOpus;
         
         SpeechToTextResponseUpdate textUpdate = null;
@@ -208,11 +207,11 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
 
             var responseId = Guid.NewGuid().ToString();
 
-            // Create audio format and recognizer using PullStream pattern
-            // Use the stream directly - don't copy or seek as it may be a producer-consumer stream
+            // Use push stream instead of pull stream to avoid blocking reads on producer-consumer streams
+            // Push stream allows us to write audio data as it arrives without the SDK blocking waiting for headers
             using var audioFormat = CreateAudioStreamFormat(detectedFormat);
-            using var audioInputStream = AudioInputStream.CreatePullStream(new AudioStreamReader(audioSpeechStream), audioFormat);
-            using var audioConfig = AudioConfig.FromStreamInput(audioInputStream);
+            using var pushStream = AudioInputStream.CreatePushStream(audioFormat);
+            using var audioConfig = AudioConfig.FromStreamInput(pushStream);
             using var recognizer = new SpeechRecognizer(_speechConfig, audioConfig);
 
             using var manualCancellationTokenSource = new CancellationTokenSource();
@@ -223,6 +222,30 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
             recognizer.Recognized += eventHandler.Recognized;
             recognizer.Canceled += eventHandler.Canceled;
             recognizer.SessionStopped += eventHandler.Stopped;
+
+            // Start a background task to read from the input stream and write to the push stream
+            var streamCopyTask = Task.Run(async () =>
+            {
+                try
+                {
+                    var buffer = new byte[4096];
+                    int bytesRead;
+                    while ((bytesRead = await audioSpeechStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false)) > 0)
+                    {
+                        pushStream.Write(buffer, (uint)bytesRead);
+                        _logger.LogDebug("Pushed {BytesRead} bytes to speech recognizer", bytesRead);
+                    }
+                    _logger.LogDebug("Finished reading from input stream; closing push stream");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error reading audio stream");
+                }
+                finally
+                {
+                    pushStream.Close();
+                }
+            }, cancellationToken);
 
             try
             {
@@ -249,6 +272,16 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
             {
                 _logger.LogDebug("Stopping continuous recognition");
                 await recognizer.StopContinuousRecognitionAsync().ConfigureAwait(false);
+
+                // Wait for the stream copy task to complete
+                try
+                {
+                    await streamCopyTask.ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Stream copy task threw an exception");
+                }
 
                 // Pause briefly to ensure all events are processed
                 await Task.Delay(500, CancellationToken.None).ConfigureAwait(false);
