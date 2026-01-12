@@ -53,7 +53,13 @@ public sealed class AzureAISearchAIDataSourceHandler : CatalogEntryHandlerBase<A
             return true;
         }
 
-        // Basic OData filter validation
+        // Basic OData filter validation to catch common syntax errors
+        // Note: This is not a complete OData parser. The Azure SDK will perform full validation.
+        // Limitations:
+        // - Does not parse string literals (operators within quotes may cause false positives)
+        // - Primarily checks single quotes (Azure AI Search standard for strings)
+        // - Requires operators or function calls (simple field references are not valid filters)
+
         // Check for common OData operators
         var hasOperator = ODataOperators.Any(op => filter.Contains(op, StringComparison.OrdinalIgnoreCase));
 
