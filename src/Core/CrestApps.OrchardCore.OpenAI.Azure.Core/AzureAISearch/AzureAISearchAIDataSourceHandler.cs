@@ -12,7 +12,8 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 public sealed class AzureAISearchAIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
 {
     private readonly IODataFilterValidator _odataFilterValidator;
-    private readonly IStringLocalizer S;
+
+    internal readonly IStringLocalizer S;
 
     public AzureAISearchAIDataSourceHandler(
         IODataFilterValidator odataFilterValidator,
