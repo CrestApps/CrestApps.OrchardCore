@@ -10,6 +10,12 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 
 public sealed class AzureAISearchAIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
 {
+    private static readonly string[] ODataOperators =
+    [
+        " eq ", " ne ", " gt ", " ge ", " lt ", " le ",
+        " and ", " or ", " not ",
+    ];
+
     internal readonly IStringLocalizer S;
 
     public AzureAISearchAIDataSourceHandler(IStringLocalizer<AzureAISearchAIDataSourceHandler> stringLocalizer)
@@ -48,19 +54,13 @@ public sealed class AzureAISearchAIDataSourceHandler : CatalogEntryHandlerBase<A
         }
 
         // Basic OData filter validation
-        // Check for common OData operators and ensure basic syntax
-        var odataOperators = new[]
-        {
-            " eq ", " ne ", " gt ", " ge ", " lt ", " le ",
-            " and ", " or ", " not ",
-        };
-
-        var hasOperator = odataOperators.Any(op => filter.Contains(op, StringComparison.OrdinalIgnoreCase));
+        // Check for common OData operators
+        var hasOperator = ODataOperators.Any(op => filter.Contains(op, StringComparison.OrdinalIgnoreCase));
 
         if (!hasOperator)
         {
             // If no operator found, it might be a function call like search.in() or geo.distance()
-            // Check for valid function syntax: should have balanced parentheses and proper order
+            // Valid Azure AI Search filters require either operators or function calls with parentheses
             if (!filter.Contains('(') || !filter.Contains(')'))
             {
                 return false;
