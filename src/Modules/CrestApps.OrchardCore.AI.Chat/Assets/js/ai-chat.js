@@ -110,6 +110,25 @@ window.openAIChatManager = function () {
 
                     });
 
+                    this.connection.on("ReceiveTranscript", (data) => {
+                        // Handle real-time transcript updates from the server
+                        console.log('Received transcript update:', data);
+                        if (data && data.text && this.recordingMessageId !== null) {
+                            const message = this.messages[this.recordingMessageId];
+                            if (message) {
+                                // Append or replace transcript
+                                if (message.content === '...' || message.content === '') {
+                                    message.content = data.text;
+                                } else {
+                                    message.content += ' ' + data.text;
+                                }
+                                message.htmlContent = marked.parse(message.content, { renderer });
+                                this.messages[this.recordingMessageId] = message;
+                                this.scrollToBottom();
+                            }
+                        }
+                    });
+
                     this.connection.on("ReceiveError", (error) => {
                         console.error("SignalR Error: ", error);
                     });
@@ -644,15 +663,54 @@ window.openAIChatManager = function () {
                     }
 
                     try {
-                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        // Request audio with constraints for better quality
+                        const stream = await navigator.mediaDevices.getUserMedia({
+                            audio: {
+                                echoCancellation: true,
+                                noiseSuppression: true,
+                                autoGainControl: true,
+                                channelCount: 1,
+                                sampleSize: 16,
+                                sampleRate: 16000
+                            },
+                            video: false
+                        });
 
-                        this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-                        this.audioChunks = [];
                         this.audioStream = stream;
                         this.recordingMessageId = null;
                         this.audioSubjectCompleted = false;
 
-                        // Create a SignalR Subject for client-to-server streaming and invoke hub method once
+                        // Check if browser supports audio/ogg;codecs=opus natively
+                        const isOggOpusSupported = window.MediaRecorder && window.MediaRecorder.isTypeSupported('audio/ogg;codecs=opus');
+                        
+                        // OpusMediaRecorder worker options for browsers that need polyfill
+                        const workerOptions = {
+                            OggOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/OggOpusEncoder.wasm',
+                            WebMOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/WebMOpusEncoder.wasm'
+                        };
+
+                        // Use OpusMediaRecorder polyfill if native doesn't support ogg/opus
+                        const RecorderClass = (isOggOpusSupported || !window.OpusMediaRecorder) ? window.MediaRecorder : window.OpusMediaRecorder;
+                        
+                        const recorderOptions = {
+                            mimeType: 'audio/ogg;codecs=opus',
+                            audioBitsPerSecond: 128000
+                        };
+
+                        // Create MediaRecorder with appropriate options
+                        if (RecorderClass === window.OpusMediaRecorder) {
+                            console.log('Using OpusMediaRecorder polyfill for audio/ogg;codecs=opus');
+                            this.mediaRecorder = new RecorderClass(stream, recorderOptions, workerOptions);
+                        } else if (isOggOpusSupported) {
+                            console.log('Using native MediaRecorder with audio/ogg;codecs=opus');
+                            this.mediaRecorder = new RecorderClass(stream, recorderOptions);
+                        } else {
+                            // Fallback to webm if ogg not supported and no polyfill
+                            console.log('Falling back to audio/webm');
+                            this.mediaRecorder = new RecorderClass(stream, { mimeType: 'audio/webm' });
+                        }
+
+                        // Create a SignalR Subject for client-to-server streaming
                         this.audioSubject = new signalR.Subject();
                         this.audioInvokePromise = this.connection.send(
                             "SendAudioChunk",
@@ -664,19 +722,21 @@ window.openAIChatManager = function () {
                             return { transcript: '', sessionId: this.getSessionId() };
                         });
 
-                        this.mediaRecorder.ondataavailable = async (event) => {
-                            if (!this.audioSubject || this.audioSubjectCompleted) {
+                        this.mediaRecorder.addEventListener("dataavailable", async (e) => {
+                            if (this.audioSubjectCompleted || !this.audioSubject) {
                                 return;
                             }
-                            if (event.data && event.data.size > 0) {
+                            
+                            if (e.data && e.data.size > 0) {
                                 try {
-                                    const arrayBuffer = await event.data.arrayBuffer();
-                                    const uint8Array = new Uint8Array(arrayBuffer);
-                                    let binary = '';
-                                    for (let i = 0; i < uint8Array.length; i++) {
-                                        binary += String.fromCharCode(uint8Array[i]);
-                                    }
-                                    const base64 = btoa(binary);
+                                    // Convert blob to base64 to send via SignalR
+                                    const data = await e.data.arrayBuffer();
+                                    const uint8Array = new Uint8Array(data);
+                                    const binaryString = uint8Array.reduce((str, byte) => str + String.fromCharCode(byte), '');
+                                    const base64 = btoa(binaryString);
+                                    
+                                    console.log('Sending audio chunk, bytes:', data.byteLength, 'base64 length:', base64.length);
+                                    
                                     if (this.audioSubject && !this.audioSubjectCompleted) {
                                         this.audioSubject.next(base64);
                                     }
@@ -684,14 +744,25 @@ window.openAIChatManager = function () {
                                     console.error('Error encoding audio chunk:', e);
                                 }
                             }
-                        };
+                        });
 
-                        this.mediaRecorder.onstop = async () => {
-                            // Complete the stream and wait for the final transcript
-                            try { this.audioSubjectCompleted = true; this.audioSubject?.complete(); } catch { }
+                        this.mediaRecorder.addEventListener("stop", async () => {
+                            console.log('MediaRecorder stopped');
+                            
+                            // Complete the SignalR stream after a short delay to ensure last chunk is sent
+                            setTimeout(() => {
+                                console.log('Completing audio subject');
+                                try {
+                                    this.audioSubjectCompleted = true;
+                                    this.audioSubject?.complete();
+                                } catch (e) {
+                                    console.error('Error completing audio subject:', e);
+                                }
+                            }, 500);
 
                             try {
                                 const result = await this.audioInvokePromise;
+                                console.log('Audio invoke result:', result);
                                 const finalTranscript = result?.transcript || '';
                                 const returnedSessionId = result?.sessionId;
                                 if (returnedSessionId) {
@@ -720,9 +791,13 @@ window.openAIChatManager = function () {
                                 this.audioStream = null;
                             }
 
-                            // Finish UI finalize
+                            // Finalize recording UI
                             await this.finalizeRecording();
-                        };
+                        });
+
+                        this.mediaRecorder.addEventListener("start", () => {
+                            console.log('MediaRecorder started');
+                        });
 
                         // Start recording with 1-second timeslice for chunked processing
                         this.mediaRecorder.start(1000);
@@ -747,6 +822,7 @@ window.openAIChatManager = function () {
                     }
                 },
                 stopRecording() {
+                    console.log('stopRecording called, isRecording:', this.isRecording);
                     if (this.mediaRecorder && this.isRecording) {
                         this.mediaRecorder.stop();
                         this.isRecording = false;
@@ -756,26 +832,6 @@ window.openAIChatManager = function () {
                             this.microphoneButton.classList.add('btn-outline-secondary');
                             this.microphoneButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
                         }
-                    }
-                },
-                async sendAudioChunk(audioBlob) {
-                    // Deprecated per-chunk invoke; now using client-to-server streaming
-                    try {
-                        if (!this.audioSubject || this.audioSubjectCompleted) {
-                            return;
-                        }
-                        const arrayBuffer = await audioBlob.arrayBuffer();
-                        const uint8Array = new Uint8Array(arrayBuffer);
-                        let binary = '';
-                        for (let i = 0; i < uint8Array.length; i++) {
-                            binary += String.fromCharCode(uint8Array[i]);
-                        }
-                        const base64 = btoa(binary);
-                        if (this.audioSubject && !this.audioSubjectCompleted) {
-                            this.audioSubject.next(base64);
-                        }
-                    } catch (error) {
-                        console.error('Error processing audio chunk:', error);
                     }
                 },
                 async finalizeRecording() {

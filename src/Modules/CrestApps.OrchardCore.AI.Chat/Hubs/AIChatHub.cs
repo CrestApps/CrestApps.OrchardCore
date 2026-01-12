@@ -1,9 +1,9 @@
 using System.Text;
-using System.IO.Pipelines;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Streams;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Support;
 using Fluid;
@@ -136,17 +136,21 @@ public class AIChatHub : Hub<IAIChatHubClient>
     }
 
     // Accept a client-to-server streamed parameter of base64-encoded audio chunks
-    public async Task SendAudioChunk(string profileId, string sessionId, IAsyncEnumerable<string> stream)
+    public async Task SendAudioChunk(string profileId, string sessionId, ChannelReader<string> stream)
     {
         try
         {
+            _logger.LogDebug("SendAudioChunk called. profileId='{ProfileId}' sessionId='{SessionId}' ConnectionId='{ConnectionId}'", profileId, sessionId, Context.ConnectionId);
+
             if (string.IsNullOrWhiteSpace(profileId))
             {
+                _logger.LogWarning("SendAudioChunk aborted: empty profileId");
                 return;
             }
 
             if (stream == null)
             {
+                _logger.LogWarning("SendAudioChunk aborted: stream is null");
                 return;
             }
 
@@ -154,6 +158,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             if (profile is null)
             {
+                _logger.LogWarning("SendAudioChunk aborted: profile not found for id '{ProfileId}'", profileId);
                 return;
             }
 
@@ -161,6 +166,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
             {
+                _logger.LogWarning("SendAudioChunk aborted: unauthorized for profile '{ProfileId}'", profileId);
                 return;
             }
 
@@ -185,7 +191,11 @@ public class AIChatHub : Hub<IAIChatHubClient>
                     return;
                 }
 
+                _logger.LogDebug("Creating speech-to-text client for provider '{Provider}' connection '{ConnectionName}' (deploymentName='{DeploymentName}')", profile.Source, speechToTextConnection, connection.GetDefaultSpeechToTextDeploymentName());
+
                 speechToTextClient = await _clientFactory.CreateSpeechToTextClientAsync(profile.Source, speechToTextConnection, connection.GetDefaultSpeechToTextDeploymentName());
+
+                _logger.LogDebug("Speech-to-text client created: {ClientType}", speechToTextClient?.GetType()?.FullName ?? "(null)");
             }
             catch (Exception ex)
             {
@@ -195,10 +205,12 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             try
             {
-                // Use a pipe to enable concurrent reading and writing.
-                // The producer writes incoming base64-decoded audio chunks to the pipe,
-                // while the consumer (speech-to-text client) reads from the pipe as a stream in real-time.
-                var pipe = new Pipe();
+                // Use a ProducerConsumerStream to enable concurrent reading and writing.
+                // The producer writes incoming base64-decoded audio chunks to the stream,
+                // while the consumer (speech-to-text client) reads from the stream in real-time.
+                // This stream is seekable within the first 12 bytes for format detection,
+                // and releases consumed data to minimize memory usage.
+                await using var audioStream = new ProducerConsumerStream(headerBufferSize: 12, logger: _logger);
 
                 var builder = new StringBuilder();
                 var messageId = IdGenerator.GenerateId();
@@ -217,41 +229,74 @@ public class AIChatHub : Hub<IAIChatHubClient>
                     isNewSession = true;
                 }
 
-                // Start the producer task that writes audio chunks to the pipe concurrently.
+                // Start the producer task that writes audio chunks to the stream concurrently.
                 // This task runs in parallel with the consumer below - do not await it here.
-                var producerTask = WriteAudioChunksToPipeAsync(pipe.Writer, stream, Context.ConnectionAborted);
+                _logger.LogDebug("Starting producer task to write audio chunks to stream");
+                var producerTask = WriteAudioChunksToStreamAsync(audioStream, stream, _logger, Context.ConnectionAborted);
 
-                // Read from the pipe as a stream and transcribe in real-time.
-                // The pipe reader will block on read until data is available and return
-                // end-of-stream when the writer calls CompleteAsync().
-                await using var pipeReaderStream = pipe.Reader.AsStream();
+                _logger.LogDebug("Calling speechToTextClient.GetStreamingTextAsync for ConnectionId='{ConnectionId}'", Context.ConnectionId);
 
-                await foreach (var update in speechToTextClient.GetStreamingTextAsync(pipeReaderStream, cancellationToken: Context.ConnectionAborted))
+                await foreach (var update in speechToTextClient.GetStreamingTextAsync(audioStream, cancellationToken: Context.ConnectionAborted))
                 {
-                    if (update is not null && !string.IsNullOrEmpty(update.Text))
+                    if (update is not null)
                     {
-                        builder.Append(update.Text);
+                        _logger.LogDebug("Received streaming update: Kind={Kind} TextLength={TextLength}", update.Kind, update.Text?.Length ?? 0);
+
+                        if (!string.IsNullOrEmpty(update.Text))
+                        {
+                            builder.Append(update.Text);
+
+                            // Send real-time transcript update to the client
+                            await Clients.Caller.ReceiveTranscript(new
+                            {
+                                update.Text,
+                                chatSession.SessionId,
+                            });
+                        }
                     }
                 }
+
+                _logger.LogDebug("Speech-to-text streaming completed; awaiting producer task to finish");
 
                 // Ensure the producer task completes and propagate any exceptions
                 await producerTask;
 
                 var transcribedText = builder.ToString().Trim() ?? string.Empty;
 
-                chatSession.Prompts.Add(new AIChatSessionPrompt
-                {
-                    Id = messageId,
-                    Role = ChatRole.User,
-                    Content = transcribedText,
-                });
+                _logger.LogDebug("Transcribed text length={Length} for ConnectionId='{ConnectionId}'", transcribedText.Length, Context.ConnectionId);
 
-                if (isNewSession)
+                // Only process if we got actual transcribed text
+                if (!string.IsNullOrWhiteSpace(transcribedText))
                 {
-                    await SetTitleAsync(profile, chatSession, transcribedText);
+                    chatSession.Prompts.Add(new AIChatSessionPrompt
+                    {
+                        Id = messageId,
+                        Role = ChatRole.User,
+                        Content = transcribedText,
+                    });
+
+                    if (isNewSession)
+                    {
+                        await SetTitleAsync(profile, chatSession, transcribedText);
+                    }
+
+                    await _sessionManager.SaveAsync(chatSession);
+
+                    // Generate AI response using the transcribed text
+                    // Create a channel to stream the response back to the client
+                    var channel = Channel.CreateUnbounded<CompletionPartialMessage>();
+
+                    // Start processing the chat prompt in the background
+                    _ = ProcessChatPromptForVoiceAsync(channel.Writer, profile, chatSession, transcribedText, Context.ConnectionAborted);
+
+                    // Note: The response will be streamed via the existing message channel infrastructure
+                    // The client should listen for the standard message updates
                 }
-
-                await _sessionManager.SaveAsync(chatSession);
+                else
+                {
+                    _logger.LogDebug("No transcribed text received, skipping AI response generation");
+                    await _sessionManager.SaveAsync(chatSession);
+                }
             }
             catch (Exception ex)
             {
@@ -264,41 +309,173 @@ public class AIChatHub : Hub<IAIChatHubClient>
         }
     }
 
-    private static async Task WriteAudioChunksToPipeAsync(PipeWriter writer, IAsyncEnumerable<string> stream, CancellationToken cancellationToken)
+    private async Task ProcessChatPromptForVoiceAsync(ChannelWriter<CompletionPartialMessage> writer, AIProfile profile, AIChatSession chatSession, string prompt, CancellationToken cancellationToken)
     {
         try
         {
-            await foreach (var base64 in stream.WithCancellation(cancellationToken))
+            var transcript = chatSession.Prompts
+                .Where(x => !x.IsGeneratedPrompt)
+                .Select(p => new ChatMessage(p.Role, p.Content));
+
+            var assistantMessage = new AIChatSessionPrompt
             {
-                if (string.IsNullOrWhiteSpace(base64))
+                Id = IdGenerator.GenerateId(),
+                Role = ChatRole.Assistant,
+                Title = profile.PromptSubject,
+            };
+
+            var builder = new StringBuilder();
+
+            var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
+            {
+                c.Session = chatSession;
+                c.UserMarkdownInResponse = true;
+            });
+
+            var contentItemIds = new HashSet<string>();
+            var references = new Dictionary<string, AICompletionReference>();
+
+            await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, transcript, completionContext, cancellationToken))
+            {
+                if (chunk.AdditionalProperties is not null)
+                {
+                    if (chunk.AdditionalProperties.TryGetValue<IList<string>>("ContentItemIds", out var ids))
+                    {
+                        foreach (var id in ids)
+                        {
+                            contentItemIds.Add(id);
+                        }
+                    }
+
+                    if (chunk.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
+                    {
+                        foreach (var (key, value) in referenceItems)
+                        {
+                            references[key] = value;
+                        }
+                    }
+                }
+
+                if (string.IsNullOrEmpty(chunk.Text))
                 {
                     continue;
                 }
 
-                byte[] bytes;
-                try
-                {
-                    bytes = Convert.FromBase64String(base64);
-                }
-                catch (FormatException)
-                {
-                    // Ignore malformed chunk
-                    continue;
-                }
+                builder.Append(chunk.Text);
 
-                await writer.WriteAsync(bytes, cancellationToken);
-                // Flush to ensure data is available to the reader immediately
-                await writer.FlushAsync(cancellationToken);
+                var partialMessage = new CompletionPartialMessage
+                {
+                    SessionId = chatSession.SessionId,
+                    MessageId = assistantMessage.Id,
+                    Content = chunk.Text,
+                    References = references,
+                };
+
+                await writer.WriteAsync(partialMessage, cancellationToken);
             }
+
+            if (builder.Length > 0)
+            {
+                assistantMessage.Content = builder.ToString();
+                assistantMessage.ContentItemIds = contentItemIds.ToList();
+                assistantMessage.References = references;
+
+                chatSession.Prompts.Add(assistantMessage);
+            }
+
+            await _sessionManager.SaveAsync(chatSession);
+        }
+        catch (Exception ex)
+        {
+            if (ex is not OperationCanceledException)
+            {
+                _logger.LogError(ex, "Error processing voice chat prompt");
+            }
+        }
+        finally
+        {
+            writer.Complete();
+        }
+    }
+
+    private static async Task WriteAudioChunksToStreamAsync(ProducerConsumerStream stream, ChannelReader<string> audioChunks, ILogger logger, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var chunkIndex = 0;
+            long totalBytes = 0;
+
+            // Read from the channel until it's completed or cancelled
+            while (await audioChunks.WaitToReadAsync(cancellationToken))
+            {
+                while (audioChunks.TryRead(out var base64))
+                {
+                    if (string.IsNullOrWhiteSpace(base64))
+                    {
+                        logger.LogDebug("Skipping empty base64 chunk at index {Index}", chunkIndex);
+                        chunkIndex++;
+                        continue;
+                    }
+
+                    byte[] bytes;
+                    try
+                    {
+                        bytes = Convert.FromBase64String(base64);
+                    }
+                    catch (FormatException)
+                    {
+                        // Ignore malformed chunk
+                        logger.LogWarning("Malformed base64 chunk at index {Index}; skipping", chunkIndex);
+                        chunkIndex++;
+                        continue;
+                    }
+
+                    totalBytes += bytes.Length;
+                    logger.LogDebug("Writing chunk index={Index} bytes={Length} totalBytes={TotalBytes}", chunkIndex, bytes.Length, totalBytes);
+
+                    // Log a short hex preview of the first bytes to help diagnose format
+                    if (chunkIndex == 0)
+                    {
+                        var previewLength = Math.Min(16, bytes.Length);
+                        if (previewLength > 0)
+                        {
+                            try
+                            {
+                                var preview = BitConverter.ToString(bytes, 0, previewLength);
+                                logger.LogDebug("First chunk preview (hex): {Preview}", preview);
+                            }
+                            catch
+                            {
+                                // ignore preview errors
+                            }
+                        }
+                    }
+
+                    await stream.WriteAsync(bytes, cancellationToken);
+                    // Flush to ensure data is available to the reader immediately
+                    await stream.FlushAsync(cancellationToken);
+
+                    chunkIndex++;
+                }
+            }
+
+            logger.LogDebug("Producer completed. totalChunks={Chunks} totalBytes={TotalBytes}", chunkIndex, totalBytes);
         }
         catch (OperationCanceledException)
         {
             // Connection was aborted, that's expected
+            logger.LogDebug("Producer cancelled (operation cancelled)");
+        }
+        catch (ChannelClosedException)
+        {
+            // Channel was closed, that's expected when the client completes the stream
+            logger.LogDebug("Producer: channel closed");
         }
         finally
         {
             // Signal that no more data will be written
-            await writer.CompleteAsync();
+            await stream.CompleteAsync();
+            logger.LogDebug("Producer stream completed");
         }
     }
 

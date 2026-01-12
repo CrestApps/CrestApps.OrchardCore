@@ -94,24 +94,44 @@ window.openAIChatManager = function () {
                       _this.addMessage(msg);
                     });
                   });
+                  _this.connection.on("ReceiveTranscript", function (data) {
+                    // Handle real-time transcript updates from the server
+                    console.log('Received transcript update:', data);
+                    if (data && data.text && _this.recordingMessageId !== null) {
+                      var message = _this.messages[_this.recordingMessageId];
+                      if (message) {
+                        // Append or replace transcript
+                        if (message.content === '...' || message.content === '') {
+                          message.content = data.text;
+                        } else {
+                          message.content += ' ' + data.text;
+                        }
+                        message.htmlContent = marked.parse(message.content, {
+                          renderer: renderer
+                        });
+                        _this.messages[_this.recordingMessageId] = message;
+                        _this.scrollToBottom();
+                      }
+                    }
+                  });
                   _this.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
                   });
-                  _context.prev = 3;
-                  _context.next = 6;
+                  _context.prev = 4;
+                  _context.next = 7;
                   return _this.connection.start();
-                case 6:
-                  _context.next = 11;
+                case 7:
+                  _context.next = 12;
                   break;
-                case 8:
-                  _context.prev = 8;
-                  _context.t0 = _context["catch"](3);
+                case 9:
+                  _context.prev = 9;
+                  _context.t0 = _context["catch"](4);
                   console.error("SignalR Connection Error: ", _context.t0);
-                case 11:
+                case 12:
                 case "end":
                   return _context.stop();
               }
-            }, _callee, null, [[3, 8]]);
+            }, _callee, null, [[4, 9]]);
           }))();
         },
         addMessageInternal: function addMessageInternal(message) {
@@ -580,7 +600,7 @@ window.openAIChatManager = function () {
         startRecording: function startRecording() {
           var _this9 = this;
           return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
-            var stream;
+            var stream, isOggOpusSupported, workerOptions, RecorderClass, recorderOptions;
             return _regeneratorRuntime().wrap(function _callee4$(_context4) {
               while (1) switch (_context4.prev = _context4.next) {
                 case 0:
@@ -595,19 +615,48 @@ window.openAIChatManager = function () {
                   _context4.prev = 4;
                   _context4.next = 7;
                   return navigator.mediaDevices.getUserMedia({
-                    audio: true
+                    audio: {
+                      echoCancellation: true,
+                      noiseSuppression: true,
+                      autoGainControl: true,
+                      channelCount: 1,
+                      sampleSize: 16,
+                      sampleRate: 16000
+                    },
+                    video: false
                   });
                 case 7:
                   stream = _context4.sent;
-                  _this9.mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: 'audio/webm'
-                  });
-                  _this9.audioChunks = [];
                   _this9.audioStream = stream;
                   _this9.recordingMessageId = null;
                   _this9.audioSubjectCompleted = false;
 
-                  // Create a SignalR Subject for client-to-server streaming and invoke hub method once
+                  // Check if browser supports audio/ogg;codecs=opus natively
+                  isOggOpusSupported = window.MediaRecorder && window.MediaRecorder.isTypeSupported('audio/ogg;codecs=opus'); // OpusMediaRecorder worker options for browsers that need polyfill
+                  workerOptions = {
+                    OggOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/OggOpusEncoder.wasm',
+                    WebMOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/WebMOpusEncoder.wasm'
+                  }; // Use OpusMediaRecorder polyfill if native doesn't support ogg/opus
+                  RecorderClass = isOggOpusSupported || !window.OpusMediaRecorder ? window.MediaRecorder : window.OpusMediaRecorder;
+                  recorderOptions = {
+                    mimeType: 'audio/ogg;codecs=opus',
+                    audioBitsPerSecond: 128000
+                  }; // Create MediaRecorder with appropriate options
+                  if (RecorderClass === window.OpusMediaRecorder) {
+                    console.log('Using OpusMediaRecorder polyfill for audio/ogg;codecs=opus');
+                    _this9.mediaRecorder = new RecorderClass(stream, recorderOptions, workerOptions);
+                  } else if (isOggOpusSupported) {
+                    console.log('Using native MediaRecorder with audio/ogg;codecs=opus');
+                    _this9.mediaRecorder = new RecorderClass(stream, recorderOptions);
+                  } else {
+                    // Fallback to webm if ogg not supported and no polyfill
+                    console.log('Falling back to audio/webm');
+                    _this9.mediaRecorder = new RecorderClass(stream, {
+                      mimeType: 'audio/webm'
+                    });
+                  }
+
+                  // Create a SignalR Subject for client-to-server streaming
                   _this9.audioSubject = new signalR.Subject();
                   _this9.audioInvokePromise = _this9.connection.send("SendAudioChunk", _this9.getProfileId(), _this9.getSessionId(), _this9.audioSubject)["catch"](function (err) {
                     console.error('Error sending audio stream:', err);
@@ -616,33 +665,33 @@ window.openAIChatManager = function () {
                       sessionId: _this9.getSessionId()
                     };
                   });
-                  _this9.mediaRecorder.ondataavailable = /*#__PURE__*/function () {
-                    var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(event) {
-                      var arrayBuffer, uint8Array, binary, i, base64;
+                  _this9.mediaRecorder.addEventListener("dataavailable", /*#__PURE__*/function () {
+                    var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(e) {
+                      var data, uint8Array, binaryString, base64;
                       return _regeneratorRuntime().wrap(function _callee2$(_context2) {
                         while (1) switch (_context2.prev = _context2.next) {
                           case 0:
-                            if (!(!_this9.audioSubject || _this9.audioSubjectCompleted)) {
+                            if (!(_this9.audioSubjectCompleted || !_this9.audioSubject)) {
                               _context2.next = 2;
                               break;
                             }
                             return _context2.abrupt("return");
                           case 2:
-                            if (!(event.data && event.data.size > 0)) {
+                            if (!(e.data && e.data.size > 0)) {
                               _context2.next = 17;
                               break;
                             }
                             _context2.prev = 3;
                             _context2.next = 6;
-                            return event.data.arrayBuffer();
+                            return e.data.arrayBuffer();
                           case 6:
-                            arrayBuffer = _context2.sent;
-                            uint8Array = new Uint8Array(arrayBuffer);
-                            binary = '';
-                            for (i = 0; i < uint8Array.length; i++) {
-                              binary += String.fromCharCode(uint8Array[i]);
-                            }
-                            base64 = btoa(binary);
+                            data = _context2.sent;
+                            uint8Array = new Uint8Array(data);
+                            binaryString = uint8Array.reduce(function (str, _byte) {
+                              return str + String.fromCharCode(_byte);
+                            }, '');
+                            base64 = btoa(binaryString);
+                            console.log('Sending audio chunk, bytes:', data.byteLength, 'base64 length:', base64.length);
                             if (_this9.audioSubject && !_this9.audioSubjectCompleted) {
                               _this9.audioSubject.next(base64);
                             }
@@ -661,22 +710,31 @@ window.openAIChatManager = function () {
                     return function (_x) {
                       return _ref.apply(this, arguments);
                     };
-                  }();
-                  _this9.mediaRecorder.onstop = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
-                    var _this9$audioSubject, result, finalTranscript, returnedSessionId, message;
+                  }());
+                  _this9.mediaRecorder.addEventListener("stop", /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+                    var result, finalTranscript, returnedSessionId, message;
                     return _regeneratorRuntime().wrap(function _callee3$(_context3) {
                       while (1) switch (_context3.prev = _context3.next) {
                         case 0:
-                          // Complete the stream and wait for the final transcript
-                          try {
-                            _this9.audioSubjectCompleted = true;
-                            (_this9$audioSubject = _this9.audioSubject) === null || _this9$audioSubject === void 0 || _this9$audioSubject.complete();
-                          } catch (_unused) {}
-                          _context3.prev = 1;
-                          _context3.next = 4;
+                          console.log('MediaRecorder stopped');
+
+                          // Complete the SignalR stream after a short delay to ensure last chunk is sent
+                          setTimeout(function () {
+                            console.log('Completing audio subject');
+                            try {
+                              var _this9$audioSubject;
+                              _this9.audioSubjectCompleted = true;
+                              (_this9$audioSubject = _this9.audioSubject) === null || _this9$audioSubject === void 0 || _this9$audioSubject.complete();
+                            } catch (e) {
+                              console.error('Error completing audio subject:', e);
+                            }
+                          }, 500);
+                          _context3.prev = 2;
+                          _context3.next = 5;
                           return _this9.audioInvokePromise;
-                        case 4:
+                        case 5:
                           result = _context3.sent;
+                          console.log('Audio invoke result:', result);
                           finalTranscript = (result === null || result === void 0 ? void 0 : result.transcript) || '';
                           returnedSessionId = result === null || result === void 0 ? void 0 : result.sessionId;
                           if (returnedSessionId) {
@@ -693,19 +751,19 @@ window.openAIChatManager = function () {
                               _this9.scrollToBottom();
                             }
                           }
-                          _context3.next = 14;
+                          _context3.next = 16;
                           break;
-                        case 11:
-                          _context3.prev = 11;
-                          _context3.t0 = _context3["catch"](1);
+                        case 13:
+                          _context3.prev = 13;
+                          _context3.t0 = _context3["catch"](2);
                           console.error('Error finalizing audio stream:', _context3.t0);
-                        case 14:
-                          _context3.prev = 14;
+                        case 16:
+                          _context3.prev = 16;
                           _this9.audioSubject = null;
                           _this9.audioInvokePromise = null;
                           _this9.audioSubjectCompleted = false;
-                          return _context3.finish(14);
-                        case 19:
+                          return _context3.finish(16);
+                        case 21:
                           // Stop all tracks to release the microphone
                           if (_this9.audioStream) {
                             _this9.audioStream.getTracks().forEach(function (track) {
@@ -714,15 +772,18 @@ window.openAIChatManager = function () {
                             _this9.audioStream = null;
                           }
 
-                          // Finish UI finalize
-                          _context3.next = 22;
+                          // Finalize recording UI
+                          _context3.next = 24;
                           return _this9.finalizeRecording();
-                        case 22:
+                        case 24:
                         case "end":
                           return _context3.stop();
                       }
-                    }, _callee3, null, [[1, 11, 14, 19]]);
-                  }));
+                    }, _callee3, null, [[2, 13, 16, 21]]);
+                  })));
+                  _this9.mediaRecorder.addEventListener("start", function () {
+                    console.log('MediaRecorder started');
+                  });
 
                   // Start recording with 1-second timeslice for chunked processing
                   _this9.mediaRecorder.start(1000);
@@ -741,21 +802,22 @@ window.openAIChatManager = function () {
                     _this9.microphoneButton.classList.remove('btn-outline-secondary');
                     _this9.microphoneButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
                   }
-                  _context4.next = 28;
+                  _context4.next = 32;
                   break;
-                case 24:
-                  _context4.prev = 24;
+                case 28:
+                  _context4.prev = 28;
                   _context4.t0 = _context4["catch"](4);
                   console.error('Error accessing microphone:', _context4.t0);
                   alert('Unable to access microphone. Please check your browser permissions and try again.');
-                case 28:
+                case 32:
                 case "end":
                   return _context4.stop();
               }
-            }, _callee4, null, [[4, 24]]);
+            }, _callee4, null, [[4, 28]]);
           }))();
         },
         stopRecording: function stopRecording() {
+          console.log('stopRecording called, isRecording:', this.isRecording);
           if (this.mediaRecorder && this.isRecording) {
             this.mediaRecorder.stop();
             this.isRecording = false;
@@ -766,97 +828,57 @@ window.openAIChatManager = function () {
             }
           }
         },
-        sendAudioChunk: function sendAudioChunk(audioBlob) {
+        finalizeRecording: function finalizeRecording() {
           var _this10 = this;
           return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
-            var arrayBuffer, uint8Array, binary, i, base64;
+            var message;
             return _regeneratorRuntime().wrap(function _callee5$(_context5) {
               while (1) switch (_context5.prev = _context5.next) {
                 case 0:
-                  _context5.prev = 0;
-                  if (!(!_this10.audioSubject || _this10.audioSubjectCompleted)) {
-                    _context5.next = 3;
-                    break;
-                  }
-                  return _context5.abrupt("return");
-                case 3:
-                  _context5.next = 5;
-                  return audioBlob.arrayBuffer();
-                case 5:
-                  arrayBuffer = _context5.sent;
-                  uint8Array = new Uint8Array(arrayBuffer);
-                  binary = '';
-                  for (i = 0; i < uint8Array.length; i++) {
-                    binary += String.fromCharCode(uint8Array[i]);
-                  }
-                  base64 = btoa(binary);
-                  if (_this10.audioSubject && !_this10.audioSubjectCompleted) {
-                    _this10.audioSubject.next(base64);
-                  }
-                  _context5.next = 16;
-                  break;
-                case 13:
-                  _context5.prev = 13;
-                  _context5.t0 = _context5["catch"](0);
-                  console.error('Error processing audio chunk:', _context5.t0);
-                case 16:
-                case "end":
-                  return _context5.stop();
-              }
-            }, _callee5, null, [[0, 13]]);
-          }))();
-        },
-        finalizeRecording: function finalizeRecording() {
-          var _this11 = this;
-          return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
-            var message;
-            return _regeneratorRuntime().wrap(function _callee6$(_context6) {
-              while (1) switch (_context6.prev = _context6.next) {
-                case 0:
-                  if (_this11.recordingMessageId !== null) {
-                    message = _this11.messages[_this11.recordingMessageId];
+                  if (_this10.recordingMessageId !== null) {
+                    message = _this10.messages[_this10.recordingMessageId];
                     if (message) {
                       // Remove the transcribing flag
                       delete message.isTranscribing;
 
                       // If we got transcription, keep it and enable send button
                       if (message.content && message.content !== '...') {
-                        _this11.inputElement.value = message.content;
-                        _this11.prompt = message.content;
-                        _this11.buttonElement.removeAttribute('disabled');
+                        _this10.inputElement.value = message.content;
+                        _this10.prompt = message.content;
+                        _this10.buttonElement.removeAttribute('disabled');
                       } else {
                         // No transcription received, remove the empty message
-                        _this11.messages.splice(_this11.recordingMessageId, 1);
+                        _this10.messages.splice(_this10.recordingMessageId, 1);
                       }
                     }
-                    _this11.recordingMessageId = null;
+                    _this10.recordingMessageId = null;
                   }
                 case 1:
                 case "end":
-                  return _context6.stop();
+                  return _context5.stop();
               }
-            }, _callee6);
+            }, _callee5);
           }))();
         }
       },
       mounted: function mounted() {
-        var _this12 = this;
-        _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee7() {
-          return _regeneratorRuntime().wrap(function _callee7$(_context7) {
-            while (1) switch (_context7.prev = _context7.next) {
+        var _this11 = this;
+        _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
+          return _regeneratorRuntime().wrap(function _callee6$(_context6) {
+            while (1) switch (_context6.prev = _context6.next) {
               case 0:
-                _context7.next = 2;
-                return _this12.startConnection();
+                _context6.next = 2;
+                return _this11.startConnection();
               case 2:
-                _this12.initializeApp();
+                _this11.initializeApp();
                 if (config.widget) {
-                  _this12.initializeWidget();
+                  _this11.initializeWidget();
                 }
               case 4:
               case "end":
-                return _context7.stop();
+                return _context6.stop();
             }
-          }, _callee7);
+          }, _callee6);
         }))();
         window.addEventListener('beforeunload', this.handleBeforeUnload);
       },

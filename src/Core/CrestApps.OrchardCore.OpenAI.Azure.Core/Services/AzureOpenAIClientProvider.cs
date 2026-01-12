@@ -15,13 +15,15 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 public sealed class AzureOpenAIClientProvider : AIClientProviderBase
 {
     private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger _logger;
 
     protected override string GetProviderName()
         => AzureOpenAIConstants.ProviderName;
 
-    public AzureOpenAIClientProvider(ILoggerFactory loggerFactory)
+    public AzureOpenAIClientProvider(ILoggerFactory loggerFactory, ILogger<AzureOpenAIClientProvider> logger)
     {
         _loggerFactory = loggerFactory;
+        _logger = logger;
     }
 
     protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, string deploymentName)
@@ -60,7 +62,7 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
                 "These are separate from Azure OpenAI settings and use the Azure Cognitive Services Speech service.");
         }
 
-        return new AzureSpeechToTextClient(region, subscriptionKey);
+        return new AzureSpeechToTextClient(region, subscriptionKey, _logger);
     }
 
     private AzureOpenAIClient GetClient(AIProviderConnectionEntry connection, Uri endpoint)
