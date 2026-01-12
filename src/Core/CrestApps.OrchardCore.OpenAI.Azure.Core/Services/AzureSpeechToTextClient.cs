@@ -183,34 +183,10 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
 
         _logger.LogDebug("GetStreamingTextAsync called. CanSeek={CanSeek}", audioSpeechStream.CanSeek);
 
-        // For streaming scenarios, use the stream directly - don't check Length upfront
-        // as the stream may be a producer-consumer stream being written to concurrently.
-        // The format detection will naturally wait for data if needed.
-        Stream workingStream = audioSpeechStream;
-
-        // Only copy to MemoryStream if the stream is not seekable
-        MemoryStream ownedMemoryStream = null;
-        if (!audioSpeechStream.CanSeek)
-        {
-            ownedMemoryStream = new MemoryStream();
-            await audioSpeechStream.CopyToAsync(ownedMemoryStream, cancellationToken).ConfigureAwait(false);
-            ownedMemoryStream.Position = 0;
-            workingStream = ownedMemoryStream;
-            _logger.LogDebug("Copied audio to memory stream. Bytes={Length}", ownedMemoryStream.Length);
-
-            if (ownedMemoryStream.Length == 0)
-            {
-                _logger.LogDebug("GetStreamingTextAsync: stream length is 0; yielding SessionClose");
-                ownedMemoryStream.Dispose();
-                yield return new SpeechToTextResponseUpdate
-                {
-                    ResponseId = Guid.NewGuid().ToString(),
-                    Kind = SpeechToTextResponseUpdateKind.SessionClose,
-                };
-                yield break;
-            }
-        }
-
+        // For streaming scenarios from MediaRecorder API, we know the format is Ogg Opus
+        // Don't try to detect format as it can cause timeouts with producer-consumer streams
+        var detectedFormat = AudioFormat.OggOpus;
+        
         SpeechToTextResponseUpdate textUpdate = null;
         SpeechToTextResponseUpdate closeUpdate = null;
 
@@ -228,94 +204,78 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
                 _logger.LogDebug("Streaming: Using default speech recognition language '{Language}'", DefaultLanguage);
             }
 
-            // Detect audio format - this will wait for data if using a producer-consumer stream
-            _logger.LogDebug("Detecting audio format...");
-            var detectedFormat = DetectAudioFormat(workingStream);
-            workingStream.Position = 0;
-
-            _logger.LogDebug("Detected streaming audio format: {Format}", detectedFormat);
+            _logger.LogDebug("Using audio format for streaming: {Format}", detectedFormat);
 
             var responseId = Guid.NewGuid().ToString();
 
-            if (detectedFormat == AudioFormat.Unknown)
+            // Create audio format and recognizer using PullStream pattern
+            // Use the stream directly - don't copy or seek as it may be a producer-consumer stream
+            using var audioFormat = CreateAudioStreamFormat(detectedFormat);
+            using var audioInputStream = AudioInputStream.CreatePullStream(new AudioStreamReader(audioSpeechStream), audioFormat);
+            using var audioConfig = AudioConfig.FromStreamInput(audioInputStream);
+            using var recognizer = new SpeechRecognizer(_speechConfig, audioConfig);
+
+            using var manualCancellationTokenSource = new CancellationTokenSource();
+            using var combinedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, manualCancellationTokenSource.Token);
+
+            var eventHandler = new RecognizerEventHandler(_logger, manualCancellationTokenSource);
+
+            recognizer.Recognized += eventHandler.Recognized;
+            recognizer.Canceled += eventHandler.Canceled;
+            recognizer.SessionStopped += eventHandler.Stopped;
+
+            try
             {
-                _logger.LogWarning("Unknown audio format detected, cannot transcribe");
-                closeUpdate = new SpeechToTextResponseUpdate
+                _logger.LogDebug("Starting continuous recognition");
+                await recognizer.StartContinuousRecognitionAsync().ConfigureAwait(false);
+
+                // Wait for recognition to complete - cancelled by SessionStopped or Canceled events
+                await Task.Delay(Timeout.Infinite, combinedCancellation.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogWarning("Recognition was canceled by the caller");
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when recognition completes normally
+                _logger.LogDebug("Recognition completed normally");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during speech recognition");
+            }
+            finally
+            {
+                _logger.LogDebug("Stopping continuous recognition");
+                await recognizer.StopContinuousRecognitionAsync().ConfigureAwait(false);
+
+                // Pause briefly to ensure all events are processed
+                await Task.Delay(500, CancellationToken.None).ConfigureAwait(false);
+
+                recognizer.Recognized -= eventHandler.Recognized;
+                recognizer.Canceled -= eventHandler.Canceled;
+                recognizer.SessionStopped -= eventHandler.Stopped;
+            }
+
+            // Prepare the response updates
+            var finalText = eventHandler.GetRecognizedText().ToString().Trim();
+            _logger.LogDebug("Final recognized text length={Length}", finalText.Length);
+
+            if (!string.IsNullOrEmpty(finalText))
+            {
+                textUpdate = new SpeechToTextResponseUpdate(finalText)
                 {
                     ResponseId = responseId,
-                    Kind = SpeechToTextResponseUpdateKind.SessionClose,
+                    Kind = SpeechToTextResponseUpdateKind.TextUpdating,
                 };
             }
-            else
+
+            closeUpdate = new SpeechToTextResponseUpdate
             {
-                // Create audio format and recognizer using PullStream pattern
-                using var audioFormat = CreateAudioStreamFormat(detectedFormat);
-                using var audioInputStream = AudioInputStream.CreatePullStream(new AudioStreamReader(workingStream), audioFormat);
-                using var audioConfig = AudioConfig.FromStreamInput(audioInputStream);
-                using var recognizer = new SpeechRecognizer(_speechConfig, audioConfig);
-
-                using var manualCancellationTokenSource = new CancellationTokenSource();
-                using var combinedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, manualCancellationTokenSource.Token);
-
-                var eventHandler = new RecognizerEventHandler(_logger, manualCancellationTokenSource);
-
-                recognizer.Recognized += eventHandler.Recognized;
-                recognizer.Canceled += eventHandler.Canceled;
-                recognizer.SessionStopped += eventHandler.Stopped;
-
-                try
-                {
-                    _logger.LogDebug("Starting continuous recognition");
-                    await recognizer.StartContinuousRecognitionAsync().ConfigureAwait(false);
-
-                    // Wait for recognition to complete - cancelled by SessionStopped or Canceled events
-                    await Task.Delay(Timeout.Infinite, combinedCancellation.Token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    _logger.LogWarning("Recognition was canceled by the caller");
-                }
-                catch (OperationCanceledException)
-                {
-                    // Expected when recognition completes normally
-                    _logger.LogDebug("Recognition completed normally");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error during speech recognition");
-                }
-                finally
-                {
-                    _logger.LogDebug("Stopping continuous recognition");
-                    await recognizer.StopContinuousRecognitionAsync().ConfigureAwait(false);
-
-                    // Pause briefly to ensure all events are processed
-                    await Task.Delay(500, CancellationToken.None).ConfigureAwait(false);
-
-                    recognizer.Recognized -= eventHandler.Recognized;
-                    recognizer.Canceled -= eventHandler.Canceled;
-                    recognizer.SessionStopped -= eventHandler.Stopped;
-                }
-
-                // Prepare the response updates
-                var finalText = eventHandler.GetRecognizedText().ToString().Trim();
-                _logger.LogDebug("Final recognized text length={Length}", finalText.Length);
-
-                if (!string.IsNullOrEmpty(finalText))
-                {
-                    textUpdate = new SpeechToTextResponseUpdate(finalText)
-                    {
-                        ResponseId = responseId,
-                        Kind = SpeechToTextResponseUpdateKind.TextUpdating,
-                    };
-                }
-
-                closeUpdate = new SpeechToTextResponseUpdate
-                {
-                    ResponseId = responseId,
-                    Kind = SpeechToTextResponseUpdateKind.SessionClose,
-                };
-            }
+                ResponseId = responseId,
+                Kind = SpeechToTextResponseUpdateKind.SessionClose,
+            };
         }
         catch (Exception ex)
         {
@@ -325,10 +285,6 @@ public sealed class AzureSpeechToTextClient : ISpeechToTextClient
                 ResponseId = Guid.NewGuid().ToString(),
                 Kind = SpeechToTextResponseUpdateKind.SessionClose,
             };
-        }
-        finally
-        {
-            ownedMemoryStream?.Dispose();
         }
 
         // Yield outside the try-finally to avoid issues with async enumerator
