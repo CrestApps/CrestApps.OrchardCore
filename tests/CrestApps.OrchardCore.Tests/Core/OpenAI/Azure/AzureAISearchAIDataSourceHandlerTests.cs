@@ -118,6 +118,8 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
     [InlineData("status eq 'unmatched")]  // Unbalanced quotes
     [InlineData("category eq 'docs' and (status eq 'published'")]  // Unbalanced parentheses
     [InlineData("(status eq 'active'")]  // Unbalanced parentheses
+    [InlineData(")(")] // Invalid parentheses order
+    [InlineData("abc)def(ghi")] // Invalid parentheses order
     public async Task ValidatedAsync_WhenFilterIsInvalidOData_ShouldFail(string filter)
     {
         // Arrange
