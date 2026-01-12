@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
@@ -39,7 +40,9 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
 
             var id = token[nameof(AIProfile.ItemId)]?.GetValue<string>();
 
-            if (!string.IsNullOrEmpty(id))
+            var hasId = !string.IsNullOrEmpty(id);
+
+            if (hasId)
             {
                 profile = await _profileManager.FindByIdAsync(id);
             }
@@ -77,6 +80,11 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
                 }
 
                 profile = await _profileManager.NewAsync(sourceName, token);
+
+                if (hasId && IdValidator.IsValid(id))
+                {
+                    profile.ItemId = id;
+                }
             }
 
             var validationResult = await _profileManager.ValidateAsync(profile);

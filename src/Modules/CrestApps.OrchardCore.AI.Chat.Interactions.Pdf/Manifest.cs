@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore;
-using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -11,6 +10,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AIConstants.Feature.ChatDocuments,
+        // Don't add dependencies to the base Chat Interactions module to allow optional installation
+        // and force the user to explicitly enable one of the Documents indexing module first.
     ]
 )]

@@ -12,6 +12,4 @@ public sealed class ChatInteractionIndex : CatalogItemIndex, ISourceAwareIndex
     public string Title { get; set; }
 
     public DateTime CreatedUtc { get; set; }
-
-    public DateTime ModifiedUtc { get; set; }
 }

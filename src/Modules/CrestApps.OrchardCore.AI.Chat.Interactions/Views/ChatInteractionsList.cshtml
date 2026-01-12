@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Core
 @using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
 @using Microsoft.AspNetCore.Authorization
@@ -17,7 +18,7 @@
                     @await DisplayAsync(Model.Header)
                 </div>
                 <div class="col-auto ps-1">
-                    <a class="btn btn-secondary" asp-action="Index" asp-controller="Admin" asp-area="@AIConstants.Feature.ChatInteractions">
+                    <a class="btn btn-secondary" asp-action="Index" asp-controller="Admin" asp-area="@ChatInteractionsConstants.Feature.ChatInteractions">
                         @T["Chat Interactions"]
                     </a>
                 </div>

@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;
@@ -35,7 +36,9 @@ internal sealed class AIToolInstanceStep : NamedRecipeStepHandler
 
             var id = token[nameof(AIProfile.ItemId)]?.GetValue<string>();
 
-            if (!string.IsNullOrEmpty(id))
+            var hasId = !string.IsNullOrEmpty(id);
+
+            if (hasId)
             {
                 instance = await _manager.FindByIdAsync(id);
             }
@@ -62,6 +65,11 @@ internal sealed class AIToolInstanceStep : NamedRecipeStepHandler
                     context.Errors.Add(S["Unable to find a tool-source that can handle the source '{Source}'.", sourceName]);
 
                     continue;
+                }
+
+                if (hasId && IdValidator.IsValid(id))
+                {
+                    instance.ItemId = id;
                 }
             }
 

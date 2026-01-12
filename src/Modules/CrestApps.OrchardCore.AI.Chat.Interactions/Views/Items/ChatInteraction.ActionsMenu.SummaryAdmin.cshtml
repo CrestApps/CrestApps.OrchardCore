@@ -1,7 +1,20 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Core
 @using CrestApps.OrchardCore.AI.Models
 @using OrchardCore.DisplayManagement.Views
 
 @model ShapeViewModel<ChatInteraction>
+
+<li>
+    <a class="dropdown-item" asp-action="New" asp-controller="Admin" asp-route-source="@Model.Value.Source" asp-area="@ChatInteractionsConstants.Feature.ChatInteractions">
+        <i class="fa-solid fa-plus"></i> @T["Empty Chat"]
+    </a>
+</li>
+
+<li>
+    <a class="dropdown-item" asp-action="Clone" asp-controller="Admin" asp-route-itemId="@Model.Value.ItemId" asp-area="@ChatInteractionsConstants.Feature.ChatInteractions">
+        <i class="fa-solid fa-plus"></i> @T["Chat with Preset Settings"]
+    </a>
+</li>
 
 <li>
     <a asp-action="Delete"

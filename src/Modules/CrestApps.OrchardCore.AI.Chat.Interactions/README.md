@@ -17,20 +17,17 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 3. Click **+ New Chat** and select an AI provider
 4. Configure your chat settings and start chatting
 
-## Dependencies
 
-This module requires:
-- `OrchardCore.Liquid`
-- `CrestApps.OrchardCore.Resources`
-- `CrestApps.OrchardCore.AI.Chat.Core`
-- `CrestApps.OrchardCore.SignalR`
-- `CrestApps.OrchardCore.AI`
 
 ## Related Features
 
 ### AI Chat Interactions - Documents
 
 For document upload and RAG (Retrieval Augmented Generation) support, see the [Documents feature documentation](./README-Documents.md).
+
+> Note: The `AI Chat Interactions - Documents` feature is provided on demand and is only enabled when another feature that requires it is enabled (for example one of the document indexing provider features). To configure document indexing you must enable either the `AI Chat Interactions - Documents - Azure AI Search` feature or the `AI Chat Interactions - Documents - Elasticsearch` feature in Orchard Core admin.
+
+The Documents feature supports Elasticsearch and Azure AI Search as embedding and search providers, ensure you enable the corresponding feature for your chosen provider in Orchard Core admin.
 
 ## Configuration
 
@@ -55,11 +52,3 @@ For document upload and RAG (Retrieval Augmented Generation) support, see the [D
 |------------|-------------|
 | `EditChatInteractions` | Allows users to create and manage their own chat interactions |
 | `ManageChatInteractionSettings` | Allows users to configure site-wide chat interaction settings |
-
-## Technical Details
-
-The module uses SignalR for real-time streaming chat responses. Messages are persisted in the database using YesSql.
-
-### API Endpoints
-
-Chat interactions are managed through the SignalR hub at `/hubs/chat-interaction`.
