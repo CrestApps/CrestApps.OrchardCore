@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 
@@ -10,16 +11,14 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 
 public sealed class AzureAISearchAIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
 {
-    private static readonly string[] ODataOperators =
-    [
-        " eq ", " ne ", " gt ", " ge ", " lt ", " le ",
-        " and ", " or ", " not ",
-    ];
+    private readonly IODataFilterValidator _odataFilterValidator;
+    private readonly IStringLocalizer S;
 
-    internal readonly IStringLocalizer S;
-
-    public AzureAISearchAIDataSourceHandler(IStringLocalizer<AzureAISearchAIDataSourceHandler> stringLocalizer)
+    public AzureAISearchAIDataSourceHandler(
+        IODataFilterValidator odataFilterValidator,
+        IStringLocalizer<AzureAISearchAIDataSourceHandler> stringLocalizer)
     {
+        _odataFilterValidator = odataFilterValidator;
         S = stringLocalizer;
     }
 
@@ -38,74 +37,11 @@ public sealed class AzureAISearchAIDataSourceHandler : CatalogEntryHandlerBase<A
             context.Result.Fail(new ValidationResult(S["The Index is required."], [nameof(metadata.IndexName)]));
         }
 
-        if (!string.IsNullOrWhiteSpace(metadata.Filter) && !IsValidODataFilter(metadata.Filter))
+        if (!string.IsNullOrWhiteSpace(metadata.Filter) && !_odataFilterValidator.IsValid(metadata.Filter))
         {
             context.Result.Fail(new ValidationResult(S["The Filter must be a valid OData filter expression."], [nameof(metadata.Filter)]));
         }
 
         return Task.CompletedTask;
-    }
-
-    private static bool IsValidODataFilter(string filter)
-    {
-        if (string.IsNullOrWhiteSpace(filter))
-        {
-            return true;
-        }
-
-        // Basic OData filter validation to catch common syntax errors
-        // Note: This is not a complete OData parser. The Azure SDK will perform full validation.
-        // Limitations:
-        // - Does not parse string literals (operators within quotes may cause false positives)
-        // - Primarily checks single quotes (Azure AI Search standard for strings)
-        // - Requires operators or function calls (simple field references are not valid filters)
-
-        // Check for common OData operators
-        var hasOperator = ODataOperators.Any(op => filter.Contains(op, StringComparison.OrdinalIgnoreCase));
-
-        if (!hasOperator)
-        {
-            // If no operator found, it might be a function call like search.in() or geo.distance()
-            // Valid Azure AI Search filters require either operators or function calls with parentheses
-            if (!filter.Contains('(') || !filter.Contains(')'))
-            {
-                return false;
-            }
-
-            return IsParenthesesBalanced(filter);
-        }
-
-        // Check for balanced quotes
-        var singleQuotes = filter.Count(c => c == '\'');
-        if (singleQuotes % 2 != 0)
-        {
-            return false;
-        }
-
-        return IsParenthesesBalanced(filter);
-    }
-
-    private static bool IsParenthesesBalanced(string input)
-    {
-        var balance = 0;
-
-        foreach (var ch in input)
-        {
-            if (ch == '(')
-            {
-                balance++;
-            }
-            else if (ch == ')')
-            {
-                balance--;
-                if (balance < 0)
-                {
-                    // Closing parenthesis before opening
-                    return false;
-                }
-            }
-        }
-
-        return balance == 0;
     }
 }

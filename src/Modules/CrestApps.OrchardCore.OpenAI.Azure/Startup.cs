@@ -116,6 +116,7 @@ public sealed class AISearchStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddSingleton<IODataFilterValidator, ODataFilterValidator>();
         services.AddDisplayDriver<AIDataSource, AzureOpenAISearchADataSourceDisplayDriver>();
         services.AddScoped<ICatalogEntryHandler<AIDataSource>, AzureAISearchAIDataSourceHandler>();
 

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using Microsoft.Extensions.Localization;
 using Moq;
 using OrchardCore.Entities;
@@ -14,15 +15,18 @@ namespace CrestApps.OrchardCore.Tests.Core.OpenAI.Azure;
 public sealed class AzureAISearchAIDataSourceHandlerTests
 {
     private readonly AzureAISearchAIDataSourceHandler _handler;
+    private readonly Mock<IODataFilterValidator> _validatorMock;
 
     public AzureAISearchAIDataSourceHandlerTests()
     {
+        _validatorMock = new Mock<IODataFilterValidator>();
+        
         var stringLocalizerMock = new Mock<IStringLocalizer<AzureAISearchAIDataSourceHandler>>();
         stringLocalizerMock
             .Setup(s => s[It.IsAny<string>()])
             .Returns((string key) => new LocalizedString(key, key));
 
-        _handler = new AzureAISearchAIDataSourceHandler(stringLocalizerMock.Object);
+        _handler = new AzureAISearchAIDataSourceHandler(_validatorMock.Object, stringLocalizerMock.Object);
     }
 
     [Fact]
@@ -75,22 +79,13 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
         Assert.True(result.Succeeded);
     }
 
-    [Theory]
-    [InlineData("category eq 'documentation'")]
-    [InlineData("status ne 'archived'")]
-    [InlineData("priority gt 5")]
-    [InlineData("rating ge 4.5")]
-    [InlineData("age lt 30")]
-    [InlineData("score le 100")]
-    [InlineData("category eq 'docs' and status eq 'published'")]
-    [InlineData("status eq 'active' or status eq 'pending'")]
-    [InlineData("not (status eq 'deleted')")]
-    [InlineData("category eq 'docs' and (status eq 'published' or status eq 'draft')")]
-    [InlineData("search.in(category, 'category1,category2')")]
-    [InlineData("geo.distance(location, geography'POINT(-122.131577 47.678581)') le 5")]
-    public async Task ValidatedAsync_WhenFilterIsValidOData_ShouldSucceed(string filter)
+    [Fact]
+    public async Task ValidatedAsync_WhenFilterIsValid_ShouldSucceed()
     {
         // Arrange
+        var filter = "category eq 'documentation'";
+        _validatorMock.Setup(v => v.IsValid(filter)).Returns(true);
+
         var dataSource = new AIDataSource
         {
             ProfileSource = AzureOpenAIConstants.AzureOpenAIOwnData,
@@ -110,19 +105,17 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
         await _handler.ValidatedAsync(context);
 
         // Assert
-        Assert.True(result.Succeeded, $"Filter '{filter}' should be valid");
+        Assert.True(result.Succeeded);
+        _validatorMock.Verify(v => v.IsValid(filter), Times.Once);
     }
 
-    [Theory]
-    [InlineData("category = 'documentation'")]  // Using = instead of eq
-    [InlineData("status eq 'unmatched")]  // Unbalanced quotes
-    [InlineData("category eq 'docs' and (status eq 'published'")]  // Unbalanced parentheses
-    [InlineData("(status eq 'active'")]  // Unbalanced parentheses
-    [InlineData(")(")] // Invalid parentheses order
-    [InlineData("abc)def(ghi")] // Invalid parentheses order
-    public async Task ValidatedAsync_WhenFilterIsInvalidOData_ShouldFail(string filter)
+    [Fact]
+    public async Task ValidatedAsync_WhenFilterIsInvalid_ShouldFail()
     {
         // Arrange
+        var filter = "invalid filter";
+        _validatorMock.Setup(v => v.IsValid(filter)).Returns(false);
+
         var dataSource = new AIDataSource
         {
             ProfileSource = AzureOpenAIConstants.AzureOpenAIOwnData,
@@ -142,13 +135,16 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
         await _handler.ValidatedAsync(context);
 
         // Assert
-        Assert.False(result.Succeeded, $"Filter '{filter}' should be invalid");
+        Assert.False(result.Succeeded);
+        _validatorMock.Verify(v => v.IsValid(filter), Times.Once);
     }
 
     [Fact]
     public async Task ValidatedAsync_WhenFilterIsNull_ShouldSucceed()
     {
         // Arrange
+        _validatorMock.Setup(v => v.IsValid(null)).Returns(true);
+
         var dataSource = new AIDataSource
         {
             ProfileSource = AzureOpenAIConstants.AzureOpenAIOwnData,
@@ -169,12 +165,15 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
 
         // Assert
         Assert.True(result.Succeeded);
+        _validatorMock.Verify(v => v.IsValid(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
     public async Task ValidatedAsync_WhenFilterIsEmpty_ShouldSucceed()
     {
         // Arrange
+        _validatorMock.Setup(v => v.IsValid("")).Returns(true);
+
         var dataSource = new AIDataSource
         {
             ProfileSource = AzureOpenAIConstants.AzureOpenAIOwnData,
@@ -195,6 +194,7 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
 
         // Assert
         Assert.True(result.Succeeded);
+        _validatorMock.Verify(v => v.IsValid(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
