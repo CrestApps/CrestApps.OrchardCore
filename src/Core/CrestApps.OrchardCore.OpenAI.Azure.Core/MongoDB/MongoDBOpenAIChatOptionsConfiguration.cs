@@ -115,6 +115,11 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             },
         };
 
+        if (!string.IsNullOrWhiteSpace(dataSourceMetadata.Filter))
+        {
+            mongoDbDataSource.parameters["filter"] = dataSourceMetadata.Filter;
+        }
+
 #pragma warning disable SCME0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         var dataSources = new List<object>()
             {

@@ -8,6 +8,8 @@ public sealed class AzureAIProfileMongoDBMetadata
 
     public int? TopNDocuments { get; set; }
 
+    public string Filter { get; set; }
+
     public AzureAIProfileMongoDBAuthenticationType Authentication { get; set; }
 
     public string EndpointName { get; set; }

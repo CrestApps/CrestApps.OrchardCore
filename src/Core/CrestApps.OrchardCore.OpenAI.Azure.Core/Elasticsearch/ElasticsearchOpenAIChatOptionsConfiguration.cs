@@ -155,6 +155,11 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
         {
             elasticsearchDataSource.parameters["top_n_documents"] = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
             elasticsearchDataSource.parameters["strictness"] = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
+            
+            if (!string.IsNullOrWhiteSpace(dataSourceMetadata.Filter))
+            {
+                elasticsearchDataSource.parameters["filter"] = dataSourceMetadata.Filter;
+            }
         }
         else
         {
@@ -204,12 +209,12 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             return;
         }
 
-        if (!dataSource.TryGet<AzureAIProfileAISearchMetadata>(out var dataSourceMetadata))
+        if (!dataSource.TryGet<AzureAIProfileElasticsearchMetadata>(out var dataSourceMetadata))
         {
             return;
         }
 
-        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(dataSourceMetadata.IndexName, AzureAISearchConstants.ProviderName);
+        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(dataSourceMetadata.IndexName, ElasticsearchConstants.ProviderName);
 
         if (indexProfile is null)
         {
