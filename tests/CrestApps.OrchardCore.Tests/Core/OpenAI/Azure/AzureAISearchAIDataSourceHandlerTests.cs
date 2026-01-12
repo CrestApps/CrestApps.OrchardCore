@@ -143,8 +143,6 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
     public async Task ValidatedAsync_WhenFilterIsNull_ShouldSucceed()
     {
         // Arrange
-        _validatorMock.Setup(v => v.IsValid(null)).Returns(true);
-
         var dataSource = new AIDataSource
         {
             ProfileSource = AzureOpenAIConstants.AzureOpenAIOwnData,
@@ -172,8 +170,6 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
     public async Task ValidatedAsync_WhenFilterIsEmpty_ShouldSucceed()
     {
         // Arrange
-        _validatorMock.Setup(v => v.IsValid("")).Returns(true);
-
         var dataSource = new AIDataSource
         {
             ProfileSource = AzureOpenAIConstants.AzureOpenAIOwnData,
