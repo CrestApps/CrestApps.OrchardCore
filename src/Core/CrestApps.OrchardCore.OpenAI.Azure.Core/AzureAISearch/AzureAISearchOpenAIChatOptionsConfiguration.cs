@@ -248,7 +248,7 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             InScope = true,
             SemanticConfiguration = "default",
             OutputContexts = DataSourceOutputContexts.Citations,
-            Filter = null,
+            Filter = string.IsNullOrWhiteSpace(dataSourceMetadata.Filter) ? null : dataSourceMetadata.Filter,
             FieldMappings = new DataSourceFieldMappings()
             {
                 TitleFieldName = GetBestTitleField(keyField),

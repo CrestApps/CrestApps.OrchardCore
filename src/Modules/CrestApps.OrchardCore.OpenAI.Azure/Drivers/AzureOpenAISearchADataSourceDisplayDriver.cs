@@ -36,6 +36,7 @@ public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AI
             model.Strictness = metadata.Strictness;
             model.TopNDocuments = metadata.TopNDocuments;
             model.IndexName = metadata.IndexName;
+            model.Filter = metadata.Filter;
 
             model.IndexNames = (await _indexProfileStore.GetByProviderAsync(AzureAISearchConstants.ProviderName))
                 .Select(i => new SelectListItem(i.Name, i.IndexName))
@@ -61,6 +62,7 @@ public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AI
             IndexName = model.IndexName,
             Strictness = model.Strictness,
             TopNDocuments = model.TopNDocuments,
+            Filter = model.Filter,
         });
 
         return Edit(dataSource, context);
