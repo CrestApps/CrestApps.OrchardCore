@@ -21,7 +21,7 @@ public sealed class OrchardCoreToolsProvider : IEnumerable<McpServerTool>
     {
         _toolDefinitions = toolDefinitions.Value;
         _serviceProvider = serviceProvider;
-        _tools = [];
+        _tools = new List<McpServerTool>();
 
         InitializeTools();
     }
@@ -31,9 +31,7 @@ public sealed class OrchardCoreToolsProvider : IEnumerable<McpServerTool>
         // Get tools from tool definitions (registered via services.AddAITool<T>)
         foreach (var (name, definition) in _toolDefinitions.Tools)
         {
-            var aiTool = ActivatorUtilities.CreateInstance(_serviceProvider, definition.ToolType) as AITool;
-
-            if (aiTool is AIFunction aiFunction)
+            if (ActivatorUtilities.CreateInstance(_serviceProvider, definition.ToolType) is AIFunction aiFunction)
             {
                 _tools.Add(McpServerTool.Create(aiFunction));
             }
