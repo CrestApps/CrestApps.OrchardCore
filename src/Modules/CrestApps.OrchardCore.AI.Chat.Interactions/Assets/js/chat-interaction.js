@@ -118,7 +118,7 @@ window.chatInteractionManager = function () {
                         // Clear messages and show placeholder
                         this.messages = [];
                         this.showPlaceholder();
-                        
+
                         // Hide the clear history button since there's no history now
                         const clearHistoryBtn = document.getElementById('clearHistoryBtn');
                         if (clearHistoryBtn) {
@@ -161,13 +161,13 @@ window.chatInteractionManager = function () {
 
                     this.addMessageInternal(message);
                     this.hidePlaceholder();
-                    
+
                     // Show clear history button when messages exist
                     const clearHistoryBtn = document.getElementById('clearHistoryBtn');
                     if (clearHistoryBtn && message.role !== 'indicator') {
                         clearHistoryBtn.style.display = '';
                     }
-                    
+
                     this.$nextTick(() => {
                         this.scrollToBottom();
                     });
@@ -427,7 +427,7 @@ window.chatInteractionManager = function () {
                     }
 
                     // Add event listeners for settings fields to save on change
-                    const settingsInputs = document.querySelectorAll('input[name="ChatInteraction.Title"], select[name="ChatInteraction.ConnectionName"], select[name="ChatInteraction.DeploymentId"], textarea[name="ChatInteraction.SystemMessage"], input[name="ChatInteraction.Temperature"], input[name="ChatInteraction.TopP"], input[name="ChatInteraction.FrequencyPenalty"], input[name="ChatInteraction.PresencePenalty"], input[name="ChatInteraction.MaxTokens"], input[name="ChatInteraction.PastMessagesCount"]');
+                    const settingsInputs = document.querySelectorAll('input[name="ChatInteraction.Title"], select[name="ChatInteraction.ConnectionName"], select[name="ChatInteraction.DeploymentId"], select[name="ChatInteraction.DataSourceId"], textarea[name="ChatInteraction.SystemMessage"], input[name="ChatInteraction.Temperature"], input[name="ChatInteraction.TopP"], input[name="ChatInteraction.FrequencyPenalty"], input[name="ChatInteraction.PresencePenalty"], input[name="ChatInteraction.MaxTokens"], input[name="ChatInteraction.PastMessagesCount"], select[name="ChatInteraction.DataSourceId"], input[name="ChatInteraction.DataSourceType"]');
                     settingsInputs.forEach(input => {
                         input.addEventListener('blur', () => this.saveSettings());
                         // Also save on change for select elements
@@ -457,7 +457,7 @@ window.chatInteractionManager = function () {
                         message: 'Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved.',
                         okText: 'Yes',
                         cancelText: 'Cancel',
-                        callback: function(confirmed) {
+                        callback: function (confirmed) {
                             if (confirmed) {
                                 self.connection.invoke("ClearHistory", itemId).catch(err => console.error('Error clearing history:', err));
                             }
@@ -480,6 +480,7 @@ window.chatInteractionManager = function () {
                     const presencePenaltyInput = document.querySelector('input[name="ChatInteraction.PresencePenalty"]');
                     const maxTokensInput = document.querySelector('input[name="ChatInteraction.MaxTokens"]');
                     const pastMessagesCountInput = document.querySelector('input[name="ChatInteraction.PastMessagesCount"]');
+                    const dataSourceIdInput = document.querySelector('select[name="ChatInteraction.DataSourceId"]');
 
                     const settings = {
                         title: titleInput?.value || 'Untitled',
@@ -491,7 +492,8 @@ window.chatInteractionManager = function () {
                         frequencyPenalty: frequencyPenaltyInput?.value ? parseFloat(frequencyPenaltyInput.value) : null,
                         presencePenalty: presencePenaltyInput?.value ? parseFloat(presencePenaltyInput.value) : null,
                         maxTokens: maxTokensInput?.value ? parseInt(maxTokensInput.value) : null,
-                        pastMessagesCount: pastMessagesCountInput?.value ? parseInt(pastMessagesCountInput.value) : null
+                        pastMessagesCount: pastMessagesCountInput?.value ? parseInt(pastMessagesCountInput.value) : null,
+                        dataSourceId: dataSourceIdInput?.value || null
                     };
 
                     this.connection.invoke(
@@ -506,7 +508,8 @@ window.chatInteractionManager = function () {
                         settings.frequencyPenalty,
                         settings.presencePenalty,
                         settings.maxTokens,
-                        settings.pastMessagesCount
+                        settings.pastMessagesCount,
+                        settings.dataSourceId
                     ).catch(err => console.error('Error saving settings:', err));
                 },
                 initializeInteraction(itemId, force) {

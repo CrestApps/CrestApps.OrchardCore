@@ -25,6 +25,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 {
     private readonly IAuthorizationService _authorizationService;
     private readonly ISourceCatalogManager<ChatInteraction> _interactionManager;
+    private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IAICompletionService _completionService;
     private readonly ISiteService _siteService;
     private readonly IIndexProfileStore _indexProfileStore;
@@ -39,6 +40,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     public ChatInteractionHub(
         IAuthorizationService authorizationService,
         ISourceCatalogManager<ChatInteraction> interactionManager,
+        IAIDataSourceStore dataSourceStore,
         IAICompletionService completionService,
         ISiteService siteService,
         IIndexProfileStore indexProfileStore,
@@ -51,6 +53,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     {
         _authorizationService = authorizationService;
         _interactionManager = interactionManager;
+        _dataSourceStore = dataSourceStore;
         _completionService = completionService;
         _siteService = siteService;
         _indexProfileStore = indexProfileStore;
@@ -127,7 +130,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         float? frequencyPenalty,
         float? presencePenalty,
         int? maxTokens,
-        int? pastMessagesCount)
+        int? pastMessagesCount,
+        string dataSourceId)
     {
         if (string.IsNullOrWhiteSpace(itemId))
         {
@@ -164,6 +168,18 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         interaction.PresencePenalty = presencePenalty;
         interaction.MaxTokens = maxTokens;
         interaction.PastMessagesCount = pastMessagesCount;
+        interaction.DataSourceId = dataSourceId;
+
+        if (!string.IsNullOrWhiteSpace(interaction.DataSourceId))
+        {
+            var dataSource = await _dataSourceStore.FindByIdAsync(interaction.DataSourceId);
+
+            if (dataSource is not null)
+            {
+                interaction.DataSourceId = dataSource.ItemId;
+                interaction.DataSourceType = dataSource.Type;
+            }
+        }
 
         await _interactionManager.UpdateAsync(interaction);
         await _session.SaveChangesAsync();
@@ -298,6 +314,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 InstanceIds = interaction.ToolInstanceIds?.ToArray(),
                 McpConnectionIds = interaction.McpConnectionIds?.ToArray(),
                 UserMarkdownInResponse = true,
+                DataSourceId = interaction.DataSourceId,
+                DataSourceType = interaction.DataSourceType,
             };
 
             var contentItemIds = new HashSet<string>();

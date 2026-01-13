@@ -406,7 +406,7 @@ window.chatInteractionManager = function () {
           }
 
           // Add event listeners for settings fields to save on change
-          var settingsInputs = document.querySelectorAll('input[name="ChatInteraction.Title"], select[name="ChatInteraction.ConnectionName"], select[name="ChatInteraction.DeploymentId"], textarea[name="ChatInteraction.SystemMessage"], input[name="ChatInteraction.Temperature"], input[name="ChatInteraction.TopP"], input[name="ChatInteraction.FrequencyPenalty"], input[name="ChatInteraction.PresencePenalty"], input[name="ChatInteraction.MaxTokens"], input[name="ChatInteraction.PastMessagesCount"]');
+          var settingsInputs = document.querySelectorAll('input[name="ChatInteraction.Title"], select[name="ChatInteraction.ConnectionName"], select[name="ChatInteraction.DeploymentId"], select[name="ChatInteraction.DataSourceId"], textarea[name="ChatInteraction.SystemMessage"], input[name="ChatInteraction.Temperature"], input[name="ChatInteraction.TopP"], input[name="ChatInteraction.FrequencyPenalty"], input[name="ChatInteraction.PresencePenalty"], input[name="ChatInteraction.MaxTokens"], input[name="ChatInteraction.PastMessagesCount"], select[name="ChatInteraction.DataSourceId"], input[name="ChatInteraction.DataSourceType"]');
           settingsInputs.forEach(function (input) {
             input.addEventListener('blur', function () {
               return _this6.saveSettings();
@@ -466,6 +466,7 @@ window.chatInteractionManager = function () {
           var presencePenaltyInput = document.querySelector('input[name="ChatInteraction.PresencePenalty"]');
           var maxTokensInput = document.querySelector('input[name="ChatInteraction.MaxTokens"]');
           var pastMessagesCountInput = document.querySelector('input[name="ChatInteraction.PastMessagesCount"]');
+          var dataSourceIdInput = document.querySelector('select[name="ChatInteraction.DataSourceId"]');
           var settings = {
             title: (titleInput === null || titleInput === void 0 ? void 0 : titleInput.value) || 'Untitled',
             connectionName: (connectionNameInput === null || connectionNameInput === void 0 ? void 0 : connectionNameInput.value) || null,
@@ -476,9 +477,10 @@ window.chatInteractionManager = function () {
             frequencyPenalty: frequencyPenaltyInput !== null && frequencyPenaltyInput !== void 0 && frequencyPenaltyInput.value ? parseFloat(frequencyPenaltyInput.value) : null,
             presencePenalty: presencePenaltyInput !== null && presencePenaltyInput !== void 0 && presencePenaltyInput.value ? parseFloat(presencePenaltyInput.value) : null,
             maxTokens: maxTokensInput !== null && maxTokensInput !== void 0 && maxTokensInput.value ? parseInt(maxTokensInput.value) : null,
-            pastMessagesCount: pastMessagesCountInput !== null && pastMessagesCountInput !== void 0 && pastMessagesCountInput.value ? parseInt(pastMessagesCountInput.value) : null
+            pastMessagesCount: pastMessagesCountInput !== null && pastMessagesCountInput !== void 0 && pastMessagesCountInput.value ? parseInt(pastMessagesCountInput.value) : null,
+            dataSourceId: (dataSourceIdInput === null || dataSourceIdInput === void 0 ? void 0 : dataSourceIdInput.value) || null
           };
-          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount)["catch"](function (err) {
+          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId)["catch"](function (err) {
             return console.error('Error saving settings:', err);
           });
         },

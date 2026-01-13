@@ -29,7 +29,7 @@ public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDri
 
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
-        if (dataSource.ProfileSource != AzureOpenAIConstants.AzureOpenAIOwnData ||
+        if (dataSource.ProfileSource != AzureOpenAIConstants.ProviderName ||
             dataSource.Type != AzureOpenAIConstants.DataSourceTypes.Elasticsearch)
         {
             return null;
@@ -51,7 +51,7 @@ public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDri
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
-        if (dataSource.ProfileSource != AzureOpenAIConstants.AzureOpenAIOwnData ||
+        if (dataSource.ProfileSource != AzureOpenAIConstants.ProviderName ||
             dataSource.Type != AzureOpenAIConstants.DataSourceTypes.Elasticsearch)
         {
             return null;

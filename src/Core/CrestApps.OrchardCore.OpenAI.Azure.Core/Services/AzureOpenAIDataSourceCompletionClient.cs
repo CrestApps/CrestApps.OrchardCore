@@ -44,7 +44,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
         ILoggerFactory loggerFactory,
         IAILinkGenerator linkGenerator,
         IEnumerable<IAzureOpenAIDataSourceHandler> azureOpenAIDataSourceHandlers,
-        ILogger<AzureOpenAICompletionClient> logger)
+        ILogger<AzureOpenAIDataSourceCompletionClient> logger)
         : base(providerOptions.Value)
     {
         _deploymentStore = deploymentStore;
@@ -56,7 +56,7 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
     }
 
     public string Name
-        => AzureOpenAIConstants.AzureOpenAIOwnData;
+        => AzureOpenAIConstants.ProviderName;
 
     public async Task<Microsoft.Extensions.AI.ChatResponse> CompleteAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
