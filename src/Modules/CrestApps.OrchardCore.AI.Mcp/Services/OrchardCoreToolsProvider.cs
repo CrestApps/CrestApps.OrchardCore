@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 
-namespace CrestApps.OrchardCore.AI.McpServer.Services;
+namespace CrestApps.OrchardCore.AI.Mcp.Services;
 
 /// <summary>
 /// Provides AI tools from Orchard Core to be exposed via the MCP server.
@@ -13,7 +13,7 @@ public sealed class OrchardCoreToolsProvider : IEnumerable<McpServerTool>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly IServiceProvider _serviceProvider;
-    private readonly List<McpServerTool> _tools;
+    private List<McpServerTool> _functions;
 
     public OrchardCoreToolsProvider(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
@@ -21,30 +21,36 @@ public sealed class OrchardCoreToolsProvider : IEnumerable<McpServerTool>
     {
         _toolDefinitions = toolDefinitions.Value;
         _serviceProvider = serviceProvider;
-        _tools = new List<McpServerTool>();
-
-        InitializeTools();
-    }
-
-    private void InitializeTools()
-    {
-        // Get tools from tool definitions (registered via services.AddAITool<T>)
-        foreach (var (name, definition) in _toolDefinitions.Tools)
-        {
-            if (ActivatorUtilities.CreateInstance(_serviceProvider, definition.ToolType) is AIFunction aiFunction)
-            {
-                _tools.Add(McpServerTool.Create(aiFunction));
-            }
-        }
     }
 
     public IEnumerator<McpServerTool> GetEnumerator()
     {
-        return _tools.GetEnumerator();
+        EnsureFunctionsInitialized();
+
+        return _functions.GetEnumerator();
     }
 
     System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
     {
         return GetEnumerator();
+    }
+
+    private void EnsureFunctionsInitialized()
+    {
+        if (_functions is not null)
+        {
+            return;
+        }
+
+        _functions = [];
+
+        // Get tools from tool definitions (registered via services.AddAITool<T>)
+        foreach (var definition in _toolDefinitions.Tools.Values)
+        {
+            if (ActivatorUtilities.CreateInstance(_serviceProvider, definition.ToolType) is AIFunction aiFunction)
+            {
+                _functions.Add(McpServerTool.Create(aiFunction));
+            }
+        }
     }
 }

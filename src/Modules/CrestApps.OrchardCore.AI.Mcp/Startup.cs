@@ -11,6 +11,8 @@ using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
@@ -18,6 +20,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
+using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Mcp;
@@ -100,5 +103,40 @@ public sealed class OCDeploymentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<McpConnectionDeploymentSource, McpConnectionDeploymentStep, McpConnectionDeploymentStepDisplayDriver>();
+    }
+}
+
+[Feature(McpConstants.Feature.Server)]
+public sealed class McpServerStartup : StartupBase
+{
+    private const string McpServerPolicyName = "McpServerPolicy";
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddPermissionProvider<McpServerPermissionsProvider>();
+
+        services.AddMcpServer(options =>
+        {
+            options.ServerInfo = new()
+            {
+                Name = "Orchard Core MCP Server",
+                Version = CrestAppsManifestConstants.Version,
+            };
+        })
+        .WithTools<OrchardCoreToolsProvider>();
+
+        services.AddAuthorizationBuilder()
+            .AddPolicy(McpServerPolicyName, policy =>
+            {
+                policy.AddAuthenticationSchemes("Api");
+                policy.RequireAuthenticatedUser();
+                policy.AddRequirements(new PermissionRequirement(McpServerPermissionsProvider.AccessMcpServer));
+            });
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.MapMcp()
+            .RequireAuthorization(McpServerPolicyName);
     }
 }

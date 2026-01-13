@@ -1,6 +1,6 @@
 using OrchardCore.Security.Permissions;
 
-namespace CrestApps.OrchardCore.AI.McpServer.Services;
+namespace CrestApps.OrchardCore.AI.Mcp.Services;
 
 public sealed class McpServerPermissionsProvider : IPermissionProvider
 {

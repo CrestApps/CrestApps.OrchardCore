@@ -32,3 +32,15 @@ using OrchardCore.Modules.Manifest;
          McpConstants.Feature.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = McpConstants.Feature.Server,
+    Name = "Model Context Protocol (MCP) Server",
+    Description = "Exposes Orchard Core AI tools through the MCP protocol, enabling external MCP-compatible clients to connect and invoke AI capabilities.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+        "CrestApps.OrchardCore.Resources",
+    ]
+)]
