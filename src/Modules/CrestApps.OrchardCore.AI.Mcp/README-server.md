@@ -33,8 +33,7 @@ The MCP server acts as a thin adapter layer that:
 
 External clients can list all available AI tools through the MCP protocol. Tools are dynamically discovered from:
 
-- **Registered AI Tools**: Tools added via `services.AddAITool<T>()`
-- **Tool Instances**: Custom tool sources configured through the admin UI
+- **Registered AI Tools**: Tools added via `services.AddAITool<T>()` and other AI tool registrations exposed through `AIToolDefinitionOptions`
 
 ### Tool Invocation
 
