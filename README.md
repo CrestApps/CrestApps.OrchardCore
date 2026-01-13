@@ -59,6 +59,9 @@ Enhances the **AI Module** by providing AI Agents to perform tasks on your Orcha
 #### Model Context Protocol (MCP) Module
 Enhances the **AI Module** by adding support for connecting to any **MCP server**, whether hosted locally or remotely. For more details, see the [MCP Module README](src/Modules/CrestApps.OrchardCore.AI.Mcp/README.md).
 
+#### Model Context Protocol (MCP) Server Module
+Enables Orchard Core to function as an **MCP server**, exposing its AI tools and capabilities to external MCP-compatible clients such as AI agents, IDEs, copilots, and automation tools. For more details, see the [MCP Server Module README](src/Modules/CrestApps.OrchardCore.AI.McpServer/README.md).
+
 #### Azure OpenAI Module
 Extends the **AI Module** by integrating **Azure OpenAI** services. See the [Azure OpenAI Module README](src/Modules/CrestApps.OrchardCore.OpenAI.Azure/README.md).  
 

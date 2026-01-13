@@ -107,6 +107,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Ch
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch", "src\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch.csproj", "{0A065220-6718-4E8E-98FA-45D885BFD20C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.McpServer", "src\Modules\CrestApps.OrchardCore.AI.McpServer\CrestApps.OrchardCore.AI.McpServer.csproj", "{DBFCCC02-0D60-46B3-868F-A9CF05B485CE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -597,6 +599,18 @@ Global
 		{0A065220-6718-4E8E-98FA-45D885BFD20C}.Release|x64.Build.0 = Release|Any CPU
 		{0A065220-6718-4E8E-98FA-45D885BFD20C}.Release|x86.ActiveCfg = Release|Any CPU
 		{0A065220-6718-4E8E-98FA-45D885BFD20C}.Release|x86.Build.0 = Release|Any CPU
+		{DBFCCC02-0D60-46B3-868F-A9CF05B485CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBFCCC02-0D60-46B3-868F-A9CF05B485CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DBFCCC02-0D60-46B3-868F-A9CF05B485CE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DBFCCC02-0D60-46B3-868F-A9CF05B485CE}.Debug|x64.Build.0 = Debug|Any CPU
+		{DBFCCC02-0D60-46B3-868F-A9CF05B485CE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DBFCCC02-0D60-46B3-868F-A9CF05B485CE}.Debug|x86.Build.0 = Debug|Any CPU
+		{DBFCCC02-0D60-46B3-868F-A9CF05B485CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DBFCCC02-0D60-46B3-868F-A9CF05B485CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DBFCCC02-0D60-46B3-868F-A9CF05B485CE}.Release|x64.ActiveCfg = Release|Any CPU
+		{DBFCCC02-0D60-46B3-868F-A9CF05B485CE}.Release|x64.Build.0 = Release|Any CPU
+		{DBFCCC02-0D60-46B3-868F-A9CF05B485CE}.Release|x86.ActiveCfg = Release|Any CPU
+		{DBFCCC02-0D60-46B3-868F-A9CF05B485CE}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -642,6 +656,7 @@ Global
 		{1DF22DE5-589B-91D7-D04A-AD3C2E128003} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{7C269FA8-9271-4B17-B57D-13CF78C39492} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
 		{0A065220-6718-4E8E-98FA-45D885BFD20C} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{DBFCCC02-0D60-46B3-868F-A9CF05B485CE} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0E9F9B00-7078-4EA8-87A9-0B2E74375F1E}
