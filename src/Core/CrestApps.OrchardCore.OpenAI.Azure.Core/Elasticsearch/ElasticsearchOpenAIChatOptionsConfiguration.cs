@@ -200,7 +200,7 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
         if (dataSource is null)
         {
             return;
-        }// 
+        }
 
         if (!dataSource.TryGet<AzureAIProfileElasticsearchMetadata>(out var dataSourceMetadata))
         {

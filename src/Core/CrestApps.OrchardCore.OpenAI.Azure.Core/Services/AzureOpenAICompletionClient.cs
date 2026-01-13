@@ -22,7 +22,7 @@ using OpenAI.Chat;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
-public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceBase, IAICompletionClient
+public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICompletionClient
 {
     private readonly INamedCatalog<AIDeployment> _deploymentStore;
     private readonly IServiceProvider _serviceProvider;
@@ -37,14 +37,14 @@ public sealed class AzureOpenAIDataSourceCompletionClient : AICompletionServiceB
 
     private AzureOpenAIClientOptions _clientOptions;
 
-    public AzureOpenAIDataSourceCompletionClient(
+    public AzureOpenAICompletionClient(
         INamedCatalog<AIDeployment> deploymentStore,
         IOptions<AIProviderOptions> providerOptions,
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory,
         IAILinkGenerator linkGenerator,
         IEnumerable<IAzureOpenAIDataSourceHandler> azureOpenAIDataSourceHandlers,
-        ILogger<AzureOpenAIDataSourceCompletionClient> logger)
+        ILogger<AzureOpenAICompletionClient> logger)
         : base(providerOptions.Value)
     {
         _deploymentStore = deploymentStore;

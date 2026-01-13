@@ -55,7 +55,7 @@ public sealed class StandardStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIProfile<AzureOpenAIDataSourceCompletionClient>(AzureOpenAIConstants.ProviderName, AzureOpenAIConstants.ProviderName, o =>
+        services.AddAIProfile<AzureOpenAICompletionClient>(AzureOpenAIConstants.ProviderName, AzureOpenAIConstants.ProviderName, o =>
         {
             o.DisplayName = S["Azure OpenAI"];
             o.Description = S["Provides AI profiles using Azure OpenAI models."];
