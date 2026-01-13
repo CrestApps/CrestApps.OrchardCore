@@ -1,6 +1,6 @@
-namespace CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 
-public class AzureProfileElasticsearchViewModel
+public sealed class AzureOpenAIProfileAISearchMetadata
 {
     public int? Strictness { get; set; }
 

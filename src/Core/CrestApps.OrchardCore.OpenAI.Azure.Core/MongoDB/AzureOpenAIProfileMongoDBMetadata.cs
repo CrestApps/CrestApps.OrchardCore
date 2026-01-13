@@ -1,6 +1,6 @@
-namespace CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDB;
 
-public class AzureProfileElasticsearchViewModel
+public sealed class AzureOpenAIProfileMongoDBMetadata
 {
     public int? Strictness { get; set; }
 

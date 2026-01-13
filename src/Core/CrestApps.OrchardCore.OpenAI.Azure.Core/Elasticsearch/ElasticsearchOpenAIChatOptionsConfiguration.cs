@@ -3,7 +3,6 @@ using System.Text.Json;
 using Azure.AI.OpenAI.Chat;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,7 +11,6 @@ using OrchardCore.Contents.Indexing;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
-using OrchardCore.Search.AzureAI;
 using OrchardCore.Search.Elasticsearch;
 using OrchardCore.Search.Elasticsearch.Core.Models;
 
@@ -150,21 +148,14 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             },
         };
 
-        if (context.AdditionalProperties.TryGetValue("DataSource", out var ds) &&
-            ds is AIDataSource dataSource && dataSource.TryGet<AzureAIProfileElasticsearchMetadata>(out var dataSourceMetadata))
+        var m = indexProfile.As<AzureOpenAIProfileElasticsearchMetadata>();
+
+        elasticsearchDataSource.parameters["top_n_documents"] = m.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
+        elasticsearchDataSource.parameters["strictness"] = m.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
+
+        if (!string.IsNullOrWhiteSpace(m.Filter))
         {
-            elasticsearchDataSource.parameters["top_n_documents"] = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
-            elasticsearchDataSource.parameters["strictness"] = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
-            
-            if (!string.IsNullOrWhiteSpace(dataSourceMetadata.Filter))
-            {
-                elasticsearchDataSource.parameters["filter"] = dataSourceMetadata.Filter;
-            }
-        }
-        else
-        {
-            elasticsearchDataSource.parameters["top_n_documents"] = AzureOpenAIConstants.DefaultTopNDocuments;
-            elasticsearchDataSource.parameters["strictness"] = AzureOpenAIConstants.DefaultStrictness;
+            elasticsearchDataSource.parameters["filter"] = m.Filter;
         }
 
         var dataSources = new List<object>()

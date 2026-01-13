@@ -4,10 +4,13 @@ public sealed class AzureAIProfileMongoDBMetadata
 {
     public string IndexName { get; set; }
 
+    [Obsolete("This should not be used, instead we should use AzureOpenAIProfileMongoDBMetadata")]
     public int? Strictness { get; set; }
 
+    [Obsolete("This should not be used, instead we should use AzureOpenAIProfileMongoDBMetadata")]
     public int? TopNDocuments { get; set; }
 
+    [Obsolete("This should not be used, instead we should use AzureOpenAIProfileMongoDBMetadata")]
     public string Filter { get; set; }
 
     public AzureAIProfileMongoDBAuthenticationType Authentication { get; set; }

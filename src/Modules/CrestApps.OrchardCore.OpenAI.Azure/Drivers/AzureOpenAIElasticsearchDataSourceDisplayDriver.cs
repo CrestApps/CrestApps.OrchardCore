@@ -35,12 +35,10 @@ public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDri
             return null;
         }
 
-        return Initialize<AzureProfileElasticsearchViewModel>("AzureOpenAIProfileElasticsearch_Edit", async model =>
+        return Initialize<AzureDataSourceElasticsearchViewModel>("AzureOpenAIDataSourceElasticsearch_Edit", async model =>
         {
             var metadata = dataSource.As<AzureAIProfileElasticsearchMetadata>();
 
-            model.Strictness = metadata.Strictness;
-            model.TopNDocuments = metadata.TopNDocuments;
             model.IndexName = metadata.IndexName;
 
             var indexProfiles = await _indexProfileStore.GetByProviderAsync(ElasticsearchConstants.ProviderName);
@@ -57,7 +55,7 @@ public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDri
             return null;
         }
 
-        var model = new AzureProfileElasticsearchViewModel();
+        var model = new AzureDataSourceElasticsearchViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
@@ -74,10 +72,48 @@ public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDri
         dataSource.Put(new AzureAIProfileElasticsearchMetadata
         {
             IndexName = model.IndexName,
-            Strictness = model.Strictness,
-            TopNDocuments = model.TopNDocuments,
         });
 
         return Edit(dataSource, context);
+    }
+}
+
+public sealed class AzureOpenAIElasticsearchAIProfileDisplayDriver : DisplayDriver<AIProfile>
+{
+    public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
+    {
+        if (profile.Source != AzureOpenAIConstants.DataSourceTypes.Elasticsearch)
+        {
+            return null;
+        }
+
+        return Initialize<AzureProfileElasticsearchViewModel>("AzureOpenAIProfileElasticsearch_Edit", async model =>
+        {
+            var metadata = profile.As<AzureOpenAIProfileElasticsearchMetadata>();
+
+            model.Strictness = metadata.Strictness;
+            model.TopNDocuments = metadata.TopNDocuments;
+            model.Filter = metadata.Filter;
+
+        }).Location("Content:3");
+    }
+
+    public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
+    {
+        if (profile.Source != AzureOpenAIConstants.DataSourceTypes.Elasticsearch)
+        {
+            return null;
+        }
+
+        var model = new AzureProfileElasticsearchViewModel();
+
+        profile.Put(new AzureOpenAIProfileElasticsearchMetadata
+        {
+            Strictness = model.Strictness,
+            TopNDocuments = model.TopNDocuments,
+            Filter = model.Filter,
+        });
+
+        return Edit(profile, context);
     }
 }
