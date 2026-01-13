@@ -13,6 +13,7 @@ public sealed class OrchardCoreToolsProvider : IEnumerable<McpServerTool>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly IServiceProvider _serviceProvider;
+
     private List<McpServerTool> _functions;
 
     public OrchardCoreToolsProvider(
@@ -31,9 +32,7 @@ public sealed class OrchardCoreToolsProvider : IEnumerable<McpServerTool>
     }
 
     System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
-    }
+        => GetEnumerator();
 
     private void EnsureFunctionsInitialized()
     {
