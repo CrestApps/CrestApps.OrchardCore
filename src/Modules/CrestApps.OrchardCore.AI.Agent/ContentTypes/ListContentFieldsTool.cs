@@ -22,26 +22,11 @@ public sealed class ListContentFieldsTool : AIFunction
         _contentMetadataService = contentMetadataService;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "required": [],
-              "additionalProperties": false
-            }
-            """, JsonSerializerOptions);
     }
 
     public override string Name => TheName;
 
     public override string Description => "Retrieves the available content fields which can be used to create content parts.";
-
-    public override JsonElement JsonSchema { get; }
-
-    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
-    {
-        ["Strict"] = false,
-    };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {

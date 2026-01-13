@@ -9,7 +9,7 @@ using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.AI.Agent.Users;
 
-internal sealed class GetUserTool : AIFunction
+internal sealed class GetUserInfoTool : AIFunction
 {
     public const string TheName = "getUserInfo";
 
@@ -17,7 +17,7 @@ internal sealed class GetUserTool : AIFunction
     private readonly IAuthorizationService _authorizationService;
     private readonly UserManager<IUser> _userManager;
 
-    public GetUserTool(
+    public GetUserInfoTool(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         UserManager<IUser> userManager)
@@ -25,6 +25,7 @@ internal sealed class GetUserTool : AIFunction
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _userManager = userManager;
+
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
            """
             {

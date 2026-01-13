@@ -31,21 +31,11 @@ public sealed class ListStartupRecipesTool : AIFunction
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _shellFeaturesManager = shellFeaturesManager;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-                "additionalProperties": false,
-                "required": []
-            }
-            """, JsonSerializerOptions);
     }
 
     public override string Name => TheName;
 
     public override string Description => "Retrieves a list of predefined startup recipes that can be executed when the tenant is first set up.";
-
-    public override JsonElement JsonSchema { get; }
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {

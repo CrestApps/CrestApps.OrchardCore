@@ -131,7 +131,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         float? presencePenalty,
         int? maxTokens,
         int? pastMessagesCount,
-        string dataSourceId)
+        string dataSourceId,
+        string[] toolNames)
     {
         if (string.IsNullOrWhiteSpace(itemId))
         {
@@ -169,6 +170,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         interaction.MaxTokens = maxTokens;
         interaction.PastMessagesCount = pastMessagesCount;
         interaction.DataSourceId = dataSourceId;
+        interaction.ToolNames = toolNames?.ToList() ?? [];
 
         if (!string.IsNullOrWhiteSpace(interaction.DataSourceId))
         {
