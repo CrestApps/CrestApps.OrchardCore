@@ -32,7 +32,7 @@ public sealed class ListStartupRecipesTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
-        ArgumentNullException.ThrowIfNull(arguments.Services, nameof(arguments.Services));
+        ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var recipeHarvesters = arguments.Services.GetRequiredService<IEnumerable<IRecipeHarvester>>();
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();

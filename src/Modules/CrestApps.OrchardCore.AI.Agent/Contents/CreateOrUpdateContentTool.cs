@@ -49,7 +49,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
-        ArgumentNullException.ThrowIfNull(arguments.Services, nameof(arguments.Services));
+        ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();

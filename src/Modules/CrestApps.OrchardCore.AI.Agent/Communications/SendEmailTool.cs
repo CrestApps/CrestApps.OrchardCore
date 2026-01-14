@@ -58,7 +58,7 @@ public sealed class SendEmailTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
-        ArgumentNullException.ThrowIfNull(arguments.Services, nameof(arguments.Services));
+        ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
         var userManager = arguments.Services.GetRequiredService<UserManager<IUser>>();

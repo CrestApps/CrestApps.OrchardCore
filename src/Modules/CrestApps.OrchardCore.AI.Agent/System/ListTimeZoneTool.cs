@@ -27,7 +27,7 @@ public sealed class ListTimeZoneTool : AIFunction
     protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
-        ArgumentNullException.ThrowIfNull(arguments.Services, nameof(arguments.Services));
+        ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var clock = arguments.Services.GetRequiredService<IClock>();
 

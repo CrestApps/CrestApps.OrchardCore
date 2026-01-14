@@ -46,7 +46,7 @@ public sealed class GetContentItemLinkTool : AIFunction
     protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
-        ArgumentNullException.ThrowIfNull(arguments.Services, nameof(arguments.Services));
+        ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
         var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
