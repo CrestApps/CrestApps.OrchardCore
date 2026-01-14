@@ -26,6 +26,7 @@
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Deployment.Abstractions" />
     <PackageReference Include="ModelContextProtocol" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
   </ItemGroup>
 
   <ItemGroup>

@@ -14,11 +14,21 @@ public sealed class ListTimeZoneTool : AIFunction
     {
         _clock = clock;
 
+        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
+            """
+            {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+            """, JsonSerializerOptions);
     }
 
     public override string Name => TheName;
 
     public override string Description => "Retrieves a list of time zones from the system.";
+
+    public override JsonElement JsonSchema { get; }
 
     protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {

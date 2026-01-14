@@ -23,11 +23,22 @@ public sealed class ListFeaturesTool : AIFunction
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _shellFeaturesManager = shellFeaturesManager;
+
+        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
+            """
+            {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+            """, JsonSerializerOptions);
     }
 
     public override string Name => TheName;
 
     public override string Description => "List features on the site";
+
+    public override JsonElement JsonSchema { get; }
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
