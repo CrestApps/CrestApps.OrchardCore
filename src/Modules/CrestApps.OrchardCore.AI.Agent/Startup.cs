@@ -451,7 +451,7 @@ public sealed class UsersStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<GetUserTool>(GetUserTool.TheName, (o) =>
+        services.AddAITool<GetUserInfoTool>(GetUserInfoTool.TheName, (o) =>
         {
             o.Title = S["Get User Info"];
             o.Description = S["Gets information about a user."];

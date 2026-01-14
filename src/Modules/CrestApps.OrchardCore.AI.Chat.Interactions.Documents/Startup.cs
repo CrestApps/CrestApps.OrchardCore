@@ -21,7 +21,8 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddDocumentTextExtractor<DefaultDocumentTextExtractor>()
+            .AddDocumentTextExtractor<DefaultDocumentTextExtractor>(".txt", ".csv",
+                ".md", ".json", ".xml", ".html", ".htm", ".log", ".yaml", ".yml")
             .AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>()
             .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
             .AddNavigationProvider<ChatInteractionDocumentsAdminMenu>();

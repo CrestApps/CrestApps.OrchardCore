@@ -28,7 +28,13 @@ window.chatInteractionManager = function () {
                 </div>
             </div>
         `,
-        indicatorTemplate: `<div class="spinner-grow spinner-grow-sm" role="status"><span class="visually-hidden">Loading...</span></div>`
+        indicatorTemplate: `<div class="spinner-grow spinner-grow-sm" role="status"><span class="visually-hidden">Loading...</span></div>`,
+        // Localizable strings
+        untitledText: 'Untitled',
+        clearHistoryTitle: 'Clear History',
+        clearHistoryMessage: 'Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved.',
+        clearHistoryOkText: 'Yes',
+        clearHistoryCancelText: 'Cancel'
     };
 
     const initialize = (instanceConfig) => {
@@ -73,7 +79,8 @@ window.chatInteractionManager = function () {
                     isNavigatingAway: false,
                     stream: null,
                     messages: [],
-                    prompt: ''
+                    prompt: '',
+                    saveSettingsTimeout: null
                 };
             },
             methods: {
@@ -106,7 +113,7 @@ window.chatInteractionManager = function () {
                         // Use a more specific selector to only target history list items, not other elements like the Clear History button
                         const historyItem = document.querySelector(`.chat-interaction-history-item[data-interaction-id="${itemId}"]`);
                         if (historyItem) {
-                            historyItem.textContent = title || 'Untitled';
+                            historyItem.textContent = title || config.untitledText;
                         }
                     });
 
@@ -118,7 +125,7 @@ window.chatInteractionManager = function () {
                         // Clear messages and show placeholder
                         this.messages = [];
                         this.showPlaceholder();
-                        
+
                         // Hide the clear history button since there's no history now
                         const clearHistoryBtn = document.getElementById('clearHistoryBtn');
                         if (clearHistoryBtn) {
@@ -161,13 +168,13 @@ window.chatInteractionManager = function () {
 
                     this.addMessageInternal(message);
                     this.hidePlaceholder();
-                    
+
                     // Show clear history button when messages exist
                     const clearHistoryBtn = document.getElementById('clearHistoryBtn');
                     if (clearHistoryBtn && message.role !== 'indicator') {
                         clearHistoryBtn.style.display = '';
                     }
-                    
+
                     this.$nextTick(() => {
                         this.scrollToBottom();
                     });
@@ -426,14 +433,27 @@ window.chatInteractionManager = function () {
                         this.addMessage(config.messages[i]);
                     }
 
-                    // Add event listeners for settings fields to save on change
-                    const settingsInputs = document.querySelectorAll('input[name="ChatInteraction.Title"], select[name="ChatInteraction.ConnectionName"], select[name="ChatInteraction.DeploymentId"], textarea[name="ChatInteraction.SystemMessage"], input[name="ChatInteraction.Temperature"], input[name="ChatInteraction.TopP"], input[name="ChatInteraction.FrequencyPenalty"], input[name="ChatInteraction.PresencePenalty"], input[name="ChatInteraction.MaxTokens"], input[name="ChatInteraction.PastMessagesCount"]');
+                    // Add event listeners for all settings fields with "ChatInteraction." prefix
+                    // Exclude tool-related inputs (they have special handling with debouncing)
+                    const settingsInputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]), select[name^="ChatInteraction."]:not([name*=".Tools["]), textarea[name^="ChatInteraction."]:not([name*=".Tools["])');
                     settingsInputs.forEach(input => {
                         input.addEventListener('blur', () => this.saveSettings());
                         // Also save on change for select elements
                         if (input.tagName === 'SELECT') {
                             input.addEventListener('change', () => this.saveSettings());
                         }
+                    });
+
+                    // Add event listeners for tool checkboxes with debouncing (850ms)
+                    const toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]');
+                    toolCheckboxes.forEach(checkbox => {
+                        checkbox.addEventListener('change', () => this.debouncedSaveSettings());
+                    });
+
+                    // Add event listeners for "Select All" group toggle checkboxes with debouncing (850ms)
+                    const groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
+                    groupToggleCheckboxes.forEach(toggle => {
+                        toggle.addEventListener('change', () => this.debouncedSaveSettings());
                     });
 
                     // Add event listener for clear history button
@@ -453,16 +473,46 @@ window.chatInteractionManager = function () {
                 clearHistory(itemId) {
                     const self = this;
                     confirmDialog({
-                        title: 'Clear History',
-                        message: 'Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved.',
-                        okText: 'Yes',
-                        cancelText: 'Cancel',
-                        callback: function(confirmed) {
+                        title: config.clearHistoryTitle,
+                        message: config.clearHistoryMessage,
+                        okText: config.clearHistoryOkText,
+                        cancelText: config.clearHistoryCancelText,
+                        callback: function (confirmed) {
                             if (confirmed) {
                                 self.connection.invoke("ClearHistory", itemId).catch(err => console.error('Error clearing history:', err));
                             }
                         }
                     });
+                },
+                debouncedSaveSettings() {
+                    // Clear any existing timeout to reset the debounce timer
+                    if (this.saveSettingsTimeout) {
+                        clearTimeout(this.saveSettingsTimeout);
+                    }
+                    // Set a new timeout to save after 850ms of no changes
+                    this.saveSettingsTimeout = setTimeout(() => {
+                        this.saveSettings();
+                        this.saveSettingsTimeout = null;
+                    }, 850);
+                },
+                getSelectedToolNames() {
+                    // Find all checked tool checkboxes and get the corresponding ItemId values
+                    const toolNames = [];
+                    const toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]:checked');
+
+                    toolCheckboxes.forEach(checkbox => {
+                        // Extract the base name pattern to find the corresponding hidden ItemId input
+                        // Checkbox name: ChatInteraction.Tools[Content Definitions][0].IsSelected
+                        // Hidden name:   ChatInteraction.Tools[Content Definitions][0].ItemId
+                        const baseName = checkbox.name.replace('.IsSelected', '.ItemId');
+                        const hiddenInput = document.querySelector(`input[type="hidden"][name="${baseName}"]`);
+
+                        if (hiddenInput && hiddenInput.value) {
+                            toolNames.push(hiddenInput.value);
+                        }
+                    });
+
+                    return toolNames;
                 },
                 saveSettings() {
                     const itemId = this.getItemId();
@@ -480,9 +530,10 @@ window.chatInteractionManager = function () {
                     const presencePenaltyInput = document.querySelector('input[name="ChatInteraction.PresencePenalty"]');
                     const maxTokensInput = document.querySelector('input[name="ChatInteraction.MaxTokens"]');
                     const pastMessagesCountInput = document.querySelector('input[name="ChatInteraction.PastMessagesCount"]');
+                    const dataSourceIdInput = document.querySelector('select[name="ChatInteraction.DataSourceId"]');
 
                     const settings = {
-                        title: titleInput?.value || 'Untitled',
+                        title: titleInput?.value || config.untitledText,
                         connectionName: connectionNameInput?.value || null,
                         deploymentId: deploymentIdInput?.value || null,
                         systemMessage: systemMessageInput?.value || null,
@@ -491,7 +542,9 @@ window.chatInteractionManager = function () {
                         frequencyPenalty: frequencyPenaltyInput?.value ? parseFloat(frequencyPenaltyInput.value) : null,
                         presencePenalty: presencePenaltyInput?.value ? parseFloat(presencePenaltyInput.value) : null,
                         maxTokens: maxTokensInput?.value ? parseInt(maxTokensInput.value) : null,
-                        pastMessagesCount: pastMessagesCountInput?.value ? parseInt(pastMessagesCountInput.value) : null
+                        pastMessagesCount: pastMessagesCountInput?.value ? parseInt(pastMessagesCountInput.value) : null,
+                        dataSourceId: dataSourceIdInput?.value || null,
+                        toolNames: this.getSelectedToolNames()
                     };
 
                     this.connection.invoke(
@@ -506,7 +559,9 @@ window.chatInteractionManager = function () {
                         settings.frequencyPenalty,
                         settings.presencePenalty,
                         settings.maxTokens,
-                        settings.pastMessagesCount
+                        settings.pastMessagesCount,
+                        settings.dataSourceId,
+                        settings.toolNames
                     ).catch(err => console.error('Error saving settings:', err));
                 },
                 initializeInteraction(itemId, force) {
