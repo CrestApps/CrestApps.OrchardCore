@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Agent.Tenants;
@@ -11,44 +12,34 @@ public sealed class GetTenantTool : AIFunction
 {
     public const string TheName = "getTenant";
 
-    private readonly IShellHost _shellHost;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-
-    public GetTenantTool(
-        IShellHost shellHost,
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
-    {
-        _shellHost = shellHost;
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "description": "A unique name for the tenant to be used as identifier."
-                    }
-                },
-                "additionalProperties": false,
-                "required": ["name"]
-            }
-            """, JsonSerializerOptions);
-    }
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+        """
+        {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "A unique name for the tenant to be used as identifier."
+                }
+            },
+            "additionalProperties": false,
+            "required": ["name"]
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Gets info about a site or a tenant.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageTenants))
+        var shellHost = arguments.Services.GetRequiredService<IShellHost>();
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
+
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageTenants))
         {
             return "The current user does not have permission to manage tenants.";
         }
@@ -58,7 +49,7 @@ public sealed class GetTenantTool : AIFunction
             return "Unable to find a name argument in the function arguments.";
         }
 
-        if (!_shellHost.TryGetSettings(name, out var tenantSettings))
+        if (!shellHost.TryGetSettings(name, out var tenantSettings))
         {
             return "The given tenant does not exists.";
         }

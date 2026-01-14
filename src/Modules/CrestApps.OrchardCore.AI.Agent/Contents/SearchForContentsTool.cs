@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.Contents;
@@ -18,57 +19,31 @@ public sealed class SearchForContentsTool : AIFunction
 {
     public const string TheName = "searchForContentItems";
 
-    private readonly IContentManager _contentManager;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IContentsAdminListQueryService _contentsAdminListQueryService;
-    private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly DocumentJsonSerializerOptions _options;
-    private readonly PagerOptions _pagerOptions;
-
-    public SearchForContentsTool(
-        IContentManager contentManager,
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService,
-        IContentsAdminListQueryService contentsAdminListQueryService,
-        IUpdateModelAccessor updateModelAccessor,
-        IOptions<DocumentJsonSerializerOptions> options,
-        IOptions<PagerOptions> pagerOptions)
-    {
-        _contentManager = contentManager;
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-        _contentsAdminListQueryService = contentsAdminListQueryService;
-        _updateModelAccessor = updateModelAccessor;
-        _pagerOptions = pagerOptions.Value;
-        _options = options.Value;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {
-                "term": {
-                  "type": "string",
-                  "description": "The query string to search for."
-                },
-                "pageNumber": {
-                  "type": "integer",
-                  "description": "The page number of results to return.",
-                  "default": 1
-                }
-              },
-              "required": ["term"],
-              "additionalProperties": false
-            }     
-            """, JsonSerializerOptions);
-    }
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+        """
+        {
+          "type": "object",
+          "properties": {
+            "term": {
+              "type": "string",
+              "description": "The query string to search for."
+            },
+            "pageNumber": {
+              "type": "integer",
+              "description": "The page number of results to return.",
+              "default": 1
+            }
+          },
+          "required": ["term"],
+          "additionalProperties": false
+        }     
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Search for content items that match the given query along with a way to paginate the results.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
@@ -79,7 +54,15 @@ public sealed class SearchForContentsTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.ListContent))
+        var contentManager = arguments.Services.GetRequiredService<IContentManager>();
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
+        var contentsAdminListQueryService = arguments.Services.GetRequiredService<IContentsAdminListQueryService>();
+        var updateModelAccessor = arguments.Services.GetRequiredService<IUpdateModelAccessor>();
+        var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
+        var pagerOptions = arguments.Services.GetRequiredService<IOptions<PagerOptions>>().Value;
+
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, CommonPermissions.ListContent))
         {
             return "You do not have permission to list content items.";
         }
@@ -96,29 +79,29 @@ public sealed class SearchForContentsTool : AIFunction
             page = 1;
         }
 
-        var startingIndex = (page - 1) * _pagerOptions.PageSize;
+        var startingIndex = (page - 1) * pagerOptions.PageSize;
 
-        var query = await _contentsAdminListQueryService.QueryAsync(new ContentOptionsViewModel()
+        var query = await contentsAdminListQueryService.QueryAsync(new ContentOptionsViewModel()
         {
             SearchText = term,
             OriginalSearchText = term,
             StartIndex = startingIndex,
-        }, _updateModelAccessor.ModelUpdater);
+        }, updateModelAccessor.ModelUpdater);
 
         var contentItemsCount = await query.CountAsync(cancellationToken);
 
         var contentItems = await query.Skip(startingIndex)
-            .Take(_pagerOptions.PageSize)
-            .ListAsync(_contentManager);
+            .Take(pagerOptions.PageSize)
+            .ListAsync(contentManager);
 
         return
         $$"""
             {
-                "contentItems": {{JsonSerializer.Serialize(contentItems, _options.SerializerOptions)}},
-                "pageSize": {{_pagerOptions.PageSize}},
+                "contentItems": {{JsonSerializer.Serialize(contentItems, options.SerializerOptions)}},
+                "pageSize": {{pagerOptions.PageSize}},
                 "contentItemsCount": {{contentItemsCount}},
-                "totalPages": {{Math.Ceiling((double)contentItemsCount / _pagerOptions.PageSize)}},
-                "pageSize": {{_pagerOptions.PageSize}},
+                "totalPages": {{Math.Ceiling((double)contentItemsCount / pagerOptions.PageSize)}},
+                "pageSize": {{pagerOptions.PageSize}},
             }
             """;
     }

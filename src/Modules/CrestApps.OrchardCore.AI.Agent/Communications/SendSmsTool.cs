@@ -2,6 +2,7 @@ using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Sms;
 
 namespace CrestApps.OrchardCore.AI.Agent.Communications;
@@ -10,43 +11,30 @@ public sealed class SendSmsTool : AIFunction
 {
     public const string TheName = "sendSmsMessage";
 
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ISmsService _smsService;
-    private readonly IPhoneFormatValidator _phoneFormatValidator;
-
-    public SendSmsTool(
-        IHttpContextAccessor httpContextAccessor,
-        ISmsService smsService,
-        IPhoneFormatValidator phoneFormatValidator)
-    {
-        _httpContextAccessor = httpContextAccessor;
-        _smsService = smsService;
-        _phoneFormatValidator = phoneFormatValidator;
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-           """
-            {
-              "type": "object",
-              "properties": {
-                "phone": {
-                  "type": "string",
-                  "description": "This must be internationally formatted phone number starting with +."
-                },
-                "body": {
-                  "type": "string",
-                  "description": "The text message body to send."
-                }
-              },
-              "additionalProperties": false,
-              "required": ["phone", "body"]
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+       """
+        {
+          "type": "object",
+          "properties": {
+            "phone": {
+              "type": "string",
+              "description": "This must be internationally formatted phone number starting with +."
+            },
+            "body": {
+              "type": "string",
+              "description": "The text message body to send."
             }
-            """, JsonSerializerOptions);
-    }
+          },
+          "additionalProperties": false,
+          "required": ["phone", "body"]
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Sends an SMS message to a phone number.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
@@ -55,7 +43,11 @@ public sealed class SendSmsTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        if (!_httpContextAccessor.HttpContext.User.Identity.IsAuthenticated)
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var smsService = arguments.Services.GetRequiredService<ISmsService>();
+        var phoneFormatValidator = arguments.Services.GetRequiredService<IPhoneFormatValidator>();
+
+        if (!httpContextAccessor.HttpContext.User.Identity.IsAuthenticated)
         {
             return "You must login to be able to send SMS message.";
         }
@@ -70,7 +62,7 @@ public sealed class SendSmsTool : AIFunction
             return "Unable to find a body argument in the function arguments.";
         }
 
-        if (!_phoneFormatValidator.IsValid(phone))
+        if (!phoneFormatValidator.IsValid(phone))
         {
             return "The given phone number must be in a international format.";
         }
@@ -81,7 +73,7 @@ public sealed class SendSmsTool : AIFunction
             Body = body,
         };
 
-        var result = await _smsService.SendAsync(message);
+        var result = await smsService.SendAsync(message);
 
         if (result.Succeeded)
         {

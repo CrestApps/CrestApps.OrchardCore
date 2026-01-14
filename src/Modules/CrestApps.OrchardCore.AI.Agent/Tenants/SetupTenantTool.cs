@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Abstractions.Setup;
 using OrchardCore.Email;
@@ -18,108 +19,80 @@ public sealed class SetupTenantTool : AIFunction
 {
     public const string TheName = "setupTenant";
 
-    private readonly IShellHost _shellHost;
-    private readonly ShellSettings _shellSettings;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ISetupService _setupService;
-    private readonly IdentityOptions _identityOptions;
-    private readonly IEmailAddressValidator _emailAddressValidator;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IClock _clock;
-
-    public SetupTenantTool(
-        IShellHost shellHost,
-        ShellSettings shellSettings,
-        IHttpContextAccessor httpContextAccessor,
-        ISetupService setupService,
-        IOptions<IdentityOptions> identityOptions,
-        IEmailAddressValidator emailAddressValidator,
-        IAuthorizationService authorizationService,
-        IClock clock)
-    {
-        _shellHost = shellHost;
-        _shellSettings = shellSettings;
-        _httpContextAccessor = httpContextAccessor;
-        _setupService = setupService;
-        _identityOptions = identityOptions.Value;
-        _emailAddressValidator = emailAddressValidator;
-        _authorizationService = authorizationService;
-        _clock = clock;
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-           """
-            {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "description": "A unique name for the tenant to be used as identifier."
-                    },
-                    "username": {
-                        "type": "string",
-                        "description": "The username for the super user to setup the site with."
-                    },
-                    "email": {
-                        "type": "string",
-                        "description": "A valid email for the super user to setup the site with."
-                    },
-                    "password": {
-                        "type": "string",
-                        "description": "The password for the super user to setup the site with."
-                    },
-                    "title": {
-                        "type": "string",
-                        "description": "A title for the site."
-                    },
-                    "timeZoneId": {
-                        "type": "string",
-                        "description": "The Unix TimeZone id."
-                    },
-                    "databaseProvider": {
-                        "type": "string",
-                        "description": "The database provider to use.",
-                        "enum": [
-                            "SqlConnection",
-                            "MySql",
-                            "Sqlite",
-                            "Postgres"
-                        ]
-                    },
-                    "requestUrlPrefix": {
-                        "type": "string",
-                        "description": "A URI prefix to use."
-                    },
-                    "requestUrlHost": {
-                        "type": "string",
-                        "description": "One or more qualified domain to use with this tenant."
-                    },
-                    "connectionString": {
-                        "type": "string",
-                        "description": "The connection string to use when setting up the tenant."
-                    },
-                    "tablePrefix": {
-                        "type": "string",
-                        "description": "A SQL table prefix to use for every table."
-                    },
-                    "recipeName": {
-                        "type": "string",
-                        "description": "The name of the startup recipe to use during setup."
-                    }
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+       """
+        {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "A unique name for the tenant to be used as identifier."
                 },
-                "additionalProperties": false,
-                "required": [
-                    "name",
-                    "username",
-                    "email",
-                    "password"]
-            }
-            """, JsonSerializerOptions);
-    }
+                "username": {
+                    "type": "string",
+                    "description": "The username for the super user to setup the site with."
+                },
+                "email": {
+                    "type": "string",
+                    "description": "A valid email for the super user to setup the site with."
+                },
+                "password": {
+                    "type": "string",
+                    "description": "The password for the super user to setup the site with."
+                },
+                "title": {
+                    "type": "string",
+                    "description": "A title for the site."
+                },
+                "timeZoneId": {
+                    "type": "string",
+                    "description": "The Unix TimeZone id."
+                },
+                "databaseProvider": {
+                    "type": "string",
+                    "description": "The database provider to use.",
+                    "enum": [
+                        "SqlConnection",
+                        "MySql",
+                        "Sqlite",
+                        "Postgres"
+                    ]
+                },
+                "requestUrlPrefix": {
+                    "type": "string",
+                    "description": "A URI prefix to use."
+                },
+                "requestUrlHost": {
+                    "type": "string",
+                    "description": "One or more qualified domain to use with this tenant."
+                },
+                "connectionString": {
+                    "type": "string",
+                    "description": "The connection string to use when setting up the tenant."
+                },
+                "tablePrefix": {
+                    "type": "string",
+                    "description": "A SQL table prefix to use for every table."
+                },
+                "recipeName": {
+                    "type": "string",
+                    "description": "The name of the startup recipe to use during setup."
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "name",
+                "username",
+                "email",
+                "password"]
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Completes the setup of an uninitialized tenant, bringing the site online and making it available for incoming requests.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
@@ -128,12 +101,21 @@ public sealed class SetupTenantTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageTenants))
+        var shellHost = arguments.Services.GetRequiredService<IShellHost>();
+        var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var setupService = arguments.Services.GetRequiredService<ISetupService>();
+        var identityOptions = arguments.Services.GetRequiredService<IOptions<IdentityOptions>>().Value;
+        var emailAddressValidator = arguments.Services.GetRequiredService<IEmailAddressValidator>();
+        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
+        var clock = arguments.Services.GetRequiredService<IClock>();
+
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageTenants))
         {
             return "The current user does not have permission to manage tenants.";
         }
 
-        if (!_shellSettings.IsDefaultShell())
+        if (!shellSettings.IsDefaultShell())
         {
             return "This function is not supported in this tenant. It can only be used in the default tenant.";
         }
@@ -143,7 +125,7 @@ public sealed class SetupTenantTool : AIFunction
             return "Unable to find a name argument in the function arguments.";
         }
 
-        if (!_shellHost.TryGetSettings(name, out var tenantSettings))
+        if (!shellHost.TryGetSettings(name, out var tenantSettings))
         {
             return "Invalid tenant name provided.";
         }
@@ -168,12 +150,12 @@ public sealed class SetupTenantTool : AIFunction
             return "The tenant is already setup.";
         }
 
-        if (username.Any(c => !_identityOptions.User.AllowedUserNameCharacters.Contains(c)))
+        if (username.Any(c => !identityOptions.User.AllowedUserNameCharacters.Contains(c)))
         {
-            return $"The username contains not allowed characters. Allowed characters are: {string.Join(' ', _identityOptions.User.AllowedUserNameCharacters)}";
+            return $"The username contains not allowed characters. Allowed characters are: {string.Join(' ', identityOptions.User.AllowedUserNameCharacters)}";
         }
 
-        if (!_emailAddressValidator.Validate(email))
+        if (!emailAddressValidator.Validate(email))
         {
             return $"The email is invalid.";
         }
@@ -185,7 +167,7 @@ public sealed class SetupTenantTool : AIFunction
             return "The recipeName argument is required.";
         }
 
-        var recipe = (await _setupService.GetSetupRecipesAsync()).FirstOrDefault(x => x.Name == recipeName);
+        var recipe = (await setupService.GetSetupRecipesAsync()).FirstOrDefault(x => x.Name == recipeName);
 
         if (recipe is null)
         {
@@ -221,7 +203,7 @@ public sealed class SetupTenantTool : AIFunction
 
         if (arguments.TryGetFirstString("timeZoneId", out var id))
         {
-            var zone = _clock.GetTimeZones()
+            var zone = clock.GetTimeZones()
                 .FirstOrDefault(x => x.TimeZoneId.Equals(id, StringComparison.OrdinalIgnoreCase));
 
             if (zone is not null)
@@ -230,7 +212,7 @@ public sealed class SetupTenantTool : AIFunction
             }
         }
 
-        timeZoneId ??= _clock.GetSystemTimeZone().TimeZoneId;
+        timeZoneId ??= clock.GetSystemTimeZone().TimeZoneId;
 
         var setupContext = new SetupContext
         {
@@ -263,7 +245,7 @@ public sealed class SetupTenantTool : AIFunction
             setupContext.Properties[SetupConstants.DatabaseSchema] = tenantSettings["Schema"];
         }
 
-        var executionId = await _setupService.SetupAsync(setupContext);
+        var executionId = await setupService.SetupAsync(setupContext);
 
         // Check if any Setup component failed (e.g., database connection validation).
         if (setupContext.Errors.Count > 0)

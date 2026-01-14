@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
 
@@ -13,48 +14,34 @@ internal sealed class GetUserInfoTool : AIFunction
 {
     public const string TheName = "getUserInfo";
 
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly UserManager<IUser> _userManager;
-
-    public GetUserInfoTool(
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService,
-        UserManager<IUser> userManager)
-    {
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-        _userManager = userManager;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-           """
-            {
-              "type": "object",
-              "properties": {
-                "userId": {
-                  "type": "string",
-                  "description": "The userId to get user info for."
-                },
-                "username": {
-                  "type": "string",
-                  "description": "The username to get user info for."
-                },
-                "email": {
-                  "type": "string",
-                  "description": "The email to get user info for."
-                }
-              },
-              "additionalProperties": false,
-              "required": []
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+       """
+        {
+          "type": "object",
+          "properties": {
+            "userId": {
+              "type": "string",
+              "description": "The userId to get user info for."
+            },
+            "username": {
+              "type": "string",
+              "description": "The username to get user info for."
+            },
+            "email": {
+              "type": "string",
+              "description": "The email to get user info for."
             }
-            """, JsonSerializerOptions);
-    }
+          },
+          "additionalProperties": false,
+          "required": []
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Gets users information.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
@@ -63,7 +50,11 @@ internal sealed class GetUserInfoTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, UsersPermissions.ViewUsers))
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
+        var userManager = arguments.Services.GetRequiredService<UserManager<IUser>>();
+
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, UsersPermissions.ViewUsers))
         {
             return "The current user does not have permission to view users";
         }
@@ -85,15 +76,15 @@ internal sealed class GetUserInfoTool : AIFunction
 
         if (hasUserId)
         {
-            user = await _userManager.FindByIdAsync(userId);
+            user = await userManager.FindByIdAsync(userId);
         }
         else if (hasUsername)
         {
-            user = await _userManager.FindByNameAsync(username);
+            user = await userManager.FindByNameAsync(username);
         }
         else if (hasEmail)
         {
-            user = await _userManager.FindByEmailAsync(email);
+            user = await userManager.FindByEmailAsync(email);
         }
 
         if (user is null)

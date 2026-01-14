@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Extensions;
 using OrchardCore.Environment.Shell;
 
@@ -12,39 +13,26 @@ public sealed class GetFeatureTool : AIFunction
 {
     public const string TheName = "getSiteFeature";
 
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IShellFeaturesManager _shellFeaturesManager;
-
-    public GetFeatureTool(
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService,
-        IShellFeaturesManager shellFeaturesManager)
-    {
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-        _shellFeaturesManager = shellFeaturesManager;
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-           """
-            {
-              "type": "object",
-              "properties": {
-                "featureId": {
-                  "type": "string",
-                  "description": "A unique feature ID to get info for."
-                }
-              },
-              "additionalProperties": false,
-              "required": ["featureId"]
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+       """
+        {
+          "type": "object",
+          "properties": {
+            "featureId": {
+              "type": "string",
+              "description": "A unique feature ID to get info for."
             }
-            """, JsonSerializerOptions);
-    }
+          },
+          "additionalProperties": false,
+          "required": ["featureId"]
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Enables feature site features";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
@@ -53,7 +41,11 @@ public sealed class GetFeatureTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageFeatures))
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
+        var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
+
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageFeatures))
         {
             return "The current user does not have permission to manage features.";
         }
@@ -63,7 +55,7 @@ public sealed class GetFeatureTool : AIFunction
             return "Unable to find a featureId argument in the function arguments.";
         }
 
-        var feature = (await _shellFeaturesManager.GetAvailableFeaturesAsync())
+        var feature = (await shellFeaturesManager.GetAvailableFeaturesAsync())
             .FirstOrDefault(feature => !feature.IsTheme() && feature.Id.Equals(featureId, StringComparison.OrdinalIgnoreCase));
 
         if (feature is null)
@@ -71,7 +63,7 @@ public sealed class GetFeatureTool : AIFunction
             return $"Unable to find a feature with the ID: {featureId}.";
         }
 
-        var isEnabled = await _shellFeaturesManager.IsFeatureEnabledAsync(feature.Id);
+        var isEnabled = await shellFeaturesManager.IsFeatureEnabledAsync(feature.Id);
 
         return JsonSerializer.Serialize(feature.AsAIObject(isEnabled));
     }

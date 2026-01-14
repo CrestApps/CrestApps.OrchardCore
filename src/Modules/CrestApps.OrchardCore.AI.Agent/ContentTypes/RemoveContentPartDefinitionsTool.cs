@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
@@ -13,49 +14,37 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
 {
     public const string TheName = "removeContentPartDefinition";
 
-    private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly RecipeExecutionService _recipeExecutionService;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-
-    public RemoveContentPartDefinitionsTool(
-        IContentDefinitionManager contentDefinitionManager,
-        RecipeExecutionService recipeExecutionService,
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
-    {
-        _contentDefinitionManager = contentDefinitionManager;
-        _recipeExecutionService = recipeExecutionService;
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "description": "The name of the content part for which to remove the definitions."
-                }
-              },
-              "required": ["name"],
-              "additionalProperties": false
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+        """
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The name of the content part for which to remove the definitions."
             }
-            """, JsonSerializerOptions);
-    }
+          },
+          "required": ["name"],
+          "additionalProperties": false
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Removes the content part definition for a given content part.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.EditContentTypes))
+        var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
+        var recipeExecutionService = arguments.Services.GetRequiredService<RecipeExecutionService>();
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
+
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.EditContentTypes))
         {
             return "You do not have permission to edit content definitions.";
         }
@@ -66,7 +55,7 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
         }
 
 
-        var partDefinition = await _contentDefinitionManager.GetPartDefinitionAsync(name);
+        var partDefinition = await contentDefinitionManager.GetPartDefinitionAsync(name);
 
         if (partDefinition is null)
         {
@@ -74,7 +63,7 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
                 $"""
                 Unable to find a part definition that match the name: {name}.
                 Here are the available part that can be removed:
-                {JsonSerializer.Serialize((await _contentDefinitionManager.ListPartDefinitionsAsync()).Select(x => x.Name), JsonHelpers.ContentDefinitionSerializerOptions)}
+                {JsonSerializer.Serialize((await contentDefinitionManager.ListPartDefinitionsAsync()).Select(x => x.Name), JsonHelpers.ContentDefinitionSerializerOptions)}
                 """;
         }
 
@@ -92,7 +81,7 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
             }
             """);
 
-        if (await _recipeExecutionService.ExecuteRecipeAsync(data))
+        if (await recipeExecutionService.ExecuteRecipeAsync(data))
         {
             return $"The content part {name} was removed successfully";
         }

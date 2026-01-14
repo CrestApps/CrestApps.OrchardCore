@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Roles;
 using OrchardCore.Security;
 
@@ -13,43 +14,30 @@ internal sealed class GetRoleTool : AIFunction
 {
     public const string TheName = "getRoleInfo";
 
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly RoleManager<IRole> _roleManager;
-
-    public GetRoleTool(
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService,
-        RoleManager<IRole> roleManager)
-    {
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-        _roleManager = roleManager;
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-           """
-            {
-              "type": "object",
-              "properties": {
-                "roleId": {
-                  "type": "string",
-                  "description": "The roleId to get role info for."
-                },
-                "roleName": {
-                  "type": "string",
-                  "description": "The roleName to get role info for."
-                }
-              },
-              "additionalProperties": false,
-              "required": []
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+       """
+        {
+          "type": "object",
+          "properties": {
+            "roleId": {
+              "type": "string",
+              "description": "The roleId to get role info for."
+            },
+            "roleName": {
+              "type": "string",
+              "description": "The roleName to get role info for."
             }
-            """, JsonSerializerOptions);
-    }
+          },
+          "additionalProperties": false,
+          "required": []
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Gets role information.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
@@ -58,7 +46,11 @@ internal sealed class GetRoleTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, RolesPermissions.ManageRoles))
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
+        var roleManager = arguments.Services.GetRequiredService<RoleManager<IRole>>();
+
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, RolesPermissions.ManageRoles))
         {
             return "The current user does not have permission to manage roles.";
         }
@@ -78,11 +70,11 @@ internal sealed class GetRoleTool : AIFunction
 
         if (hasRoleId)
         {
-            role = await _roleManager.FindByIdAsync(roleId);
+            role = await roleManager.FindByIdAsync(roleId);
         }
         else if (hasRoleName)
         {
-            role = await _roleManager.FindByNameAsync(roleName);
+            role = await roleManager.FindByNameAsync(roleName);
         }
 
         if (role is null)
