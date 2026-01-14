@@ -25,7 +25,7 @@ public sealed class GetTenantTool : AIFunction
         _authorizationService = authorizationService;
 
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-                  """
+            """
             {
                 "type": "object",
                 "properties": {

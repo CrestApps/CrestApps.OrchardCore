@@ -22,21 +22,11 @@ public sealed class ListTenantTool : AIFunction
         _shellHost = shellHost;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-           """
-            {
-                "additionalProperties": false,
-                "required": []
-            }
-            """, JsonSerializerOptions);
     }
 
     public override string Name => TheName;
 
     public override string Description => "Lists all sites or tenants.";
-
-    public override JsonElement JsonSchema { get; }
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {

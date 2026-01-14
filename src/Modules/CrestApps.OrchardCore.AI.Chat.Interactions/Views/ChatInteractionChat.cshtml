@@ -86,7 +86,12 @@
             inputElementSelector: '#@userPromptHtmlId',
             sendButtonElementSelector: '#@buttonHtmlId',
             placeholderElementSelector: '#@placeholderHtmlId',
-            messages: @Html.Raw(JsonSerializer.Serialize(prompts ?? [], JOptions.CamelCase))
+            messages: @Html.Raw(JsonSerializer.Serialize(prompts ?? [], JOptions.CamelCase)),
+            untitledText: '@T["Untitled"]',
+            clearHistoryTitle: '@T["Clear History"]',
+            clearHistoryMessage: '@T["Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved."]',
+            clearHistoryOkText: '@T["Yes"]',
+            clearHistoryCancelText: '@T["Cancel"]'
         });
     });
 </script>

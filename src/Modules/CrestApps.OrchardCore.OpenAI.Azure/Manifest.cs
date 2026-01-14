@@ -35,26 +35,13 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = AzureOpenAIConstants.Feature.DataSources,
-    Name = "Azure OpenAI – Bring Your Own Data",
-    Description = "Provides you a way to connect your Azure OpenAI with defined data sources.",
-    Category = "Artificial Intelligence",
-    Dependencies =
-    [
-        AIConstants.Feature.DataSources,
-        AzureOpenAIConstants.Feature.Area,
-    ],
-    EnabledByDependencyOnly = true
-)]
-
-[assembly: Feature(
     Id = AzureOpenAIConstants.Feature.AISearch,
     Name = "Azure AI Search-Powered Data Source",
     Description = "Enables integration with OpenAI and Azure AI Search data via the Azure service provider.",
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AzureOpenAIConstants.Feature.DataSources,
+        AIConstants.Feature.DataSources,
         "OrchardCore.Search.AzureAI",
     ]
 )]
@@ -66,7 +53,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AzureOpenAIConstants.Feature.DataSources,
+        AIConstants.Feature.DataSources,
         "OrchardCore.Search.Elasticsearch",
     ]
 )]
@@ -78,6 +65,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AzureOpenAIConstants.Feature.DataSources,
+        AIConstants.Feature.DataSources,
     ]
 )]

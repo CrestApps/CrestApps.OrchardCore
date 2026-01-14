@@ -8,10 +8,12 @@ using CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDb;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 using CrestApps.OrchardCore.OpenAI.Azure.Handlers;
+using CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 using CrestApps.OrchardCore.OpenAI.Core;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 
@@ -28,6 +30,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddDataMigration<AzureOpenAIOwnDataAIProfilesMigrations>();
+
         services
             .AddScoped<IAIClientProvider, AzureOpenAIClientProvider>()
             .AddScoped<IOpenAIChatOptionsConfiguration, AzurePatchOpenAIDataSourceHandler>()
@@ -51,11 +55,20 @@ public sealed class StandardStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAIProfile<AzureOpenAICompletionClient>(AzureOpenAIConstants.StandardImplementationName, AzureOpenAIConstants.ProviderName, o =>
+        services.AddAIProfile<AzureOpenAICompletionClient>(AzureOpenAIConstants.ProviderName, AzureOpenAIConstants.ProviderName, o =>
         {
             o.DisplayName = S["Azure OpenAI"];
             o.Description = S["Provides AI profiles using Azure OpenAI models."];
         });
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.DataSources)]
+public sealed class DataSourcesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<AzureOpenAIOwnDataAIDataSourceMigrations>();
     }
 }
 
@@ -84,26 +97,6 @@ public sealed class ConnectionManagementStartup : StartupBase
 
 #region Data Sources Features
 
-[Feature(AzureOpenAIConstants.Feature.DataSources)]
-public sealed class DataSourcesStartup : StartupBase
-{
-    internal readonly IStringLocalizer S;
-
-    public DataSourcesStartup(IStringLocalizer<DataSourcesStartup> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddAIProfile<AzureOpenAIDataSourceCompletionClient>(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.ProviderName, o =>
-        {
-            o.DisplayName = S["Azure OpenAI with Your Data"];
-            o.Description = S["Provides AI profiles using Azure OpenAI models with your data."];
-        });
-    }
-}
-
 [Feature(AzureOpenAIConstants.Feature.AISearch)]
 public sealed class AISearchStartup : StartupBase
 {
@@ -124,7 +117,7 @@ public sealed class AISearchStartup : StartupBase
             .AddScoped<AzureAISearchOpenAIChatOptionsConfiguration>()
             .AddScoped<IOpenAIChatOptionsConfiguration>(sp => sp.GetRequiredService<AzureAISearchOpenAIChatOptionsConfiguration>())
             .AddScoped<IAzureOpenAIDataSourceHandler>(sp => sp.GetRequiredService<AzureAISearchOpenAIChatOptionsConfiguration>())
-            .AddAIDataSource(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.AzureAISearch, o =>
+            .AddAIDataSource(AzureOpenAIConstants.ProviderName, AzureOpenAIConstants.DataSourceTypes.AzureAISearch, o =>
             {
                 o.DisplayName = S["Azure OpenAI with Azure AI Search"];
                 o.Description = S["Enables AI models to use Azure AI Search as a data source for your data."];
@@ -151,7 +144,7 @@ public sealed class ElasticsearchStartup : StartupBase
             .AddScoped<ElasticsearchOpenAIChatOptionsConfiguration>()
             .AddScoped<IOpenAIChatOptionsConfiguration>(sp => sp.GetRequiredService<ElasticsearchOpenAIChatOptionsConfiguration>())
             .AddScoped<IAzureOpenAIDataSourceHandler>(sp => sp.GetRequiredService<ElasticsearchOpenAIChatOptionsConfiguration>())
-            .AddAIDataSource(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.Elasticsearch, o =>
+            .AddAIDataSource(AzureOpenAIConstants.ProviderName, AzureOpenAIConstants.DataSourceTypes.Elasticsearch, o =>
             {
                 o.DisplayName = S["Azure OpenAI with Elasticsearch"];
                 o.Description = S["Enables AI models to use Elasticsearch as a data source for your data."];
@@ -178,7 +171,7 @@ public sealed class MongoDBStartup : StartupBase
             .AddScoped<MongoDBOpenAIChatOptionsConfiguration>()
             .AddScoped<IOpenAIChatOptionsConfiguration>(sp => sp.GetRequiredService<MongoDBOpenAIChatOptionsConfiguration>())
             .AddScoped<IAzureOpenAIDataSourceHandler>(sp => sp.GetRequiredService<MongoDBOpenAIChatOptionsConfiguration>())
-            .AddAIDataSource(AzureOpenAIConstants.AzureOpenAIOwnData, AzureOpenAIConstants.DataSourceTypes.MongoDB, o =>
+            .AddAIDataSource(AzureOpenAIConstants.ProviderName, AzureOpenAIConstants.DataSourceTypes.MongoDB, o =>
             {
                 o.DisplayName = S["Azure OpenAI with Mongo DB"];
                 o.Description = S["Enables AI models to use Mongo DB as a data source for your data."];
