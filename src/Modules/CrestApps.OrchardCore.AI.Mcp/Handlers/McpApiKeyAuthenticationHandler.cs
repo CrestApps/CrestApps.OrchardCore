@@ -9,35 +9,43 @@ namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 
 internal sealed class McpApiKeyAuthenticationHandler : AuthenticationHandler<McpApiKeyAuthenticationOptions>
 {
-    private readonly McpServerOptions _mcpServerOptions;
+    private readonly IOptionsMonitor<McpServerOptions> _mcpServerOptionsMonitor;
 
     public McpApiKeyAuthenticationHandler(
         IOptionsMonitor<McpApiKeyAuthenticationOptions> options,
-        IOptions<McpServerOptions> mcpServerOptions,
+        IOptionsMonitor<McpServerOptions> mcpServerOptionsMonitor,
         ILoggerFactory logger,
         UrlEncoder encoder)
         : base(options, logger, encoder)
     {
-        _mcpServerOptions = mcpServerOptions.Value;
+        _mcpServerOptionsMonitor = mcpServerOptionsMonitor;
     }
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        if (string.IsNullOrEmpty(_mcpServerOptions.ApiKey))
+        var mcpServerOptions = _mcpServerOptionsMonitor.CurrentValue;
+
+        // Only handle authentication if ApiKey authentication type is configured.
+        if (mcpServerOptions.AuthenticationType != McpServerAuthenticationType.ApiKey)
+        {
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
+        if (string.IsNullOrEmpty(mcpServerOptions.ApiKey))
         {
             return Task.FromResult(AuthenticateResult.Fail("API key is not configured on the server."));
         }
 
         if (!Request.Headers.TryGetValue("Authorization", out var authHeader))
         {
-            return Task.FromResult(AuthenticateResult.Fail("Authorization header is missing."));
+            return Task.FromResult(AuthenticateResult.NoResult());
         }
 
         var authHeaderValue = authHeader.ToString();
 
         if (string.IsNullOrEmpty(authHeaderValue))
         {
-            return Task.FromResult(AuthenticateResult.Fail("Authorization header is empty."));
+            return Task.FromResult(AuthenticateResult.NoResult());
         }
 
         string apiKey;
@@ -57,10 +65,10 @@ internal sealed class McpApiKeyAuthenticationHandler : AuthenticationHandler<Mcp
 
         if (string.IsNullOrEmpty(apiKey))
         {
-            return Task.FromResult(AuthenticateResult.Fail("API key is missing from the Authorization header."));
+            return Task.FromResult(AuthenticateResult.NoResult());
         }
 
-        if (!string.Equals(apiKey, _mcpServerOptions.ApiKey, StringComparison.Ordinal))
+        if (!string.Equals(apiKey, mcpServerOptions.ApiKey, StringComparison.Ordinal))
         {
             return Task.FromResult(AuthenticateResult.Fail("Invalid API key."));
         }

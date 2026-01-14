@@ -20,11 +20,22 @@ public sealed class ListNonStartupRecipesTool : AIFunction
     {
         _recipeHarvesters = recipeHarvesters;
         _shellFeaturesManager = shellFeaturesManager;
+
+        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
+            """
+            {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+            """, JsonSerializerOptions);
     }
 
     public override string Name => TheName;
 
     public override string Description => "Retrieves a list of predefined recipes that can be executed manually and are not designated to run at application startup.";
+
+    public override JsonElement JsonSchema { get; }
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {

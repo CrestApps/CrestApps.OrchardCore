@@ -46,6 +46,7 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
         _shellHost = shellHost;
         _shellSettings = shellSettings;
         _logger = logger;
+
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
             """
             {

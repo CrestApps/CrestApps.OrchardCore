@@ -183,7 +183,11 @@ public sealed class McpServerStartup : StartupBase
             }
 
             // Convert IDictionary<string, JsonElement> to AIFunctionArguments
-            var arguments = new AIFunctionArguments();
+            var arguments = new AIFunctionArguments()
+            {
+                Services = request.Services,
+            };
+
             if (request.Params.Arguments is not null)
             {
                 foreach (var kvp in request.Params.Arguments)
@@ -200,20 +204,29 @@ public sealed class McpServerStartup : StartupBase
             };
         });
 
-        // Configure authorization policy with multiple authentication schemes.
-        // The actual authorization logic is handled by McpServerAuthorizationHandler.
+        // Configure authorization policy.
+        // The actual authorization logic is handled by McpServerAuthorizationHandler which reads the options at runtime.
         services.AddAuthorizationBuilder()
             .AddPolicy(McpServerPolicyName, policy =>
             {
-                // Add all possible authentication schemes - the handler will decide which one applies.
-                policy.AddAuthenticationSchemes("Api", McpApiKeyAuthenticationDefaults.AuthenticationScheme);
+                // Add all possible authentication schemes - authentication will be attempted for each.
+                // The McpApiKeyAuthenticationHandler returns NoResult if API key auth is not configured,
+                // allowing other schemes to be tried.
+                policy.AddAuthenticationSchemes(McpApiKeyAuthenticationDefaults.AuthenticationScheme, "Api");
                 policy.AddRequirements(new McpServerAuthorizationRequirement());
             });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.MapMcp("mcp")
-            .RequireAuthorization(McpServerPolicyName);
+        var mcpServerOptions = serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
+
+        var endpoint = routes.MapMcp("mcp");
+
+        // Only require authorization if not using anonymous access.
+        if (mcpServerOptions.AuthenticationType != McpServerAuthenticationType.None)
+        {
+            endpoint.RequireAuthorization(McpServerPolicyName);
+        }
     }
 }
