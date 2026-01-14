@@ -21,6 +21,7 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
     private readonly ISiteService _siteService;
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IAIClientFactory _aIClientFactory;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IOptions<AIProviderOptions> _providerOptions;
     private readonly ILogger<RagDocumentProcessingStrategy> _logger;
 
@@ -28,12 +29,14 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
         ISiteService siteService,
         IIndexProfileStore indexProfileStore,
         IAIClientFactory aIClientFactory,
+        IServiceProvider serviceProvider,
         IOptions<AIProviderOptions> providerOptions,
         ILogger<RagDocumentProcessingStrategy> logger)
     {
         _siteService = siteService;
         _indexProfileStore = indexProfileStore;
         _aIClientFactory = aIClientFactory;
+        _serviceProvider = serviceProvider;
         _providerOptions = providerOptions;
         _logger = logger;
     }
@@ -77,7 +80,7 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
             }
 
             // Get the embedding search service for this provider
-            var searchService = context.ServiceProvider?.GetKeyedService<IVectorSearchService>(indexProfile.ProviderName);
+            var searchService = _serviceProvider.GetKeyedService<IVectorSearchService>(indexProfile.ProviderName);
 
             if (searchService == null)
             {

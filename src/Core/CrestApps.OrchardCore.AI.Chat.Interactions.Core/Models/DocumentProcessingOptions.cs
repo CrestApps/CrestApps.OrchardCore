@@ -21,5 +21,7 @@ public sealed class DocumentProcessingOptions
     /// });
     /// </code>
     /// </remarks>
-    public Dictionary<string, string> Intents { get; } = new(StringComparer.OrdinalIgnoreCase);
+    internal Dictionary<string, string> InternalIntents { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public IReadOnlyDictionary<string, string> Intents => InternalIntents;
 }

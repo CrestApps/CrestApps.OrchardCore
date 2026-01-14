@@ -437,7 +437,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 Interaction = interaction,
                 IntentResult = intentResult,
                 CancellationToken = cancellationToken,
-                ServiceProvider = _serviceProvider,
             };
 
             await strategyProvider.ProcessAsync(processingContext);

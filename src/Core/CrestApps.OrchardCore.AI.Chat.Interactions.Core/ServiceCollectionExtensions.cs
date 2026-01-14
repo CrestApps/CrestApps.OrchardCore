@@ -49,7 +49,7 @@ public static class ServiceCollectionExtensions
 
         services.Configure<DocumentProcessingOptions>(options =>
         {
-            options.Intents.TryAdd(intentName, description);
+            options.InternalIntents.TryAdd(intentName, description);
         });
 
         return services;

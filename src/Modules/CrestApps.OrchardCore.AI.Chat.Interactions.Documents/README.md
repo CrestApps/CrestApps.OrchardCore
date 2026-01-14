@@ -88,6 +88,44 @@ Each intent is handled by a specialized strategy:
 
 ## Configuration
 
+### Intent Detection Model
+
+The AI intent detector uses a chat model to classify user intent. By default, it uses the same model configured for chat (`DefaultDeploymentName`). However, since intent detection is a simple classification task, you can configure a separate, cost-effective model specifically for intent detection.
+
+To configure the intent detection model, set the `DefaultIntentDeploymentName` in your provider connection settings. This can be done via:
+
+**Option 1: Admin UI**
+
+Navigate to **Artificial Intelligence > Provider Connections**, edit your connection, and set the **Intent deployment name** field.
+
+**Option 2: Configuration (appsettings.json)**
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Providers": {
+        "OpenAI": {
+          "Connections": {
+            "default": {
+              "DefaultDeploymentName": "gpt-4o",
+              "DefaultEmbeddingDeploymentName": "text-embedding-3-small",
+              "DefaultIntentDeploymentName": "gpt-4o-mini"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+> **Recommendation**: Use a lightweight, cost-effective model for intent detection such as `gpt-4o-mini`, `gpt-4.1-mini`, or `gpt-4.1-nano`. Intent classification is a simple task that doesn't require the full capabilities of larger models, and using a smaller model significantly reduces costs and improves response times.
+
+If `DefaultIntentDeploymentName` is not configured, the system falls back to:
+1. The `DefaultDeploymentName` (chat model) for the connection
+2. Keyword-based intent detection (if no AI model is available)
+
 ### Documents Tab Settings
 
 | Setting | Description | Default |

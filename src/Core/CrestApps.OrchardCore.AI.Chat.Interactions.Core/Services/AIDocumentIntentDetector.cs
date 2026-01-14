@@ -73,7 +73,7 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
         }
 
         // Check if we have any registered intents
-        var intents = _options.Value.Intents;
+        var intents = _options.Value.InternalIntents;
         if (intents.Count == 0)
         {
             _logger.LogDebug("No intents registered in DocumentProcessingOptions, cannot use AI-based intent detection.");
