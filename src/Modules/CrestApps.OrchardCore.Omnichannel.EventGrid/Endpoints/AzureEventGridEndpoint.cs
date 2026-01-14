@@ -172,12 +172,11 @@ internal static class AzureEventGridEndpoint
 
     private static string GetStringProperty(Dictionary<string, JsonElement> data, params string[] names)
     {
-        foreach (var name in names)
+        var validNames = names.Where(name => data.TryGetValue(name, out var element) && element.ValueKind == JsonValueKind.String);
+        
+        foreach (var name in validNames)
         {
-            if (data.TryGetValue(name, out var element) && element.ValueKind == JsonValueKind.String)
-            {
-                return element.GetString();
-            }
+            return data[name].GetString();
         }
 
         return null;

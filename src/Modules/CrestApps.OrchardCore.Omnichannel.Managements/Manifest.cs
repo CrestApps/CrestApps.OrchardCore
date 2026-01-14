@@ -15,7 +15,7 @@ using OrchardCore.Modules.Manifest;
     Name = "Omnichannel Management",
     Id = OmnichannelConstants.Features.Managements,
     Category = "Communications",
-    Description = "Provides was to manage Omnichannel Contacts",
+    Description = "Provides way to manage Omnichannel Contacts",
     Dependencies =
     [
         OmnichannelConstants.Features.Area,

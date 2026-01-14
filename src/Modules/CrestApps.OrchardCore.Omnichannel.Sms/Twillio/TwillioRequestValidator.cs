@@ -54,7 +54,7 @@ internal sealed class TwillioRequestValidator
         ArgumentException.ThrowIfNullOrEmpty(expected);
 
 #pragma warning disable CA5350 // Do Not Use Weak Cryptographic Algorithms
-        var hmac = new HMACSHA1(_secret);
+        using var hmac = new HMACSHA1(_secret);
 #pragma warning restore CA5350 // Do Not Use Weak Cryptographic Algorithms
 
         if (parameters == null || parameters.Count == 0)
@@ -110,15 +110,11 @@ internal sealed class TwillioRequestValidator
         ArgumentException.ThrowIfNullOrEmpty(expected);
 
         var paramString = new Uri(url, UriKind.Absolute).Query.TrimStart('?');
-        var bodyHash = "";
-        foreach (var param in paramString.Split('&'))
-        {
-            var split = param.Split('=');
-            if (split[0] == "bodySHA256")
-            {
-                bodyHash = Uri.UnescapeDataString(split[1]);
-            }
-        }
+        var bodyHash = paramString.Split('&')
+            .Select(param => param.Split('='))
+            .Where(split => split[0] == "bodySHA256")
+            .Select(split => Uri.UnescapeDataString(split[1]))
+            .FirstOrDefault() ?? "";
 
         return Validate(url, (IDictionary<string, string>)null, expected) && ValidateBody(body, bodyHash);
     }
@@ -133,7 +129,7 @@ internal sealed class TwillioRequestValidator
     public bool ValidateBody(string rawBody, string expected)
     {
 #pragma warning disable CA5350 // Do Not Use Weak Cryptographic Algorithms
-        var hmac = new HMACSHA1(_secret);
+        using var hmac = new HMACSHA1(_secret);
 #pragma warning restore CA5350 // Do Not Use Weak Cryptographic Algorithms
 
         var signature = hmac.ComputeHash(Encoding.UTF8.GetBytes(rawBody));

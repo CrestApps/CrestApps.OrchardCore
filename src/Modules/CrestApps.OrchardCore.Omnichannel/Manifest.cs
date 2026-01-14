@@ -22,7 +22,7 @@ using OrchardCore.Modules.Manifest;
     Name = "Omnichannel (Azure Communication Services)",
     Id = OmnichannelConstants.Features.AzureCommunicationServices,
     Category = "Communications",
-    Description = "Provides was to communicate using Azure Communication Services",
+    Description = "Provides way to communicate using Azure Communication Services",
     Dependencies =
     [
         OmnichannelConstants.Features.Area,

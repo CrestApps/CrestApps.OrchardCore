@@ -61,17 +61,13 @@ internal sealed class NewActivityTaskDisplayDriver : ActivityDisplayDriver<NewAc
 
         model.Campaigns = (await _campaignCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.ItemId)).OrderBy(x => x.Text);
 
-        var subjectContentTypes = new List<SelectListItem>();
+        var subjectContentTypes = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
+            .Where(contentType => contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
+            .Select(contentType => new SelectListItem(contentType.DisplayName, contentType.Name))
+            .OrderBy(x => x.Text)
+            .ToList();
 
-        foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
-        {
-            if (contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
-            {
-                subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
-            }
-        }
-
-        model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
+        model.SubjectContentTypes = subjectContentTypes;
 
         var users = await _userManager.GetUsersInRoleAsync(OmnichannelConstants.AgentRole);
 

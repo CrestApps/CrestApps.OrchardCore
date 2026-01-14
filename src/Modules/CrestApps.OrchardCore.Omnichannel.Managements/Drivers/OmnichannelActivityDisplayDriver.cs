@@ -281,13 +281,13 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
             if (campaign is not null)
             {
-                activity.ChannelEndpointId = campaign?.ChannelEndpointId;
-                activity.InteractionType = campaign?.InteractionType ?? ActivityInteractionType.Manual;
+                activity.ChannelEndpointId = campaign.ChannelEndpointId;
+                activity.InteractionType = campaign.InteractionType;
                 activity.CampaignId = model.CampaignId;
             }
 
             activity.SubjectContentType = model.SubjectContentType;
-            activity.ContactContentType = activity.ContactContentType;
+            activity.ContactContentType = model.ContactContentType;
             activity.Instructions = model.Instructions?.Trim();
             activity.UrgencyLevel = model.UrgencyLevel;
 
