@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Services;
 
@@ -12,38 +13,31 @@ public sealed class ListWorkflowActivitiesTool : AIFunction
 {
     public const string TheName = "listWorkflowActivities";
 
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IActivityLibrary _activityLibrary;
-
-    public ListWorkflowActivitiesTool(
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService,
-        IActivityLibrary activityLibrary)
-    {
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-        _activityLibrary = activityLibrary;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {},
-              "additionalProperties": false
-            }
-            """, JsonSerializerOptions);
-    }
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+        """
+        {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "List all available workflow activities like tasks and events.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageWorkflows))
+        ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
+        var activityLibrary = arguments.Services.GetRequiredService<IActivityLibrary>();
+
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageWorkflows))
         {
             return "The current user does not have permission to manage workflows.";
         }
@@ -53,7 +47,7 @@ public sealed class ListWorkflowActivitiesTool : AIFunction
             return "Unable to find a workflowTypeId argument in the function arguments.";
         }
 
-        var activities = _activityLibrary.ListActivities();
+        var activities = activityLibrary.ListActivities();
 
         if (!activities.Any())
         {
