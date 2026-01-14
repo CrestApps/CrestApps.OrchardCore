@@ -14,7 +14,7 @@ public sealed class GeneralReferenceDocumentProcessingStrategy : DocumentProcess
     /// <inheritdoc />
     public override Task ProcessAsync(DocumentProcessingContext context)
     {
-        if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.GeneralChatWithReference, StringComparison.OrdinalIgnoreCase))
+        if (!CanHandle(context, DocumentIntents.GeneralChatWithReference))
         {
             return Task.CompletedTask;
         }

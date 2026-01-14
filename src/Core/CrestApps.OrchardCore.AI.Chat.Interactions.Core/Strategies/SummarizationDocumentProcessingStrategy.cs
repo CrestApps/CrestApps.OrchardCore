@@ -14,7 +14,7 @@ public sealed class SummarizationDocumentProcessingStrategy : DocumentProcessing
     /// <inheritdoc />
     public override Task ProcessAsync(DocumentProcessingContext context)
     {
-        if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.SummarizeDocument, StringComparison.OrdinalIgnoreCase))
+        if (!CanHandle(context, DocumentIntents.SummarizeDocument))
         {
             return Task.CompletedTask;
         }

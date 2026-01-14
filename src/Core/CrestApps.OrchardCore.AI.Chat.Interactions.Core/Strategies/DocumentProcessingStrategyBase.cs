@@ -92,6 +92,9 @@ public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrate
         return builder.ToString();
     }
 
+    protected static bool CanHandle(DocumentProcessingContext context, string intent)
+        => string.Equals(context.IntentResult?.Intent, intent, StringComparison.OrdinalIgnoreCase);
+
     private static string FormatFileSize(long bytes)
     {
         if (bytes < 1024)

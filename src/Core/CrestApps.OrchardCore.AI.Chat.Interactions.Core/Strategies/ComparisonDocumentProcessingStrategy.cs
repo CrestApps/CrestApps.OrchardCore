@@ -13,7 +13,7 @@ public sealed class ComparisonDocumentProcessingStrategy : DocumentProcessingStr
     /// <inheritdoc />
     public override Task ProcessAsync(DocumentProcessingContext context)
     {
-        if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.CompareDocuments, StringComparison.OrdinalIgnoreCase))
+        if (!CanHandle(context, DocumentIntents.CompareDocuments))
         {
             return Task.CompletedTask;
         }

@@ -15,6 +15,8 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
 
     public string DefaultEmbeddingDeploymentName { get; set; }
 
+    public string DefaultIntentDeploymentName { get; set; }
+
     public bool IsDefault { get; set; }
 
     [JsonIgnore]
@@ -48,6 +50,7 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
             IsDefault = IsDefault,
             DefaultDeploymentName = DefaultDeploymentName,
             DefaultEmbeddingDeploymentName = DefaultEmbeddingDeploymentName,
+            DefaultIntentDeploymentName = DefaultIntentDeploymentName,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,

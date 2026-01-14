@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 public sealed class DefaultDocumentProcessingStrategyProvider : IDocumentProcessingStrategyProvider
 {
     private readonly IEnumerable<IDocumentProcessingStrategy> _strategies;
-    private readonly ILogger<DefaultDocumentProcessingStrategyProvider> _logger;
+    private readonly ILogger _logger;
 
     public DefaultDocumentProcessingStrategyProvider(
         IEnumerable<IDocumentProcessingStrategy> strategies,
@@ -28,19 +28,23 @@ public sealed class DefaultDocumentProcessingStrategyProvider : IDocumentProcess
 
         var intent = context.IntentResult.Intent;
 
+        var isDebugging = _logger.IsEnabled(LogLevel.Debug);
+
         // Call all strategies, allowing each to contribute context
         foreach (var strategy in _strategies)
         {
             try
             {
-                _logger.LogDebug("Calling strategy {StrategyType} for intent {Intent}.",
-                    strategy.GetType().Name, intent);
+                if (isDebugging)
+                {
+                    _logger.LogDebug("Calling strategy {StrategyType} for intent {Intent}.", strategy.GetType().Name, intent);
+                }
 
                 var contextCountBefore = context.Result.AdditionalContexts.Count;
                 await strategy.ProcessAsync(context);
                 var contextCountAfter = context.Result.AdditionalContexts.Count;
 
-                if (contextCountAfter > contextCountBefore)
+                if (isDebugging && contextCountAfter > contextCountBefore)
                 {
                     _logger.LogDebug("Strategy {StrategyType} added {ContextCount} context(s) for intent {Intent}.",
                         strategy.GetType().Name, contextCountAfter - contextCountBefore, intent);
@@ -48,15 +52,17 @@ public sealed class DefaultDocumentProcessingStrategyProvider : IDocumentProcess
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in strategy {StrategyType} for intent {Intent}.",
-                    strategy.GetType().Name, intent);
                 // Continue to next strategy on error
+                _logger.LogError(ex, "Error in strategy {StrategyType} for intent {Intent}.", strategy.GetType().Name, intent);
             }
         }
 
         if (!context.Result.HasContext)
         {
-            _logger.LogDebug("No strategy added context for intent {Intent}.", intent);
+            if (isDebugging)
+            {
+                _logger.LogDebug("No strategy added context for intent {Intent}.", intent);
+            }
         }
     }
 }

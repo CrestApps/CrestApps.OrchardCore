@@ -13,7 +13,7 @@ public sealed class ExtractionDocumentProcessingStrategy : DocumentProcessingStr
     /// <inheritdoc />
     public override Task ProcessAsync(DocumentProcessingContext context)
     {
-        if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.ExtractStructuredData, StringComparison.OrdinalIgnoreCase))
+        if (!CanHandle(context, DocumentIntents.ExtractStructuredData))
         {
             return Task.CompletedTask;
         }

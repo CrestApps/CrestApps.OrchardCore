@@ -1,15 +1,11 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.Core;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.AI.Core.Extensions;
 
 public static class AIFunctionArgumentsExtensions
 {
-    private readonly static JsonSerializerOptions _caseInsensitive = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
-
     public static bool TryGetFirst(this AIFunctionArguments arguments, string key, out object value)
     {
         return arguments.TryGetValue(key, out value) && value is not null;
@@ -67,7 +63,7 @@ public static class AIFunctionArgumentsExtensions
 
             if (unsafeValue is JsonElement je)
             {
-                value = JsonSerializer.Deserialize<T>(je.GetRawText(), _caseInsensitive);
+                value = JsonSerializer.Deserialize<T>(je.GetRawText(), JSOptions.CaseInsensitive);
 
                 return true;
             }

@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 /// </summary>
 public sealed class TabularAnalysisDocumentProcessingStrategy : DocumentProcessingStrategyBase
 {
-    private static readonly string[] TabularExtensions = [".csv", ".tsv", ".xlsx", ".xls"];
+    private static readonly string[] _tabularExtensions = [".csv", ".tsv", ".xlsx", ".xls"];
 
     // Maximum rows to include in context
     private const int MaxRows = 100;
@@ -18,7 +18,7 @@ public sealed class TabularAnalysisDocumentProcessingStrategy : DocumentProcessi
     /// <inheritdoc />
     public override Task ProcessAsync(DocumentProcessingContext context)
     {
-        if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.AnalyzeTabularData, StringComparison.OrdinalIgnoreCase))
+        if (!CanHandle(context, DocumentIntents.AnalyzeTabularData))
         {
             return Task.CompletedTask;
         }
@@ -106,7 +106,7 @@ public sealed class TabularAnalysisDocumentProcessingStrategy : DocumentProcessi
             return false;
         }
 
-        foreach (var ext in TabularExtensions)
+        foreach (var ext in _tabularExtensions)
         {
             if (fileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase))
             {

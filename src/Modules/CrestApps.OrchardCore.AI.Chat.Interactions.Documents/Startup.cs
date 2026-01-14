@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Endpoints;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Handlers;
@@ -40,6 +41,9 @@ public sealed class Startup : StartupBase
         services
             .AddDocumentProcessingServices()
             .AddDefaultDocumentProcessingStrategies()
+            .AddDocumentIntent(
+                DocumentIntents.DocumentQnA,
+                "The user wants to ask questions about documents, search for information, or find specific content within documents using RAG (Retrieval-Augmented Generation).")
             .AddDocumentProcessingStrategy<RagDocumentProcessingStrategy>();
     }
 

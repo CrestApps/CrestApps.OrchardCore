@@ -46,6 +46,7 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
             model.Name = connection.Name;
             model.DefaultDeploymentName = connection.DefaultDeploymentName;
             model.DefaultEmbeddingDeploymentName = connection.DefaultEmbeddingDeploymentName;
+            model.DefaultIntentDeploymentName = connection.DefaultIntentDeploymentName;
             model.IsDefault = connection.IsDefault;
             model.IsNew = context.IsNew;
 
@@ -85,6 +86,7 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
         connection.DisplayText = model.DisplayText;
         connection.DefaultDeploymentName = model.DefaultDeploymentName;
         connection.DefaultEmbeddingDeploymentName = model.DefaultEmbeddingDeploymentName;
+        connection.DefaultIntentDeploymentName = model.DefaultIntentDeploymentName;
         connection.IsDefault = model.IsDefault;
 
         _shellReleaseManager.RequestRelease();

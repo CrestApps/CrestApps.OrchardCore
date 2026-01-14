@@ -145,59 +145,70 @@ Example:
 services.AddDocumentTextExtractor<MyCustomExtractor>();
 ```
 
-## Extending Intent Detection
-
-You can provide custom intent detection by implementing `IDocumentIntentDetector`:
-
-```csharp
-public class MyIntentDetector : IDocumentIntentDetector
-{
-    public Task<DocumentIntentResult> DetectAsync(DocumentIntentDetectionContext context)
-    {
-        // Your custom intent detection logic
-        return Task.FromResult(DocumentIntentResult.FromIntent(DocumentIntents.DocumentQnA));
-    }
-}
-
-// Register in Startup
-services.AddScoped<IDocumentIntentDetector, MyIntentDetector>();
-```
-
 ## Adding Custom Processing Strategies
 
-To add a custom processing strategy:
+To add a custom document processing strategy with a custom intent:
 
-1. Implement `IDocumentProcessingStrategy` or extend `DocumentProcessingStrategyBase`
-2. Register using `AddDocumentProcessingStrategy<T>()`
+1. Register your intent using `AddDocumentIntent()` - this configures the AI intent detector to recognize your custom intent
+2. Implement `IDocumentProcessingStrategy` or extend `DocumentProcessingStrategyBase`
+3. Register your strategy using `AddDocumentProcessingStrategy<T>()`
 
-All strategies are called in sequence and each can add context to the shared result.
-Multiple strategies can contribute to the same request.
+> **Important**: Intents must be registered via `AddDocumentIntent()` to be recognized by the AI intent detector. If an intent is not registered, it will not be included in the AI classification prompt and your strategy will never be invoked.
 
-Example:
+### Example: Custom Strategy with Custom Intent
+
 ```csharp
 public class MyCustomStrategy : DocumentProcessingStrategyBase
 {
+    public const string MyCustomIntent = "MyCustomIntent";
+
     public override Task ProcessAsync(DocumentProcessingContext context)
     {
         // Check if we should handle this intent
-        if (!string.Equals(context.IntentResult?.Intent, "MyCustomIntent", StringComparison.OrdinalIgnoreCase))
+        if (!CanHandle(context, MyCustomIntent))
         {
             return Task.CompletedTask;
         }
 
+        // Get combined text from all documents
+        var documentText = GetCombinedDocumentText(context, maxLength: 50000);
+
         // Add context to the result
         context.Result.AddContext(
-            "Custom context content",
-            "Custom prefix:",
+            documentText,
+            "Custom context from documents:",
             usedVectorSearch: false);
 
         return Task.CompletedTask;
     }
 }
-
-// Register in Startup
-services.AddDocumentProcessingStrategy<MyCustomStrategy>();
 ```
+
+### Registering in Startup
+
+```csharp
+public override void ConfigureServices(IServiceCollection services)
+{
+    // Register the custom intent with a description for the AI classifier
+    services.AddDocumentIntent(
+        MyCustomStrategy.MyCustomIntent,
+        "The user wants to perform a custom operation on the documents, such as [describe when this intent applies].");
+
+    // Register the strategy
+    services.AddDocumentProcessingStrategy<MyCustomStrategy>();
+}
+```
+
+### How It Works
+
+1. **Intent Registration**: `AddDocumentIntent()` adds your intent and description to `DocumentProcessingOptions.Intents`
+2. **AI Classification**: The AI intent detector dynamically builds its classification prompt from all registered intents
+3. **Intent Detection**: When a user sends a message, the AI classifies their intent based on the registered descriptions
+4. **Strategy Invocation**: Your strategy's `ProcessAsync` method is called, and it checks if the detected intent matches
+
+### Multiple Strategies
+
+All registered strategies are called in sequence. Each strategy decides whether to handle the request based on the detected intent. Multiple strategies can contribute context to the same request.
 
 ## API Endpoints
 

@@ -13,7 +13,7 @@ public sealed class TransformationDocumentProcessingStrategy : DocumentProcessin
     /// <inheritdoc />
     public override Task ProcessAsync(DocumentProcessingContext context)
     {
-        if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.TransformFormat, StringComparison.OrdinalIgnoreCase))
+        if (!CanHandle(context, DocumentIntents.TransformFormat))
         {
             return Task.CompletedTask;
         }

@@ -26,4 +26,9 @@ public sealed class DocumentIntentDetectionContext
     /// Gets or sets the cancellation token for the operation.
     /// </summary>
     public CancellationToken CancellationToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets the service provider for resolving dependencies.
+    /// </summary>
+    public IServiceProvider ServiceProvider { get; set; }
 }

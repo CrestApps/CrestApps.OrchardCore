@@ -1,10 +1,8 @@
 using System.Text;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -43,7 +41,7 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
     /// <inheritdoc />
     public override async Task ProcessAsync(DocumentProcessingContext context)
     {
-        if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.DocumentQnA, StringComparison.OrdinalIgnoreCase))
+        if (!CanHandle(context, DocumentIntents.DocumentQnA))
         {
             return;
         }
