@@ -79,8 +79,8 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             model.TopP = context.IsNew ? _defaultAIOptions.TopP : campaign.TopP;
             model.FrequencyPenalty = context.IsNew ? _defaultAIOptions.FrequencyPenalty : campaign.FrequencyPenalty;
             model.PresencePenalty = context.IsNew ? _defaultAIOptions.PresencePenalty : campaign.PresencePenalty;
-            model.AllowAIToUpdateContact = context.IsNew ? false : campaign.AllowAIToUpdateContact;
-            model.AllowAIToUpdateSubject = context.IsNew ? true : campaign.AllowAIToUpdateSubject;
+            model.AllowAIToUpdateContact = !context.IsNew && campaign.AllowAIToUpdateContact;
+            model.AllowAIToUpdateSubject = context.IsNew || campaign.AllowAIToUpdateSubject;
 
             var dispositions = await _dispositionsCatalog.GetAllAsync();
 
@@ -219,16 +219,11 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
 
             var selectedToolKeys = toolsModel.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
 
-            if (selectedToolKeys is null || !selectedToolKeys.Any())
-            {
-                campaign.ToolNames = [];
-            }
-            else
-            {
-                campaign.ToolNames = _toolDefinitions.Tools.Keys
-                .Intersect(selectedToolKeys)
-                .ToArray();
-            }
+            campaign.ToolNames = selectedToolKeys is null || !selectedToolKeys.Any()
+                ? []
+                : _toolDefinitions.Tools.Keys
+                    .Intersect(selectedToolKeys)
+                    .ToArray();
         }
 
         return Edit(campaign, context);

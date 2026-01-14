@@ -296,7 +296,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     // we use deferred task here to ensure that we don't hold current process for a longer running
                     // AI conclusion detection.
                     var store = scope.ServiceProvider.GetRequiredService<IOmnichannelActivityStore>();
-                    var completionService = scope.ServiceProvider.GetRequiredService<IAICompletionService>();
                     var dispositionCatalog = scope.ServiceProvider.GetRequiredService<ICatalog<OmnichannelDisposition>>();
                     var clientFactory = scope.ServiceProvider.GetRequiredService<IAIClientFactory>();
                     var dispositions = await dispositionCatalog.GetAsync(campaign.DispositionIds);

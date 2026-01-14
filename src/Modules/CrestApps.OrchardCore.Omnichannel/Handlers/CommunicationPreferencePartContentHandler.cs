@@ -74,7 +74,7 @@ internal sealed class CommunicationPreferencePartContentHandler : ContentDisplay
 
         if (!part.DoNotChat && model.DoNotChat)
         {
-            part.DoNotChat = model.DoNotEmail;
+            part.DoNotChat = model.DoNotChat;
             part.DoNotChatUtc = _clock.UtcNow;
         }
         else
