@@ -133,9 +133,10 @@ public sealed class TabularAnalysisDocumentProcessingStrategy : DocumentProcessi
             return content;
         }
 
-        // Take header + first N rows
+        // Take header + first N rows + truncation message
+        // lines.Length > maxRows + 1, so we have at least maxRows + 2 elements
         var limitedLines = new string[maxRows + 2]; // +1 for header, +1 for truncation message
-        for (var i = 0; i <= maxRows; i++)
+        for (var i = 0; i <= maxRows && i < lines.Length; i++)
         {
             limitedLines[i] = lines[i];
         }

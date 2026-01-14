@@ -58,6 +58,11 @@ public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrate
             if (maxLength.HasValue)
             {
                 var remainingSpace = maxLength.Value - totalLength;
+                if (remainingSpace <= 0)
+                {
+                    break;
+                }
+
                 if (textToAdd.Length > remainingSpace)
                 {
                     textToAdd = textToAdd.Substring(0, remainingSpace);
