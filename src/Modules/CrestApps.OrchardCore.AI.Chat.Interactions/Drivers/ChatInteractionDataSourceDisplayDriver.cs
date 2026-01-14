@@ -33,8 +33,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
 
     public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
     {
-        // Only show data source selector for AzureOpenAIOwnData provider
-        if (!string.Equals(interaction.Source, AzureOpenAIConstants.AzureOpenAIOwnData, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(interaction.Source, AzureOpenAIConstants.ProviderName, StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
@@ -59,8 +58,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
     {
-        // Only update for AzureOpenAIOwnData provider
-        if (!string.Equals(interaction.Source, AzureOpenAIConstants.AzureOpenAIOwnData, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(interaction.Source, AzureOpenAIConstants.ProviderName, StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }

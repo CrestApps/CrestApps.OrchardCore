@@ -18,7 +18,7 @@ public sealed class ElasticsearchAIDataSourceHandler : CatalogEntryHandlerBase<A
 
     public override Task ValidatedAsync(ValidatedContext<AIDataSource> context)
     {
-        if (context.Model.ProfileSource != AzureOpenAIConstants.AzureOpenAIOwnData ||
+        if (context.Model.ProfileSource != AzureOpenAIConstants.ProviderName ||
             context.Model.Type != AzureOpenAIConstants.DataSourceTypes.Elasticsearch)
         {
             return Task.CompletedTask;

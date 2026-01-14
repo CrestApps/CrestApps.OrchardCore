@@ -32,7 +32,7 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
 
     public override Task ValidatedAsync(ValidatedContext<AIDataSource> context)
     {
-        if (context.Model.ProfileSource != AzureOpenAIConstants.AzureOpenAIOwnData ||
+        if (context.Model.ProfileSource != AzureOpenAIConstants.ProviderName ||
             context.Model.Type != AzureOpenAIConstants.DataSourceTypes.MongoDB)
         {
             return Task.CompletedTask;
@@ -80,7 +80,7 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
 
     private Task PopulateAsync(AIDataSource source, JsonNode data)
     {
-        if (source.ProfileSource != AzureOpenAIConstants.AzureOpenAIOwnData ||
+        if (source.ProfileSource != AzureOpenAIConstants.ProviderName ||
             source.Type != AzureOpenAIConstants.DataSourceTypes.MongoDB)
         {
             return Task.CompletedTask;

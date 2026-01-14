@@ -58,13 +58,11 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
 
         var model = new EditProfileDataSourcesViewModel();
 
+        var metadata = profile.As<AIProfileDataSourceMetadata>();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrEmpty(model.DataSourceId))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DataSourceId), S["Data source is required."]);
-        }
-        else
+        if (!string.IsNullOrEmpty(model.DataSourceId))
         {
             var dataSource = await _dataSourceStore.FindByIdAsync(model.DataSourceId);
 
@@ -73,12 +71,16 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.DataSourceId), S["Invalid data source provided."]);
             }
 
-            profile.Put(new AIProfileDataSourceMetadata()
-            {
-                DataSourceType = dataSource?.Type,
-                DataSourceId = model.DataSourceId,
-            });
+            metadata.DataSourceId = model.DataSourceId;
+            metadata.DataSourceType = dataSource?.Type;
         }
+        else
+        {
+            metadata.DataSourceId = null;
+            metadata.DataSourceType = null;
+        }
+
+        profile.Put(metadata);
 
         return Edit(profile, context);
     }
