@@ -25,6 +25,10 @@
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AzureAIInference\CrestApps.OrchardCore.AzureAIInference.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.ContentAccessControl\CrestApps.OrchardCore.ContentAccessControl.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Ollama\CrestApps.OrchardCore.Ollama.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Omnichannel.EventGrid\CrestApps.OrchardCore.Omnichannel.EventGrid.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Omnichannel.Managements\CrestApps.OrchardCore.Omnichannel.Managements.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Omnichannel.Sms\CrestApps.OrchardCore.Omnichannel.Sms.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Omnichannel\CrestApps.OrchardCore.Omnichannel.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.OpenAI.Azure\CrestApps.OrchardCore.OpenAI.Azure.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.OpenAI\CrestApps.OrchardCore.OpenAI.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Recipes\CrestApps.OrchardCore.Recipes.csproj" PrivateAssets="none" />

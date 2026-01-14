@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.YesSql.Core.Indexes;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using YesSql;
 
 namespace CrestApps.OrchardCore.YesSql.Core;
 
@@ -19,38 +20,58 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddDocumentCatalog<TModel, TIndex>(this IServiceCollection services)
+    public static IServiceCollection AddDocumentCatalog<TModel, TIndex>(this IServiceCollection services, string collection = null)
         where TModel : CatalogItem
         where TIndex : CatalogItemIndex
     {
-        services.AddScoped<ICatalog<TModel>, DocumentCatalog<TModel, TIndex>>();
+        services.AddScoped<ICatalog<TModel>>(sp =>
+        {
+            var session = sp.GetRequiredService<ISession>();
+
+            return new DocumentCatalog<TModel, TIndex>(session, collection);
+        });
 
         return services;
     }
 
-    public static IServiceCollection AddNamedDocumentCatalog<TModel, TIndex>(this IServiceCollection services)
+    public static IServiceCollection AddNamedDocumentCatalog<TModel, TIndex>(this IServiceCollection services, string collection = null)
         where TModel : CatalogItem, INameAwareModel
         where TIndex : CatalogItemIndex, INameAwareIndex
     {
-        services.AddScoped<ICatalog<TModel>, NamedDocumentCatalog<TModel, TIndex>>();
+        services.AddScoped<ICatalog<TModel>>(sp =>
+        {
+            var session = sp.GetRequiredService<ISession>();
+
+            return new NamedDocumentCatalog<TModel, TIndex>(session, collection);
+        });
 
         return services;
     }
 
-    public static IServiceCollection AddSourceDocumentCatalog<TModel, TIndex>(this IServiceCollection services)
+    public static IServiceCollection AddSourceDocumentCatalog<TModel, TIndex>(this IServiceCollection services, string collection = null)
         where TModel : CatalogItem, ISourceAwareModel
         where TIndex : CatalogItemIndex, ISourceAwareIndex
     {
-        services.AddScoped<ISourceCatalog<TModel>, SourceDocumentCatalog<TModel, TIndex>>();
+        services.AddScoped<ICatalog<TModel>>(sp =>
+        {
+            var session = sp.GetRequiredService<ISession>();
+
+            return new SourceDocumentCatalog<TModel, TIndex>(session, collection);
+        });
 
         return services;
     }
 
-    public static IServiceCollection AddNamedSourceDocumentCatalog<TModel, TIndex>(this IServiceCollection services)
+    public static IServiceCollection AddNamedSourceDocumentCatalog<TModel, TIndex>(this IServiceCollection services, string collection = null)
         where TModel : CatalogItem, INameAwareModel, ISourceAwareModel
         where TIndex : CatalogItemIndex, INameAwareIndex, ISourceAwareIndex
     {
-        services.AddScoped<INamedSourceCatalog<TModel>, NamedSourceDocumentCatalog<TModel, TIndex>>();
+        services.AddScoped<ICatalog<TModel>>(sp =>
+        {
+            var session = sp.GetRequiredService<ISession>();
+
+            return new NamedSourceDocumentCatalog<TModel, TIndex>(session, collection);
+        });
 
         return services;
     }

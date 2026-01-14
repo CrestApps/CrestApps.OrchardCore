@@ -101,9 +101,17 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         };
     }
 
-    public async Task<AIChatSession> FindAsync(string sessionId)
+    public Task<AIChatSession> FindByIdAsync(string id)
     {
-        ArgumentException.ThrowIfNullOrEmpty(sessionId);
+        ArgumentException.ThrowIfNullOrEmpty(id);
+
+        return _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id, collection: AIConstants.CollectionName)
+                .FirstOrDefaultAsync();
+    }
+
+    public async Task<AIChatSession> FindAsync(string id)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(id);
 
         var user = _httpContextAccessor.HttpContext?.User;
 
@@ -111,7 +119,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == sessionId && i.UserId == userId && i.ProfileId != null, collection: AIConstants.CollectionName)
+            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id && i.UserId == userId && i.ProfileId != null, collection: AIConstants.CollectionName)
                 .FirstOrDefaultAsync();
         }
         else
@@ -124,7 +132,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             }
 
             // It's important to make sure that the userId is null when querying using clientId.
-            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == sessionId && i.UserId == null && i.ClientId == clientId, collection: AIConstants.CollectionName)
+            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id && i.UserId == null && i.ClientId == clientId, collection: AIConstants.CollectionName)
                 .FirstOrDefaultAsync();
         }
     }

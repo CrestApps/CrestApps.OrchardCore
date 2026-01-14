@@ -1,0 +1,123 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using OrchardCore
+
+@model OmnichannelActivityBatchViewModel
+
+@if (Model.Status != OmnichannelActivityBatchStatus.New)
+{
+    <div class="alert alert-info" role="alert">
+        @T["You cannot change the settings of an activity batch once it has started loading. If you need to change any of these settings, please create a new activity batch."]
+    </div>
+}
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DisplayText" class="@Orchard.GetLabelClasses()">@T["Title"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="DisplayText" class="form-control" />
+        <span asp-validation-for="DisplayText" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="CampaignId" class="@Orchard.GetLabelClasses()">@T["Campaign"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">
+            <option value="">@T["Select a campaign"]</option>
+        </select>
+        <span asp-validation-for="CampaignId" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="SubjectContentType" class="@Orchard.GetLabelClasses()">@T["Subject content type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select">
+            <option value="">@T["Select a subject content type"]</option>
+        </select>
+        <span asp-validation-for="SubjectContentType" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="ContactContentType" class="@Orchard.GetLabelClasses()">@T["Contact content type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="ContactContentType" asp-items="Model.ContactContentTypes" class="form-select">
+            <option value="">@T["Select a contact content type"]</option>
+        </select>
+        <span asp-validation-for="ContactContentType" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="ScheduleAt" class="@Orchard.GetLabelClasses()">@T["Schedule at"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="datetime-local" asp-for="ScheduleAt" class="form-control" />
+        <span asp-validation-for="ScheduleAt" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="UserIds" class="@Orchard.GetLabelClasses()">@T["User(s) to assign activities to"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="UserIds" asp-items="Model.Users" class="form-select" multiple></select>
+        <span asp-validation-for="UserIds" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="UrgencyLevel" class="@Orchard.GetLabelClasses()">@T["Urgency level"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels" class="form-select"></select>
+        <span asp-validation-for="UrgencyLevel" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Instructions" class="@Orchard.GetLabelClasses()">@T["Instructions"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="Instructions" class="form-control"></textarea>
+        <span asp-validation-for="Instructions" class="text-danger"></span>
+        <span class="hint">@T["Optionally, specify any instructions the user should know or be aware of before completing this activity."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="PreventDuplicates">
+            <label class="form-check-label" asp-for="PreventDuplicates">@T["Prevent duplicate activity with the same subject"]</label>
+            <span class="hint dashed">@T["When enabled, if a contact already has an outstanding activity with the same subject, a new one will not be created."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IncludeDoNoCalls">
+            <label class="form-check-label" asp-for="IncludeDoNoCalls">@T["Include do not call contacts"]</label>
+            <span class="hint dashed">@T["When enabled, we'll include any contact that is flagged as do not call."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IncludeDoNoEmail">
+            <label class="form-check-label" asp-for="IncludeDoNoEmail">@T["Include do not email contacts"]</label>
+            <span class="hint dashed">@T["When enabled, we'll include any contact that is flagged as do not email."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IncludeDoNoSms">
+            <label class="form-check-label" asp-for="IncludeDoNoSms">@T["Include do not SMS contacts"]</label>
+            <span class="hint dashed">@T["When enabled, we'll include any contact that is flagged as do not SMS."]</span>
+        </div>
+    </div>
+</div>

@@ -242,7 +242,6 @@ public sealed class ConnectionsController : Controller
 
     [HttpPost]
     [Admin("ai/mcp/connection/delete/{id}", "AIMCPConnectionDelete")]
-
     public async Task<IActionResult> Delete(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, McpPermissions.ManageMcpConnections))

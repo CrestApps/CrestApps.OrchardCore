@@ -6,7 +6,7 @@ public class UsersConstants
 
     public class Feature
     {
-        public const string Users = "CrestApps.OrchardCore.Users";
+        public const string Area = "CrestApps.OrchardCore.Users";
 
         public const string DisplayName = "CrestApps.OrchardCore.Users.DisplayName";
 

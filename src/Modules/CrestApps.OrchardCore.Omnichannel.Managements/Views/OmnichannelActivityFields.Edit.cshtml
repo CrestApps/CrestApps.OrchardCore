@@ -1,0 +1,58 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore
+
+@model EditOmnichannelActivity
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="CampaignId" class="@Orchard.GetLabelClasses()">@T["Campaign"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select">
+            <option value="">@T["Select a campaign"]</option>
+        </select>
+        <span asp-validation-for="CampaignId" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="SubjectContentType" class="@Orchard.GetLabelClasses()">@T["Subject content type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select">
+            <option value="">@T["Select a subject content type"]</option>
+        </select>
+        <span asp-validation-for="SubjectContentType" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="ScheduleAt" class="@Orchard.GetLabelClasses()">@T["Schedule at"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="datetime-local" asp-for="ScheduleAt" class="form-control" />
+        <span asp-validation-for="ScheduleAt" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="UserId" class="@Orchard.GetLabelClasses()">@T["User(s) to assign activities to"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="UserId" asp-items="Model.Users" class="form-select"></select>
+        <span asp-validation-for="UserId" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="UrgencyLevel" class="@Orchard.GetLabelClasses()">@T["Urgency level"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels" class="form-select"></select>
+        <span asp-validation-for="UrgencyLevel" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Instructions" class="@Orchard.GetLabelClasses()">@T["Instructions"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="Instructions" class="form-control"></textarea>
+        <span asp-validation-for="Instructions" class="text-danger"></span>
+        <span class="hint">@T["Optionally, specify any instructions the user should know or be aware of before completing this activity."]</span>
+    </div>
+</div>
