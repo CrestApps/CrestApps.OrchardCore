@@ -98,10 +98,9 @@ public sealed class SearchForContentsTool : AIFunction
         $$"""
             {
                 "contentItems": {{JsonSerializer.Serialize(contentItems, options.SerializerOptions)}},
-                "pageSize": {{pagerOptions.PageSize}},
                 "contentItemsCount": {{contentItemsCount}},
                 "totalPages": {{Math.Ceiling((double)contentItemsCount / pagerOptions.PageSize)}},
-                "pageSize": {{pagerOptions.PageSize}},
+                "pageSize": {{pagerOptions.PageSize}}
             }
             """;
     }

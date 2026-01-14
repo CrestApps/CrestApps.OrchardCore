@@ -86,10 +86,9 @@ public sealed class ListWorkflowTypesTool : AIFunction
         $$"""
             {
                 "workflows": {{JsonSerializer.Serialize(items, options.SerializerOptions)}},
-                "pageSize": {{pagerOptions.PageSize}},
                 "workflowsCount": {{count}},
                 "totalPages": {{Math.Ceiling((double)count / pagerOptions.PageSize)}},
-                "pageSize": {{pagerOptions.PageSize}},
+                "pageSize": {{pagerOptions.PageSize}}
             }
             """;
     }

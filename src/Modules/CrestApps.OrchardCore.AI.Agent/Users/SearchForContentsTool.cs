@@ -100,10 +100,9 @@ public sealed class SearchForUsersTool : AIFunction
         $$"""
             {
                 "users": {{JsonSerializer.Serialize(contentItems, options.SerializerOptions)}},
-                "pageSize": {{pagerOptions.PageSize}},
                 "usersCount": {{contentItemsCount}},
                 "totalPages": {{Math.Ceiling((double)contentItemsCount / pagerOptions.PageSize)}},
-                "pageSize": {{pagerOptions.PageSize}},
+                "pageSize": {{pagerOptions.PageSize}}
             }
             """;
     }

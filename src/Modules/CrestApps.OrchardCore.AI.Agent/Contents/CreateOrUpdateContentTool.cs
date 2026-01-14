@@ -65,7 +65,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             isDraft = false;
         }
 
-        var model = JsonSerializer.Deserialize<ContentItem>(json);
+        var model = JsonSerializer.Deserialize<ContentItem>(json, JsonSerializerOptions);
 
         var contentItem = await contentManager.GetAsync(model.ContentItemId, VersionOptions.DraftRequired);
 
