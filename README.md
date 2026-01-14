@@ -57,7 +57,10 @@ Enables ad-hoc AI chat experiences with configurable parameters, document upload
 Enhances the **AI Module** by providing AI Agents to perform tasks on your Orchard Core site. For more details, see the [Orchard Core AI Agent Module README](src/Modules/CrestApps.OrchardCore.AI.Agent/README.md).
 
 #### Model Context Protocol (MCP) Module
-Enhances the **AI Module** by adding support for connecting to any **MCP server**, whether hosted locally or remotely. For more details, see the [MCP Module README](src/Modules/CrestApps.OrchardCore.AI.Mcp/README.md).
+Provides support for the Model Context Protocol (MCP) and contains multiple features:
+
+- **MCP Client (feature)** — Client-side components to connect to remote MCP servers. See [README](src/Modules/CrestApps.OrchardCore.AI.Mcp/README.md) file for details.
+- **MCP Server (feature)** — Enables Orchard Core to act as an MCP server, exposing AI tools and capabilities to external MCP-compatible clients such as AI agents, IDEs, copilots, and automation tools. See [README-server](src/Modules/CrestApps.OrchardCore.AI.Mcp/README-server.md) file for details.
 
 #### Azure OpenAI Module
 Extends the **AI Module** by integrating **Azure OpenAI** services. See the [Azure OpenAI Module README](src/Modules/CrestApps.OrchardCore.OpenAI.Azure/README.md).  
@@ -189,4 +192,4 @@ We welcome contributions from the community! To contribute:
 
 ## License
 
-CrestApps is licensed under the **MIT License**. See the [LICENSE](https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt) file for more details.  
+CrestApps is licensed under the **MIT License**. See the [LICENSE](https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt) file for more details.

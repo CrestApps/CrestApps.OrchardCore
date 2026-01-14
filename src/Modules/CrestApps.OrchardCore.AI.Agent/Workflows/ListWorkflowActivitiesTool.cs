@@ -24,11 +24,22 @@ public sealed class ListWorkflowActivitiesTool : AIFunction
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _activityLibrary = activityLibrary;
+
+        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
+            """
+            {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+            """, JsonSerializerOptions);
     }
 
     public override string Name => TheName;
 
     public override string Description => "List all available workflow activities like tasks and events.";
+
+    public override JsonElement JsonSchema { get; }
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {

@@ -142,6 +142,12 @@ Prefer configuration through code? Here's how to define the same connection usin
 
 ---
 
+### Model Context Protocol (MCP) Server
+
+The **Model Context Protocol (MCP) Server Feature** allows your Orchard Core application to expose its AI tools and capabilities to external MCP clients. This feature supports the SSE transport type, enabling real-time communication. For more information, refer to the [MCP Server Documentation](./README-server.md).
+
+---
+
 ### Admin Chat UI with Time MCP Server Integration (MCP Demonstration)
 
 ![Screen cast of the admin chat](../../../docs/images/mcp-integration.gif)
