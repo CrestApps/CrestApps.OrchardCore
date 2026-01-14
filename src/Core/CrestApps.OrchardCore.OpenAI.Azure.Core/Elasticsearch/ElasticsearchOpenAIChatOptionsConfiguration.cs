@@ -153,6 +153,11 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
         {
             elasticsearchDataSource.parameters["top_n_documents"] = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
             elasticsearchDataSource.parameters["strictness"] = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
+
+            if (!string.IsNullOrWhiteSpace(dataSourceMetadata.Filter))
+            {
+                elasticsearchDataSource.parameters["filter"] = dataSourceMetadata.Filter;
+            }
         }
         else
         {

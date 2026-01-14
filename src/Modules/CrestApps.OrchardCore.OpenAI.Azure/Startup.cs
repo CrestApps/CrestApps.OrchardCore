@@ -31,6 +31,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDataMigration<AzureOpenAIOwnDataAIProfilesMigrations>();
+        services.AddSingleton<IODataFilterValidator, ODataFilterValidator>();
 
         services
             .AddScoped<IAIClientProvider, AzureOpenAIClientProvider>()
