@@ -19,6 +19,7 @@ public sealed class ApplySystemSettingsTool : ImportRecipeBaseTool
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services, nameof(arguments.Services));
 
         var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
         var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();

@@ -36,6 +36,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
     protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services, nameof(arguments.Services));
 
         if (!arguments.TryGetFirstString("recipe", out var recipe))
         {
@@ -54,6 +55,8 @@ public abstract class ImportRecipeBaseTool : AIFunction
     protected static async ValueTask<object> ProcessRecipeAsync(IServiceProvider services, string json, CancellationToken cancellationToken)
 #pragma warning restore IDE0060 // Remove unused parameter
     {
+        ArgumentNullException.ThrowIfNull(services, nameof(services));
+
         var recipeExecutionService = services.GetRequiredService<RecipeExecutionService>();
         var recipeStepsService = services.GetRequiredService<RecipeStepsService>();
         var recipeSteps = services.GetRequiredService<IEnumerable<IRecipeStep>>();

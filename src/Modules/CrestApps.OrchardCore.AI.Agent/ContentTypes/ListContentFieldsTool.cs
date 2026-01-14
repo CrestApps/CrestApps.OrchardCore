@@ -29,6 +29,7 @@ public sealed class ListContentFieldsTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services, nameof(arguments.Services));
 
         var contentMetadataService = arguments.Services.GetRequiredService<ContentMetadataService>();
         var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();

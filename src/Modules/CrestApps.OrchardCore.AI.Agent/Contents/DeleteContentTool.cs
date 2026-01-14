@@ -38,6 +38,7 @@ public sealed class DeleteContentTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services, nameof(arguments.Services));
 
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
         var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
