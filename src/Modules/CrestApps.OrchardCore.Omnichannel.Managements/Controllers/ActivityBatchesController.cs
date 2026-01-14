@@ -508,21 +508,21 @@ public sealed class ActivityBatchesController : Controller
                 case CatalogEntryAction.None:
                     break;
                 case CatalogEntryAction.Remove:
-                    var deleteTasks = itemIds.Select(async id =>
+                    var counter = 0;
+                    foreach (var id in itemIds)
                     {
                         var instance = await _manager.FindByIdAsync(id);
 
                         if (instance == null)
                         {
-                            return false;
+                            continue;
                         }
 
-                        return await _manager.DeleteAsync(instance);
-                    });
-
-                    var results = await Task.WhenAll(deleteTasks);
-                    var counter = results.Count(success => success);
-
+                        if (await _manager.DeleteAsync(instance))
+                        {
+                            counter++;
+                        }
+                    }
                     if (counter == 0)
                     {
                         await _notifier.WarningAsync(H["No activity batch were removed."]);
