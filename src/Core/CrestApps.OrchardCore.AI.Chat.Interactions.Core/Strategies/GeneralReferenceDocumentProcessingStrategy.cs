@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 /// <summary>
 /// Strategy for handling general chat with document reference.
 /// Provides document metadata and limited content for general reference.
-/// This is typically the fallback strategy when no other strategy handles the intent.
+/// Handles the <see cref="DocumentIntents.GeneralChatWithReference"/> intent.
 /// </summary>
 public sealed class GeneralReferenceDocumentProcessingStrategy : DocumentProcessingStrategyBase
 {
