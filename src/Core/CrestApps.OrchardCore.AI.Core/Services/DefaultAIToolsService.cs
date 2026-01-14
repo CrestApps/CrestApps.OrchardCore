@@ -26,12 +26,7 @@ public sealed class DefaultAIToolsService : IAIToolsService
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
-        if (_toolDefinitions.Tools.ContainsKey(name))
-        {
-            return ValueTask.FromResult(_serviceProvider.GetKeyedService<AITool>(name));
-        }
-
-        return ValueTask.FromResult<AITool>(null);
+        return ValueTask.FromResult(_serviceProvider.GetKeyedService<AITool>(name));
     }
 
     public async ValueTask<AITool> GetByInstanceIdAsync(string id)

@@ -11,7 +11,7 @@ public static class ServiceCollectionExtensions
         ArgumentException.ThrowIfNullOrEmpty(name);
 
         services.AddSingleton<TTool>();
-        services.AddKeyedTransient<AITool>(name, (sp, key) => sp.GetRequiredService<TTool>());
+        services.AddKeyedSingleton<AITool>(name, (sp, key) => sp.GetRequiredService<TTool>());
 
         services.Configure<AIToolDefinitionOptions>(o =>
         {
