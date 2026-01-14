@@ -45,26 +45,122 @@ Clients can invoke any discovered tool using the standard MCP tool invocation pr
 
 ### Authentication & Authorization
 
-The MCP server integrates with Orchard Core's authentication system:
+The MCP server supports multiple authentication modes that can be configured via settings:
 
-- Requires API authentication (Bearer token)
-- Respects the `AccessMcpServer` permission
-- All tool invocations run in the context of the authenticated user
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| `OpenId` | OpenID Connect authentication via the "Api" scheme (default) | Production environments |
+| `ApiKey` | Predefined API key authentication | Simple integrations, testing |
+| `None` | No authentication required | Local development only |
+
+## Configuration
+
+Configure the MCP server authentication in your `appsettings.json`:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "McpServer": {
+        "AuthenticationType": "OpenId",
+        "RequireAccessPermission": true
+      }
+    }
+  }
+}
+```
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `AuthenticationType` | `string` | `OpenId` | Authentication type: `OpenId`, `ApiKey`, or `None` |
+| `ApiKey` | `string` | `null` | API key for `ApiKey` authentication |
+| `RequireAccessPermission` | `bool` | `true` | Whether to require the `AccessMcpServer` permission (OpenId only) |
+
+### Authentication Types
+
+#### OpenId (Default - Recommended for Production)
+
+Uses OpenID Connect authentication via the "Api" authentication scheme. This is the most secure option and integrates with Orchard Core's existing OpenID Server feature.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "McpServer": {
+        "AuthenticationType": "OpenId",
+        "RequireAccessPermission": true
+      }
+    }
+  }
+}
+```
+
+When `RequireAccessPermission` is `true`, users must also have the `AccessMcpServer` permission.
+
+#### ApiKey (For Simple Integrations)
+
+Uses a predefined API key for authentication. The client must provide the API key in the `Authorization` header.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "McpServer": {
+        "AuthenticationType": "ApiKey",
+        "ApiKey": "your-secure-api-key-here"
+      }
+    }
+  }
+}
+```
+
+The API key can be provided in the `Authorization` header in any of these formats:
+- `Bearer your-api-key`
+- `ApiKey your-api-key`
+- `your-api-key` (raw key)
+
+#### None (For Local Development Only)
+
+> ⚠️ **WARNING**: This option disables all authentication and should **NEVER** be used in production environments. Only use this for local development and testing.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "McpServer": {
+        "AuthenticationType": "None"
+      }
+    }
+  }
+}
+```
 
 ## Getting Started
 
 ### 1. Enable the Feature
 
-In the Orchard Core Admin, navigate to **Configuration → Features** and enable **Model Context Protocol (MCP) Server**.
+In the Orchard Core Admin, navigate to **Tools → Features** and enable **Model Context Protocol (MCP) Server**.
 
 ### 2. Configure Authentication
 
-Ensure your Orchard Core instance has API authentication configured. You can use:
+Choose an authentication method based on your environment:
 
-- **OpenID Connect**: Enable the OpenID Server feature for token-based authentication
-- **API Keys**: Configure API key authentication for simpler setups
+**For Production (OpenId):**
+- Enable the OpenID Server feature for token-based authentication
+- Configure your OAuth client applications
+- Grant the `AccessMcpServer` permission to appropriate users/roles
 
-### 3. Grant Permissions
+**For Simple Integrations (ApiKey):**
+- Set a secure API key in your configuration
+- Share the API key securely with authorized clients
+
+**For Local Development (None):**
+- Set `AuthenticationType` to `None`
+- Remember to change this before deploying to production
+
+### 3. Grant Permissions (OpenId mode only)
 
 Assign the `AccessMcpServer` permission to users or roles that should be able to connect to the MCP server.
 
@@ -74,7 +170,7 @@ Use the SSE (Server-Sent Events) endpoint to connect:
 
 ```
 POST /mcp/sse
-Authorization: Bearer <your-token>
+Authorization: Bearer <your-token-or-api-key>
 ```
 
 ## MCP Endpoint
@@ -87,7 +183,7 @@ The MCP server exposes a single SSE endpoint:
 
 ## Example: Connecting from an MCP Client
 
-Here's an example of connecting to the Orchard Core MCP server:
+### Using OpenId Authentication
 
 ```json
 {
@@ -97,8 +193,41 @@ Here's an example of connecting to the Orchard Core MCP server:
         "type": "sse",
         "url": "https://your-orchard-site.com/mcp/sse",
         "headers": {
-          "Authorization": "Bearer <your-token>"
+          "Authorization": "Bearer <your-oauth-token>"
         }
+      }
+    }
+  }
+}
+```
+
+### Using API Key Authentication
+
+```json
+{
+  "mcpServers": {
+    "orchard-core": {
+      "transport": {
+        "type": "sse",
+        "url": "https://your-orchard-site.com/mcp/sse",
+        "headers": {
+          "Authorization": "ApiKey <your-api-key>"
+        }
+      }
+    }
+  }
+}
+```
+
+### Using No Authentication (Local Development)
+
+```json
+{
+  "mcpServers": {
+    "orchard-core": {
+      "transport": {
+        "type": "sse",
+        "url": "http://localhost:5000/mcp/sse"
       }
     }
   }
@@ -107,8 +236,13 @@ Here's an example of connecting to the Orchard Core MCP server:
 
 ## Security Considerations
 
-- **Authentication Required**: All MCP requests must include valid API authentication
-- **Permission-Based Access**: Users must have the `AccessMcpServer` permission
+- **Production**: Always use `OpenId` authentication in production environments
+- **API Keys**: If using API key authentication, ensure the key is:
+  - Long and randomly generated
+  - Stored securely (not committed to source control)
+  - Rotated periodically
+- **Never use `None`**: The `None` authentication type should only be used for local development
+- **Permission-Based Access**: When using OpenId, configure `RequireAccessPermission: true` for additional security
 - **Tool Permissions**: Individual tool invocations respect Orchard Core's permission system
 - **Tenant Isolation**: MCP server operates within the context of a single tenant
 
@@ -152,8 +286,10 @@ The **Orchard Core AI Agent** module provides a comprehensive set of AI tools th
 ### Connection Refused
 
 - Verify the MCP Server feature is enabled
-- Check that API authentication is configured
-- Ensure the user has the `AccessMcpServer` permission
+- Check that the appropriate authentication is configured
+- For OpenId: Ensure API authentication is configured
+- For ApiKey: Verify the API key matches the configured value
+- For OpenId: Ensure the user has the `AccessMcpServer` permission (if `RequireAccessPermission` is enabled)
 
 ### Tools Not Appearing
 
@@ -162,9 +298,25 @@ The **Orchard Core AI Agent** module provides a comprehensive set of AI tools th
 
 ### Authentication Errors
 
-- Verify your token is valid and not expired
+**For OpenId:**
+- Verify your OAuth token is valid and not expired
 - Ensure you're using the correct authentication scheme
 - Check the authorization header format: `Bearer <token>`
+
+**For ApiKey:**
+- Verify the API key matches exactly (case-sensitive)
+- Ensure the `ApiKey` is configured in the server settings
+- Check the authorization header format: `Bearer <key>`, `ApiKey <key>`, or just `<key>`
+
+**For None:**
+- Ensure you're connecting to the correct endpoint
+- Check that no authentication headers are causing issues
+
+### Configuration Not Taking Effect
+
+- Ensure the configuration path is correct: `CrestApps_AI:McpServer`
+- Restart the application after changing configuration
+- Verify the JSON syntax is valid
 
 ## Related Features
 

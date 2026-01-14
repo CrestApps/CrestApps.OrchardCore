@@ -11,16 +11,21 @@ using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
-using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Mcp;
@@ -113,7 +118,16 @@ public sealed class McpServerStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddTransient<IConfigureOptions<McpServerOptions>, McpServerOptionsConfiguration>();
         services.AddPermissionProvider<McpServerPermissionsProvider>();
+
+        // Register the authorization handler for MCP server.
+        services.AddScoped<IAuthorizationHandler, McpServerAuthorizationHandler>();
+
+        // Register API key authentication scheme.
+        services.AddAuthentication()
+            .AddScheme<McpApiKeyAuthenticationOptions, McpApiKeyAuthenticationHandler>(
+                McpApiKeyAuthenticationDefaults.AuthenticationScheme, options => { });
 
         services.AddMcpServer(options =>
         {
@@ -123,20 +137,83 @@ public sealed class McpServerStartup : StartupBase
                 Version = CrestAppsManifestConstants.Version,
             };
         })
-        .WithTools<OrchardCoreToolsProvider>();
+        .WithHttpTransport()
+        .WithListToolsHandler((request, cancellationToken) =>
+        {
+            var toolDefinitions = request.Services.GetRequiredService<IOptions<AIToolDefinitionOptions>>().Value;
+            ILogger logger = null;
+            var tools = new List<Tool>();
 
+            foreach (var (name, definition) in toolDefinitions.Tools)
+            {
+                try
+                {
+                    if (ActivatorUtilities.CreateInstance(request.Services, definition.ToolType) is AIFunction aiFunction)
+                    {
+                        tools.Add(new Tool
+                        {
+                            Name = aiFunction.Name,
+                            Description = aiFunction.Description,
+                            InputSchema = aiFunction.JsonSchema,
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger ??= request.Services.GetRequiredService<ILogger<McpServerStartup>>();
+
+                    logger.LogError(ex, "Error creating tool instance for '{ToolName}'", name);
+                }
+            }
+
+            return ValueTask.FromResult(new ListToolsResult { Tools = tools });
+        })
+        .WithCallToolHandler(async (request, cancellationToken) =>
+        {
+            var toolDefinitions = request.Services.GetRequiredService<IOptions<AIToolDefinitionOptions>>().Value;
+
+            if (!toolDefinitions.Tools.TryGetValue(request.Params.Name, out var definition))
+            {
+                throw new McpException($"Tool '{request.Params.Name}' not found.");
+            }
+
+            if (ActivatorUtilities.CreateInstance(request.Services, definition.ToolType) is not AIFunction aiFunction)
+            {
+                throw new McpException($"Failed to create tool '{request.Params.Name}'.");
+            }
+
+            // Convert IDictionary<string, JsonElement> to AIFunctionArguments
+            var arguments = new AIFunctionArguments();
+            if (request.Params.Arguments is not null)
+            {
+                foreach (var kvp in request.Params.Arguments)
+                {
+                    arguments[kvp.Key] = kvp.Value;
+                }
+            }
+
+            var result = await aiFunction.InvokeAsync(arguments, cancellationToken);
+
+            return new CallToolResult
+            {
+                Content = [new TextContentBlock { Text = result?.ToString() ?? string.Empty }]
+            };
+        });
+
+        // Configure authorization policy with multiple authentication schemes.
+        // The actual authorization logic is handled by McpServerAuthorizationHandler.
         services.AddAuthorizationBuilder()
             .AddPolicy(McpServerPolicyName, policy =>
             {
-                policy.AddAuthenticationSchemes("Api");
-                policy.RequireAuthenticatedUser();
-                policy.AddRequirements(new PermissionRequirement(McpServerPermissionsProvider.AccessMcpServer));
+                // Add all possible authentication schemes - the handler will decide which one applies.
+                policy.AddAuthenticationSchemes("Api", McpApiKeyAuthenticationDefaults.AuthenticationScheme);
+                policy.AddRequirements(new McpServerAuthorizationRequirement());
             });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.MapMcp()
+        routes.MapMcp("mcp")
             .RequireAuthorization(McpServerPolicyName);
     }
 }
