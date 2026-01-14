@@ -29,3 +29,11 @@
         <span class="hint">@T["This specifies the number of top-scoring documents from your data index used to generate responses. You want to increase the value when you have short documents or want to provide more context. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultTopNDocuments]</span>
     </div>
 </div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Filter" class="@Orchard.GetLabelClasses()">@T["Filter"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" class="form-control" asp-for="Filter">
+        <span class="hint">@T["Optional OData filter expression to query a subset of indexed data. Example: category eq 'documentation' or status ne 'archived'. Leave blank to search all data."]</span>
+    </div>
+</div>

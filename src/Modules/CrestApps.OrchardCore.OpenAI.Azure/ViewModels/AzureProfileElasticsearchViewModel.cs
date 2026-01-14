@@ -14,6 +14,8 @@ public class AzureProfileElasticsearchViewModel
     [Range(3, 20)]
     public int? TopNDocuments { get; set; }
 
+    public string Filter { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> IndexNames { get; set; }
 }

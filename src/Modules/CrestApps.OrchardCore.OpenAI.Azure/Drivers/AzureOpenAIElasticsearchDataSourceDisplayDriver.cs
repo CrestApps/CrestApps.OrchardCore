@@ -42,6 +42,7 @@ public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDri
             model.Strictness = metadata.Strictness;
             model.TopNDocuments = metadata.TopNDocuments;
             model.IndexName = metadata.IndexName;
+            model.Filter = metadata.Filter;
 
             var indexProfiles = await _indexProfileStore.GetByProviderAsync(ElasticsearchConstants.ProviderName);
 
@@ -76,6 +77,7 @@ public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDri
             IndexName = model.IndexName,
             Strictness = model.Strictness,
             TopNDocuments = model.TopNDocuments,
+            Filter = model.Filter,
         });
 
         return Edit(dataSource, context);
