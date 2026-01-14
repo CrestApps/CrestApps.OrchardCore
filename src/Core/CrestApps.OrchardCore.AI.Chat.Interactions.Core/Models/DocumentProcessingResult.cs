@@ -1,20 +1,18 @@
+using System.Text;
+
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 
 /// <summary>
 /// Result of document processing containing additional context to inject into the AI completion.
+/// This class allows multiple strategies to contribute context by adding to the AdditionalContexts list.
 /// </summary>
 public sealed class DocumentProcessingResult
 {
     /// <summary>
-    /// Gets or sets additional context to be appended to the system message.
-    /// This context is injected into the AI model to provide document-aware responses.
+    /// Gets the list of additional context entries to be appended to the system message.
+    /// Multiple strategies can add context to this list.
     /// </summary>
-    public string AdditionalContext { get; set; }
-
-    /// <summary>
-    /// Gets or sets a prefix message to prepend to the context explaining what it contains.
-    /// </summary>
-    public string ContextPrefix { get; set; }
+    public List<string> AdditionalContexts { get; } = [];
 
     /// <summary>
     /// Gets or sets whether vector search was used in the processing.
@@ -22,14 +20,12 @@ public sealed class DocumentProcessingResult
     public bool UsedVectorSearch { get; set; }
 
     /// <summary>
-    /// Gets or sets whether the strategy handled the request.
-    /// When false, the next strategy in the chain will be tried.
+    /// Gets whether any strategy has contributed context.
     /// </summary>
-    public bool Handled { get; set; }
+    public bool HasContext => AdditionalContexts.Count > 0;
 
     /// <summary>
     /// Gets or sets whether the processing was successful.
-    /// Only relevant when <see cref="Handled"/> is true.
     /// </summary>
     public bool IsSuccess { get; set; } = true;
 
@@ -39,55 +35,58 @@ public sealed class DocumentProcessingResult
     public string ErrorMessage { get; set; }
 
     /// <summary>
-    /// Creates a successful result with the specified context.
+    /// Adds context with an optional prefix message.
     /// </summary>
-    public static DocumentProcessingResult Success(string context, string prefix = null, bool usedVectorSearch = false)
+    /// <param name="context">The context content to add.</param>
+    /// <param name="prefix">Optional prefix explaining the context.</param>
+    /// <param name="usedVectorSearch">Whether vector search was used to obtain this context.</param>
+    public void AddContext(string context, string prefix = null, bool usedVectorSearch = false)
     {
-        return new DocumentProcessingResult
+        if (string.IsNullOrWhiteSpace(context))
         {
-            AdditionalContext = context,
-            ContextPrefix = prefix,
-            UsedVectorSearch = usedVectorSearch,
-            Handled = true,
-            IsSuccess = true,
-        };
+            return;
+        }
+
+        var builder = new StringBuilder();
+
+        if (!string.IsNullOrWhiteSpace(prefix))
+        {
+            builder.AppendLine(prefix);
+        }
+
+        builder.Append(context);
+        AdditionalContexts.Add(builder.ToString());
+
+        if (usedVectorSearch)
+        {
+            UsedVectorSearch = true;
+        }
     }
 
     /// <summary>
-    /// Creates an empty successful result (no additional context needed).
+    /// Gets the combined additional context from all strategies.
     /// </summary>
-    public static DocumentProcessingResult Empty()
+    public string GetCombinedContext()
     {
-        return new DocumentProcessingResult
+        if (AdditionalContexts.Count == 0)
         {
-            Handled = true,
-            IsSuccess = true,
-        };
+            return string.Empty;
+        }
+
+        if (AdditionalContexts.Count == 1)
+        {
+            return AdditionalContexts[0];
+        }
+
+        return string.Join(Environment.NewLine + "---" + Environment.NewLine, AdditionalContexts);
     }
 
     /// <summary>
-    /// Creates a result indicating the strategy did not handle the request.
-    /// The next strategy in the chain will be tried.
+    /// Sets the result to a failed state with the specified error message.
     /// </summary>
-    public static DocumentProcessingResult NotHandled()
+    public void SetFailed(string errorMessage)
     {
-        return new DocumentProcessingResult
-        {
-            Handled = false,
-            IsSuccess = true,
-        };
-    }
-
-    /// <summary>
-    /// Creates a failed result with the specified error message.
-    /// </summary>
-    public static DocumentProcessingResult Failed(string errorMessage)
-    {
-        return new DocumentProcessingResult
-        {
-            Handled = true,
-            IsSuccess = false,
-            ErrorMessage = errorMessage,
-        };
+        IsSuccess = false;
+        ErrorMessage = errorMessage;
     }
 }

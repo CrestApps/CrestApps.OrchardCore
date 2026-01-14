@@ -10,7 +10,7 @@ Shared core types and helpers used by AI Chat Interactions modules.
 
 ## Document Processing Architecture
 
-This module provides an extensible architecture for processing documents in chat interactions based on detected user intent.
+This module provides an extensible architecture for processing documents in chat interactions based on detected user intent. Multiple strategies can contribute context to a single request.
 
 ### Key Components
 
@@ -30,11 +30,19 @@ The `IDocumentIntentDetector` interface allows classification of user intent whe
 
 The `IDocumentProcessingStrategy` interface enables custom document processing based on intent:
 
-- Strategies are called in sequence until one handles the request
-- Each strategy decides internally whether to handle the intent by returning `Handled = true` or `Handled = false`
+- All strategies are called in sequence for every request
+- Each strategy decides internally whether to contribute context based on the intent
+- Multiple strategies can add context to the same result
 - Strategies can bypass vector search when appropriate
-- Multiple strategies can potentially handle the same intent
 - Extensible via DI for custom strategies
+
+#### Processing Result
+
+The `DocumentProcessingResult` is part of the `DocumentProcessingContext` and allows multiple strategies to contribute:
+
+- `AdditionalContexts` - List of context entries from all contributing strategies
+- `GetCombinedContext()` - Gets the combined context from all strategies
+- `HasContext` - Whether any strategy has contributed context
 
 ### Built-in Strategies
 
@@ -68,18 +76,21 @@ services.AddDocumentProcessingStrategy<MyCustomStrategy>();
 ```csharp
 public class MyCustomStrategy : DocumentProcessingStrategyBase
 {
-    public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
+    public override Task ProcessAsync(DocumentProcessingContext context)
     {
         // Check if we should handle this intent
         if (!string.Equals(context.IntentResult?.Intent, "MyCustomIntent", StringComparison.OrdinalIgnoreCase))
         {
-            return Task.FromResult(DocumentProcessingResult.NotHandled());
+            return Task.CompletedTask;
         }
 
-        // Process and return result
-        return Task.FromResult(DocumentProcessingResult.Success(
+        // Add context to the result
+        context.Result.AddContext(
             "Processed content",
-            "Context prefix"));
+            "Context prefix:",
+            usedVectorSearch: false);
+
+        return Task.CompletedTask;
     }
 }
 ```

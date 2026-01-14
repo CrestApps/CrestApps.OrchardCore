@@ -16,11 +16,11 @@ public sealed class TabularAnalysisDocumentProcessingStrategy : DocumentProcessi
     private const int MaxRows = 100;
 
     /// <inheritdoc />
-    public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
+    public override Task ProcessAsync(DocumentProcessingContext context)
     {
         if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.AnalyzeTabularData, StringComparison.OrdinalIgnoreCase))
         {
-            return Task.FromResult(DocumentProcessingResult.NotHandled());
+            return Task.CompletedTask;
         }
 
         var tabularDocuments = GetTabularDocuments(context.Documents);
@@ -29,10 +29,11 @@ public sealed class TabularAnalysisDocumentProcessingStrategy : DocumentProcessi
         {
             // Fallback to full document content if no tabular files found
             var allContent = GetCombinedDocumentText(context);
-            return Task.FromResult(DocumentProcessingResult.Success(
+            context.Result.AddContext(
                 allContent,
                 "The following is the content of the attached documents for analysis:",
-                usedVectorSearch: false));
+                usedVectorSearch: false);
+            return Task.CompletedTask;
         }
 
         var builder = new StringBuilder();
@@ -62,20 +63,20 @@ public sealed class TabularAnalysisDocumentProcessingStrategy : DocumentProcessi
 
         if (builder.Length == 0)
         {
-            return Task.FromResult(DocumentProcessingResult.Success(
+            context.Result.AddContext(
                 GetDocumentMetadata(context),
                 "Tabular files are attached but could not be read:",
-                usedVectorSearch: false));
+                usedVectorSearch: false);
+            return Task.CompletedTask;
         }
 
         var prefix = processedCount == 1
             ? "The following is tabular data from the attached file for analysis. The data is in a structured format (e.g., CSV/TSV):"
             : $"The following is tabular data from {processedCount} attached files for analysis:";
 
-        return Task.FromResult(DocumentProcessingResult.Success(
-            builder.ToString(),
-            prefix,
-            usedVectorSearch: false));
+        context.Result.AddContext(builder.ToString(), prefix, usedVectorSearch: false);
+
+        return Task.CompletedTask;
     }
 
     private static List<ChatInteractionDocument> GetTabularDocuments(IList<ChatInteractionDocument> documents)

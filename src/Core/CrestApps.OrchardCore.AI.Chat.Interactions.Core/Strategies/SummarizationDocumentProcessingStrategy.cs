@@ -12,29 +12,29 @@ public sealed class SummarizationDocumentProcessingStrategy : DocumentProcessing
     private const int MaxContextLength = 50000;
 
     /// <inheritdoc />
-    public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
+    public override Task ProcessAsync(DocumentProcessingContext context)
     {
         if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.SummarizeDocument, StringComparison.OrdinalIgnoreCase))
         {
-            return Task.FromResult(DocumentProcessingResult.NotHandled());
+            return Task.CompletedTask;
         }
 
         var documentContent = GetCombinedDocumentText(context, MaxContextLength);
 
         if (string.IsNullOrWhiteSpace(documentContent))
         {
-            return Task.FromResult(DocumentProcessingResult.Success(
+            context.Result.AddContext(
                 GetDocumentMetadata(context),
-                "The following documents are attached (but could not be read):"));
+                "The following documents are attached (but could not be read):");
+        }
+        else
+        {
+            var prefix = context.Documents.Count == 1
+                ? "The following is the content of the attached document that the user wants summarized:"
+                : $"The following is the content of {context.Documents.Count} attached documents that the user wants summarized:";
+            context.Result.AddContext(documentContent, prefix, usedVectorSearch: false);
         }
 
-        var prefix = context.Documents.Count == 1
-            ? "The following is the content of the attached document that the user wants summarized:"
-            : $"The following is the content of {context.Documents.Count} attached documents that the user wants summarized:";
-
-        return Task.FromResult(DocumentProcessingResult.Success(
-            documentContent,
-            prefix,
-            usedVectorSearch: false));
+        return Task.CompletedTask;
     }
 }

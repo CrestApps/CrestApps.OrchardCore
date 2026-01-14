@@ -296,14 +296,10 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             var documentProcessingResult = await ProcessDocumentsAsync(interaction, prompt, cancellationToken);
 
             var systemMessage = interaction.SystemMessage ?? string.Empty;
-            if (documentProcessingResult != null && documentProcessingResult.IsSuccess && !string.IsNullOrEmpty(documentProcessingResult.AdditionalContext))
+            if (documentProcessingResult != null && documentProcessingResult.IsSuccess && documentProcessingResult.HasContext)
             {
                 // Append document context to the system message
-                var contextPrefix = !string.IsNullOrEmpty(documentProcessingResult.ContextPrefix)
-                    ? documentProcessingResult.ContextPrefix + "\n\n"
-                    : string.Empty;
-
-                systemMessage = systemMessage + contextPrefix + documentProcessingResult.AdditionalContext + "\n\n";
+                systemMessage = systemMessage + "\n\n" + documentProcessingResult.GetCombinedContext();
             }
 
             var completionContext = new AICompletionContext
@@ -457,7 +453,9 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 ServiceProvider = _serviceProvider,
             };
 
-            return await strategyProvider.ProcessAsync(processingContext);
+            await strategyProvider.ProcessAsync(processingContext);
+
+            return processingContext.Result;
         }
         catch (Exception ex)
         {
@@ -474,15 +472,17 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     {
         var context = await GetDocumentContextAsync(interaction, prompt, cancellationToken);
 
-        if (string.IsNullOrEmpty(context))
+        var result = new DocumentProcessingResult();
+
+        if (!string.IsNullOrEmpty(context))
         {
-            return DocumentProcessingResult.Empty();
+            result.AddContext(
+                context,
+                S["The following is relevant context from uploaded documents. Use this information to answer the user's question:"].Value,
+                usedVectorSearch: true);
         }
 
-        return DocumentProcessingResult.Success(
-            context,
-            S["The following is relevant context from uploaded documents. Use this information to answer the user's question:"].Value,
-            usedVectorSearch: true);
+        return result;
     }
 
     private LocalizedString GetFriendlyErrorMessage(Exception ex)

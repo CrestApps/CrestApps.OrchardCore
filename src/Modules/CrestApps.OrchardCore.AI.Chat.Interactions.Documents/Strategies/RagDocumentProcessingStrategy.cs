@@ -41,11 +41,11 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
     }
 
     /// <inheritdoc />
-    public override async Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
+    public override async Task ProcessAsync(DocumentProcessingContext context)
     {
         if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.DocumentQnA, StringComparison.OrdinalIgnoreCase))
         {
-            return DocumentProcessingResult.NotHandled();
+            return;
         }
 
         var interaction = context.Interaction;
@@ -55,7 +55,7 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
         // Check if there are documents attached
         if (interaction.Documents == null || interaction.Documents.Count == 0)
         {
-            return DocumentProcessingResult.Empty();
+            return;
         }
 
         try
@@ -66,7 +66,7 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
             if (string.IsNullOrEmpty(settings.IndexProfileName))
             {
                 _logger.LogWarning("Documents are attached but no index profile is configured. Document context will not be used.");
-                return DocumentProcessingResult.Empty();
+                return;
             }
 
             // Find the index profile
@@ -75,7 +75,7 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
             if (indexProfile == null)
             {
                 _logger.LogWarning("Index profile '{IndexProfileName}' not found. Document context will not be used.", settings.IndexProfileName);
-                return DocumentProcessingResult.Empty();
+                return;
             }
 
             // Get the embedding search service for this provider
@@ -84,7 +84,7 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
             if (searchService == null)
             {
                 _logger.LogWarning("No embedding search service registered for provider '{ProviderName}'. Document context will not be used.", indexProfile.ProviderName);
-                return DocumentProcessingResult.Empty();
+                return;
             }
 
             // Get embedding for the user's prompt
@@ -108,7 +108,7 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
             if (string.IsNullOrEmpty(deploymentName))
             {
                 _logger.LogWarning("No embedding deployment configured. Document context will not be used.");
-                return DocumentProcessingResult.Empty();
+                return;
             }
 
             var embeddingGenerator = await _aIClientFactory.CreateEmbeddingGeneratorAsync(providerName, connectionName, deploymentName);
@@ -116,7 +116,7 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
             if (embeddingGenerator == null)
             {
                 _logger.LogWarning("Failed to create embedding generator. Document context will not be used.");
-                return DocumentProcessingResult.Empty();
+                return;
             }
 
             // Generate embedding for the prompt
@@ -125,7 +125,7 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
             if (embeddings == null || embeddings.Count == 0 || embeddings[0]?.Vector == null || embeddings[0].Vector.Length == 0)
             {
                 _logger.LogWarning("Failed to generate embedding for prompt. Document context will not be used.");
-                return DocumentProcessingResult.Empty();
+                return;
             }
 
             var embedding = embeddings[0];
@@ -147,7 +147,7 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
 
             if (results == null || !results.Any())
             {
-                return DocumentProcessingResult.Empty();
+                return;
             }
 
             // Combine the relevant chunks into context
@@ -166,10 +166,10 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
 
             if (string.IsNullOrWhiteSpace(documentContext))
             {
-                return DocumentProcessingResult.Empty();
+                return;
             }
 
-            return DocumentProcessingResult.Success(
+            context.Result.AddContext(
                 documentContext,
                 "The following is relevant context from uploaded documents. Use this information to answer the user's question:",
                 usedVectorSearch: true);
@@ -177,7 +177,6 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving document context. Document context will not be used.");
-            return DocumentProcessingResult.Empty();
         }
     }
 }

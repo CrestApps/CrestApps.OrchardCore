@@ -12,27 +12,27 @@ public sealed class GeneralReferenceDocumentProcessingStrategy : DocumentProcess
     private const int MaxContextLength = 30000;
 
     /// <inheritdoc />
-    public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
+    public override Task ProcessAsync(DocumentProcessingContext context)
     {
         if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.GeneralChatWithReference, StringComparison.OrdinalIgnoreCase))
         {
-            return Task.FromResult(DocumentProcessingResult.NotHandled());
+            return Task.CompletedTask;
         }
 
         var documentContent = GetCombinedDocumentText(context, MaxContextLength);
 
         if (string.IsNullOrWhiteSpace(documentContent))
         {
-            return Task.FromResult(DocumentProcessingResult.Success(
+            context.Result.AddContext(
                 GetDocumentMetadata(context),
-                "The following documents are attached for reference:"));
+                "The following documents are attached for reference:");
+        }
+        else
+        {
+            var prefix = "The following documents are attached for reference. Use this information if relevant to the user's request:";
+            context.Result.AddContext(documentContent, prefix, usedVectorSearch: false);
         }
 
-        var prefix = "The following documents are attached for reference. Use this information if relevant to the user's request:";
-
-        return Task.FromResult(DocumentProcessingResult.Success(
-            documentContent,
-            prefix,
-            usedVectorSearch: false));
+        return Task.CompletedTask;
     }
 }

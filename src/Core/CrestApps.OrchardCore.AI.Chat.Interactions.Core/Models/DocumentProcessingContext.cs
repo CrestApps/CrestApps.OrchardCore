@@ -4,6 +4,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 
 /// <summary>
 /// Context for document processing strategy execution.
+/// Contains both input data and the result that strategies can update.
 /// </summary>
 public sealed class DocumentProcessingContext
 {
@@ -37,4 +38,9 @@ public sealed class DocumentProcessingContext
     /// This allows strategies to resolve dependencies like vector search services.
     /// </summary>
     public IServiceProvider ServiceProvider { get; set; }
+
+    /// <summary>
+    /// Gets the result of document processing. Multiple strategies can add context to this result.
+    /// </summary>
+    public DocumentProcessingResult Result { get; } = new DocumentProcessingResult();
 }

@@ -170,23 +170,28 @@ To add a custom processing strategy:
 1. Implement `IDocumentProcessingStrategy` or extend `DocumentProcessingStrategyBase`
 2. Register using `AddDocumentProcessingStrategy<T>()`
 
-Strategies are called in sequence and each decides whether to handle the request by returning
-`DocumentProcessingResult.Handled = true` or `DocumentProcessingResult.NotHandled()`.
+All strategies are called in sequence and each can add context to the shared result.
+Multiple strategies can contribute to the same request.
 
 Example:
 ```csharp
 public class MyCustomStrategy : DocumentProcessingStrategyBase
 {
-    public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
+    public override Task ProcessAsync(DocumentProcessingContext context)
     {
         // Check if we should handle this intent
         if (!string.Equals(context.IntentResult?.Intent, "MyCustomIntent", StringComparison.OrdinalIgnoreCase))
         {
-            return Task.FromResult(DocumentProcessingResult.NotHandled());
+            return Task.CompletedTask;
         }
 
-        // Your custom processing logic
-        return Task.FromResult(DocumentProcessingResult.Success("Custom context", "Custom prefix"));
+        // Add context to the result
+        context.Result.AddContext(
+            "Custom context content",
+            "Custom prefix:",
+            usedVectorSearch: false);
+
+        return Task.CompletedTask;
     }
 }
 

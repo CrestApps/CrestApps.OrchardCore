@@ -11,27 +11,27 @@ public sealed class ComparisonDocumentProcessingStrategy : DocumentProcessingStr
     private const int MaxContextLength = 60000;
 
     /// <inheritdoc />
-    public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
+    public override Task ProcessAsync(DocumentProcessingContext context)
     {
         if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.CompareDocuments, StringComparison.OrdinalIgnoreCase))
         {
-            return Task.FromResult(DocumentProcessingResult.NotHandled());
+            return Task.CompletedTask;
         }
 
         var documentContent = GetCombinedDocumentText(context, MaxContextLength);
 
         if (string.IsNullOrWhiteSpace(documentContent))
         {
-            return Task.FromResult(DocumentProcessingResult.Success(
+            context.Result.AddContext(
                 GetDocumentMetadata(context),
-                "The following documents are attached for comparison (but could not be read):"));
+                "The following documents are attached for comparison (but could not be read):");
+        }
+        else
+        {
+            var prefix = $"The following is the content of {context.Documents.Count} documents that the user wants to compare. Each document is separated by '---':";
+            context.Result.AddContext(documentContent, prefix, usedVectorSearch: false);
         }
 
-        var prefix = $"The following is the content of {context.Documents.Count} documents that the user wants to compare. Each document is separated by '---':";
-
-        return Task.FromResult(DocumentProcessingResult.Success(
-            documentContent,
-            prefix,
-            usedVectorSearch: false));
+        return Task.CompletedTask;
     }
 }

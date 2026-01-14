@@ -13,13 +13,13 @@ public sealed class DocumentProcessingStrategyTests
         var strategy = new SummarizationDocumentProcessingStrategy();
 
         var correctContext = CreateProcessingContext(DocumentIntents.SummarizeDocument);
-        var correctResult = await strategy.ProcessAsync(correctContext);
-        Assert.True(correctResult.Handled);
-        Assert.True(correctResult.IsSuccess);
+        await strategy.ProcessAsync(correctContext);
+        Assert.True(correctContext.Result.HasContext);
+        Assert.True(correctContext.Result.IsSuccess);
 
         var wrongContext = CreateProcessingContext(DocumentIntents.DocumentQnA);
-        var wrongResult = await strategy.ProcessAsync(wrongContext);
-        Assert.False(wrongResult.Handled);
+        await strategy.ProcessAsync(wrongContext);
+        Assert.False(wrongContext.Result.HasContext);
     }
 
     [Fact]
@@ -28,12 +28,12 @@ public sealed class DocumentProcessingStrategyTests
         var strategy = new SummarizationDocumentProcessingStrategy();
         var context = CreateProcessingContext(DocumentIntents.SummarizeDocument);
 
-        var result = await strategy.ProcessAsync(context);
+        await strategy.ProcessAsync(context);
 
-        Assert.True(result.Handled);
-        Assert.True(result.IsSuccess);
-        Assert.Contains("Sample document content", result.AdditionalContext);
-        Assert.False(result.UsedVectorSearch);
+        Assert.True(context.Result.HasContext);
+        Assert.True(context.Result.IsSuccess);
+        Assert.Contains("Sample document content", context.Result.GetCombinedContext());
+        Assert.False(context.Result.UsedVectorSearch);
     }
 
     [Fact]
@@ -42,13 +42,13 @@ public sealed class DocumentProcessingStrategyTests
         var strategy = new TabularAnalysisDocumentProcessingStrategy();
 
         var correctContext = CreateCsvProcessingContext();
-        var correctResult = await strategy.ProcessAsync(correctContext);
-        Assert.True(correctResult.Handled);
-        Assert.True(correctResult.IsSuccess);
+        await strategy.ProcessAsync(correctContext);
+        Assert.True(correctContext.Result.HasContext);
+        Assert.True(correctContext.Result.IsSuccess);
 
         var wrongContext = CreateProcessingContext(DocumentIntents.SummarizeDocument);
-        var wrongResult = await strategy.ProcessAsync(wrongContext);
-        Assert.False(wrongResult.Handled);
+        await strategy.ProcessAsync(wrongContext);
+        Assert.False(wrongContext.Result.HasContext);
     }
 
     [Fact]
@@ -57,12 +57,12 @@ public sealed class DocumentProcessingStrategyTests
         var strategy = new TabularAnalysisDocumentProcessingStrategy();
         var context = CreateCsvProcessingContext();
 
-        var result = await strategy.ProcessAsync(context);
+        await strategy.ProcessAsync(context);
 
-        Assert.True(result.Handled);
-        Assert.True(result.IsSuccess);
-        Assert.Contains("Name,Age,City", result.AdditionalContext);
-        Assert.False(result.UsedVectorSearch);
+        Assert.True(context.Result.HasContext);
+        Assert.True(context.Result.IsSuccess);
+        Assert.Contains("Name,Age,City", context.Result.GetCombinedContext());
+        Assert.False(context.Result.UsedVectorSearch);
     }
 
     [Fact]
@@ -71,12 +71,12 @@ public sealed class DocumentProcessingStrategyTests
         var strategy = new ExtractionDocumentProcessingStrategy();
 
         var correctContext = CreateProcessingContext(DocumentIntents.ExtractStructuredData);
-        var correctResult = await strategy.ProcessAsync(correctContext);
-        Assert.True(correctResult.Handled);
+        await strategy.ProcessAsync(correctContext);
+        Assert.True(correctContext.Result.HasContext);
 
         var wrongContext = CreateProcessingContext(DocumentIntents.SummarizeDocument);
-        var wrongResult = await strategy.ProcessAsync(wrongContext);
-        Assert.False(wrongResult.Handled);
+        await strategy.ProcessAsync(wrongContext);
+        Assert.False(wrongContext.Result.HasContext);
     }
 
     [Fact]
@@ -85,12 +85,12 @@ public sealed class DocumentProcessingStrategyTests
         var strategy = new ComparisonDocumentProcessingStrategy();
 
         var correctContext = CreateProcessingContext(DocumentIntents.CompareDocuments);
-        var correctResult = await strategy.ProcessAsync(correctContext);
-        Assert.True(correctResult.Handled);
+        await strategy.ProcessAsync(correctContext);
+        Assert.True(correctContext.Result.HasContext);
 
         var wrongContext = CreateProcessingContext(DocumentIntents.SummarizeDocument);
-        var wrongResult = await strategy.ProcessAsync(wrongContext);
-        Assert.False(wrongResult.Handled);
+        await strategy.ProcessAsync(wrongContext);
+        Assert.False(wrongContext.Result.HasContext);
     }
 
     [Fact]
@@ -99,12 +99,12 @@ public sealed class DocumentProcessingStrategyTests
         var strategy = new TransformationDocumentProcessingStrategy();
 
         var correctContext = CreateProcessingContext(DocumentIntents.TransformFormat);
-        var correctResult = await strategy.ProcessAsync(correctContext);
-        Assert.True(correctResult.Handled);
+        await strategy.ProcessAsync(correctContext);
+        Assert.True(correctContext.Result.HasContext);
 
         var wrongContext = CreateProcessingContext(DocumentIntents.SummarizeDocument);
-        var wrongResult = await strategy.ProcessAsync(wrongContext);
-        Assert.False(wrongResult.Handled);
+        await strategy.ProcessAsync(wrongContext);
+        Assert.False(wrongContext.Result.HasContext);
     }
 
     [Fact]
@@ -113,16 +113,16 @@ public sealed class DocumentProcessingStrategyTests
         var strategy = new GeneralReferenceDocumentProcessingStrategy();
 
         var correctContext = CreateProcessingContext(DocumentIntents.GeneralChatWithReference);
-        var correctResult = await strategy.ProcessAsync(correctContext);
-        Assert.True(correctResult.Handled);
+        await strategy.ProcessAsync(correctContext);
+        Assert.True(correctContext.Result.HasContext);
 
         var wrongContext = CreateProcessingContext(DocumentIntents.SummarizeDocument);
-        var wrongResult = await strategy.ProcessAsync(wrongContext);
-        Assert.False(wrongResult.Handled);
+        await strategy.ProcessAsync(wrongContext);
+        Assert.False(wrongContext.Result.HasContext);
     }
 
     [Fact]
-    public async Task AllStrategies_ProcessAsync_ReturnHandledWithContent()
+    public async Task AllStrategies_ProcessAsync_AddContextForMatchingIntent()
     {
         var strategies = new IDocumentProcessingStrategy[]
         {
@@ -147,16 +147,16 @@ public sealed class DocumentProcessingStrategyTests
         for (var i = 0; i < strategies.Length; i++)
         {
             var context = CreateProcessingContext(intents[i]);
-            var result = await strategies[i].ProcessAsync(context);
+            await strategies[i].ProcessAsync(context);
 
-            Assert.True(result.Handled, $"Strategy {strategies[i].GetType().Name} should handle its intent");
-            Assert.True(result.IsSuccess, $"Strategy {strategies[i].GetType().Name} should return success");
-            Assert.NotNull(result.AdditionalContext);
+            Assert.True(context.Result.HasContext, $"Strategy {strategies[i].GetType().Name} should add context for its intent");
+            Assert.True(context.Result.IsSuccess, $"Strategy {strategies[i].GetType().Name} should have success status");
+            Assert.NotEmpty(context.Result.AdditionalContexts);
         }
     }
 
     [Fact]
-    public async Task Strategies_ProcessAsync_ReturnNotHandledForWrongIntent()
+    public async Task Strategies_ProcessAsync_DoNotAddContextForWrongIntent()
     {
         var strategies = new IDocumentProcessingStrategy[]
         {
@@ -173,9 +173,84 @@ public sealed class DocumentProcessingStrategyTests
 
         foreach (var strategy in strategies)
         {
-            var result = await strategy.ProcessAsync(context);
-            Assert.False(result.Handled, $"Strategy {strategy.GetType().Name} should not handle DocumentQnA intent");
+            await strategy.ProcessAsync(context);
         }
+
+        // Since we use the same context, it should still have no content after all strategies run
+        Assert.False(context.Result.HasContext, "No strategy should add context for DocumentQnA intent");
+    }
+
+    [Fact]
+    public async Task MultipleStrategies_ProcessAsync_CanAccumulateContext()
+    {
+        // Create a context that could match multiple strategies
+        var context = new DocumentProcessingContext
+        {
+            Prompt = "Summarize and compare",
+            Interaction = new ChatInteraction
+            {
+                ItemId = "test-id",
+                Documents =
+                [
+                    new ChatInteractionDocument
+                    {
+                        DocumentId = "doc1",
+                        FileName = "document.txt",
+                        ContentType = "text/plain",
+                        Text = "Sample document content"
+                    }
+                ]
+            },
+            IntentResult = DocumentIntentResult.FromIntent(DocumentIntents.SummarizeDocument)
+        };
+
+        // First strategy adds context
+        var summarizationStrategy = new SummarizationDocumentProcessingStrategy();
+        await summarizationStrategy.ProcessAsync(context);
+        Assert.Single(context.Result.AdditionalContexts);
+
+        // Manually add more context (simulating multiple strategies contributing)
+        context.Result.AddContext("Additional comparison context", "Comparison prefix:");
+        Assert.Equal(2, context.Result.AdditionalContexts.Count);
+
+        // Combined context should include both
+        var combined = context.Result.GetCombinedContext();
+        Assert.Contains("Sample document content", combined);
+        Assert.Contains("Additional comparison context", combined);
+    }
+
+    [Fact]
+    public void DocumentProcessingResult_AddContext_AccumulatesMultipleContexts()
+    {
+        var result = new DocumentProcessingResult();
+
+        Assert.False(result.HasContext);
+
+        result.AddContext("First context", "Prefix 1:");
+        Assert.True(result.HasContext);
+        Assert.Single(result.AdditionalContexts);
+
+        result.AddContext("Second context", "Prefix 2:");
+        Assert.Equal(2, result.AdditionalContexts.Count);
+
+        var combined = result.GetCombinedContext();
+        Assert.Contains("First context", combined);
+        Assert.Contains("Second context", combined);
+        Assert.Contains("---", combined); // Separator between contexts
+    }
+
+    [Fact]
+    public void DocumentProcessingResult_AddContext_TracksVectorSearch()
+    {
+        var result = new DocumentProcessingResult();
+
+        Assert.False(result.UsedVectorSearch);
+
+        result.AddContext("Context without vector search", usedVectorSearch: false);
+        Assert.False(result.UsedVectorSearch);
+
+        result.AddContext("Context with vector search", usedVectorSearch: true);
+        Assert.True(result.UsedVectorSearch);
     }
 
     private static DocumentProcessingContext CreateProcessingContext(string intent)

@@ -1,3 +1,4 @@
+using System.Text;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
@@ -8,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrategy
 {
     /// <inheritdoc />
-    public abstract Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context);
+    public abstract Task ProcessAsync(DocumentProcessingContext context);
 
     /// <summary>
     /// Gets the combined text content from all documents.
@@ -20,7 +21,7 @@ public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrate
             return string.Empty;
         }
 
-        var builder = new System.Text.StringBuilder();
+        var builder = new StringBuilder();
         var totalLength = 0;
 
         foreach (var doc in context.Documents)
@@ -80,7 +81,7 @@ public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrate
             return string.Empty;
         }
 
-        var builder = new System.Text.StringBuilder();
+        var builder = new StringBuilder();
         builder.AppendLine("Attached documents:");
 
         foreach (var doc in context.Documents)

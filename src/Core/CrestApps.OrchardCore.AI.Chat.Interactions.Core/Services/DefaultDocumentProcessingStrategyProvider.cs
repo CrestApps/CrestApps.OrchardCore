@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 
 /// <summary>
 /// Default implementation of <see cref="IDocumentProcessingStrategyProvider"/> that routes
-/// document processing through all registered strategies until one handles the request.
+/// document processing through all registered strategies, allowing multiple to contribute context.
 /// </summary>
 public sealed class DefaultDocumentProcessingStrategyProvider : IDocumentProcessingStrategyProvider
 {
@@ -21,32 +21,30 @@ public sealed class DefaultDocumentProcessingStrategyProvider : IDocumentProcess
     }
 
     /// <inheritdoc />
-    public async Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
+    public async Task ProcessAsync(DocumentProcessingContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(context.IntentResult);
 
         var intent = context.IntentResult.Intent;
 
-        // Try each strategy in sequence
+        // Call all strategies, allowing each to contribute context
         foreach (var strategy in _strategies)
         {
             try
             {
-                _logger.LogDebug("Trying strategy {StrategyType} for intent {Intent}.",
+                _logger.LogDebug("Calling strategy {StrategyType} for intent {Intent}.",
                     strategy.GetType().Name, intent);
 
-                var result = await strategy.ProcessAsync(context);
+                var contextCountBefore = context.Result.AdditionalContexts.Count;
+                await strategy.ProcessAsync(context);
+                var contextCountAfter = context.Result.AdditionalContexts.Count;
 
-                if (result.Handled)
+                if (contextCountAfter > contextCountBefore)
                 {
-                    _logger.LogDebug("Strategy {StrategyType} handled intent {Intent}. Success: {IsSuccess}.",
-                        strategy.GetType().Name, intent, result.IsSuccess);
-                    return result;
+                    _logger.LogDebug("Strategy {StrategyType} added {ContextCount} context(s) for intent {Intent}.",
+                        strategy.GetType().Name, contextCountAfter - contextCountBefore, intent);
                 }
-
-                _logger.LogDebug("Strategy {StrategyType} did not handle intent {Intent}.",
-                    strategy.GetType().Name, intent);
             }
             catch (Exception ex)
             {
@@ -56,8 +54,9 @@ public sealed class DefaultDocumentProcessingStrategyProvider : IDocumentProcess
             }
         }
 
-        // No strategy handled the request
-        _logger.LogWarning("No strategy handled intent {Intent}. Returning empty result.", intent);
-        return DocumentProcessingResult.Empty();
+        if (!context.Result.HasContext)
+        {
+            _logger.LogDebug("No strategy added context for intent {Intent}.", intent);
+        }
     }
 }

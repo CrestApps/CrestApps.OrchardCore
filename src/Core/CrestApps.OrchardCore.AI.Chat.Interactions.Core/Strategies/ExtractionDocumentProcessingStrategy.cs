@@ -11,27 +11,27 @@ public sealed class ExtractionDocumentProcessingStrategy : DocumentProcessingStr
     private const int MaxContextLength = 50000;
 
     /// <inheritdoc />
-    public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
+    public override Task ProcessAsync(DocumentProcessingContext context)
     {
         if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.ExtractStructuredData, StringComparison.OrdinalIgnoreCase))
         {
-            return Task.FromResult(DocumentProcessingResult.NotHandled());
+            return Task.CompletedTask;
         }
 
         var documentContent = GetCombinedDocumentText(context, MaxContextLength);
 
         if (string.IsNullOrWhiteSpace(documentContent))
         {
-            return Task.FromResult(DocumentProcessingResult.Success(
+            context.Result.AddContext(
                 GetDocumentMetadata(context),
-                "The following documents are attached (but could not be read):"));
+                "The following documents are attached (but could not be read):");
+        }
+        else
+        {
+            var prefix = "The following is the content of the attached document(s). The user wants to extract structured data or specific information from this content:";
+            context.Result.AddContext(documentContent, prefix, usedVectorSearch: false);
         }
 
-        var prefix = "The following is the content of the attached document(s). The user wants to extract structured data or specific information from this content:";
-
-        return Task.FromResult(DocumentProcessingResult.Success(
-            documentContent,
-            prefix,
-            usedVectorSearch: false));
+        return Task.CompletedTask;
     }
 }
