@@ -16,7 +16,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
         PropertyNameCaseInsensitive = true,
     };
 
-    private static readonly JsonElement _jsonSchemaString = JsonSerializer.Deserialize<JsonElement>(
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
         """
         {
           "type": "object",
@@ -31,7 +31,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
         }
         """);
 
-    public override JsonElement JsonSchema => _jsonSchemaString;
+    public override JsonElement JsonSchema => _jsonSchema;
 
     protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
