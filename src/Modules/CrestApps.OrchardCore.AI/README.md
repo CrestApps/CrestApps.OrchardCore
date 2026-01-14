@@ -281,41 +281,41 @@ public sealed class SystemDefinedAIProfileMigrations : DataMigration
 
 ### Extending AI Chat with Custom Functions
 
-You can enhance the AI chat functionality by adding custom functions. To create a custom function, inherit from `AIFunction` and register it as a service. Below is an example of a custom function that retrieves weather information based on the user's location:
+You can enhance the AI chat functionality by adding custom functions. To create a custom function, inherit from `AIFunction` and register it as a service. AI tools are registered as singletons, so dependencies must be resolved at execution time using `arguments.Services`.
+
+Below is an example of a custom function that retrieves weather information based on the user's location:
 
 ```csharp
 public sealed class GetWeatherFunction : AIFunction
 {
     public const string TheName = "get_weather";
 
-    public GetWeatherFunction()
-    {
-        Name = TheName;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-         {
-           "type": "object",
-           "properties": {
-             "Location": {
-               "type": "string",
-               "description": "The geographic location for which the weather information is requested."
-             }
-           },
-           "additionalProperties": false,
-           "required": ["Location"]
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+    """
+     {
+       "type": "object",
+       "properties": {
+         "Location": {
+           "type": "string",
+           "description": "The geographic location for which the weather information is requested."
          }
-        """);
-    }
+       },
+       "additionalProperties": false,
+       "required": ["Location"]
+     }
+    """);
 
-    public override string Name { get; }
+    public override string Name => TheName;
 
     public override string Description => "Retrieves weather information for a specified location.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
+        // For dependencies, resolve them at runtime via arguments.Services:
+        // var someService = arguments.Services.GetRequiredService<ISomeService>();
+
         if (!arguments.TryGetValue("Location", out var prompt) || prompt is null) 
         {
             return ValueTask.FromResult<object>("Location is required.");
@@ -341,7 +341,7 @@ public sealed class GetWeatherFunction : AIFunction
 
 #### Registering the Custom Function
 
-To register the custom function, add it as a service in the `Startup` class:
+To register the custom function, add it as a service in the `Startup` class. AI tools are registered as singletons with keyed service support:
 
 ```csharp
 services.AddAITool<GetWeatherFunction>(GetWeatherFunction.TheName);
@@ -358,7 +358,7 @@ services.AddAITool<GetWeatherFunction>(GetWeatherFunction.TheName, options =>
 });
 ```
 
-Once registered, the function can be accessed via `IAIToolsService` in your module.
+Once registered, the function can be accessed via `IAIToolsService` in your module, which resolves tools by their name using keyed service resolution.
 
 ---
 
