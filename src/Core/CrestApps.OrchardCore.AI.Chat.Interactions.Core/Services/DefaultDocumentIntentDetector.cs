@@ -48,7 +48,7 @@ public sealed class DefaultDocumentIntentDetector : IDocumentIntentDetector
     ];
 
     /// <inheritdoc />
-    public Task<DocumentIntentResult> DetectIntentAsync(DocumentIntentDetectionContext context)
+    public Task<DocumentIntentResult> DetectAsync(DocumentIntentDetectionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -56,7 +56,7 @@ public sealed class DefaultDocumentIntentDetector : IDocumentIntentDetector
         {
             // Default to general chat with reference if no prompt provided
             return Task.FromResult(DocumentIntentResult.FromIntent(
-                DocumentIntent.GeneralChatWithReference,
+                DocumentIntents.GeneralChatWithReference,
                 0.5f,
                 "No prompt provided, defaulting to general chat."));
         }
@@ -69,7 +69,7 @@ public sealed class DefaultDocumentIntentDetector : IDocumentIntentDetector
         if (hasTabularFiles && ContainsAnyKeyword(prompt, _tabularAnalysisKeywords))
         {
             return Task.FromResult(DocumentIntentResult.FromIntent(
-                DocumentIntent.AnalyzeTabularData,
+                DocumentIntents.AnalyzeTabularData,
                 0.9f,
                 "Tabular file detected with analysis-related keywords."));
         }
@@ -78,7 +78,7 @@ public sealed class DefaultDocumentIntentDetector : IDocumentIntentDetector
         if (hasMultipleDocuments && ContainsAnyKeyword(prompt, _comparisonKeywords))
         {
             return Task.FromResult(DocumentIntentResult.FromIntent(
-                DocumentIntent.CompareDocuments,
+                DocumentIntents.CompareDocuments,
                 0.85f,
                 "Multiple documents with comparison keywords detected."));
         }
@@ -87,7 +87,7 @@ public sealed class DefaultDocumentIntentDetector : IDocumentIntentDetector
         if (ContainsAnyKeyword(prompt, _summarizationKeywords))
         {
             return Task.FromResult(DocumentIntentResult.FromIntent(
-                DocumentIntent.SummarizeDocument,
+                DocumentIntents.SummarizeDocument,
                 0.9f,
                 "Summarization keywords detected."));
         }
@@ -96,7 +96,7 @@ public sealed class DefaultDocumentIntentDetector : IDocumentIntentDetector
         if (ContainsAnyKeyword(prompt, _extractionKeywords))
         {
             return Task.FromResult(DocumentIntentResult.FromIntent(
-                DocumentIntent.ExtractStructuredData,
+                DocumentIntents.ExtractStructuredData,
                 0.85f,
                 "Data extraction keywords detected."));
         }
@@ -105,7 +105,7 @@ public sealed class DefaultDocumentIntentDetector : IDocumentIntentDetector
         if (ContainsAnyKeyword(prompt, _transformationKeywords))
         {
             return Task.FromResult(DocumentIntentResult.FromIntent(
-                DocumentIntent.TransformFormat,
+                DocumentIntents.TransformFormat,
                 0.8f,
                 "Transformation keywords detected."));
         }
@@ -114,14 +114,14 @@ public sealed class DefaultDocumentIntentDetector : IDocumentIntentDetector
         if (IsQuestionPattern(prompt))
         {
             return Task.FromResult(DocumentIntentResult.FromIntent(
-                DocumentIntent.DocumentQnA,
+                DocumentIntents.DocumentQnA,
                 0.75f,
                 "Question pattern detected, using RAG approach."));
         }
 
         // Default to document Q&A (existing RAG behavior) for backward compatibility
         return Task.FromResult(DocumentIntentResult.FromIntent(
-            DocumentIntent.DocumentQnA,
+            DocumentIntents.DocumentQnA,
             0.5f,
             "No specific intent detected, defaulting to document Q&A."));
     }

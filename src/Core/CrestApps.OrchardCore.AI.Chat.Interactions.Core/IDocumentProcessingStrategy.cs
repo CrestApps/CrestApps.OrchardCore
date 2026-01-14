@@ -9,16 +9,11 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 public interface IDocumentProcessingStrategy
 {
     /// <summary>
-    /// Gets the order/priority of this strategy. Lower values are checked first.
-    /// </summary>
-    int Order => 0;
-
-    /// <summary>
     /// Determines whether this strategy can handle the given intent.
     /// </summary>
-    /// <param name="intent">The detected document intent.</param>
+    /// <param name="intent">The detected document intent name.</param>
     /// <returns>True if this strategy can handle the intent; otherwise, false.</returns>
-    bool CanHandle(DocumentIntent intent);
+    bool CanHandle(string intent);
 
     /// <summary>
     /// Processes the documents according to the strategy and returns context for the AI.

@@ -41,12 +41,9 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
     }
 
     /// <inheritdoc />
-    public override int Order => 100;
-
-    /// <inheritdoc />
-    public override bool CanHandle(DocumentIntent intent)
+    public override bool CanHandle(string intent)
     {
-        return intent == DocumentIntent.DocumentQnA;
+        return string.Equals(intent, DocumentIntents.DocumentQnA, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <inheritdoc />

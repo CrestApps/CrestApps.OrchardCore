@@ -12,16 +12,16 @@ public sealed class DocumentProcessingStrategyTests
     {
         var strategy = new SummarizationDocumentProcessingStrategy();
 
-        Assert.True(strategy.CanHandle(DocumentIntent.SummarizeDocument));
-        Assert.False(strategy.CanHandle(DocumentIntent.DocumentQnA));
-        Assert.False(strategy.CanHandle(DocumentIntent.AnalyzeTabularData));
+        Assert.True(strategy.CanHandle(DocumentIntents.SummarizeDocument));
+        Assert.False(strategy.CanHandle(DocumentIntents.DocumentQnA));
+        Assert.False(strategy.CanHandle(DocumentIntents.AnalyzeTabularData));
     }
 
     [Fact]
     public async Task SummarizationStrategy_ProcessAsync_ReturnsDocumentContent()
     {
         var strategy = new SummarizationDocumentProcessingStrategy();
-        var context = CreateProcessingContext(DocumentIntent.SummarizeDocument);
+        var context = CreateProcessingContext(DocumentIntents.SummarizeDocument);
 
         var result = await strategy.ProcessAsync(context);
 
@@ -35,9 +35,9 @@ public sealed class DocumentProcessingStrategyTests
     {
         var strategy = new TabularAnalysisDocumentProcessingStrategy();
 
-        Assert.True(strategy.CanHandle(DocumentIntent.AnalyzeTabularData));
-        Assert.False(strategy.CanHandle(DocumentIntent.SummarizeDocument));
-        Assert.False(strategy.CanHandle(DocumentIntent.DocumentQnA));
+        Assert.True(strategy.CanHandle(DocumentIntents.AnalyzeTabularData));
+        Assert.False(strategy.CanHandle(DocumentIntents.SummarizeDocument));
+        Assert.False(strategy.CanHandle(DocumentIntents.DocumentQnA));
     }
 
     [Fact]
@@ -58,8 +58,8 @@ public sealed class DocumentProcessingStrategyTests
     {
         var strategy = new ExtractionDocumentProcessingStrategy();
 
-        Assert.True(strategy.CanHandle(DocumentIntent.ExtractStructuredData));
-        Assert.False(strategy.CanHandle(DocumentIntent.SummarizeDocument));
+        Assert.True(strategy.CanHandle(DocumentIntents.ExtractStructuredData));
+        Assert.False(strategy.CanHandle(DocumentIntents.SummarizeDocument));
     }
 
     [Fact]
@@ -67,8 +67,8 @@ public sealed class DocumentProcessingStrategyTests
     {
         var strategy = new ComparisonDocumentProcessingStrategy();
 
-        Assert.True(strategy.CanHandle(DocumentIntent.CompareDocuments));
-        Assert.False(strategy.CanHandle(DocumentIntent.SummarizeDocument));
+        Assert.True(strategy.CanHandle(DocumentIntents.CompareDocuments));
+        Assert.False(strategy.CanHandle(DocumentIntents.SummarizeDocument));
     }
 
     [Fact]
@@ -76,8 +76,8 @@ public sealed class DocumentProcessingStrategyTests
     {
         var strategy = new TransformationDocumentProcessingStrategy();
 
-        Assert.True(strategy.CanHandle(DocumentIntent.TransformFormat));
-        Assert.False(strategy.CanHandle(DocumentIntent.SummarizeDocument));
+        Assert.True(strategy.CanHandle(DocumentIntents.TransformFormat));
+        Assert.False(strategy.CanHandle(DocumentIntents.SummarizeDocument));
     }
 
     [Fact]
@@ -85,8 +85,8 @@ public sealed class DocumentProcessingStrategyTests
     {
         var strategy = new GeneralReferenceDocumentProcessingStrategy();
 
-        Assert.True(strategy.CanHandle(DocumentIntent.GeneralChatWithReference));
-        Assert.False(strategy.CanHandle(DocumentIntent.SummarizeDocument));
+        Assert.True(strategy.CanHandle(DocumentIntents.GeneralChatWithReference));
+        Assert.False(strategy.CanHandle(DocumentIntents.SummarizeDocument));
     }
 
     [Fact]
@@ -104,12 +104,12 @@ public sealed class DocumentProcessingStrategyTests
 
         var intents = new[]
         {
-            DocumentIntent.SummarizeDocument,
-            DocumentIntent.AnalyzeTabularData,
-            DocumentIntent.ExtractStructuredData,
-            DocumentIntent.CompareDocuments,
-            DocumentIntent.TransformFormat,
-            DocumentIntent.GeneralChatWithReference,
+            DocumentIntents.SummarizeDocument,
+            DocumentIntents.AnalyzeTabularData,
+            DocumentIntents.ExtractStructuredData,
+            DocumentIntents.CompareDocuments,
+            DocumentIntents.TransformFormat,
+            DocumentIntents.GeneralChatWithReference,
         };
 
         for (var i = 0; i < strategies.Length; i++)
@@ -122,7 +122,7 @@ public sealed class DocumentProcessingStrategyTests
         }
     }
 
-    private static DocumentProcessingContext CreateProcessingContext(DocumentIntent intent)
+    private static DocumentProcessingContext CreateProcessingContext(string intent)
     {
         return new DocumentProcessingContext
         {
@@ -164,7 +164,7 @@ public sealed class DocumentProcessingStrategyTests
                     }
                 ]
             },
-            IntentResult = DocumentIntentResult.FromIntent(DocumentIntent.AnalyzeTabularData)
+            IntentResult = DocumentIntentResult.FromIntent(DocumentIntents.AnalyzeTabularData)
         };
     }
 }

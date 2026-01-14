@@ -13,5 +13,5 @@ public interface IDocumentIntentDetector
     /// </summary>
     /// <param name="context">The context containing the prompt, documents, and interaction.</param>
     /// <returns>The detected intent result with confidence level.</returns>
-    Task<DocumentIntentResult> DetectIntentAsync(DocumentIntentDetectionContext context);
+    Task<DocumentIntentResult> DetectAsync(DocumentIntentDetectionContext context);
 }

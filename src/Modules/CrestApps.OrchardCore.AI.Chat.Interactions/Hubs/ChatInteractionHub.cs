@@ -442,7 +442,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 CancellationToken = cancellationToken,
             };
 
-            var intentResult = await intentDetector.DetectIntentAsync(intentContext);
+            var intentResult = await intentDetector.DetectAsync(intentContext);
 
             _logger.LogDebug("Detected document intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
                 intentResult.Intent, intentResult.Confidence, intentResult.Reason);

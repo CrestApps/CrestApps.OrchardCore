@@ -16,23 +16,24 @@ This module provides an extensible architecture for processing documents in chat
 
 #### Intent Detection
 
-The `IDocumentIntentDetector` interface allows classification of user intent when documents are attached:
+The `IDocumentIntentDetector` interface allows classification of user intent when documents are attached. Intents are string-based, allowing easy extensibility. Well-known intents are defined in `DocumentIntents`:
 
-- `DocumentQnA` - Question answering over documents (RAG)
-- `SummarizeDocument` - Document summarization
-- `AnalyzeTabularData` - CSV/tabular data analysis
-- `ExtractStructuredData` - Data extraction
-- `CompareDocuments` - Document comparison
-- `TransformFormat` - Content transformation/reformatting
-- `GeneralChatWithReference` - General chat with document reference
+- `DocumentIntents.DocumentQnA` - Question answering over documents (RAG)
+- `DocumentIntents.SummarizeDocument` - Document summarization
+- `DocumentIntents.AnalyzeTabularData` - CSV/tabular data analysis
+- `DocumentIntents.ExtractStructuredData` - Data extraction
+- `DocumentIntents.CompareDocuments` - Document comparison
+- `DocumentIntents.TransformFormat` - Content transformation/reformatting
+- `DocumentIntents.GeneralChatWithReference` - General chat with document reference
 
 #### Processing Strategies
 
 The `IDocumentProcessingStrategy` interface enables custom document processing based on intent:
 
-- Each strategy handles specific intents
+- Each strategy handles specific intents (string-based matching)
 - Strategies can bypass vector search when appropriate
 - Extensible via DI for custom strategies
+- Fallback intent is configurable via `ChatInteractionDocumentOptions`
 
 ### Built-in Strategies
 
@@ -57,5 +58,18 @@ services.AddDocumentProcessingServices()
 ### Adding Custom Strategies
 
 ```csharp
-services.AddDocumentProcessingStrategy<MyCustomStrategy>();
+// Register a strategy with a custom intent
+services.AddDocumentProcessingStrategy<MyCustomStrategy>("MyCustomIntent");
+
+// Register a strategy for a well-known intent
+services.AddDocumentProcessingStrategy<MyRagStrategy>(DocumentIntents.DocumentQnA);
+```
+
+### Configuring Fallback Intent
+
+```csharp
+services.Configure<ChatInteractionDocumentOptions>(options =>
+{
+    options.FallbackIntent = DocumentIntents.GeneralChatWithReference;
+});
 ```

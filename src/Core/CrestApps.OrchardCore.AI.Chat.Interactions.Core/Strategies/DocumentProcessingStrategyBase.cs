@@ -8,10 +8,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrategy
 {
     /// <inheritdoc />
-    public virtual int Order => 0;
-
-    /// <inheritdoc />
-    public abstract bool CanHandle(DocumentIntent intent);
+    public abstract bool CanHandle(string intent);
 
     /// <inheritdoc />
     public abstract Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context);

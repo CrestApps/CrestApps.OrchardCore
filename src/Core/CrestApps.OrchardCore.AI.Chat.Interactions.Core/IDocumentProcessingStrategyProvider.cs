@@ -10,9 +10,9 @@ public interface IDocumentProcessingStrategyProvider
     /// <summary>
     /// Gets the appropriate strategy for the given intent.
     /// </summary>
-    /// <param name="intent">The detected document intent.</param>
+    /// <param name="intent">The detected document intent name.</param>
     /// <returns>The strategy to use for processing, or null if no strategy can handle the intent.</returns>
-    IDocumentProcessingStrategy GetStrategy(DocumentIntent intent);
+    IDocumentProcessingStrategy GetStrategy(string intent);
 
     /// <summary>
     /// Processes documents using the appropriate strategy for the detected intent.

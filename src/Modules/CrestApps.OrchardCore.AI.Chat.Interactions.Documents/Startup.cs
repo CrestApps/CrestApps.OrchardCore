@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Endpoints;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Handlers;
@@ -40,7 +41,7 @@ public sealed class Startup : StartupBase
         services
             .AddDocumentProcessingServices()
             .AddDefaultDocumentProcessingStrategies()
-            .AddDocumentProcessingStrategy<RagDocumentProcessingStrategy>();
+            .AddDocumentProcessingStrategy<RagDocumentProcessingStrategy>(DocumentIntents.DocumentQnA);
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

@@ -152,10 +152,10 @@ You can provide custom intent detection by implementing `IDocumentIntentDetector
 ```csharp
 public class MyIntentDetector : IDocumentIntentDetector
 {
-    public Task<DocumentIntentResult> DetectIntentAsync(DocumentIntentDetectionContext context)
+    public Task<DocumentIntentResult> DetectAsync(DocumentIntentDetectionContext context)
     {
         // Your custom intent detection logic
-        return Task.FromResult(DocumentIntentResult.FromIntent(DocumentIntent.DocumentQnA));
+        return Task.FromResult(DocumentIntentResult.FromIntent(DocumentIntents.DocumentQnA));
     }
 }
 
@@ -168,13 +168,13 @@ services.AddScoped<IDocumentIntentDetector, MyIntentDetector>();
 To add a custom processing strategy:
 
 1. Implement `IDocumentProcessingStrategy` or extend `DocumentProcessingStrategyBase`
-2. Register using `AddDocumentProcessingStrategy<T>()`
+2. Register using `AddDocumentProcessingStrategy<T>(intent)`
 
 Example:
 ```csharp
 public class MyCustomStrategy : DocumentProcessingStrategyBase
 {
-    public override bool CanHandle(DocumentIntent intent) => intent == DocumentIntent.SummarizeDocument;
+    public override bool CanHandle(string intent) => intent == "MyCustomIntent";
 
     public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
     {
@@ -183,8 +183,8 @@ public class MyCustomStrategy : DocumentProcessingStrategyBase
     }
 }
 
-// Register in Startup
-services.AddDocumentProcessingStrategy<MyCustomStrategy>();
+// Register in Startup with your custom intent name
+services.AddDocumentProcessingStrategy<MyCustomStrategy>("MyCustomIntent");
 ```
 
 ## API Endpoints

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,27 +26,37 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds a document processing strategy to the service collection.
+    /// Adds a document processing strategy and registers it for a specific intent.
     /// </summary>
-    public static IServiceCollection AddDocumentProcessingStrategy<TStrategy>(this IServiceCollection services)
+    /// <typeparam name="TStrategy">The strategy type.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <param name="intent">The intent name this strategy handles.</param>
+    public static IServiceCollection AddDocumentProcessingStrategy<TStrategy>(this IServiceCollection services, string intent)
         where TStrategy : class, IDocumentProcessingStrategy
     {
+        ArgumentException.ThrowIfNullOrEmpty(intent);
+
         services.AddScoped<IDocumentProcessingStrategy, TStrategy>();
+        services.Configure<ChatInteractionDocumentOptions>(options =>
+        {
+            options.AddStrategy<TStrategy>(intent);
+        });
+
         return services;
     }
 
     /// <summary>
-    /// Adds the default document processing strategies (excluding RAG which requires specific services).
+    /// Adds the default document processing strategies.
     /// </summary>
     public static IServiceCollection AddDefaultDocumentProcessingStrategies(this IServiceCollection services)
     {
         services
-            .AddDocumentProcessingStrategy<SummarizationDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<TabularAnalysisDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<ExtractionDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<ComparisonDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<TransformationDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<GeneralReferenceDocumentProcessingStrategy>();
+            .AddDocumentProcessingStrategy<SummarizationDocumentProcessingStrategy>(DocumentIntents.SummarizeDocument)
+            .AddDocumentProcessingStrategy<TabularAnalysisDocumentProcessingStrategy>(DocumentIntents.AnalyzeTabularData)
+            .AddDocumentProcessingStrategy<ExtractionDocumentProcessingStrategy>(DocumentIntents.ExtractStructuredData)
+            .AddDocumentProcessingStrategy<ComparisonDocumentProcessingStrategy>(DocumentIntents.CompareDocuments)
+            .AddDocumentProcessingStrategy<TransformationDocumentProcessingStrategy>(DocumentIntents.TransformFormat)
+            .AddDocumentProcessingStrategy<GeneralReferenceDocumentProcessingStrategy>(DocumentIntents.GeneralChatWithReference);
 
         return services;
     }

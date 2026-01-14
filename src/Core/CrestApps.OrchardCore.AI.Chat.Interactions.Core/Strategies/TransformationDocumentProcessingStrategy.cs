@@ -11,12 +11,9 @@ public sealed class TransformationDocumentProcessingStrategy : DocumentProcessin
     private const int MaxContextLength = 50000;
 
     /// <inheritdoc />
-    public override int Order => 100;
-
-    /// <inheritdoc />
-    public override bool CanHandle(DocumentIntent intent)
+    public override bool CanHandle(string intent)
     {
-        return intent == DocumentIntent.TransformFormat;
+        return string.Equals(intent, DocumentIntents.TransformFormat, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <inheritdoc />

@@ -9,13 +9,13 @@ public sealed class DefaultDocumentIntentDetectorTests
     private readonly DefaultDocumentIntentDetector _detector = new();
 
     [Fact]
-    public async Task DetectIntentAsync_WhenPromptIsEmpty_ReturnsGeneralChatWithReference()
+    public async Task DetectAsync_WhenPromptIsEmpty_ReturnsGeneralChatWithReference()
     {
         var context = CreateContext("");
 
-        var result = await _detector.DetectIntentAsync(context);
+        var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntent.GeneralChatWithReference, result.Intent);
+        Assert.Equal(DocumentIntents.GeneralChatWithReference, result.Intent);
     }
 
     [Theory]
@@ -24,13 +24,13 @@ public sealed class DefaultDocumentIntentDetectorTests
     [InlineData("what are the key points?")]
     [InlineData("brief overview please")]
     [InlineData("tldr")]
-    public async Task DetectIntentAsync_WhenSummarizationKeywordsPresent_ReturnsSummarizeDocument(string prompt)
+    public async Task DetectAsync_WhenSummarizationKeywordsPresent_ReturnsSummarizeDocument(string prompt)
     {
         var context = CreateContext(prompt);
 
-        var result = await _detector.DetectIntentAsync(context);
+        var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntent.SummarizeDocument, result.Intent);
+        Assert.Equal(DocumentIntents.SummarizeDocument, result.Intent);
     }
 
     [Theory]
@@ -38,13 +38,13 @@ public sealed class DefaultDocumentIntentDetectorTests
     [InlineData("what is the average revenue?")]
     [InlineData("show me the statistics")]
     [InlineData("calculate the sum")]
-    public async Task DetectIntentAsync_WhenTabularAnalysisKeywordsWithCsvFile_ReturnsAnalyzeTabularData(string prompt)
+    public async Task DetectAsync_WhenTabularAnalysisKeywordsWithCsvFile_ReturnsAnalyzeTabularData(string prompt)
     {
         var context = CreateContextWithCsvDocument(prompt);
 
-        var result = await _detector.DetectIntentAsync(context);
+        var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntent.AnalyzeTabularData, result.Intent);
+        Assert.Equal(DocumentIntents.AnalyzeTabularData, result.Intent);
     }
 
     [Theory]
@@ -52,26 +52,26 @@ public sealed class DefaultDocumentIntentDetectorTests
     [InlineData("get all email addresses")]
     [InlineData("parse the document for dates")]
     [InlineData("find all phone numbers")]
-    public async Task DetectIntentAsync_WhenExtractionKeywordsPresent_ReturnsExtractStructuredData(string prompt)
+    public async Task DetectAsync_WhenExtractionKeywordsPresent_ReturnsExtractStructuredData(string prompt)
     {
         var context = CreateContext(prompt);
 
-        var result = await _detector.DetectIntentAsync(context);
+        var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntent.ExtractStructuredData, result.Intent);
+        Assert.Equal(DocumentIntents.ExtractStructuredData, result.Intent);
     }
 
     [Theory]
     [InlineData("compare these two documents")]
     [InlineData("what is the difference between them?")]
     [InlineData("how are they similar?")]
-    public async Task DetectIntentAsync_WhenComparisonKeywordsWithMultipleDocs_ReturnsCompareDocuments(string prompt)
+    public async Task DetectAsync_WhenComparisonKeywordsWithMultipleDocs_ReturnsCompareDocuments(string prompt)
     {
         var context = CreateContextWithMultipleDocuments(prompt);
 
-        var result = await _detector.DetectIntentAsync(context);
+        var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntent.CompareDocuments, result.Intent);
+        Assert.Equal(DocumentIntents.CompareDocuments, result.Intent);
     }
 
     [Theory]
@@ -79,13 +79,13 @@ public sealed class DefaultDocumentIntentDetectorTests
     [InlineData("reformat as bullet points")]
     [InlineData("change to markdown format")]
     [InlineData("make it a numbered list")]
-    public async Task DetectIntentAsync_WhenTransformationKeywordsPresent_ReturnsTransformFormat(string prompt)
+    public async Task DetectAsync_WhenTransformationKeywordsPresent_ReturnsTransformFormat(string prompt)
     {
         var context = CreateContext(prompt);
 
-        var result = await _detector.DetectIntentAsync(context);
+        var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntent.TransformFormat, result.Intent);
+        Assert.Equal(DocumentIntents.TransformFormat, result.Intent);
     }
 
     [Theory]
@@ -93,42 +93,42 @@ public sealed class DefaultDocumentIntentDetectorTests
     [InlineData("when was this created?")]
     [InlineData("can you find details about the meeting?")]
     [InlineData("how does the product work?")]
-    public async Task DetectIntentAsync_WhenQuestionPattern_ReturnsDocumentQnA(string prompt)
+    public async Task DetectAsync_WhenQuestionPattern_ReturnsDocumentQnA(string prompt)
     {
         var context = CreateContext(prompt);
 
-        var result = await _detector.DetectIntentAsync(context);
+        var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntent.DocumentQnA, result.Intent);
+        Assert.Equal(DocumentIntents.DocumentQnA, result.Intent);
     }
 
     [Fact]
-    public async Task DetectIntentAsync_WhenNoSpecificPattern_DefaultsToDocumentQnA()
+    public async Task DetectAsync_WhenNoSpecificPattern_DefaultsToDocumentQnA()
     {
         var context = CreateContext("process the document content");
 
-        var result = await _detector.DetectIntentAsync(context);
+        var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntent.DocumentQnA, result.Intent);
+        Assert.Equal(DocumentIntents.DocumentQnA, result.Intent);
     }
 
     [Fact]
-    public async Task DetectIntentAsync_ReturnsConfidenceValue()
+    public async Task DetectAsync_ReturnsConfidenceValue()
     {
         var context = CreateContext("summarize this document");
 
-        var result = await _detector.DetectIntentAsync(context);
+        var result = await _detector.DetectAsync(context);
 
         Assert.True(result.Confidence > 0);
         Assert.True(result.Confidence <= 1);
     }
 
     [Fact]
-    public async Task DetectIntentAsync_ReturnsReasonForIntent()
+    public async Task DetectAsync_ReturnsReasonForIntent()
     {
         var context = CreateContext("summarize this document");
 
-        var result = await _detector.DetectIntentAsync(context);
+        var result = await _detector.DetectAsync(context);
 
         Assert.NotNull(result.Reason);
         Assert.NotEmpty(result.Reason);

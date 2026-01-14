@@ -11,12 +11,9 @@ public sealed class ComparisonDocumentProcessingStrategy : DocumentProcessingStr
     private const int MaxContextLength = 60000;
 
     /// <inheritdoc />
-    public override int Order => 100;
-
-    /// <inheritdoc />
-    public override bool CanHandle(DocumentIntent intent)
+    public override bool CanHandle(string intent)
     {
-        return intent == DocumentIntent.CompareDocuments;
+        return string.Equals(intent, DocumentIntents.CompareDocuments, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <inheritdoc />

@@ -12,12 +12,9 @@ public sealed class SummarizationDocumentProcessingStrategy : DocumentProcessing
     private const int MaxContextLength = 50000;
 
     /// <inheritdoc />
-    public override int Order => 100;
-
-    /// <inheritdoc />
-    public override bool CanHandle(DocumentIntent intent)
+    public override bool CanHandle(string intent)
     {
-        return intent == DocumentIntent.SummarizeDocument;
+        return string.Equals(intent, DocumentIntents.SummarizeDocument, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <inheritdoc />

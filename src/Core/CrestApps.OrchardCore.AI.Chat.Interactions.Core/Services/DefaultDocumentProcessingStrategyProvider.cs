@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 
@@ -10,19 +11,21 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 public sealed class DefaultDocumentProcessingStrategyProvider : IDocumentProcessingStrategyProvider
 {
     private readonly IEnumerable<IDocumentProcessingStrategy> _strategies;
+    private readonly ChatInteractionDocumentOptions _options;
     private readonly ILogger<DefaultDocumentProcessingStrategyProvider> _logger;
 
     public DefaultDocumentProcessingStrategyProvider(
         IEnumerable<IDocumentProcessingStrategy> strategies,
+        IOptions<ChatInteractionDocumentOptions> options,
         ILogger<DefaultDocumentProcessingStrategyProvider> logger)
     {
-        // Order strategies by their Order property
-        _strategies = strategies.OrderBy(s => s.Order);
+        _strategies = strategies;
+        _options = options.Value;
         _logger = logger;
     }
 
     /// <inheritdoc />
-    public IDocumentProcessingStrategy GetStrategy(DocumentIntent intent)
+    public IDocumentProcessingStrategy GetStrategy(string intent)
     {
         foreach (var strategy in _strategies)
         {
@@ -31,6 +34,23 @@ public sealed class DefaultDocumentProcessingStrategyProvider : IDocumentProcess
                 _logger.LogDebug("Selected strategy {StrategyType} for intent {Intent}.",
                     strategy.GetType().Name, intent);
                 return strategy;
+            }
+        }
+
+        // Try fallback intent if different from requested
+        if (!string.Equals(intent, _options.FallbackIntent, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogDebug("No strategy found for intent {Intent}, trying fallback intent {FallbackIntent}.",
+                intent, _options.FallbackIntent);
+
+            foreach (var strategy in _strategies)
+            {
+                if (strategy.CanHandle(_options.FallbackIntent))
+                {
+                    _logger.LogDebug("Selected fallback strategy {StrategyType} for intent {Intent}.",
+                        strategy.GetType().Name, _options.FallbackIntent);
+                    return strategy;
+                }
             }
         }
 

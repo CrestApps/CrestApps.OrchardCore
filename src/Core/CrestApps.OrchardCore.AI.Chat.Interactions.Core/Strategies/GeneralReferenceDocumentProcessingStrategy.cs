@@ -11,12 +11,9 @@ public sealed class GeneralReferenceDocumentProcessingStrategy : DocumentProcess
     private const int MaxContextLength = 30000;
 
     /// <inheritdoc />
-    public override int Order => 1000; // Low priority - fallback strategy
-
-    /// <inheritdoc />
-    public override bool CanHandle(DocumentIntent intent)
+    public override bool CanHandle(string intent)
     {
-        return intent == DocumentIntent.GeneralChatWithReference;
+        return string.Equals(intent, DocumentIntents.GeneralChatWithReference, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <inheritdoc />

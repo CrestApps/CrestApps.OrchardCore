@@ -16,12 +16,9 @@ public sealed class TabularAnalysisDocumentProcessingStrategy : DocumentProcessi
     private const int MaxRows = 100;
 
     /// <inheritdoc />
-    public override int Order => 100;
-
-    /// <inheritdoc />
-    public override bool CanHandle(DocumentIntent intent)
+    public override bool CanHandle(string intent)
     {
-        return intent == DocumentIntent.AnalyzeTabularData;
+        return string.Equals(intent, DocumentIntents.AnalyzeTabularData, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <inheritdoc />
