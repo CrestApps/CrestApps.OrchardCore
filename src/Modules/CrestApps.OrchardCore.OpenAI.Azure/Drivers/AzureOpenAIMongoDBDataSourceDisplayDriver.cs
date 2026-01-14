@@ -27,7 +27,7 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
 
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
-        if (dataSource.ProfileSource != AzureOpenAIConstants.AzureOpenAIOwnData ||
+        if (dataSource.ProfileSource != AzureOpenAIConstants.ProviderName ||
             dataSource.Type != AzureOpenAIConstants.DataSourceTypes.MongoDB)
         {
             return null;
@@ -51,7 +51,7 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
-        if (dataSource.ProfileSource != AzureOpenAIConstants.AzureOpenAIOwnData ||
+        if (dataSource.ProfileSource != AzureOpenAIConstants.ProviderName ||
             dataSource.Type != AzureOpenAIConstants.DataSourceTypes.MongoDB)
         {
             return null;

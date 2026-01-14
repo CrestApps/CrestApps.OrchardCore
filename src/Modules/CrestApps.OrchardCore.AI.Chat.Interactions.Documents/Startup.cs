@@ -1,7 +1,10 @@
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Endpoints;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Services;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Strategies;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
@@ -21,7 +24,8 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddDocumentTextExtractor<DefaultDocumentTextExtractor>()
+            .AddDocumentTextExtractor<DefaultDocumentTextExtractor>(".txt", ".csv",
+                ".md", ".json", ".xml", ".html", ".htm", ".log", ".yaml", ".yml")
             .AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>()
             .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
             .AddNavigationProvider<ChatInteractionDocumentsAdminMenu>();
@@ -32,6 +36,15 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionHandler>()
             .AddIndexProfileHandler<ChatInteractionIndexProfileHandler>()
             .AddDisplayDriver<IndexProfile, ChatInteractionIndexProfileDisplayDriver>();
+
+        // Add document processing services for intent-aware, strategy-based document handling.
+        services
+            .AddDocumentProcessingServices()
+            .AddDefaultDocumentProcessingStrategies()
+            .AddDocumentIntent(
+                DocumentIntents.DocumentQnA,
+                "The user wants to ask questions about documents, search for information, or find specific content within documents using RAG (Retrieval-Augmented Generation).")
+            .AddDocumentProcessingStrategy<RagDocumentProcessingStrategy>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

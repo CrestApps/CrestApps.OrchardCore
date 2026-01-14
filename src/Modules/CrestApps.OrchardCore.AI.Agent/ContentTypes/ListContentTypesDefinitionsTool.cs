@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
@@ -10,48 +11,35 @@ public sealed class ListContentTypesDefinitionsTool : AIFunction
 {
     public const string TheName = "listContentTypesDefinitions";
 
-    private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-
-    public ListContentTypesDefinitionsTool(
-        IContentDefinitionManager contentDefinitionManager,
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
-    {
-        _contentDefinitionManager = contentDefinitionManager;
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "required": [],
-              "additionalProperties": false
-            }
-            """, JsonSerializerOptions);
-    }
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+        """
+        {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Retrieves the available content types definitions which can be used to create content types.";
 
-    public override JsonElement JsonSchema { get; }
-
-    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
-    {
-        ["Strict"] = false,
-    };
+    public override JsonElement JsonSchema => _jsonSchema;
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ViewContentTypes))
+        var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
+
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ViewContentTypes))
         {
             return "You do not have permission to view content types.";
         }
 
-        return JsonSerializer.Serialize(await _contentDefinitionManager.ListTypeDefinitionsAsync(), JsonHelpers.ContentDefinitionSerializerOptions);
+        return JsonSerializer.Serialize(await contentDefinitionManager.ListTypeDefinitionsAsync(), JsonHelpers.ContentDefinitionSerializerOptions);
     }
 }

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.Channels;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -13,10 +14,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OrchardCore;
-using OrchardCore.Indexing;
-using OrchardCore.Settings;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
@@ -25,11 +23,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 {
     private readonly IAuthorizationService _authorizationService;
     private readonly ISourceCatalogManager<ChatInteraction> _interactionManager;
+    private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IAICompletionService _completionService;
-    private readonly ISiteService _siteService;
-    private readonly IIndexProfileStore _indexProfileStore;
-    private readonly IAIClientFactory _aIClientFactory;
-    private readonly IOptions<AIProviderOptions> _providerOptions;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ChatInteractionHub> _logger;
     private readonly ISession _session;
@@ -39,11 +34,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     public ChatInteractionHub(
         IAuthorizationService authorizationService,
         ISourceCatalogManager<ChatInteraction> interactionManager,
+        IAIDataSourceStore dataSourceStore,
         IAICompletionService completionService,
-        ISiteService siteService,
-        IIndexProfileStore indexProfileStore,
-        IAIClientFactory aIClientFactory,
-        IOptions<AIProviderOptions> providerOptions,
         IServiceProvider serviceProvider,
         ILogger<ChatInteractionHub> logger,
         ISession session,
@@ -51,11 +43,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     {
         _authorizationService = authorizationService;
         _interactionManager = interactionManager;
+        _dataSourceStore = dataSourceStore;
         _completionService = completionService;
-        _siteService = siteService;
-        _indexProfileStore = indexProfileStore;
-        _aIClientFactory = aIClientFactory;
-        _providerOptions = providerOptions;
         _serviceProvider = serviceProvider;
         _logger = logger;
         _session = session;
@@ -127,7 +116,9 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         float? frequencyPenalty,
         float? presencePenalty,
         int? maxTokens,
-        int? pastMessagesCount)
+        int? pastMessagesCount,
+        string dataSourceId,
+        string[] toolNames)
     {
         if (string.IsNullOrWhiteSpace(itemId))
         {
@@ -164,6 +155,19 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         interaction.PresencePenalty = presencePenalty;
         interaction.MaxTokens = maxTokens;
         interaction.PastMessagesCount = pastMessagesCount;
+        interaction.DataSourceId = dataSourceId;
+        interaction.ToolNames = toolNames?.ToList() ?? [];
+
+        if (!string.IsNullOrWhiteSpace(interaction.DataSourceId))
+        {
+            var dataSource = await _dataSourceStore.FindByIdAsync(interaction.DataSourceId);
+
+            if (dataSource is not null)
+            {
+                interaction.DataSourceId = dataSource.ItemId;
+                interaction.DataSourceType = dataSource.Type;
+            }
+        }
 
         await _interactionManager.UpdateAsync(interaction);
         await _session.SaveChangesAsync();
@@ -272,15 +276,14 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             var builder = new StringBuilder();
 
-            // Retrieve document context for RAG if documents are attached
-            var documentContext = await GetDocumentContextAsync(interaction, prompt, cancellationToken);
+            // Process documents using intent-aware, strategy-based approach
+            var documentProcessingResult = await ProcessDocumentsAsync(interaction, prompt, cancellationToken);
 
             var systemMessage = interaction.SystemMessage ?? string.Empty;
-            if (!string.IsNullOrEmpty(documentContext))
+            if (documentProcessingResult != null && documentProcessingResult.IsSuccess && documentProcessingResult.HasContext)
             {
-                // Prepend document context to the system message
-                var contextPrefix = S["The following is relevant context from uploaded documents. Use this information to answer the user's question:"].Value + "\n\n" + documentContext + "\n\n";
-                systemMessage = systemMessage + contextPrefix;
+                // Append document context to the system message
+                systemMessage = systemMessage + "\n\n" + documentProcessingResult.GetCombinedContext();
             }
 
             var completionContext = new AICompletionContext
@@ -298,6 +301,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 InstanceIds = interaction.ToolInstanceIds?.ToArray(),
                 McpConnectionIds = interaction.McpConnectionIds?.ToArray(),
                 UserMarkdownInResponse = true,
+                DataSourceId = interaction.DataSourceId,
+                DataSourceType = interaction.DataSourceType,
             };
 
             var contentItemIds = new HashSet<string>();
@@ -379,6 +384,72 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         }
     }
 
+    /// <summary>
+    /// Processes documents using intent-aware, strategy-based approach.
+    /// First detects the user's intent, then routes to the appropriate processing strategy.
+    /// </summary>
+    private async Task<DocumentProcessingResult> ProcessDocumentsAsync(ChatInteraction interaction, string prompt, CancellationToken cancellationToken)
+    {
+        // Check if there are documents attached
+        if (interaction.Documents == null || interaction.Documents.Count == 0)
+        {
+            return null;
+        }
+
+        // Get the intent detector (required for document processing)
+        var intentDetector = _serviceProvider.GetService<IDocumentIntentDetector>();
+        if (intentDetector == null)
+        {
+            _logger.LogWarning("Document intent detector is not available. Document processing will be skipped.");
+
+            return null;
+        }
+
+        // Get the strategy provider (required for document processing)
+        var strategyProvider = _serviceProvider.GetService<IDocumentProcessingStrategyProvider>();
+        if (strategyProvider == null)
+        {
+            _logger.LogWarning("Document processing strategy provider is not available. Document processing will be skipped.");
+
+            return null;
+        }
+
+        try
+        {
+            // Detect user intent
+            var intentContext = new DocumentIntentDetectionContext
+            {
+                Prompt = prompt,
+                Interaction = interaction,
+                CancellationToken = cancellationToken,
+                ServiceProvider = _serviceProvider,
+            };
+
+            var intentResult = await intentDetector.DetectAsync(intentContext);
+
+            _logger.LogDebug("Detected document intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
+                intentResult.Intent, intentResult.Confidence, intentResult.Reason);
+
+            // Process documents using the appropriate strategy
+            var processingContext = new DocumentProcessingContext
+            {
+                Prompt = prompt,
+                Interaction = interaction,
+                IntentResult = intentResult,
+                CancellationToken = cancellationToken,
+            };
+
+            await strategyProvider.ProcessAsync(processingContext);
+
+            return processingContext.Result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during document intent detection or processing.");
+            return null;
+        }
+    }
+
     private LocalizedString GetFriendlyErrorMessage(Exception ex)
     {
         if (ex is HttpRequestException httpEx)
@@ -410,132 +481,5 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         }
 
         return S["Our service is currently unavailable. Please try again later."];
-    }
-
-    /// <summary>
-    /// Retrieves relevant document context for RAG by embedding the user prompt and searching for similar chunks.
-    /// </summary>
-    private async Task<string> GetDocumentContextAsync(ChatInteraction interaction, string prompt, CancellationToken cancellationToken)
-    {
-        // Check if there are documents attached
-        if (interaction.Documents == null || interaction.Documents.Count == 0)
-        {
-            return null;
-        }
-
-        try
-        {
-            // Get the document settings to find the index profile
-            var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
-
-            if (string.IsNullOrEmpty(settings.IndexProfileName))
-            {
-                _logger.LogWarning("Documents are attached but no index profile is configured. Document context will not be used.");
-                return null;
-            }
-
-            // Find the index profile
-            var indexProfile = await _indexProfileStore.FindByNameAsync(settings.IndexProfileName);
-
-            if (indexProfile == null)
-            {
-                _logger.LogWarning("Index profile '{IndexProfileName}' not found. Document context will not be used.", settings.IndexProfileName);
-                return null;
-            }
-
-            // Get the embedding search service for this provider
-            var searchService = _serviceProvider.GetKeyedService<IVectorSearchService>(indexProfile.ProviderName);
-
-            if (searchService == null)
-            {
-                _logger.LogWarning("No embedding search service registered for provider '{ProviderName}'. Document context will not be used.", indexProfile.ProviderName);
-
-                return null;
-            }
-
-            // Get embedding for the user's prompt
-            var providerName = interaction.Source;
-            var connectionName = interaction.ConnectionName;
-            string deploymentName = null;
-
-            if (_providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
-            {
-                if (string.IsNullOrEmpty(connectionName))
-                {
-                    connectionName = provider.DefaultConnectionName;
-                }
-
-                if (!string.IsNullOrEmpty(connectionName) && provider.Connections.TryGetValue(connectionName, out var connection))
-                {
-                    deploymentName = connection.GetDefaultEmbeddingDeploymentName(false);
-                }
-            }
-
-            if (string.IsNullOrEmpty(deploymentName))
-            {
-                _logger.LogWarning("No embedding deployment configured. Document context will not be used.");
-
-                return null;
-            }
-
-            var embeddingGenerator = await _aIClientFactory.CreateEmbeddingGeneratorAsync(providerName, connectionName, deploymentName);
-
-            if (embeddingGenerator == null)
-            {
-                _logger.LogWarning("Failed to create embedding generator. Document context will not be used.");
-
-                return null;
-            }
-
-            // Generate embedding for the prompt
-            var embedding = await embeddingGenerator.GenerateAsync(prompt, cancellationToken: cancellationToken);
-
-            if (embedding?.Vector == null || embedding.Vector.Length == 0)
-            {
-                _logger.LogWarning("Failed to generate embedding for prompt. Document context will not be used.");
-
-                return null;
-            }
-
-            // Search for similar document chunks
-            var topN = interaction.DocumentTopN ?? settings.TopN;
-
-            if (topN <= 0)
-            {
-                topN = 3;
-            }
-
-            var results = await searchService.SearchAsync(
-                indexProfile,
-                embedding.Vector.ToArray(),
-                interaction.ItemId,
-                topN,
-                cancellationToken);
-
-            if (results == null || !results.Any())
-            {
-                return null;
-            }
-
-            // Combine the relevant chunks into context
-            var contextBuilder = new StringBuilder();
-
-            foreach (var result in results)
-            {
-                if (result.Chunk != null && !string.IsNullOrWhiteSpace(result.Chunk.Text))
-                {
-                    contextBuilder.AppendLine("---");
-                    contextBuilder.AppendLine(result.Chunk.Text);
-                }
-            }
-
-            return contextBuilder.ToString();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving document context. Document context will not be used.");
-
-            return null;
-        }
     }
 }

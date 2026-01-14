@@ -3,7 +3,6 @@ using System.Text.Json;
 using Azure.AI.OpenAI.Chat;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,7 +11,6 @@ using OrchardCore.Contents.Indexing;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
-using OrchardCore.Search.AzureAI;
 using OrchardCore.Search.Elasticsearch;
 using OrchardCore.Search.Elasticsearch.Core.Models;
 
@@ -204,12 +202,12 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             return;
         }
 
-        if (!dataSource.TryGet<AzureAIProfileAISearchMetadata>(out var dataSourceMetadata))
+        if (!dataSource.TryGet<AzureAIProfileElasticsearchMetadata>(out var dataSourceMetadata))
         {
             return;
         }
 
-        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(dataSourceMetadata.IndexName, AzureAISearchConstants.ProviderName);
+        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(dataSourceMetadata.IndexName, ElasticsearchConstants.ProviderName);
 
         if (indexProfile is null)
         {

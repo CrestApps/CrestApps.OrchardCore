@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
@@ -10,43 +11,32 @@ public sealed class GetContentItemLinkTool : AIFunction
 {
     public const string TheName = "getLinkForContentItem";
 
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly LinkGenerator _linkGenerator;
-
-    public GetContentItemLinkTool(
-        IHttpContextAccessor httpContextAccessor,
-        LinkGenerator linkGenerator)
-    {
-        _httpContextAccessor = httpContextAccessor;
-        _linkGenerator = linkGenerator;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {
-                "contentItemId": {
-                  "type": "string",
-                  "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
-                },
-                "type": {
-                  "type": "string",
-                  "description": "Specifies the type of link to generate.",
-                  "enum": ["display", "edit"],
-                  "default": "display"
-                }
-              },
-              "required": ["contentItemId"],
-              "additionalProperties": false
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+        """
+        {
+          "type": "object",
+          "properties": {
+            "contentItemId": {
+              "type": "string",
+              "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
+            },
+            "type": {
+              "type": "string",
+              "description": "Specifies the type of link to generate.",
+              "enum": ["display", "edit"],
+              "default": "display"
             }
-            """, JsonSerializerOptions);
-    }
+          },
+          "required": ["contentItemId"],
+          "additionalProperties": false
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Get a URL for the given content item based on the type.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
@@ -56,6 +46,10 @@ public sealed class GetContentItemLinkTool : AIFunction
     protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
 
         if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {
@@ -82,7 +76,7 @@ public sealed class GetContentItemLinkTool : AIFunction
             },
         };
 
-        var link = _linkGenerator.GetUriByRouteValues(_httpContextAccessor.HttpContext, null, routeValues);
+        var link = linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, routeValues);
 
         return ValueTask.FromResult<object>(link);
     }
