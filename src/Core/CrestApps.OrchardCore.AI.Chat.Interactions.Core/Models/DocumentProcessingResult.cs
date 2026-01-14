@@ -22,7 +22,14 @@ public sealed class DocumentProcessingResult
     public bool UsedVectorSearch { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the strategy handled the request.
+    /// When false, the next strategy in the chain will be tried.
+    /// </summary>
+    public bool Handled { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the processing was successful.
+    /// Only relevant when <see cref="Handled"/> is true.
     /// </summary>
     public bool IsSuccess { get; set; } = true;
 
@@ -41,6 +48,7 @@ public sealed class DocumentProcessingResult
             AdditionalContext = context,
             ContextPrefix = prefix,
             UsedVectorSearch = usedVectorSearch,
+            Handled = true,
             IsSuccess = true,
         };
     }
@@ -52,6 +60,20 @@ public sealed class DocumentProcessingResult
     {
         return new DocumentProcessingResult
         {
+            Handled = true,
+            IsSuccess = true,
+        };
+    }
+
+    /// <summary>
+    /// Creates a result indicating the strategy did not handle the request.
+    /// The next strategy in the chain will be tried.
+    /// </summary>
+    public static DocumentProcessingResult NotHandled()
+    {
+        return new DocumentProcessingResult
+        {
+            Handled = false,
             IsSuccess = true,
         };
     }
@@ -63,6 +85,7 @@ public sealed class DocumentProcessingResult
     {
         return new DocumentProcessingResult
         {
+            Handled = true,
             IsSuccess = false,
             ErrorMessage = errorMessage,
         };

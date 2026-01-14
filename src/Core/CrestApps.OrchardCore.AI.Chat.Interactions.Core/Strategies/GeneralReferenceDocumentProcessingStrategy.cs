@@ -5,20 +5,20 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 /// <summary>
 /// Strategy for handling general chat with document reference.
 /// Provides document metadata and limited content for general reference.
+/// This is typically the fallback strategy when no other strategy handles the intent.
 /// </summary>
 public sealed class GeneralReferenceDocumentProcessingStrategy : DocumentProcessingStrategyBase
 {
     private const int MaxContextLength = 30000;
 
     /// <inheritdoc />
-    public override bool CanHandle(string intent)
-    {
-        return string.Equals(intent, DocumentIntents.GeneralChatWithReference, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <inheritdoc />
     public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
     {
+        if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.GeneralChatWithReference, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(DocumentProcessingResult.NotHandled());
+        }
+
         var documentContent = GetCombinedDocumentText(context, MaxContextLength);
 
         if (string.IsNullOrWhiteSpace(documentContent))

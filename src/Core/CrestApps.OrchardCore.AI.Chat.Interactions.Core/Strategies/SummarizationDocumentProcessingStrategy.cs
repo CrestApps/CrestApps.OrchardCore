@@ -12,14 +12,13 @@ public sealed class SummarizationDocumentProcessingStrategy : DocumentProcessing
     private const int MaxContextLength = 50000;
 
     /// <inheritdoc />
-    public override bool CanHandle(string intent)
-    {
-        return string.Equals(intent, DocumentIntents.SummarizeDocument, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <inheritdoc />
     public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
     {
+        if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.SummarizeDocument, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(DocumentProcessingResult.NotHandled());
+        }
+
         var documentContent = GetCombinedDocumentText(context, MaxContextLength);
 
         if (string.IsNullOrWhiteSpace(documentContent))

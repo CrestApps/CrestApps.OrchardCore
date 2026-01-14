@@ -30,10 +30,11 @@ The `IDocumentIntentDetector` interface allows classification of user intent whe
 
 The `IDocumentProcessingStrategy` interface enables custom document processing based on intent:
 
-- Each strategy handles specific intents (string-based matching)
+- Strategies are called in sequence until one handles the request
+- Each strategy decides internally whether to handle the intent by returning `Handled = true` or `Handled = false`
 - Strategies can bypass vector search when appropriate
+- Multiple strategies can potentially handle the same intent
 - Extensible via DI for custom strategies
-- Fallback intent is configurable via `ChatInteractionDocumentOptions`
 
 ### Built-in Strategies
 
@@ -58,18 +59,27 @@ services.AddDocumentProcessingServices()
 ### Adding Custom Strategies
 
 ```csharp
-// Register a strategy with a custom intent
-services.AddDocumentProcessingStrategy<MyCustomStrategy>("MyCustomIntent");
-
-// Register a strategy for a well-known intent
-services.AddDocumentProcessingStrategy<MyRagStrategy>(DocumentIntents.DocumentQnA);
+// Register a custom strategy - it decides internally which intents to handle
+services.AddDocumentProcessingStrategy<MyCustomStrategy>();
 ```
 
-### Configuring Fallback Intent
+### Implementing a Custom Strategy
 
 ```csharp
-services.Configure<ChatInteractionDocumentOptions>(options =>
+public class MyCustomStrategy : DocumentProcessingStrategyBase
 {
-    options.FallbackIntent = DocumentIntents.GeneralChatWithReference;
-});
+    public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
+    {
+        // Check if we should handle this intent
+        if (!string.Equals(context.IntentResult?.Intent, "MyCustomIntent", StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(DocumentProcessingResult.NotHandled());
+        }
+
+        // Process and return result
+        return Task.FromResult(DocumentProcessingResult.Success(
+            "Processed content",
+            "Context prefix"));
+    }
+}
 ```

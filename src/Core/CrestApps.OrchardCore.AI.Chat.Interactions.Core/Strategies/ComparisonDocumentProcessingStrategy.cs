@@ -11,14 +11,13 @@ public sealed class ComparisonDocumentProcessingStrategy : DocumentProcessingStr
     private const int MaxContextLength = 60000;
 
     /// <inheritdoc />
-    public override bool CanHandle(string intent)
-    {
-        return string.Equals(intent, DocumentIntents.CompareDocuments, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <inheritdoc />
     public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
     {
+        if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.CompareDocuments, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(DocumentProcessingResult.NotHandled());
+        }
+
         var documentContent = GetCombinedDocumentText(context, MaxContextLength);
 
         if (string.IsNullOrWhiteSpace(documentContent))

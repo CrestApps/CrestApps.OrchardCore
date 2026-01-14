@@ -8,13 +8,18 @@ namespace CrestApps.OrchardCore.Tests.Core.ChatInteractions;
 public sealed class DocumentProcessingStrategyTests
 {
     [Fact]
-    public void SummarizationStrategy_CanHandle_ReturnsTrueForSummarizeDocument()
+    public async Task SummarizationStrategy_ProcessAsync_HandlesCorrectIntent()
     {
         var strategy = new SummarizationDocumentProcessingStrategy();
 
-        Assert.True(strategy.CanHandle(DocumentIntents.SummarizeDocument));
-        Assert.False(strategy.CanHandle(DocumentIntents.DocumentQnA));
-        Assert.False(strategy.CanHandle(DocumentIntents.AnalyzeTabularData));
+        var correctContext = CreateProcessingContext(DocumentIntents.SummarizeDocument);
+        var correctResult = await strategy.ProcessAsync(correctContext);
+        Assert.True(correctResult.Handled);
+        Assert.True(correctResult.IsSuccess);
+
+        var wrongContext = CreateProcessingContext(DocumentIntents.DocumentQnA);
+        var wrongResult = await strategy.ProcessAsync(wrongContext);
+        Assert.False(wrongResult.Handled);
     }
 
     [Fact]
@@ -25,19 +30,25 @@ public sealed class DocumentProcessingStrategyTests
 
         var result = await strategy.ProcessAsync(context);
 
+        Assert.True(result.Handled);
         Assert.True(result.IsSuccess);
         Assert.Contains("Sample document content", result.AdditionalContext);
         Assert.False(result.UsedVectorSearch);
     }
 
     [Fact]
-    public void TabularAnalysisStrategy_CanHandle_ReturnsTrueForAnalyzeTabularData()
+    public async Task TabularAnalysisStrategy_ProcessAsync_HandlesCorrectIntent()
     {
         var strategy = new TabularAnalysisDocumentProcessingStrategy();
 
-        Assert.True(strategy.CanHandle(DocumentIntents.AnalyzeTabularData));
-        Assert.False(strategy.CanHandle(DocumentIntents.SummarizeDocument));
-        Assert.False(strategy.CanHandle(DocumentIntents.DocumentQnA));
+        var correctContext = CreateCsvProcessingContext();
+        var correctResult = await strategy.ProcessAsync(correctContext);
+        Assert.True(correctResult.Handled);
+        Assert.True(correctResult.IsSuccess);
+
+        var wrongContext = CreateProcessingContext(DocumentIntents.SummarizeDocument);
+        var wrongResult = await strategy.ProcessAsync(wrongContext);
+        Assert.False(wrongResult.Handled);
     }
 
     [Fact]
@@ -48,49 +59,70 @@ public sealed class DocumentProcessingStrategyTests
 
         var result = await strategy.ProcessAsync(context);
 
+        Assert.True(result.Handled);
         Assert.True(result.IsSuccess);
         Assert.Contains("Name,Age,City", result.AdditionalContext);
         Assert.False(result.UsedVectorSearch);
     }
 
     [Fact]
-    public void ExtractionStrategy_CanHandle_ReturnsTrueForExtractStructuredData()
+    public async Task ExtractionStrategy_ProcessAsync_HandlesCorrectIntent()
     {
         var strategy = new ExtractionDocumentProcessingStrategy();
 
-        Assert.True(strategy.CanHandle(DocumentIntents.ExtractStructuredData));
-        Assert.False(strategy.CanHandle(DocumentIntents.SummarizeDocument));
+        var correctContext = CreateProcessingContext(DocumentIntents.ExtractStructuredData);
+        var correctResult = await strategy.ProcessAsync(correctContext);
+        Assert.True(correctResult.Handled);
+
+        var wrongContext = CreateProcessingContext(DocumentIntents.SummarizeDocument);
+        var wrongResult = await strategy.ProcessAsync(wrongContext);
+        Assert.False(wrongResult.Handled);
     }
 
     [Fact]
-    public void ComparisonStrategy_CanHandle_ReturnsTrueForCompareDocuments()
+    public async Task ComparisonStrategy_ProcessAsync_HandlesCorrectIntent()
     {
         var strategy = new ComparisonDocumentProcessingStrategy();
 
-        Assert.True(strategy.CanHandle(DocumentIntents.CompareDocuments));
-        Assert.False(strategy.CanHandle(DocumentIntents.SummarizeDocument));
+        var correctContext = CreateProcessingContext(DocumentIntents.CompareDocuments);
+        var correctResult = await strategy.ProcessAsync(correctContext);
+        Assert.True(correctResult.Handled);
+
+        var wrongContext = CreateProcessingContext(DocumentIntents.SummarizeDocument);
+        var wrongResult = await strategy.ProcessAsync(wrongContext);
+        Assert.False(wrongResult.Handled);
     }
 
     [Fact]
-    public void TransformationStrategy_CanHandle_ReturnsTrueForTransformFormat()
+    public async Task TransformationStrategy_ProcessAsync_HandlesCorrectIntent()
     {
         var strategy = new TransformationDocumentProcessingStrategy();
 
-        Assert.True(strategy.CanHandle(DocumentIntents.TransformFormat));
-        Assert.False(strategy.CanHandle(DocumentIntents.SummarizeDocument));
+        var correctContext = CreateProcessingContext(DocumentIntents.TransformFormat);
+        var correctResult = await strategy.ProcessAsync(correctContext);
+        Assert.True(correctResult.Handled);
+
+        var wrongContext = CreateProcessingContext(DocumentIntents.SummarizeDocument);
+        var wrongResult = await strategy.ProcessAsync(wrongContext);
+        Assert.False(wrongResult.Handled);
     }
 
     [Fact]
-    public void GeneralReferenceStrategy_CanHandle_ReturnsTrueForGeneralChatWithReference()
+    public async Task GeneralReferenceStrategy_ProcessAsync_HandlesCorrectIntent()
     {
         var strategy = new GeneralReferenceDocumentProcessingStrategy();
 
-        Assert.True(strategy.CanHandle(DocumentIntents.GeneralChatWithReference));
-        Assert.False(strategy.CanHandle(DocumentIntents.SummarizeDocument));
+        var correctContext = CreateProcessingContext(DocumentIntents.GeneralChatWithReference);
+        var correctResult = await strategy.ProcessAsync(correctContext);
+        Assert.True(correctResult.Handled);
+
+        var wrongContext = CreateProcessingContext(DocumentIntents.SummarizeDocument);
+        var wrongResult = await strategy.ProcessAsync(wrongContext);
+        Assert.False(wrongResult.Handled);
     }
 
     [Fact]
-    public async Task AllStrategies_ProcessAsync_ReturnSuccessWithContent()
+    public async Task AllStrategies_ProcessAsync_ReturnHandledWithContent()
     {
         var strategies = new IDocumentProcessingStrategy[]
         {
@@ -117,8 +149,32 @@ public sealed class DocumentProcessingStrategyTests
             var context = CreateProcessingContext(intents[i]);
             var result = await strategies[i].ProcessAsync(context);
 
+            Assert.True(result.Handled, $"Strategy {strategies[i].GetType().Name} should handle its intent");
             Assert.True(result.IsSuccess, $"Strategy {strategies[i].GetType().Name} should return success");
             Assert.NotNull(result.AdditionalContext);
+        }
+    }
+
+    [Fact]
+    public async Task Strategies_ProcessAsync_ReturnNotHandledForWrongIntent()
+    {
+        var strategies = new IDocumentProcessingStrategy[]
+        {
+            new SummarizationDocumentProcessingStrategy(),
+            new TabularAnalysisDocumentProcessingStrategy(),
+            new ExtractionDocumentProcessingStrategy(),
+            new ComparisonDocumentProcessingStrategy(),
+            new TransformationDocumentProcessingStrategy(),
+            new GeneralReferenceDocumentProcessingStrategy(),
+        };
+
+        // Use an intent that none of these strategies handle (DocumentQnA requires RAG strategy)
+        var context = CreateProcessingContext(DocumentIntents.DocumentQnA);
+
+        foreach (var strategy in strategies)
+        {
+            var result = await strategy.ProcessAsync(context);
+            Assert.False(result.Handled, $"Strategy {strategy.GetType().Name} should not handle DocumentQnA intent");
         }
     }
 

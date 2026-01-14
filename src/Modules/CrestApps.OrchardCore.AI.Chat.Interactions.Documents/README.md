@@ -168,23 +168,30 @@ services.AddScoped<IDocumentIntentDetector, MyIntentDetector>();
 To add a custom processing strategy:
 
 1. Implement `IDocumentProcessingStrategy` or extend `DocumentProcessingStrategyBase`
-2. Register using `AddDocumentProcessingStrategy<T>(intent)`
+2. Register using `AddDocumentProcessingStrategy<T>()`
+
+Strategies are called in sequence and each decides whether to handle the request by returning
+`DocumentProcessingResult.Handled = true` or `DocumentProcessingResult.NotHandled()`.
 
 Example:
 ```csharp
 public class MyCustomStrategy : DocumentProcessingStrategyBase
 {
-    public override bool CanHandle(string intent) => intent == "MyCustomIntent";
-
     public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
     {
+        // Check if we should handle this intent
+        if (!string.Equals(context.IntentResult?.Intent, "MyCustomIntent", StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(DocumentProcessingResult.NotHandled());
+        }
+
         // Your custom processing logic
         return Task.FromResult(DocumentProcessingResult.Success("Custom context", "Custom prefix"));
     }
 }
 
-// Register in Startup with your custom intent name
-services.AddDocumentProcessingStrategy<MyCustomStrategy>("MyCustomIntent");
+// Register in Startup
+services.AddDocumentProcessingStrategy<MyCustomStrategy>();
 ```
 
 ## API Endpoints

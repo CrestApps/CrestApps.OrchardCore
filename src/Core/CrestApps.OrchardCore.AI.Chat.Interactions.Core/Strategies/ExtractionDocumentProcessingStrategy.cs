@@ -11,14 +11,13 @@ public sealed class ExtractionDocumentProcessingStrategy : DocumentProcessingStr
     private const int MaxContextLength = 50000;
 
     /// <inheritdoc />
-    public override bool CanHandle(string intent)
-    {
-        return string.Equals(intent, DocumentIntents.ExtractStructuredData, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <inheritdoc />
     public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
     {
+        if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.ExtractStructuredData, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(DocumentProcessingResult.NotHandled());
+        }
+
         var documentContent = GetCombinedDocumentText(context, MaxContextLength);
 
         if (string.IsNullOrWhiteSpace(documentContent))

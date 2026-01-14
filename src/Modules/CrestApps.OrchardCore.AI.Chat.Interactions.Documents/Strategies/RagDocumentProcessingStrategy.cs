@@ -41,14 +41,13 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
     }
 
     /// <inheritdoc />
-    public override bool CanHandle(string intent)
-    {
-        return string.Equals(intent, DocumentIntents.DocumentQnA, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <inheritdoc />
     public override async Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
     {
+        if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.DocumentQnA, StringComparison.OrdinalIgnoreCase))
+        {
+            return DocumentProcessingResult.NotHandled();
+        }
+
         var interaction = context.Interaction;
         var prompt = context.Prompt;
         var cancellationToken = context.CancellationToken;

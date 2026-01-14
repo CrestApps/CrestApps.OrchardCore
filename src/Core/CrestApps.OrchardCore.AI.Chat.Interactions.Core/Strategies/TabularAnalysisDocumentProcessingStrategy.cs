@@ -16,14 +16,13 @@ public sealed class TabularAnalysisDocumentProcessingStrategy : DocumentProcessi
     private const int MaxRows = 100;
 
     /// <inheritdoc />
-    public override bool CanHandle(string intent)
-    {
-        return string.Equals(intent, DocumentIntents.AnalyzeTabularData, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <inheritdoc />
     public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
     {
+        if (!string.Equals(context.IntentResult?.Intent, DocumentIntents.AnalyzeTabularData, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(DocumentProcessingResult.NotHandled());
+        }
+
         var tabularDocuments = GetTabularDocuments(context.Documents);
 
         if (tabularDocuments.Count == 0)

@@ -3,19 +3,15 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 
 /// <summary>
-/// Provider that routes document processing to the appropriate strategy based on detected intent.
+/// Provider that routes document processing through all registered strategies.
+/// Each strategy is called in sequence until one handles the request.
+/// If no strategy handles it, the fallback strategy is used.
 /// </summary>
 public interface IDocumentProcessingStrategyProvider
 {
     /// <summary>
-    /// Gets the appropriate strategy for the given intent.
-    /// </summary>
-    /// <param name="intent">The detected document intent name.</param>
-    /// <returns>The strategy to use for processing, or null if no strategy can handle the intent.</returns>
-    IDocumentProcessingStrategy GetStrategy(string intent);
-
-    /// <summary>
-    /// Processes documents using the appropriate strategy for the detected intent.
+    /// Processes documents by calling all registered strategies until one handles the request.
+    /// If no strategy handles the request, the fallback strategy is used.
     /// </summary>
     /// <param name="context">The processing context containing documents and intent.</param>
     /// <returns>The processing result containing additional context for the AI.</returns>
