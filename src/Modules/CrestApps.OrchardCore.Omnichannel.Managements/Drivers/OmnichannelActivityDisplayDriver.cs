@@ -287,7 +287,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             }
 
             activity.SubjectContentType = model.SubjectContentType;
-            activity.ContactContentType = model.ContactContentType;
             activity.Instructions = model.Instructions?.Trim();
             activity.UrgencyLevel = model.UrgencyLevel;
 
