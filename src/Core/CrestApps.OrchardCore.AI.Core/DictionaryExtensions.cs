@@ -31,6 +31,9 @@ public static class DictionaryExtensions
     public static string GetDefaultEmbeddingDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
         => entry.GetStringValue("DefaultEmbeddingDeploymentName", throwException);
 
+    public static string GetDefaultIntentDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("DefaultIntentDeploymentName", throwException);
+
     public static string GetStringValue(this IDictionary<string, object> entry, string key, bool throwException = false)
     {
         if (entry.TryGetValue(key, out var value))

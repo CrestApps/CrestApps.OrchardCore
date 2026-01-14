@@ -1,9 +1,16 @@
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.ViewModels
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
 @using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.Models
+@using Microsoft.Extensions.Options
 @using OrchardCore
 
 @model EditChatInteractionDocumentsViewModel
+
+@inject IOptions<ChatInteractionsOptions> ChatInteractionOptions
+@{
+    var allowedExtensions = string.Join(", ", ChatInteractionOptions.Value.AllowedFileExtensions);
+}
 
 @if (!Model.HasIndexProfile)
 {
@@ -11,7 +18,7 @@
         <i class="fa-solid fa-triangle-exclamation me-2"></i>
         <strong>@T["Index Not Configured"]</strong>
         <p class="mb-0">
-            @T["No document index is configured. Please navigate to Settings > Chat Interaction and select an index profile to enable document embedding."]
+            @T["No document index is configured. Please navigate to Settings > Chat Interactions and select an index profile to enable document embedding."]
         </p>
     </div>
 }
@@ -29,7 +36,7 @@ else if (!Model.HasVectorSearchService)
 <div class="mb-3">
     <label class="form-label">
         @T["Attached Documents"]
-        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Upload documents (PDF, Word, Excel, TXT, etc.) to chat against your own data. The content will be extracted and used as context for AI responses."]" aria-label="@T["Help: Attached Documents explanation"]">
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Upload documents to chat against your own data. The content will be extracted and used as context for AI responses."]" aria-label="@T["Help: Attached Documents explanation"]">
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
     </label>
@@ -54,10 +61,10 @@ else if (!Model.HasVectorSearchService)
         <input type="file"
                class="d-none"
                id="documentUpload-@Model.ItemId"
-               accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.md,.json,.xml,.html,.htm"
+               accept="@allowedExtensions"
                multiple />
         <div class="form-text mb-3">
-            @T["Supported formats: PDF, Word (.doc, .docx), Excel (.xls, .xlsx), Text (.txt), CSV, Markdown (.md), JSON, XML, HTML"]
+            @T["Supported formats: {0}", allowedExtensions]
         </div>
 
         <div id="documentsList-@Model.ItemId" class="document-list">
