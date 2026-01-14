@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Email;
 using OrchardCore.Users;
 
@@ -12,55 +13,42 @@ public sealed class SendEmailTool : AIFunction
 {
     public const string TheName = "sendEmail";
 
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly UserManager<IUser> _userManager;
-    private readonly IEmailService _emailService;
-
-    public SendEmailTool(
-        IHttpContextAccessor httpContextAccessor,
-        UserManager<IUser> userManager,
-        IEmailService emailService)
-    {
-        _httpContextAccessor = httpContextAccessor;
-        _userManager = userManager;
-        _emailService = emailService;
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-           """
-            {
-              "type": "object",
-              "properties": {
-                "to": {
-                  "type": "string",
-                  "description": "A valid email address to send to."
-                },
-                "subject": {
-                  "type": "string",
-                  "description": "The email subject to send."
-                },
-                "body": {
-                  "type": "string",
-                  "description": "The email body to send."
-                },
-                "cc": {
-                  "type": "string",
-                  "description": "A comma-delimited emails to carbon-copy."
-                },
-                "bcc": {
-                  "type": "string",
-                  "description": "A comma-delimited emails to blind carbon-copy."
-                }
-              },
-              "additionalProperties": false,
-              "required": ["to", "subject", "body"]
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+       """
+        {
+          "type": "object",
+          "properties": {
+            "to": {
+              "type": "string",
+              "description": "A valid email address to send to."
+            },
+            "subject": {
+              "type": "string",
+              "description": "The email subject to send."
+            },
+            "body": {
+              "type": "string",
+              "description": "The email body to send."
+            },
+            "cc": {
+              "type": "string",
+              "description": "A comma-delimited emails to carbon-copy."
+            },
+            "bcc": {
+              "type": "string",
+              "description": "A comma-delimited emails to blind carbon-copy."
             }
-            """, JsonSerializerOptions);
-    }
+          },
+          "additionalProperties": false,
+          "required": ["to", "subject", "body"]
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Sends an email";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
@@ -69,6 +57,13 @@ public sealed class SendEmailTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var userManager = arguments.Services.GetRequiredService<UserManager<IUser>>();
+        var emailService = arguments.Services.GetRequiredService<IEmailService>();
+
         if (!arguments.TryGetFirstString("to", out var to))
         {
             return "Unable to find a to argument in the function arguments.";
@@ -84,19 +79,19 @@ public sealed class SendEmailTool : AIFunction
             return "Unable to find a body argument in the function arguments.";
         }
 
-        if (!_httpContextAccessor.HttpContext.User.Identity.IsAuthenticated)
+        if (!httpContextAccessor.HttpContext.User.Identity.IsAuthenticated)
         {
             return "You must login to be able to send email.";
         }
 
-        var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext.User);
+        var user = await userManager.GetUserAsync(httpContextAccessor.HttpContext.User);
 
         if (user is null)
         {
             return "You must login to be able to send email.";
         }
 
-        var email = await _userManager.GetEmailAsync(user);
+        var email = await userManager.GetEmailAsync(user);
 
         if (string.IsNullOrEmpty(email))
         {
@@ -123,7 +118,7 @@ public sealed class SendEmailTool : AIFunction
             message.Bcc = bcc;
         }
 
-        var result = await _emailService.SendAsync(message);
+        var result = await emailService.SendAsync(message);
 
         if (result.Succeeded)
         {

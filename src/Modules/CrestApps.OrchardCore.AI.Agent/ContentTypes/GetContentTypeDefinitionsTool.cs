@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
@@ -11,46 +12,37 @@ public sealed class GetContentTypeDefinitionsTool : AIFunction
 {
     public const string TheName = "getContentTypeDefinition";
 
-    private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-
-    public GetContentTypeDefinitionsTool(
-        IContentDefinitionManager contentDefinitionManager,
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
-    {
-        _contentDefinitionManager = contentDefinitionManager;
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "description": "The name of the content type for which to retrieve the definitions."
-                }
-              },
-              "required": ["name"],
-              "additionalProperties": false
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+        """
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The name of the content type for which to retrieve the definitions."
             }
-            """, JsonSerializerOptions);
-    }
+          },
+          "required": ["name"],
+          "additionalProperties": false
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Retrieves the content type definition for a given content type.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OrchardCorePermissions.ViewContentTypes))
+        var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
+
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ViewContentTypes))
         {
             return "You do not have permission to view content types.";
         }
@@ -60,7 +52,7 @@ public sealed class GetContentTypeDefinitionsTool : AIFunction
             return "Unable to find a name argument in the function arguments.";
         }
 
-        var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(name);
+        var definition = await contentDefinitionManager.GetTypeDefinitionAsync(name);
 
         if (definition is null)
         {

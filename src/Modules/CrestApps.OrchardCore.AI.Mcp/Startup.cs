@@ -148,7 +148,7 @@ public sealed class McpServerStartup : StartupBase
             {
                 try
                 {
-                    if (ActivatorUtilities.CreateInstance(request.Services, definition.ToolType) is AIFunction aiFunction)
+                    if (request.Services.GetKeyedService<AITool>(name) is AIFunction aiFunction)
                     {
                         tools.Add(new Tool
                         {
@@ -172,12 +172,12 @@ public sealed class McpServerStartup : StartupBase
         {
             var toolDefinitions = request.Services.GetRequiredService<IOptions<AIToolDefinitionOptions>>().Value;
 
-            if (!toolDefinitions.Tools.TryGetValue(request.Params.Name, out var definition))
+            if (!toolDefinitions.Tools.ContainsKey(request.Params.Name))
             {
                 throw new McpException($"Tool '{request.Params.Name}' not found.");
             }
 
-            if (ActivatorUtilities.CreateInstance(request.Services, definition.ToolType) is not AIFunction aiFunction)
+            if (request.Services.GetKeyedService<AITool>(request.Params.Name) is not AIFunction aiFunction)
             {
                 throw new McpException($"Failed to create tool '{request.Params.Name}'.");
             }

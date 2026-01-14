@@ -422,7 +422,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         return null;
     }
 
-    private static async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<ChatToolCall> tollCalls, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
+    private async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<ChatToolCall> tollCalls, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
     {
         if (tollCalls is null || !tollCalls.Any())
         {
@@ -441,6 +441,8 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             }
 
             var arguments = toolCall.FunctionArguments.ToObjectFromJson<Microsoft.Extensions.AI.AIFunctionArguments>();
+
+            arguments.Services = _serviceProvider;
 
             var result = await function.InvokeAsync(arguments);
 
