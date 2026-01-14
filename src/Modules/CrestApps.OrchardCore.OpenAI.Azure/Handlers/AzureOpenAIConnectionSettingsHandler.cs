@@ -78,11 +78,29 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
 
         var apiKey = metadataNode[nameof(metadata.ApiKey)]?.GetValue<string>();
 
+        IDataProtector protector = null;
+
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
-            var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+            protector ??= _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
 
             metadata.ApiKey = protector.Protect(apiKey);
+        }
+
+        var speechAPIKey = metadataNode[nameof(metadata.SpeechAPIKey)]?.GetValue<string>();
+
+        if (!string.IsNullOrWhiteSpace(speechAPIKey))
+        {
+            protector ??= _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+
+            metadata.SpeechAPIKey = protector.Protect(speechAPIKey);
+        }
+
+        var speechRegion = metadataNode[nameof(metadata.SpeechRegion)]?.GetValue<string>();
+
+        if (!string.IsNullOrWhiteSpace(speechRegion))
+        {
+            metadata.SpeechRegion = speechRegion;
         }
 
         connection.Put(metadata);

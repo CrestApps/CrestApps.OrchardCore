@@ -14,6 +14,8 @@ public class AIProviderConnectionFieldsViewModel
 
     public string DefaultEmbeddingDeploymentName { get; set; }
 
+    public string DefaultSpeechToTextDeploymentName { get; set; }
+
     [BindNever]
     public bool IsNew { get; set; }
 }

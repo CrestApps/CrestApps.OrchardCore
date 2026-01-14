@@ -15,13 +15,15 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 public sealed class AzureOpenAIClientProvider : AIClientProviderBase
 {
     private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger _logger;
 
     protected override string GetProviderName()
         => AzureOpenAIConstants.ProviderName;
 
-    public AzureOpenAIClientProvider(ILoggerFactory loggerFactory)
+    public AzureOpenAIClientProvider(ILoggerFactory loggerFactory, ILogger<AzureOpenAIClientProvider> logger)
     {
         _loggerFactory = loggerFactory;
+        _logger = logger;
     }
 
     protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, string deploymentName)
@@ -38,6 +40,29 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
         return GetClient(connection, endpoint)
             .GetEmbeddingClient(deploymentName)
             .AsIEmbeddingGenerator();
+    }
+
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    protected override ISpeechToTextClient GetSpeechToTextClient(AIProviderConnectionEntry connection, string deploymentName)
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    {
+        // Azure Speech-to-Text uses Azure Cognitive Services Speech SDK
+        // Extract region and subscription key from connection
+        // Expected connection format:
+        // - SpeechRegion: Azure region aka location (e.g., "westus", "eastus")
+        // - SpeechAPIKey: Subscription key for Azure Speech service
+
+        var region = connection.GetStringValue("SpeechRegion");
+        var subscriptionKey = connection.GetStringValue("SpeechAPIKey");
+
+        if (string.IsNullOrEmpty(region) || string.IsNullOrEmpty(subscriptionKey))
+        {
+            throw new InvalidOperationException(
+                "Azure Speech-to-Text requires 'SpeechRegion' and 'SpeechAPIKey' to be configured in the connection. " +
+                "These are separate from Azure OpenAI settings and use the Azure Cognitive Services Speech service.");
+        }
+
+        return new AzureSpeechToTextClient(region, subscriptionKey, _logger);
     }
 
     private AzureOpenAIClient GetClient(AIProviderConnectionEntry connection, Uri endpoint)
