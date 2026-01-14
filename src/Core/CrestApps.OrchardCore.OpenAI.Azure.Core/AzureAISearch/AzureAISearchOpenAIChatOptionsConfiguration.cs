@@ -161,6 +161,11 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
         {
             azureDataSource.parameters["top_n_documents"] = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
             azureDataSource.parameters["strictness"] = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
+
+            if (!string.IsNullOrWhiteSpace(dataSourceMetadata.Filter))
+            {
+                azureDataSource.parameters["filter"] = dataSourceMetadata.Filter;
+            }
         }
         else
         {
@@ -248,7 +253,7 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             InScope = true,
             SemanticConfiguration = "default",
             OutputContexts = DataSourceOutputContexts.Citations,
-            Filter = null,
+            Filter = string.IsNullOrWhiteSpace(dataSourceMetadata.Filter) ? null : dataSourceMetadata.Filter,
             FieldMappings = new DataSourceFieldMappings()
             {
                 TitleFieldName = GetBestTitleField(keyField),

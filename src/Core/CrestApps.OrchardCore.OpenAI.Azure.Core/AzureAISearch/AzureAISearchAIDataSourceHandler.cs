@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 
@@ -10,10 +11,15 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 
 public sealed class AzureAISearchAIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
 {
+    private readonly IODataFilterValidator _filterValidator;
+
     internal readonly IStringLocalizer S;
 
-    public AzureAISearchAIDataSourceHandler(IStringLocalizer<AzureAISearchAIDataSourceHandler> stringLocalizer)
+    public AzureAISearchAIDataSourceHandler(
+        IODataFilterValidator filterValidator,
+        IStringLocalizer<AzureAISearchAIDataSourceHandler> stringLocalizer)
     {
+        _filterValidator = filterValidator;
         S = stringLocalizer;
     }
 
@@ -30,6 +36,11 @@ public sealed class AzureAISearchAIDataSourceHandler : CatalogEntryHandlerBase<A
         if (string.IsNullOrWhiteSpace(metadata.IndexName))
         {
             context.Result.Fail(new ValidationResult(S["The Index is required."], [nameof(metadata.IndexName)]));
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.Filter) && !_filterValidator.IsValid(metadata.Filter))
+        {
+            context.Result.Fail(new ValidationResult(S["The Filter must be a valid OData filter expression."], [nameof(metadata.Filter)]));
         }
 
         return Task.CompletedTask;
