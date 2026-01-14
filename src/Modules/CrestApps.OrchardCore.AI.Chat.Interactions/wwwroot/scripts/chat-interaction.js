@@ -427,7 +427,7 @@ window.chatInteractionManager = function () {
             }
           });
 
-          // Add event listeners for tool checkboxes with debouncing (750ms)
+          // Add event listeners for tool checkboxes with debouncing (850ms)
           var toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]');
           toolCheckboxes.forEach(function (checkbox) {
             checkbox.addEventListener('change', function () {
@@ -435,7 +435,7 @@ window.chatInteractionManager = function () {
             });
           });
 
-          // Add event listeners for "Select All" group toggle checkboxes with debouncing (750ms)
+          // Add event listeners for "Select All" group toggle checkboxes with debouncing (850ms)
           var groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
           groupToggleCheckboxes.forEach(function (toggle) {
             toggle.addEventListener('change', function () {
@@ -481,11 +481,11 @@ window.chatInteractionManager = function () {
           if (this.saveSettingsTimeout) {
             clearTimeout(this.saveSettingsTimeout);
           }
-          // Set a new timeout to save after 750ms of no changes
+          // Set a new timeout to save after 850ms of no changes
           this.saveSettingsTimeout = setTimeout(function () {
             _this7.saveSettings();
             _this7.saveSettingsTimeout = null;
-          }, 750);
+          }, 850);
         },
         getSelectedToolNames: function getSelectedToolNames() {
           // Find all checked tool checkboxes and get the corresponding ItemId values

@@ -444,13 +444,13 @@ window.chatInteractionManager = function () {
                         }
                     });
 
-                    // Add event listeners for tool checkboxes with debouncing (750ms)
+                    // Add event listeners for tool checkboxes with debouncing (850ms)
                     const toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]');
                     toolCheckboxes.forEach(checkbox => {
                         checkbox.addEventListener('change', () => this.debouncedSaveSettings());
                     });
 
-                    // Add event listeners for "Select All" group toggle checkboxes with debouncing (750ms)
+                    // Add event listeners for "Select All" group toggle checkboxes with debouncing (850ms)
                     const groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
                     groupToggleCheckboxes.forEach(toggle => {
                         toggle.addEventListener('change', () => this.debouncedSaveSettings());
