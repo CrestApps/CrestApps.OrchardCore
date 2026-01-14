@@ -8,7 +8,7 @@ public sealed class DocumentIntentResult
     /// <summary>
     /// Gets or sets the detected document intent name.
     /// </summary>
-    public string Intent { get; set; }
+    public required string Intent { get; set; }
 
     /// <summary>
     /// Gets or sets the confidence level of the detection (0.0 to 1.0).
@@ -25,6 +25,8 @@ public sealed class DocumentIntentResult
     /// </summary>
     public static DocumentIntentResult FromIntent(string intent, float confidence = 1.0f, string reason = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(intent);
+
         return new DocumentIntentResult
         {
             Intent = intent,

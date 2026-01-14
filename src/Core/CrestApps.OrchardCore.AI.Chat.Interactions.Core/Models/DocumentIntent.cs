@@ -5,6 +5,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 /// </summary>
 public sealed class ChatInteractionDocumentOptions
 {
+    private readonly object _lock = new();
     private readonly Dictionary<string, HashSet<Type>> _intentStrategies = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -28,19 +29,28 @@ public sealed class ChatInteractionDocumentOptions
     {
         ArgumentException.ThrowIfNullOrEmpty(intent);
 
-        if (!_intentStrategies.TryGetValue(intent, out var strategies))
+        lock (_lock)
         {
-            strategies = [];
-            _intentStrategies[intent] = strategies;
-        }
+            if (!_intentStrategies.TryGetValue(intent, out var strategies))
+            {
+                strategies = [];
+                _intentStrategies[intent] = strategies;
+            }
 
-        strategies.Add(typeof(TStrategy));
+            strategies.Add(typeof(TStrategy));
+        }
     }
 
     /// <summary>
     /// Gets all registered intent names.
     /// </summary>
-    public IEnumerable<string> GetIntents() => _intentStrategies.Keys;
+    public IEnumerable<string> GetIntents()
+    {
+        lock (_lock)
+        {
+            return _intentStrategies.Keys.ToList();
+        }
+    }
 }
 
 /// <summary>
