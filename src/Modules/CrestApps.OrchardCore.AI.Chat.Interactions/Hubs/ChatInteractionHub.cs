@@ -1,5 +1,7 @@
 using System.Text;
 using System.Threading.Channels;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -290,15 +292,18 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             var builder = new StringBuilder();
 
-            // Retrieve document context for RAG if documents are attached
-            var documentContext = await GetDocumentContextAsync(interaction, prompt, cancellationToken);
+            // Process documents using intent-aware, strategy-based approach
+            var documentProcessingResult = await ProcessDocumentsAsync(interaction, prompt, cancellationToken);
 
             var systemMessage = interaction.SystemMessage ?? string.Empty;
-            if (!string.IsNullOrEmpty(documentContext))
+            if (documentProcessingResult != null && documentProcessingResult.IsSuccess && !string.IsNullOrEmpty(documentProcessingResult.AdditionalContext))
             {
-                // Prepend document context to the system message
-                var contextPrefix = S["The following is relevant context from uploaded documents. Use this information to answer the user's question:"].Value + "\n\n" + documentContext + "\n\n";
-                systemMessage = systemMessage + contextPrefix;
+                // Append document context to the system message
+                var contextPrefix = !string.IsNullOrEmpty(documentProcessingResult.ContextPrefix)
+                    ? documentProcessingResult.ContextPrefix + "\n\n"
+                    : string.Empty;
+
+                systemMessage = systemMessage + contextPrefix + documentProcessingResult.AdditionalContext + "\n\n";
             }
 
             var completionContext = new AICompletionContext
@@ -397,6 +402,87 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         {
             writer.Complete();
         }
+    }
+
+    /// <summary>
+    /// Processes documents using intent-aware, strategy-based approach.
+    /// First detects the user's intent, then routes to the appropriate processing strategy.
+    /// </summary>
+    private async Task<DocumentProcessingResult> ProcessDocumentsAsync(ChatInteraction interaction, string prompt, CancellationToken cancellationToken)
+    {
+        // Check if there are documents attached
+        if (interaction.Documents == null || interaction.Documents.Count == 0)
+        {
+            return null;
+        }
+
+        // Try to get the intent detector (may not be registered if Documents feature is not enabled)
+        var intentDetector = _serviceProvider.GetService<IDocumentIntentDetector>();
+        if (intentDetector == null)
+        {
+            // Fallback to legacy behavior if intent detection is not available
+            return await GetDocumentContextAsResultAsync(interaction, prompt, cancellationToken);
+        }
+
+        // Try to get the strategy provider
+        var strategyProvider = _serviceProvider.GetService<IDocumentProcessingStrategyProvider>();
+        if (strategyProvider == null)
+        {
+            // Fallback to legacy behavior if strategy provider is not available
+            return await GetDocumentContextAsResultAsync(interaction, prompt, cancellationToken);
+        }
+
+        try
+        {
+            // Detect user intent
+            var intentContext = new DocumentIntentDetectionContext
+            {
+                Prompt = prompt,
+                Interaction = interaction,
+                CancellationToken = cancellationToken,
+            };
+
+            var intentResult = await intentDetector.DetectIntentAsync(intentContext);
+
+            _logger.LogDebug("Detected document intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
+                intentResult.Intent, intentResult.Confidence, intentResult.Reason);
+
+            // Process documents using the appropriate strategy
+            var processingContext = new DocumentProcessingContext
+            {
+                Prompt = prompt,
+                Interaction = interaction,
+                IntentResult = intentResult,
+                CancellationToken = cancellationToken,
+                ServiceProvider = _serviceProvider,
+            };
+
+            return await strategyProvider.ProcessAsync(processingContext);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during document intent detection or processing. Falling back to legacy behavior.");
+            return await GetDocumentContextAsResultAsync(interaction, prompt, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Legacy document context retrieval wrapped as a <see cref="DocumentProcessingResult"/>.
+    /// Used as fallback when intent detection or strategy processing is not available.
+    /// </summary>
+    private async Task<DocumentProcessingResult> GetDocumentContextAsResultAsync(ChatInteraction interaction, string prompt, CancellationToken cancellationToken)
+    {
+        var context = await GetDocumentContextAsync(interaction, prompt, cancellationToken);
+
+        if (string.IsNullOrEmpty(context))
+        {
+            return DocumentProcessingResult.Empty();
+        }
+
+        return DocumentProcessingResult.Success(
+            context,
+            S["The following is relevant context from uploaded documents. Use this information to answer the user's question:"].Value,
+            usedVectorSearch: true);
     }
 
     private LocalizedString GetFriendlyErrorMessage(Exception ex)
@@ -508,14 +594,16 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             }
 
             // Generate embedding for the prompt
-            var embedding = await embeddingGenerator.GenerateAsync(prompt, cancellationToken: cancellationToken);
+            var embeddings = await embeddingGenerator.GenerateAsync([prompt], cancellationToken: cancellationToken);
 
-            if (embedding?.Vector == null || embedding.Vector.Length == 0)
+            if (embeddings == null || embeddings.Count == 0 || embeddings[0]?.Vector == null || embeddings[0].Vector.Length == 0)
             {
                 _logger.LogWarning("Failed to generate embedding for prompt. Document context will not be used.");
 
                 return null;
             }
+
+            var embedding = embeddings[0];
 
             // Search for similar document chunks
             var topN = interaction.DocumentTopN ?? settings.TopN;

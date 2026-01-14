@@ -1,15 +1,51 @@
 # AI Chat Interactions - Documents
 
-This feature extends the AI Chat Interactions module with document upload and RAG (Retrieval Augmented Generation) capabilities, enabling users to chat against their own uploaded documents.
+This feature extends the AI Chat Interactions module with document upload and intelligent, intent-aware document processing capabilities, enabling users to chat against their own uploaded documents with optimized responses based on their intent.
 
 ## Features
 
 - **Document Upload**: Upload PDF, Word, Excel, PowerPoint, and text-based documents
 - **Drag and Drop**: Easy file upload via drag-and-drop or file browser
 - **Text Extraction**: Automatic text extraction from uploaded documents
-- **Document Embedding**: Content is chunked and embedded for semantic search
+- **Intent Detection**: Automatic classification of user intent (Q&A, summarization, analysis, etc.)
+- **Strategy-Based Processing**: Optimized document handling based on detected intent
+- **Document Embedding**: Content is chunked and embedded for semantic search (RAG)
 - **RAG Integration**: Relevant document chunks are retrieved and used as context for AI responses
 - **Document Management**: View, manage, and remove uploaded documents
+
+## Intent-Aware Document Processing
+
+When documents are attached to a chat interaction, the system automatically detects the user's intent and routes the request to an appropriate processing strategy.
+
+### Supported Intents
+
+| Intent | Description | Example Prompts |
+|--------|-------------|-----------------|
+| **Document Q&A** | Question answering using RAG | "What does this document say about X?" |
+| **Summarize** | Document summarization | "Summarize this document", "Give me a brief overview" |
+| **Tabular Analysis** | CSV/Excel data analysis | "Calculate the total sales", "Show me the average" |
+| **Extract Data** | Structured data extraction | "Extract all email addresses", "List all names" |
+| **Compare Documents** | Multi-document comparison | "Compare these documents", "What are the differences?" |
+| **Transform Format** | Content reformatting | "Convert to bullet points", "Make it a table" |
+| **General Reference** | General chat with document context | Default fallback |
+
+### Processing Strategies
+
+Each intent is handled by a specialized strategy:
+
+- **RAG Strategy**: Uses vector search to find relevant chunks (for Q&A)
+- **Summarization Strategy**: Provides full document content (bypasses vector search)
+- **Tabular Analysis Strategy**: Parses structured data for calculations
+- **Extraction Strategy**: Focuses on content extraction
+- **Comparison Strategy**: Provides multi-document content
+- **Transformation Strategy**: Provides content for reformatting
+
+### Benefits
+
+- **More Accurate Responses**: AI receives context tailored to the user's actual intent
+- **Lower Token Costs**: Avoids unnecessary vector search when not needed
+- **Faster Processing**: Optimal strategy selection reduces overhead
+- **Extensible**: Add custom intents and strategies via the plugin architecture
 
 ## Getting Started
 
@@ -107,6 +143,48 @@ The document extraction system is extensible. To add support for additional file
 Example:
 ```csharp
 services.AddDocumentTextExtractor<MyCustomExtractor>();
+```
+
+## Extending Intent Detection
+
+You can provide custom intent detection by implementing `IDocumentIntentDetector`:
+
+```csharp
+public class MyIntentDetector : IDocumentIntentDetector
+{
+    public Task<DocumentIntentResult> DetectIntentAsync(DocumentIntentDetectionContext context)
+    {
+        // Your custom intent detection logic
+        return Task.FromResult(DocumentIntentResult.FromIntent(DocumentIntent.DocumentQnA));
+    }
+}
+
+// Register in Startup
+services.AddScoped<IDocumentIntentDetector, MyIntentDetector>();
+```
+
+## Adding Custom Processing Strategies
+
+To add a custom processing strategy:
+
+1. Implement `IDocumentProcessingStrategy` or extend `DocumentProcessingStrategyBase`
+2. Register using `AddDocumentProcessingStrategy<T>()`
+
+Example:
+```csharp
+public class MyCustomStrategy : DocumentProcessingStrategyBase
+{
+    public override bool CanHandle(DocumentIntent intent) => intent == DocumentIntent.SummarizeDocument;
+
+    public override Task<DocumentProcessingResult> ProcessAsync(DocumentProcessingContext context)
+    {
+        // Your custom processing logic
+        return Task.FromResult(DocumentProcessingResult.Success("Custom context", "Custom prefix"));
+    }
+}
+
+// Register in Startup
+services.AddDocumentProcessingStrategy<MyCustomStrategy>();
 ```
 
 ## API Endpoints
