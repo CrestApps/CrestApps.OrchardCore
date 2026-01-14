@@ -256,7 +256,6 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             QueryType = DataSourceQueryType.Simple,
             InScope = true,
             OutputContexts = DataSourceOutputContexts.Citations,
-            Filter = string.IsNullOrWhiteSpace(dataSourceMetadata.Filter) ? null : dataSourceMetadata.Filter,
             FieldMappings = new DataSourceFieldMappings()
             {
                 TitleFieldName = _titleFieldName,
