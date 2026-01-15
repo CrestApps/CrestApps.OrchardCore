@@ -35,31 +35,14 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
 
         return Initialize<AzureMongoDBDataSourceViewModel>("AzureOpenAIMongoDBDataSource_Edit", model =>
         {
-            // Try the new metadata first, fall back to legacy for backward compatibility
-            var newMetadata = dataSource.As<AzureMongoDBDataSourceMetadata>();
-            if (newMetadata is not null && !string.IsNullOrWhiteSpace(newMetadata.IndexName))
-            {
-                model.EndpointName = newMetadata.EndpointName;
-                model.AppName = newMetadata.AppName;
-                model.CollectionName = newMetadata.CollectionName;
-                model.Username = newMetadata.Authentication?.Username;
-                model.HasPassword = !string.IsNullOrEmpty(newMetadata.Authentication?.Password);
-                model.IndexName = newMetadata.IndexName;
-                model.DatabaseName = newMetadata.DatabaseName;
-            }
-            else
-            {
-#pragma warning disable CS0618 // Type or member is obsolete
-                var legacyMetadata = dataSource.As<AzureAIProfileMongoDBMetadata>();
-                model.EndpointName = legacyMetadata.EndpointName;
-                model.AppName = legacyMetadata.AppName;
-                model.CollectionName = legacyMetadata.CollectionName;
-                model.Username = legacyMetadata.Authentication?.Username;
-                model.HasPassword = !string.IsNullOrEmpty(legacyMetadata.Authentication?.Password);
-                model.IndexName = legacyMetadata.IndexName;
-                model.DatabaseName = legacyMetadata.DatabaseName;
-#pragma warning restore CS0618 // Type or member is obsolete
-            }
+            var metadata = dataSource.As<AzureMongoDBDataSourceMetadata>();
+            model.EndpointName = metadata?.EndpointName;
+            model.AppName = metadata?.AppName;
+            model.CollectionName = metadata?.CollectionName;
+            model.Username = metadata?.Authentication?.Username;
+            model.HasPassword = !string.IsNullOrEmpty(metadata?.Authentication?.Password);
+            model.IndexName = metadata?.IndexName;
+            model.DatabaseName = metadata?.DatabaseName;
         }).Location("Content:3");
     }
 

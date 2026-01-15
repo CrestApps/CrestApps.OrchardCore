@@ -69,17 +69,16 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             return;
         }
 
-        // Get index name from new metadata first, fall back to legacy
-        var indexName = GetIndexName(dataSource);
+        var indexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
 
-        if (string.IsNullOrWhiteSpace(indexName))
+        if (string.IsNullOrWhiteSpace(indexMetadata?.IndexName))
         {
             return;
         }
 
         if (context.AdditionalProperties is null || !context.AdditionalProperties.TryGetValue("ElasticsearchIndexProfile", out _))
         {
-            var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(indexName, ElasticsearchConstants.ProviderName);
+            var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(indexMetadata.IndexName, ElasticsearchConstants.ProviderName);
 
             if (indexProfile is null)
             {
@@ -157,7 +156,7 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             },
         };
 
-        // Get RAG parameters from AIProfile first (new pattern), then fall back to legacy metadata on data source
+        // Get RAG parameters from AIProfile metadata
         var ragParams = GetRagParameters(context);
         elasticsearchDataSource.parameters["top_n_documents"] = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
         elasticsearchDataSource.parameters["strictness"] = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
@@ -209,19 +208,18 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             return;
         }
 
-        // Get index name from new metadata first, fall back to legacy
-        var indexName = GetIndexName(dataSource);
+        var indexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
 
-        if (string.IsNullOrWhiteSpace(indexName))
+        if (string.IsNullOrWhiteSpace(indexMetadata?.IndexName))
         {
             return;
         }
 
-        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(indexName, ElasticsearchConstants.ProviderName);
+        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(indexMetadata.IndexName, ElasticsearchConstants.ProviderName);
 
         if (indexProfile is null)
         {
-            _logger.LogWarning("Index named '{IndexName}' set as Elasticsearch data-source but not found in Elasticsearch document manager.", indexName);
+            _logger.LogWarning("Index named '{IndexName}' set as Elasticsearch data-source but not found in Elasticsearch document manager.", indexMetadata.IndexName);
             return;
         }
 
@@ -251,16 +249,16 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             throw new InvalidOperationException($"The '{_elasticsearchOptions.AuthenticationType}' is not supported as Authentication type for Elasticsearch AI Data Source. Only '{ElasticsearchAuthenticationType.KeyIdAndKey}' and '{ElasticsearchAuthenticationType.Base64ApiKey}' are supported.");
         }
 
-        // Get RAG parameters from context (profile metadata) or fall back to legacy data source metadata
-        var ragParams = GetRagParametersFromContext(context, dataSource);
+        // Get RAG parameters from the profile
+        var ragMetadata = indexProfile.As<AzureRagChatMetadata>();
 
         options.AddDataSource(new ElasticsearchChatDataSource()
         {
             Endpoint = uri,
             IndexName = indexProfile.IndexFullName,
             Authentication = credentials,
-            Strictness = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            Strictness = ragMetadata?.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = ragMetadata?.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
             QueryType = DataSourceQueryType.Simple,
             InScope = true,
             OutputContexts = DataSourceOutputContexts.Citations,
@@ -342,71 +340,16 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
     private const string exceptionSuffix = "should be a string in the form of cluster_name:base_64_data";
 
     /// <summary>
-    /// Gets the index name from the data source, trying new metadata first, then falling back to legacy.
-    /// </summary>
-    private static string GetIndexName(AIDataSource dataSource)
-    {
-        // Try new metadata first
-        var newMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
-        if (!string.IsNullOrWhiteSpace(newMetadata?.IndexName))
-        {
-            return newMetadata.IndexName;
-        }
-
-        // Fall back to legacy metadata
-#pragma warning disable CS0618 // Type or member is obsolete
-        var legacyMetadata = dataSource.As<AzureAIProfileElasticsearchMetadata>();
-        return legacyMetadata?.IndexName;
-#pragma warning restore CS0618 // Type or member is obsolete
-    }
-
-    /// <summary>
-    /// Gets RAG parameters from context (profile) first, then falls back to legacy data source metadata.
+    /// Gets RAG parameters from AIProfile metadata.
     /// </summary>
     private static (int? Strictness, int? TopNDocuments, string Filter) GetRagParameters(CompletionServiceConfigureContext context)
     {
-        // Try to get from AIProfile metadata (new pattern)
         if (context.AdditionalProperties is not null &&
             context.AdditionalProperties.TryGetValue("RagMetadata", out var ragMeta) &&
             ragMeta is AzureRagChatMetadata ragMetadata)
         {
             return (ragMetadata.Strictness, ragMetadata.TopNDocuments, ragMetadata.Filter);
         }
-
-        // Fall back to legacy data source metadata
-        if (context.AdditionalProperties is not null &&
-            context.AdditionalProperties.TryGetValue("DataSource", out var ds) &&
-            ds is AIDataSource dataSource)
-        {
-#pragma warning disable CS0618 // Type or member is obsolete
-            if (dataSource.TryGet<AzureAIProfileElasticsearchMetadata>(out var legacyMetadata))
-            {
-                return (legacyMetadata.Strictness, legacyMetadata.TopNDocuments, legacyMetadata.Filter);
-            }
-#pragma warning restore CS0618 // Type or member is obsolete
-        }
-
-        return (null, null, null);
-    }
-
-    /// <summary>
-    /// Gets RAG parameters from context or falls back to data source.
-    /// </summary>
-    private static (int? Strictness, int? TopNDocuments, string Filter) GetRagParametersFromContext(AzureOpenAIDataSourceContext context, AIDataSource dataSource)
-    {
-        // Try to get from context (set by completion handler from AIProfile)
-        if (context.RagMetadata is not null)
-        {
-            return (context.RagMetadata.Strictness, context.RagMetadata.TopNDocuments, context.RagMetadata.Filter);
-        }
-
-        // Fall back to legacy data source metadata
-#pragma warning disable CS0618 // Type or member is obsolete
-        if (dataSource.TryGet<AzureAIProfileElasticsearchMetadata>(out var legacyMetadata))
-        {
-            return (legacyMetadata.Strictness, legacyMetadata.TopNDocuments, legacyMetadata.Filter);
-        }
-#pragma warning restore CS0618 // Type or member is obsolete
 
         return (null, null, null);
     }

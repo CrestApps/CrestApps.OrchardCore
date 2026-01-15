@@ -1,8 +1,8 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDB;
 using CrestApps.OrchardCore.Services;
@@ -21,7 +21,11 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 /// </summary>
 internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 {
-#pragma warning disable CS0618 // Type or member is obsolete
+    // Legacy metadata class names (used for Properties dictionary access)
+    private const string LegacyAISearchMetadataName = "AzureAIProfileAISearchMetadata";
+    private const string LegacyElasticsearchMetadataName = "AzureAIProfileElasticsearchMetadata";
+    private const string LegacyMongoDBMetadataName = "AzureAIProfileMongoDBMetadata";
+
 #pragma warning disable CA1822 // Mark members as static
     public int Create()
 #pragma warning restore CA1822 // Mark members as static
@@ -40,7 +44,6 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 }
 
                 var needsUpdate = false;
-                string indexName = null;
 
                 // Check if new metadata already exists
                 var newIndexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
@@ -50,54 +53,73 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                     continue;
                 }
 
-                // Extract IndexName based on data source type
+                // Extract IndexName based on data source type using Properties dictionary
                 switch (dataSource.Type)
                 {
                     case AzureOpenAIConstants.DataSourceTypes.AzureAISearch:
-                        var aiSearchMetadata = dataSource.As<AzureAIProfileAISearchMetadata>();
-                        if (aiSearchMetadata is not null && !string.IsNullOrWhiteSpace(aiSearchMetadata.IndexName))
                         {
-                            indexName = aiSearchMetadata.IndexName;
-                            needsUpdate = true;
+                            var indexName = GetPropertyValue<string>(dataSource.Properties, LegacyAISearchMetadataName, "IndexName");
+                            if (!string.IsNullOrWhiteSpace(indexName))
+                            {
+                                dataSource.Put(new AzureAIDataSourceIndexMetadata
+                                {
+                                    IndexName = indexName,
+                                });
+                                needsUpdate = true;
+                            }
                         }
                         break;
 
                     case AzureOpenAIConstants.DataSourceTypes.Elasticsearch:
-                        var esMetadata = dataSource.As<AzureAIProfileElasticsearchMetadata>();
-                        if (esMetadata is not null && !string.IsNullOrWhiteSpace(esMetadata.IndexName))
                         {
-                            indexName = esMetadata.IndexName;
-                            needsUpdate = true;
+                            var indexName = GetPropertyValue<string>(dataSource.Properties, LegacyElasticsearchMetadataName, "IndexName");
+                            if (!string.IsNullOrWhiteSpace(indexName))
+                            {
+                                dataSource.Put(new AzureAIDataSourceIndexMetadata
+                                {
+                                    IndexName = indexName,
+                                });
+                                needsUpdate = true;
+                            }
                         }
                         break;
 
                     case AzureOpenAIConstants.DataSourceTypes.MongoDB:
-                        var mongoMetadata = dataSource.As<AzureAIProfileMongoDBMetadata>();
-                        if (mongoMetadata is not null && !string.IsNullOrWhiteSpace(mongoMetadata.IndexName))
                         {
-                            // For MongoDB, migrate to the new metadata class
-                            var newMongoMetadata = new AzureMongoDBDataSourceMetadata
+                            var legacyProps = GetPropertyObject(dataSource.Properties, LegacyMongoDBMetadataName);
+                            if (legacyProps != null)
                             {
-                                IndexName = mongoMetadata.IndexName,
-                                EndpointName = mongoMetadata.EndpointName,
-                                AppName = mongoMetadata.AppName,
-                                CollectionName = mongoMetadata.CollectionName,
-                                DatabaseName = mongoMetadata.DatabaseName,
-                                Authentication = mongoMetadata.Authentication,
-                            };
-                            dataSource.Put(newMongoMetadata);
-                            needsUpdate = true;
+                                var indexName = legacyProps["IndexName"]?.GetValue<string>();
+                                if (!string.IsNullOrWhiteSpace(indexName))
+                                {
+                                    // For MongoDB, migrate to the new metadata class
+                                    var authProps = legacyProps["Authentication"]?.AsObject();
+                                    AzureAIProfileMongoDBAuthenticationType auth = null;
+                                    if (authProps != null)
+                                    {
+                                        auth = new AzureAIProfileMongoDBAuthenticationType
+                                        {
+                                            Type = authProps["Type"]?.GetValue<string>(),
+                                            Username = authProps["Username"]?.GetValue<string>(),
+                                            Password = authProps["Password"]?.GetValue<string>(),
+                                        };
+                                    }
+
+                                    var newMongoMetadata = new AzureMongoDBDataSourceMetadata
+                                    {
+                                        IndexName = indexName,
+                                        EndpointName = legacyProps["EndpointName"]?.GetValue<string>(),
+                                        AppName = legacyProps["AppName"]?.GetValue<string>(),
+                                        CollectionName = legacyProps["CollectionName"]?.GetValue<string>(),
+                                        DatabaseName = legacyProps["DatabaseName"]?.GetValue<string>(),
+                                        Authentication = auth,
+                                    };
+                                    dataSource.Put(newMongoMetadata);
+                                    needsUpdate = true;
+                                }
+                            }
                         }
                         break;
-                }
-
-                if (needsUpdate && !string.IsNullOrWhiteSpace(indexName))
-                {
-                    // Store the index name in the new metadata
-                    dataSource.Put(new AzureAIDataSourceIndexMetadata
-                    {
-                        IndexName = indexName,
-                    });
                 }
 
                 if (needsUpdate)
@@ -142,35 +164,41 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 int? topNDocuments = null;
                 string filter = null;
 
-                // Extract query parameters based on data source type
+                // Extract query parameters based on data source type using Properties dictionary
                 switch (dataSource.Type)
                 {
                     case AzureOpenAIConstants.DataSourceTypes.AzureAISearch:
-                        var aiSearchMetadata = dataSource.As<AzureAIProfileAISearchMetadata>();
-                        if (aiSearchMetadata is not null)
                         {
-                            strictness = aiSearchMetadata.Strictness;
-                            topNDocuments = aiSearchMetadata.TopNDocuments;
-                            filter = aiSearchMetadata.Filter;
+                            var legacyProps = GetPropertyObject(dataSource.Properties, LegacyAISearchMetadataName);
+                            if (legacyProps != null)
+                            {
+                                strictness = GetNullableInt(legacyProps, "Strictness");
+                                topNDocuments = GetNullableInt(legacyProps, "TopNDocuments");
+                                filter = legacyProps["Filter"]?.GetValue<string>();
+                            }
                         }
                         break;
 
                     case AzureOpenAIConstants.DataSourceTypes.Elasticsearch:
-                        var esMetadata = dataSource.As<AzureAIProfileElasticsearchMetadata>();
-                        if (esMetadata is not null)
                         {
-                            strictness = esMetadata.Strictness;
-                            topNDocuments = esMetadata.TopNDocuments;
-                            filter = esMetadata.Filter;
+                            var legacyProps = GetPropertyObject(dataSource.Properties, LegacyElasticsearchMetadataName);
+                            if (legacyProps != null)
+                            {
+                                strictness = GetNullableInt(legacyProps, "Strictness");
+                                topNDocuments = GetNullableInt(legacyProps, "TopNDocuments");
+                                filter = legacyProps["Filter"]?.GetValue<string>();
+                            }
                         }
                         break;
 
                     case AzureOpenAIConstants.DataSourceTypes.MongoDB:
-                        var mongoMetadata = dataSource.As<AzureAIProfileMongoDBMetadata>();
-                        if (mongoMetadata is not null)
                         {
-                            strictness = mongoMetadata.Strictness;
-                            topNDocuments = mongoMetadata.TopNDocuments;
+                            var legacyProps = GetPropertyObject(dataSource.Properties, LegacyMongoDBMetadataName);
+                            if (legacyProps != null)
+                            {
+                                strictness = GetNullableInt(legacyProps, "Strictness");
+                                topNDocuments = GetNullableInt(legacyProps, "TopNDocuments");
+                            }
                         }
                         break;
                 }
@@ -192,5 +220,61 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
         return 1;
     }
-#pragma warning restore CS0618 // Type or member is obsolete
+
+    /// <summary>
+    /// Gets a property object from the Properties dictionary using string keys.
+    /// </summary>
+    private static JsonObject GetPropertyObject(JsonObject properties, string metadataClassName)
+    {
+        if (properties is null)
+        {
+            return null;
+        }
+
+        if (properties.TryGetPropertyValue(metadataClassName, out var node) && node is JsonObject obj)
+        {
+            return obj;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets a property value from the Properties dictionary using string keys.
+    /// </summary>
+    private static T GetPropertyValue<T>(JsonObject properties, string metadataClassName, string propertyName)
+    {
+        var obj = GetPropertyObject(properties, metadataClassName);
+        if (obj is null)
+        {
+            return default;
+        }
+
+        if (obj.TryGetPropertyValue(propertyName, out var node) && node is not null)
+        {
+            return node.GetValue<T>();
+        }
+
+        return default;
+    }
+
+    /// <summary>
+    /// Gets a nullable int value from a JsonObject.
+    /// </summary>
+    private static int? GetNullableInt(JsonObject obj, string propertyName)
+    {
+        if (obj.TryGetPropertyValue(propertyName, out var node) && node is not null)
+        {
+            try
+            {
+                return node.GetValue<int?>();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        return null;
+    }
 }

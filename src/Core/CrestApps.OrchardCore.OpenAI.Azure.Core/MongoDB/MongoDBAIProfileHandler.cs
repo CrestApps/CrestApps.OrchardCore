@@ -38,40 +38,34 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
             return Task.CompletedTask;
         }
 
-        var metadata = GetMongoDBMetadata(context.Model);
+        var metadata = context.Model.As<AzureMongoDBDataSourceMetadata>();
 
-        if (metadata is null)
-        {
-            context.Result.Fail(new ValidationResult(S["MongoDB configuration is required."]));
-            return Task.CompletedTask;
-        }
-
-        if (string.IsNullOrWhiteSpace(metadata.IndexName))
+        if (metadata is null || string.IsNullOrWhiteSpace(metadata.IndexName))
         {
             context.Result.Fail(new ValidationResult(S["The Index is required."], [nameof(metadata.IndexName)]));
         }
 
-        if (string.IsNullOrWhiteSpace(metadata.EndpointName))
+        if (string.IsNullOrWhiteSpace(metadata?.EndpointName))
         {
             context.Result.Fail(new ValidationResult(S["The endpoint name is required."], [nameof(metadata.EndpointName)]));
         }
 
-        if (string.IsNullOrWhiteSpace(metadata.CollectionName))
+        if (string.IsNullOrWhiteSpace(metadata?.CollectionName))
         {
             context.Result.Fail(new ValidationResult(S["The collection name is required."], [nameof(metadata.CollectionName)]));
         }
 
-        if (string.IsNullOrWhiteSpace(metadata.AppName))
+        if (string.IsNullOrWhiteSpace(metadata?.AppName))
         {
             context.Result.Fail(new ValidationResult(S["The app name is required."], [nameof(metadata.AppName)]));
         }
 
-        if (string.IsNullOrWhiteSpace(metadata.Authentication?.Username))
+        if (string.IsNullOrWhiteSpace(metadata?.Authentication?.Username))
         {
             context.Result.Fail(new ValidationResult(S["The username is required."], [nameof(AzureAIProfileMongoDBAuthenticationType.Username)]));
         }
 
-        if (string.IsNullOrWhiteSpace(metadata.Authentication?.Password))
+        if (string.IsNullOrWhiteSpace(metadata?.Authentication?.Password))
         {
             context.Result.Fail(new ValidationResult(S["The password is required."], [nameof(AzureAIProfileMongoDBAuthenticationType.Password)]));
         }
@@ -87,13 +81,7 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
             return Task.CompletedTask;
         }
 
-        // Try the new metadata format first
         var metadataNode = data[nameof(AIProfile.Properties)]?[nameof(AzureMongoDBDataSourceMetadata)]?.AsObject();
-
-        // Fall back to legacy metadata format
-#pragma warning disable CS0618 // Type or member is obsolete
-        metadataNode ??= data[nameof(AIProfile.Properties)]?[nameof(AzureAIProfileMongoDBMetadata)]?.AsObject();
-#pragma warning restore CS0618 // Type or member is obsolete
 
         if (metadataNode == null || metadataNode.Count == 0)
         {
@@ -160,38 +148,5 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
         source.Put(metadata);
 
         return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Gets MongoDB metadata from the data source, trying new metadata first, then falling back to legacy.
-    /// </summary>
-    private static AzureMongoDBDataSourceMetadata GetMongoDBMetadata(AIDataSource dataSource)
-    {
-        // Try new metadata first
-        var newMetadata = dataSource.As<AzureMongoDBDataSourceMetadata>();
-        if (newMetadata is not null && !string.IsNullOrWhiteSpace(newMetadata.IndexName))
-        {
-            return newMetadata;
-        }
-
-        // Fall back to legacy metadata
-#pragma warning disable CS0618 // Type or member is obsolete
-        var legacyMetadata = dataSource.As<AzureAIProfileMongoDBMetadata>();
-        if (legacyMetadata is not null && !string.IsNullOrWhiteSpace(legacyMetadata.IndexName))
-        {
-            return new AzureMongoDBDataSourceMetadata
-            {
-                IndexName = legacyMetadata.IndexName,
-                EndpointName = legacyMetadata.EndpointName,
-                AppName = legacyMetadata.AppName,
-                CollectionName = legacyMetadata.CollectionName,
-                DatabaseName = legacyMetadata.DatabaseName,
-                Authentication = legacyMetadata.Authentication,
-            };
-        }
-#pragma warning restore CS0618 // Type or member is obsolete
-
-        // Return null if no metadata exists - validation will handle this
-        return null;
     }
 }

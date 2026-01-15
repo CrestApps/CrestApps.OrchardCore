@@ -31,20 +31,9 @@ public sealed class ElasticsearchAIDataSourceHandler : CatalogEntryHandlerBase<A
             return Task.CompletedTask;
         }
 
-        // Try the new metadata first, fall back to legacy for backward compatibility
         var indexMetadata = context.Model.As<AzureAIDataSourceIndexMetadata>();
-        var indexName = indexMetadata?.IndexName;
 
-        // Fall back to legacy metadata if new metadata doesn't have index name
-#pragma warning disable CS0618 // Type or member is obsolete
-        if (string.IsNullOrWhiteSpace(indexName))
-        {
-            var legacyMetadata = context.Model.As<AzureAIProfileElasticsearchMetadata>();
-            indexName = legacyMetadata?.IndexName;
-        }
-#pragma warning restore CS0618 // Type or member is obsolete
-
-        if (string.IsNullOrWhiteSpace(indexName))
+        if (string.IsNullOrWhiteSpace(indexMetadata?.IndexName))
         {
             context.Result.Fail(new ValidationResult(S["The Index is required."], [nameof(AzureAIDataSourceIndexMetadata.IndexName)]));
         }

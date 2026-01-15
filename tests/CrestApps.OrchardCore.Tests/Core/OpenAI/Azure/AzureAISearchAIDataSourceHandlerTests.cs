@@ -79,33 +79,6 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
     }
 
     [Fact]
-    public async Task ValidatedAsync_WhenLegacyMetadataHasIndexName_ShouldSucceed()
-    {
-        // Arrange - Tests backward compatibility with legacy metadata
-        var dataSource = new AIDataSource
-        {
-            ProfileSource = AzureOpenAIConstants.ProviderName,
-            Type = AzureOpenAIConstants.DataSourceTypes.AzureAISearch,
-        };
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        dataSource.Put(new AzureAIProfileAISearchMetadata
-        {
-            IndexName = "my-index",
-        });
-#pragma warning restore CS0618 // Type or member is obsolete
-
-        var result = new ValidationResultDetails();
-        var context = new ValidatedContext<AIDataSource>(dataSource, result);
-
-        // Act
-        await _handler.ValidatedAsync(context);
-
-        // Assert
-        Assert.True(result.Succeeded);
-    }
-
-    [Fact]
     public async Task ValidatedAsync_WhenProfileSourceIsNotAzureOpenAI_ShouldSkipValidation()
     {
         // Arrange

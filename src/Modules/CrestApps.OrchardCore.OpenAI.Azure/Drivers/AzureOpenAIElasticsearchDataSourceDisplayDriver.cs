@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -38,17 +37,8 @@ public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDri
 
         return Initialize<AzureDataSourceIndexViewModel>("AzureOpenAIDataSourceIndex_Edit", async model =>
         {
-            // Try the new metadata first, fall back to legacy for backward compatibility
             var indexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
             model.IndexName = indexMetadata?.IndexName;
-
-#pragma warning disable CS0618 // Type or member is obsolete
-            if (string.IsNullOrEmpty(model.IndexName))
-            {
-                var legacyMetadata = dataSource.As<AzureAIProfileElasticsearchMetadata>();
-                model.IndexName = legacyMetadata?.IndexName;
-            }
-#pragma warning restore CS0618 // Type or member is obsolete
 
             var indexProfiles = await _indexProfileStore.GetByProviderAsync(ElasticsearchConstants.ProviderName);
 

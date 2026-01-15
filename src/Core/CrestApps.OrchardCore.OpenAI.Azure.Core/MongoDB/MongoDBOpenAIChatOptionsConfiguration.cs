@@ -70,9 +70,8 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             return;
         }
 
-        // Try to get MongoDB metadata from new or legacy metadata
-        var mongoMetadata = GetMongoDBMetadata(dataSource);
-        if (mongoMetadata is null)
+        var mongoMetadata = dataSource.As<AzureMongoDBDataSourceMetadata>();
+        if (mongoMetadata is null || string.IsNullOrWhiteSpace(mongoMetadata.IndexName))
         {
             return;
         }
@@ -118,8 +117,8 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             },
         };
 
-        // Get RAG parameters from AIProfile first (new pattern), then fall back to legacy metadata on data source
-        var ragParams = GetRagParameters(context, dataSource);
+        // Get RAG parameters from AIProfile metadata
+        var ragParams = GetRagParameters(context);
         mongoDbDataSource.parameters["top_n_documents"] = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
         mongoDbDataSource.parameters["strictness"] = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
 
@@ -164,9 +163,8 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             return;
         }
 
-        // Try to get MongoDB metadata from new or legacy metadata
-        var mongoMetadata = GetMongoDBMetadata(dataSource);
-        if (mongoMetadata is null)
+        var mongoMetadata = dataSource.As<AzureMongoDBDataSourceMetadata>();
+        if (mongoMetadata is null || string.IsNullOrWhiteSpace(mongoMetadata.IndexName))
         {
             return;
         }
@@ -191,8 +189,8 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             }
         }
 
-        // Get RAG parameters from context (profile metadata) or fall back to legacy data source metadata
-        var ragParams = GetRagParametersFromContext(context, dataSource);
+        // Get RAG parameters from the profile
+        var ragMetadata = dataSource.As<AzureRagChatMetadata>();
 
         options.AddDataSource(new MongoDBChatDataSource()
         {
@@ -201,8 +199,8 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             AppName = mongoMetadata.AppName,
             IndexName = mongoMetadata.IndexName,
             Authentication = credentials,
-            Strictness = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            Strictness = ragMetadata?.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = ragMetadata?.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
             InScope = true,
             OutputContexts = DataSourceOutputContexts.Citations,
         });
@@ -225,79 +223,16 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
     }
 
     /// <summary>
-    /// Gets MongoDB metadata from the data source, trying new metadata first, then falling back to legacy.
+    /// Gets RAG parameters from AIProfile metadata.
     /// </summary>
-    private static AzureMongoDBDataSourceMetadata GetMongoDBMetadata(AIDataSource dataSource)
+    private static (int? Strictness, int? TopNDocuments) GetRagParameters(CompletionServiceConfigureContext context)
     {
-        // Try new metadata first
-        var newMetadata = dataSource.As<AzureMongoDBDataSourceMetadata>();
-        if (newMetadata is not null && !string.IsNullOrWhiteSpace(newMetadata.IndexName))
-        {
-            return newMetadata;
-        }
-
-        // Fall back to legacy metadata
-#pragma warning disable CS0618 // Type or member is obsolete
-        var legacyMetadata = dataSource.As<AzureAIProfileMongoDBMetadata>();
-        if (legacyMetadata is not null && !string.IsNullOrWhiteSpace(legacyMetadata.IndexName))
-        {
-            return new AzureMongoDBDataSourceMetadata
-            {
-                IndexName = legacyMetadata.IndexName,
-                EndpointName = legacyMetadata.EndpointName,
-                AppName = legacyMetadata.AppName,
-                CollectionName = legacyMetadata.CollectionName,
-                DatabaseName = legacyMetadata.DatabaseName,
-                Authentication = legacyMetadata.Authentication,
-            };
-        }
-#pragma warning restore CS0618 // Type or member is obsolete
-
-        return null;
-    }
-
-    /// <summary>
-    /// Gets RAG parameters from context (profile) first, then falls back to legacy data source metadata.
-    /// </summary>
-    private static (int? Strictness, int? TopNDocuments) GetRagParameters(CompletionServiceConfigureContext context, AIDataSource dataSource)
-    {
-        // Try to get from AIProfile metadata (new pattern)
         if (context.AdditionalProperties is not null &&
             context.AdditionalProperties.TryGetValue("RagMetadata", out var ragMeta) &&
             ragMeta is AzureRagChatMetadata ragMetadata)
         {
             return (ragMetadata.Strictness, ragMetadata.TopNDocuments);
         }
-
-        // Fall back to legacy data source metadata
-#pragma warning disable CS0618 // Type or member is obsolete
-        if (dataSource.TryGet<AzureAIProfileMongoDBMetadata>(out var legacyMetadata))
-        {
-            return (legacyMetadata.Strictness, legacyMetadata.TopNDocuments);
-        }
-#pragma warning restore CS0618 // Type or member is obsolete
-
-        return (null, null);
-    }
-
-    /// <summary>
-    /// Gets RAG parameters from context or falls back to data source.
-    /// </summary>
-    private static (int? Strictness, int? TopNDocuments) GetRagParametersFromContext(AzureOpenAIDataSourceContext context, AIDataSource dataSource)
-    {
-        // Try to get from context (set by completion handler from AIProfile)
-        if (context.RagMetadata is not null)
-        {
-            return (context.RagMetadata.Strictness, context.RagMetadata.TopNDocuments);
-        }
-
-        // Fall back to legacy data source metadata
-#pragma warning disable CS0618 // Type or member is obsolete
-        if (dataSource.TryGet<AzureAIProfileMongoDBMetadata>(out var legacyMetadata))
-        {
-            return (legacyMetadata.Strictness, legacyMetadata.TopNDocuments);
-        }
-#pragma warning restore CS0618 // Type or member is obsolete
 
         return (null, null);
     }

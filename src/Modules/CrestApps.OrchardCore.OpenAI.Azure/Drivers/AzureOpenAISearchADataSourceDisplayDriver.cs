@@ -31,17 +31,8 @@ public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AI
 
         return Initialize<AzureDataSourceIndexViewModel>("AzureOpenAIDataSourceIndex_Edit", async model =>
         {
-            // Try the new metadata first, fall back to legacy for backward compatibility
             var indexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
             model.IndexName = indexMetadata?.IndexName;
-
-#pragma warning disable CS0618 // Type or member is obsolete
-            if (string.IsNullOrEmpty(model.IndexName))
-            {
-                var legacyMetadata = dataSource.As<AzureAIProfileAISearchMetadata>();
-                model.IndexName = legacyMetadata?.IndexName;
-            }
-#pragma warning restore CS0618 // Type or member is obsolete
 
             model.IndexNames = (await _indexProfileStore.GetByProviderAsync(AzureAISearchConstants.ProviderName))
                 .Select(i => new SelectListItem(i.Name, i.IndexName))
