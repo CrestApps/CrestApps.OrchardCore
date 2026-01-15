@@ -38,7 +38,7 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
             return Task.CompletedTask;
         }
 
-        var metadata = context.Model.As<AzureAIProfileMongoDBMetadata>();
+        var metadata = GetMongoDBMetadata(context.Model);
 
         if (string.IsNullOrWhiteSpace(metadata.IndexName))
         {
@@ -48,11 +48,6 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
         if (string.IsNullOrWhiteSpace(metadata.EndpointName))
         {
             context.Result.Fail(new ValidationResult(S["The endpoint name is required."], [nameof(metadata.EndpointName)]));
-        }
-
-        if (string.IsNullOrWhiteSpace(metadata.IndexName))
-        {
-            context.Result.Fail(new ValidationResult(S["The index name is required."], [nameof(metadata.IndexName)]));
         }
 
         if (string.IsNullOrWhiteSpace(metadata.CollectionName))
@@ -67,12 +62,12 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
 
         if (string.IsNullOrWhiteSpace(metadata.Authentication?.Username))
         {
-            context.Result.Fail(new ValidationResult(S["The username is required."], [nameof(metadata.Authentication.Username)]));
+            context.Result.Fail(new ValidationResult(S["The username is required."], [nameof(AzureAIProfileMongoDBAuthenticationType.Username)]));
         }
 
         if (string.IsNullOrWhiteSpace(metadata.Authentication?.Password))
         {
-            context.Result.Fail(new ValidationResult(S["The password is required."], [nameof(metadata.Authentication.Password)]));
+            context.Result.Fail(new ValidationResult(S["The password is required."], [nameof(AzureAIProfileMongoDBAuthenticationType.Password)]));
         }
 
         return Task.CompletedTask;
@@ -86,14 +81,20 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
             return Task.CompletedTask;
         }
 
-        var metadataNode = data[nameof(AIProfile.Properties)]?[nameof(AzureAIProfileMongoDBMetadata)]?.AsObject();
+        // Try the new metadata format first
+        var metadataNode = data[nameof(AIProfile.Properties)]?[nameof(AzureMongoDBDataSourceMetadata)]?.AsObject();
+
+        // Fall back to legacy metadata format
+#pragma warning disable CS0618 // Type or member is obsolete
+        metadataNode ??= data[nameof(AIProfile.Properties)]?[nameof(AzureAIProfileMongoDBMetadata)]?.AsObject();
+#pragma warning restore CS0618 // Type or member is obsolete
 
         if (metadataNode == null || metadataNode.Count == 0)
         {
             return Task.CompletedTask;
         }
 
-        var metadata = source.As<AzureAIProfileMongoDBMetadata>();
+        var metadata = source.As<AzureMongoDBDataSourceMetadata>();
 
         metadata.Authentication ??= new AzureAIProfileMongoDBAuthenticationType();
 
@@ -132,20 +133,6 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
             metadata.AppName = appName;
         }
 
-        var strictness = metadataNode[nameof(metadata.Strictness)]?.GetValue<int?>();
-
-        if (strictness.HasValue)
-        {
-            metadata.Strictness = strictness;
-        }
-
-        var topNDocuments = metadataNode[nameof(metadata.TopNDocuments)]?.GetValue<int?>();
-
-        if (topNDocuments.HasValue)
-        {
-            metadata.TopNDocuments = topNDocuments;
-        }
-
         var authentication = metadataNode[nameof(metadata.Authentication)]?.AsObject();
 
         var username = authentication?[nameof(metadata.Authentication.Username)]?.GetValue<string>();
@@ -167,5 +154,38 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
         source.Put(metadata);
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Gets MongoDB metadata from the data source, trying new metadata first, then falling back to legacy.
+    /// </summary>
+    private static AzureMongoDBDataSourceMetadata GetMongoDBMetadata(AIDataSource dataSource)
+    {
+        // Try new metadata first
+        var newMetadata = dataSource.As<AzureMongoDBDataSourceMetadata>();
+        if (newMetadata is not null && !string.IsNullOrWhiteSpace(newMetadata.IndexName))
+        {
+            return newMetadata;
+        }
+
+        // Fall back to legacy metadata
+#pragma warning disable CS0618 // Type or member is obsolete
+        var legacyMetadata = dataSource.As<AzureAIProfileMongoDBMetadata>();
+        if (legacyMetadata is not null && !string.IsNullOrWhiteSpace(legacyMetadata.IndexName))
+        {
+            return new AzureMongoDBDataSourceMetadata
+            {
+                IndexName = legacyMetadata.IndexName,
+                EndpointName = legacyMetadata.EndpointName,
+                AppName = legacyMetadata.AppName,
+                CollectionName = legacyMetadata.CollectionName,
+                DatabaseName = legacyMetadata.DatabaseName,
+                Authentication = legacyMetadata.Authentication,
+            };
+        }
+#pragma warning restore CS0618 // Type or member is obsolete
+
+        // Return empty metadata if neither exists
+        return new AzureMongoDBDataSourceMetadata();
     }
 }
