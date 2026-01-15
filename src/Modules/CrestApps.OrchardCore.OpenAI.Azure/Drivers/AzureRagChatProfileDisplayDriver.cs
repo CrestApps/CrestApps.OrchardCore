@@ -39,12 +39,6 @@ public sealed class AzureRagChatProfileDisplayDriver : DisplayDriver<AIProfile>
             return null;
         }
 
-        var dataSourceMetadata = profile.As<AIProfileDataSourceMetadata>();
-        if (string.IsNullOrEmpty(dataSourceMetadata?.DataSourceId))
-        {
-            return null;
-        }
-
         return Initialize<AzureRagChatViewModel>("AzureRagChat_Edit", model =>
         {
             var ragMetadata = profile.As<AzureRagChatMetadata>();
@@ -52,7 +46,7 @@ public sealed class AzureRagChatProfileDisplayDriver : DisplayDriver<AIProfile>
             model.Strictness = ragMetadata?.Strictness;
             model.TopNDocuments = ragMetadata?.TopNDocuments;
             model.Filter = ragMetadata?.Filter;
-        }).Location("Content:4");
+        }).Location("Content:3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

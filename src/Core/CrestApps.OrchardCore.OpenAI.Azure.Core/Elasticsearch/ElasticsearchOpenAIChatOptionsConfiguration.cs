@@ -156,8 +156,7 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             },
         };
 
-        // Get RAG parameters from AIProfile metadata
-        var ragParams = GetRagParameters(context);
+        var ragParams = indexProfile.As<AzureRagChatMetadata>();
         elasticsearchDataSource.parameters["top_n_documents"] = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
         elasticsearchDataSource.parameters["strictness"] = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
 
@@ -249,6 +248,8 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             throw new InvalidOperationException($"The '{_elasticsearchOptions.AuthenticationType}' is not supported as Authentication type for Elasticsearch AI Data Source. Only '{ElasticsearchAuthenticationType.KeyIdAndKey}' and '{ElasticsearchAuthenticationType.Base64ApiKey}' are supported.");
         }
 
+        var ragParams = indexProfile.As<AzureRagChatMetadata>();
+
         // Note: RAG parameters (Strictness, TopNDocuments, Filter) are stored on AIProfile,
         // which is not accessible in this context. Using defaults here.
         // For profile-specific RAG parameters, use the Configure method path via IOpenAIChatOptionsConfiguration.
@@ -257,8 +258,8 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             Endpoint = uri,
             IndexName = indexProfile.IndexFullName,
             Authentication = credentials,
-            Strictness = AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = AzureOpenAIConstants.DefaultTopNDocuments,
+            Strictness = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
             QueryType = DataSourceQueryType.Simple,
             InScope = true,
             OutputContexts = DataSourceOutputContexts.Citations,
@@ -338,19 +339,4 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
     }
 
     private const string exceptionSuffix = "should be a string in the form of cluster_name:base_64_data";
-
-    /// <summary>
-    /// Gets RAG parameters from AIProfile metadata.
-    /// </summary>
-    private static (int? Strictness, int? TopNDocuments, string Filter) GetRagParameters(CompletionServiceConfigureContext context)
-    {
-        if (context.AdditionalProperties is not null &&
-            context.AdditionalProperties.TryGetValue("RagMetadata", out var ragMeta) &&
-            ragMeta is AzureRagChatMetadata ragMetadata)
-        {
-            return (ragMetadata.Strictness, ragMetadata.TopNDocuments, ragMetadata.Filter);
-        }
-
-        return (null, null, null);
-    }
 }

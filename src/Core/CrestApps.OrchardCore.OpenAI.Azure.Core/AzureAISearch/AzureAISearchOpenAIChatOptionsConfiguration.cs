@@ -163,8 +163,7 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             };
         }
 
-        // Get RAG parameters from AIProfile metadata
-        var ragParams = GetRagParameters(context);
+        var ragParams = indexProfile.As<AzureRagChatMetadata>();
         azureDataSource.parameters["top_n_documents"] = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
         azureDataSource.parameters["strictness"] = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
 
@@ -244,6 +243,8 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             throw new NotSupportedException($"Unsupported authentication type: {_azureAISearchDefaultOptions.AuthenticationType}");
         }
 
+        var ragParams = indexProfile.As<AzureRagChatMetadata>();
+
         // Note: RAG parameters (Strictness, TopNDocuments, Filter) are stored on AIProfile,
         // which is not accessible in this context. Using defaults here.
         // For profile-specific RAG parameters, use the Configure method path via IOpenAIChatOptionsConfiguration.
@@ -252,8 +253,9 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             Endpoint = new Uri(_azureAISearchDefaultOptions.Endpoint),
             IndexName = indexProfile.IndexFullName,
             Authentication = credentials,
-            Strictness = AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = AzureOpenAIConstants.DefaultTopNDocuments,
+            Strictness = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            Filter = string.IsNullOrWhiteSpace(ragParams.Filter) ? null : ragParams.Filter,
             QueryType = DataSourceQueryType.Simple,
             InScope = true,
             SemanticConfiguration = "default",
@@ -291,20 +293,5 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
         }
 
         return null;
-    }
-
-    /// <summary>
-    /// Gets RAG parameters from AIProfile metadata.
-    /// </summary>
-    private static (int? Strictness, int? TopNDocuments, string Filter) GetRagParameters(CompletionServiceConfigureContext context)
-    {
-        if (context.AdditionalProperties is not null &&
-            context.AdditionalProperties.TryGetValue("RagMetadata", out var ragMeta) &&
-            ragMeta is AzureRagChatMetadata ragMetadata)
-        {
-            return (ragMetadata.Strictness, ragMetadata.TopNDocuments, ragMetadata.Filter);
-        }
-
-        return (null, null, null);
     }
 }

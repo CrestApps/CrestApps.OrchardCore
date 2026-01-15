@@ -6,23 +6,32 @@ using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDB;
 using CrestApps.OrchardCore.OpenAI.Core;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
 using OrchardCore.Entities;
+using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
+using OrchardCore.Search.Elasticsearch;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDb;
 
 public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsConfiguration, IAzureOpenAIDataSourceHandler
 {
     private readonly IAIDataSourceManager _aIDataSourceManager;
+    private readonly IIndexProfileStore _indexProfileStore;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly ILogger _logger;
 
     public MongoDBOpenAIChatOptionsConfiguration(
         IAIDataSourceManager aIDataSourceManager,
-        IDataProtectionProvider dataProtectionProvider)
+        IIndexProfileStore indexProfileStore,
+        IDataProtectionProvider dataProtectionProvider,
+        ILogger<MongoDBOpenAIChatOptionsConfiguration> logger)
     {
         _aIDataSourceManager = aIDataSourceManager;
+        _indexProfileStore = indexProfileStore;
         _dataProtectionProvider = dataProtectionProvider;
+        _logger = logger;
     }
 
     public async Task InitializeConfigurationAsync(CompletionServiceConfigureContext context)
@@ -118,7 +127,8 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
         };
 
         // Get RAG parameters from AIProfile metadata
-        var ragParams = GetRagParameters(context);
+        var ragParams = indexProfile.As<AzureRagChatMetadata>();
+
         mongoDbDataSource.parameters["top_n_documents"] = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
         mongoDbDataSource.parameters["strictness"] = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
 
@@ -164,8 +174,24 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
         }
 
         var mongoMetadata = dataSource.As<AzureMongoDBDataSourceMetadata>();
+
         if (mongoMetadata is null || string.IsNullOrWhiteSpace(mongoMetadata.IndexName))
         {
+            return;
+        }
+
+        var indexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
+
+        if (string.IsNullOrWhiteSpace(indexMetadata?.IndexName))
+        {
+            return;
+        }
+
+        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(indexMetadata.IndexName, ElasticsearchConstants.ProviderName);
+
+        if (indexProfile is null)
+        {
+            _logger.LogWarning("Index named '{IndexName}' set as Elasticsearch data-source but not found in Elasticsearch document manager.", indexMetadata.IndexName);
             return;
         }
 
@@ -189,9 +215,13 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             }
         }
 
-        // Note: RAG parameters (Strictness, TopNDocuments) are stored on AIProfile,
-        // which is not accessible in this context. Using defaults here.
-        // For profile-specific RAG parameters, use the Configure method path via IOpenAIChatOptionsConfiguration.
+        var ragParams = indexProfile.As<AzureRagChatMetadata>();
+
+        if (!string.IsNullOrWhiteSpace(ragParams.Filter))
+        {
+            _logger.LogWarning("MongoDB data source does not support filter parameter. The provided filter '{Filter}' will be ignored.", ragParams.Filter);
+        }
+
         options.AddDataSource(new MongoDBChatDataSource()
         {
             EndpointName = mongoMetadata.EndpointName,
@@ -199,8 +229,8 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             AppName = mongoMetadata.AppName,
             IndexName = mongoMetadata.IndexName,
             Authentication = credentials,
-            Strictness = AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = AzureOpenAIConstants.DefaultTopNDocuments,
+            Strictness = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
             InScope = true,
             OutputContexts = DataSourceOutputContexts.Citations,
         });
@@ -220,20 +250,5 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
         }
 
         return true;
-    }
-
-    /// <summary>
-    /// Gets RAG parameters from AIProfile metadata.
-    /// </summary>
-    private static (int? Strictness, int? TopNDocuments) GetRagParameters(CompletionServiceConfigureContext context)
-    {
-        if (context.AdditionalProperties is not null &&
-            context.AdditionalProperties.TryGetValue("RagMetadata", out var ragMeta) &&
-            ragMeta is AzureRagChatMetadata ragMetadata)
-        {
-            return (ragMetadata.Strictness, ragMetadata.TopNDocuments);
-        }
-
-        return (null, null);
     }
 }
