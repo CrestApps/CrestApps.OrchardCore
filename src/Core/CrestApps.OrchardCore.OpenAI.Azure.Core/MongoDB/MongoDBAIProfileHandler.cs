@@ -40,6 +40,12 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
 
         var metadata = GetMongoDBMetadata(context.Model);
 
+        if (metadata is null)
+        {
+            context.Result.Fail(new ValidationResult(S["MongoDB configuration is required."]));
+            return Task.CompletedTask;
+        }
+
         if (string.IsNullOrWhiteSpace(metadata.IndexName))
         {
             context.Result.Fail(new ValidationResult(S["The Index is required."], [nameof(metadata.IndexName)]));
@@ -185,7 +191,7 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
         }
 #pragma warning restore CS0618 // Type or member is obsolete
 
-        // Return empty metadata if neither exists
-        return new AzureMongoDBDataSourceMetadata();
+        // Return null if no metadata exists - validation will handle this
+        return null;
     }
 }
