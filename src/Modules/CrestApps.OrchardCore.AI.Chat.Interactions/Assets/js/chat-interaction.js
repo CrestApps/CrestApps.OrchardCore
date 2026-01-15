@@ -80,6 +80,8 @@ window.chatInteractionManager = function () {
                     stream: null,
                     messages: [],
                     prompt: '',
+                    initialFieldValues: new Map(),
+                    settingsDirty: false,
                     saveSettingsTimeout: null
                 };
             },
@@ -437,23 +439,50 @@ window.chatInteractionManager = function () {
                     // Exclude tool-related inputs (they have special handling with debouncing)
                     const settingsInputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]), select[name^="ChatInteraction."]:not([name*=".Tools["]), textarea[name^="ChatInteraction."]:not([name*=".Tools["])');
                     settingsInputs.forEach(input => {
-                        input.addEventListener('blur', () => this.saveSettings());
-                        // Also save on change for select elements
+                        input.addEventListener('focus', () => {
+                            this.initialFieldValues.set(input, input.value);
+                        });
+
+                        input.addEventListener('blur', () => {
+                            const initialValue = this.initialFieldValues.get(input);
+
+                            // Only save when the field value actually changed.
+                            // If the field never focused (e.g. programmatic blur), treat it as unchanged.
+                            const hasChanged = initialValue !== undefined && input.value !== initialValue;
+
+                            if (hasChanged) {
+                                this.settingsDirty = true;
+                                this.debouncedSaveSettings();
+                            }
+
+                            this.initialFieldValues.delete(input);
+                        });
+
+                        // Selects can change without blur
                         if (input.tagName === 'SELECT') {
-                            input.addEventListener('change', () => this.saveSettings());
+                            input.addEventListener('change', () => {
+                                this.settingsDirty = true;
+                                this.debouncedSaveSettings();
+                            });
                         }
                     });
 
                     // Add event listeners for tool checkboxes with debouncing (850ms)
                     const toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]');
                     toolCheckboxes.forEach(checkbox => {
-                        checkbox.addEventListener('change', () => this.debouncedSaveSettings());
+                        checkbox.addEventListener('change', () => {
+                            this.settingsDirty = true;
+                            this.debouncedSaveSettings();
+                        });
                     });
 
                     // Add event listeners for "Select All" group toggle checkboxes with debouncing (850ms)
                     const groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
                     groupToggleCheckboxes.forEach(toggle => {
-                        toggle.addEventListener('change', () => this.debouncedSaveSettings());
+                        toggle.addEventListener('change', () => {
+                            this.settingsDirty = true;
+                            this.debouncedSaveSettings();
+                        });
                     });
 
                     // Add event listener for clear history button
@@ -491,7 +520,10 @@ window.chatInteractionManager = function () {
                     }
                     // Set a new timeout to save after 850ms of no changes
                     this.saveSettingsTimeout = setTimeout(() => {
-                        this.saveSettings();
+                        if (this.settingsDirty) {
+                            this.saveSettings();
+                            this.settingsDirty = false;
+                        }
                         this.saveSettingsTimeout = null;
                     }, 850);
                 },
