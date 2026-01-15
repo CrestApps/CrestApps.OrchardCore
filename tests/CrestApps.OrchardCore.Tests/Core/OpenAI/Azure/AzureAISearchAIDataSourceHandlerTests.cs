@@ -1,10 +1,8 @@
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using Moq;
 using OrchardCore.Entities;
@@ -13,19 +11,16 @@ namespace CrestApps.OrchardCore.Tests.Core.OpenAI.Azure;
 
 public sealed class AzureAISearchAIDataSourceHandlerTests
 {
-    private readonly AzureAISearchAIDataSourceHandler _handler;
-    private readonly Mock<IODataFilterValidator> _validatorMock;
+    private readonly AzureAIDataSourceHandler _handler;
 
     public AzureAISearchAIDataSourceHandlerTests()
     {
-        _validatorMock = new Mock<IODataFilterValidator>();
-
-        var stringLocalizerMock = new Mock<IStringLocalizer<AzureAISearchAIDataSourceHandler>>();
+        var stringLocalizerMock = new Mock<IStringLocalizer<AzureAIDataSourceHandler>>();
         stringLocalizerMock
             .Setup(s => s[It.IsAny<string>()])
             .Returns((string key) => new LocalizedString(key, key));
 
-        _handler = new AzureAISearchAIDataSourceHandler(_validatorMock.Object, stringLocalizerMock.Object);
+        _handler = new AzureAIDataSourceHandler(stringLocalizerMock.Object);
     }
 
     [Fact]

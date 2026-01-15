@@ -41,7 +41,6 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
             model.CollectionName = metadata?.CollectionName;
             model.Username = metadata?.Authentication?.Username;
             model.HasPassword = !string.IsNullOrEmpty(metadata?.Authentication?.Password);
-            model.IndexName = metadata?.IndexName;
             model.DatabaseName = metadata?.DatabaseName;
         }).Location("Content:3");
     }
@@ -61,11 +60,6 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
         if (string.IsNullOrWhiteSpace(model.EndpointName))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.EndpointName), S["The endpoint name is required."]);
-        }
-
-        if (string.IsNullOrWhiteSpace(model.IndexName))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexName), S["The index name is required."]);
         }
 
         if (string.IsNullOrWhiteSpace(model.CollectionName))
@@ -102,7 +96,6 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
         }
 
         metadata.EndpointName = model.EndpointName;
-        metadata.IndexName = model.IndexName;
         metadata.AppName = model.AppName;
         metadata.CollectionName = model.CollectionName;
         metadata.Authentication.Username = model.Username;

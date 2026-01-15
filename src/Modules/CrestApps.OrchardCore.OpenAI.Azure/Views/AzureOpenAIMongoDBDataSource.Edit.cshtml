@@ -4,14 +4,6 @@
 @model AzureMongoDBDataSourceViewModel
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="IndexName" class="@Orchard.GetLabelClasses()">@T["Index name"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <input type="text" class="form-control" asp-for="IndexName" />
-        <span class="hint">@T["The name of the Mongo DB index to use as a data source."]</span>
-    </div>
-</div>
-
-<div class="@Orchard.GetWrapperClasses()">
     <label asp-for="EndpointName" class="@Orchard.GetLabelClasses()">@T["Endpoint name"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="text" class="form-control" asp-for="EndpointName" />
@@ -54,7 +46,7 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="Password" class="@Orchard.GetLabelClasses()">@T["Password"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <input type="text" class="form-control" asp-for="Password" placeholder="@(Model.HasPassword ? T["A password is securely stored. Enter a new one to replace it."] : string.Empty)" />
+        <input type="text" class="form-control" asp-for="Password" placeholder="@(Model.HasPassword? T["A password is securely stored. Enter a new one to replace it."] : string.Empty)" />
         <span class="hint">@T["The Mongo DB password."]</span>
     </div>
 </div>

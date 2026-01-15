@@ -87,14 +87,23 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                     case AzureOpenAIConstants.DataSourceTypes.MongoDB:
                         {
                             var legacyProps = GetPropertyObject(dataSource.Properties, LegacyMongoDBMetadataName);
+
                             if (legacyProps != null)
                             {
                                 var indexName = legacyProps["IndexName"]?.GetValue<string>();
+
                                 if (!string.IsNullOrWhiteSpace(indexName))
                                 {
+                                    dataSource.Put(new AzureAIDataSourceIndexMetadata
+                                    {
+                                        IndexName = indexName,
+                                    });
+
                                     // For MongoDB, migrate to the new metadata class
                                     var authProps = legacyProps["Authentication"]?.AsObject();
+
                                     AzureAIProfileMongoDBAuthenticationType auth = null;
+
                                     if (authProps != null)
                                     {
                                         auth = new AzureAIProfileMongoDBAuthenticationType
@@ -107,13 +116,13 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
                                     var newMongoMetadata = new AzureMongoDBDataSourceMetadata
                                     {
-                                        IndexName = indexName,
                                         EndpointName = legacyProps["EndpointName"]?.GetValue<string>(),
                                         AppName = legacyProps["AppName"]?.GetValue<string>(),
                                         CollectionName = legacyProps["CollectionName"]?.GetValue<string>(),
                                         DatabaseName = legacyProps["DatabaseName"]?.GetValue<string>(),
                                         Authentication = auth,
                                     };
+
                                     dataSource.Put(newMongoMetadata);
                                     needsUpdate = true;
                                 }

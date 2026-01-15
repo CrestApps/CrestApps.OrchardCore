@@ -3,30 +3,24 @@ using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 
-namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch;
+namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
 
-public sealed class ElasticsearchAIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
+public sealed class AzureAIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
 {
-    private readonly IODataFilterValidator _filterValidator;
-
     internal readonly IStringLocalizer S;
 
-    public ElasticsearchAIDataSourceHandler(
-        IODataFilterValidator filterValidator,
-        IStringLocalizer<ElasticsearchAIDataSourceHandler> stringLocalizer)
+    public AzureAIDataSourceHandler(
+        IStringLocalizer<AzureAIDataSourceHandler> stringLocalizer)
     {
-        _filterValidator = filterValidator;
         S = stringLocalizer;
     }
 
     public override Task ValidatedAsync(ValidatedContext<AIDataSource> context)
     {
-        if (context.Model.ProfileSource != AzureOpenAIConstants.ProviderName ||
-            context.Model.Type != AzureOpenAIConstants.DataSourceTypes.Elasticsearch)
+        if (context.Model.ProfileSource != AzureOpenAIConstants.ProviderName)
         {
             return Task.CompletedTask;
         }

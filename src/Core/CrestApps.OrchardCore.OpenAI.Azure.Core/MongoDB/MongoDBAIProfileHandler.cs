@@ -40,11 +40,6 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
 
         var metadata = context.Model.As<AzureMongoDBDataSourceMetadata>();
 
-        if (metadata is null || string.IsNullOrWhiteSpace(metadata.IndexName))
-        {
-            context.Result.Fail(new ValidationResult(S["The Index is required."], [nameof(metadata.IndexName)]));
-        }
-
         if (string.IsNullOrWhiteSpace(metadata?.EndpointName))
         {
             context.Result.Fail(new ValidationResult(S["The endpoint name is required."], [nameof(metadata.EndpointName)]));
@@ -99,18 +94,11 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
             metadata.EndpointName = endpointName;
         }
 
-        var indexName = metadataNode[nameof(metadata.IndexName)]?.GetValue<string>();
+        var databaseName = metadataNode[nameof(metadata.DatabaseName)]?.GetValue<string>();
 
-        if (!string.IsNullOrEmpty(indexName))
+        if (!string.IsNullOrEmpty(databaseName))
         {
-            metadata.IndexName = indexName;
-        }
-
-        var datbaseName = metadataNode[nameof(metadata.DatabaseName)]?.GetValue<string>();
-
-        if (!string.IsNullOrEmpty(datbaseName))
-        {
-            metadata.DatabaseName = datbaseName;
+            metadata.DatabaseName = databaseName;
         }
 
         var collectionName = metadataNode[nameof(metadata.CollectionName)]?.GetValue<string>();

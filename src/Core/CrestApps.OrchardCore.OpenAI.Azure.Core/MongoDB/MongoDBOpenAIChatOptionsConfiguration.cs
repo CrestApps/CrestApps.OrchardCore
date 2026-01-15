@@ -79,8 +79,12 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             return;
         }
 
-        var mongoMetadata = dataSource.As<AzureMongoDBDataSourceMetadata>();
-        if (mongoMetadata is null || string.IsNullOrWhiteSpace(mongoMetadata.IndexName))
+        if (!dataSource.TryGet<AzureAIDataSourceIndexMetadata>(out var indexMetadata) || string.IsNullOrWhiteSpace(indexMetadata.IndexName))
+        {
+            return;
+        }
+
+        if (!dataSource.TryGet<AzureMongoDBDataSourceMetadata>(out var mongoMetadata))
         {
             return;
         }
@@ -117,7 +121,7 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
                 ["endpoint"] = mongoMetadata.EndpointName,
                 ["collection_name"] = mongoMetadata.CollectionName,
                 ["database_name"] = mongoMetadata.DatabaseName,
-                ["index_name"] = mongoMetadata.IndexName,
+                ["index_name"] = indexMetadata.IndexName,
                 ["app_name"] = mongoMetadata.AppName,
                 ["authentication"] = authentication,
                 ["semantic_configuration"] = "default",
@@ -173,16 +177,12 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             return;
         }
 
-        var mongoMetadata = dataSource.As<AzureMongoDBDataSourceMetadata>();
-
-        if (mongoMetadata is null || string.IsNullOrWhiteSpace(mongoMetadata.IndexName))
+        if (!dataSource.TryGet<AzureAIDataSourceIndexMetadata>(out var indexMetadata) || string.IsNullOrWhiteSpace(indexMetadata.IndexName))
         {
             return;
         }
 
-        var indexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
-
-        if (string.IsNullOrWhiteSpace(indexMetadata?.IndexName))
+        if (!dataSource.TryGet<AzureMongoDBDataSourceMetadata>(out var mongoMetadata))
         {
             return;
         }
@@ -227,7 +227,6 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             EndpointName = mongoMetadata.EndpointName,
             CollectionName = mongoMetadata.CollectionName,
             AppName = mongoMetadata.AppName,
-            IndexName = mongoMetadata.IndexName,
             Authentication = credentials,
             Strictness = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
             TopNDocuments = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
