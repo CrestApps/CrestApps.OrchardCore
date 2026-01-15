@@ -1,0 +1,60 @@
+@using CrestApps.OrchardCore.OpenAI.Azure.ViewModels
+@using OrchardCore
+
+@model AzureMongoDBDataSourceViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="IndexName" class="@Orchard.GetLabelClasses()">@T["Index name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" class="form-control" asp-for="IndexName" />
+        <span class="hint">@T["The name of the Mongo DB index to use as a data source."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="EndpointName" class="@Orchard.GetLabelClasses()">@T["Endpoint name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" class="form-control" asp-for="EndpointName" />
+        <span class="hint">@T["The Mongo DB Endpoint name."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DatabaseName" class="@Orchard.GetLabelClasses()">@T["Database name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" class="form-control" asp-for="DatabaseName" />
+        <span class="hint">@T["The Mongo DB database name."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="CollectionName" class="@Orchard.GetLabelClasses()">@T["Collection name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" class="form-control" asp-for="CollectionName" />
+        <span class="hint">@T["The Mongo DB collection name."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="AppName" class="@Orchard.GetLabelClasses()">@T["App name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" class="form-control" asp-for="AppName" />
+        <span class="hint">@T["The Mongo DB app name."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Username" class="@Orchard.GetLabelClasses()">@T["Username"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" class="form-control" asp-for="Username" />
+        <span class="hint">@T["The Mongo DB username."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Password" class="@Orchard.GetLabelClasses()">@T["Password"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" class="form-control" asp-for="Password" placeholder="@(Model.HasPassword ? T["A password is securely stored. Enter a new one to replace it."] : string.Empty)" />
+        <span class="hint">@T["The Mongo DB password."]</span>
+    </div>
+</div>

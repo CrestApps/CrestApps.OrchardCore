@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -35,14 +36,19 @@ public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDri
             return null;
         }
 
-        return Initialize<AzureProfileElasticsearchViewModel>("AzureOpenAIProfileElasticsearch_Edit", async model =>
+        return Initialize<AzureDataSourceIndexViewModel>("AzureOpenAIDataSourceIndex_Edit", async model =>
         {
-            var metadata = dataSource.As<AzureAIProfileElasticsearchMetadata>();
+            // Try the new metadata first, fall back to legacy for backward compatibility
+            var indexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
+            model.IndexName = indexMetadata?.IndexName;
 
-            model.Strictness = metadata.Strictness;
-            model.TopNDocuments = metadata.TopNDocuments;
-            model.IndexName = metadata.IndexName;
-            model.Filter = metadata.Filter;
+#pragma warning disable CS0618 // Type or member is obsolete
+            if (string.IsNullOrEmpty(model.IndexName))
+            {
+                var legacyMetadata = dataSource.As<AzureAIProfileElasticsearchMetadata>();
+                model.IndexName = legacyMetadata?.IndexName;
+            }
+#pragma warning restore CS0618 // Type or member is obsolete
 
             var indexProfiles = await _indexProfileStore.GetByProviderAsync(ElasticsearchConstants.ProviderName);
 
@@ -58,7 +64,7 @@ public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDri
             return null;
         }
 
-        var model = new AzureProfileElasticsearchViewModel();
+        var model = new AzureDataSourceIndexViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
@@ -72,12 +78,10 @@ public sealed class AzureOpenAIElasticsearchDataSourceDisplayDriver : DisplayDri
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexName), S["Invalid index name."]);
         }
 
-        dataSource.Put(new AzureAIProfileElasticsearchMetadata
+        // Store only index-level configuration on the data source
+        dataSource.Put(new AzureAIDataSourceIndexMetadata
         {
             IndexName = model.IndexName,
-            Strictness = model.Strictness,
-            TopNDocuments = model.TopNDocuments,
-            Filter = model.Filter,
         });
 
         return Edit(dataSource, context);

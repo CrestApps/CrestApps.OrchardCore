@@ -111,7 +111,9 @@ public sealed class AISearchStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<AIDataSource, AzureOpenAISearchADataSourceDisplayDriver>();
+        services.AddDisplayDriver<AIProfile, AzureRagChatProfileDisplayDriver>();
         services.AddScoped<ICatalogEntryHandler<AIDataSource>, AzureAISearchAIDataSourceHandler>();
+        services.AddDataMigration<AzureOpenAIDataSourceMetadataMigrations>();
 
         services
             .AddScoped<AzureAISearchOpenAIChatOptionsConfiguration>()
@@ -138,7 +140,9 @@ public sealed class ElasticsearchStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<AIDataSource, AzureOpenAIElasticsearchDataSourceDisplayDriver>();
+        services.AddDisplayDriver<AIProfile, AzureRagChatProfileDisplayDriver>();
         services.AddScoped<ICatalogEntryHandler<AIDataSource>, ElasticsearchAIDataSourceHandler>();
+        services.AddDataMigration<AzureOpenAIDataSourceMetadataMigrations>();
 
         services
             .AddScoped<ElasticsearchOpenAIChatOptionsConfiguration>()
@@ -165,7 +169,9 @@ public sealed class MongoDBStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<AIDataSource, AzureOpenAIMongoDBDataSourceDisplayDriver>();
+        services.AddDisplayDriver<AIProfile, AzureRagChatProfileDisplayDriver>();
         services.AddScoped<ICatalogEntryHandler<AIDataSource>, MongoDBAIProfileHandler>();
+        services.AddDataMigration<AzureOpenAIDataSourceMetadataMigrations>();
 
         services
             .AddScoped<MongoDBOpenAIChatOptionsConfiguration>()

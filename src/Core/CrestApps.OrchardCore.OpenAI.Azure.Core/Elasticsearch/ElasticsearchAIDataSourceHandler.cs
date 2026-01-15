@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
@@ -30,16 +31,22 @@ public sealed class ElasticsearchAIDataSourceHandler : CatalogEntryHandlerBase<A
             return Task.CompletedTask;
         }
 
-        var metadata = context.Model.As<AzureAIProfileElasticsearchMetadata>();
+        // Try the new metadata first, fall back to legacy for backward compatibility
+        var indexMetadata = context.Model.As<AzureAIDataSourceIndexMetadata>();
+        var indexName = indexMetadata?.IndexName;
 
-        if (string.IsNullOrWhiteSpace(metadata.IndexName))
+        // Fall back to legacy metadata if new metadata doesn't have index name
+#pragma warning disable CS0618 // Type or member is obsolete
+        if (string.IsNullOrWhiteSpace(indexName))
         {
-            context.Result.Fail(new ValidationResult(S["The Index is required."], [nameof(metadata.IndexName)]));
+            var legacyMetadata = context.Model.As<AzureAIProfileElasticsearchMetadata>();
+            indexName = legacyMetadata?.IndexName;
         }
+#pragma warning restore CS0618 // Type or member is obsolete
 
-        if (!string.IsNullOrWhiteSpace(metadata.Filter) && !_filterValidator.IsValid(metadata.Filter))
+        if (string.IsNullOrWhiteSpace(indexName))
         {
-            context.Result.Fail(new ValidationResult(S["The Filter must be a valid OData filter expression."], [nameof(metadata.Filter)]));
+            context.Result.Fail(new ValidationResult(S["The Index is required."], [nameof(AzureAIDataSourceIndexMetadata.IndexName)]));
         }
 
         return Task.CompletedTask;

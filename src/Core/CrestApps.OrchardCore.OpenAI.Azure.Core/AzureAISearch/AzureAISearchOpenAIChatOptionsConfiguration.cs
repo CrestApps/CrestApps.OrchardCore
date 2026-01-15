@@ -63,14 +63,22 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             dataSource = ds as AIDataSource;
         }
 
-        if (dataSource is null || !dataSource.TryGet<AzureAIProfileAISearchMetadata>(out var dataSourceMetadata))
+        if (dataSource is null)
+        {
+            return;
+        }
+
+        // Get index name from new metadata first, fall back to legacy
+        var indexName = GetIndexName(dataSource);
+
+        if (string.IsNullOrWhiteSpace(indexName))
         {
             return;
         }
 
         if (context.AdditionalProperties is null || !context.AdditionalProperties.TryGetValue("AzureAISearchIndexProfile", out _))
         {
-            var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(dataSourceMetadata.IndexName, AzureAISearchConstants.ProviderName);
+            var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(indexName, AzureAISearchConstants.ProviderName);
 
             if (indexProfile is null)
             {
@@ -156,21 +164,14 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             };
         }
 
-        if (context.AdditionalProperties.TryGetValue("DataSource", out var ds) &&
-           ds is AIDataSource dataSource && dataSource.TryGet<AzureAIProfileAISearchMetadata>(out var dataSourceMetadata))
-        {
-            azureDataSource.parameters["top_n_documents"] = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
-            azureDataSource.parameters["strictness"] = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
+        // Get RAG parameters from AIProfile first (new pattern), then fall back to legacy metadata on data source
+        var ragParams = GetRagParameters(context);
+        azureDataSource.parameters["top_n_documents"] = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
+        azureDataSource.parameters["strictness"] = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
 
-            if (!string.IsNullOrWhiteSpace(dataSourceMetadata.Filter))
-            {
-                azureDataSource.parameters["filter"] = dataSourceMetadata.Filter;
-            }
-        }
-        else
+        if (!string.IsNullOrWhiteSpace(ragParams.Filter))
         {
-            azureDataSource.parameters["top_n_documents"] = AzureOpenAIConstants.DefaultTopNDocuments;
-            azureDataSource.parameters["strictness"] = AzureOpenAIConstants.DefaultStrictness;
+            azureDataSource.parameters["filter"] = ragParams.Filter;
         }
 
 #pragma warning disable SCME0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
@@ -217,12 +218,15 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             return;
         }
 
-        if (!dataSource.TryGet<AzureAIProfileAISearchMetadata>(out var dataSourceMetadata))
+        // Get index name from new metadata first, fall back to legacy
+        var indexName = GetIndexName(dataSource);
+
+        if (string.IsNullOrWhiteSpace(indexName))
         {
             return;
         }
 
-        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(dataSourceMetadata.IndexName, AzureAISearchConstants.ProviderName);
+        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(indexName, AzureAISearchConstants.ProviderName);
 
         var keyField = indexProfile.As<AzureAISearchIndexMetadata>().IndexMappings?.FirstOrDefault(x => x.IsKey);
 
@@ -242,18 +246,21 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             throw new NotSupportedException($"Unsupported authentication type: {_azureAISearchDefaultOptions.AuthenticationType}");
         }
 
+        // Get RAG parameters from context (profile metadata) or fall back to legacy data source metadata
+        var ragParams = GetRagParametersFromContext(context, dataSource);
+
         options.AddDataSource(new AzureSearchChatDataSource()
         {
             Endpoint = new Uri(_azureAISearchDefaultOptions.Endpoint),
             IndexName = indexProfile.IndexFullName,
             Authentication = credentials,
-            Strictness = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            Strictness = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
             QueryType = DataSourceQueryType.Simple,
             InScope = true,
             SemanticConfiguration = "default",
             OutputContexts = DataSourceOutputContexts.Citations,
-            Filter = string.IsNullOrWhiteSpace(dataSourceMetadata.Filter) ? null : dataSourceMetadata.Filter,
+            Filter = string.IsNullOrWhiteSpace(ragParams.Filter) ? null : ragParams.Filter,
             FieldMappings = new DataSourceFieldMappings()
             {
                 TitleFieldName = GetBestTitleField(keyField),
@@ -287,5 +294,75 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Gets the index name from the data source, trying new metadata first, then falling back to legacy.
+    /// </summary>
+    private static string GetIndexName(AIDataSource dataSource)
+    {
+        // Try new metadata first
+        var newMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
+        if (!string.IsNullOrWhiteSpace(newMetadata?.IndexName))
+        {
+            return newMetadata.IndexName;
+        }
+
+        // Fall back to legacy metadata
+#pragma warning disable CS0618 // Type or member is obsolete
+        var legacyMetadata = dataSource.As<AzureAIProfileAISearchMetadata>();
+        return legacyMetadata?.IndexName;
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
+    /// <summary>
+    /// Gets RAG parameters from context (profile) first, then falls back to legacy data source metadata.
+    /// </summary>
+    private static (int? Strictness, int? TopNDocuments, string Filter) GetRagParameters(CompletionServiceConfigureContext context)
+    {
+        // Try to get from AIProfile metadata (new pattern)
+        if (context.AdditionalProperties is not null &&
+            context.AdditionalProperties.TryGetValue("RagMetadata", out var ragMeta) &&
+            ragMeta is AzureRagChatMetadata ragMetadata)
+        {
+            return (ragMetadata.Strictness, ragMetadata.TopNDocuments, ragMetadata.Filter);
+        }
+
+        // Fall back to legacy data source metadata
+        if (context.AdditionalProperties is not null &&
+            context.AdditionalProperties.TryGetValue("DataSource", out var ds) &&
+            ds is AIDataSource dataSource)
+        {
+#pragma warning disable CS0618 // Type or member is obsolete
+            if (dataSource.TryGet<AzureAIProfileAISearchMetadata>(out var legacyMetadata))
+            {
+                return (legacyMetadata.Strictness, legacyMetadata.TopNDocuments, legacyMetadata.Filter);
+            }
+#pragma warning restore CS0618 // Type or member is obsolete
+        }
+
+        return (null, null, null);
+    }
+
+    /// <summary>
+    /// Gets RAG parameters from context or falls back to data source.
+    /// </summary>
+    private static (int? Strictness, int? TopNDocuments, string Filter) GetRagParametersFromContext(AzureOpenAIDataSourceContext context, AIDataSource dataSource)
+    {
+        // Try to get from context (set by completion handler from AIProfile)
+        if (context.RagMetadata is not null)
+        {
+            return (context.RagMetadata.Strictness, context.RagMetadata.TopNDocuments, context.RagMetadata.Filter);
+        }
+
+        // Fall back to legacy data source metadata
+#pragma warning disable CS0618 // Type or member is obsolete
+        if (dataSource.TryGet<AzureAIProfileAISearchMetadata>(out var legacyMetadata))
+        {
+            return (legacyMetadata.Strictness, legacyMetadata.TopNDocuments, legacyMetadata.Filter);
+        }
+#pragma warning restore CS0618 // Type or member is obsolete
+
+        return (null, null, null);
     }
 }

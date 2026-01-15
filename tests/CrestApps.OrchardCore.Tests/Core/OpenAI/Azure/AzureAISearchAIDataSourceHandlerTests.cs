@@ -38,7 +38,7 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
             Type = AzureOpenAIConstants.DataSourceTypes.AzureAISearch,
         };
 
-        dataSource.Put(new AzureAIProfileAISearchMetadata
+        dataSource.Put(new AzureAIDataSourceIndexMetadata
         {
             IndexName = "",
         });
@@ -63,7 +63,7 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
             Type = AzureOpenAIConstants.DataSourceTypes.AzureAISearch,
         };
 
-        dataSource.Put(new AzureAIProfileAISearchMetadata
+        dataSource.Put(new AzureAIDataSourceIndexMetadata
         {
             IndexName = "my-index",
         });
@@ -79,23 +79,21 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
     }
 
     [Fact]
-    public async Task ValidatedAsync_WhenFilterIsValid_ShouldSucceed()
+    public async Task ValidatedAsync_WhenLegacyMetadataHasIndexName_ShouldSucceed()
     {
-        // Arrange
-        var filter = "category eq 'documentation'";
-        _validatorMock.Setup(v => v.IsValid(filter)).Returns(true);
-
+        // Arrange - Tests backward compatibility with legacy metadata
         var dataSource = new AIDataSource
         {
             ProfileSource = AzureOpenAIConstants.ProviderName,
             Type = AzureOpenAIConstants.DataSourceTypes.AzureAISearch,
         };
 
+#pragma warning disable CS0618 // Type or member is obsolete
         dataSource.Put(new AzureAIProfileAISearchMetadata
         {
             IndexName = "my-index",
-            Filter = filter,
         });
+#pragma warning restore CS0618 // Type or member is obsolete
 
         var result = new ValidationResultDetails();
         var context = new ValidatedContext<AIDataSource>(dataSource, result);
@@ -105,91 +103,6 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
 
         // Assert
         Assert.True(result.Succeeded);
-        _validatorMock.Verify(v => v.IsValid(filter), Times.Once);
-    }
-
-    [Fact]
-    public async Task ValidatedAsync_WhenFilterIsInvalid_ShouldFail()
-    {
-        // Arrange
-        var filter = "invalid filter";
-        _validatorMock.Setup(v => v.IsValid(filter)).Returns(false);
-
-        var dataSource = new AIDataSource
-        {
-            ProfileSource = AzureOpenAIConstants.ProviderName,
-            Type = AzureOpenAIConstants.DataSourceTypes.AzureAISearch,
-        };
-
-        dataSource.Put(new AzureAIProfileAISearchMetadata
-        {
-            IndexName = "my-index",
-            Filter = filter,
-        });
-
-        var result = new ValidationResultDetails();
-        var context = new ValidatedContext<AIDataSource>(dataSource, result);
-
-        // Act
-        await _handler.ValidatedAsync(context);
-
-        // Assert
-        Assert.False(result.Succeeded);
-        _validatorMock.Verify(v => v.IsValid(filter), Times.Once);
-    }
-
-    [Fact]
-    public async Task ValidatedAsync_WhenFilterIsNull_ShouldSucceed()
-    {
-        // Arrange
-        var dataSource = new AIDataSource
-        {
-            ProfileSource = AzureOpenAIConstants.ProviderName,
-            Type = AzureOpenAIConstants.DataSourceTypes.AzureAISearch,
-        };
-
-        dataSource.Put(new AzureAIProfileAISearchMetadata
-        {
-            IndexName = "my-index",
-            Filter = null,
-        });
-
-        var result = new ValidationResultDetails();
-        var context = new ValidatedContext<AIDataSource>(dataSource, result);
-
-        // Act
-        await _handler.ValidatedAsync(context);
-
-        // Assert
-        Assert.True(result.Succeeded);
-        _validatorMock.Verify(v => v.IsValid(It.IsAny<string>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ValidatedAsync_WhenFilterIsEmpty_ShouldSucceed()
-    {
-        // Arrange
-        var dataSource = new AIDataSource
-        {
-            ProfileSource = AzureOpenAIConstants.ProviderName,
-            Type = AzureOpenAIConstants.DataSourceTypes.AzureAISearch,
-        };
-
-        dataSource.Put(new AzureAIProfileAISearchMetadata
-        {
-            IndexName = "my-index",
-            Filter = "",
-        });
-
-        var result = new ValidationResultDetails();
-        var context = new ValidatedContext<AIDataSource>(dataSource, result);
-
-        // Act
-        await _handler.ValidatedAsync(context);
-
-        // Assert
-        Assert.True(result.Succeeded);
-        _validatorMock.Verify(v => v.IsValid(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -202,7 +115,7 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
             Type = AzureOpenAIConstants.DataSourceTypes.AzureAISearch,
         };
 
-        dataSource.Put(new AzureAIProfileAISearchMetadata
+        dataSource.Put(new AzureAIDataSourceIndexMetadata
         {
             IndexName = "",
         });
@@ -227,7 +140,7 @@ public sealed class AzureAISearchAIDataSourceHandlerTests
             Type = "OtherType",
         };
 
-        dataSource.Put(new AzureAIProfileAISearchMetadata
+        dataSource.Put(new AzureAIDataSourceIndexMetadata
         {
             IndexName = "",
         });

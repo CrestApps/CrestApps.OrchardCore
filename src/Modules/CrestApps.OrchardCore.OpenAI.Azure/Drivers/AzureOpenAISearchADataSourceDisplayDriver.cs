@@ -29,14 +29,19 @@ public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AI
             return null;
         }
 
-        return Initialize<AzureProfileSearchAIViewModel>("AzureOpenAIProfileSearchAI_Edit", async model =>
+        return Initialize<AzureDataSourceIndexViewModel>("AzureOpenAIDataSourceIndex_Edit", async model =>
         {
-            var metadata = dataSource.As<AzureAIProfileAISearchMetadata>();
+            // Try the new metadata first, fall back to legacy for backward compatibility
+            var indexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
+            model.IndexName = indexMetadata?.IndexName;
 
-            model.Strictness = metadata.Strictness;
-            model.TopNDocuments = metadata.TopNDocuments;
-            model.IndexName = metadata.IndexName;
-            model.Filter = metadata.Filter;
+#pragma warning disable CS0618 // Type or member is obsolete
+            if (string.IsNullOrEmpty(model.IndexName))
+            {
+                var legacyMetadata = dataSource.As<AzureAIProfileAISearchMetadata>();
+                model.IndexName = legacyMetadata?.IndexName;
+            }
+#pragma warning restore CS0618 // Type or member is obsolete
 
             model.IndexNames = (await _indexProfileStore.GetByProviderAsync(AzureAISearchConstants.ProviderName))
                 .Select(i => new SelectListItem(i.Name, i.IndexName))
@@ -53,16 +58,14 @@ public sealed class AzureOpenAISearchADataSourceDisplayDriver : DisplayDriver<AI
             return null;
         }
 
-        var model = new AzureProfileSearchAIViewModel();
+        var model = new AzureDataSourceIndexViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        dataSource.Put(new AzureAIProfileAISearchMetadata
+        // Store only index-level configuration on the data source
+        dataSource.Put(new AzureAIDataSourceIndexMetadata
         {
             IndexName = model.IndexName,
-            Strictness = model.Strictness,
-            TopNDocuments = model.TopNDocuments,
-            Filter = model.Filter,
         });
 
         return Edit(dataSource, context);
