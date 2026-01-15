@@ -249,16 +249,16 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             throw new InvalidOperationException($"The '{_elasticsearchOptions.AuthenticationType}' is not supported as Authentication type for Elasticsearch AI Data Source. Only '{ElasticsearchAuthenticationType.KeyIdAndKey}' and '{ElasticsearchAuthenticationType.Base64ApiKey}' are supported.");
         }
 
-        // Get RAG parameters from the profile
-        var ragMetadata = indexProfile.As<AzureRagChatMetadata>();
-
+        // Note: RAG parameters (Strictness, TopNDocuments, Filter) are stored on AIProfile,
+        // which is not accessible in this context. Using defaults here.
+        // For profile-specific RAG parameters, use the Configure method path via IOpenAIChatOptionsConfiguration.
         options.AddDataSource(new ElasticsearchChatDataSource()
         {
             Endpoint = uri,
             IndexName = indexProfile.IndexFullName,
             Authentication = credentials,
-            Strictness = ragMetadata?.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = ragMetadata?.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            Strictness = AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = AzureOpenAIConstants.DefaultTopNDocuments,
             QueryType = DataSourceQueryType.Simple,
             InScope = true,
             OutputContexts = DataSourceOutputContexts.Citations,

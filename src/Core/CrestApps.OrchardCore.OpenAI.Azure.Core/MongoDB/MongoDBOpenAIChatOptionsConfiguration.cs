@@ -189,9 +189,9 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             }
         }
 
-        // Get RAG parameters from the profile
-        var ragMetadata = dataSource.As<AzureRagChatMetadata>();
-
+        // Note: RAG parameters (Strictness, TopNDocuments) are stored on AIProfile,
+        // which is not accessible in this context. Using defaults here.
+        // For profile-specific RAG parameters, use the Configure method path via IOpenAIChatOptionsConfiguration.
         options.AddDataSource(new MongoDBChatDataSource()
         {
             EndpointName = mongoMetadata.EndpointName,
@@ -199,8 +199,8 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             AppName = mongoMetadata.AppName,
             IndexName = mongoMetadata.IndexName,
             Authentication = credentials,
-            Strictness = ragMetadata?.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = ragMetadata?.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            Strictness = AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = AzureOpenAIConstants.DefaultTopNDocuments,
             InScope = true,
             OutputContexts = DataSourceOutputContexts.Citations,
         });

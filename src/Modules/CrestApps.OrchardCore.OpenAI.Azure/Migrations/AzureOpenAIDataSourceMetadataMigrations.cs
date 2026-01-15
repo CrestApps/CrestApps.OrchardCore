@@ -269,8 +269,14 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
             {
                 return node.GetValue<int?>();
             }
-            catch
+            catch (InvalidOperationException)
             {
+                // Value cannot be converted to int - return null
+                return null;
+            }
+            catch (FormatException)
+            {
+                // Value is not in the expected format - return null
                 return null;
             }
         }
