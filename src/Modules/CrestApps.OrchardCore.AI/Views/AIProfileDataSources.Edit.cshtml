@@ -13,3 +13,32 @@
         <span class="hint">@T["The data-source where your data is stored."]</span>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const dataSourceSelect = document.getElementById('@Html.IdFor(x => x.DataSourceId)');
+
+        function toggleDataSourceDependentElements() {
+            const dependentElements = document.querySelectorAll('.data-source-dependent');
+
+            if (dataSourceSelect && dependentElements.length > 0) {
+                const hasDataSource = dataSourceSelect.value && dataSourceSelect.value.trim() !== '';
+
+                dependentElements.forEach(element => {
+                    if (hasDataSource) {
+                        element.classList.remove('d-none');
+                    } else {
+                        element.classList.add('d-none');
+                    }
+                });
+            }
+        }
+
+        // Initial check on page load
+        toggleDataSourceDependentElements();
+
+        // Listen for changes on the data source select
+        dataSourceSelect.addEventListener('change', toggleDataSourceDependentElements);
+    });
+</script>

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -51,6 +52,12 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
         {
             var metadata = interaction.As<ChatInteractionDataSourceMetadata>();
             model.DataSourceId = metadata?.DataSourceId;
+
+            var ragMetadata = interaction.As<AzureRagChatMetadata>();
+            model.Strictness = ragMetadata?.Strictness;
+            model.TopNDocuments = ragMetadata?.TopNDocuments;
+            model.Filter = ragMetadata?.Filter;
+
             model.DataSources = (await _dataSourceStore.GetAsync(interaction.Source))
                 .Select(x => new SelectListItem(x.DisplayText, x.ItemId));
         }).Location("Parameters:3#Settings:3");
@@ -93,6 +100,13 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             // Clear the metadata if no data source is selected
             interaction.Put(new ChatInteractionDataSourceMetadata());
         }
+
+        interaction.Put(new AzureRagChatMetadata
+        {
+            Strictness = model.Strictness,
+            TopNDocuments = model.TopNDocuments,
+            Filter = model.Filter,
+        });
 
         return Edit(interaction, context);
     }

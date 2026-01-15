@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.Services;
 using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Entities;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
@@ -118,6 +120,9 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         int? maxTokens,
         int? pastMessagesCount,
         string dataSourceId,
+        int? strictness,
+        int? topNDocuments,
+        string filter,
         string[] toolNames)
     {
         if (string.IsNullOrWhiteSpace(itemId))
@@ -166,7 +171,19 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             {
                 interaction.DataSourceId = dataSource.ItemId;
                 interaction.DataSourceType = dataSource.Type;
+                interaction.Put(new AzureRagChatMetadata()
+                {
+                    Strictness = strictness,
+                    TopNDocuments = topNDocuments,
+                    Filter = filter,
+                });
             }
+        }
+        else
+        {
+            interaction.DataSourceType = null;
+            interaction.DataSourceId = null;
+            interaction.Put(new AzureRagChatMetadata());
         }
 
         await _interactionManager.UpdateAsync(interaction);

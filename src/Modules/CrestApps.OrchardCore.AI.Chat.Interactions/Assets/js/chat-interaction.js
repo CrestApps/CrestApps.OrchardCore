@@ -531,6 +531,9 @@ window.chatInteractionManager = function () {
                     const maxTokensInput = document.querySelector('input[name="ChatInteraction.MaxTokens"]');
                     const pastMessagesCountInput = document.querySelector('input[name="ChatInteraction.PastMessagesCount"]');
                     const dataSourceIdInput = document.querySelector('select[name="ChatInteraction.DataSourceId"]');
+                    const strictnessInput = document.querySelector('input[name="ChatInteraction.Strictness"]');
+                    const topNDocumentsInput = document.querySelector('input[name="ChatInteraction.TopNDocuments"]');
+                    const filterInput = document.querySelector('input[name="ChatInteraction.Filter"]');
 
                     const settings = {
                         title: titleInput?.value || config.untitledText,
@@ -544,6 +547,9 @@ window.chatInteractionManager = function () {
                         maxTokens: maxTokensInput?.value ? parseInt(maxTokensInput.value) : null,
                         pastMessagesCount: pastMessagesCountInput?.value ? parseInt(pastMessagesCountInput.value) : null,
                         dataSourceId: dataSourceIdInput?.value || null,
+                        strictness: strictnessInput?.value ? parseInt(strictnessInput.value) : null,
+                        topNDocuments: topNDocumentsInput?.value ? parseInt(topNDocumentsInput.value) : null,
+                        filter: filterInput.value,
                         toolNames: this.getSelectedToolNames()
                     };
 
@@ -561,6 +567,9 @@ window.chatInteractionManager = function () {
                         settings.maxTokens,
                         settings.pastMessagesCount,
                         settings.dataSourceId,
+                        settings.strictness,
+                        settings.topNDocuments,
+                        settings.filter,
                         settings.toolNames
                     ).catch(err => console.error('Error saving settings:', err));
                 },

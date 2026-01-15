@@ -519,6 +519,9 @@ window.chatInteractionManager = function () {
           var maxTokensInput = document.querySelector('input[name="ChatInteraction.MaxTokens"]');
           var pastMessagesCountInput = document.querySelector('input[name="ChatInteraction.PastMessagesCount"]');
           var dataSourceIdInput = document.querySelector('select[name="ChatInteraction.DataSourceId"]');
+          var strictnessInput = document.querySelector('input[name="ChatInteraction.Strictness"]');
+          var topNDocumentsInput = document.querySelector('input[name="ChatInteraction.TopNDocuments"]');
+          var filterInput = document.querySelector('input[name="ChatInteraction.Filter"]');
           var settings = {
             title: (titleInput === null || titleInput === void 0 ? void 0 : titleInput.value) || config.untitledText,
             connectionName: (connectionNameInput === null || connectionNameInput === void 0 ? void 0 : connectionNameInput.value) || null,
@@ -531,9 +534,12 @@ window.chatInteractionManager = function () {
             maxTokens: maxTokensInput !== null && maxTokensInput !== void 0 && maxTokensInput.value ? parseInt(maxTokensInput.value) : null,
             pastMessagesCount: pastMessagesCountInput !== null && pastMessagesCountInput !== void 0 && pastMessagesCountInput.value ? parseInt(pastMessagesCountInput.value) : null,
             dataSourceId: (dataSourceIdInput === null || dataSourceIdInput === void 0 ? void 0 : dataSourceIdInput.value) || null,
+            strictness: strictnessInput !== null && strictnessInput !== void 0 && strictnessInput.value ? parseInt(strictnessInput.value) : null,
+            topNDocuments: topNDocumentsInput !== null && topNDocumentsInput !== void 0 && topNDocumentsInput.value ? parseInt(topNDocumentsInput.value) : null,
+            filter: filterInput.value,
             toolNames: this.getSelectedToolNames()
           };
-          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId, settings.toolNames)["catch"](function (err) {
+          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId, settings.strictness, settings.topNDocuments, settings.filter, settings.toolNames)["catch"](function (err) {
             return console.error('Error saving settings:', err);
           });
         },

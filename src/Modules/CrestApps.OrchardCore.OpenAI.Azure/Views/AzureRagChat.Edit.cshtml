@@ -4,9 +4,7 @@
 
 @model AzureRagChatViewModel
 
-<fieldset class="mb-3">
-    <legend class="h6">@T["RAG Query Parameters"]</legend>
-    <p class="hint mb-3">@T["Configure query-time parameters for Retrieval-Augmented Generation (RAG). These settings control how documents are retrieved and filtered for this AI profile."]</p>
+<div class="mb-3 d-none data-source-dependent">
 
     <div class="@Orchard.GetWrapperClasses()">
         <label asp-for="Strictness" class="@Orchard.GetLabelClasses()">@T["Strictness"]</label>
@@ -31,4 +29,4 @@
             <span class="hint">@T["Optional OData filter expression to query a subset of indexed data. Example: category eq 'documentation' or status ne 'archived'. Leave blank to search all data."]</span>
         </div>
     </div>
-</fieldset>
+</div>
