@@ -45,6 +45,7 @@ public sealed class AzureRagChatProfileDisplayDriver : DisplayDriver<AIProfile>
 
             model.Strictness = ragMetadata?.Strictness;
             model.TopNDocuments = ragMetadata?.TopNDocuments;
+            model.IsInScope = ragMetadata?.IsInScope ?? true;
             model.Filter = ragMetadata?.Filter;
         }).Location("Content:3");
     }
@@ -77,6 +78,7 @@ public sealed class AzureRagChatProfileDisplayDriver : DisplayDriver<AIProfile>
         {
             Strictness = model.Strictness,
             TopNDocuments = model.TopNDocuments,
+            IsInScope = model.IsInScope,
             Filter = model.Filter,
         });
 

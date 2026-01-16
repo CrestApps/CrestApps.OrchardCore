@@ -45,6 +45,21 @@
     </div>
 </div>
 
+<div class="@Orchard.GetWrapperClasses("data-source-dependent", "data-source-dependent-any")">
+    <div class="@Orchard.GetEndClasses()">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" asp-for="IsInScope" />
+
+            <label class="form-check-label" asp-for="IsInScope">
+                @T["Restrict responses to indexed data"]
+            </label>
+        </div>
+        <span class="hint">
+            @T["When enabled, the model will only generate responses using your Azure OpenAI On Your Data index (is_scope = true). If disabled, the model may use its general knowledge in addition to your data."]
+        </span>
+    </div>
+</div>
+
 <div class="@Orchard.GetWrapperClasses("d-none", "data-source-dependent", "data-source-dependent-" + AzureOpenAIConstants.DataSourceTypes.AzureAISearch)">
     <label asp-for="Filter" class="@Orchard.GetLabelClasses()">@T["Filter"]</label>
     <div class="@Orchard.GetEndClasses()">
@@ -68,7 +83,6 @@
                 const hasDataSource = dataSourceSelect.value && dataSourceSelect.value.trim() !== '';
 
                 dependentElements.forEach(element => {
-                    console.log(element, element.classList, element.classList.contains('data-source-dependent-' + type), element.classList.contains('data-source-dependent-any') || (hasDataSource && element.classList.contains('data-source-dependent-' + type)));
 
                     if (!hasDataSource) {
                         element.classList.add('d-none');

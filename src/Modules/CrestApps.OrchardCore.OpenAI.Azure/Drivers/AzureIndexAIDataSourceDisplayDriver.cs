@@ -65,8 +65,7 @@ public sealed class AzureIndexAIDataSourceDisplayDriver : DisplayDriver<AIDataSo
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
-        if (dataSource.ProfileSource != AzureOpenAIConstants.ProviderName ||
-            dataSource.Type != AzureOpenAIConstants.DataSourceTypes.AzureAISearch)
+        if (dataSource.ProfileSource != AzureOpenAIConstants.ProviderName)
         {
             return null;
         }

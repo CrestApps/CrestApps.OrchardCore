@@ -147,7 +147,6 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
                 ["authentication"] = authentication,
                 ["semantic_configuration"] = "default",
                 ["query_type"] = "simple",
-                ["in_scope"] = true,
                 ["fields_mapping"] = new Dictionary<string, object>
                 {
                     ["title_field"] = _titleFieldName,
@@ -159,6 +158,7 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
         var ragParams = indexProfile.As<AzureRagChatMetadata>();
         elasticsearchDataSource.parameters["top_n_documents"] = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
         elasticsearchDataSource.parameters["strictness"] = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
+        elasticsearchDataSource.parameters["in_scope"] = ragParams.IsInScope;
 
         if (!string.IsNullOrWhiteSpace(ragParams.Filter))
         {
@@ -264,7 +264,7 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             Strictness = context.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
             TopNDocuments = context.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
             QueryType = DataSourceQueryType.Simple,
-            InScope = true,
+            InScope = context.IsInScope ?? true,
             OutputContexts = DataSourceOutputContexts.Citations,
             FieldMappings = new DataSourceFieldMappings()
             {

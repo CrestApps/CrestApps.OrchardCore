@@ -148,7 +148,6 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
                 ["authentication"] = authentication,
                 ["semantic_configuration"] = "default",
                 ["query_type"] = "simple",
-                ["in_scope"] = true,
             },
         };
 
@@ -166,6 +165,7 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
         var ragParams = indexProfile.As<AzureRagChatMetadata>();
         azureDataSource.parameters["top_n_documents"] = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
         azureDataSource.parameters["strictness"] = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
+        azureDataSource.parameters["in_scope"] = ragParams.IsInScope;
 
         if (!string.IsNullOrWhiteSpace(ragParams.Filter))
         {
@@ -255,7 +255,7 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             TopNDocuments = context.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
             Filter = string.IsNullOrWhiteSpace(context.Filter) ? null : context.Filter,
             QueryType = DataSourceQueryType.Simple,
-            InScope = true,
+            InScope = context.IsInScope ?? true,
             SemanticConfiguration = "default",
             OutputContexts = DataSourceOutputContexts.Citations,
             FieldMappings = new DataSourceFieldMappings()

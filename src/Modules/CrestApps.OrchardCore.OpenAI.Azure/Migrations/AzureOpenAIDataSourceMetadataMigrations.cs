@@ -152,8 +152,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 }
 
                 // Check if new RAG metadata already exists
-                var existingRagMetadata = profile.As<AzureRagChatMetadata>();
-                if (existingRagMetadata is not null &&
+                if (profile.TryGet<AzureRagChatMetadata>(out var existingRagMetadata) &&
                     (existingRagMetadata.Strictness.HasValue ||
                      existingRagMetadata.TopNDocuments.HasValue ||
                      !string.IsNullOrWhiteSpace(existingRagMetadata.Filter)))
@@ -195,7 +194,6 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                             {
                                 strictness = GetNullableInt(legacyProps, "Strictness");
                                 topNDocuments = GetNullableInt(legacyProps, "TopNDocuments");
-                                filter = legacyProps["Filter"]?.GetValue<string>();
                             }
                         }
                         break;
@@ -219,6 +217,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                     {
                         Strictness = strictness,
                         TopNDocuments = topNDocuments,
+                        IsInScope = true,
                         Filter = filter,
                     });
 

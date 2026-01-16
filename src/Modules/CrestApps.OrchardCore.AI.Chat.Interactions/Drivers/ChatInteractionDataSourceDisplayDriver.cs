@@ -51,6 +51,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             var ragMetadata = interaction.As<AzureRagChatMetadata>();
             model.Strictness = ragMetadata?.Strictness;
             model.TopNDocuments = ragMetadata?.TopNDocuments;
+            model.IsInScope = ragMetadata?.IsInScope ?? true;
             model.Filter = ragMetadata?.Filter;
 
             model.DataSources = await _dataSourceStore.GetAsync(interaction.Source);
@@ -99,6 +100,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
         {
             Strictness = model.Strictness,
             TopNDocuments = model.TopNDocuments,
+            IsInScope = model.IsInScope,
             Filter = model.Filter,
         });
 

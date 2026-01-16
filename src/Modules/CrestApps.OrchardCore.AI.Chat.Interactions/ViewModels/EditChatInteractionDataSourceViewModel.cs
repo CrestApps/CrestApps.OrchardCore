@@ -11,6 +11,8 @@ public class EditChatInteractionDataSourceViewModel
 
     public int? TopNDocuments { get; set; }
 
+    public bool IsInScope { get; set; }
+
     public string Filter { get; set; }
 
     [BindNever]

@@ -416,16 +416,26 @@ window.chatInteractionManager = function () {
 
           // Add event listeners for all settings fields with "ChatInteraction." prefix
           // Exclude tool-related inputs (they have special handling with debouncing)
-          var settingsInputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]), select[name^="ChatInteraction."]:not([name*=".Tools["]), textarea[name^="ChatInteraction."]:not([name*=".Tools["])');
+          var settingsInputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["])');
           settingsInputs.forEach(function (input) {
+            var isCheckbox = input.type === 'checkbox';
+            var isSelect = input.tagName === 'SELECT';
+
+            // Checkboxes & selects save immediately
+            if (isCheckbox || isSelect) {
+              input.addEventListener('change', function () {
+                _this6.settingsDirty = true;
+                _this6.debouncedSaveSettings();
+              });
+              return;
+            }
+
+            // Text / textarea / number inputs → save on blur if changed
             input.addEventListener('focus', function () {
               _this6.initialFieldValues.set(input, input.value);
             });
             input.addEventListener('blur', function () {
               var initialValue = _this6.initialFieldValues.get(input);
-
-              // Only save when the field value actually changed.
-              // If the field never focused (e.g. programmatic blur), treat it as unchanged.
               var hasChanged = initialValue !== undefined && input.value !== initialValue;
               if (hasChanged) {
                 _this6.settingsDirty = true;
@@ -433,14 +443,6 @@ window.chatInteractionManager = function () {
               }
               _this6.initialFieldValues["delete"](input);
             });
-
-            // Selects can change without blur
-            if (input.tagName === 'SELECT') {
-              input.addEventListener('change', function () {
-                _this6.settingsDirty = true;
-                _this6.debouncedSaveSettings();
-              });
-            }
           });
 
           // Add event listeners for tool checkboxes with debouncing (850ms)
@@ -525,6 +527,7 @@ window.chatInteractionManager = function () {
           return toolNames;
         },
         saveSettings: function saveSettings() {
+          var _isInScopeInput$check;
           var itemId = this.getItemId();
           if (!itemId) {
             return;
@@ -542,6 +545,7 @@ window.chatInteractionManager = function () {
           var dataSourceIdInput = document.querySelector('select[name="ChatInteraction.DataSourceId"]');
           var strictnessInput = document.querySelector('input[name="ChatInteraction.Strictness"]');
           var topNDocumentsInput = document.querySelector('input[name="ChatInteraction.TopNDocuments"]');
+          var isInScopeInput = document.querySelector('input[name="ChatInteraction.IsInScope"]');
           var filterInput = document.querySelector('input[name="ChatInteraction.Filter"]');
           var settings = {
             title: (titleInput === null || titleInput === void 0 ? void 0 : titleInput.value) || config.untitledText,
@@ -558,9 +562,10 @@ window.chatInteractionManager = function () {
             strictness: strictnessInput !== null && strictnessInput !== void 0 && strictnessInput.value ? parseInt(strictnessInput.value) : null,
             topNDocuments: topNDocumentsInput !== null && topNDocumentsInput !== void 0 && topNDocumentsInput.value ? parseInt(topNDocumentsInput.value) : null,
             filter: filterInput.value,
+            isInScope: (_isInScopeInput$check = isInScopeInput === null || isInScopeInput === void 0 ? void 0 : isInScopeInput.checked) !== null && _isInScopeInput$check !== void 0 ? _isInScopeInput$check : true,
             toolNames: this.getSelectedToolNames()
           };
-          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId, settings.strictness, settings.topNDocuments, settings.filter, settings.toolNames)["catch"](function (err) {
+          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId, settings.strictness, settings.topNDocuments, settings.filter, settings.isInScope, settings.toolNames)["catch"](function (err) {
             return console.error('Error saving settings:', err);
           });
         },

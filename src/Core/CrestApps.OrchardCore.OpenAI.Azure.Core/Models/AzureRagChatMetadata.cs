@@ -20,6 +20,11 @@ public sealed class AzureRagChatMetadata
     public int? TopNDocuments { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether to limit retrieval to in-scope documents only.
+    /// </summary>
+    public bool IsInScope { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the OData filter expression to query a subset of indexed data.
     /// Example: "category eq 'documentation' or status ne 'archived'".
     /// </summary>

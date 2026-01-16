@@ -123,6 +123,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         int? strictness,
         int? topNDocuments,
         string filter,
+        bool? isInScope,
         string[] toolNames)
     {
         if (string.IsNullOrWhiteSpace(itemId))
@@ -160,29 +161,32 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         interaction.PresencePenalty = presencePenalty;
         interaction.MaxTokens = maxTokens;
         interaction.PastMessagesCount = pastMessagesCount;
-        interaction.DataSourceId = dataSourceId;
         interaction.ToolNames = toolNames?.ToList() ?? [];
 
-        if (!string.IsNullOrWhiteSpace(interaction.DataSourceId))
+        if (!string.IsNullOrWhiteSpace(dataSourceId))
         {
-            var dataSource = await _dataSourceStore.FindByIdAsync(interaction.DataSourceId);
+            var dataSource = await _dataSourceStore.FindByIdAsync(dataSourceId);
 
             if (dataSource is not null)
             {
-                interaction.DataSourceId = dataSource.ItemId;
-                interaction.DataSourceType = dataSource.Type;
+                interaction.Put(new ChatInteractionDataSourceMetadata()
+                {
+                    DataSourceType = dataSource.Type,
+                    DataSourceId = dataSource.ItemId,
+                });
+
                 interaction.Put(new AzureRagChatMetadata()
                 {
                     Strictness = strictness,
                     TopNDocuments = topNDocuments,
+                    IsInScope = isInScope ?? true,
                     Filter = filter,
                 });
             }
         }
         else
         {
-            interaction.DataSourceType = null;
-            interaction.DataSourceId = null;
+            interaction.Put(new ChatInteractionDataSourceMetadata());
             interaction.Put(new AzureRagChatMetadata());
         }
 
@@ -318,14 +322,17 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 InstanceIds = interaction.ToolInstanceIds?.ToArray(),
                 McpConnectionIds = interaction.McpConnectionIds?.ToArray(),
                 UserMarkdownInResponse = true,
-                DataSourceId = interaction.DataSourceId,
-                DataSourceType = interaction.DataSourceType,
             };
+            var dataSourceMetadata = interaction.As<ChatInteractionDataSourceMetadata>();
+
+            completionContext.DataSourceId = dataSourceMetadata.DataSourceId;
+            completionContext.DataSourceType = dataSourceMetadata.DataSourceType;
 
             var ragMetadata = interaction.As<AzureRagChatMetadata>();
 
             completionContext.AdditionalProperties["Strictness"] = ragMetadata.Strictness;
             completionContext.AdditionalProperties["TopNDocuments"] = ragMetadata.TopNDocuments;
+            completionContext.AdditionalProperties["IsInScope"] = ragMetadata.IsInScope;
             completionContext.AdditionalProperties["Filter"] = ragMetadata.Filter;
 
             var contentItemIds = new HashSet<string>();

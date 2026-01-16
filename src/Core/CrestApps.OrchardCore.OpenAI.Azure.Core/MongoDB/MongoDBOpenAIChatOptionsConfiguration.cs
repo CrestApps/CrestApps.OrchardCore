@@ -41,7 +41,7 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             return;
         }
 
-        if (context.AdditionalProperties is null || !context.AdditionalProperties.TryGetValue("DataSource", out var ds))
+        if (context.AdditionalProperties is null || !context.AdditionalProperties.TryGetValue("DataSource", out _))
         {
             var dataSource = await _aIDataSourceManager.FindByIdAsync(context.CompletionContext.DataSourceId);
 
@@ -126,7 +126,6 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
                 ["authentication"] = authentication,
                 ["semantic_configuration"] = "default",
                 ["query_type"] = "simple",
-                ["in_scope"] = true,
             },
         };
 
@@ -135,6 +134,7 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
 
         mongoDbDataSource.parameters["top_n_documents"] = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
         mongoDbDataSource.parameters["strictness"] = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
+        mongoDbDataSource.parameters["in_scope"] = ragParams.IsInScope;
 
 #pragma warning disable SCME0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         var dataSources = new List<object>()
@@ -228,7 +228,7 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             Authentication = credentials,
             Strictness = context.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
             TopNDocuments = context.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
-            InScope = true,
+            InScope = context.IsInScope ?? true,
             OutputContexts = DataSourceOutputContexts.Citations,
         });
 #pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.

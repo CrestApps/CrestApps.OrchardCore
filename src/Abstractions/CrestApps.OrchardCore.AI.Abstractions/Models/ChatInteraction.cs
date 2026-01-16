@@ -39,16 +39,6 @@ public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
     public string ConnectionName { get; set; }
 
     /// <summary>
-    /// Gets or sets the data source identifier for Azure AI data sources.
-    /// </summary>
-    public string DataSourceId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the data source type for Azure AI data sources.
-    /// </summary>
-    public string DataSourceType { get; set; }
-
-    /// <summary>
     /// Gets or sets the system message/prompt for the AI.
     /// </summary>
     public string SystemMessage { get; set; }

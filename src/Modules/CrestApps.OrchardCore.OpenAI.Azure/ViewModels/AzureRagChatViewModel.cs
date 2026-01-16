@@ -14,5 +14,7 @@ public class AzureRagChatViewModel
     [Range(3, 20)]
     public int? TopNDocuments { get; set; }
 
+    public bool IsInScope { get; set; }
+
     public string Filter { get; set; }
 }

@@ -437,18 +437,34 @@ window.chatInteractionManager = function () {
 
                     // Add event listeners for all settings fields with "ChatInteraction." prefix
                     // Exclude tool-related inputs (they have special handling with debouncing)
-                    const settingsInputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]), select[name^="ChatInteraction."]:not([name*=".Tools["]), textarea[name^="ChatInteraction."]:not([name*=".Tools["])');
+                    const settingsInputs = document.querySelectorAll(
+                        'input[name^="ChatInteraction."]:not([name*=".Tools["]), ' +
+                        'select[name^="ChatInteraction."]:not([name*=".Tools["]), ' +
+                        'textarea[name^="ChatInteraction."]:not([name*=".Tools["])'
+                    );
+
                     settingsInputs.forEach(input => {
+                        const isCheckbox = input.type === 'checkbox';
+                        const isSelect = input.tagName === 'SELECT';
+
+                        // Checkboxes & selects save immediately
+                        if (isCheckbox || isSelect) {
+                            input.addEventListener('change', () => {
+                                this.settingsDirty = true;
+                                this.debouncedSaveSettings();
+                            });
+                            return;
+                        }
+
+                        // Text / textarea / number inputs → save on blur if changed
                         input.addEventListener('focus', () => {
                             this.initialFieldValues.set(input, input.value);
                         });
 
                         input.addEventListener('blur', () => {
                             const initialValue = this.initialFieldValues.get(input);
-
-                            // Only save when the field value actually changed.
-                            // If the field never focused (e.g. programmatic blur), treat it as unchanged.
-                            const hasChanged = initialValue !== undefined && input.value !== initialValue;
+                            const hasChanged =
+                                initialValue !== undefined && input.value !== initialValue;
 
                             if (hasChanged) {
                                 this.settingsDirty = true;
@@ -457,14 +473,6 @@ window.chatInteractionManager = function () {
 
                             this.initialFieldValues.delete(input);
                         });
-
-                        // Selects can change without blur
-                        if (input.tagName === 'SELECT') {
-                            input.addEventListener('change', () => {
-                                this.settingsDirty = true;
-                                this.debouncedSaveSettings();
-                            });
-                        }
                     });
 
                     // Add event listeners for tool checkboxes with debouncing (850ms)
@@ -565,6 +573,7 @@ window.chatInteractionManager = function () {
                     const dataSourceIdInput = document.querySelector('select[name="ChatInteraction.DataSourceId"]');
                     const strictnessInput = document.querySelector('input[name="ChatInteraction.Strictness"]');
                     const topNDocumentsInput = document.querySelector('input[name="ChatInteraction.TopNDocuments"]');
+                    const isInScopeInput = document.querySelector('input[name="ChatInteraction.IsInScope"]');
                     const filterInput = document.querySelector('input[name="ChatInteraction.Filter"]');
 
                     const settings = {
@@ -582,6 +591,7 @@ window.chatInteractionManager = function () {
                         strictness: strictnessInput?.value ? parseInt(strictnessInput.value) : null,
                         topNDocuments: topNDocumentsInput?.value ? parseInt(topNDocumentsInput.value) : null,
                         filter: filterInput.value,
+                        isInScope: isInScopeInput?.checked ?? true,
                         toolNames: this.getSelectedToolNames()
                     };
 
@@ -602,6 +612,7 @@ window.chatInteractionManager = function () {
                         settings.strictness,
                         settings.topNDocuments,
                         settings.filter,
+                        settings.isInScope,
                         settings.toolNames
                     ).catch(err => console.error('Error saving settings:', err));
                 },

@@ -19,5 +19,7 @@ public sealed class AzureOpenAIDataSourceContext
 
     public int? TopNDocuments { get; set; }
 
+    public bool? IsInScope { get; set; }
+
     public string Filter { get; set; }
 }

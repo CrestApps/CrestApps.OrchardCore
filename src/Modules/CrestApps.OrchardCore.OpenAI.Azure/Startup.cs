@@ -72,6 +72,7 @@ public sealed class DataSourcesStartup : StartupBase
         services.AddDataMigration<AzureOpenAIOwnDataAIDataSourceMigrations>();
         services.AddDisplayDriver<AIProfile, AzureRagChatProfileDisplayDriver>();
         services.AddDisplayDriver<AIDataSource, AzureIndexAIDataSourceDisplayDriver>();
+        services.AddScoped<IAICompletionContextBuilderHandler, AzureOpenAICompletionContextBuilderHandler>();
     }
 }
 
