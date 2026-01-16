@@ -27,6 +27,7 @@ public static class ServiceCollectionExtensions
             .AddScoped<IAICompletionService, DefaultAICompletionService>()
             .AddScoped<IAICompletionContextBuilder, DefaultAICompletionContextBuilder>()
             .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
+            .AddScoped<IAIProfileTemplateManager, DefaultAIProfileTemplateManager>()
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileHandler>();
 
         services
