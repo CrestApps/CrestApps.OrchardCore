@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Services;
 
-namespace CrestApps.OrchardCore.Tests.Core.OpenAI.Azure;
+namespace CrestApps.OrchardCore.Tests.Core.Services;
 
 public sealed class ODataFilterValidatorTests
 {

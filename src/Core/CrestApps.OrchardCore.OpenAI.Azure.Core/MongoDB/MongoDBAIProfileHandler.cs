@@ -38,41 +38,31 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
             return Task.CompletedTask;
         }
 
-        var metadata = context.Model.As<AzureAIProfileMongoDBMetadata>();
+        var metadata = context.Model.As<AzureMongoDBDataSourceMetadata>();
 
-        if (string.IsNullOrWhiteSpace(metadata.IndexName))
-        {
-            context.Result.Fail(new ValidationResult(S["The Index is required."], [nameof(metadata.IndexName)]));
-        }
-
-        if (string.IsNullOrWhiteSpace(metadata.EndpointName))
+        if (string.IsNullOrWhiteSpace(metadata?.EndpointName))
         {
             context.Result.Fail(new ValidationResult(S["The endpoint name is required."], [nameof(metadata.EndpointName)]));
         }
 
-        if (string.IsNullOrWhiteSpace(metadata.IndexName))
-        {
-            context.Result.Fail(new ValidationResult(S["The index name is required."], [nameof(metadata.IndexName)]));
-        }
-
-        if (string.IsNullOrWhiteSpace(metadata.CollectionName))
+        if (string.IsNullOrWhiteSpace(metadata?.CollectionName))
         {
             context.Result.Fail(new ValidationResult(S["The collection name is required."], [nameof(metadata.CollectionName)]));
         }
 
-        if (string.IsNullOrWhiteSpace(metadata.AppName))
+        if (string.IsNullOrWhiteSpace(metadata?.AppName))
         {
             context.Result.Fail(new ValidationResult(S["The app name is required."], [nameof(metadata.AppName)]));
         }
 
-        if (string.IsNullOrWhiteSpace(metadata.Authentication?.Username))
+        if (string.IsNullOrWhiteSpace(metadata?.Authentication?.Username))
         {
-            context.Result.Fail(new ValidationResult(S["The username is required."], [nameof(metadata.Authentication.Username)]));
+            context.Result.Fail(new ValidationResult(S["The username is required."], [nameof(AzureAIProfileMongoDBAuthenticationType.Username)]));
         }
 
-        if (string.IsNullOrWhiteSpace(metadata.Authentication?.Password))
+        if (string.IsNullOrWhiteSpace(metadata?.Authentication?.Password))
         {
-            context.Result.Fail(new ValidationResult(S["The password is required."], [nameof(metadata.Authentication.Password)]));
+            context.Result.Fail(new ValidationResult(S["The password is required."], [nameof(AzureAIProfileMongoDBAuthenticationType.Password)]));
         }
 
         return Task.CompletedTask;
@@ -86,14 +76,14 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
             return Task.CompletedTask;
         }
 
-        var metadataNode = data[nameof(AIProfile.Properties)]?[nameof(AzureAIProfileMongoDBMetadata)]?.AsObject();
+        var metadataNode = data[nameof(AIProfile.Properties)]?[nameof(AzureMongoDBDataSourceMetadata)]?.AsObject();
 
         if (metadataNode == null || metadataNode.Count == 0)
         {
             return Task.CompletedTask;
         }
 
-        var metadata = source.As<AzureAIProfileMongoDBMetadata>();
+        var metadata = source.As<AzureMongoDBDataSourceMetadata>();
 
         metadata.Authentication ??= new AzureAIProfileMongoDBAuthenticationType();
 
@@ -104,18 +94,11 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
             metadata.EndpointName = endpointName;
         }
 
-        var indexName = metadataNode[nameof(metadata.IndexName)]?.GetValue<string>();
+        var databaseName = metadataNode[nameof(metadata.DatabaseName)]?.GetValue<string>();
 
-        if (!string.IsNullOrEmpty(indexName))
+        if (!string.IsNullOrEmpty(databaseName))
         {
-            metadata.IndexName = indexName;
-        }
-
-        var datbaseName = metadataNode[nameof(metadata.DatabaseName)]?.GetValue<string>();
-
-        if (!string.IsNullOrEmpty(datbaseName))
-        {
-            metadata.DatabaseName = datbaseName;
+            metadata.DatabaseName = databaseName;
         }
 
         var collectionName = metadataNode[nameof(metadata.CollectionName)]?.GetValue<string>();
@@ -130,20 +113,6 @@ public sealed class MongoDBAIProfileHandler : CatalogEntryHandlerBase<AIDataSour
         if (!string.IsNullOrEmpty(appName))
         {
             metadata.AppName = appName;
-        }
-
-        var strictness = metadataNode[nameof(metadata.Strictness)]?.GetValue<int?>();
-
-        if (strictness.HasValue)
-        {
-            metadata.Strictness = strictness;
-        }
-
-        var topNDocuments = metadataNode[nameof(metadata.TopNDocuments)]?.GetValue<int?>();
-
-        if (topNDocuments.HasValue)
-        {
-            metadata.TopNDocuments = topNDocuments;
         }
 
         var authentication = metadataNode[nameof(metadata.Authentication)]?.AsObject();

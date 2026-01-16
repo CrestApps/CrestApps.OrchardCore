@@ -3,6 +3,7 @@ using System.Text.Json;
 using Azure.AI.OpenAI.Chat;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Core;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -63,14 +64,21 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             dataSource = ds as AIDataSource;
         }
 
-        if (dataSource is null || !dataSource.TryGet<AzureAIProfileElasticsearchMetadata>(out var dataSourceMetadata))
+        if (dataSource is null)
+        {
+            return;
+        }
+
+        var indexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
+
+        if (string.IsNullOrWhiteSpace(indexMetadata?.IndexName))
         {
             return;
         }
 
         if (context.AdditionalProperties is null || !context.AdditionalProperties.TryGetValue("ElasticsearchIndexProfile", out _))
         {
-            var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(dataSourceMetadata.IndexName, ElasticsearchConstants.ProviderName);
+            var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(indexMetadata.IndexName, ElasticsearchConstants.ProviderName);
 
             if (indexProfile is null)
             {
@@ -139,7 +147,6 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
                 ["authentication"] = authentication,
                 ["semantic_configuration"] = "default",
                 ["query_type"] = "simple",
-                ["in_scope"] = true,
                 ["fields_mapping"] = new Dictionary<string, object>
                 {
                     ["title_field"] = _titleFieldName,
@@ -148,21 +155,14 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             },
         };
 
-        if (context.AdditionalProperties.TryGetValue("DataSource", out var ds) &&
-            ds is AIDataSource dataSource && dataSource.TryGet<AzureAIProfileElasticsearchMetadata>(out var dataSourceMetadata))
-        {
-            elasticsearchDataSource.parameters["top_n_documents"] = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
-            elasticsearchDataSource.parameters["strictness"] = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
+        var ragParams = indexProfile.As<AzureRagChatMetadata>();
+        elasticsearchDataSource.parameters["top_n_documents"] = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
+        elasticsearchDataSource.parameters["strictness"] = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
+        elasticsearchDataSource.parameters["in_scope"] = ragParams.IsInScope;
 
-            if (!string.IsNullOrWhiteSpace(dataSourceMetadata.Filter))
-            {
-                elasticsearchDataSource.parameters["filter"] = dataSourceMetadata.Filter;
-            }
-        }
-        else
+        if (!string.IsNullOrWhiteSpace(ragParams.Filter))
         {
-            elasticsearchDataSource.parameters["top_n_documents"] = AzureOpenAIConstants.DefaultTopNDocuments;
-            elasticsearchDataSource.parameters["strictness"] = AzureOpenAIConstants.DefaultStrictness;
+            elasticsearchDataSource.parameters["filter"] = ragParams.Filter;
         }
 
         var dataSources = new List<object>()
@@ -207,16 +207,18 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             return;
         }
 
-        if (!dataSource.TryGet<AzureAIProfileElasticsearchMetadata>(out var dataSourceMetadata))
+        var indexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
+
+        if (string.IsNullOrWhiteSpace(indexMetadata?.IndexName))
         {
             return;
         }
 
-        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(dataSourceMetadata.IndexName, ElasticsearchConstants.ProviderName);
+        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(indexMetadata.IndexName, ElasticsearchConstants.ProviderName);
 
         if (indexProfile is null)
         {
-            _logger.LogWarning("Index named '{IndexName}' set as Elasticsearch data-source but not found in Elasticsearch document manager.", dataSourceMetadata.IndexName);
+            _logger.LogWarning("Index named '{IndexName}' set as Elasticsearch data-source but not found in Elasticsearch document manager.", indexMetadata.IndexName);
             return;
         }
 
@@ -246,15 +248,23 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             throw new InvalidOperationException($"The '{_elasticsearchOptions.AuthenticationType}' is not supported as Authentication type for Elasticsearch AI Data Source. Only '{ElasticsearchAuthenticationType.KeyIdAndKey}' and '{ElasticsearchAuthenticationType.Base64ApiKey}' are supported.");
         }
 
+        if (!string.IsNullOrWhiteSpace(context.Filter))
+        {
+            _logger.LogWarning("MongoDB data source does not support filter parameter. The provided filter '{Filter}' will be ignored.", context.Filter);
+        }
+
+        // Note: RAG parameters (Strictness, TopNDocuments, Filter) are stored on AIProfile,
+        // which is not accessible in this context. Using defaults here.
+        // For profile-specific RAG parameters, use the Configure method path via IOpenAIChatOptionsConfiguration.
         options.AddDataSource(new ElasticsearchChatDataSource()
         {
             Endpoint = uri,
             IndexName = indexProfile.IndexFullName,
             Authentication = credentials,
-            Strictness = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            Strictness = context.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = context.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
             QueryType = DataSourceQueryType.Simple,
-            InScope = true,
+            InScope = context.IsInScope ?? true,
             OutputContexts = DataSourceOutputContexts.Citations,
             FieldMappings = new DataSourceFieldMappings()
             {

@@ -68,7 +68,7 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
                     .Select(x => new SelectListItem(x.Name, x.ItemId));
                 }
             }
-        }).Location("Content:3");
+        }).Location("Content:4");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

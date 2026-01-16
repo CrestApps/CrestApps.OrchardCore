@@ -123,7 +123,7 @@ public sealed class ChatInteractionIndexingService
 
         var tasks = new List<RecordIndexingTask>();
 
-        while (tasks.Count <= _batchSize)
+        while (true)
         {
             tasks = (await _indexingTaskManager.GetIndexingTasksAsync(lastTaskId, _batchSize, ChatInteractionsConstants.IndexingTaskType)).ToList();
             if (tasks.Count == 0)
@@ -133,9 +133,9 @@ public sealed class ChatInteractionIndexingService
 
             var updatedDocumentsByIndex = tracker.Values.ToDictionary(x => x.IndexProfile.Id, b => new List<DocumentIndex>());
 
-            var removedDocumentsByIndex = new Dictionary<string, List<string>>();
+            var removedDocumentsByIndex = tracker.Values.ToDictionary(x => x.IndexProfile.Id, _ => new List<string>());
 
-            await BeforeProcessingTasksAsync(tasks, tracker.Values);
+            await BeforeProcessingTasksAsync(tasks);
 
             foreach (var entry in tracker.Values)
             {
@@ -158,14 +158,14 @@ public sealed class ChatInteractionIndexingService
 
                         var buildIndexContext = new BuildDocumentIndexContext(document, doc, [doc.DocumentId], entry.DocumentIndexManager.GetContentIndexSettings())
                         {
-                            AdditionalProperties =
+                            AdditionalProperties = new Dictionary<string, object>
                             {
                                 { nameof(IndexProfile), entry.IndexProfile },
                                 { "Interaction", interaction },
                             }
                         };
 
-                        await _documentIndexHandlers.InvokeAsync(x => x.BuildIndexAsync(buildIndexContext), _logger);
+                        await _documentIndexHandlers.InvokeAsync((x, ctx) => x.BuildIndexAsync(ctx), buildIndexContext, _logger);
 
                         updatedDocumentsByIndex[entry.IndexProfile.Id].Add(buildIndexContext.DocumentIndex);
                     }
@@ -185,9 +185,10 @@ public sealed class ChatInteractionIndexingService
                 {
                     var entry = tracker[indexEntry.Key];
 
-                    var documentIds = removedDocumentsByIndex[indexEntry.Key];
-
-                    await entry.DocumentIndexManager.DeleteDocumentsAsync(entry.IndexProfile, documentIds);
+                    if (removedDocumentsByIndex.TryGetValue(indexEntry.Key, out var documentIds) && documentIds.Count > 0)
+                    {
+                        await entry.DocumentIndexManager.DeleteDocumentsAsync(entry.IndexProfile, documentIds);
+                    }
 
                     if (await entry.DocumentIndexManager.AddOrUpdateDocumentsAsync(entry.IndexProfile, indexEntry.Value))
                     {
@@ -198,7 +199,7 @@ public sealed class ChatInteractionIndexingService
         }
     }
 
-    private async Task BeforeProcessingTasksAsync(IEnumerable<RecordIndexingTask> tasks, IEnumerable<IndexProfileEntryContext> contexts)
+    private async Task BeforeProcessingTasksAsync(IEnumerable<RecordIndexingTask> tasks)
     {
         var interactionIds = tasks
             .Where(x => x.Type == RecordIndexingTaskTypes.Update)

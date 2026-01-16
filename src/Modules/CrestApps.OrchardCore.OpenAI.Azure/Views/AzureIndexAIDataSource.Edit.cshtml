@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.OpenAI.Azure.ViewModels
+@using OrchardCore
+
+@model AzureDataSourceIndexViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="IndexName" class="@Orchard.GetLabelClasses()">@T["Index name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="IndexName" asp-items="Model.IndexNames" class="form-select">
+            <option value="">@T["Select an index"]</option>
+        </select>
+        <span class="hint">@T["The index to use as a data source."]</span>
+    </div>
+</div>

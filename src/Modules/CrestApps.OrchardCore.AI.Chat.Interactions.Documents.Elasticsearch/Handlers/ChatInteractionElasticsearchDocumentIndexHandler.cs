@@ -18,20 +18,23 @@ public sealed class ChatInteractionElasticsearchDocumentIndexHandler : IDocument
         }
 
         if (!context.AdditionalProperties.TryGetValue("Interaction", out var v) ||
-            v is not ChatInteraction interaction ||
-            interaction.Source != ElasticsearchConstants.ProviderName)
+            v is not ChatInteraction interaction)
         {
             return Task.CompletedTask;
         }
 
-        if (context.AdditionalProperties.TryGetValue(nameof(IndexProfile), out var profile) && profile is IndexProfile indexProfile)
+        if (!context.AdditionalProperties.TryGetValue(nameof(IndexProfile), out var profile) ||
+            profile is not IndexProfile indexProfile ||
+            indexProfile.ProviderName != ElasticsearchConstants.ProviderName)
         {
-            var metadata = indexProfile.As<ElasticsearchIndexMetadata>();
+            return Task.CompletedTask;
+        }
 
-            if (metadata.StoreSourceData)
-            {
-                context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.Text, chatInteractionDocument.Text, DocumentIndexOptions.Store);
-            }
+        var metadata = indexProfile.As<ElasticsearchIndexMetadata>();
+
+        if (metadata.StoreSourceData)
+        {
+            context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.Text, chatInteractionDocument.Text, DocumentIndexOptions.Store);
         }
 
         context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.DocumentId, chatInteractionDocument.DocumentId, DocumentIndexOptions.Store);

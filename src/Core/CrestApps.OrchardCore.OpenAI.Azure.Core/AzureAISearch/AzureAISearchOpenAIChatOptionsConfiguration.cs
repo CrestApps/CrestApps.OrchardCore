@@ -63,14 +63,21 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             dataSource = ds as AIDataSource;
         }
 
-        if (dataSource is null || !dataSource.TryGet<AzureAIProfileAISearchMetadata>(out var dataSourceMetadata))
+        if (dataSource is null)
+        {
+            return;
+        }
+
+        var indexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
+
+        if (string.IsNullOrWhiteSpace(indexMetadata?.IndexName))
         {
             return;
         }
 
         if (context.AdditionalProperties is null || !context.AdditionalProperties.TryGetValue("AzureAISearchIndexProfile", out _))
         {
-            var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(dataSourceMetadata.IndexName, AzureAISearchConstants.ProviderName);
+            var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(indexMetadata.IndexName, AzureAISearchConstants.ProviderName);
 
             if (indexProfile is null)
             {
@@ -141,7 +148,6 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
                 ["authentication"] = authentication,
                 ["semantic_configuration"] = "default",
                 ["query_type"] = "simple",
-                ["in_scope"] = true,
             },
         };
 
@@ -156,21 +162,14 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             };
         }
 
-        if (context.AdditionalProperties.TryGetValue("DataSource", out var ds) &&
-           ds is AIDataSource dataSource && dataSource.TryGet<AzureAIProfileAISearchMetadata>(out var dataSourceMetadata))
-        {
-            azureDataSource.parameters["top_n_documents"] = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
-            azureDataSource.parameters["strictness"] = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
+        var ragParams = indexProfile.As<AzureRagChatMetadata>();
+        azureDataSource.parameters["top_n_documents"] = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
+        azureDataSource.parameters["strictness"] = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
+        azureDataSource.parameters["in_scope"] = ragParams.IsInScope;
 
-            if (!string.IsNullOrWhiteSpace(dataSourceMetadata.Filter))
-            {
-                azureDataSource.parameters["filter"] = dataSourceMetadata.Filter;
-            }
-        }
-        else
+        if (!string.IsNullOrWhiteSpace(ragParams.Filter))
         {
-            azureDataSource.parameters["top_n_documents"] = AzureOpenAIConstants.DefaultTopNDocuments;
-            azureDataSource.parameters["strictness"] = AzureOpenAIConstants.DefaultStrictness;
+            azureDataSource.parameters["filter"] = ragParams.Filter;
         }
 
 #pragma warning disable SCME0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
@@ -217,12 +216,14 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             return;
         }
 
-        if (!dataSource.TryGet<AzureAIProfileAISearchMetadata>(out var dataSourceMetadata))
+        var indexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
+
+        if (string.IsNullOrWhiteSpace(indexMetadata?.IndexName))
         {
             return;
         }
 
-        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(dataSourceMetadata.IndexName, AzureAISearchConstants.ProviderName);
+        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(indexMetadata.IndexName, AzureAISearchConstants.ProviderName);
 
         var keyField = indexProfile.As<AzureAISearchIndexMetadata>().IndexMappings?.FirstOrDefault(x => x.IsKey);
 
@@ -242,18 +243,21 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             throw new NotSupportedException($"Unsupported authentication type: {_azureAISearchDefaultOptions.AuthenticationType}");
         }
 
+        // Note: RAG parameters (Strictness, TopNDocuments, Filter) are stored on AIProfile,
+        // which is not accessible in this context. Using defaults here.
+        // For profile-specific RAG parameters, use the Configure method path via IOpenAIChatOptionsConfiguration.
         options.AddDataSource(new AzureSearchChatDataSource()
         {
             Endpoint = new Uri(_azureAISearchDefaultOptions.Endpoint),
             IndexName = indexProfile.IndexFullName,
             Authentication = credentials,
-            Strictness = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            Strictness = context.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = context.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            Filter = string.IsNullOrWhiteSpace(context.Filter) ? null : context.Filter,
             QueryType = DataSourceQueryType.Simple,
-            InScope = true,
+            InScope = context.IsInScope ?? true,
             SemanticConfiguration = "default",
             OutputContexts = DataSourceOutputContexts.Citations,
-            Filter = string.IsNullOrWhiteSpace(dataSourceMetadata.Filter) ? null : dataSourceMetadata.Filter,
             FieldMappings = new DataSourceFieldMappings()
             {
                 TitleFieldName = GetBestTitleField(keyField),

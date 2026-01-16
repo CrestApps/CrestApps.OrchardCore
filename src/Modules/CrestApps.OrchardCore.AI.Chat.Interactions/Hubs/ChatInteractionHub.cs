@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.Services;
 using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Entities;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
@@ -118,6 +120,10 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         int? maxTokens,
         int? pastMessagesCount,
         string dataSourceId,
+        int? strictness,
+        int? topNDocuments,
+        string filter,
+        bool? isInScope,
         string[] toolNames)
     {
         if (string.IsNullOrWhiteSpace(itemId))
@@ -155,18 +161,33 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         interaction.PresencePenalty = presencePenalty;
         interaction.MaxTokens = maxTokens;
         interaction.PastMessagesCount = pastMessagesCount;
-        interaction.DataSourceId = dataSourceId;
         interaction.ToolNames = toolNames?.ToList() ?? [];
 
-        if (!string.IsNullOrWhiteSpace(interaction.DataSourceId))
+        if (!string.IsNullOrWhiteSpace(dataSourceId))
         {
-            var dataSource = await _dataSourceStore.FindByIdAsync(interaction.DataSourceId);
+            var dataSource = await _dataSourceStore.FindByIdAsync(dataSourceId);
 
             if (dataSource is not null)
             {
-                interaction.DataSourceId = dataSource.ItemId;
-                interaction.DataSourceType = dataSource.Type;
+                interaction.Put(new ChatInteractionDataSourceMetadata()
+                {
+                    DataSourceType = dataSource.Type,
+                    DataSourceId = dataSource.ItemId,
+                });
+
+                interaction.Put(new AzureRagChatMetadata()
+                {
+                    Strictness = strictness,
+                    TopNDocuments = topNDocuments,
+                    IsInScope = isInScope ?? true,
+                    Filter = filter,
+                });
             }
+        }
+        else
+        {
+            interaction.Put(new ChatInteractionDataSourceMetadata());
+            interaction.Put(new AzureRagChatMetadata());
         }
 
         await _interactionManager.UpdateAsync(interaction);
@@ -301,9 +322,18 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 InstanceIds = interaction.ToolInstanceIds?.ToArray(),
                 McpConnectionIds = interaction.McpConnectionIds?.ToArray(),
                 UserMarkdownInResponse = true,
-                DataSourceId = interaction.DataSourceId,
-                DataSourceType = interaction.DataSourceType,
             };
+            var dataSourceMetadata = interaction.As<ChatInteractionDataSourceMetadata>();
+
+            completionContext.DataSourceId = dataSourceMetadata.DataSourceId;
+            completionContext.DataSourceType = dataSourceMetadata.DataSourceType;
+
+            var ragMetadata = interaction.As<AzureRagChatMetadata>();
+
+            completionContext.AdditionalProperties["Strictness"] = ragMetadata.Strictness;
+            completionContext.AdditionalProperties["TopNDocuments"] = ragMetadata.TopNDocuments;
+            completionContext.AdditionalProperties["IsInScope"] = ragMetadata.IsInScope;
+            completionContext.AdditionalProperties["Filter"] = ragMetadata.Filter;
 
             var contentItemIds = new HashSet<string>();
             var references = new Dictionary<string, AICompletionReference>();

@@ -126,7 +126,7 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
                         }
                     };
 
-                    await documentIndexHandlers.InvokeAsync(x => x.BuildIndexAsync(buildIndexContext), logger);
+                    await documentIndexHandlers.InvokeAsync((x, ctx) => x.BuildIndexAsync(ctx), buildIndexContext, logger);
 
                     documents.Add(document);
                 }

@@ -491,7 +491,13 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
         if (!string.IsNullOrEmpty(context.DataSourceId) && !string.IsNullOrEmpty(context.DataSourceType))
         {
-            var dataSourceContext = new AzureOpenAIDataSourceContext(context.DataSourceId, context.DataSourceType);
+            var dataSourceContext = new AzureOpenAIDataSourceContext(context.DataSourceId, context.DataSourceType)
+            {
+                Strictness = context.AdditionalProperties.TryGetValue("Strictness", out var strictnessObj) && strictnessObj is int strictness ? strictness : null,
+                TopNDocuments = context.AdditionalProperties.TryGetValue("TopNDocuments", out var topNDocumentsObj) && topNDocumentsObj is int topNDocuments ? topNDocuments : null,
+                Filter = context.AdditionalProperties.TryGetValue("Filter", out var filterObj) && filterObj is string filter ? filter : null,
+                IsInScope = context.AdditionalProperties.TryGetValue("IsInScope", out var isInScopeObj) && isInScopeObj is bool isInScope ? isInScope : (bool?)null,
+            };
 
             foreach (var handler in _azureOpenAIDataSourceHandlers)
             {
