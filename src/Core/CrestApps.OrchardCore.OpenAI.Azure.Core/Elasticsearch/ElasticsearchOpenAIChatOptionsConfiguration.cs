@@ -248,7 +248,10 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             throw new InvalidOperationException($"The '{_elasticsearchOptions.AuthenticationType}' is not supported as Authentication type for Elasticsearch AI Data Source. Only '{ElasticsearchAuthenticationType.KeyIdAndKey}' and '{ElasticsearchAuthenticationType.Base64ApiKey}' are supported.");
         }
 
-        var ragParams = indexProfile.As<AzureRagChatMetadata>();
+        if (!string.IsNullOrWhiteSpace(context.Filter))
+        {
+            _logger.LogWarning("MongoDB data source does not support filter parameter. The provided filter '{Filter}' will be ignored.", context.Filter);
+        }
 
         // Note: RAG parameters (Strictness, TopNDocuments, Filter) are stored on AIProfile,
         // which is not accessible in this context. Using defaults here.
@@ -258,8 +261,8 @@ public sealed class ElasticsearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             Endpoint = uri,
             IndexName = indexProfile.IndexFullName,
             Authentication = credentials,
-            Strictness = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            Strictness = context.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = context.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
             QueryType = DataSourceQueryType.Simple,
             InScope = true,
             OutputContexts = DataSourceOutputContexts.Citations,

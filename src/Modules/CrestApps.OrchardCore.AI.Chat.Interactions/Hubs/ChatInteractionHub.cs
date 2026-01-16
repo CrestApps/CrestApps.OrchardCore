@@ -322,6 +322,12 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 DataSourceType = interaction.DataSourceType,
             };
 
+            var ragMetadata = interaction.As<AzureRagChatMetadata>();
+
+            completionContext.AdditionalProperties["Strictness"] = ragMetadata.Strictness;
+            completionContext.AdditionalProperties["TopNDocuments"] = ragMetadata.TopNDocuments;
+            completionContext.AdditionalProperties["Filter"] = ragMetadata.Filter;
+
             var contentItemIds = new HashSet<string>();
             var references = new Dictionary<string, AICompletionReference>();
 

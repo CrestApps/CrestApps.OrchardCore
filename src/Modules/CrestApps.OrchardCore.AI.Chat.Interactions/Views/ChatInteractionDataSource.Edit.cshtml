@@ -6,42 +6,50 @@
 
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="DataSourceId" class="@Orchard.GetLabelClasses()">
-        @T["Data Source"]
+        @T["Data source"]
         <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="@T["Select a data source for your own data. This connects to Azure AI Search, Elasticsearch, or MongoDB where your indexed data is stored."]" aria-label="@T["Information about data source parameter"]">
             <i class="fa-solid fa-circle-question"></i>
         </span>
     </label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select" name="ChatInteraction.DataSourceId">
+        <select asp-for="DataSourceId" class="form-select">
             <option value="">@T["Select a data source"]</option>
+            @foreach (var source in Model.DataSources.OrderBy(x => x.DisplayText))
+            {
+                @if (source.ItemId == Model.DataSourceId)
+                {
+                    <option value="@source.ItemId" data-source-type="@source.Type" selected="selected">@source.DisplayText</option>
+                    continue;
+                }
+
+                <option value="@source.ItemId" data-source-type="@source.Type">@source.DisplayText</option>
+            }
         </select>
         <span class="hint">@T["The data source where your indexed data is stored."]</span>
     </div>
 </div>
 
-<div class="mb-3 d-none data-source-dependent">
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="Strictness" class="@Orchard.GetLabelClasses()">@T["Strictness"]</label>
-        <div class="@Orchard.GetEndClasses()">
-            <input type="number" class="form-control" asp-for="Strictness" step="1" min="1" max="5">
-            <span class="hint">@T["Strictness sets the threshold to categorize documents as relevant to your queries. Raising strictness means a higher threshold for relevance and filtering out more documents that are less relevant for responses. Very high strictness could cause failure to generate responses due to limited available documents. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultStrictness]</span>
-        </div>
+<div class="@Orchard.GetWrapperClasses("d-none", "data-source-dependent", "data-source-dependent-any")">
+    <label asp-for="Strictness" class="@Orchard.GetLabelClasses()">@T["Strictness"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="Strictness" step="1" min="1" max="5">
+        <span class="hint">@T["Strictness sets the threshold to categorize documents as relevant to your queries. Raising strictness means a higher threshold for relevance and filtering out more documents that are less relevant for responses. Very high strictness could cause failure to generate responses due to limited available documents. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultStrictness]</span>
     </div>
+</div>
 
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="TopNDocuments" class="@Orchard.GetLabelClasses()">@T["Total retrieved documents"]</label>
-        <div class="@Orchard.GetEndClasses()">
-            <input type="number" class="form-control" asp-for="TopNDocuments" step="1" min="3" max="20">
-            <span class="hint">@T["This specifies the number of top-scoring documents from your data index used to generate responses. You want to increase the value when you have short documents or want to provide more context. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultTopNDocuments]</span>
-        </div>
+<div class="@Orchard.GetWrapperClasses("d-none", "data-source-dependent", "data-source-dependent-any")">
+    <label asp-for="TopNDocuments" class="@Orchard.GetLabelClasses()">@T["Total retrieved documents"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="TopNDocuments" step="1" min="3" max="20">
+        <span class="hint">@T["This specifies the number of top-scoring documents from your data index used to generate responses. You want to increase the value when you have short documents or want to provide more context. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultTopNDocuments]</span>
     </div>
+</div>
 
-    <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="Filter" class="@Orchard.GetLabelClasses()">@T["Filter"]</label>
-        <div class="@Orchard.GetEndClasses()">
-            <input type="text" class="form-control" asp-for="Filter">
-            <span class="hint">@T["Optional OData filter expression to query a subset of indexed data. Example: category eq 'documentation' or status ne 'archived'. Leave blank to search all data."]</span>
-        </div>
+<div class="@Orchard.GetWrapperClasses("d-none", "data-source-dependent", "data-source-dependent-" + AzureOpenAIConstants.DataSourceTypes.AzureAISearch)">
+    <label asp-for="Filter" class="@Orchard.GetLabelClasses()">@T["Filter"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" class="form-control" asp-for="Filter">
+        <span class="hint">@T["Optional OData filter expression to query a subset of indexed data. Example: category eq 'documentation' or status ne 'archived'. Leave blank to search all data."]</span>
     </div>
 </div>
 
@@ -54,10 +62,21 @@
             const dependentElements = document.querySelectorAll('.data-source-dependent');
 
             if (dataSourceSelect && dependentElements.length > 0) {
+
+                const option = dataSourceSelect.selectedOptions?.[0];
+                const type = option?.dataset.sourceType;
                 const hasDataSource = dataSourceSelect.value && dataSourceSelect.value.trim() !== '';
 
                 dependentElements.forEach(element => {
-                    if (hasDataSource) {
+                    console.log(element, element.classList, element.classList.contains('data-source-dependent-' + type), element.classList.contains('data-source-dependent-any') || (hasDataSource && element.classList.contains('data-source-dependent-' + type)));
+
+                    if (!hasDataSource) {
+                        element.classList.add('d-none');
+
+                        return;
+                    }
+
+                    if (element.classList.contains('data-source-dependent-any') || element.classList.contains('data-source-dependent-' + type)) {
                         element.classList.remove('d-none');
                     } else {
                         element.classList.add('d-none');
@@ -69,6 +88,9 @@
         // Initial check on page load
         toggleDataSourceDependentElements();
 
-        dataSourceSelect.addEventListener('change', toggleDataSourceDependentElements);
+        if (dataSourceSelect) {
+            // Listen for changes on the data source select
+            dataSourceSelect.addEventListener('change', toggleDataSourceDependentElements);
+        }
     });
 </script>

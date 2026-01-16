@@ -3,8 +3,6 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -20,16 +18,13 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
     private readonly IAIDataSourceStore _dataSourceStore;
     private readonly AIOptions _aiOptions;
 
-    private readonly IStringLocalizer S;
 
     public ChatInteractionDataSourceDisplayDriver(
         IAIDataSourceStore dataSourceStore,
-        IOptions<AIOptions> aiOptions,
-        IStringLocalizer<ChatInteractionDataSourceDisplayDriver> stringLocalizer)
+        IOptions<AIOptions> aiOptions)
     {
         _dataSourceStore = dataSourceStore;
         _aiOptions = aiOptions.Value;
-        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
@@ -58,8 +53,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             model.TopNDocuments = ragMetadata?.TopNDocuments;
             model.Filter = ragMetadata?.Filter;
 
-            model.DataSources = (await _dataSourceStore.GetAsync(interaction.Source))
-                .Select(x => new SelectListItem(x.DisplayText, x.ItemId));
+            model.DataSources = await _dataSourceStore.GetAsync(interaction.Source);
         }).Location("Parameters:3#Settings:3");
     }
 

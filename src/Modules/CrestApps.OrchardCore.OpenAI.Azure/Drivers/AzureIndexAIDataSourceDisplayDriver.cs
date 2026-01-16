@@ -8,7 +8,6 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
-using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core.Indexes;
 using OrchardCore.Indexing.Models;
 using YesSql;
@@ -18,7 +17,6 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 
 public sealed class AzureIndexAIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 {
-    private readonly IIndexProfileStore _indexProfileStore;
     private readonly ISession _session;
     private readonly AIOptions _aiOptions;
 

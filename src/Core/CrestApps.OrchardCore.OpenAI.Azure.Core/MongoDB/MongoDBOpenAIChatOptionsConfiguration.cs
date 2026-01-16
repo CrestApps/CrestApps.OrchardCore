@@ -215,11 +215,9 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             }
         }
 
-        var ragParams = indexProfile.As<AzureRagChatMetadata>();
-
-        if (!string.IsNullOrWhiteSpace(ragParams.Filter))
+        if (!string.IsNullOrWhiteSpace(context.Filter))
         {
-            _logger.LogWarning("MongoDB data source does not support filter parameter. The provided filter '{Filter}' will be ignored.", ragParams.Filter);
+            _logger.LogWarning("MongoDB data source does not support filter parameter. The provided filter '{Filter}' will be ignored.", context.Filter);
         }
 
         options.AddDataSource(new MongoDBChatDataSource()
@@ -228,8 +226,8 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             CollectionName = mongoMetadata.CollectionName,
             AppName = mongoMetadata.AppName,
             Authentication = credentials,
-            Strictness = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            Strictness = context.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = context.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
             InScope = true,
             OutputContexts = DataSourceOutputContexts.Citations,
         });

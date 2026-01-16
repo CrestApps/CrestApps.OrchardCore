@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
@@ -42,8 +41,7 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
         {
             var metadata = profile.As<AIProfileDataSourceMetadata>();
             model.DataSourceId = metadata.DataSourceId;
-            model.DataSources = (await _dataSourceStore.GetAsync(profile.Source))
-            .Select(x => new SelectListItem(x.DisplayText, x.ItemId));
+            model.DataSources = await _dataSourceStore.GetAsync(profile.Source);
         }).Location("Content:2");
     }
 

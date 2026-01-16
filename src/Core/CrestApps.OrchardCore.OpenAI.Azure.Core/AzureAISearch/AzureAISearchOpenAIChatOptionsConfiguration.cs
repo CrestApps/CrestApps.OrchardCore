@@ -243,8 +243,6 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             throw new NotSupportedException($"Unsupported authentication type: {_azureAISearchDefaultOptions.AuthenticationType}");
         }
 
-        var ragParams = indexProfile.As<AzureRagChatMetadata>();
-
         // Note: RAG parameters (Strictness, TopNDocuments, Filter) are stored on AIProfile,
         // which is not accessible in this context. Using defaults here.
         // For profile-specific RAG parameters, use the Configure method path via IOpenAIChatOptionsConfiguration.
@@ -253,9 +251,9 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
             Endpoint = new Uri(_azureAISearchDefaultOptions.Endpoint),
             IndexName = indexProfile.IndexFullName,
             Authentication = credentials,
-            Strictness = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
-            Filter = string.IsNullOrWhiteSpace(ragParams.Filter) ? null : ragParams.Filter,
+            Strictness = context.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = context.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            Filter = string.IsNullOrWhiteSpace(context.Filter) ? null : context.Filter,
             QueryType = DataSourceQueryType.Simple,
             InScope = true,
             SemanticConfiguration = "default",
