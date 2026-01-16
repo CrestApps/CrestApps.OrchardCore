@@ -140,6 +140,19 @@ Follow these steps to get started with CrestApps:
 5. **Enable Modules:**  
    Access the **Orchard Core Admin Dashboard** to enable desired CrestApps modules.  
 
+---
+
+### Aspire
+
+The quickest way is to develop locally is to use [Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/get-started/aspire-overview) which this solution is already configured to use out of the box.
+
+To get started using Aspire with this project
+
+1. Set `CrestApp.Aspire.HostApp` as your startup project.  
+2. Run the project to start the Aspire host, which sets up the necessary environment and services. 
+
+Note, running the `CrestApp.Aspire.HostApp` for the first time will download multiple large packages for AI development like Ollama AI model and Foundry model. If you are not ready to use AI features with this project, 
+ 
 ## Package Management 
 
 This project is actively maintained and evolves alongside Orchard Core.
