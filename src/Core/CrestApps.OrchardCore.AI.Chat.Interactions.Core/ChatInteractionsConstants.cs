@@ -18,6 +18,8 @@ public static class ChatInteractionsConstants
 
         public const string ChunksEmbedding = "chunks.embedding";
 
+        public const string ChunksText = "chunks.text";
+
         public static class ChunksColumnNames
         {
             public const string Text = "text";
