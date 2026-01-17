@@ -4,13 +4,29 @@
     <!-- NuGet properties-->
     <Title>Target for Modular OrchardCore CMS Application</Title>
     <Description>
-      $(OCCMSDescription)
+      $(CrestAppsDescription)
 
       Add all of the CrestApps modules to your OrchardCore CMS application.
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS CMS</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <!--
+    ProjectReferences are used for local development and building from source.
+    When this project is packed, these ProjectReferences become PackageReference
+    dependencies in the generated .nupkg file because:
+    1. PrivateAssets="none" ensures the dependency is not hidden from consumers
+    2. All referenced projects have IsPackable=true (set in Directory.Build.props)
+    3. The version is resolved from VersionPrefix/VersionSuffix at pack time
+    
+    This allows consumers of the NuGet package to get all module DLLs via 
+    transitive NuGet dependency resolution during 'dotnet publish'.
+  -->
   <ItemGroup>
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Agent\CrestApps.OrchardCore.AI.Agent.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions\CrestApps.OrchardCore.AI.Chat.Interactions.csproj" PrivateAssets="none" />
