@@ -94,11 +94,6 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
                                 if (!string.IsNullOrWhiteSpace(indexName))
                                 {
-                                    dataSource.Put(new AzureAIDataSourceIndexMetadata
-                                    {
-                                        IndexName = indexName,
-                                    });
-
                                     // For MongoDB, migrate to the new metadata class
                                     var authProps = legacyProps["Authentication"]?.AsObject();
 
@@ -116,6 +111,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
                                     var newMongoMetadata = new AzureMongoDBDataSourceMetadata
                                     {
+                                        IndexName = indexName,
                                         EndpointName = legacyProps["EndpointName"]?.GetValue<string>(),
                                         AppName = legacyProps["AppName"]?.GetValue<string>(),
                                         CollectionName = legacyProps["CollectionName"]?.GetValue<string>(),
