@@ -1,33 +1,24 @@
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
-using OrchardCore.Indexing.Core.Indexes;
-using OrchardCore.Indexing.Models;
+using OrchardCore.Indexing;
 using OrchardCore.Search.AzureAI;
 using OrchardCore.Search.Elasticsearch;
-using YesSql;
-using YesSql.Services;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 
 public sealed class AzureIndexAIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 {
-    private readonly ISession _session;
-    private readonly AIOptions _aiOptions;
+    private readonly IIndexProfileStore _indexProfileStore;
 
-    public AzureIndexAIDataSourceDisplayDriver(
-        ISession session,
-        IOptions<AIOptions> aiOptions)
+    public AzureIndexAIDataSourceDisplayDriver(IIndexProfileStore indexProfileStore)
     {
-        _session = session;
-        _aiOptions = aiOptions.Value;
+        _indexProfileStore = indexProfileStore;
     }
 
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
@@ -42,32 +33,19 @@ public sealed class AzureIndexAIDataSourceDisplayDriver : DisplayDriver<AIDataSo
             var indexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
             model.IndexName = indexMetadata.IndexName;
 
-            var indexProfileSources = _aiOptions.DataSources.Keys
-                .Where(x => x.ProfileSource == AzureOpenAIConstants.ProviderName)
-                .Select(x => x.Type switch
-                {
-                    AzureOpenAIConstants.DataSourceTypes.AzureAISearch => AzureAISearchConstants.ProviderName,
-                    AzureOpenAIConstants.DataSourceTypes.Elasticsearch => ElasticsearchConstants.ProviderName,
-                    AzureOpenAIConstants.DataSourceTypes.MongoDB => "MongoDB",
-                    _ => x.Type
-                })
-                .ToArray();
-
-            if (indexProfileSources.Length > 0)
+            var indexProviderName = dataSource.Type switch
             {
-                var indexes = await _session.Query<IndexProfile, IndexProfileIndex>()
-                    .Where(ip => ip.ProviderName.IsIn(indexProfileSources))
-                    .ListAsync();
+                AzureOpenAIConstants.DataSourceTypes.AzureAISearch => AzureAISearchConstants.ProviderName,
+                AzureOpenAIConstants.DataSourceTypes.Elasticsearch => ElasticsearchConstants.ProviderName,
+                AzureOpenAIConstants.DataSourceTypes.MongoDB => "MongoDB",
+                _ => dataSource.Type
+            };
 
-                model.IndexNames = indexes
-                    .Select(i => new SelectListItem(i.Name, i.Name))
-                    .OrderBy(x => x.Text);
-            }
-            else
-            {
-                model.IndexNames = [];
-            }
+            var indexes = await _indexProfileStore.GetByProviderAsync(indexProviderName);
 
+            model.IndexNames = indexes
+                .Select(i => new SelectListItem(i.Name, i.Name))
+                .OrderBy(x => x.Text);
         }).Location("Content:3");
     }
 
