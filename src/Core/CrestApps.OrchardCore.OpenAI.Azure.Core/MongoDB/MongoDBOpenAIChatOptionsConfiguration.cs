@@ -9,27 +9,22 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
 using OrchardCore.Entities;
-using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
-using OrchardCore.Search.Elasticsearch;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDb;
 
 public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsConfiguration, IAzureOpenAIDataSourceHandler
 {
     private readonly IAIDataSourceManager _aIDataSourceManager;
-    private readonly IIndexProfileStore _indexProfileStore;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger _logger;
 
     public MongoDBOpenAIChatOptionsConfiguration(
         IAIDataSourceManager aIDataSourceManager,
-        IIndexProfileStore indexProfileStore,
         IDataProtectionProvider dataProtectionProvider,
         ILogger<MongoDBOpenAIChatOptionsConfiguration> logger)
     {
         _aIDataSourceManager = aIDataSourceManager;
-        _indexProfileStore = indexProfileStore;
         _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
     }
@@ -174,14 +169,6 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
 
         if (!dataSource.TryGet<AzureMongoDBDataSourceMetadata>(out var mongoMetadata))
         {
-            return;
-        }
-
-        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(mongoMetadata.IndexName, ElasticsearchConstants.ProviderName);
-
-        if (indexProfile is null)
-        {
-            _logger.LogWarning("Index named '{IndexName}' set as Elasticsearch data-source but not found in Elasticsearch document manager.", mongoMetadata.IndexName);
             return;
         }
 
