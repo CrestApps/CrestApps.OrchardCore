@@ -225,6 +225,13 @@ public sealed class AzureAISearchOpenAIChatOptionsConfiguration : IOpenAIChatOpt
 
         var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(indexMetadata.IndexName, AzureAISearchConstants.ProviderName);
 
+        if (indexProfile is null)
+        {
+            _logger.LogWarning("The index profile '{IndexName}' for Azure AI Search data source was not found.", indexMetadata.IndexName);
+
+            return;
+        }
+
         var keyField = indexProfile.As<AzureAISearchIndexMetadata>().IndexMappings?.FirstOrDefault(x => x.IsKey);
 
 #pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
