@@ -48,12 +48,48 @@ The `.nuspec` should contain `<dependency>` entries for all CrestApps modules wi
 
 ## Troubleshooting
 
+### DLLs Not Included in Publish Output
+
 If modules are not being included during `dotnet publish`:
 
 1. **Verify package source**: Ensure all CrestApps packages are available from your configured NuGet sources
 2. **Check versions**: All CrestApps packages must be published with matching versions
 3. **Clear NuGet cache**: Run `dotnet nuget locals all --clear` to clear cached packages
 4. **Verify dependencies**: Inspect the `.nupkg` file to confirm dependencies are present
+
+### Modules Not Loaded at Runtime (DLLs Present but Not Working)
+
+If DLLs are present but OrchardCore doesn't discover the modules:
+
+1. **Check `.deps.json`**: Verify modules are listed in your app's `.deps.json` file:
+   ```bash
+   cat YourApp.deps.json | grep -i "CrestApps.OrchardCore"
+   ```
+
+2. **Verify module registration**: Each module must have a `Manifest.cs` with the `[assembly: Module(...)]` attribute. This is how OrchardCore discovers modules.
+
+3. **Enable features in OrchardCore**: CrestApps modules need to be enabled in OrchardCore's admin panel under Features, or via a recipe during setup.
+
+4. **Check feature dependencies**: Some features have `EnabledByDependencyOnly = true` meaning they're only enabled when another feature depends on them.
+
+5. **Review startup logs**: OrchardCore logs module discovery. Check application logs for messages about module loading.
+
+6. **Docker-specific issues**:
+   - Ensure the working directory is set correctly in your Dockerfile
+   - Verify environment variables like `ASPNETCORE_URLS` are properly configured
+   - Check if there are missing native dependencies that modules might need
+
+### Debugging Module Discovery
+
+To debug why modules aren't being loaded:
+
+```csharp
+// In Program.cs, add logging to see module discovery
+builder.Logging.AddConsole();
+builder.Logging.SetMinimumLevel(LogLevel.Debug);
+```
+
+OrchardCore will log which modules and features it discovers and enables.
 
 ## Included Modules
 
