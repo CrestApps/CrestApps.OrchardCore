@@ -79,11 +79,6 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             return;
         }
 
-        if (!dataSource.TryGet<AzureAIDataSourceIndexMetadata>(out var indexMetadata) || string.IsNullOrWhiteSpace(indexMetadata.IndexName))
-        {
-            return;
-        }
-
         if (!dataSource.TryGet<AzureMongoDBDataSourceMetadata>(out var mongoMetadata))
         {
             return;
@@ -115,13 +110,13 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
 
         var mongoDbDataSource = new
         {
-            type = "mongo_db",
+            type = dataSource.Type,
             parameters = new Dictionary<string, object>
             {
                 ["endpoint"] = mongoMetadata.EndpointName,
                 ["collection_name"] = mongoMetadata.CollectionName,
                 ["database_name"] = mongoMetadata.DatabaseName,
-                ["index_name"] = indexMetadata.IndexName,
+                ["index_name"] = mongoMetadata.IndexName,
                 ["app_name"] = mongoMetadata.AppName,
                 ["authentication"] = authentication,
                 ["semantic_configuration"] = "default",
@@ -177,21 +172,16 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             return;
         }
 
-        if (!dataSource.TryGet<AzureAIDataSourceIndexMetadata>(out var indexMetadata) || string.IsNullOrWhiteSpace(indexMetadata.IndexName))
-        {
-            return;
-        }
-
         if (!dataSource.TryGet<AzureMongoDBDataSourceMetadata>(out var mongoMetadata))
         {
             return;
         }
 
-        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(indexMetadata.IndexName, ElasticsearchConstants.ProviderName);
+        var indexProfile = await _indexProfileStore.FindByIndexNameAndProviderAsync(mongoMetadata.IndexName, ElasticsearchConstants.ProviderName);
 
         if (indexProfile is null)
         {
-            _logger.LogWarning("Index named '{IndexName}' set as Elasticsearch data-source but not found in Elasticsearch document manager.", indexMetadata.IndexName);
+            _logger.LogWarning("Index named '{IndexName}' set as Elasticsearch data-source but not found in Elasticsearch document manager.", mongoMetadata.IndexName);
             return;
         }
 
@@ -222,6 +212,7 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
 
         options.AddDataSource(new MongoDBChatDataSource()
         {
+            IndexName = mongoMetadata.IndexName,
             EndpointName = mongoMetadata.EndpointName,
             CollectionName = mongoMetadata.CollectionName,
             AppName = mongoMetadata.AppName,

@@ -23,7 +23,7 @@ public sealed class AzureIndexAIDataSourceDisplayDriver : DisplayDriver<AIDataSo
 
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
-        if (dataSource.ProfileSource != AzureOpenAIConstants.ProviderName)
+        if (dataSource.ProfileSource != AzureOpenAIConstants.ProviderName || dataSource.Type == AzureOpenAIConstants.DataSourceTypes.MongoDB)
         {
             return null;
         }
@@ -37,7 +37,6 @@ public sealed class AzureIndexAIDataSourceDisplayDriver : DisplayDriver<AIDataSo
             {
                 AzureOpenAIConstants.DataSourceTypes.AzureAISearch => AzureAISearchConstants.ProviderName,
                 AzureOpenAIConstants.DataSourceTypes.Elasticsearch => ElasticsearchConstants.ProviderName,
-                AzureOpenAIConstants.DataSourceTypes.MongoDB => "MongoDB",
                 _ => dataSource.Type
             };
 
@@ -51,7 +50,7 @@ public sealed class AzureIndexAIDataSourceDisplayDriver : DisplayDriver<AIDataSo
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
-        if (dataSource.ProfileSource != AzureOpenAIConstants.ProviderName)
+        if (dataSource.ProfileSource != AzureOpenAIConstants.ProviderName || dataSource.Type == AzureOpenAIConstants.DataSourceTypes.MongoDB)
         {
             return null;
         }
