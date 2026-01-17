@@ -10,6 +10,8 @@ using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Core.Indexes;
 using OrchardCore.Indexing.Models;
+using OrchardCore.Search.AzureAI;
+using OrchardCore.Search.Elasticsearch;
 using YesSql;
 using YesSql.Services;
 
@@ -42,7 +44,13 @@ public sealed class AzureIndexAIDataSourceDisplayDriver : DisplayDriver<AIDataSo
 
             var indexProfileSources = _aiOptions.DataSources.Keys
                 .Where(x => x.ProfileSource == AzureOpenAIConstants.ProviderName)
-                .Select(x => x.Type)
+                .Select(x => x.Type switch
+                {
+                    AzureOpenAIConstants.DataSourceTypes.AzureAISearch => AzureAISearchConstants.ProviderName,
+                    AzureOpenAIConstants.DataSourceTypes.Elasticsearch => ElasticsearchConstants.ProviderName,
+                    AzureOpenAIConstants.DataSourceTypes.MongoDB => "MongoDB",
+                    _ => x.Type
+                })
                 .ToArray();
 
             if (indexProfileSources.Length > 0)
