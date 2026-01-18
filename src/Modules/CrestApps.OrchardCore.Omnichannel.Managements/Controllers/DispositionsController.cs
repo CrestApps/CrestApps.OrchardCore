@@ -89,7 +89,7 @@ public sealed class DispositionsController : Controller
             viewModel.Models.Add(new CatalogEntryViewModel<OmnichannelDisposition>
             {
                 Model = model,
-                Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+                Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
             });
         }
 

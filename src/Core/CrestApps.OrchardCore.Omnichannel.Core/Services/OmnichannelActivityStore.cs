@@ -26,10 +26,12 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
                             .OrderBy(x => x.ScheduledUtc)
                             .ThenBy(x => x.Id);
 
+        var skip = (Math.Max(page, 1) - 1) * pageSize;
+
         return new PageResult<OmnichannelActivity>()
         {
             Count = await query.CountAsync(),
-            Entries = (await query.Skip((page - 1) * pageSize).Take(pageSize).ListAsync()).ToArray(),
+            Entries = (await query.Skip(skip).Take(pageSize).ListAsync()).ToArray(),
         };
     }
 
@@ -44,10 +46,12 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
                     .OrderBy(x => x.ScheduledUtc)
                     .ThenBy(x => x.Id);
 
+        var skip = (Math.Max(page, 1) - 1) * pageSize;
+
         return new PageResult<OmnichannelActivity>()
         {
             Count = await query.CountAsync(),
-            Entries = (await query.Skip((page - 1) * pageSize).Take(pageSize).ListAsync()).ToArray(),
+            Entries = (await query.Skip(skip).Take(pageSize).ListAsync()).ToArray(),
         };
     }
 
@@ -62,10 +66,12 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
                             .OrderByDescending(x => x.CompletedUtc)
                             .ThenBy(x => x.Id);
 
+        var skip = (Math.Max(page, 1) - 1) * pageSize;
+
         return new PageResult<OmnichannelActivity>()
         {
             Count = await query.CountAsync(),
-            Entries = (await query.Skip((page - 1) * pageSize).Take(pageSize).ListAsync()).ToArray(),
+            Entries = (await query.Skip(skip).Take(pageSize).ListAsync()).ToArray(),
         };
     }
 
