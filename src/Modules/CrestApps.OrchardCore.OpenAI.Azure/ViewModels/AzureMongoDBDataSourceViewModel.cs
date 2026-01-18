@@ -8,6 +8,8 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 /// </summary>
 public class AzureMongoDBDataSourceViewModel
 {
+    public string IndexName { get; set; }
+
     public string EndpointName { get; set; }
 
     public string DatabaseName { get; set; }

@@ -36,6 +36,7 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
         return Initialize<AzureMongoDBDataSourceViewModel>("AzureOpenAIMongoDBDataSource_Edit", model =>
         {
             var metadata = dataSource.As<AzureMongoDBDataSourceMetadata>();
+            model.IndexName = metadata?.IndexName;
             model.EndpointName = metadata?.EndpointName;
             model.AppName = metadata?.AppName;
             model.CollectionName = metadata?.CollectionName;
@@ -56,6 +57,11 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
         var model = new AzureMongoDBDataSourceViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        if (string.IsNullOrWhiteSpace(model.IndexName))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexName), S["The index name is required."]);
+        }
 
         if (string.IsNullOrWhiteSpace(model.EndpointName))
         {
@@ -95,6 +101,7 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
             metadata.Authentication.Password = protector.Protect(model.Password);
         }
 
+        metadata.IndexName = model.IndexName;
         metadata.EndpointName = model.EndpointName;
         metadata.AppName = model.AppName;
         metadata.CollectionName = model.CollectionName;

@@ -8,6 +8,11 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDB;
 public sealed class AzureMongoDBDataSourceMetadata
 {
     /// <summary>
+    /// Gets or sets the MongoDB index name.
+    /// </summary>
+    public string IndexName { get; set; }
+
+    /// <summary>
     /// Gets or sets the MongoDB endpoint name.
     /// </summary>
     public string EndpointName { get; set; }

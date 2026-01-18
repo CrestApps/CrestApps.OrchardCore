@@ -1,4 +1,3 @@
-using System;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDB;
@@ -11,7 +10,7 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDB;
 /// on the AIDataSource, <see cref="AzureMongoDBDataSourceMetadata"/> for MongoDB-specific connection settings,
 /// and <see cref="AzureRagChatMetadata"/> for query-time parameters on the AIProfile.
 /// </remarks>
-[Obsolete($"Use {nameof(AzureAIDataSourceIndexMetadata)} for index configuration, {nameof(AzureMongoDBDataSourceMetadata)} for MongoDB-specific settings, and {nameof(AzureRagChatMetadata)} for query-time parameters.")]
+[Obsolete($"Use {nameof(AzureMongoDBDataSourceMetadata)} for MongoDB-specific settings, and {nameof(AzureRagChatMetadata)} for query-time parameters.")]
 public sealed class AzureAIProfileMongoDBMetadata
 {
     public string IndexName { get; set; }
