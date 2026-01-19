@@ -8,6 +8,11 @@ namespace CrestApps.OrchardCore.Ollama.Services;
 
 public sealed class OllamaAIClientProvider : AIClientProviderBase
 {
+    public OllamaAIClientProvider(IServiceProvider serviceProvider)
+        : base(serviceProvider)
+    {
+    }
+
     protected override string GetProviderName()
         => OllamaConstants.ProviderName;
 

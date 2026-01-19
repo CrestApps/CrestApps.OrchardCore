@@ -5,6 +5,13 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 
 public abstract class AIClientProviderBase : IAIClientProvider
 {
+    private readonly IServiceProvider _serviceProvider;
+
+    protected AIClientProviderBase(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+    }
+
     public bool CanHandle(string providerName)
         => string.Equals(GetProviderName(), providerName, StringComparison.OrdinalIgnoreCase);
 
@@ -20,7 +27,11 @@ public abstract class AIClientProviderBase : IAIClientProvider
             throw new ArgumentException("A deployment name must be provided, either directly or as a default in the connection settings.");
         }
 
-        return ValueTask.FromResult(GetChatClient(connection, deploymentName));
+        var client = GetChatClient(connection, deploymentName);
+
+        var builder = new ChatClientBuilder(client);
+
+        return ValueTask.FromResult(builder.Build(_serviceProvider));
     }
 
     public ValueTask<IEmbeddingGenerator<string, Embedding<float>>> GetEmbeddingGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null)
@@ -35,7 +46,11 @@ public abstract class AIClientProviderBase : IAIClientProvider
             throw new ArgumentException("An embedding deployment name must be provided, either directly or as a default in the connection settings.");
         }
 
-        return ValueTask.FromResult(GetEmbeddingGenerator(connection, deploymentName));
+        var client = GetEmbeddingGenerator(connection, deploymentName);
+
+        var builder = new EmbeddingGeneratorBuilder<string, Embedding<float>>(client);
+
+        return ValueTask.FromResult(builder.Build(_serviceProvider));
     }
 
     protected abstract string GetProviderName();

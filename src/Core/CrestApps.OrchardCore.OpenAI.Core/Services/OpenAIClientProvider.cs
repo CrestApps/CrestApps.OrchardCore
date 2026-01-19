@@ -9,6 +9,11 @@ namespace CrestApps.OrchardCore.OpenAI.Core.Services;
 
 public sealed class OpenAIClientProvider : AIClientProviderBase
 {
+    public OpenAIClientProvider(IServiceProvider serviceProvider)
+        : base(serviceProvider)
+    {
+    }
+
     protected override string GetProviderName()
         => OpenAIConstants.ProviderName;
 
@@ -17,8 +22,8 @@ public sealed class OpenAIClientProvider : AIClientProviderBase
         var client = GetOpenAIClient(connection);
 
         return client
-            .GetChatClient(deploymentName)
-            .AsIChatClient();
+             .GetChatClient(deploymentName)
+             .AsIChatClient();
     }
 
     protected override IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator(AIProviderConnectionEntry connection, string deploymentName)
