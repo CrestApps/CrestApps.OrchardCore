@@ -89,7 +89,7 @@ public sealed class CampaignsController : Controller
             viewModel.Models.Add(new CatalogEntryViewModel<OmnichannelCampaign>
             {
                 Model = model,
-                Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+                Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
             });
         }
 

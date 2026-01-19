@@ -30,7 +30,7 @@ internal sealed class AdminMenu : AdminNavigationProvider
                     .AddClass("activity-batches")
                     .Id("activityBatches")
                     .Action("Index", "ActivityBatches", "CrestApps.OrchardCore.Omnichannel.Managements")
-                    .Permission(OmnichannelConstants.Permissions.ManageChannelEndpoints)
+                    .Permission(OmnichannelConstants.Permissions.ManageActivityBatches)
                     .LocalNav()
                 )
                 .Add(S["Campaigns"], S["Campaigns"].PrefixPosition(), campaigns => campaigns

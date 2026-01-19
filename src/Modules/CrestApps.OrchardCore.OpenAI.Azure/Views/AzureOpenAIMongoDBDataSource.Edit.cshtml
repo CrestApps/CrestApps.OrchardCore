@@ -4,6 +4,14 @@
 @model AzureMongoDBDataSourceViewModel
 
 <div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="IndexName" class="@Orchard.GetLabelClasses()">@T["Index name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" class="form-control" asp-for="IndexName" />
+        <span class="hint">@T["The Mongo DB index name."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
     <label asp-for="EndpointName" class="@Orchard.GetLabelClasses()">@T["Endpoint name"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="text" class="form-control" asp-for="EndpointName" />

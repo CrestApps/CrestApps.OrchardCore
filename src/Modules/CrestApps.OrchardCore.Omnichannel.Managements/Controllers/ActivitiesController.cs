@@ -98,7 +98,7 @@ public sealed class ActivitiesController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var scheduledResult = await _omnichannelActivityManager.PageManualScheduledAsync(userId, pager.GetStartIndex(), pager.PageSize);
+        var scheduledResult = await _omnichannelActivityManager.PageManualScheduledAsync(userId, pager.Page, pager.PageSize);
 
         var pagerShape = await shapeFactory.PagerAsync(pager, scheduledResult.Count);
 
@@ -169,14 +169,14 @@ public sealed class ActivitiesController : Controller
 
         var scheduledPager = new Pager(scheduledPagerParameters, pagerOptions.Value.GetPageSize());
 
-        var scheduledResults = await _omnichannelActivityManager.PageContactManualScheduledAsync(contentItemId, scheduledPager.GetStartIndex(), scheduledPager.PageSize);
+        var scheduledResults = await _omnichannelActivityManager.PageContactManualScheduledAsync(contentItemId, scheduledPager.Page, scheduledPager.PageSize);
 
         var scheduledPagerShape = await shapeFactory.PagerAsync(scheduledPager, scheduledResults.Count);
         scheduledPagerShape.Properties["PagerId"] = "s.pagenum";
 
         var completedPager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var completedResults = await _omnichannelActivityManager.PageContactManualCompletedAsync(contentItemId, scheduledPager.GetStartIndex(), scheduledPager.PageSize);
+        var completedResults = await _omnichannelActivityManager.PageContactManualCompletedAsync(contentItemId, scheduledPager.Page, scheduledPager.PageSize);
 
         var completedPagerShape = await shapeFactory.PagerAsync(completedPager, completedResults.Count);
 

@@ -5,6 +5,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Workflows\Events\**" />
+    <EmbeddedResource Remove="Workflows\Events\**" />
+    <None Remove="Workflows\Events\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
@@ -37,10 +43,6 @@
     -->
     <ProjectReference Include="..\CrestApps.OrchardCore.Omnichannel\CrestApps.OrchardCore.Omnichannel.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Users\CrestApps.OrchardCore.Users.csproj" PrivateAssets="none" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Workflows\Events\" />
   </ItemGroup>
 
 </Project>
