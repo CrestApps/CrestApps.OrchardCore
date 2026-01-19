@@ -15,6 +15,7 @@ public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClien
         IAIClientFactory aIClientFactory,
         IDistributedCache distributedCache,
         ILoggerFactory loggerFactory,
+        IServiceProvider serviceProvider,
         AIProviderOptions providerOptions,
         DefaultAIOptions defaultOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
@@ -24,6 +25,7 @@ public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClien
             aIClientFactory,
             distributedCache,
             loggerFactory,
+            serviceProvider,
             providerOptions,
             defaultOptions,
             handlers)
