@@ -76,21 +76,9 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (!string.IsNullOrEmpty(model.SubjectContentType))
-        {
-            filter.SubjectContentType = model.SubjectContentType;
-        }
-
-        if (model.UrgencyLevel.HasValue)
-        {
-            filter.UrgencyLevel = model.UrgencyLevel.Value;
-        }
-
-        if (!string.IsNullOrEmpty(model.Channel))
-        {
-            filter.Channel = model.Channel;
-        }
-
+        filter.SubjectContentType = model.SubjectContentType;
+        filter.UrgencyLevel = model.UrgencyLevel;
+        filter.Channel = model.Channel;
         filter.AttemptFrom = model.AttemptFrom;
         filter.AttemptTo = model.AttemptTo;
 

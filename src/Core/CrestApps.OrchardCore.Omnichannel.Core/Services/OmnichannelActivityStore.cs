@@ -63,7 +63,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
                         index.AssignedToId == userId &&
                         index.Status == ActivityStatus.NotStated &&
                         index.InteractionType == ActivityInteractionType.Manual &&
-                        (filter.UrgencyLevel == ActivityUrgencyLevel.Normal || index.UrgencyLevel == filter.UrgencyLevel) &&
+                        (filter.UrgencyLevel == null || index.UrgencyLevel == filter.UrgencyLevel) &&
                         (filter.SubjectContentType == null || index.SubjectContentType == filter.SubjectContentType) &&
                         (filter.Channel == null || index.Channel == filter.Channel) &&
                         (filter.AttemptFrom == null || index.Attempts >= filter.AttemptFrom) &&

@@ -2,7 +2,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 public sealed class ListOmnichannelActivityFilter
 {
-    public ActivityUrgencyLevel UrgencyLevel { get; set; }
+    public ActivityUrgencyLevel? UrgencyLevel { get; set; }
 
     public string SubjectContentType { get; set; }
 

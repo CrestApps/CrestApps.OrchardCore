@@ -107,7 +107,7 @@ public sealed class ActivitiesController : Controller
         // Create filter from view model
         var filter = new ListOmnichannelActivityFilter
         {
-            UrgencyLevel = filterViewModel.UrgencyLevel ?? ActivityUrgencyLevel.Normal,
+            UrgencyLevel = filterViewModel.UrgencyLevel,
             SubjectContentType = filterViewModel.SubjectContentType,
             Channel = filterViewModel.Channel,
             AttemptFrom = filterViewModel.AttemptFrom,
