@@ -32,6 +32,14 @@ public class OmnichannelActivityBatchViewModel
 
     public ActivityUrgencyLevel UrgencyLevel { get; set; }
 
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
+    public DateTime? LeadCreatedFrom { get; set; }
+
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
+    public DateTime? LeadCreatedTo { get; set; }
+
+    public bool OnlyPublishedLeads { get; set; } = true;
+
     [BindNever]
     public OmnichannelActivityBatchStatus Status { get; set; }
 

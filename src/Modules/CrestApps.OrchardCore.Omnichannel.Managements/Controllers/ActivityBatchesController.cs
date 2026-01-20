@@ -395,7 +395,12 @@ public sealed class ActivityBatchesController : Controller
                         contactQuery = contactQuery.With<OmnichannelContactIndex>(index => index.PrimaryEmailAddress != null);
                     }
 
-                    contactQuery = contactQuery.With<ContentItemIndex>(index => index.ContentType == batch.ContactContentType && index.Published && index.DocumentId > documentId)
+                    contactQuery = contactQuery.With<ContentItemIndex>(index =>
+                        index.ContentType == batch.ContactContentType &&
+                        (batch.OnlyPublishedLeads ? index.Published : index.Latest) &&
+                        index.DocumentId > documentId &&
+                        (batch.LeadCreatedFrom == null || index.CreatedUtc >= batch.LeadCreatedFrom) &&
+                        (batch.LeadCreatedTo == null || index.CreatedUtc <= batch.LeadCreatedTo))
                         .OrderBy(x => x.DocumentId);
 
                     // Apply the filters logic

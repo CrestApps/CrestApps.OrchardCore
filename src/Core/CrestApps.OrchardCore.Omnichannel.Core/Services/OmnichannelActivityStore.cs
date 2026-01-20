@@ -55,6 +55,32 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         };
     }
 
+    public async Task<PageResult<OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize, ListOmnichannelActivityFilter filter)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+
+        var query = Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
+                        index.AssignedToId == userId &&
+                        index.Status == ActivityStatus.NotStated &&
+                        index.InteractionType == ActivityInteractionType.Manual &&
+                        (filter.UrgencyLevel == ActivityUrgencyLevel.Normal || index.UrgencyLevel == filter.UrgencyLevel) &&
+                        (filter.SubjectContentType == null || index.SubjectContentType == filter.SubjectContentType) &&
+                        (filter.Channel == null || index.Channel == filter.Channel) &&
+                        (filter.AttemptFrom == null || index.Attempts >= filter.AttemptFrom) &&
+                        (filter.AttemptTo == null || index.Attempts <= filter.AttemptTo),
+                        collection: OmnichannelConstants.CollectionName)
+                    .OrderBy(x => x.ScheduledUtc)
+                    .ThenBy(x => x.Id);
+
+        var skip = (Math.Max(page, 1) - 1) * pageSize;
+
+        return new PageResult<OmnichannelActivity>()
+        {
+            Count = await query.CountAsync(),
+            Entries = (await query.Skip(skip).Take(pageSize).ListAsync()).ToArray(),
+        };
+    }
+
     public async Task<PageResult<OmnichannelActivity>> PageContactManualCompletedAsync(string contentContentItemId, int page, int pageSize)
     {
         ArgumentException.ThrowIfNullOrEmpty(contentContentItemId);

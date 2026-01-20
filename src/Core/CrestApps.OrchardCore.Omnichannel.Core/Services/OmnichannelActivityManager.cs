@@ -43,6 +43,18 @@ public sealed class OmnichannelActivityManager : CatalogManager<OmnichannelActiv
         return result;
     }
 
+    public async Task<PageResult<OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize, ListOmnichannelActivityFilter filter)
+    {
+        var result = await _store.PageManualScheduledAsync(userId, page, pageSize, filter);
+
+        foreach (var entry in result.Entries)
+        {
+            await LoadAsync(entry);
+        }
+
+        return result;
+    }
+
     public async Task<PageResult<OmnichannelActivity>> PageContactManualCompletedAsync(string contentContentItemId, int page, int pageSize)
     {
         var result = await _store.PageContactManualCompletedAsync(contentContentItemId, page, pageSize);

@@ -50,6 +50,9 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>();
 
         services
+            .AddDisplayDriver<ListOmnichannelActivityFilter, ListOmnichannelActivityFilterDisplayDriver>();
+
+        services
             .AddDisplayDriver<OmnichannelDisposition, OmnichannelDispositionDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<OmnichannelDisposition>, OmnichannelDispositionHandler>();
 

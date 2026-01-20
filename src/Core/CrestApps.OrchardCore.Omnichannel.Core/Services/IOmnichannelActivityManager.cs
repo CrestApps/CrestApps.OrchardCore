@@ -8,6 +8,8 @@ public interface IOmnichannelActivityManager : ICatalogManager<OmnichannelActivi
 {
     Task<PageResult<OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize);
 
+    Task<PageResult<OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize, ListOmnichannelActivityFilter filter);
+
     Task<PageResult<OmnichannelActivity>> PageContactManualScheduledAsync(string contentContentItemId, int page, int pageSize);
 
     Task<PageResult<OmnichannelActivity>> PageContactManualCompletedAsync(string contentContentItemId, int page, int pageSize);

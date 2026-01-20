@@ -1,0 +1,40 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore
+
+@model ListOmnichannelActivityFilterViewModel
+
+<div class="row gx-2">
+    <div class="col-lg-2">
+        <div class="@Orchard.GetWrapperClasses()">
+            <select asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels" class="form-select"></select>
+        </div>
+    </div>
+
+    <div class="col-lg-2">
+        <div class="@Orchard.GetWrapperClasses()">
+            <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select"></select>
+        </div>
+    </div>
+
+    <div class="col-lg-2">
+        <div class="@Orchard.GetWrapperClasses()">
+            <select asp-for="Channel" asp-items="Model.Channels" class="form-select"></select>
+        </div>
+    </div>
+
+    <div class="col-lg-2">
+        <div class="@Orchard.GetWrapperClasses()">
+            <input type="number" asp-for="AttemptFrom" class="form-control" placeholder="@T["Attempt from"]" min="1" />
+        </div>
+    </div>
+
+    <div class="col-lg-2">
+        <div class="@Orchard.GetWrapperClasses()">
+            <input type="number" asp-for="AttemptTo" class="form-control" placeholder="@T["Attempt to"]" min="1" />
+        </div>
+    </div>
+
+    <div class="col-lg-2">
+        <button type="submit" name="submit.Filter" value="Filter" class="btn btn-primary">@T["Filter"]</button>
+    </div>
+</div>

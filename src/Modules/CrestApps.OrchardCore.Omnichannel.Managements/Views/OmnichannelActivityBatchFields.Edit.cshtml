@@ -74,11 +74,39 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="LeadCreatedFrom" class="@Orchard.GetLabelClasses()">@T["Lead created from"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="datetime-local" asp-for="LeadCreatedFrom" class="form-control" />
+        <span asp-validation-for="LeadCreatedFrom" class="text-danger"></span>
+        <span class="hint">@T["Optionally, only include leads created on or after this date."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="LeadCreatedTo" class="@Orchard.GetLabelClasses()">@T["Lead created to"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="datetime-local" asp-for="LeadCreatedTo" class="form-control" />
+        <span asp-validation-for="LeadCreatedTo" class="text-danger"></span>
+        <span class="hint">@T["Optionally, only include leads created on or before this date."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
     <label asp-for="Instructions" class="@Orchard.GetLabelClasses()">@T["Instructions"]</label>
     <div class="@Orchard.GetEndClasses()">
         <textarea asp-for="Instructions" class="form-control"></textarea>
         <span asp-validation-for="Instructions" class="text-danger"></span>
         <span class="hint">@T["Optionally, specify any instructions the user should know or be aware of before completing this activity."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="OnlyPublishedLeads">
+            <label class="form-check-label" asp-for="OnlyPublishedLeads">@T["Only published leads"]</label>
+            <span class="hint dashed">@T["When enabled, only published leads will be included. When disabled, the latest version of leads will be included regardless of their publish status."]</span>
+        </div>
     </div>
 </div>
 
