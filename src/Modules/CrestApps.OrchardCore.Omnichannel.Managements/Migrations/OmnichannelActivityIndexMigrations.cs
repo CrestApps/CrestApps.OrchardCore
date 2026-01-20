@@ -20,7 +20,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
             .Column<string>("CampaignId", column => column.WithLength(26))
             .Column<string>("SubjectContentType", column => column.WithLength(26))
             .Column<DateTime>("ScheduledUtc", column => column.NotNull())
-            .Column<DateTime>("CompletedUtc", column => column.NotNull())
+            .Column<DateTime>("CompletedUtc")
             .Column<int>("Attempts", column => column.NotNull())
             .Column<string>("AssignedToId", column => column.WithLength(26))
             .Column<DateTime>("AssignedToUtc")
