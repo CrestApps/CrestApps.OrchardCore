@@ -12,6 +12,11 @@ namespace CrestApps.OrchardCore.AzureAIInference.Services;
 
 public sealed class AzureAIInferenceClientProvider : AIClientProviderBase
 {
+    public AzureAIInferenceClientProvider(IServiceProvider serviceProvider)
+    : base(serviceProvider)
+    {
+    }
+
     protected override string GetProviderName()
         => AzureAIInferenceConstants.ProviderName;
 

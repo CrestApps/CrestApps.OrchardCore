@@ -17,6 +17,7 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
         IDistributedCache distributedCache,
         IOptions<AIProviderOptions> providerOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
+        IServiceProvider serviceProvider,
         IOptions<DefaultAIOptions> defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore
         ) : base(
@@ -24,6 +25,7 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
             aIClientFactory,
             distributedCache,
             loggerFactory,
+            serviceProvider,
             providerOptions.Value,
             defaultOptions.Value,
             handlers,

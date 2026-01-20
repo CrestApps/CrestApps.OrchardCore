@@ -16,6 +16,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
     private readonly IDistributedCache _distributedCache;
     private readonly IEnumerable<IAICompletionServiceHandler> _handlers;
     private readonly DefaultAIOptions _defaultOptions;
+    private readonly IServiceProvider _serviceProvider;
 
     protected readonly ILogger Logger;
     protected readonly ILoggerFactory LoggerFactory;
@@ -25,6 +26,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         IAIClientFactory aIClientFactory,
         IDistributedCache distributedCache,
         ILoggerFactory loggerFactory,
+        IServiceProvider serviceProvider,
         AIProviderOptions providerOptions,
         DefaultAIOptions defaultOptions,
         IEnumerable<IAICompletionServiceHandler> handlers)
@@ -35,6 +37,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         _aIClientFactory = aIClientFactory;
         _distributedCache = distributedCache;
         LoggerFactory = loggerFactory;
+        _serviceProvider = serviceProvider;
         _defaultOptions = defaultOptions;
         Logger = loggerFactory.CreateLogger(DefaultLogCategory);
         _handlers = handlers;
@@ -259,6 +262,6 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             builder.UseOpenTelemetry(LoggerFactory, sourceName: DefaultLogCategory, ConfigureOpenTelemetry);
         }
 
-        return builder.Build();
+        return builder.Build(_serviceProvider);
     }
 }
