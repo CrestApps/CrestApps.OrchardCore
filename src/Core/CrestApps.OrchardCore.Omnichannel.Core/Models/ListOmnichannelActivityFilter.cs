@@ -1,6 +1,8 @@
+using OrchardCore.Entities;
+
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
-public sealed class ListOmnichannelActivityFilter
+public sealed class ListOmnichannelActivityFilter : Entity
 {
     public ActivityUrgencyLevel? UrgencyLevel { get; set; }
 

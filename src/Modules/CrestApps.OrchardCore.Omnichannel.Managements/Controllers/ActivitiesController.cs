@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore;
@@ -39,7 +38,6 @@ public sealed class ActivitiesController : Controller
     private readonly IContentManager _contentManager;
     private readonly IDisplayManager<OmnichannelActivityContainer> _containerDisplayManager;
     private readonly IDisplayManager<OmnichannelActivity> _activityDisplayManager;
-    private readonly IDisplayManager<ListOmnichannelActivityFilter> _filterDisplayManager;
     private readonly IOmnichannelActivityManager _omnichannelActivityManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -58,7 +56,6 @@ public sealed class ActivitiesController : Controller
         IContentManager contentItemManager,
         IDisplayManager<OmnichannelActivityContainer> containerDisplayManager,
         IDisplayManager<OmnichannelActivity> activityDisplayManager,
-        IDisplayManager<ListOmnichannelActivityFilter> filterDisplayManager,
         IOmnichannelActivityManager omnichannelActivityManager,
         IAuthorizationService authorizationService,
         IContentDefinitionManager contentDefinitionManager,
@@ -75,7 +72,6 @@ public sealed class ActivitiesController : Controller
         _contentManager = contentItemManager;
         _containerDisplayManager = containerDisplayManager;
         _activityDisplayManager = activityDisplayManager;
-        _filterDisplayManager = filterDisplayManager;
         _omnichannelActivityManager = omnichannelActivityManager;
         _authorizationService = authorizationService;
         _contentDefinitionManager = contentDefinitionManager;
@@ -90,10 +86,10 @@ public sealed class ActivitiesController : Controller
 
     [Admin("omnichannel/activities", "OmnichannelActivities")]
     public async Task<IActionResult> Activities(
-        ListOmnichannelActivityFilterViewModel filterViewModel,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
-        [FromServices] IShapeFactory shapeFactory)
+        [FromServices] IShapeFactory shapeFactory,
+        [FromServices] IDisplayManager<ListOmnichannelActivityFilter> filterDisplayManager)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ListActivities))
         {
@@ -104,56 +100,15 @@ public sealed class ActivitiesController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        // Create filter from view model
-        var filter = new ListOmnichannelActivityFilter
-        {
-            UrgencyLevel = filterViewModel.UrgencyLevel,
-            SubjectContentType = filterViewModel.SubjectContentType,
-            Channel = filterViewModel.Channel,
-            AttemptFrom = filterViewModel.AttemptFrom,
-            AttemptTo = filterViewModel.AttemptTo,
-        };
+        // Create a new filter instance and use the display manager to populate it from request parameters
+        var filter = new ListOmnichannelActivityFilter();
 
-        // Determine if filtering is active
-        var hasFilters = filterViewModel.UrgencyLevel.HasValue ||
-                        !string.IsNullOrEmpty(filterViewModel.SubjectContentType) ||
-                        !string.IsNullOrEmpty(filterViewModel.Channel) ||
-                        filterViewModel.AttemptFrom.HasValue ||
-                        filterViewModel.AttemptTo.HasValue;
+        // Build the filter editor (this populates the filter from request parameters via the display driver)
+        var header = await filterDisplayManager.UpdateEditorAsync(filter, _updateModelAccessor.ModelUpdater, isNew: false, string.Empty, string.Empty);
 
-        var scheduledResult = hasFilters
-            ? await _omnichannelActivityManager.PageManualScheduledAsync(userId, pager.Page, pager.PageSize, filter)
-            : await _omnichannelActivityManager.PageManualScheduledAsync(userId, pager.Page, pager.PageSize);
+        var scheduledResult = await _omnichannelActivityManager.PageManualScheduledAsync(userId, pager.Page, pager.PageSize, filter);
 
-        // Maintain previous route data when generating page links.
-        var routeData = new RouteData();
-
-        if (filterViewModel.UrgencyLevel.HasValue)
-        {
-            routeData.Values.TryAdd(nameof(filterViewModel.UrgencyLevel), filterViewModel.UrgencyLevel);
-        }
-
-        if (!string.IsNullOrEmpty(filterViewModel.SubjectContentType))
-        {
-            routeData.Values.TryAdd(nameof(filterViewModel.SubjectContentType), filterViewModel.SubjectContentType);
-        }
-
-        if (!string.IsNullOrEmpty(filterViewModel.Channel))
-        {
-            routeData.Values.TryAdd(nameof(filterViewModel.Channel), filterViewModel.Channel);
-        }
-
-        if (filterViewModel.AttemptFrom.HasValue)
-        {
-            routeData.Values.TryAdd(nameof(filterViewModel.AttemptFrom), filterViewModel.AttemptFrom);
-        }
-
-        if (filterViewModel.AttemptTo.HasValue)
-        {
-            routeData.Values.TryAdd(nameof(filterViewModel.AttemptTo), filterViewModel.AttemptTo);
-        }
-
-        var pagerShape = await shapeFactory.PagerAsync(pager, scheduledResult.Count, routeData);
+        var pagerShape = await shapeFactory.PagerAsync(pager, scheduledResult.Count);
 
         var contactsIds = scheduledResult.Entries.Select(x => x.ContactContentItemId)
             .Where(x => !string.IsNullOrEmpty(x))
@@ -191,9 +146,6 @@ public sealed class ActivitiesController : Controller
             containerSummaries.Add(await _containerDisplayManager.BuildDisplayAsync(container, _updateModelAccessor.ModelUpdater, "SummaryAdmin"));
         }
 
-        // Build the filter header
-        var header = await _filterDisplayManager.BuildEditorAsync(filter, _updateModelAccessor.ModelUpdater, isNew: false, string.Empty, string.Empty);
-
         var model = new ListOmnichannelActivityContainer()
         {
             Header = header,
@@ -208,16 +160,9 @@ public sealed class ActivitiesController : Controller
     [ActionName(nameof(Activities))]
     [FormValueRequired("submit.Filter")]
     [Admin("omnichannel/activities", "OmnichannelActivities")]
-    public ActionResult ActivitiesFilterPost(ListOmnichannelActivityFilterViewModel filterViewModel)
+    public ActionResult ActivitiesFilterPost()
     {
-        return RedirectToAction(nameof(Activities), new RouteValueDictionary
-        {
-            { nameof(filterViewModel.UrgencyLevel), filterViewModel.UrgencyLevel },
-            { nameof(filterViewModel.SubjectContentType), filterViewModel.SubjectContentType },
-            { nameof(filterViewModel.Channel), filterViewModel.Channel },
-            { nameof(filterViewModel.AttemptFrom), filterViewModel.AttemptFrom },
-            { nameof(filterViewModel.AttemptTo), filterViewModel.AttemptTo },
-        });
+        return RedirectToAction(nameof(Activities));
     }
 
     [Admin("omnichannel/activities/{contentItemId}")]

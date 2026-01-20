@@ -38,7 +38,7 @@ public class OmnichannelActivityBatchViewModel
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
     public DateTime? LeadCreatedTo { get; set; }
 
-    public bool OnlyPublishedLeads { get; set; } = true;
+    public bool OnlyPublishedLeads { get; set; }
 
     [BindNever]
     public OmnichannelActivityBatchStatus Status { get; set; }
