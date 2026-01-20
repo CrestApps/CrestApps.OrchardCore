@@ -331,11 +331,11 @@ public sealed class ActivityBatchesController : Controller
         model.Status = OmnichannelActivityBatchStatus.Started;
         await _manager.UpdateAsync(model);
 
-        ShellScope.AddDeferredTask(s =>
+        ShellScope.AddDeferredTask(async s =>
         {
             // Query the contacts, and find the ones that do not already have an activity assigned.
             // Then, load the activities and assign them to the agents.
-            return HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("load-activity-batch", User.FindFirstValue(ClaimTypes.NameIdentifier), User.Identity.Name, model.ItemId, async (scope, loaderId, loaderUserName, batchId) =>
+            await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("load-activity-batch", User.FindFirstValue(ClaimTypes.NameIdentifier), User.Identity.Name, model.ItemId, async (scope, loaderId, loaderUserName, batchId) =>
             {
                 var catalog = scope.ServiceProvider.GetRequiredService<ICatalog<OmnichannelActivityBatch>>();
 

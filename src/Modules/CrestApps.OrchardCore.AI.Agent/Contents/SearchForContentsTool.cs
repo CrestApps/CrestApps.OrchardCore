@@ -12,6 +12,8 @@ using OrchardCore.Contents.ViewModels;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Json;
 using OrchardCore.Navigation;
+using YesSql.Filters.Query;
+using YesSql.Filters.Query.Services;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
@@ -75,18 +77,14 @@ public sealed class SearchForContentsTool : AIFunction
 
         var page = arguments.GetFirstValueOrDefault("pageNumber", 1);
 
-        if (page < 1)
-        {
-            page = 1;
-        }
-
-        var startingIndex = (page - 1) * pagerOptions.PageSize;
+        var startingIndex = (Math.Max(1, page) - 1) * pagerOptions.PageSize;
 
         var query = await contentsAdminListQueryService.QueryAsync(new ContentOptionsViewModel()
         {
             SearchText = term,
             OriginalSearchText = term,
             StartIndex = startingIndex,
+            FilterResult = new QueryFilterResult<ContentItem>(new Dictionary<string, QueryTermOption<ContentItem>>()),
         }, updateModelAccessor.ModelUpdater);
 
         var contentItemsCount = await query.CountAsync(cancellationToken);

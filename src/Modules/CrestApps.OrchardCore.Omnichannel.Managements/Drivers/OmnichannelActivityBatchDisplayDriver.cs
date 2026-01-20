@@ -10,6 +10,7 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
@@ -22,6 +23,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     private readonly UserManager<IUser> _userManager;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
@@ -30,12 +32,14 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
         IContentDefinitionManager contentDefinitionManager,
+        ILocalClock localClock,
         IStringLocalizer<OmnichannelActivityBatchDisplayDriver> stringLocalizer)
     {
         _campaignCatalog = campaignCatalog;
         _userManager = userManager;
         _displayNameProvider = displayNameProvider;
         _contentDefinitionManager = contentDefinitionManager;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -62,7 +66,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         {
             model.DisplayText = batch.DisplayText;
             model.CampaignId = batch.CampaignId;
-            model.ScheduleAt = batch.ScheduleAt;
+            model.ScheduleAt = context.IsNew ? (await _localClock.GetLocalNowAsync()).DateTime : batch.ScheduleAt;
             model.SubjectContentType = batch.SubjectContentType;
             model.ContactContentType = batch.ContactContentType;
             model.UserIds = batch.UserIds;
