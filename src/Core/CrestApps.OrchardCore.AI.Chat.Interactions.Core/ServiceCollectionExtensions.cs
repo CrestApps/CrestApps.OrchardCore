@@ -91,6 +91,9 @@ public static class ServiceCollectionExtensions
                 DocumentIntents.TransformFormat,
                 "The user wants to convert, transform, reformat content into another representation (tables, bullet points, different format).")
             .AddDocumentIntent(
+                DocumentIntents.GenerateImage,
+                "The user wants to generate, create, draw, or produce an image, picture, illustration, visual, or artwork based on a text description.")
+            .AddDocumentIntent(
                 DocumentIntents.GeneralChatWithReference,
                 "General conversation that may reference documents but doesn't fit other categories.");
 
@@ -101,6 +104,7 @@ public static class ServiceCollectionExtensions
             .AddDocumentProcessingStrategy<ExtractionDocumentProcessingStrategy>()
             .AddDocumentProcessingStrategy<ComparisonDocumentProcessingStrategy>()
             .AddDocumentProcessingStrategy<TransformationDocumentProcessingStrategy>()
+            .AddDocumentProcessingStrategy<ImageGenerationDocumentProcessingStrategy>()
             .AddDocumentProcessingStrategy<GeneralReferenceDocumentProcessingStrategy>();
 
         return services;

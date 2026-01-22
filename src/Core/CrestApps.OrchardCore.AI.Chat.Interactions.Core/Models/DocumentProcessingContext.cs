@@ -34,6 +34,11 @@ public sealed class DocumentProcessingContext
     public CancellationToken CancellationToken { get; set; }
 
     /// <summary>
+    /// Gets or sets the service provider for resolving dependencies.
+    /// </summary>
+    public IServiceProvider ServiceProvider { get; set; }
+
+    /// <summary>
     /// Gets the result of document processing. Multiple strategies can add context to this result.
     /// </summary>
     public DocumentProcessingResult Result { get; } = new DocumentProcessingResult();

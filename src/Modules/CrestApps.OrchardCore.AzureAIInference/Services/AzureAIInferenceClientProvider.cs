@@ -3,6 +3,7 @@ using Azure.AI.Inference;
 using Azure.Identity;
 using CrestApps.Azure.Core;
 using CrestApps.Azure.Core.Models;
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
@@ -48,5 +49,10 @@ public sealed class AzureAIInferenceClientProvider : AIClientProviderBase
         };
 
         return client.AsIEmbeddingGenerator();
+    }
+
+    protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+    {
+        throw new NotSupportedException("Azure AI Inference does not support image generation.");
     }
 }

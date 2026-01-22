@@ -53,9 +53,28 @@ public abstract class AIClientProviderBase : IAIClientProvider
         return ValueTask.FromResult(builder.Build(_serviceProvider));
     }
 
+    public ValueTask<IImageGenerator> GetImageGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null)
+    {
+        if (string.IsNullOrEmpty(deploymentName))
+        {
+            deploymentName = connection.GetDefaultImagesDeploymentName(false);
+        }
+
+        if (string.IsNullOrEmpty(deploymentName))
+        {
+            throw new ArgumentException("An image deployment name must be provided, either directly or as a default in the connection settings.");
+        }
+
+        var generator = GetImageGenerator(connection, deploymentName);
+
+        return ValueTask.FromResult(generator);
+    }
+
     protected abstract string GetProviderName();
 
     protected abstract IChatClient GetChatClient(AIProviderConnectionEntry connection, string deploymentName);
 
     protected abstract IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator(AIProviderConnectionEntry connection, string deploymentName);
+
+    protected abstract IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName);
 }

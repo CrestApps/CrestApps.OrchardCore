@@ -1,4 +1,5 @@
 using System.ClientModel;
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
@@ -32,6 +33,13 @@ public sealed class OpenAIClientProvider : AIClientProviderBase
 
         return client.GetEmbeddingClient(deploymentName)
             .AsIEmbeddingGenerator();
+    }
+
+    protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+    {
+        var client = GetOpenAIClient(connection);
+
+        return new OpenAIImageGenerator(client.GetImageClient(deploymentName));
     }
 
     private static OpenAIClient GetOpenAIClient(AIProviderConnectionEntry connection)

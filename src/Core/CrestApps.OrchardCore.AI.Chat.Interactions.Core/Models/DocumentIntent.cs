@@ -46,4 +46,10 @@ public static class DocumentIntents
     /// Fallback when no specific intent is detected.
     /// </summary>
     public const string GeneralChatWithReference = "GeneralChatWithReference";
+
+    /// <summary>
+    /// Generate an image based on a text description.
+    /// Uses AI image generation models (e.g., DALL-E) to create visual content.
+    /// </summary>
+    public const string GenerateImage = "GenerateImage";
 }

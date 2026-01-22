@@ -1,4 +1,5 @@
 using System.Text;
+using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 
@@ -33,6 +34,16 @@ public sealed class DocumentProcessingResult
     /// Gets or sets an error message if processing failed.
     /// </summary>
     public string ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets generated images if the intent was image generation.
+    /// </summary>
+    public GeneratedImageResult GeneratedImages { get; set; }
+
+    /// <summary>
+    /// Gets whether any images were generated.
+    /// </summary>
+    public bool HasGeneratedImages => GeneratedImages?.Images?.Count > 0;
 
     /// <summary>
     /// Adds context with an optional prefix message.

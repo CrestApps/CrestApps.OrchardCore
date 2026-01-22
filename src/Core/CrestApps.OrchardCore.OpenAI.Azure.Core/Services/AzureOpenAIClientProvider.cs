@@ -4,6 +4,7 @@ using Azure.AI.OpenAI;
 using Azure.Identity;
 using CrestApps.Azure.Core;
 using CrestApps.Azure.Core.Models;
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
@@ -41,6 +42,13 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
         return GetClient(connection, endpoint)
             .GetEmbeddingClient(deploymentName)
             .AsIEmbeddingGenerator();
+    }
+
+    protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+    {
+        var endpoint = connection.GetEndpoint();
+
+        return new AzureOpenAIImageGenerator(GetClient(connection, endpoint).GetImageClient(deploymentName));
     }
 
     private AzureOpenAIClient GetClient(AIProviderConnectionEntry connection, Uri endpoint)

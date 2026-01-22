@@ -42,6 +42,16 @@ public sealed class KeywordDocumentIntentDetector : IDocumentIntentDetector
         "make it", "turn into", "translate to", "bullet points", "table"
     ];
 
+    private static readonly string[] _imageGenerationKeywords =
+    [
+        "generate image", "create image", "draw", "generate a picture",
+        "create a picture", "make an image", "generate an illustration",
+        "create an illustration", "generate artwork", "create artwork",
+        "generate a visual", "create a visual", "image of", "picture of",
+        "illustration of", "visualize", "visualise", "render an image",
+        "design an image", "generate a photo", "create a photo"
+    ];
+
     private static readonly string[] _tabularFileExtensions =
     [
         ".csv", ".xlsx", ".xls", ".tsv"
@@ -64,6 +74,15 @@ public sealed class KeywordDocumentIntentDetector : IDocumentIntentDetector
         var prompt = context.Prompt.ToLowerInvariant();
         var hasTabularFiles = HasTabularFiles(context.Documents);
         var hasMultipleDocuments = context.Documents.Count > 1;
+
+        // Check for image generation intent (high priority - doesn't require documents)
+        if (ContainsAnyKeyword(prompt, _imageGenerationKeywords))
+        {
+            return Task.FromResult(DocumentIntentResult.FromIntent(
+                DocumentIntents.GenerateImage,
+                0.9f,
+                "Image generation keywords detected."));
+        }
 
         // Check for tabular analysis intent (high priority for CSV/Excel files)
         if (hasTabularFiles && ContainsAnyKeyword(prompt, _tabularAnalysisKeywords))

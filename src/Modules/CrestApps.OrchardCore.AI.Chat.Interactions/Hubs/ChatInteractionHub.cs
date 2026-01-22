@@ -300,6 +300,35 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             // Process documents using intent-aware, strategy-based approach
             var documentProcessingResult = await ProcessDocumentsAsync(interaction, prompt, cancellationToken);
 
+            // Handle image generation results
+            if (documentProcessingResult != null && documentProcessingResult.HasGeneratedImages)
+            {
+                await HandleImageGenerationResultAsync(writer, interaction, assistantMessage, documentProcessingResult, cancellationToken);
+                return;
+            }
+
+            // Handle image generation errors
+            if (documentProcessingResult != null && !documentProcessingResult.IsSuccess &&
+                documentProcessingResult.ErrorMessage?.Contains("image", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                var errorMessage = new CompletionPartialMessage
+                {
+                    SessionId = interaction.ItemId,
+                    MessageId = assistantMessage.Id,
+                    Content = documentProcessingResult.ErrorMessage,
+                };
+
+                await writer.WriteAsync(errorMessage, cancellationToken);
+
+                assistantMessage.Content = documentProcessingResult.ErrorMessage;
+                interaction.Prompts.Add(assistantMessage);
+
+                await _interactionManager.UpdateAsync(interaction);
+                await _session.SaveChangesAsync(cancellationToken);
+
+                return;
+            }
+
             var systemMessage = interaction.SystemMessage ?? string.Empty;
             if (documentProcessingResult != null && documentProcessingResult.IsSuccess && documentProcessingResult.HasContext)
             {
@@ -420,33 +449,41 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     /// </summary>
     private async Task<DocumentProcessingResult> ProcessDocumentsAsync(ChatInteraction interaction, string prompt, CancellationToken cancellationToken)
     {
-        // Check if there are documents attached
-        if (interaction.Documents == null || interaction.Documents.Count == 0)
-        {
-            return null;
-        }
-
-        // Get the intent detector (required for document processing)
+        // Get the intent detector
         var intentDetector = _serviceProvider.GetService<IDocumentIntentDetector>();
         if (intentDetector == null)
         {
-            _logger.LogWarning("Document intent detector is not available. Document processing will be skipped.");
+            _logger.LogDebug("Document intent detector is not available.");
 
+            // If no documents, nothing to process
+            if (interaction.Documents == null || interaction.Documents.Count == 0)
+            {
+                return null;
+            }
+
+            _logger.LogWarning("Document intent detector is not available. Document processing will be skipped.");
             return null;
         }
 
-        // Get the strategy provider (required for document processing)
+        // Get the strategy provider
         var strategyProvider = _serviceProvider.GetService<IDocumentProcessingStrategyProvider>();
         if (strategyProvider == null)
         {
-            _logger.LogWarning("Document processing strategy provider is not available. Document processing will be skipped.");
+            _logger.LogDebug("Document processing strategy provider is not available.");
 
+            // If no documents, nothing to process
+            if (interaction.Documents == null || interaction.Documents.Count == 0)
+            {
+                return null;
+            }
+
+            _logger.LogWarning("Document processing strategy provider is not available. Document processing will be skipped.");
             return null;
         }
 
         try
         {
-            // Detect user intent
+            // Detect user intent (this works with or without documents)
             var intentContext = new DocumentIntentDetectionContext
             {
                 Prompt = prompt,
@@ -457,25 +494,49 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             var intentResult = await intentDetector.DetectAsync(intentContext);
 
-            _logger.LogDebug("Detected document intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
+            _logger.LogDebug("Detected intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
                 intentResult.Intent, intentResult.Confidence, intentResult.Reason);
 
+            // For image generation, we don't need documents
+            if (string.Equals(intentResult.Intent, DocumentIntents.GenerateImage, StringComparison.OrdinalIgnoreCase))
+            {
+                var processingContext = new DocumentProcessingContext
+                {
+                    Prompt = prompt,
+                    Interaction = interaction,
+                    IntentResult = intentResult,
+                    CancellationToken = cancellationToken,
+                    ServiceProvider = _serviceProvider,
+                };
+
+                await strategyProvider.ProcessAsync(processingContext);
+
+                return processingContext.Result;
+            }
+
+            // For other intents, we need documents
+            if (interaction.Documents == null || interaction.Documents.Count == 0)
+            {
+                return null;
+            }
+
             // Process documents using the appropriate strategy
-            var processingContext = new DocumentProcessingContext
+            var documentProcessingContext = new DocumentProcessingContext
             {
                 Prompt = prompt,
                 Interaction = interaction,
                 IntentResult = intentResult,
                 CancellationToken = cancellationToken,
+                ServiceProvider = _serviceProvider,
             };
 
-            await strategyProvider.ProcessAsync(processingContext);
+            await strategyProvider.ProcessAsync(documentProcessingContext);
 
-            return processingContext.Result;
+            return documentProcessingContext.Result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during document intent detection or processing.");
+            _logger.LogError(ex, "Error during intent detection or processing.");
             return null;
         }
     }
@@ -511,5 +572,78 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         }
 
         return S["Our service is currently unavailable. Please try again later."];
+    }
+
+    /// <summary>
+    /// Handles the result of image generation and sends the generated images to the client.
+    /// </summary>
+    private async Task HandleImageGenerationResultAsync(
+        ChannelWriter<CompletionPartialMessage> writer,
+        ChatInteraction interaction,
+        AIChatSessionPrompt assistantMessage,
+        DocumentProcessingResult documentProcessingResult,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var images = documentProcessingResult.GeneratedImages.Images;
+            var messageBuilder = new StringBuilder();
+
+            foreach (var image in images)
+            {
+                // Add the revised prompt if available
+                if (!string.IsNullOrEmpty(image.RevisedPrompt))
+                {
+                    messageBuilder.AppendLine($"*{image.RevisedPrompt}*");
+                    messageBuilder.AppendLine();
+                }
+
+                // Build markdown for the image
+                if (image.Url != null)
+                {
+                    messageBuilder.AppendLine($"![Generated Image]({image.Url})");
+                    messageBuilder.AppendLine();
+                    messageBuilder.AppendLine($"[Download Image]({image.Url})");
+                }
+                else if (!string.IsNullOrEmpty(image.Base64Data))
+                {
+                    var dataUri = $"data:{image.ContentType ?? "image/png"};base64,{image.Base64Data}";
+                    messageBuilder.AppendLine($"![Generated Image]({dataUri})");
+                    messageBuilder.AppendLine();
+                    messageBuilder.AppendLine($"[Download Image]({dataUri})");
+                }
+            }
+
+            var content = messageBuilder.ToString();
+
+            var partialMessage = new CompletionPartialMessage
+            {
+                SessionId = interaction.ItemId,
+                MessageId = assistantMessage.Id,
+                Content = content,
+            };
+
+            await writer.WriteAsync(partialMessage, cancellationToken);
+
+            // Save the assistant message
+            assistantMessage.Content = content;
+            interaction.Prompts.Add(assistantMessage);
+
+            await _interactionManager.UpdateAsync(interaction);
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling image generation result.");
+
+            var errorMessage = new CompletionPartialMessage
+            {
+                SessionId = interaction.ItemId,
+                MessageId = assistantMessage.Id,
+                Content = S["An error occurred while processing the generated image."].Value,
+            };
+
+            await writer.WriteAsync(errorMessage, cancellationToken);
+        }
     }
 }
