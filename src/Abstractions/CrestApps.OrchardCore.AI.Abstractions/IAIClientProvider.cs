@@ -1,3 +1,5 @@
+#pragma warning disable MEAI001 // IImageGenerator is experimental but we intentionally use it
+
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 

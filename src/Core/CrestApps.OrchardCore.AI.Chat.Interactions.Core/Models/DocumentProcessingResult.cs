@@ -1,5 +1,7 @@
+#pragma warning disable MEAI001 // IImageGenerator is experimental but we intentionally use it
+
 using System.Text;
-using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 
@@ -43,12 +45,12 @@ public sealed class DocumentProcessingResult
     /// <summary>
     /// Gets or sets generated images if the intent was image generation.
     /// </summary>
-    public GeneratedImageResult GeneratedImages { get; set; }
+    public ImageGenerationResponse GeneratedImages { get; set; }
 
     /// <summary>
     /// Gets whether any images were generated.
     /// </summary>
-    public bool HasGeneratedImages => GeneratedImages?.Images?.Count > 0;
+    public bool HasGeneratedImages => GeneratedImages?.Contents?.Count > 0;
 
     /// <summary>
     /// Adds context with an optional prefix message.

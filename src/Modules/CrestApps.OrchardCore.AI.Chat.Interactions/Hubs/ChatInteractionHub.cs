@@ -1,3 +1,5 @@
+#pragma warning disable MEAI001 // IImageGenerator is experimental but we intentionally use it
+
 using System.Text;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
@@ -585,47 +587,43 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     {
         try
         {
-            var images = documentProcessingResult.GeneratedImages.Images;
+            var contents = documentProcessingResult.GeneratedImages.Contents;
             var messageBuilder = new StringBuilder();
 
-            foreach (var image in images)
+            foreach (var content in contents)
             {
-                // Add the revised prompt if available
-                if (!string.IsNullOrEmpty(image.RevisedPrompt))
+                // Handle UriContent (remote image URL)
+                if (content is UriContent uriContent)
                 {
-                    messageBuilder.AppendLine($"*{image.RevisedPrompt}*");
+                    messageBuilder.AppendLine($"![Generated Image]({uriContent.Uri})");
                     messageBuilder.AppendLine();
+                    messageBuilder.AppendLine($"[Download Image]({uriContent.Uri})");
                 }
-
-                // Build markdown for the image
-                if (image.Url != null)
+                // Handle DataContent (base64 encoded image data)
+                else if (content is DataContent dataContent)
                 {
-                    messageBuilder.AppendLine($"![Generated Image]({image.Url})");
-                    messageBuilder.AppendLine();
-                    messageBuilder.AppendLine($"[Download Image]({image.Url})");
-                }
-                else if (!string.IsNullOrEmpty(image.Base64Data))
-                {
-                    var dataUri = $"data:{image.ContentType ?? "image/png"};base64,{image.Base64Data}";
+                    var base64Data = Convert.ToBase64String(dataContent.Data.ToArray());
+                    var mediaType = dataContent.MediaType ?? "image/png";
+                    var dataUri = $"data:{mediaType};base64,{base64Data}";
                     messageBuilder.AppendLine($"![Generated Image]({dataUri})");
                     messageBuilder.AppendLine();
                     messageBuilder.AppendLine($"[Download Image]({dataUri})");
                 }
             }
 
-            var content = messageBuilder.ToString();
+            var messageContent = messageBuilder.ToString();
 
             var partialMessage = new CompletionPartialMessage
             {
                 SessionId = interaction.ItemId,
                 MessageId = assistantMessage.Id,
-                Content = content,
+                Content = messageContent,
             };
 
             await writer.WriteAsync(partialMessage, cancellationToken);
 
             // Save the assistant message
-            assistantMessage.Content = content;
+            assistantMessage.Content = messageContent;
             interaction.Prompts.Add(assistantMessage);
 
             await _interactionManager.UpdateAsync(interaction);

@@ -1,3 +1,5 @@
+#pragma warning disable MEAI001 // IImageGenerator is experimental but we intentionally use it
+
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 
@@ -53,7 +55,7 @@ public abstract class AIClientProviderBase : IAIClientProvider
         return ValueTask.FromResult(builder.Build(_serviceProvider));
     }
 
-    public ValueTask<CrestApps.OrchardCore.AI.IImageGenerator> GetImageGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null)
+    public ValueTask<IImageGenerator> GetImageGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null)
     {
         if (string.IsNullOrEmpty(deploymentName))
         {
@@ -76,5 +78,5 @@ public abstract class AIClientProviderBase : IAIClientProvider
 
     protected abstract IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator(AIProviderConnectionEntry connection, string deploymentName);
 
-    protected abstract CrestApps.OrchardCore.AI.IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName);
+    protected abstract IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName);
 }

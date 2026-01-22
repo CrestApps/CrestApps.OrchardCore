@@ -1,10 +1,11 @@
+#pragma warning disable MEAI001 // IImageGenerator is experimental but we intentionally use it
+
 using System.ClientModel;
 using System.ClientModel.Primitives;
 using Azure.AI.OpenAI;
 using Azure.Identity;
 using CrestApps.Azure.Core;
 using CrestApps.Azure.Core.Models;
-using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
@@ -44,11 +45,13 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
             .AsIEmbeddingGenerator();
     }
 
-    protected override CrestApps.OrchardCore.AI.IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+    protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
     {
         var endpoint = connection.GetEndpoint();
 
-        return new AzureOpenAIImageGenerator(GetClient(connection, endpoint).GetImageClient(deploymentName));
+        return GetClient(connection, endpoint)
+            .GetImageClient(deploymentName)
+            .AsIImageGenerator();
     }
 
     private AzureOpenAIClient GetClient(AIProviderConnectionEntry connection, Uri endpoint)

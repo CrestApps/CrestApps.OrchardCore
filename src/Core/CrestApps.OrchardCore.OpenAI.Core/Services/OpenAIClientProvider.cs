@@ -1,5 +1,6 @@
+#pragma warning disable MEAI001 // IImageGenerator is experimental but we intentionally use it
+
 using System.ClientModel;
-using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
@@ -35,11 +36,12 @@ public sealed class OpenAIClientProvider : AIClientProviderBase
             .AsIEmbeddingGenerator();
     }
 
-    protected override CrestApps.OrchardCore.AI.IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+    protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
     {
         var client = GetOpenAIClient(connection);
 
-        return new OpenAIImageGenerator(client.GetImageClient(deploymentName));
+        return client.GetImageClient(deploymentName)
+            .AsIImageGenerator();
     }
 
     private static OpenAIClient GetOpenAIClient(AIProviderConnectionEntry connection)

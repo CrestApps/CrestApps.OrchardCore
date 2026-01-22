@@ -1,6 +1,9 @@
+#pragma warning disable MEAI001 // IImageGenerator is experimental but we intentionally use it
+
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -100,19 +103,19 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
 
             var imageGenerator = await clientFactory.CreateImageGeneratorAsync(providerName, connectionName, deploymentName);
 
+            var request = new ImageGenerationRequest(context.Prompt);
+
             var options = new ImageGenerationOptions
             {
                 // Default to 1024x1024 for DALL-E 3
-                Width = 1024,
-                Height = 1024,
-                ResponseFormat = "url",
+                ImageSize = new System.Drawing.Size(1024, 1024),
             };
 
-            var result = await imageGenerator.GenerateAsync(context.Prompt, options, context.CancellationToken);
+            var result = await imageGenerator.GenerateAsync(request, options, context.CancellationToken);
 
             context.Result.GeneratedImages = result;
 
-            _logger.LogDebug("Successfully generated {Count} image(s).", result.Images?.Count ?? 0);
+            _logger.LogDebug("Successfully generated {Count} image(s).", result.Contents?.Count ?? 0);
         }
         catch (NotSupportedException ex)
         {

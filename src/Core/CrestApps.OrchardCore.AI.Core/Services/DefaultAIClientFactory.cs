@@ -1,3 +1,5 @@
+#pragma warning disable MEAI001 // IImageGenerator is experimental but we intentionally use it
+
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
@@ -73,7 +75,7 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
         throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{providerName}'.");
     }
 
-    public ValueTask<CrestApps.OrchardCore.AI.IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null)
+    public ValueTask<IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
         ArgumentException.ThrowIfNullOrEmpty(connectionName);
