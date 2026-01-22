@@ -307,9 +307,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 return;
             }
 
-            // Handle image generation errors
-            if (documentProcessingResult != null && !documentProcessingResult.IsSuccess &&
-                documentProcessingResult.ErrorMessage?.Contains("image", StringComparison.OrdinalIgnoreCase) == true)
+            // Handle image generation errors (use IsImageGenerationIntent flag instead of string check)
+            if (documentProcessingResult != null && documentProcessingResult.IsImageGenerationIntent && !documentProcessingResult.IsSuccess)
             {
                 var errorMessage = new CompletionPartialMessage
                 {

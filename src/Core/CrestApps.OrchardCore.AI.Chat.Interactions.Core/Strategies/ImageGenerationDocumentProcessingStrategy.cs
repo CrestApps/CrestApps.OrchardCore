@@ -28,6 +28,9 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
             return;
         }
 
+        // Mark this as an image generation intent
+        context.Result.IsImageGenerationIntent = true;
+
         if (context.ServiceProvider == null)
         {
             _logger.LogWarning("ServiceProvider is not available in context, cannot generate images.");

@@ -36,6 +36,11 @@ public sealed class DocumentProcessingResult
     public string ErrorMessage { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the processing was for image generation intent.
+    /// </summary>
+    public bool IsImageGenerationIntent { get; set; }
+
+    /// <summary>
     /// Gets or sets generated images if the intent was image generation.
     /// </summary>
     public GeneratedImageResult GeneratedImages { get; set; }
