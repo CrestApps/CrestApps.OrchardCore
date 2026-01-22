@@ -15,7 +15,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.GeneralChatWithReference, result.Intent);
+        Assert.Equal(DocumentIntents.GeneralChatWithReference, result.Name);
     }
 
     [Theory]
@@ -30,7 +30,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.SummarizeDocument, result.Intent);
+        Assert.Equal(DocumentIntents.SummarizeDocument, result.Name);
     }
 
     [Theory]
@@ -44,7 +44,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.AnalyzeTabularData, result.Intent);
+        Assert.Equal(DocumentIntents.AnalyzeTabularData, result.Name);
     }
 
     [Theory]
@@ -58,7 +58,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.ExtractStructuredData, result.Intent);
+        Assert.Equal(DocumentIntents.ExtractStructuredData, result.Name);
     }
 
     [Theory]
@@ -71,7 +71,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.CompareDocuments, result.Intent);
+        Assert.Equal(DocumentIntents.CompareDocuments, result.Name);
     }
 
     [Theory]
@@ -85,7 +85,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.TransformFormat, result.Intent);
+        Assert.Equal(DocumentIntents.TransformFormat, result.Name);
     }
 
     [Theory]
@@ -99,7 +99,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.DocumentQnA, result.Intent);
+        Assert.Equal(DocumentIntents.DocumentQnA, result.Name);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.DocumentQnA, result.Intent);
+        Assert.Equal(DocumentIntents.DocumentQnA, result.Name);
     }
 
     [Theory]
@@ -124,7 +124,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.GenerateImage, result.Intent);
+        Assert.Equal(DocumentIntents.GenerateImage, result.Name);
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.GenerateImage, result.Intent);
+        Assert.Equal(DocumentIntents.GenerateImage, result.Name);
         Assert.True(result.Confidence >= 0.9f);
     }
 

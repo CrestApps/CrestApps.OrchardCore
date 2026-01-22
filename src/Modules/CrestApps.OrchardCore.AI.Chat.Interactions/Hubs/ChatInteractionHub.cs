@@ -1,3 +1,5 @@
+using System.Text;
+using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
@@ -15,8 +17,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Entities;
-using System.Text;
-using System.Threading.Channels;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
@@ -298,7 +298,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             var builder = new StringBuilder();
 
             // Process documents using intent-aware, strategy-based approach
-            var documentProcessingResult = await ProcessDocumentsAsync(interaction, prompt, cancellationToken);
+            var documentProcessingResult = await ReasonAsync(interaction, prompt, cancellationToken);
 
             // Handle image generation results
             if (documentProcessingResult != null && documentProcessingResult.HasGeneratedImages)
@@ -351,17 +351,20 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 McpConnectionIds = interaction.McpConnectionIds?.ToArray(),
                 UserMarkdownInResponse = true,
             };
-            var dataSourceMetadata = interaction.As<ChatInteractionDataSourceMetadata>();
 
-            completionContext.DataSourceId = dataSourceMetadata.DataSourceId;
-            completionContext.DataSourceType = dataSourceMetadata.DataSourceType;
+            if (interaction.TryGet<ChatInteractionDataSourceMetadata>(out var dataSourceMetadata))
+            {
+                completionContext.DataSourceId = dataSourceMetadata.DataSourceId;
+                completionContext.DataSourceType = dataSourceMetadata.DataSourceType;
+            }
 
-            var ragMetadata = interaction.As<AzureRagChatMetadata>();
-
-            completionContext.AdditionalProperties["Strictness"] = ragMetadata.Strictness;
-            completionContext.AdditionalProperties["TopNDocuments"] = ragMetadata.TopNDocuments;
-            completionContext.AdditionalProperties["IsInScope"] = ragMetadata.IsInScope;
-            completionContext.AdditionalProperties["Filter"] = ragMetadata.Filter;
+            if (interaction.TryGet<AzureRagChatMetadata>(out var ragMetadata))
+            {
+                completionContext.AdditionalProperties["Strictness"] = ragMetadata.Strictness;
+                completionContext.AdditionalProperties["TopNDocuments"] = ragMetadata.TopNDocuments;
+                completionContext.AdditionalProperties["IsInScope"] = ragMetadata.IsInScope;
+                completionContext.AdditionalProperties["Filter"] = ragMetadata.Filter;
+            }
 
             var contentItemIds = new HashSet<string>();
             var references = new Dictionary<string, AICompletionReference>();
@@ -443,10 +446,10 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     }
 
     /// <summary>
-    /// Processes documents using intent-aware, strategy-based approach.
+    /// Processes prompt using intent-aware, strategy-based approach.
     /// First detects the user's intent, then routes to the appropriate processing strategy.
     /// </summary>
-    private async Task<DocumentProcessingResult> ProcessDocumentsAsync(ChatInteraction interaction, string prompt, CancellationToken cancellationToken)
+    private async Task<IntentProcessingResult> ReasonAsync(ChatInteraction interaction, string prompt, CancellationToken cancellationToken)
     {
         // Get the intent detector
         var intentDetector = _serviceProvider.GetService<IDocumentIntentDetector>();
@@ -454,12 +457,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         {
             _logger.LogDebug("Document intent detector is not available.");
 
-            // If no documents, nothing to process
-            if (interaction.Documents == null || interaction.Documents.Count == 0)
-            {
-                return null;
-            }
-
+            // Without intent detection we can't route to any strategy.
             _logger.LogWarning("Document intent detector is not available. Document processing will be skipped.");
             return null;
         }
@@ -469,12 +467,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         if (strategyProvider == null)
         {
             _logger.LogDebug("Document processing strategy provider is not available.");
-
-            // If no documents, nothing to process
-            if (interaction.Documents == null || interaction.Documents.Count == 0)
-            {
-                return null;
-            }
 
             _logger.LogWarning("Document processing strategy provider is not available. Document processing will be skipped.");
             return null;
@@ -488,54 +480,32 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 Prompt = prompt,
                 Interaction = interaction,
                 CancellationToken = cancellationToken,
-                ServiceProvider = _serviceProvider,
             };
 
-            var intentResult = await intentDetector.DetectAsync(intentContext);
+            var intent = await intentDetector.DetectAsync(intentContext);
 
             _logger.LogDebug("Detected intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
-                intentResult.Intent, intentResult.Confidence, intentResult.Reason);
+                intent.Name, intent.Confidence, intent.Reason);
 
-            // For image generation, we don't need documents
-            if (string.Equals(intentResult.Intent, DocumentIntents.GenerateImage, StringComparison.OrdinalIgnoreCase))
-            {
-                var processingContext = new DocumentProcessingContext
-                {
-                    Prompt = prompt,
-                    Interaction = interaction,
-                    IntentResult = intentResult,
-                    CancellationToken = cancellationToken,
-                    ServiceProvider = _serviceProvider,
-                };
-
-                await strategyProvider.ProcessAsync(processingContext);
-
-                return processingContext.Result;
-            }
-
-            // For other intents, we need documents
-            if (interaction.Documents == null || interaction.Documents.Count == 0)
-            {
-                return null;
-            }
-
-            // Process documents using the appropriate strategy
-            var documentProcessingContext = new DocumentProcessingContext
+            var processingContext = new IntentProcessingContext
             {
                 Prompt = prompt,
                 Interaction = interaction,
-                IntentResult = intentResult,
                 CancellationToken = cancellationToken,
-                ServiceProvider = _serviceProvider,
             };
 
-            await strategyProvider.ProcessAsync(documentProcessingContext);
+            processingContext.Result.Intent = intent.Name;
+            processingContext.Result.Confidence = intent.Confidence;
+            processingContext.Result.Reason = intent.Reason;
 
-            return documentProcessingContext.Result;
+            await strategyProvider.ProcessAsync(processingContext);
+
+            return processingContext.Result;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during intent detection or processing.");
+
             return null;
         }
     }
@@ -580,7 +550,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         ChannelWriter<CompletionPartialMessage> writer,
         ChatInteraction interaction,
         AIChatSessionPrompt assistantMessage,
-        DocumentProcessingResult result,
+        IntentProcessingResult result,
         CancellationToken cancellationToken)
     {
         try

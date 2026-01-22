@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -14,15 +13,22 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 /// </summary>
 public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessingStrategyBase
 {
+    private readonly AIProviderOptions _providerOptions;
+    private readonly IAIClientFactory _aIClientFactory;
     private readonly ILogger<ImageGenerationDocumentProcessingStrategy> _logger;
 
-    public ImageGenerationDocumentProcessingStrategy(ILogger<ImageGenerationDocumentProcessingStrategy> logger)
+    public ImageGenerationDocumentProcessingStrategy(
+        IAIClientFactory aIClientFactory,
+        IOptions<AIProviderOptions> providerOptions,
+        ILogger<ImageGenerationDocumentProcessingStrategy> logger)
     {
+        _providerOptions = providerOptions.Value;
+        _aIClientFactory = aIClientFactory;
         _logger = logger;
     }
 
     /// <inheritdoc />
-    public override async Task ProcessAsync(DocumentProcessingContext context)
+    public override async Task ProcessAsync(IntentProcessingContext context)
     {
         if (!CanHandle(context, DocumentIntents.GenerateImage))
         {
@@ -31,13 +37,6 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
 
         // Mark this as an image generation intent
         context.Result.IsImageGenerationIntent = true;
-
-        if (context.ServiceProvider == null)
-        {
-            _logger.LogWarning("ServiceProvider is not available in context, cannot generate images.");
-            context.Result.SetFailed("Service provider is not available for image generation.");
-            return;
-        }
 
         var interaction = context.Interaction;
         if (interaction == null)
@@ -49,8 +48,7 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
 
         try
         {
-            var providerOptions = context.ServiceProvider.GetService<IOptions<AIProviderOptions>>();
-            if (providerOptions?.Value?.Providers == null)
+            if (_providerOptions.Providers == null)
             {
                 _logger.LogWarning("AI provider options not available.");
                 context.Result.SetFailed("AI provider configuration is not available.");
@@ -60,7 +58,7 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
             var providerName = interaction.Source;
             var connectionName = interaction.ConnectionName;
 
-            if (!providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
+            if (!_providerOptions.Providers.TryGetValue(providerName, out var provider))
             {
                 _logger.LogWarning("Provider '{ProviderName}' not found in configuration.", providerName);
                 context.Result.SetFailed($"Provider '{providerName}' is not configured.");
@@ -88,18 +86,10 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
                 return;
             }
 
-            var clientFactory = context.ServiceProvider.GetService<IAIClientFactory>();
-            if (clientFactory == null)
-            {
-                _logger.LogWarning("AI client factory not available.");
-                context.Result.SetFailed("AI client factory is not available.");
-                return;
-            }
-
             _logger.LogDebug("Generating image using provider '{ProviderName}', connection '{ConnectionName}', deployment '{DeploymentName}'.",
                 providerName, connectionName, deploymentName);
 
-            var imageGenerator = await clientFactory.CreateImageGeneratorAsync(providerName, connectionName, deploymentName);
+            var imageGenerator = await _aIClientFactory.CreateImageGeneratorAsync(providerName, connectionName, deploymentName);
 
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             var options = new ImageGenerationOptions

@@ -12,9 +12,11 @@ public sealed class GeneralReferenceDocumentProcessingStrategy : DocumentProcess
     private const int MaxContextLength = 30000;
 
     /// <inheritdoc />
-    public override Task ProcessAsync(DocumentProcessingContext context)
+    public override Task ProcessAsync(IntentProcessingContext context)
     {
-        if (!CanHandle(context, DocumentIntents.GeneralChatWithReference))
+        if (!CanHandle(context, DocumentIntents.GeneralChatWithReference) ||
+            context.Interaction.Documents is null ||
+            context.Interaction.Documents.Count == 0)
         {
             return Task.CompletedTask;
         }

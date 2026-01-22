@@ -184,7 +184,7 @@ public sealed class DocumentProcessingStrategyTests
     public async Task MultipleStrategies_ProcessAsync_CanAccumulateContext()
     {
         // Create a context that could match multiple strategies
-        var context = new DocumentProcessingContext
+        var context = new IntentProcessingContext
         {
             Prompt = "Summarize and compare",
             Interaction = new ChatInteraction
@@ -201,8 +201,8 @@ public sealed class DocumentProcessingStrategyTests
                     }
                 ]
             },
-            IntentResult = DocumentIntentResult.FromIntent(DocumentIntents.SummarizeDocument)
         };
+        context.Result.Intent = DocumentIntents.SummarizeDocument;
 
         // First strategy adds context
         var summarizationStrategy = new SummarizationDocumentProcessingStrategy();
@@ -222,7 +222,7 @@ public sealed class DocumentProcessingStrategyTests
     [Fact]
     public void DocumentProcessingResult_AddContext_AccumulatesMultipleContexts()
     {
-        var result = new DocumentProcessingResult();
+        var result = new IntentProcessingResult();
 
         Assert.False(result.HasContext);
 
@@ -242,7 +242,7 @@ public sealed class DocumentProcessingStrategyTests
     [Fact]
     public void DocumentProcessingResult_AddContext_TracksVectorSearch()
     {
-        var result = new DocumentProcessingResult();
+        var result = new IntentProcessingResult();
 
         Assert.False(result.UsedVectorSearch);
 
@@ -253,9 +253,9 @@ public sealed class DocumentProcessingStrategyTests
         Assert.True(result.UsedVectorSearch);
     }
 
-    private static DocumentProcessingContext CreateProcessingContext(string intent)
+    private static IntentProcessingContext CreateProcessingContext(string intent)
     {
-        return new DocumentProcessingContext
+        var ctx = new IntentProcessingContext
         {
             Prompt = "Test prompt",
             Interaction = new ChatInteraction
@@ -272,13 +272,16 @@ public sealed class DocumentProcessingStrategyTests
                     }
                 ]
             },
-            IntentResult = DocumentIntentResult.FromIntent(intent)
         };
+
+        ctx.Result.Intent = intent;
+
+        return ctx;
     }
 
-    private static DocumentProcessingContext CreateCsvProcessingContext()
+    private static IntentProcessingContext CreateCsvProcessingContext()
     {
-        return new DocumentProcessingContext
+        var ctx = new IntentProcessingContext
         {
             Prompt = "Analyze this data",
             Interaction = new ChatInteraction
@@ -295,7 +298,10 @@ public sealed class DocumentProcessingStrategyTests
                     }
                 ]
             },
-            IntentResult = DocumentIntentResult.FromIntent(DocumentIntents.AnalyzeTabularData)
         };
+
+        ctx.Result.Intent = DocumentIntents.AnalyzeTabularData;
+
+        return ctx;
     }
 }

@@ -11,9 +11,11 @@ public sealed class ComparisonDocumentProcessingStrategy : DocumentProcessingStr
     private const int MaxContextLength = 60000;
 
     /// <inheritdoc />
-    public override Task ProcessAsync(DocumentProcessingContext context)
+    public override Task ProcessAsync(IntentProcessingContext context)
     {
-        if (!CanHandle(context, DocumentIntents.CompareDocuments))
+        if (!CanHandle(context, DocumentIntents.CompareDocuments) ||
+            context.Interaction.Documents is null ||
+            context.Interaction.Documents.Count == 0)
         {
             return Task.CompletedTask;
         }
@@ -28,7 +30,7 @@ public sealed class ComparisonDocumentProcessingStrategy : DocumentProcessingStr
         }
         else
         {
-            var prefix = $"The following is the content of {context.Documents.Count} documents that the user wants to compare. Each document is separated by '---':";
+            var prefix = $"The following is the content of {context.Interaction.Documents.Count} documents that the user wants to compare. Each document is separated by '---':";
             context.Result.AddContext(documentContent, prefix, usedVectorSearch: false);
         }
 

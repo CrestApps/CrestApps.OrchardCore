@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 /// Result of document processing containing additional context to inject into the AI completion.
 /// This class allows multiple strategies to contribute context by adding to the AdditionalContexts list.
 /// </summary>
-public sealed class DocumentProcessingResult
+public sealed class IntentProcessingResult
 {
     /// <summary>
     /// Gets the list of additional context entries to be appended to the system message.
@@ -51,6 +51,21 @@ public sealed class DocumentProcessingResult
     /// Gets whether any images were generated.
     /// </summary>
     public bool HasGeneratedImages => GeneratedImages?.Contents?.Count > 0;
+
+    /// <summary>
+    /// Gets or sets the detected intent name for this processing run.
+    /// </summary>
+    public string Intent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the confidence level for the detected intent.
+    /// </summary>
+    public float Confidence { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reason/explanation for the detected intent.
+    /// </summary>
+    public string Reason { get; set; }
 
     /// <summary>
     /// Adds context with an optional prefix message.
