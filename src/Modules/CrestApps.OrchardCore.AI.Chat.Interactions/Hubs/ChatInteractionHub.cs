@@ -1,5 +1,3 @@
-using System.Text;
-using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
@@ -17,6 +15,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Entities;
+using System.Text;
+using System.Threading.Channels;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
@@ -580,40 +580,45 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         ChannelWriter<CompletionPartialMessage> writer,
         ChatInteraction interaction,
         AIChatSessionPrompt assistantMessage,
-        DocumentProcessingResult documentProcessingResult,
+        DocumentProcessingResult result,
         CancellationToken cancellationToken)
     {
         try
         {
-            var images = documentProcessingResult.GeneratedImages.Images;
-            var messageBuilder = new StringBuilder();
-
-            foreach (var image in images)
+            var response = result?.GeneratedImages;
+            if (response?.Contents is null || response.Contents.Count == 0)
             {
-                // Add the revised prompt if available
-                if (!string.IsNullOrEmpty(image.RevisedPrompt))
+                var emptyMessage = new CompletionPartialMessage
                 {
-                    messageBuilder.AppendLine($"*{image.RevisedPrompt}*");
-                    messageBuilder.AppendLine();
-                }
+                    SessionId = interaction.ItemId,
+                    MessageId = assistantMessage.Id,
+                    Content = result?.ErrorMessage ?? S["No images were generated."].Value,
+                };
 
-                // Build markdown for the image
-                if (image.Url != null)
-                {
-                    messageBuilder.AppendLine($"![Generated Image]({image.Url})");
-                    messageBuilder.AppendLine();
-                    messageBuilder.AppendLine($"[Download Image]({image.Url})");
-                }
-                else if (!string.IsNullOrEmpty(image.Base64Data))
-                {
-                    var dataUri = $"data:{image.ContentType ?? "image/png"};base64,{image.Base64Data}";
-                    messageBuilder.AppendLine($"![Generated Image]({dataUri})");
-                    messageBuilder.AppendLine();
-                    messageBuilder.AppendLine($"[Download Image]({dataUri})");
-                }
+                await writer.WriteAsync(emptyMessage, cancellationToken);
+                return;
             }
 
-            var content = messageBuilder.ToString();
+            var messageBuilder = new StringBuilder();
+
+            foreach (var contentItem in response.Contents)
+            {
+                var imageUri = contentItem?.ToString();
+
+                if (string.IsNullOrWhiteSpace(imageUri))
+                {
+                    continue;
+                }
+
+                messageBuilder.AppendLine($"![Generated Image]({imageUri})");
+                messageBuilder.AppendLine();
+                messageBuilder.AppendLine($"[Download Image]({imageUri})");
+                messageBuilder.AppendLine();
+            }
+
+            var content = messageBuilder.Length > 0
+                ? messageBuilder.ToString()
+                : (result?.ErrorMessage ?? S["No images were generated."].Value);
 
             var partialMessage = new CompletionPartialMessage
             {
@@ -624,7 +629,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             await writer.WriteAsync(partialMessage, cancellationToken);
 
-            // Save the assistant message
             assistantMessage.Content = content;
             interaction.Prompts.Add(assistantMessage);
 

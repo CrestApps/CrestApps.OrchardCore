@@ -1,5 +1,4 @@
 using System.ClientModel;
-using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
@@ -35,11 +34,16 @@ public sealed class OpenAIClientProvider : AIClientProviderBase
             .AsIEmbeddingGenerator();
     }
 
-    protected override CrestApps.OrchardCore.AI.IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     {
         var client = GetOpenAIClient(connection);
 
-        return new OpenAIImageGenerator(client.GetImageClient(deploymentName));
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        return client.GetImageClient(deploymentName)
+            .AsIImageGenerator();
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     }
 
     private static OpenAIClient GetOpenAIClient(AIProviderConnectionEntry connection)

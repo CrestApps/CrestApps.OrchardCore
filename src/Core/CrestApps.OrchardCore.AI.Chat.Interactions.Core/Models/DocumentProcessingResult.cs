@@ -1,5 +1,5 @@
 using System.Text;
-using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 
@@ -43,12 +43,14 @@ public sealed class DocumentProcessingResult
     /// <summary>
     /// Gets or sets generated images if the intent was image generation.
     /// </summary>
-    public GeneratedImageResult GeneratedImages { get; set; }
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    public ImageGenerationResponse GeneratedImages { get; set; }
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
     /// <summary>
     /// Gets whether any images were generated.
     /// </summary>
-    public bool HasGeneratedImages => GeneratedImages?.Images?.Count > 0;
+    public bool HasGeneratedImages => GeneratedImages?.Contents?.Count > 0;
 
     /// <summary>
     /// Adds context with an optional prefix message.

@@ -53,7 +53,9 @@ public abstract class AIClientProviderBase : IAIClientProvider
         return ValueTask.FromResult(builder.Build(_serviceProvider));
     }
 
-    public ValueTask<CrestApps.OrchardCore.AI.IImageGenerator> GetImageGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null)
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    public ValueTask<IImageGenerator> GetImageGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null)
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     {
         if (string.IsNullOrEmpty(deploymentName))
         {
@@ -76,5 +78,7 @@ public abstract class AIClientProviderBase : IAIClientProvider
 
     protected abstract IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator(AIProviderConnectionEntry connection, string deploymentName);
 
-    protected abstract CrestApps.OrchardCore.AI.IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName);
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    protected abstract IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName);
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 }
