@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Models;
 using OpenAI.Images;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
@@ -7,7 +6,7 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 /// <summary>
 /// An IImageGenerator implementation that wraps Azure OpenAI's ImageClient.
 /// </summary>
-public sealed class AzureOpenAIImageGenerator : IImageGenerator
+public sealed class AzureOpenAIImageGenerator : CrestApps.OrchardCore.AI.IImageGenerator
 {
     private readonly ImageClient _imageClient;
 
@@ -16,9 +15,9 @@ public sealed class AzureOpenAIImageGenerator : IImageGenerator
         _imageClient = imageClient ?? throw new ArgumentNullException(nameof(imageClient));
     }
 
-    public async Task<GeneratedImageResult> GenerateAsync(
+    public async Task<AI.Models.GeneratedImageResult> GenerateAsync(
         string prompt,
-        ImageGenerationOptions options = null,
+        AI.Models.ImageGenerationOptions options = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(prompt);
@@ -29,9 +28,9 @@ public sealed class AzureOpenAIImageGenerator : IImageGenerator
         return MapToResult(response.Value);
     }
 
-    private static OpenAI.Images.ImageGenerationOptions BuildOptions(ImageGenerationOptions options)
+    private static ImageGenerationOptions BuildOptions(AI.Models.ImageGenerationOptions options)
     {
-        var requestOptions = new OpenAI.Images.ImageGenerationOptions();
+        var requestOptions = new ImageGenerationOptions();
 
         if (options == null)
         {
@@ -75,11 +74,11 @@ public sealed class AzureOpenAIImageGenerator : IImageGenerator
         return requestOptions;
     }
 
-    private static GeneratedImageResult MapToResult(GeneratedImage generatedImage)
+    private static AI.Models.GeneratedImageResult MapToResult(GeneratedImage generatedImage)
     {
-        var images = new List<Models.GeneratedImage>();
+        var images = new List<AI.Models.GeneratedImage>();
 
-        var image = new Models.GeneratedImage
+        var image = new AI.Models.GeneratedImage
         {
             Url = generatedImage.ImageUri,
             RevisedPrompt = generatedImage.RevisedPrompt,
@@ -94,7 +93,7 @@ public sealed class AzureOpenAIImageGenerator : IImageGenerator
 
         images.Add(image);
 
-        return new GeneratedImageResult
+        return new AI.Models.GeneratedImageResult
         {
             Images = images,
         };

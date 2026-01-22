@@ -51,7 +51,7 @@ public sealed class AzureAIInferenceClientProvider : AIClientProviderBase
         return client.AsIEmbeddingGenerator();
     }
 
-    protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+    protected override CrestApps.OrchardCore.AI.IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
     {
         throw new NotSupportedException("Azure AI Inference does not support image generation.");
     }

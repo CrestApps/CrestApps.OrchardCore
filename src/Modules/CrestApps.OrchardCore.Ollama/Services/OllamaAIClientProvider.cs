@@ -27,7 +27,7 @@ public sealed class OllamaAIClientProvider : AIClientProviderBase
         return new OllamaApiClient(connection.GetEndpoint(), deploymentName);
     }
 
-    protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+    protected override CrestApps.OrchardCore.AI.IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
     {
         throw new NotSupportedException("Ollama does not support image generation.");
     }

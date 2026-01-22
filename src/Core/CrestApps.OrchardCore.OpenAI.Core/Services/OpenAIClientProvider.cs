@@ -35,7 +35,7 @@ public sealed class OpenAIClientProvider : AIClientProviderBase
             .AsIEmbeddingGenerator();
     }
 
-    protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+    protected override CrestApps.OrchardCore.AI.IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
     {
         var client = GetOpenAIClient(connection);
 

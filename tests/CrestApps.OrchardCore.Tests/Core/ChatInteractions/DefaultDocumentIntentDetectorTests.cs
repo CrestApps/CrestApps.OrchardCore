@@ -112,6 +112,33 @@ public sealed class KeywordDocumentIntentDetectorTests
         Assert.Equal(DocumentIntents.DocumentQnA, result.Intent);
     }
 
+    [Theory]
+    [InlineData("generate an image of a sunset")]
+    [InlineData("create an image of a cat")]
+    [InlineData("draw a landscape")]
+    [InlineData("generate a picture of mountains")]
+    [InlineData("create a visual of the concept")]
+    public async Task DetectAsync_WhenImageGenerationKeywordsPresent_ReturnsGenerateImage(string prompt)
+    {
+        var context = CreateContextWithNoDocuments(prompt);
+
+        var result = await _detector.DetectAsync(context);
+
+        Assert.Equal(DocumentIntents.GenerateImage, result.Intent);
+    }
+
+    [Fact]
+    public async Task DetectAsync_ImageGenerationTakesPriority_OverDocumentQnA()
+    {
+        // Image generation should work even without documents
+        var context = CreateContextWithNoDocuments("generate an image of a beautiful garden");
+
+        var result = await _detector.DetectAsync(context);
+
+        Assert.Equal(DocumentIntents.GenerateImage, result.Intent);
+        Assert.True(result.Confidence >= 0.9f);
+    }
+
     [Fact]
     public async Task DetectAsync_ReturnsConfidenceValue()
     {
@@ -203,6 +230,19 @@ public sealed class KeywordDocumentIntentDetectorTests
                         Text = "Second document content"
                     }
                 ]
+            }
+        };
+    }
+
+    private static DocumentIntentDetectionContext CreateContextWithNoDocuments(string prompt)
+    {
+        return new DocumentIntentDetectionContext
+        {
+            Prompt = prompt,
+            Interaction = new ChatInteraction
+            {
+                ItemId = "test-id",
+                Documents = []
             }
         };
     }

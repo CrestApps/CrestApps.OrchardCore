@@ -73,7 +73,7 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
         throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{providerName}'.");
     }
 
-    public ValueTask<IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null)
+    public ValueTask<CrestApps.OrchardCore.AI.IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
         ArgumentException.ThrowIfNullOrEmpty(connectionName);
