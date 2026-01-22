@@ -1,5 +1,6 @@
 #pragma warning disable MEAI001 // IImageGenerator is experimental but we intentionally use it
 
+using System.Drawing;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
@@ -108,7 +109,7 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
             var options = new ImageGenerationOptions
             {
                 // Default to 1024x1024 for DALL-E 3
-                ImageSize = new System.Drawing.Size(1024, 1024),
+                ImageSize = new Size(1024, 1024),
             };
 
             var result = await imageGenerator.GenerateAsync(request, options, context.CancellationToken);
