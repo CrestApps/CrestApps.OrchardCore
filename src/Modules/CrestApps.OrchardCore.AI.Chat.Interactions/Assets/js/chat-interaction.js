@@ -1,13 +1,15 @@
 window.chatInteractionManager = function () {
 
-    const renderer = new marked.Renderer();
-
-    // Modify the link rendering to open in a new tab
-    renderer.link = function (data) {
-        return `<a href="${data.href}" target="_blank" rel="noopener noreferrer">${data.text}</a>`;
-    };
-
+    // Defaults (can be overridden by instanceConfig)
     var defaultConfig = {
+        // UI defaults for generated media
+        generatedImageAltText: 'Generated Image',
+        generatedImageMaxWidth: 400,
+        generatedChartMaxWidth: 600,
+        downloadImageTitle: 'Download image',
+        downloadChartTitle: 'Download chart as image',
+        downloadChartButtonText: 'Download',
+
         messageTemplate: `
             <div class="list-group">
                 <div v-for="(message, index) in messages" :key="index" class="list-group-item">
@@ -37,9 +39,179 @@ window.chatInteractionManager = function () {
         clearHistoryCancelText: 'Cancel'
     };
 
+    const renderer = new marked.Renderer();
+
+    // Modify the link rendering to open in a new tab
+    renderer.link = function (data) {
+        return `<a href="${data.href}" target="_blank" rel="noopener noreferrer">${data.text}</a>`;
+    };
+
+    // Custom image renderer for generated images with thumbnail styling and download button
+    renderer.image = function (data) {
+        const src = data.href;
+        const alt = data.text || defaultConfig.generatedImageAltText;
+        const maxWidth = defaultConfig.generatedImageMaxWidth;
+        return `<div class="generated-image-container">
+            <img src="${src}" alt="${alt}" class="img-thumbnail" style="max-width: ${maxWidth}px; height: auto;" />
+            <div class="mt-2">
+                <a href="${src}" target="_blank" download title="${defaultConfig.downloadImageTitle}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fa-solid fa-download"></i>
+                </a>
+            </div>
+        </div>`;
+    };
+
+    // Chart counter for unique IDs
+    let chartCounter = 0;
+
+    function createChartHtml(chartId) {
+        const chartMaxWidth = defaultConfig.generatedChartMaxWidth;
+
+        return `<div class="chart-container" style="position: relative; max-width: ${chartMaxWidth}px; margin: 0 auto;">
+            <canvas id="${chartId}" class="img-thumbnail"></canvas>
+        </div>
+        <div class="mt-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadChart('${chartId}')" title="${defaultConfig.downloadChartTitle}">
+                <i class="fa-solid fa-download"></i> ${defaultConfig.downloadChartButtonText}
+            </button>
+        </div>`;
+    }
+
+    // Extract a [chart:{...json...}] marker. This avoids regex issues with nested brackets.
+    function tryExtractChartMarker(text) {
+        const token = '[chart:';
+        const start = text.indexOf(token);
+        if (start < 0) {
+            return null;
+        }
+
+        // Find JSON object boundary by balancing braces
+        const jsonStart = start + token.length;
+        let i = jsonStart;
+        while (i < text.length && (text[i] === ' ' || text[i] === '\n' || text[i] === '\r' || text[i] === '\t')) {
+            i++;
+        }
+
+        if (i >= text.length || text[i] !== '{') {
+            return null;
+        }
+
+        let depth = 0;
+        let inString = false;
+        let escape = false;
+
+        for (; i < text.length; i++) {
+            const ch = text[i];
+
+            if (inString) {
+                if (escape) {
+                    escape = false;
+                    continue;
+                }
+                if (ch === '\\') {
+                    escape = true;
+                    continue;
+                }
+                if (ch === '"') {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (ch === '"') {
+                inString = true;
+                continue;
+            }
+
+            if (ch === '{') {
+                depth++;
+            } else if (ch === '}') {
+                depth--;
+                if (depth === 0) {
+                    const jsonEnd = i;
+                    // Expect closing bracket after JSON
+                    const closeBracketIndex = text.indexOf(']', jsonEnd + 1);
+                    if (closeBracketIndex < 0) {
+                        return null;
+                    }
+
+                    const json = text.substring(jsonStart, jsonEnd + 1).trim();
+                    return {
+                        startIndex: start,
+                        endIndex: closeBracketIndex + 1,
+                        json: json
+                    };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    function renderChartsInMessage(message) {
+        if (!message || !message._pendingCharts || !message._pendingCharts.length) {
+            return;
+        }
+
+        for (const c of message._pendingCharts) {
+            const canvas = document.getElementById(c.chartId);
+            if (!canvas) {
+                continue;
+            }
+
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js is not available on the page.');
+                continue;
+            }
+
+            try {
+                // Destroy existing chart instance if re-rendering
+                if (canvas._chartInstance) {
+                    canvas._chartInstance.destroy();
+                }
+
+                const cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
+                canvas._chartInstance = new Chart(canvas, cfg);
+            } catch (e) {
+                console.error('Error creating chart:', e);
+            }
+        }
+
+        // Prevent re-render work
+        message._pendingCharts = [];
+    }
+
+    // Replace chart markers in content with chart placeholders and collect configs.
+    function processChartMarkers(content, message) {
+        if (!content) {
+            return content;
+        }
+
+        let result = content;
+        message._pendingCharts ??= [];
+
+        // Only replace markers when we can fully extract them.
+        while (true) {
+            const extracted = tryExtractChartMarker(result);
+            if (!extracted) {
+                break;
+            }
+
+            const chartId = `chat_chart_${++chartCounter}`;
+            message._pendingCharts.push({ chartId: chartId, config: extracted.json });
+
+            const html = createChartHtml(chartId);
+            result = result.substring(0, extracted.startIndex) + html + result.substring(extracted.endIndex);
+        }
+
+        return result;
+    }
+
     const initialize = (instanceConfig) => {
 
         const config = Object.assign({}, defaultConfig, instanceConfig);
+        // Keep defaultConfig in sync so renderers use overridden values
+        defaultConfig = config;
 
         if (!config.signalRHubUrl) {
             console.error('The signalRHubUrl is required.');
@@ -97,16 +269,26 @@ window.chatInteractionManager = function () {
 
                     this.connection.on("LoadInteraction", (data) => {
                         this.initializeInteraction(data.itemId, true);
-                        this.messages = [];
-
-                        // Update the title field if it exists
+                        this.messages = [];// Update the title field if it exists
                         const titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
                         if (titleInput && data.title) {
                             titleInput.value = data.title;
                         }
 
                         (data.messages ?? []).forEach(msg => {
+                            // Ensure persisted chart markers are rendered too
+                            if (msg && msg.content) {
+                                msg.content = processChartMarkers(msg.content.trim(), msg);
+                                if (msg.content.includes('class="chart-container"')) {
+                                    msg.htmlContent = msg.content;
+                                }
+                            }
+
                             this.addMessage(msg);
+
+                            this.$nextTick(() => {
+                                renderChartsInMessage(msg);
+                            });
                         });
                     });
 
@@ -152,6 +334,10 @@ window.chatInteractionManager = function () {
                 addMessage(message) {
                     if (message.content) {
                         let processedContent = message.content.trim();
+
+                        // Process chart markers first (before markdown parsing)
+                        processedContent = processChartMarkers(processedContent, message);
+
                         if (message.references && typeof message.references === "object" && Object.keys(message.references).length) {
                             for (const [key, value] of Object.entries(message.references)) {
                                 processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
@@ -165,19 +351,21 @@ window.chatInteractionManager = function () {
                         }
 
                         message.content = processedContent;
-                        message.htmlContent = marked.parse(processedContent, { renderer });
+
+                        // If we inserted chart HTML, don't markdown-parse
+                        if (processedContent.includes('class="chart-container"')) {
+                            message.htmlContent = processedContent;
+                        } else {
+                            message.htmlContent = marked.parse(processedContent, { renderer });
+                        }
                     }
 
                     this.addMessageInternal(message);
                     this.hidePlaceholder();
 
-                    // Show clear history button when messages exist
-                    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-                    if (clearHistoryBtn && message.role !== 'indicator') {
-                        clearHistoryBtn.style.display = '';
-                    }
-
                     this.$nextTick(() => {
+                        // Render any pending charts once the DOM is updated
+                        renderChartsInMessage(message);
                         this.scrollToBottom();
                     });
                 },
@@ -269,11 +457,22 @@ window.chatInteractionManager = function () {
                                 }
 
                                 message.content = content;
-                                message.htmlContent = marked.parse(content, { renderer });
+
+                                // Process chart markers before markdown parsing
+                                let htmlContent = processChartMarkers(content, message);
+
+                                if (htmlContent.includes('class="chart-container"')) {
+                                    message.htmlContent = htmlContent;
+                                } else {
+                                    message.htmlContent = marked.parse(htmlContent, { renderer });
+                                }
 
                                 this.messages[messageIndex] = message;
 
-                                this.scrollToBottom();
+                                this.$nextTick(() => {
+                                  renderChartsInMessage(message);
+                                  this.scrollToBottom();
+                                });
                             },
                             complete: () => {
                                 this.processReferences(references, messageIndex);
@@ -657,3 +856,19 @@ window.chatInteractionManager = function () {
         initialize: initialize
     };
 }();
+
+
+// Global function for downloading charts as images
+window.downloadChart = function (chartId) {
+    const canvas = document.getElementById(chartId);
+    if (!canvas) {
+        console.error('Chart canvas not found:', chartId);
+        return;
+    }
+
+    // Create a temporary link element
+    const link = document.createElement('a');
+    link.download = 'chart-' + chartId + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+};

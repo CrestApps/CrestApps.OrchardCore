@@ -8,6 +8,20 @@
   {
     "copy": true,
     "inputs": [
+      "node_modules/chart.js/dist/chart.umd.js"
+    ],
+    "output": "wwwroot/vendors/chartjs/chart.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/chart.js/dist/chart.umd.min.js"
+    ],
+    "output": "wwwroot/vendors/chartjs/chart.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
       "node_modules/easymde/dist/easymde.min.js"
     ],
     "output": "wwwroot/vendors/easymde/js/easymde.js"

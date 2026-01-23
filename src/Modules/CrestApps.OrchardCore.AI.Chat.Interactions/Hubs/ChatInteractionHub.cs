@@ -300,6 +300,34 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             // Process documents using intent-aware, strategy-based approach
             var documentProcessingResult = await ReasonAsync(interaction, prompt, cancellationToken);
 
+            // Handle chart generation results
+            if (documentProcessingResult != null && documentProcessingResult.HasGeneratedChart)
+            {
+                await HandleChartGenerationResultAsync(writer, interaction, assistantMessage, documentProcessingResult, cancellationToken);
+                return;
+            }
+
+            // Handle chart generation errors
+            if (documentProcessingResult != null && documentProcessingResult.IsChartGenerationIntent && !documentProcessingResult.IsSuccess)
+            {
+                var errorMessage = new CompletionPartialMessage
+                {
+                    SessionId = interaction.ItemId,
+                    MessageId = assistantMessage.Id,
+                    Content = documentProcessingResult.ErrorMessage,
+                };
+
+                await writer.WriteAsync(errorMessage, cancellationToken);
+
+                assistantMessage.Content = documentProcessingResult.ErrorMessage;
+                interaction.Prompts.Add(assistantMessage);
+
+                await _interactionManager.UpdateAsync(interaction);
+                await _session.SaveChangesAsync(cancellationToken);
+
+                return;
+            }
+
             // Handle image generation results
             if (documentProcessingResult != null && documentProcessingResult.HasGeneratedImages)
             {
@@ -487,10 +515,15 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             _logger.LogDebug("Detected intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
                 intent.Name, intent.Confidence, intent.Reason);
 
+            // Build conversation history from past prompts (excluding the current prompt which hasn't been added yet)
+            var conversationHistory = BuildConversationHistory(interaction);
+
             var processingContext = new IntentProcessingContext
             {
                 Prompt = prompt,
                 Interaction = interaction,
+                ConversationHistory = conversationHistory,
+                MaxHistoryMessagesForImageGeneration = interaction.PastMessagesCount ?? 5,
                 CancellationToken = cancellationToken,
             };
 
@@ -508,6 +541,26 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             return null;
         }
+    }
+
+    /// <summary>
+    /// Builds a conversation history from past prompts for context.
+    /// </summary>
+    private static List<ChatMessage> BuildConversationHistory(ChatInteraction interaction)
+    {
+        var history = new List<ChatMessage>();
+
+        if (interaction.Prompts == null || interaction.Prompts.Count == 0)
+        {
+            return history;
+        }
+
+        foreach (var prompt in interaction.Prompts.Where(p => !p.IsGeneratedPrompt))
+        {
+            history.Add(new ChatMessage(prompt.Role, prompt.Content));
+        }
+
+        return history;
     }
 
     private LocalizedString GetFriendlyErrorMessage(Exception ex)
@@ -573,16 +626,15 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             foreach (var contentItem in response.Contents)
             {
-                var imageUri = contentItem?.ToString();
+                var imageUri = ExtractImageUri(contentItem);
 
                 if (string.IsNullOrWhiteSpace(imageUri))
                 {
                     continue;
                 }
 
+                // Use markdown-style syntax with special marker for client-side rendering
                 messageBuilder.AppendLine($"![Generated Image]({imageUri})");
-                messageBuilder.AppendLine();
-                messageBuilder.AppendLine($"[Download Image]({imageUri})");
                 messageBuilder.AppendLine();
             }
 
@@ -618,5 +670,93 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             await writer.WriteAsync(errorMessage, cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Handles the result of chart generation and sends the Chart.js configuration to the client.
+    /// </summary>
+    private async Task HandleChartGenerationResultAsync(
+        ChannelWriter<CompletionPartialMessage> writer,
+        ChatInteraction interaction,
+        AIChatSessionPrompt assistantMessage,
+        IntentProcessingResult result,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var chartConfig = result?.GeneratedChartConfig;
+            if (string.IsNullOrWhiteSpace(chartConfig))
+            {
+                var emptyMessage = new CompletionPartialMessage
+                {
+                    SessionId = interaction.ItemId,
+                    MessageId = assistantMessage.Id,
+                    Content = result?.ErrorMessage ?? S["No chart was generated."].Value,
+                };
+
+                await writer.WriteAsync(emptyMessage, cancellationToken);
+                return;
+            }
+
+            // Use a special marker format that the client will recognize and render as a chart
+            // Format: [chart:<json-config>]
+            var content = $"[chart:{chartConfig}]";
+
+            var partialMessage = new CompletionPartialMessage
+            {
+                SessionId = interaction.ItemId,
+                MessageId = assistantMessage.Id,
+                Content = content,
+            };
+
+            await writer.WriteAsync(partialMessage, cancellationToken);
+
+            assistantMessage.Content = content;
+            interaction.Prompts.Add(assistantMessage);
+
+            await _interactionManager.UpdateAsync(interaction);
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling chart generation result.");
+
+            var errorMessage = new CompletionPartialMessage
+            {
+                SessionId = interaction.ItemId,
+                MessageId = assistantMessage.Id,
+                Content = S["An error occurred while processing the generated chart."].Value,
+            };
+
+            await writer.WriteAsync(errorMessage, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Extracts the image URI from an AIContent object.
+    /// Handles UriContent, DataContent, and other content types.
+    /// </summary>
+    private static string ExtractImageUri(AIContent contentItem)
+    {
+        if (contentItem is null)
+        {
+            return null;
+        }
+
+        // Check if it's a UriContent (most common for image generation)
+        if (contentItem is UriContent uriContent)
+        {
+            return uriContent.Uri?.ToString();
+        }
+
+        // Check if it's a DataContent with a URI
+        if (contentItem is DataContent dataContent && dataContent.Uri is not null)
+        {
+            return dataContent.Uri.ToString();
+        }
+
+        // Fallback: try to get raw value if it's somehow stored differently
+        // The ToString() method for AIContent typically returns type name, so avoid using it
+        return null;
     }
 }

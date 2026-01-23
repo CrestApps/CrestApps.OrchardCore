@@ -29,26 +29,15 @@ For document upload and RAG (Retrieval Augmented Generation) support, see the [D
 
 The Documents feature supports Elasticsearch and Azure AI Search as embedding and search providers, ensure you enable the corresponding feature for your chosen provider in Orchard Core admin.
 
-## Configuration
+## Intent-based processing
 
-### Settings Tab Parameters
+AI Chat Interactions uses intent detection to route a prompt to the most appropriate processing strategy.
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| Title | User-defined name for the interaction | "Untitled" |
-| Connection | AI provider connection to use | Default connection |
-| Deployment | AI model deployment to use | Default deployment |
-| System Instructions | Persona and context for the AI | Empty |
-| Max Response Tokens | Token limit for responses | Provider default |
-| Temperature | Controls randomness (0-2) | Provider default |
-| Top P | Nucleus sampling (0-1) | Provider default |
-| Frequency Penalty | Reduces token repetition (-2 to 2) | Provider default |
-| Presence Penalty | Encourages new topics (-2 to 2) | Provider default |
-| Past Messages | Context window size | Provider default |
+### Image generation intents
 
-## Permissions
+The following intents are used for image generation:
 
-| Permission | Description |
-|------------|-------------|
-| `EditChatInteractions` | Allows users to create and manage their own chat interactions |
-| `ManageChatInteractionSettings` | Allows users to configure site-wide chat interaction settings |
+- `GenerateImage`: The user is asking to generate an image (including chart/graph requests like "create a bar chart" or "draw a chart").
+- `GenerateImageWithHistory`: The user is asking to generate an image based on prior context (for example: "use that data to create a chart", "based on the above", etc.).
+
+When `GenerateImageWithHistory` is selected, the image generation prompt is augmented with the last N chat messages (configured by the interaction's **Past Messages** setting) so that prompts like "use that data" can be resolved.

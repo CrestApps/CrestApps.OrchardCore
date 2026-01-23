@@ -127,6 +127,35 @@ public sealed class KeywordDocumentIntentDetectorTests
         Assert.Equal(DocumentIntents.GenerateImage, result.Name);
     }
 
+    [Theory]
+    [InlineData("draw an bar chart representing that data")]
+    [InlineData("create a bar chart")]
+    [InlineData("generate a chart image")]
+    [InlineData("make a chart")]
+    [InlineData("create a graph")]
+    public async Task DetectAsync_WhenChartKeywordsPresent_ReturnsGenerateImage(string prompt)
+    {
+        var context = CreateContextWithNoDocuments(prompt);
+
+        var result = await _detector.DetectAsync(context);
+
+        Assert.Equal(DocumentIntents.GenerateImage, result.Name);
+    }
+
+    [Theory]
+    [InlineData("use that data to create a chart")]
+    [InlineData("based on this, generate a bar chart")]
+    [InlineData("create a chart from the above")]
+    [InlineData("generate an image from that table")]
+    public async Task DetectAsync_WhenChartKeywordsReferenceHistory_ReturnsGenerateImageWithHistory(string prompt)
+    {
+        var context = CreateContextWithNoDocuments(prompt);
+
+        var result = await _detector.DetectAsync(context);
+
+        Assert.Equal(DocumentIntents.GenerateImageWithHistory, result.Name);
+    }
+
     [Fact]
     public async Task DetectAsync_ImageGenerationTakesPriority_OverDocumentQnA()
     {

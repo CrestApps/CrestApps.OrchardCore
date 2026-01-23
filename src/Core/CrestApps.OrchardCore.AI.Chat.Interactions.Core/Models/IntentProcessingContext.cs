@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 
@@ -17,6 +18,18 @@ public sealed class IntentProcessingContext
     /// Gets or sets the chat interaction containing documents and configuration.
     /// </summary>
     public ChatInteraction Interaction { get; set; }
+
+    /// <summary>
+    /// Gets or sets the conversation history (past messages) for context.
+    /// This allows strategies to reference previous prompts and responses.
+    /// </summary>
+    public IList<ChatMessage> ConversationHistory { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the maximum number of past messages to include in context for image generation.
+    /// Default is 5 messages.
+    /// </summary>
+    public int MaxHistoryMessagesForImageGeneration { get; set; } = 5;
 
     /// <summary>
     /// Gets or sets the cancellation token for the operation.

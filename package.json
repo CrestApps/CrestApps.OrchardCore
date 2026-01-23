@@ -47,6 +47,7 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
+    "chart.js": "^4.5.1",
     "extendable-media-recorder": "^9.1.7",
     "gulp-util": "^3.0.8"
   }

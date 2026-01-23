@@ -20,4 +20,8 @@ public static class DocumentIntents
     public const string GeneralChatWithReference = "GeneralChatWithReference";
 
     public const string GenerateImage = "GenerateImage";
+
+    public const string GenerateImageWithHistory = "GenerateImageWithHistory";
+
+    public const string GenerateChart = "GenerateChart";
 }

@@ -68,6 +68,21 @@ public sealed class IntentProcessingResult
     public string Reason { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the processing was for chart generation intent.
+    /// </summary>
+    public bool IsChartGenerationIntent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the generated Chart.js configuration JSON if the intent was chart generation.
+    /// </summary>
+    public string GeneratedChartConfig { get; set; }
+
+    /// <summary>
+    /// Gets whether a chart configuration was generated.
+    /// </summary>
+    public bool HasGeneratedChart => !string.IsNullOrWhiteSpace(GeneratedChartConfig);
+
+    /// <summary>
     /// Adds context with an optional prefix message.
     /// </summary>
     /// <param name="context">The context content to add.</param>

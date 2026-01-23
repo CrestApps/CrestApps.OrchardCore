@@ -1,3 +1,4 @@
+using System.Text;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
@@ -30,7 +31,10 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
     /// <inheritdoc />
     public override async Task ProcessAsync(IntentProcessingContext context)
     {
-        if (!CanHandle(context, DocumentIntents.GenerateImage))
+        var isGenerateImage = CanHandle(context, DocumentIntents.GenerateImage);
+        var isGenerateImageWithHistory = CanHandle(context, DocumentIntents.GenerateImageWithHistory);
+
+        if (!isGenerateImage && !isGenerateImageWithHistory)
         {
             return;
         }
@@ -99,9 +103,11 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
                 ResponseFormat = ImageGenerationResponseFormat.Uri,
             };
 
-            var request = new ImageGenerationRequest()
+            var request = new ImageGenerationRequest
             {
-                Prompt = context.Prompt,
+                Prompt = isGenerateImageWithHistory
+                    ? BuildPromptWithHistory(context.Prompt, context.ConversationHistory, context.MaxHistoryMessagesForImageGeneration)
+                    : context.Prompt,
             };
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
@@ -121,5 +127,54 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
             _logger.LogError(ex, "Error during image generation.");
             context.Result.SetFailed($"An error occurred while generating the image: {ex.Message}");
         }
+    }
+
+    private const int DefaultMaxHistoryMessages = 5;
+    private const int MaxMessageChars = 2000;
+
+    private static string BuildPromptWithHistory(
+        string prompt,
+        IList<ChatMessage> conversationHistory,
+        int maxHistoryMessages)
+    {
+        var currentPrompt = prompt?.Trim() ?? string.Empty;
+
+        if (conversationHistory == null || conversationHistory.Count == 0)
+        {
+            return currentPrompt;
+        }
+
+        if (maxHistoryMessages <= 0)
+        {
+            maxHistoryMessages = DefaultMaxHistoryMessages;
+        }
+
+        var recent = conversationHistory.TakeLast(maxHistoryMessages);
+
+        var builder = new StringBuilder();
+        builder.AppendLine("Conversation context (most recent messages):");
+        builder.AppendLine();
+
+        foreach (var msg in recent)
+        {
+            var text = msg.Text ?? string.Empty;
+            if (text.Length > MaxMessageChars)
+            {
+                text = string.Concat(text.AsSpan(0, MaxMessageChars), "... [truncated]");
+            }
+
+            builder.Append(msg.Role.Value);
+            builder.AppendLine(":");
+            builder.AppendLine(text);
+            builder.AppendLine();
+        }
+
+        builder.AppendLine("---");
+        builder.AppendLine("Current request:");
+        builder.AppendLine(currentPrompt);
+        builder.AppendLine();
+        builder.AppendLine("Generate an image that satisfies the current request using the conversation context when relevant.");
+
+        return builder.ToString();
     }
 }

@@ -20,7 +20,7 @@ public sealed class KeywordDocumentIntentDetector : IDocumentIntentDetector
     private static readonly string[] _tabularAnalysisKeywords =
     [
         "calculate", "total", "sum", "average", "mean", "count", "aggregate",
-        "analyze data", "analyse data", "statistics", "chart", "graph",
+        "analyze data", "analyse data", "statistics",
         "trend", "correlation", "breakdown", "distribution"
     ];
 
@@ -44,12 +44,52 @@ public sealed class KeywordDocumentIntentDetector : IDocumentIntentDetector
 
     private static readonly string[] _imageGenerationKeywords =
     [
-        "generate image", "create image", "draw", "generate a picture",
+        "generate image", "create image", "generate a picture",
         "create a picture", "make an image", "generate an illustration",
         "create an illustration", "generate artwork", "create artwork",
         "generate a visual", "create a visual", "image of", "picture of",
-        "illustration of", "visualize", "visualise", "render an image",
+        "illustration of", "render an image",
         "design an image", "generate a photo", "create a photo"
+    ];
+
+    private static readonly string[] _chartGenerationKeywords =
+    [
+        "create a chart", "create chart", "draw a chart", "draw chart",
+        "bar chart", "line chart", "pie chart", "scatter plot", "doughnut chart",
+        "histogram", "area chart", "radar chart",
+        "plot", "create a plot", "draw a plot",
+        "create a graph", "draw a graph", "make a graph",
+        "generate a chart", "generate chart", "render a chart",
+        "make a chart", "make chart", "show a chart", "show chart",
+        "visualize data", "visualise data", "data visualization",
+        "chart of", "graph of", "plot of"
+    ];
+
+    private static readonly string[] _historyReferenceCuePhrases =
+    [
+        "use that",
+        "use this",
+        "use it",
+        "use them",
+        "that data",
+        "this data",
+        "the data",
+        "that table",
+        "this table",
+        "that chart",
+        "this chart",
+        "based on that",
+        "based on this",
+        "from that",
+        "from this",
+        "from the",
+        "previous",
+        "earlier",
+        "above",
+        "as discussed",
+        "as shown",
+        "representing that",
+        "representing this",
     ];
 
     private static readonly string[] _tabularFileExtensions =
@@ -74,12 +114,27 @@ public sealed class KeywordDocumentIntentDetector : IDocumentIntentDetector
         var prompt = context.Prompt.ToLowerInvariant();
         var hasTabularFiles = HasTabularFiles(context.Documents);
         var hasMultipleDocuments = context.Documents.Count > 1;
+        var referencesHistory = ContainsAnyKeyword(prompt, _historyReferenceCuePhrases);
 
-        // Check for image generation intent (high priority - doesn't require documents)
-        if (ContainsAnyKeyword(prompt, _imageGenerationKeywords))
+        // Check for chart generation intent (high priority - chart keywords are specific)
+        // Always use GenerateChart since the AI model already has conversation history
+        if (ContainsAnyKeyword(prompt, _chartGenerationKeywords))
         {
             return Task.FromResult(DocumentIntent.FromName(
-                DocumentIntents.GenerateImage,
+                DocumentIntents.GenerateChart,
+                0.9f,
+                "Chart generation keywords detected."));
+        }
+
+        // Check for image generation intent (doesn't require documents)
+        if (ContainsAnyKeyword(prompt, _imageGenerationKeywords))
+        {
+            var intentName = referencesHistory
+                ? DocumentIntents.GenerateImageWithHistory
+                : DocumentIntents.GenerateImage;
+
+            return Task.FromResult(DocumentIntent.FromName(
+                intentName,
                 0.9f,
                 "Image generation keywords detected."));
         }

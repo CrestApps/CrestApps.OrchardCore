@@ -39,7 +39,7 @@ public static class ServiceCollectionExtensions
     /// Only intents registered via this method will be recognized by the AI intent detector.
     /// Each intent should have a corresponding strategy registered via <see cref="AddDocumentProcessingStrategy{TStrategy}"/>.
     /// </remarks>
-    public static IServiceCollection AddDocumentIntent(
+    public static IServiceCollection AddProcessingIntent(
         this IServiceCollection services,
         string intentName,
         string description)
@@ -75,25 +75,31 @@ public static class ServiceCollectionExtensions
     {
         // Register intents for the default strategies
         services
-            .AddDocumentIntent(
+            .AddProcessingIntent(
                 DocumentIntents.SummarizeDocument,
                 "The user wants a summary, overview, brief, key points, or outline of document content.")
-            .AddDocumentIntent(
+            .AddProcessingIntent(
                 DocumentIntents.AnalyzeTabularData,
                 "The user wants to perform calculations, aggregations, statistics, or data analysis on tabular data (CSV, Excel, etc.).")
-            .AddDocumentIntent(
+            .AddProcessingIntent(
                 DocumentIntents.ExtractStructuredData,
                 "The user wants to extract specific data, parse content into structured formats (JSON, schema), or pull out entities.")
-            .AddDocumentIntent(
+            .AddProcessingIntent(
                 DocumentIntents.CompareDocuments,
                 "The user wants to compare, contrast, find differences, or analyze similarities between multiple documents.")
-            .AddDocumentIntent(
+            .AddProcessingIntent(
                 DocumentIntents.TransformFormat,
                 "The user wants to convert, transform, reformat content into another representation (tables, bullet points, different format).")
-            .AddDocumentIntent(
+            .AddProcessingIntent(
                 DocumentIntents.GenerateImage,
-                "The user wants to generate, create, draw, or produce an image, picture, illustration, visual, or artwork based on a text description.")
-            .AddDocumentIntent(
+                "The user requests creation of a new image from a text description. Detect when the prompt asks for visuals, illustrations, diagrams, or artwork and capture any optional parameters (style, size, aspect ratio, color palette, level of detail, or composition). The output should be an image-generation task consisting of a refined prompt and metadata suitable for calling an image-generation service.")
+            .AddProcessingIntent(
+                DocumentIntents.GenerateImageWithHistory,
+                "Trigger when the user requests the creation of an image, diagram, or visual that is based on information, data, or discussion from prior chat messages. Detect references to previous conversation, earlier outputs, or chat-based data that should influence the visual. This intent is strictly for generating images that depend on chat history, including summaries, illustrations, or artwork derived from earlier messages, but does not include charts or graphs.")
+            .AddProcessingIntent(
+                DocumentIntents.GenerateChart,
+                "The user wants to create a chart, graph, or data visualization such as bar chart, line chart, pie chart, scatter plot, or histogram. The AI model already receives conversation history, so this intent handles both explicit data in the prompt and references to data from earlier messages.")
+            .AddProcessingIntent(
                 DocumentIntents.GeneralChatWithReference,
                 "General conversation that may reference documents but doesn't fit other categories.");
 
@@ -105,6 +111,7 @@ public static class ServiceCollectionExtensions
             .AddDocumentProcessingStrategy<ComparisonDocumentProcessingStrategy>()
             .AddDocumentProcessingStrategy<TransformationDocumentProcessingStrategy>()
             .AddDocumentProcessingStrategy<ImageGenerationDocumentProcessingStrategy>()
+            .AddDocumentProcessingStrategy<ChartGenerationDocumentProcessingStrategy>()
             .AddDocumentProcessingStrategy<GeneralReferenceDocumentProcessingStrategy>();
 
         return services;

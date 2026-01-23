@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.Tests.Core.ChatInteractions;
 
@@ -303,5 +304,44 @@ public sealed class DocumentProcessingStrategyTests
         ctx.Result.Intent = DocumentIntents.AnalyzeTabularData;
 
         return ctx;
+    }
+
+    [Fact]
+    public void ImageGeneration_BuildPromptWithHistory_FallsBackToPrompt_WhenNoHistory()
+    {
+        var method = typeof(ImageGenerationDocumentProcessingStrategy)
+            .GetMethod("BuildPromptWithHistory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        Assert.NotNull(method);
+
+        var enhanced = (string)method!.Invoke(null, ["Create an image with blue skies", null, 5]);
+
+        Assert.Equal("Create an image with blue skies", enhanced);
+        Assert.DoesNotContain("Conversation context", enhanced, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ImageGeneration_BuildPromptWithHistory_IncludesHistoryAndCurrentRequest()
+    {
+        var method = typeof(ImageGenerationDocumentProcessingStrategy)
+            .GetMethod("BuildPromptWithHistory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        Assert.NotNull(method);
+
+        var history = new List<ChatMessage>
+        {
+            new(ChatRole.User, "Analyze this data"),
+            new(ChatRole.Assistant, "Here is the extracted table: A,B,C"),
+        };
+
+        var enhanced = (string)method!.Invoke(null, ["Use that data to create an image chart", history, 5]);
+
+        Assert.Contains("Conversation context", enhanced, StringComparison.Ordinal);
+        Assert.Contains("User:", enhanced, StringComparison.Ordinal);
+        Assert.Contains("Analyze this data", enhanced, StringComparison.Ordinal);
+        Assert.Contains("Assistant:", enhanced, StringComparison.Ordinal);
+        Assert.Contains("extracted table", enhanced, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Current request:", enhanced, StringComparison.Ordinal);
+        Assert.Contains("Use that data to create an image chart", enhanced, StringComparison.Ordinal);
     }
 }
