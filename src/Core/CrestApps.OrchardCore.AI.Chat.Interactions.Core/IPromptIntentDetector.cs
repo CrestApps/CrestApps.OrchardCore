@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 /// Interface for detecting user intent when documents are attached to a chat interaction.
 /// Implementations can use AI models, heuristics, or other methods to classify intent.
 /// </summary>
-public interface IDocumentIntentDetector
+public interface IPromptIntentDetector
 {
     /// <summary>
     /// Detects the user's intent based on their prompt and attached documents.

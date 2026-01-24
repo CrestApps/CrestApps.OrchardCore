@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 /// <summary>
 /// Base class for document processing strategies that provides common functionality.
 /// </summary>
-public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrategy
+public abstract class DocumentProcessingStrategyBase : IPromptProcessingStrategy
 {
     /// <inheritdoc />
     public abstract Task ProcessAsync(IntentProcessingContext context);

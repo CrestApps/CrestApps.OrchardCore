@@ -4,17 +4,17 @@ using Microsoft.Extensions.Logging;
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 
 /// <summary>
-/// Default implementation of <see cref="IDocumentProcessingStrategyProvider"/> that routes
+/// Default implementation of <see cref="IPromptProcessingStrategyProvider"/> that routes
 /// document processing through all registered strategies, allowing multiple to contribute context.
 /// </summary>
-public sealed class DefaultDocumentProcessingStrategyProvider : IDocumentProcessingStrategyProvider
+public sealed class DefaultPromptProcessingStrategyProvider : IPromptProcessingStrategyProvider
 {
-    private readonly IEnumerable<IDocumentProcessingStrategy> _strategies;
+    private readonly IEnumerable<IPromptProcessingStrategy> _strategies;
     private readonly ILogger _logger;
 
-    public DefaultDocumentProcessingStrategyProvider(
-        IEnumerable<IDocumentProcessingStrategy> strategies,
-        ILogger<DefaultDocumentProcessingStrategyProvider> logger)
+    public DefaultPromptProcessingStrategyProvider(
+        IEnumerable<IPromptProcessingStrategy> strategies,
+        ILogger<DefaultPromptProcessingStrategyProvider> logger)
     {
         _strategies = strategies;
         _logger = logger;

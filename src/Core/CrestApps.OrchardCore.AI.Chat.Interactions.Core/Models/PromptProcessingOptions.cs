@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 /// Options for configuring document processing intents and their descriptions.
 /// Use this to register custom intents that will be recognized by the AI intent detector.
 /// </summary>
-public sealed class DocumentProcessingOptions
+public sealed class PromptProcessingOptions
 {
     /// <summary>
     /// Gets the dictionary of registered intents and their descriptions.

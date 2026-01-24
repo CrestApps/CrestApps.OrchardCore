@@ -125,7 +125,7 @@ public sealed class DocumentProcessingStrategyTests
     [Fact]
     public async Task AllStrategies_ProcessAsync_AddContextForMatchingIntent()
     {
-        var strategies = new IDocumentProcessingStrategy[]
+        var strategies = new IPromptProcessingStrategy[]
         {
             new SummarizationDocumentProcessingStrategy(),
             new TabularAnalysisDocumentProcessingStrategy(),
@@ -159,7 +159,7 @@ public sealed class DocumentProcessingStrategyTests
     [Fact]
     public async Task Strategies_ProcessAsync_DoNotAddContextForWrongIntent()
     {
-        var strategies = new IDocumentProcessingStrategy[]
+        var strategies = new IPromptProcessingStrategy[]
         {
             new SummarizationDocumentProcessingStrategy(),
             new TabularAnalysisDocumentProcessingStrategy(),
@@ -343,5 +343,84 @@ public sealed class DocumentProcessingStrategyTests
         Assert.Contains("extracted table", enhanced, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Current request:", enhanced, StringComparison.Ordinal);
         Assert.Contains("Use that data to create an image chart", enhanced, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ChartGeneration_BuildPromptWithHistory_FallsBackToPrompt_WhenNoHistory()
+    {
+        var method = typeof(ChartGenerationDocumentProcessingStrategy)
+            .GetMethod("BuildPromptWithHistory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        Assert.NotNull(method);
+
+        var enhanced = (string)method!.Invoke(null, ["Create a bar chart", null, 10]);
+
+        Assert.Equal("Create a bar chart", enhanced);
+        Assert.DoesNotContain("Conversation context", enhanced, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ChartGeneration_BuildPromptWithHistory_IncludesHistoryAndCurrentRequest()
+    {
+        var method = typeof(ChartGenerationDocumentProcessingStrategy)
+            .GetMethod("BuildPromptWithHistory", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        Assert.NotNull(method);
+
+        var history = new List<ChatMessage>
+        {
+            new(ChatRole.User, "Sales by month: Jan=10, Feb=20, Mar=30"),
+            new(ChatRole.Assistant, "Noted. You can plot these values."),
+        };
+
+        var enhanced = (string)method!.Invoke(null, ["Create a bar chart", history, 10]);
+
+        Assert.Contains("Conversation context with data to visualize", enhanced, StringComparison.Ordinal);
+        Assert.Contains("User:", enhanced, StringComparison.Ordinal);
+        Assert.Contains("Sales by month", enhanced, StringComparison.Ordinal);
+        Assert.Contains("Assistant:", enhanced, StringComparison.Ordinal);
+        Assert.Contains("Current request:", enhanced, StringComparison.Ordinal);
+        Assert.Contains("Create a bar chart", enhanced, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ChartGeneration_ExtractJsonFromResponse_ExtractsFromMarkdownJsonBlock()
+    {
+        var method = typeof(ChartGenerationDocumentProcessingStrategy)
+            .GetMethod("ExtractJsonFromResponse", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        Assert.NotNull(method);
+
+        var response = "```json\n{\"type\":\"bar\",\"data\":{}}\n```";
+        var json = (string)method!.Invoke(null, [response]);
+
+        Assert.Equal("{\"type\":\"bar\",\"data\":{}}", json);
+    }
+
+    [Fact]
+    public void ChartGeneration_ExtractJsonFromResponse_ExtractsJsonObject_WhenSurroundedByText()
+    {
+        var method = typeof(ChartGenerationDocumentProcessingStrategy)
+            .GetMethod("ExtractJsonFromResponse", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        Assert.NotNull(method);
+
+        var response = "Here is the config: {\"type\":\"pie\",\"data\":{}} Thanks!";
+        var json = (string)method!.Invoke(null, [response]);
+
+        Assert.Equal("{\"type\":\"pie\",\"data\":{}}", json);
+    }
+
+    [Fact]
+    public void ChartGeneration_ExtractJsonFromResponse_ReturnsNull_WhenNoJson()
+    {
+        var method = typeof(ChartGenerationDocumentProcessingStrategy)
+            .GetMethod("ExtractJsonFromResponse", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        Assert.NotNull(method);
+
+        var json = (string)method!.Invoke(null, ["No json here"]);
+
+        Assert.Null(json);
     }
 }
