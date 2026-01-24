@@ -12,9 +12,11 @@ public sealed class SummarizationDocumentProcessingStrategy : DocumentProcessing
     private const int MaxContextLength = 50000;
 
     /// <inheritdoc />
-    public override Task ProcessAsync(DocumentProcessingContext context)
+    public override Task ProcessAsync(IntentProcessingContext context)
     {
-        if (!CanHandle(context, DocumentIntents.SummarizeDocument))
+        if (!CanHandle(context, DocumentIntents.SummarizeDocument) ||
+            context.Interaction.Documents is null ||
+            context.Interaction.Documents.Count == 0)
         {
             return Task.CompletedTask;
         }
@@ -29,9 +31,9 @@ public sealed class SummarizationDocumentProcessingStrategy : DocumentProcessing
         }
         else
         {
-            var prefix = context.Documents.Count == 1
+            var prefix = context.Interaction.Documents.Count == 1
                 ? "The following is the content of the attached document that the user wants summarized:"
-                : $"The following is the content of {context.Documents.Count} attached documents that the user wants summarized:";
+                : $"The following is the content of {context.Interaction.Documents.Count} attached documents that the user wants summarized:";
             context.Result.AddContext(documentContent, prefix, usedVectorSearch: false);
         }
 

@@ -294,3 +294,6 @@ dotnet_diagnostic.SA1648.severity = none            # Inheritdoc should be used 
 dotnet_diagnostic.SA1649.severity = none            # File name should match first type name.
 dotnet_diagnostic.SA1650.severity = none            # Element documentation should be spelled correctly.
 dotnet_diagnostic.SA1651.severity = none            # Do not use placeholder elements.
+
+# IDE0290: Use primary constructor
+dotnet_diagnostic.IDE0290.severity = none

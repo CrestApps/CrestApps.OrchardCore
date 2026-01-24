@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Strategies;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Builder;
@@ -24,7 +25,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddDocumentTextExtractor<DefaultDocumentTextExtractor>(".txt", ".csv",
+            .AddDocumentTextExtractor<DefaultDocumentTextExtractor>(".txt", new ExtractorExtension(".csv", false),
                 ".md", ".json", ".xml", ".html", ".htm", ".log", ".yaml", ".yml")
             .AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>()
             .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
@@ -41,7 +42,7 @@ public sealed class Startup : StartupBase
         services
             .AddDocumentProcessingServices()
             .AddDefaultDocumentProcessingStrategies()
-            .AddDocumentIntent(
+            .AddProcessingIntent(
                 DocumentIntents.DocumentQnA,
                 "The user wants to ask questions about documents, search for information, or find specific content within documents using RAG (Retrieval-Augmented Generation).")
             .AddDocumentProcessingStrategy<RagDocumentProcessingStrategy>();

@@ -42,9 +42,11 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
     }
 
     /// <inheritdoc />
-    public override async Task ProcessAsync(DocumentProcessingContext context)
+    public override async Task ProcessAsync(IntentProcessingContext context)
     {
-        if (!CanHandle(context, DocumentIntents.DocumentQnA))
+        if (!CanHandle(context, DocumentIntents.DocumentQnA) ||
+            context.Interaction.Documents is null ||
+            context.Interaction.Documents.Count == 0)
         {
             return;
         }
@@ -52,12 +54,6 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
         var interaction = context.Interaction;
         var prompt = context.Prompt;
         var cancellationToken = context.CancellationToken;
-
-        // Check if there are documents attached
-        if (interaction.Documents == null || interaction.Documents.Count == 0)
-        {
-            return;
-        }
 
         try
         {

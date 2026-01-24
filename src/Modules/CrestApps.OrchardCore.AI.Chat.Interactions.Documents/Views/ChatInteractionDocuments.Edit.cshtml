@@ -58,6 +58,14 @@ else if (!Model.HasVectorSearchService)
                 <div class="text-primary fw-bold">@T["Drop files to upload"]</div>
             </div>
         </div>
+
+        <div id="uploadAlert-@Model.ItemId" class="alert alert-danger d-none" role="alert">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="me-3" id="uploadAlertMessage-@Model.ItemId"></div>
+                <button type="button" class="btn-close" aria-label="@T["Close"]" id="uploadAlertClose-@Model.ItemId"></button>
+            </div>
+        </div>
+
         <input type="file"
                class="d-none"
                id="documentUpload-@Model.ItemId"
@@ -146,12 +154,33 @@ else if (!Model.HasVectorSearchService)
         const fileInput = document.getElementById('documentUpload-' + itemId);
         const documentsList = document.getElementById('documentsList-' + itemId);
         const uploadProgress = document.getElementById('uploadProgress-' + itemId);
+        const uploadAlert = document.getElementById('uploadAlert-' + itemId);
+        const uploadAlertMessage = document.getElementById('uploadAlertMessage-' + itemId);
+        const uploadAlertClose = document.getElementById('uploadAlertClose-' + itemId);
         const dropZone = document.getElementById('dropZone-' + itemId);
         const dropZoneContent = document.getElementById('dropZoneContent-' + itemId);
         const dropZoneActive = document.getElementById('dropZoneActive-' + itemId);
         const browseBtn = document.getElementById('browseBtn-' + itemId);
         const uploadUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionUploadDocument)';
         const removeUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionRemoveDocument)';
+
+        function showUploadAlert(html) {
+            if (!uploadAlert || !uploadAlertMessage) return;
+            uploadAlertMessage.innerHTML = html;
+            uploadAlert.classList.remove('d-none');
+        }
+
+        function hideUploadAlert() {
+            if (!uploadAlert) return;
+            uploadAlert.classList.add('d-none');
+            if (uploadAlertMessage) uploadAlertMessage.innerHTML = '';
+        }
+
+        if (uploadAlertClose) {
+            uploadAlertClose.addEventListener('click', function() {
+                hideUploadAlert();
+            });
+        }
 
         // Browse button click handler
         if (browseBtn && fileInput) {
@@ -239,6 +268,9 @@ else if (!Model.HasVectorSearchService)
         }
 
         async function uploadFiles(files) {
+            // Auto-dismiss any prior error when a new upload starts
+            hideUploadAlert();
+
             uploadProgress.style.display = 'block';
             const progressBar = uploadProgress.querySelector('.progress-bar');
             const statusText = uploadProgress.querySelector('.upload-status');
@@ -274,9 +306,19 @@ else if (!Model.HasVectorSearchService)
                     }
                 }
 
-                // Show status message
                 const successCount = result.uploaded ? result.uploaded.length : 0;
                 const failCount = result.failed ? result.failed.length : 0;
+
+                // Show per-file errors (persistent, dismissible)
+                if (failCount > 0) {
+                    const lines = [];
+                    for (const f of result.failed) {
+                        const name = f.fileName || '@T["Unknown file"]';
+                        lines.push(`@T["The file"] \"${escapeHtml(name)}\" @T["failed to upload"].`);
+                    }
+
+                    showUploadAlert(lines.join('<br>'));
+                }
 
                 if (failCount === 0 && successCount > 0) {
                     statusText.textContent = '@T["Upload complete"]' + ': ' + successCount + ' @T["file(s)"]';
@@ -287,7 +329,8 @@ else if (!Model.HasVectorSearchService)
                     statusText.classList.remove('text-success', 'text-danger');
                     statusText.classList.add('text-warning');
                 } else if (failCount > 0) {
-                    statusText.textContent = '@T["All uploads failed"]';
+                    // Keep status short; user-facing details are in the alert above
+                    statusText.textContent = '@T["Upload failed"]';
                     statusText.classList.remove('text-success', 'text-warning');
                     statusText.classList.add('text-danger');
                 }
@@ -295,9 +338,11 @@ else if (!Model.HasVectorSearchService)
             } catch (error) {
                 console.error('Upload failed:', error);
                 progressBar.style.width = '100%';
-                statusText.textContent = '@T["Upload failed"]' + ': ' + error.message;
+                statusText.textContent = '@T["Upload failed"]';
                 statusText.classList.remove('text-success', 'text-warning');
                 statusText.classList.add('text-danger');
+
+                showUploadAlert(escapeHtml(error.message));
             }
 
             setTimeout(function() {

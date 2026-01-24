@@ -5,22 +5,25 @@
 
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
+function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
 window.chatInteractionManager = function () {
-  var renderer = new marked.Renderer();
-
-  // Modify the link rendering to open in a new tab
-  renderer.link = function (data) {
-    return "<a href=\"".concat(data.href, "\" target=\"_blank\" rel=\"noopener noreferrer\">").concat(data.text, "</a>");
-  };
+  // Defaults (can be overridden by instanceConfig)
   var defaultConfig = {
+    // UI defaults for generated media
+    generatedImageAltText: 'Generated Image',
+    generatedImageMaxWidth: 400,
+    generatedChartMaxWidth: 900,
+    downloadImageTitle: 'Download image',
+    downloadChartTitle: 'Download chart as image',
+    downloadChartButtonText: 'Download',
     messageTemplate: "\n            <div class=\"list-group\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                    <div class=\"d-flex align-items-center\">\n                        <div class=\"p-2\">\n                            <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'\"></i>\n                        </div>\n                        <div class=\"p-2 lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent || message.content\"></div>\n                        </div>\n                    </div>\n                    <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"!isIndicator(message)\">\n                        <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                            <i class=\"fa-solid fa-copy fa-lg\"></i>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
     indicatorTemplate: "<div class=\"spinner-grow spinner-grow-sm\" role=\"status\"><span class=\"visually-hidden\">Loading...</span></div>",
     // Localizable strings
@@ -30,8 +33,161 @@ window.chatInteractionManager = function () {
     clearHistoryOkText: 'Yes',
     clearHistoryCancelText: 'Cancel'
   };
+  var renderer = new marked.Renderer();
+
+  // Modify the link rendering to open in a new tab
+  renderer.link = function (data) {
+    return "<a href=\"".concat(data.href, "\" target=\"_blank\" rel=\"noopener noreferrer\">").concat(data.text, "</a>");
+  };
+
+  // Custom image renderer for generated images with thumbnail styling and download button
+  renderer.image = function (data) {
+    var src = data.href;
+    var alt = data.text || defaultConfig.generatedImageAltText;
+    var maxWidth = defaultConfig.generatedImageMaxWidth;
+    return "<div class=\"generated-image-container\">\n            <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n            <div class=\"mt-2\">\n                <a href=\"").concat(src, "\" target=\"_blank\" download title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary\">\n                    <i class=\"fa-solid fa-download\"></i>\n                </a>\n            </div>\n        </div>");
+  };
+
+  // Chart counter for unique IDs
+  var chartCounter = 0;
+  function createChartHtml(chartId) {
+    var chartMaxWidth = defaultConfig.generatedChartMaxWidth;
+    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: ".concat(chartMaxWidth, "px; margin: 0 auto; height: 480px;\">\n            <canvas id=\"").concat(chartId, "\" class=\"img-thumbnail\" width=\"").concat(chartMaxWidth, "\" height=\"480\" style=\"width: 100%; height: 480px;\"></canvas>\n        </div>\n        <div class=\"mt-2\">\n            <button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadChart('").concat(chartId, "')\" title=\"").concat(defaultConfig.downloadChartTitle, "\">\n                <i class=\"fa-solid fa-download\"></i> ").concat(defaultConfig.downloadChartButtonText, "\n            </button>\n        </div>");
+  }
+
+  // Extract a [chart:{...json...}] marker. This avoids regex issues with nested brackets.
+  function tryExtractChartMarker(text) {
+    var token = '[chart:';
+    var start = text.indexOf(token);
+    if (start < 0) {
+      return null;
+    }
+
+    // Find JSON object boundary by balancing braces
+    var jsonStart = start + token.length;
+    var i = jsonStart;
+    while (i < text.length && (text[i] === ' ' || text[i] === '\n' || text[i] === '\r' || text[i] === '\t')) {
+      i++;
+    }
+    if (i >= text.length || text[i] !== '{') {
+      return null;
+    }
+    var depth = 0;
+    var inString = false;
+    var escape = false;
+    for (; i < text.length; i++) {
+      var ch = text[i];
+      if (inString) {
+        if (escape) {
+          escape = false;
+          continue;
+        }
+        if (ch === '\\') {
+          escape = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      if (ch === '{') {
+        depth++;
+      } else if (ch === '}') {
+        depth--;
+        if (depth === 0) {
+          var jsonEnd = i;
+          // Expect closing bracket after JSON
+          var closeBracketIndex = text.indexOf(']', jsonEnd + 1);
+          if (closeBracketIndex < 0) {
+            return null;
+          }
+          var json = text.substring(jsonStart, jsonEnd + 1).trim();
+          return {
+            startIndex: start,
+            endIndex: closeBracketIndex + 1,
+            json: json
+          };
+        }
+      }
+    }
+    return null;
+  }
+  function renderChartsInMessage(message) {
+    if (!message || !message._pendingCharts || !message._pendingCharts.length) {
+      return;
+    }
+    var _iterator = _createForOfIteratorHelper(message._pendingCharts),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var c = _step.value;
+        var canvas = document.getElementById(c.chartId);
+        if (!canvas) {
+          continue;
+        }
+        if (typeof Chart === 'undefined') {
+          console.error('Chart.js is not available on the page.');
+          continue;
+        }
+        try {
+          var _cfg$options;
+          // Destroy existing chart instance if re-rendering
+          if (canvas._chartInstance) {
+            canvas._chartInstance.destroy();
+          }
+          var cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
+          (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
+          cfg.options.responsive = true;
+          cfg.options.maintainAspectRatio = false;
+          canvas._chartInstance = new Chart(canvas, cfg);
+        } catch (e) {
+          console.error('Error creating chart:', e);
+        }
+      }
+
+      // Prevent re-render work
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+    message._pendingCharts = [];
+  }
+
+  // Replace chart markers in content with chart placeholders and collect configs.
+  function processChartMarkers(content, message) {
+    var _message$_pendingChar;
+    if (!content) {
+      return content;
+    }
+    var result = content;
+    (_message$_pendingChar = message._pendingCharts) !== null && _message$_pendingChar !== void 0 ? _message$_pendingChar : message._pendingCharts = [];
+
+    // Only replace markers when we can fully extract them.
+    while (true) {
+      var extracted = tryExtractChartMarker(result);
+      if (!extracted) {
+        break;
+      }
+      var chartId = "chat_chart_".concat(++chartCounter);
+      message._pendingCharts.push({
+        chartId: chartId,
+        config: extracted.json
+      });
+      var html = createChartHtml(chartId);
+      result = result.substring(0, extracted.startIndex) + html + result.substring(extracted.endIndex);
+    }
+    return result;
+  }
   var initialize = function initialize(instanceConfig) {
     var config = Object.assign({}, defaultConfig, instanceConfig);
+    // Keep defaultConfig in sync so renderers use overridden values
+    defaultConfig = config;
     if (!config.signalRHubUrl) {
       console.error('The signalRHubUrl is required.');
       return;
@@ -85,15 +241,23 @@ window.chatInteractionManager = function () {
                   _this.connection.on("LoadInteraction", function (data) {
                     var _data$messages;
                     _this.initializeInteraction(data.itemId, true);
-                    _this.messages = [];
-
-                    // Update the title field if it exists
+                    _this.messages = []; // Update the title field if it exists
                     var titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
                     if (titleInput && data.title) {
                       titleInput.value = data.title;
                     }
                     ((_data$messages = data.messages) !== null && _data$messages !== void 0 ? _data$messages : []).forEach(function (msg) {
+                      // Ensure persisted chart markers are rendered too
+                      if (msg && msg.content) {
+                        msg.content = processChartMarkers(msg.content.trim(), msg);
+                        if (msg.content.includes('class="chart-container"')) {
+                          msg.htmlContent = msg.content;
+                        }
+                      }
                       _this.addMessage(msg);
+                      _this.$nextTick(function () {
+                        renderChartsInMessage(msg);
+                      });
                     });
                   });
                   _this.connection.on("SettingsSaved", function (itemId, title) {
@@ -155,6 +319,9 @@ window.chatInteractionManager = function () {
           var _this3 = this;
           if (message.content) {
             var processedContent = message.content.trim();
+
+            // Process chart markers first (before markdown parsing)
+            processedContent = processChartMarkers(processedContent, message);
             if (message.references && _typeof(message.references) === "object" && Object.keys(message.references).length) {
               for (var _i = 0, _Object$entries = Object.entries(message.references); _i < _Object$entries.length; _i++) {
                 var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
@@ -170,19 +337,21 @@ window.chatInteractionManager = function () {
               }
             }
             message.content = processedContent;
-            message.htmlContent = marked.parse(processedContent, {
-              renderer: renderer
-            });
+
+            // If we inserted chart HTML, don't markdown-parse
+            if (processedContent.includes('class="chart-container"')) {
+              message.htmlContent = processedContent;
+            } else {
+              message.htmlContent = marked.parse(processedContent, {
+                renderer: renderer
+              });
+            }
           }
           this.addMessageInternal(message);
           this.hidePlaceholder();
-
-          // Show clear history button when messages exist
-          var clearHistoryBtn = document.getElementById('clearHistoryBtn');
-          if (clearHistoryBtn && message.role !== 'indicator') {
-            clearHistoryBtn.style.display = '';
-          }
           this.$nextTick(function () {
+            // Render any pending charts once the DOM is updated
+            renderChartsInMessage(message);
             _this3.scrollToBottom();
           });
         },
@@ -265,11 +434,21 @@ window.chatInteractionManager = function () {
                 content += processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
               }
               message.content = content;
-              message.htmlContent = marked.parse(content, {
-                renderer: renderer
-              });
+
+              // Process chart markers before markdown parsing
+              var htmlContent = processChartMarkers(content, message);
+              if (htmlContent.includes('class="chart-container"')) {
+                message.htmlContent = htmlContent;
+              } else {
+                message.htmlContent = marked.parse(htmlContent, {
+                  renderer: renderer
+                });
+              }
               _this4.messages[messageIndex] = message;
-              _this4.scrollToBottom();
+              _this4.$nextTick(function () {
+                renderChartsInMessage(message);
+                _this4.scrollToBottom();
+              });
             },
             complete: function complete() {
               var _this4$stream;
@@ -621,3 +800,18 @@ window.chatInteractionManager = function () {
     initialize: initialize
   };
 }();
+
+// Global function for downloading charts as images
+window.downloadChart = function (chartId) {
+  var canvas = document.getElementById(chartId);
+  if (!canvas) {
+    console.error('Chart canvas not found:', chartId);
+    return;
+  }
+
+  // Create a temporary link element
+  var link = document.createElement('a');
+  link.download = 'chart-' + chartId + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+};

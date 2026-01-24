@@ -49,4 +49,11 @@ public sealed class AzureAIInferenceClientProvider : AIClientProviderBase
 
         return client.AsIEmbeddingGenerator();
     }
+
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    {
+        throw new NotSupportedException("Azure AI Inference does not support image generation.");
+    }
 }

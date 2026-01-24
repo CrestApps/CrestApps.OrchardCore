@@ -11,9 +11,11 @@ public sealed class TransformationDocumentProcessingStrategy : DocumentProcessin
     private const int MaxContextLength = 50000;
 
     /// <inheritdoc />
-    public override Task ProcessAsync(DocumentProcessingContext context)
+    public override Task ProcessAsync(IntentProcessingContext context)
     {
-        if (!CanHandle(context, DocumentIntents.TransformFormat))
+        if (!CanHandle(context, DocumentIntents.TransformFormat) ||
+            context.Interaction.Documents is null ||
+            context.Interaction.Documents.Count == 0)
         {
             return Task.CompletedTask;
         }

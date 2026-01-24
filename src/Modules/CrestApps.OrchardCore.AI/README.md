@@ -63,9 +63,13 @@ Below is an example configuration:
           "DefaultConnectionName": "<!-- The default connection name to use from the Connections list -->",
           "DefaultDeploymentName": "<!-- The default deployment name -->",
           "DefaultEmbeddingDeploymentName": "<!-- The default embedding deployment name (optional, for embedding services) -->",
+          "DefaultIntentDeploymentName": "<!-- The default deployment name for intent detection (optional) -->",
+          "DefaultImagesDeploymentName": "<!-- The default deployment name for image generation (optional, e.g., 'dall-e-3') -->",
           "Connections": {
             "<!-- Connection name goes here -->": {
-              "DefaultDeploymentName": "<!-- The default deployment name for this connection -->"
+              "DefaultDeploymentName": "<!-- The default deployment name for this connection -->",
+              "DefaultIntentDeploymentName": "<!-- The intent detection deployment name (optional, lightweight model recommended) -->",
+              "DefaultImagesDeploymentName": "<!-- The image generation deployment name (optional, e.g., 'dall-e-3') -->"
               // Provider-specific settings go here
             }
           }
@@ -75,6 +79,15 @@ Below is an example configuration:
   }
 }
 ```
+
+#### Deployment Name Settings
+
+| Setting | Description | Required |
+|---------|-------------|----------|
+| `DefaultDeploymentName` | The default model for chat completions | Yes |
+| `DefaultEmbeddingDeploymentName` | The model for generating embeddings (for RAG/vector search) | No |
+| `DefaultIntentDeploymentName` | A lightweight model for intent classification (e.g., `gpt-4o-mini`). If not set, falls back to `DefaultDeploymentName`. | No |
+| `DefaultImagesDeploymentName` | The model for image generation (e.g., `dall-e-3`). Required for image generation features. | No |
 
 ---
 

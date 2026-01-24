@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 
@@ -6,7 +7,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 /// Context for document processing strategy execution.
 /// Contains both input data and the result that strategies can update.
 /// </summary>
-public sealed class DocumentProcessingContext
+public sealed class IntentProcessingContext
 {
     /// <summary>
     /// Gets or sets the user's prompt text.
@@ -19,14 +20,16 @@ public sealed class DocumentProcessingContext
     public ChatInteraction Interaction { get; set; }
 
     /// <summary>
-    /// Gets the list of documents attached to the interaction.
+    /// Gets or sets the conversation history (past messages) for context.
+    /// This allows strategies to reference previous prompts and responses.
     /// </summary>
-    public IList<ChatInteractionDocument> Documents => Interaction?.Documents ?? [];
+    public IList<ChatMessage> ConversationHistory { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the detected intent for this processing context.
+    /// Gets or sets the maximum number of past messages to include in context for image generation.
+    /// Default is 5 messages.
     /// </summary>
-    public DocumentIntentResult IntentResult { get; set; }
+    public int MaxHistoryMessagesForImageGeneration { get; set; } = 5;
 
     /// <summary>
     /// Gets or sets the cancellation token for the operation.
@@ -34,7 +37,8 @@ public sealed class DocumentProcessingContext
     public CancellationToken CancellationToken { get; set; }
 
     /// <summary>
-    /// Gets the result of document processing. Multiple strategies can add context to this result.
+    /// Gets the result of intent processing. Multiple strategies can add context to this result.
+    /// This also contains detected intent metadata (Intent/Confidence/Reason).
     /// </summary>
-    public DocumentProcessingResult Result { get; } = new DocumentProcessingResult();
+    public IntentProcessingResult Result { get; } = new IntentProcessingResult();
 }

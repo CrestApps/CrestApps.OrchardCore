@@ -15,7 +15,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.GeneralChatWithReference, result.Intent);
+        Assert.Equal(DocumentIntents.GeneralChatWithReference, result.Name);
     }
 
     [Theory]
@@ -30,7 +30,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.SummarizeDocument, result.Intent);
+        Assert.Equal(DocumentIntents.SummarizeDocument, result.Name);
     }
 
     [Theory]
@@ -44,7 +44,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.AnalyzeTabularData, result.Intent);
+        Assert.Equal(DocumentIntents.AnalyzeTabularData, result.Name);
     }
 
     [Theory]
@@ -58,7 +58,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.ExtractStructuredData, result.Intent);
+        Assert.Equal(DocumentIntents.ExtractStructuredData, result.Name);
     }
 
     [Theory]
@@ -71,7 +71,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.CompareDocuments, result.Intent);
+        Assert.Equal(DocumentIntents.CompareDocuments, result.Name);
     }
 
     [Theory]
@@ -85,7 +85,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.TransformFormat, result.Intent);
+        Assert.Equal(DocumentIntents.TransformFormat, result.Name);
     }
 
     [Theory]
@@ -99,7 +99,7 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.DocumentQnA, result.Intent);
+        Assert.Equal(DocumentIntents.DocumentQnA, result.Name);
     }
 
     [Fact]
@@ -109,7 +109,72 @@ public sealed class KeywordDocumentIntentDetectorTests
 
         var result = await _detector.DetectAsync(context);
 
-        Assert.Equal(DocumentIntents.DocumentQnA, result.Intent);
+        Assert.Equal(DocumentIntents.DocumentQnA, result.Name);
+    }
+
+    [Theory]
+    [InlineData("generate an image of a sunset")]
+    [InlineData("create an image of a cat")]
+    [InlineData("draw a landscape")]
+    [InlineData("generate a picture of mountains")]
+    [InlineData("create a visual of the concept")]
+    public async Task DetectAsync_WhenImageGenerationKeywordsPresent_ReturnsGenerateImage(string prompt)
+    {
+        var context = CreateContextWithNoDocuments(prompt);
+
+        var result = await _detector.DetectAsync(context);
+
+        Assert.Equal(DocumentIntents.GenerateImage, result.Name);
+    }
+
+    [Theory]
+    [InlineData("draw an bar chart representing that data")]
+    [InlineData("create a bar chart")]
+    [InlineData("generate a chart image")]
+    [InlineData("make a chart")]
+    [InlineData("create a graph")]
+    public async Task DetectAsync_WhenChartKeywordsPresent_ReturnsGenerateChart(string prompt)
+    {
+        var context = CreateContextWithNoDocuments(prompt);
+
+        var result = await _detector.DetectAsync(context);
+
+        Assert.Equal(DocumentIntents.GenerateChart, result.Name);
+    }
+
+    [Theory]
+    [InlineData("use that data to create a chart")]
+    [InlineData("based on this, generate a bar chart")]
+    [InlineData("create a chart from the above")]
+    public async Task DetectAsync_WhenChartKeywordsReferenceHistory_ReturnsGenerateChart(string prompt)
+    {
+        var context = CreateContextWithNoDocuments(prompt);
+
+        var result = await _detector.DetectAsync(context);
+
+        Assert.Equal(DocumentIntents.GenerateChart, result.Name);
+    }
+
+    [Fact]
+    public async Task DetectAsync_WhenImageKeywordsReferenceHistory_ReturnsGenerateImageWithHistory()
+    {
+        var context = CreateContextWithNoDocuments("generate an image from that table");
+
+        var result = await _detector.DetectAsync(context);
+
+        Assert.Equal(DocumentIntents.GenerateImageWithHistory, result.Name);
+    }
+
+    [Fact]
+    public async Task DetectAsync_ImageGenerationTakesPriority_OverDocumentQnA()
+    {
+        // Image generation should work even without documents
+        var context = CreateContextWithNoDocuments("generate an image of a beautiful garden");
+
+        var result = await _detector.DetectAsync(context);
+
+        Assert.Equal(DocumentIntents.GenerateImage, result.Name);
+        Assert.True(result.Confidence >= 0.9f);
     }
 
     [Fact]
@@ -203,6 +268,19 @@ public sealed class KeywordDocumentIntentDetectorTests
                         Text = "Second document content"
                     }
                 ]
+            }
+        };
+    }
+
+    private static DocumentIntentDetectionContext CreateContextWithNoDocuments(string prompt)
+    {
+        return new DocumentIntentDetectionContext
+        {
+            Prompt = prompt,
+            Interaction = new ChatInteraction
+            {
+                ItemId = "test-id",
+                Documents = []
             }
         };
     }

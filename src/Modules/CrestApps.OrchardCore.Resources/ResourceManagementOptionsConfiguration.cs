@@ -36,6 +36,19 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("2.18.0");
 
         _manifest
+        .DefineScript("chart.js")
+        .SetUrl(
+            "~/CrestApps.OrchardCore.Resources/vendors/chartjs/chart.min.js",
+            "~/CrestApps.OrchardCore.Resources/vendors/chartjs/chart.js")
+        .SetCdn(
+            "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js",
+            "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.js")
+        .SetCdnIntegrity(
+            "sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ",
+            "sha384-hfkuqrKeWFmnTMWN31VWyoe8xgdTADD11kgxmdpx2uyE6j5Az5uZq6u6AKYYmAOw")
+        .SetVersion("4.5.1");
+
+        _manifest
             .DefineScript("marked")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/scripts/marked.min.js",

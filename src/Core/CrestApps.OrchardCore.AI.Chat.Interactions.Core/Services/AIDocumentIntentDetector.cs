@@ -5,7 +5,6 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -18,28 +17,34 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 /// </summary>
 public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
 {
+    private readonly AIProviderOptions _aiProviderOptions;
+    private readonly IAIClientFactory _aIClientFactory;
     private readonly KeywordDocumentIntentDetector _fallbackDetector;
     private readonly IOptions<DocumentProcessingOptions> _options;
     private readonly ILogger<AIDocumentIntentDetector> _logger;
 
     public AIDocumentIntentDetector(
+        IOptions<AIProviderOptions> aiProviderOptions,
+        IAIClientFactory aIClientFactory,
         KeywordDocumentIntentDetector fallbackDetector,
         IOptions<DocumentProcessingOptions> options,
         ILogger<AIDocumentIntentDetector> logger)
     {
+        _aiProviderOptions = aiProviderOptions.Value;
+        _aIClientFactory = aIClientFactory;
         _fallbackDetector = fallbackDetector;
         _options = options;
         _logger = logger;
     }
 
     /// <inheritdoc />
-    public async Task<DocumentIntentResult> DetectAsync(DocumentIntentDetectionContext context)
+    public async Task<DocumentIntent> DetectAsync(DocumentIntentDetectionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         if (string.IsNullOrWhiteSpace(context.Prompt))
         {
-            return DocumentIntentResult.FromIntent(
+            return DocumentIntent.FromName(
                 DocumentIntents.GeneralChatWithReference,
                 0.5f,
                 "No prompt provided, defaulting to general chat.");
@@ -54,17 +59,13 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
 
         // Fall back to keyword-based detection
         _logger.LogDebug("AI-based intent detection unavailable, falling back to keyword-based detection.");
-        return await _fallbackDetector.DetectAsync(context);
+        var fallback = await _fallbackDetector.DetectAsync(context);
+
+        return fallback;
     }
 
-    private async Task<DocumentIntentResult> TryDetectWithAIAsync(DocumentIntentDetectionContext context)
+    private async Task<DocumentIntent> TryDetectWithAIAsync(DocumentIntentDetectionContext context)
     {
-        if (context.ServiceProvider == null)
-        {
-            _logger.LogDebug("ServiceProvider not available in context, cannot use AI-based intent detection.");
-            return null;
-        }
-
         var interaction = context.Interaction;
         if (interaction == null)
         {
@@ -82,8 +83,7 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
 
         try
         {
-            var providerOptions = context.ServiceProvider.GetService<IOptions<AIProviderOptions>>();
-            if (providerOptions?.Value?.Providers == null)
+            if (_aiProviderOptions.Providers == null)
             {
                 _logger.LogDebug("AI provider options not available.");
                 return null;
@@ -92,7 +92,7 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
             var providerName = interaction.Source;
             var connectionName = interaction.ConnectionName;
 
-            if (!providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
+            if (!_aiProviderOptions.Providers.TryGetValue(providerName, out var provider))
             {
                 _logger.LogDebug("Provider '{ProviderName}' not found in configuration.", providerName);
                 return null;
@@ -122,14 +122,7 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
                 return null;
             }
 
-            var clientFactory = context.ServiceProvider.GetService<IAIClientFactory>();
-            if (clientFactory == null)
-            {
-                _logger.LogDebug("AI client factory not available.");
-                return null;
-            }
-
-            var chatClient = await clientFactory.CreateChatClientAsync(providerName, connectionName, deploymentName);
+            var chatClient = await _aIClientFactory.CreateChatClientAsync(providerName, connectionName, deploymentName);
             if (chatClient == null)
             {
                 _logger.LogDebug("Failed to create chat client for intent detection.");
@@ -227,7 +220,7 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
         return $"User prompt: {context.Prompt}{documentInfo}";
     }
 
-    private DocumentIntentResult ParseIntentResponse(string responseText, Dictionary<string, string> registeredIntents)
+    private DocumentIntent ParseIntentResponse(string responseText, Dictionary<string, string> registeredIntents)
     {
         try
         {
@@ -249,7 +242,7 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
                     _logger.LogDebug("AI detected intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
                         validIntent, confidence, parsed.Reason);
 
-                    return DocumentIntentResult.FromIntent(validIntent, confidence, parsed.Reason ?? "AI-based detection");
+                    return DocumentIntent.FromName(validIntent, confidence, parsed.Reason ?? "AI-based detection");
                 }
             }
 

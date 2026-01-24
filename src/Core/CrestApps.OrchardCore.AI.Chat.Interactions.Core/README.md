@@ -18,6 +18,7 @@ This module provides an extensible architecture for processing documents in chat
 
 The `IDocumentIntentDetector` interface allows classification of user intent when documents are attached. Intents are string-based, allowing easy extensibility. Well-known intents are defined in `DocumentIntents`:
 
+**Document-related intents:**
 - `DocumentIntents.DocumentQnA` - Question answering over documents (RAG)
 - `DocumentIntents.SummarizeDocument` - Document summarization
 - `DocumentIntents.AnalyzeTabularData` - CSV/tabular data analysis
@@ -25,6 +26,11 @@ The `IDocumentIntentDetector` interface allows classification of user intent whe
 - `DocumentIntents.CompareDocuments` - Document comparison
 - `DocumentIntents.TransformFormat` - Content transformation/reformatting
 - `DocumentIntents.GeneralChatWithReference` - General chat with document reference
+
+**Image generation intents:**
+- `DocumentIntents.GenerateImage` - Generate an image from a text description
+- `DocumentIntents.GenerateImageWithHistory` - Generate an image using conversation context
+- `DocumentIntents.GenerateChart` - Generate charts and graphs
 
 #### Processing Strategies
 
@@ -43,15 +49,22 @@ The `DocumentProcessingResult` is part of the `DocumentProcessingContext` and al
 - `AdditionalContexts` - List of context entries from all contributing strategies
 - `GetCombinedContext()` - Gets the combined context from all strategies
 - `HasContext` - Whether any strategy has contributed context
+- `GeneratedImages` - Contains generated images when image generation intents are processed
+- `HasGeneratedImages` - Whether any images were generated
+- `IsImageGenerationIntent` - Whether the request was for image generation
 
 ### Built-in Strategies
 
+**Document Processing Strategies:**
 - `SummarizationDocumentProcessingStrategy` - Full document content for summarization
 - `TabularAnalysisDocumentProcessingStrategy` - Structured data parsing for analysis
 - `ExtractionDocumentProcessingStrategy` - Content for data extraction
 - `ComparisonDocumentProcessingStrategy` - Multi-document content for comparison
 - `TransformationDocumentProcessingStrategy` - Content for format transformation
 - `GeneralReferenceDocumentProcessingStrategy` - General document reference
+
+**Image Generation Strategy:**
+- `ImageGenerationDocumentProcessingStrategy` - Generates images using AI image generation models (e.g., DALL-E)
 
 ## Usage
 

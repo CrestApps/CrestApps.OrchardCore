@@ -11,9 +11,9 @@ public interface IDocumentProcessingStrategy
 {
     /// <summary>
     /// Processes the documents according to the strategy and updates the context result.
-    /// If this strategy handles the given intent, it should add context to <see cref="DocumentProcessingContext.Result"/>.
+    /// If this strategy handles the given intent, it should add context to <see cref="IntentProcessingContext.Result"/>.
     /// If this strategy does not handle the intent, it should return without modifying the result.
     /// </summary>
     /// <param name="context">The processing context containing documents, intent, and result to update.</param>
-    Task ProcessAsync(DocumentProcessingContext context);
+    Task ProcessAsync(IntentProcessingContext context);
 }

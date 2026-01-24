@@ -12,6 +12,6 @@ public interface IDocumentIntentDetector
     /// Detects the user's intent based on their prompt and attached documents.
     /// </summary>
     /// <param name="context">The context containing the prompt, documents, and interaction.</param>
-    /// <returns>The detected intent result with confidence level.</returns>
-    Task<DocumentIntentResult> DetectAsync(DocumentIntentDetectionContext context);
+    /// <returns>The detected intent metadata.</returns>
+    Task<DocumentIntent> DetectAsync(DocumentIntentDetectionContext context);
 }

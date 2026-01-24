@@ -9,14 +9,14 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrategy
 {
     /// <inheritdoc />
-    public abstract Task ProcessAsync(DocumentProcessingContext context);
+    public abstract Task ProcessAsync(IntentProcessingContext context);
 
     /// <summary>
     /// Gets the combined text content from all documents.
     /// </summary>
-    protected static string GetCombinedDocumentText(DocumentProcessingContext context, int? maxLength = null)
+    protected static string GetCombinedDocumentText(IntentProcessingContext context, int? maxLength = null)
     {
-        if (context.Documents == null || context.Documents.Count == 0)
+        if (context.Interaction?.Documents == null || context.Interaction.Documents.Count == 0)
         {
             return string.Empty;
         }
@@ -24,7 +24,7 @@ public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrate
         var builder = new StringBuilder();
         var totalLength = 0;
 
-        foreach (var doc in context.Documents)
+        foreach (var doc in context.Interaction.Documents)
         {
             if (string.IsNullOrWhiteSpace(doc.Text))
             {
@@ -74,9 +74,9 @@ public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrate
     /// <summary>
     /// Gets document metadata for context.
     /// </summary>
-    protected static string GetDocumentMetadata(DocumentProcessingContext context)
+    protected static string GetDocumentMetadata(IntentProcessingContext context)
     {
-        if (context.Documents == null || context.Documents.Count == 0)
+        if (context.Interaction?.Documents == null || context.Interaction.Documents.Count == 0)
         {
             return string.Empty;
         }
@@ -84,7 +84,7 @@ public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrate
         var builder = new StringBuilder();
         builder.AppendLine("Attached documents:");
 
-        foreach (var doc in context.Documents)
+        foreach (var doc in context.Interaction.Documents)
         {
             builder.AppendLine($"- {doc.FileName ?? "Unknown"} ({FormatFileSize(doc.FileSize)}, {doc.ContentType ?? "unknown type"})");
         }
@@ -92,8 +92,8 @@ public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrate
         return builder.ToString();
     }
 
-    protected static bool CanHandle(DocumentProcessingContext context, string intent)
-        => string.Equals(context.IntentResult?.Intent, intent, StringComparison.OrdinalIgnoreCase);
+    protected static bool CanHandle(IntentProcessingContext context, string intent)
+        => string.Equals(context.Result?.Intent, intent, StringComparison.OrdinalIgnoreCase);
 
     private static string FormatFileSize(long bytes)
     {

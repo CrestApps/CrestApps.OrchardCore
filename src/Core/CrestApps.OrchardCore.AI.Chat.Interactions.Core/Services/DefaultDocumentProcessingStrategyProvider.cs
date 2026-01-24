@@ -21,12 +21,12 @@ public sealed class DefaultDocumentProcessingStrategyProvider : IDocumentProcess
     }
 
     /// <inheritdoc />
-    public async Task ProcessAsync(DocumentProcessingContext context)
+    public async Task ProcessAsync(IntentProcessingContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(context.IntentResult);
 
-        var intent = context.IntentResult.Intent;
+        var intent = context.Result.Intent;
+        ArgumentException.ThrowIfNullOrEmpty(intent);
 
         var isDebugging = _logger.IsEnabled(LogLevel.Debug);
 
