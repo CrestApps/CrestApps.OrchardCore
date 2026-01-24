@@ -15,6 +15,13 @@
   {
     "copy": true,
     "inputs": [
+      "node_modules/chart.js/dist/chart.umd.js.map"
+    ],
+    "output": "wwwroot/vendors/chartjs/chart.umd.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
       "node_modules/chart.js/dist/chart.umd.min.js"
     ],
     "output": "wwwroot/vendors/chartjs/chart.min.js"
