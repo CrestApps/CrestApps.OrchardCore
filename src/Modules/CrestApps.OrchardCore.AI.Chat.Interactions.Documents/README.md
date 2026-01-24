@@ -110,7 +110,8 @@ Navigate to **Artificial Intelligence > Provider Connections**, edit your connec
             "default": {
               "DefaultDeploymentName": "gpt-4o",
               "DefaultEmbeddingDeploymentName": "text-embedding-3-small",
-              "DefaultIntentDeploymentName": "gpt-4o-mini"
+              "DefaultIntentDeploymentName": "gpt-4o-mini",
+              "DefaultImagesDeploymentName": "dall-e-3"
             }
           }
         }
@@ -119,6 +120,15 @@ Navigate to **Artificial Intelligence > Provider Connections**, edit your connec
   }
 }
 ```
+
+#### Deployment Name Settings
+
+| Setting | Description | Required |
+|---------|-------------|----------|
+| `DefaultDeploymentName` | The default model for chat completions | Yes |
+| `DefaultEmbeddingDeploymentName` | The model for generating embeddings (for RAG/vector search) | No |
+| `DefaultIntentDeploymentName` | A lightweight model for intent classification (e.g., `gpt-4o-mini`) | No |
+| `DefaultImagesDeploymentName` | The model for image generation (e.g., `dall-e-3`) | No |
 
 > **Recommendation**: Use a lightweight, cost-effective model for intent detection such as `gpt-4o-mini`, `gpt-4.1-mini`, or `gpt-4.1-nano`. Intent classification is a simple task that doesn't require the full capabilities of larger models, and using a smaller model significantly reduces costs and improves response times.
 
