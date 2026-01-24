@@ -37,9 +37,13 @@ public sealed class FunctionInvocationAICompletionServiceHandler : IAICompletion
         foreach (var toolName in context.CompletionContext.ToolNames)
         {
             // Verify user has permission to access this tool
-            if (user is not null && !await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, toolName))
+            if (user is not null)
             {
-                continue;
+                var authResult = await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, toolName);
+                if (!authResult.Succeeded)
+                {
+                    continue;
+                }
             }
 
             var tool = await _toolsService.GetByNameAsync(toolName);
