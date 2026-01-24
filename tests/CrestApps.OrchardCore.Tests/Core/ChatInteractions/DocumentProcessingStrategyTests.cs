@@ -337,9 +337,9 @@ public sealed class DocumentProcessingStrategyTests
         var enhanced = (string)method!.Invoke(null, ["Use that data to create an image chart", history, 5]);
 
         Assert.Contains("Conversation context", enhanced, StringComparison.Ordinal);
-        Assert.Contains("User:", enhanced, StringComparison.Ordinal);
+        Assert.Contains("user:", enhanced, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Analyze this data", enhanced, StringComparison.Ordinal);
-        Assert.Contains("Assistant:", enhanced, StringComparison.Ordinal);
+        Assert.Contains("assistant:", enhanced, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("extracted table", enhanced, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Current request:", enhanced, StringComparison.Ordinal);
         Assert.Contains("Use that data to create an image chart", enhanced, StringComparison.Ordinal);

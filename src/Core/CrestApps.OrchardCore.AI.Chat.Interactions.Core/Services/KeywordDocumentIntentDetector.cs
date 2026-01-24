@@ -49,7 +49,15 @@ public sealed class KeywordDocumentIntentDetector : IDocumentIntentDetector
         "create an illustration", "generate artwork", "create artwork",
         "generate a visual", "create a visual", "image of", "picture of",
         "illustration of", "render an image",
-        "design an image", "generate a photo", "create a photo"
+        "design an image", "generate a photo", "create a photo",
+        "draw a", "draw an", "draw "
+    ];
+
+    private static readonly string[] _imageGenerationWithHistoryKeywords =
+    [
+        "generate an image from", "create an image from", "make an image from",
+        "generate an image based on", "create an image based on", "make an image based on",
+        "generate a picture from", "create a picture from", "make a picture from"
     ];
 
     private static readonly string[] _chartGenerationKeywords =
@@ -127,6 +135,15 @@ public sealed class KeywordDocumentIntentDetector : IDocumentIntentDetector
         }
 
         // Check for image generation intent (doesn't require documents)
+        // Special-case phrases like "generate an image from that table" which can otherwise match transform keywords.
+        if (ContainsAnyKeyword(prompt, _imageGenerationWithHistoryKeywords))
+        {
+            return Task.FromResult(DocumentIntent.FromName(
+                DocumentIntents.GenerateImageWithHistory,
+                0.9f,
+                "Image generation with history keywords detected."));
+        }
+
         if (ContainsAnyKeyword(prompt, _imageGenerationKeywords))
         {
             var intentName = referencesHistory
