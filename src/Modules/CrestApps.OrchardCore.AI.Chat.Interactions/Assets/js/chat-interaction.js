@@ -5,7 +5,7 @@ window.chatInteractionManager = function () {
         // UI defaults for generated media
         generatedImageAltText: 'Generated Image',
         generatedImageMaxWidth: 400,
-        generatedChartMaxWidth: 600,
+        generatedChartMaxWidth: 900,
         downloadImageTitle: 'Download image',
         downloadChartTitle: 'Download chart as image',
         downloadChartButtonText: 'Download',
@@ -67,8 +67,8 @@ window.chatInteractionManager = function () {
     function createChartHtml(chartId) {
         const chartMaxWidth = defaultConfig.generatedChartMaxWidth;
 
-        return `<div class="chart-container" style="position: relative; max-width: ${chartMaxWidth}px; margin: 0 auto;">
-            <canvas id="${chartId}" class="img-thumbnail"></canvas>
+        return `<div class="chart-container" style="position: relative; width: 100%; max-width: ${chartMaxWidth}px; margin: 0 auto; height: 480px;">
+            <canvas id="${chartId}" class="img-thumbnail" width="${chartMaxWidth}" height="480" style="width: 100%; height: 480px;"></canvas>
         </div>
         <div class="mt-2">
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadChart('${chartId}')" title="${defaultConfig.downloadChartTitle}">
@@ -171,6 +171,10 @@ window.chatInteractionManager = function () {
                 }
 
                 const cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
+                cfg.options ??= {};
+                cfg.options.responsive = true;
+                cfg.options.maintainAspectRatio = false;
+
                 canvas._chartInstance = new Chart(canvas, cfg);
             } catch (e) {
                 console.error('Error creating chart:', e);
@@ -470,8 +474,8 @@ window.chatInteractionManager = function () {
                                 this.messages[messageIndex] = message;
 
                                 this.$nextTick(() => {
-                                  renderChartsInMessage(message);
-                                  this.scrollToBottom();
+                                    renderChartsInMessage(message);
+                                    this.scrollToBottom();
                                 });
                             },
                             complete: () => {
@@ -856,7 +860,6 @@ window.chatInteractionManager = function () {
         initialize: initialize
     };
 }();
-
 
 // Global function for downloading charts as images
 window.downloadChart = function (chartId) {

@@ -20,7 +20,7 @@ window.chatInteractionManager = function () {
     // UI defaults for generated media
     generatedImageAltText: 'Generated Image',
     generatedImageMaxWidth: 400,
-    generatedChartMaxWidth: 600,
+    generatedChartMaxWidth: 900,
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
@@ -52,7 +52,7 @@ window.chatInteractionManager = function () {
   var chartCounter = 0;
   function createChartHtml(chartId) {
     var chartMaxWidth = defaultConfig.generatedChartMaxWidth;
-    return "<div class=\"chart-container\" style=\"position: relative; max-width: ".concat(chartMaxWidth, "px; margin: 0 auto;\">\n            <canvas id=\"").concat(chartId, "\" class=\"img-thumbnail\"></canvas>\n        </div>\n        <div class=\"mt-2\">\n            <button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadChart('").concat(chartId, "')\" title=\"").concat(defaultConfig.downloadChartTitle, "\">\n                <i class=\"fa-solid fa-download\"></i> ").concat(defaultConfig.downloadChartButtonText, "\n            </button>\n        </div>");
+    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: ".concat(chartMaxWidth, "px; margin: 0 auto; height: 480px;\">\n            <canvas id=\"").concat(chartId, "\" class=\"img-thumbnail\" width=\"").concat(chartMaxWidth, "\" height=\"480\" style=\"width: 100%; height: 480px;\"></canvas>\n        </div>\n        <div class=\"mt-2\">\n            <button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadChart('").concat(chartId, "')\" title=\"").concat(defaultConfig.downloadChartTitle, "\">\n                <i class=\"fa-solid fa-download\"></i> ").concat(defaultConfig.downloadChartButtonText, "\n            </button>\n        </div>");
   }
 
   // Extract a [chart:{...json...}] marker. This avoids regex issues with nested brackets.
@@ -135,11 +135,15 @@ window.chatInteractionManager = function () {
           continue;
         }
         try {
+          var _cfg$options;
           // Destroy existing chart instance if re-rendering
           if (canvas._chartInstance) {
             canvas._chartInstance.destroy();
           }
           var cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
+          (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
+          cfg.options.responsive = true;
+          cfg.options.maintainAspectRatio = false;
           canvas._chartInstance = new Chart(canvas, cfg);
         } catch (e) {
           console.error('Error creating chart:', e);
