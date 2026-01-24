@@ -1,7 +1,10 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -12,14 +15,20 @@ namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 internal sealed class AIProfileToolInstancesDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly ICatalog<AIToolInstance> _toolInstanceStore;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileToolInstancesDisplayDriver(
         ICatalog<AIToolInstance> toolInstanceStore,
+        IAuthorizationService authorizationService,
+        IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<AIProfileToolsDisplayDriver> stringLocalizer)
     {
         _toolInstanceStore = toolInstanceStore;
+        _authorizationService = authorizationService;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -32,11 +41,29 @@ internal sealed class AIProfileToolInstancesDisplayDriver : DisplayDriver<AIProf
             return null;
         }
 
+        // Filter instances based on user permissions
+        var user = _httpContextAccessor.HttpContext.User;
+        var accessibleInstances = new List<AIToolInstance>();
+
+        foreach (var instance in instances)
+        {
+            // Check if user has access to this tool instance
+            if (await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, instance.ItemId))
+            {
+                accessibleInstances.Add(instance);
+            }
+        }
+
+        if (accessibleInstances.Count == 0)
+        {
+            return null;
+        }
+
         return Initialize<EditProfileToolInstancesViewModel>("EditProfileToolInstances_Edit", model =>
         {
             var toolMetadata = profile.As<AIProfileFunctionInstancesMetadata>();
 
-            model.Instances = instances.Select(instance => new ToolEntry
+            model.Instances = accessibleInstances.Select(instance => new ToolEntry
             {
                 ItemId = instance.ItemId,
                 DisplayText = instance.DisplayText,

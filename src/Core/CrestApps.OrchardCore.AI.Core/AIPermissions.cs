@@ -34,7 +34,13 @@ public static class AIPermissions
 
     public static readonly Permission DeleteOwnChatInteraction = new("DeleteOwnChatInteraction", "Delete own chat interaction", [DeleteChatInteraction]);
 
+    public static readonly Permission AccessAnyAITool = new("AccessAnyAITool", "Access any AI tool", [], isSecurityCritical: true);
+
+    public static readonly Permission AccessAITool = new("AccessAITool", "Access AI tool");
+
     private static readonly Permission _queryAIProfileTemplate = new("QueryAIProfile_{0}", "Query AI profile - {0}", [QueryAnyAIProfile]);
+
+    private static readonly Permission _accessAIToolTemplate = new("AccessAITool_{0}", "Access AI tool - {0}", [AccessAnyAITool]);
 
     /// <summary>
     /// Generates a permission dynamically for a content type.
@@ -47,6 +53,20 @@ public static class AIPermissions
             string.Format(_queryAIProfileTemplate.Name, profileName),
             string.Format(_queryAIProfileTemplate.Description, profileName),
            _queryAIProfileTemplate.ImpliedBy ?? []
+        );
+    }
+
+    /// <summary>
+    /// Generates a permission dynamically for an AI tool.
+    /// </summary>
+    public static Permission CreateAIToolPermission(string toolName)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(toolName);
+
+        return new Permission(
+            string.Format(_accessAIToolTemplate.Name, toolName),
+            string.Format(_accessAIToolTemplate.Description, toolName),
+            _accessAIToolTemplate.ImpliedBy ?? []
         );
     }
 }
