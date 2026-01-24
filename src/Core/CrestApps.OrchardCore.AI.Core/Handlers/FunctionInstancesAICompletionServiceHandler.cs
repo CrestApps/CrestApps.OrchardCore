@@ -39,8 +39,7 @@ public sealed class FunctionInstancesAICompletionServiceHandler : IAICompletionS
             // Verify user has permission to access this tool instance
             if (user is not null)
             {
-                var authResult = await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, instanceId);
-                if (!authResult.Succeeded)
+                if (!await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, instanceId as object))
                 {
                     continue;
                 }

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -65,6 +66,16 @@ public sealed class AIToolAuthorizationHandler : AuthorizationHandler<Permission
         if (resource is string toolIdentifier)
         {
             return toolIdentifier;
+        }
+
+        if (resource is AIToolDefinitionEntry entry)
+        {
+            return entry.Name;
+        }
+
+        if (resource is AIToolInstance aIToolInstance)
+        {
+            return aIToolInstance.ItemId;
         }
 
         // Resource can also be an AITool instance

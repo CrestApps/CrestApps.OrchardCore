@@ -48,8 +48,7 @@ internal sealed class AIProfileToolInstancesDisplayDriver : DisplayDriver<AIProf
         foreach (var instance in instances)
         {
             // Check if user has access to this tool instance
-            var authResult = await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, instance.ItemId);
-            if (authResult.Succeeded)
+            if (await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, instance))
             {
                 accessibleInstances.Add(instance);
             }

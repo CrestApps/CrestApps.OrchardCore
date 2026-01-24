@@ -46,8 +46,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
         foreach (var tool in _toolDefinitions.Tools)
         {
             // Check if user has access to this tool
-            var authResult = await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key);
-            if (authResult.Succeeded)
+            if (await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
             {
                 accessibleTools[tool.Key] = tool.Value;
             }
