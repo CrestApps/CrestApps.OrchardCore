@@ -1,6 +1,9 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
@@ -12,20 +15,45 @@ namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileToolsDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
+        IAuthorizationService authorizationService,
+        IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<AIProfileToolsDisplayDriver> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
+        _authorizationService = authorizationService;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
+    public override async Task<IDisplayResult> EditAsync(AIProfile profile, BuildEditorContext context)
     {
         if (_toolDefinitions.Tools.Count == 0)
+        {
+            return null;
+        }
+
+        // Filter tools based on user permissions
+        var user = _httpContextAccessor.HttpContext.User;
+        var accessibleTools = new Dictionary<string, AIToolDefinitionEntry>();
+
+        foreach (var tool in _toolDefinitions.Tools)
+        {
+            // Check if user has access to this tool
+            var authResult = await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key);
+            if (authResult.Succeeded)
+            {
+                accessibleTools[tool.Key] = tool.Value;
+            }
+        }
+
+        if (accessibleTools.Count == 0)
         {
             return null;
         }
@@ -34,7 +62,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
         {
             var metadata = profile.As<AIProfileFunctionInvocationMetadata>();
 
-            model.Tools = _toolDefinitions.Tools
+            model.Tools = accessibleTools
             .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
             .OrderBy(group => group.Key)
             .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry

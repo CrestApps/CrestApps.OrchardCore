@@ -1,14 +1,23 @@
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
 public sealed class FunctionInstancesAICompletionServiceHandler : IAICompletionServiceHandler
 {
     private readonly IAIToolsService _toolsService;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public FunctionInstancesAICompletionServiceHandler(IAIToolsService toolsService)
+    public FunctionInstancesAICompletionServiceHandler(
+        IAIToolsService toolsService,
+        IAuthorizationService authorizationService,
+        IHttpContextAccessor httpContextAccessor)
     {
         _toolsService = toolsService;
+        _authorizationService = authorizationService;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task ConfigureAsync(CompletionServiceConfigureContext context)
@@ -23,8 +32,20 @@ public sealed class FunctionInstancesAICompletionServiceHandler : IAICompletionS
 
         context.ChatOptions.Tools ??= [];
 
+        var user = _httpContextAccessor.HttpContext?.User;
+
         foreach (var instanceId in context.CompletionContext.InstanceIds)
         {
+            // Verify user has permission to access this tool instance
+            if (user is not null)
+            {
+                var authResult = await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, instanceId);
+                if (!authResult.Succeeded)
+                {
+                    continue;
+                }
+            }
+
             var tool = await _toolsService.GetByInstanceIdAsync(instanceId);
 
             if (tool is null)
