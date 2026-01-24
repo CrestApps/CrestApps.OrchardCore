@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Security;
 
@@ -27,14 +28,14 @@ public sealed class AIToolAuthorizationHandler : AuthorizationHandler<Permission
             return;
         }
 
-        // Only handle AccessAITool permission (Permission #2)
-        if (requirement.Permission != AIPermissions.AccessAITool)
+        // Resource must be provided (AI tool name or instance ID)
+        if (context.Resource is null)
         {
             return;
         }
 
-        // Resource must be provided (AI tool name or instance ID)
-        if (context.Resource is null)
+        // Only handle AccessAITool permission (Permission #2)
+        if (requirement.Permission != AIPermissions.AccessAITool)
         {
             return;
         }
@@ -48,14 +49,8 @@ public sealed class AIToolAuthorizationHandler : AuthorizationHandler<Permission
 
         _authorizationService ??= _serviceProvider.GetService<IAuthorizationService>();
 
-        // First, check if user has super permission (Permission #1 - AccessAnyAITool)
-        if (await _authorizationService.AuthorizeAsync(context.User, AIPermissions.AccessAnyAITool))
-        {
-            context.Succeed(requirement);
-            return;
-        }
-
-        // Otherwise, check the specific tool permission (Permission #3)
+        // Check the specific tool permission (Permission #3)
+        // Note: AccessAnyAITool is implied by the permission hierarchy and will be automatically checked
         var toolPermission = AIPermissions.CreateAIToolPermission(toolIdentifier);
 
         if (await _authorizationService.AuthorizeAsync(context.User, toolPermission))
@@ -67,6 +62,17 @@ public sealed class AIToolAuthorizationHandler : AuthorizationHandler<Permission
     private static string GetToolIdentifier(object resource)
     {
         // Resource can be a string (tool name or instance ID)
-        return resource as string;
+        if (resource is string toolIdentifier)
+        {
+            return toolIdentifier;
+        }
+
+        // Resource can also be an AITool instance
+        if (resource is AITool aiTool)
+        {
+            return aiTool.Name;
+        }
+
+        return null;
     }
 }
