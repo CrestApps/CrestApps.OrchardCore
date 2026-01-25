@@ -36,7 +36,7 @@ public static class AIPermissions
 
     public static readonly Permission AccessAnyAITool = new("AccessAnyAITool", "Access any AI tool", [], isSecurityCritical: true);
 
-    public static readonly Permission AccessAITool = new("AccessAITool", "Access AI tool");
+    public static readonly Permission AccessAITool = new("AccessAITool", "Access AI tool", [AccessAnyAITool]);
 
     private static readonly Permission _queryAIProfileTemplate = new("QueryAIProfile_{0}", "Query AI profile - {0}", [QueryAnyAIProfile]);
 

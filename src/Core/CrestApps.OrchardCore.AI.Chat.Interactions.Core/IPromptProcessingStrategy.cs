@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 /// Each strategy implements a specific approach to processing documents based on the detected intent.
 /// Multiple strategies can contribute to the same processing context by adding context to the result.
 /// </summary>
-public interface IDocumentProcessingStrategy
+public interface IPromptProcessingStrategy
 {
     /// <summary>
     /// Processes the documents according to the strategy and updates the context result.

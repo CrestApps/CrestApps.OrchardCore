@@ -480,7 +480,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private async Task<IntentProcessingResult> ReasonAsync(ChatInteraction interaction, string prompt, CancellationToken cancellationToken)
     {
         // Get the intent detector
-        var intentDetector = _serviceProvider.GetService<IDocumentIntentDetector>();
+        var intentDetector = _serviceProvider.GetService<IPromptIntentDetector>();
         if (intentDetector == null)
         {
             _logger.LogDebug("Document intent detector is not available.");
@@ -491,7 +491,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         }
 
         // Get the strategy provider
-        var strategyProvider = _serviceProvider.GetService<IDocumentProcessingStrategyProvider>();
+        var strategyProvider = _serviceProvider.GetService<IPromptProcessingStrategyProvider>();
         if (strategyProvider == null)
         {
             _logger.LogDebug("Document processing strategy provider is not available.");

@@ -14,16 +14,16 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Adds the core document processing services including intent detection and strategy provider.
     /// </summary>
-    public static IServiceCollection AddDocumentProcessingServices(this IServiceCollection services)
+    public static IServiceCollection AddPromptRoutingServices(this IServiceCollection services)
     {
         // Register the keyword-based intent detector as a concrete service (used as fallback)
-        services.TryAddScoped<KeywordDocumentIntentDetector>();
+        services.TryAddScoped<KeywordPromptIntentDetector>();
 
         // Register the AI-based intent detector as the primary implementation
-        services.TryAddScoped<IDocumentIntentDetector, AIDocumentIntentDetector>();
+        services.TryAddScoped<IPromptIntentDetector, AIPromptIntentDetector>();
 
         // Register the strategy provider
-        services.TryAddScoped<IDocumentProcessingStrategyProvider, DefaultDocumentProcessingStrategyProvider>();
+        services.TryAddScoped<IPromptProcessingStrategyProvider, DefaultPromptProcessingStrategyProvider>();
 
         return services;
     }
@@ -37,9 +37,9 @@ public static class ServiceCollectionExtensions
     /// <returns>The service collection for chaining.</returns>
     /// <remarks>
     /// Only intents registered via this method will be recognized by the AI intent detector.
-    /// Each intent should have a corresponding strategy registered via <see cref="AddDocumentProcessingStrategy{TStrategy}"/>.
+    /// Each intent should have a corresponding strategy registered via <see cref="AddPromptProcessingStrategy{TStrategy}"/>.
     /// </remarks>
-    public static IServiceCollection AddProcessingIntent(
+    public static IServiceCollection AddPromptProcessingIntent(
         this IServiceCollection services,
         string intentName,
         string description)
@@ -47,7 +47,7 @@ public static class ServiceCollectionExtensions
         ArgumentException.ThrowIfNullOrEmpty(intentName);
         ArgumentException.ThrowIfNullOrEmpty(description);
 
-        services.Configure<DocumentProcessingOptions>(options =>
+        services.Configure<PromptProcessingOptions>(options =>
         {
             options.InternalIntents.TryAdd(intentName, description);
         });
@@ -61,58 +61,74 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <typeparam name="TStrategy">The strategy type.</typeparam>
     /// <param name="services">The service collection.</param>
-    public static IServiceCollection AddDocumentProcessingStrategy<TStrategy>(this IServiceCollection services)
-        where TStrategy : class, IDocumentProcessingStrategy
+    public static IServiceCollection AddPromptProcessingStrategy<TStrategy>(this IServiceCollection services)
+        where TStrategy : class, IPromptProcessingStrategy
     {
-        services.AddScoped<IDocumentProcessingStrategy, TStrategy>();
+        services.AddScoped<IPromptProcessingStrategy, TStrategy>();
         return services;
     }
 
     /// <summary>
     /// Adds the default document processing strategies with their intent registrations.
     /// </summary>
-    public static IServiceCollection AddDefaultDocumentProcessingStrategies(this IServiceCollection services)
+    public static IServiceCollection AddDefaultPromptProcessingStrategies(this IServiceCollection services)
     {
         // Register intents for the default strategies
         services
-            .AddProcessingIntent(
-                DocumentIntents.SummarizeDocument,
-                "The user wants a summary, overview, brief, key points, or outline of document content.")
-            .AddProcessingIntent(
-                DocumentIntents.AnalyzeTabularData,
-                "The user wants to perform calculations, aggregations, statistics, or data analysis on tabular data (CSV, Excel, etc.).")
-            .AddProcessingIntent(
-                DocumentIntents.ExtractStructuredData,
-                "The user wants to extract specific data, parse content into structured formats (JSON, schema), or pull out entities.")
-            .AddProcessingIntent(
-                DocumentIntents.CompareDocuments,
-                "The user wants to compare, contrast, find differences, or analyze similarities between multiple documents.")
-            .AddProcessingIntent(
-                DocumentIntents.TransformFormat,
-                "The user wants to convert, transform, reformat content into another representation (tables, bullet points, different format).")
-            .AddProcessingIntent(
+            .AddPromptProcessingIntent(
                 DocumentIntents.GenerateImage,
                 "The user requests creation of a new image from a text description. Detect when the prompt asks for visuals, illustrations, diagrams, or artwork and capture any optional parameters (style, size, aspect ratio, color palette, level of detail, or composition). The output should be an image-generation task consisting of a refined prompt and metadata suitable for calling an image-generation service.")
-            .AddProcessingIntent(
+            .AddPromptProcessingIntent(
                 DocumentIntents.GenerateImageWithHistory,
                 "Trigger when the user requests the creation of an image, diagram, or visual that is based on information, data, or discussion from prior chat messages. Detect references to previous conversation, earlier outputs, or chat-based data that should influence the visual. This intent is strictly for generating images that depend on chat history, including summaries, illustrations, or artwork derived from earlier messages, but does not include charts or graphs.")
-            .AddProcessingIntent(
+            .AddPromptProcessingIntent(
                 DocumentIntents.GenerateChart,
-                "The user wants to create a chart, graph, or data visualization such as bar chart, line chart, pie chart, scatter plot, or histogram. The AI model already receives conversation history, so this intent handles both explicit data in the prompt and references to data from earlier messages.")
-            .AddProcessingIntent(
+                "The user wants to create a chart, graph, or data visualization such as bar chart, line chart, pie chart, scatter plot, or histogram. The AI model already receives conversation history, so this intent handles both explicit data in the prompt and references to data from earlier messages.");
+
+        // Register the strategies
+        services
+            .AddPromptProcessingStrategy<ImageGenerationDocumentProcessingStrategy>()
+            .AddPromptProcessingStrategy<ChartGenerationDocumentProcessingStrategy>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the default document prompt processing strategies with their intent registrations.
+    /// </summary>
+    /// <param name="services"></param>
+    /// <returns></returns>
+    public static IServiceCollection AddDefaultDocumentPromptProcessingStrategies(this IServiceCollection services)
+    {
+        // Register intents for the default strategies
+        services
+            .AddPromptProcessingIntent(
+                DocumentIntents.SummarizeDocument,
+                "The user wants a summary, overview, brief, key points, or outline of document content.")
+            .AddPromptProcessingIntent(
+                DocumentIntents.AnalyzeTabularData,
+                "The user wants to perform calculations, aggregations, statistics, or data analysis on tabular data (CSV, Excel, etc.).")
+            .AddPromptProcessingIntent(
+                DocumentIntents.ExtractStructuredData,
+                "The user wants to extract specific data, parse content into structured formats (JSON, schema), or pull out entities.")
+            .AddPromptProcessingIntent(
+                DocumentIntents.CompareDocuments,
+                "The user wants to compare, contrast, find differences, or analyze similarities between multiple documents.")
+            .AddPromptProcessingIntent(
+                DocumentIntents.TransformFormat,
+                "The user wants to convert, transform, reformat content into another representation (tables, bullet points, different format).")
+            .AddPromptProcessingIntent(
                 DocumentIntents.GeneralChatWithReference,
                 "General conversation that may reference documents but doesn't fit other categories.");
 
         // Register the strategies
         services
-            .AddDocumentProcessingStrategy<SummarizationDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<TabularAnalysisDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<ExtractionDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<ComparisonDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<TransformationDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<ImageGenerationDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<ChartGenerationDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<GeneralReferenceDocumentProcessingStrategy>();
+            .AddPromptProcessingStrategy<SummarizationDocumentProcessingStrategy>()
+            .AddPromptProcessingStrategy<TabularAnalysisDocumentProcessingStrategy>()
+            .AddPromptProcessingStrategy<ExtractionDocumentProcessingStrategy>()
+            .AddPromptProcessingStrategy<ComparisonDocumentProcessingStrategy>()
+            .AddPromptProcessingStrategy<TransformationDocumentProcessingStrategy>()
+            .AddPromptProcessingStrategy<ImageGenerationDocumentProcessingStrategy>();
 
         return services;
     }

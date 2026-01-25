@@ -4,9 +4,9 @@ using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.Tests.Core.ChatInteractions;
 
-public sealed class KeywordDocumentIntentDetectorTests
+public sealed class KeywordPromptIntentDetectorTests
 {
-    private readonly KeywordDocumentIntentDetector _detector = new();
+    private readonly KeywordPromptIntentDetector _detector = new();
 
     [Fact]
     public async Task DetectAsync_WhenPromptIsEmpty_ReturnsGeneralChatWithReference()

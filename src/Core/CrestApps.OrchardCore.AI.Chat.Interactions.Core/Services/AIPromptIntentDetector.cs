@@ -11,24 +11,24 @@ using Microsoft.Extensions.Options;
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 
 /// <summary>
-/// AI-based implementation of <see cref="IDocumentIntentDetector"/> that uses a chat model
+/// AI-based implementation of <see cref="IPromptIntentDetector"/> that uses a chat model
 /// to detect user intent. This provides multi-language support and more accurate intent
 /// detection compared to keyword-based approaches.
 /// </summary>
-public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
+public sealed class AIPromptIntentDetector : IPromptIntentDetector
 {
     private readonly AIProviderOptions _aiProviderOptions;
     private readonly IAIClientFactory _aIClientFactory;
-    private readonly KeywordDocumentIntentDetector _fallbackDetector;
-    private readonly IOptions<DocumentProcessingOptions> _options;
-    private readonly ILogger<AIDocumentIntentDetector> _logger;
+    private readonly KeywordPromptIntentDetector _fallbackDetector;
+    private readonly IOptions<PromptProcessingOptions> _options;
+    private readonly ILogger<AIPromptIntentDetector> _logger;
 
-    public AIDocumentIntentDetector(
+    public AIPromptIntentDetector(
         IOptions<AIProviderOptions> aiProviderOptions,
         IAIClientFactory aIClientFactory,
-        KeywordDocumentIntentDetector fallbackDetector,
-        IOptions<DocumentProcessingOptions> options,
-        ILogger<AIDocumentIntentDetector> logger)
+        KeywordPromptIntentDetector fallbackDetector,
+        IOptions<PromptProcessingOptions> options,
+        ILogger<AIPromptIntentDetector> logger)
     {
         _aiProviderOptions = aiProviderOptions.Value;
         _aIClientFactory = aIClientFactory;

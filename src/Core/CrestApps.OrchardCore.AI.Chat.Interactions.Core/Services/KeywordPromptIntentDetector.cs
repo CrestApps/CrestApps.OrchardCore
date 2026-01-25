@@ -4,11 +4,11 @@ using CrestApps.OrchardCore.AI.Models;
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 
 /// <summary>
-/// Keyword-based implementation of <see cref="IDocumentIntentDetector"/> that uses heuristic-based
+/// Keyword-based implementation of <see cref="IPromptIntentDetector"/> that uses heuristic-based
 /// pattern matching to classify user intent. This provides a lightweight, low-cost
 /// fallback alternative when AI-based intent detection is unavailable.
 /// </summary>
-public sealed class KeywordDocumentIntentDetector : IDocumentIntentDetector
+public sealed class KeywordPromptIntentDetector : IPromptIntentDetector
 {
     // Keyword patterns for different intents (case-insensitive matching)
     private static readonly string[] _summarizationKeywords =

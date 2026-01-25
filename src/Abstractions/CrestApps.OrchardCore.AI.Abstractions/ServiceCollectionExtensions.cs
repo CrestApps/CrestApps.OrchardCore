@@ -15,7 +15,13 @@ public static class ServiceCollectionExtensions
 
         services.Configure<AIToolDefinitionOptions>(o =>
         {
-            o.Add<TTool>(name, configure);
+            o.Add<TTool>(name, (t) =>
+            {
+
+                configure(t);
+
+                t.Name = name;
+            });
         });
 
         return services;

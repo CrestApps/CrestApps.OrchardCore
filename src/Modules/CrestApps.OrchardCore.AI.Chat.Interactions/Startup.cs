@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
@@ -40,6 +41,10 @@ public sealed class Startup : StartupBase
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatInteractionsAdminMenu>()
             .AddDataMigration<ChatInteractionMigrations>();
+
+        services
+            .AddPromptRoutingServices()
+            .AddDefaultPromptProcessingStrategies();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
