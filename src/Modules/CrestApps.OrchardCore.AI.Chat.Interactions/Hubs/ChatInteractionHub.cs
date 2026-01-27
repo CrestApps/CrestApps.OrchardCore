@@ -565,6 +565,19 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
     private LocalizedString GetFriendlyErrorMessage(Exception ex)
     {
+        var message = ex.Message ?? string.Empty;
+        var clientStatusCode = TryGetClientResultStatusCode(ex);
+
+        if (clientStatusCode == (int)System.Net.HttpStatusCode.TooManyRequests ||
+            message.Contains("ratelimitreached", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("rate limit", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("too many requests", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.IsNullOrWhiteSpace(message)
+                ? S["Rate limit reached. Please wait and try again later."]
+                : S["Rate limit reached. {0}", message];
+        }
+
         if (ex is HttpRequestException httpEx)
         {
             if (httpEx.StatusCode is { } code)
@@ -594,6 +607,28 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         }
 
         return S["Our service is currently unavailable. Please try again later."];
+    }
+
+    private static int? TryGetClientResultStatusCode(Exception ex)
+    {
+        if (ex is null)
+        {
+            return null;
+        }
+
+        var type = ex.GetType();
+        if (!string.Equals(type.Name, "ClientResultException", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var statusProperty = type.GetProperty("Status") ?? type.GetProperty("StatusCode");
+        if (statusProperty?.GetValue(ex) is int status)
+        {
+            return status;
+        }
+
+        return null;
     }
 
     /// <summary>

@@ -219,6 +219,19 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
     private LocalizedString GetFriendlyErrorMessage(Exception ex)
     {
+        var message = ex.Message ?? string.Empty;
+        var clientStatusCode = TryGetClientResultStatusCode(ex);
+
+        if (clientStatusCode == (int)System.Net.HttpStatusCode.TooManyRequests ||
+            message.Contains("ratelimitreached", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("rate limit", StringComparison.OrdinalIgnoreCase) ||
+            message.Contains("too many requests", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.IsNullOrWhiteSpace(message)
+                ? S["Rate limit reached. Please wait and try again later."]
+                : S["Rate limit reached. {0}", message];
+        }
+
         // Handle explicit HttpRequestException with known status codes.
         if (ex is HttpRequestException httpEx)
         {
@@ -298,6 +311,28 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         // Fallback generic error.
         return S["Our service is currently unavailable. Please try again later."];
+    }
+
+    private static int? TryGetClientResultStatusCode(Exception ex)
+    {
+        if (ex is null)
+        {
+            return null;
+        }
+
+        var type = ex.GetType();
+        if (!string.Equals(type.Name, "ClientResultException", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var statusProperty = type.GetProperty("Status") ?? type.GetProperty("StatusCode");
+        if (statusProperty?.GetValue(ex) is int status)
+        {
+            return status;
+        }
+
+        return null;
     }
 
     private async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, string userPrompt)
