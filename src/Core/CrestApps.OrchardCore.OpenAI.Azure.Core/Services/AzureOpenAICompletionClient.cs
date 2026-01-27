@@ -273,30 +273,15 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         // Key is the tool call index, value contains the accumulated tool call data.
         var accumulatedToolCalls = new Dictionary<int, (string ToolCallId, string FunctionName, List<byte> ArgumentBytes)>();
 
-        IAsyncEnumerator<ChatMessageStreamingUpdate> enumerator = null;
+        IAsyncEnumerator<StreamingChatCompletionUpdate> enumerator = null;
 
         try
         {
             enumerator = chatClient.CompleteChatStreamingAsync(prompts, chatOptions, cancellationToken).GetAsyncEnumerator(cancellationToken);
 
-            while (true)
+            while (await enumerator.MoveNextAsync())
             {
-                ChatMessageStreamingUpdate update;
-                
-                try
-                {
-                    if (!await enumerator.MoveNextAsync())
-                    {
-                        break;
-                    }
-                    
-                    update = enumerator.Current;
-                }
-                catch (ClientResultException ex)
-                {
-                    LogClientResultException(ex, context, deploymentName);
-                    throw;
-                }
+                var update = enumerator.Current;
 
                 await foreach (var result in ProcessStreamingUpdateAsync(update, prompts, functions, chatClient, subSequenceContext, linkContext, currentPrompt, context, accumulatedToolCalls, cancellationToken))
                 {
@@ -314,7 +299,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
     }
 
     private async IAsyncEnumerable<Microsoft.Extensions.AI.ChatResponseUpdate> ProcessStreamingUpdateAsync(
-        ChatMessageStreamingUpdate update,
+        StreamingChatCompletionUpdate update,
         List<ChatMessage> prompts,
         IEnumerable<Microsoft.Extensions.AI.AIFunction> functions,
         ChatClient chatClient,
@@ -373,37 +358,29 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
             subSequenceContext ??= GetOptions(context, functions);
 
-            try
+            await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, subSequenceContext, cancellationToken))
             {
-                await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, subSequenceContext, cancellationToken))
+                var result = new Microsoft.Extensions.AI.ChatResponseUpdate
                 {
-                    var result = new Microsoft.Extensions.AI.ChatResponseUpdate
-                    {
-                        ResponseId = newUpdate.CompletionId,
-                        CreatedAt = newUpdate.CreatedAt,
-                        ModelId = newUpdate.Model,
-                        Contents = newUpdate.ContentUpdate.Select(x => new Microsoft.Extensions.AI.TextContent(x.Text))
-                        .Cast<Microsoft.Extensions.AI.AIContent>()
-                        .ToList(),
-                    };
+                    ResponseId = newUpdate.CompletionId,
+                    CreatedAt = newUpdate.CreatedAt,
+                    ModelId = newUpdate.Model,
+                    Contents = newUpdate.ContentUpdate.Select(x => new Microsoft.Extensions.AI.TextContent(x.Text))
+                    .Cast<Microsoft.Extensions.AI.AIContent>()
+                    .ToList(),
+                };
 
-                    if (newUpdate.FinishReason is not null)
-                    {
-                        result.FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(newUpdate.FinishReason?.ToString());
-                    }
-
-                    if (newUpdate.Role is not null)
-                    {
-                        result.Role = new Microsoft.Extensions.AI.ChatRole(newUpdate.Role.ToString().ToLowerInvariant());
-                    }
-
-                    yield return result;
+                if (newUpdate.FinishReason is not null)
+                {
+                    result.FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(newUpdate.FinishReason?.ToString());
                 }
-            }
-            catch (ClientResultException ex)
-            {
-                LogClientResultException(ex, context, null);
-                throw;
+
+                if (newUpdate.Role is not null)
+                {
+                    result.Role = new Microsoft.Extensions.AI.ChatRole(newUpdate.Role.ToString().ToLowerInvariant());
+                }
+
+                yield return result;
             }
         }
         else
@@ -549,7 +526,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             errorDetails.AppendLine($"DataSourceType: {context.DataSourceType}");
         }
 
-        _logger.LogError(ex, errorDetails.ToString());
+        _logger.LogError(ex, "{ErrorDetails}", errorDetails.ToString());
     }
 
     protected override async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
