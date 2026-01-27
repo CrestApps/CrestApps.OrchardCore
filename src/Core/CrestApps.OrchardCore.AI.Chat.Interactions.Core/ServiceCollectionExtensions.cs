@@ -109,6 +109,9 @@ public static class ServiceCollectionExtensions
                 DocumentIntents.AnalyzeTabularData,
                 "The user wants to perform calculations, aggregations, statistics, or data analysis on tabular data (CSV, Excel, etc.).")
             .AddPromptProcessingIntent(
+                DocumentIntents.AnalyzeTabularDataByRow,
+                "The user wants row-by-row analysis or extraction from tabular data (CSV/Excel), returning one result per row (e.g., classify each record, extract fields, detect escalations, or produce per-row outputs based on transcript/text columns).")
+            .AddPromptProcessingIntent(
                 DocumentIntents.ExtractStructuredData,
                 "The user wants to extract specific data, parse content into structured formats (JSON, schema), or pull out entities.")
             .AddPromptProcessingIntent(
@@ -125,6 +128,7 @@ public static class ServiceCollectionExtensions
         services
             .AddPromptProcessingStrategy<SummarizationDocumentProcessingStrategy>()
             .AddPromptProcessingStrategy<TabularAnalysisDocumentProcessingStrategy>()
+            .AddPromptProcessingStrategy<RowLevelTabularAnalysisDocumentProcessingStrategy>()
             .AddPromptProcessingStrategy<ExtractionDocumentProcessingStrategy>()
             .AddPromptProcessingStrategy<ComparisonDocumentProcessingStrategy>()
             .AddPromptProcessingStrategy<TransformationDocumentProcessingStrategy>()

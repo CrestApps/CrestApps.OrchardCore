@@ -11,6 +11,8 @@ public static class DocumentIntents
 
     public const string AnalyzeTabularData = "AnalyzeTabularData";
 
+    public const string AnalyzeTabularDataByRow = "AnalyzeTabularDataByRow";
+
     public const string ExtractStructuredData = "ExtractStructuredData";
 
     public const string CompareDocuments = "CompareDocuments";
