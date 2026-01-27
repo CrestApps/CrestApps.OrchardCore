@@ -24,6 +24,12 @@ public sealed class KeywordPromptIntentDetector : IPromptIntentDetector
         "trend", "correlation", "breakdown", "distribution"
     ];
 
+    private static readonly string[] _rowLevelTabularAnalysisKeywords =
+    [
+        "for every row", "for each row", "per row", "row by row", "row-by-row",
+        "each record", "per record"
+    ];
+
     private static readonly string[] _extractionKeywords =
     [
         "extract", "pull out", "get all", "list all", "find all",
@@ -154,6 +160,15 @@ public sealed class KeywordPromptIntentDetector : IPromptIntentDetector
                 intentName,
                 0.9f,
                 "Image generation keywords detected."));
+        }
+
+        // Check for row-level tabular analysis intent (highest priority for CSV/Excel files)
+        if (hasTabularFiles && ContainsAnyKeyword(prompt, _rowLevelTabularAnalysisKeywords))
+        {
+            return Task.FromResult(DocumentIntent.FromName(
+                DocumentIntents.AnalyzeTabularDataByRow,
+                0.9f,
+                "Tabular file detected with row-level processing keywords."));
         }
 
         // Check for tabular analysis intent (high priority for CSV/Excel files)

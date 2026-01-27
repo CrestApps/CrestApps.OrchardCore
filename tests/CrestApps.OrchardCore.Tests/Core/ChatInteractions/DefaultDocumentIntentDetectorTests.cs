@@ -48,6 +48,19 @@ public sealed class KeywordPromptIntentDetectorTests
     }
 
     [Theory]
+    [InlineData("for every row, output the reason for escalation")]
+    [InlineData("for each row return whether escalation is present")]
+    [InlineData("per row extract the verbatim escalation quote")]
+    public async Task DetectAsync_WhenRowLevelKeywordsWithCsvFile_ReturnsAnalyzeTabularDataByRow(string prompt)
+    {
+        var context = CreateContextWithCsvDocument(prompt);
+
+        var result = await _detector.DetectAsync(context);
+
+        Assert.Equal(DocumentIntents.AnalyzeTabularDataByRow, result.Name);
+    }
+
+    [Theory]
     [InlineData("extract all the names")]
     [InlineData("get all email addresses")]
     [InlineData("parse the document for dates")]
