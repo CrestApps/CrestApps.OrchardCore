@@ -23,6 +23,8 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
 public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 {
+    private const string ClientResultExceptionName = "ClientResultException";
+    private static readonly string[] RateLimitIndicators = ["ratelimitreached", "rate limit", "too many requests"];
     private readonly IAuthorizationService _authorizationService;
     private readonly ISourceCatalogManager<ChatInteraction> _interactionManager;
     private readonly IAIDataSourceStore _dataSourceStore;
@@ -569,13 +571,13 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         var clientStatusCode = TryGetClientResultStatusCode(ex);
 
         if (clientStatusCode == (int)System.Net.HttpStatusCode.TooManyRequests ||
-            message.Contains("ratelimitreached", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("rate limit", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("too many requests", StringComparison.OrdinalIgnoreCase))
+            ContainsRateLimitIndicator(message))
         {
-            return string.IsNullOrWhiteSpace(message)
+            var retryAfterMessage = ExtractRetryAfterMessage(message);
+
+            return string.IsNullOrWhiteSpace(retryAfterMessage)
                 ? S["Rate limit reached. Please wait and try again later."]
-                : S["Rate limit reached. {0}", message];
+                : S["Rate limit reached. {0}", retryAfterMessage];
         }
 
         if (ex is HttpRequestException httpEx)
@@ -617,18 +619,66 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         }
 
         var type = ex.GetType();
-        if (!string.Equals(type.Name, "ClientResultException", StringComparison.Ordinal))
+        if (!string.Equals(type.Name, ClientResultExceptionName, StringComparison.Ordinal))
         {
             return null;
         }
 
-        var statusProperty = type.GetProperty("Status") ?? type.GetProperty("StatusCode");
-        if (statusProperty?.GetValue(ex) is int status)
+        try
         {
-            return status;
+            var statusProperty = type.GetProperty("Status") ?? type.GetProperty("StatusCode");
+            if (statusProperty?.GetValue(ex) is int status)
+            {
+                return status;
+            }
+        }
+        catch (Exception)
+        {
+            return null;
         }
 
         return null;
+    }
+
+    private static bool ContainsRateLimitIndicator(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        foreach (var indicator in RateLimitIndicators)
+        {
+            if (message.Contains(indicator, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string ExtractRetryAfterMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return string.Empty;
+        }
+
+        var retryIndex = message.IndexOf("retry after", StringComparison.OrdinalIgnoreCase);
+        if (retryIndex < 0)
+        {
+            return string.Empty;
+        }
+
+        var sentence = message.Substring(retryIndex);
+        var endIndex = sentence.IndexOf('.', StringComparison.Ordinal);
+        if (endIndex >= 0)
+        {
+            sentence = sentence.Substring(0, endIndex + 1);
+        }
+
+        return sentence.Trim();
     }
 
     /// <summary>
