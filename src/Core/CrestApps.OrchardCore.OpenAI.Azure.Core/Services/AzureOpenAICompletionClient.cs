@@ -205,12 +205,16 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
             return result;
         }
+        catch (ClientResultException ex)
+        {
+            LogClientResultException(ex, context, deploymentName);
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unable to get chat completion result from Azure OpenAI.");
+            throw;
         }
-
-        return null;
     }
 
     public async IAsyncEnumerable<Microsoft.Extensions.AI.ChatResponseUpdate> CompleteStreamingAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -269,56 +273,108 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         // Key is the tool call index, value contains the accumulated tool call data.
         var accumulatedToolCalls = new Dictionary<int, (string ToolCallId, string FunctionName, List<byte> ArgumentBytes)>();
 
-        await foreach (var update in chatClient.CompleteChatStreamingAsync(prompts, chatOptions, cancellationToken))
+        IAsyncEnumerator<ChatMessageStreamingUpdate> enumerator = null;
+
+        try
         {
-            // Accumulate tool call updates as they arrive.
-            foreach (var toolCallUpdate in update.ToolCallUpdates)
+            enumerator = chatClient.CompleteChatStreamingAsync(prompts, chatOptions, cancellationToken).GetAsyncEnumerator(cancellationToken);
+
+            while (true)
             {
-                if (!accumulatedToolCalls.TryGetValue(toolCallUpdate.Index, out var accumulated))
+                ChatMessageStreamingUpdate update;
+                
+                try
                 {
-                    accumulated = (toolCallUpdate.ToolCallId, toolCallUpdate.FunctionName, new List<byte>());
-                    accumulatedToolCalls[toolCallUpdate.Index] = accumulated;
+                    if (!await enumerator.MoveNextAsync())
+                    {
+                        break;
+                    }
+                    
+                    update = enumerator.Current;
+                }
+                catch (ClientResultException ex)
+                {
+                    LogClientResultException(ex, context, deploymentName);
+                    throw;
                 }
 
-                // Update ToolCallId and FunctionName if they are provided in this chunk.
-                if (!string.IsNullOrEmpty(toolCallUpdate.ToolCallId))
+                await foreach (var result in ProcessStreamingUpdateAsync(update, prompts, functions, chatClient, subSequenceContext, linkContext, currentPrompt, context, accumulatedToolCalls, cancellationToken))
                 {
-                    accumulated.ToolCallId = toolCallUpdate.ToolCallId;
+                    yield return result;
                 }
+            }
+        }
+        finally
+        {
+            if (enumerator != null)
+            {
+                await enumerator.DisposeAsync();
+            }
+        }
+    }
 
-                if (!string.IsNullOrEmpty(toolCallUpdate.FunctionName))
-                {
-                    accumulated.FunctionName = toolCallUpdate.FunctionName;
-                }
-
-                // Append function arguments bytes.
-                if (toolCallUpdate.FunctionArgumentsUpdate is not null)
-                {
-                    accumulated.ArgumentBytes.AddRange(toolCallUpdate.FunctionArgumentsUpdate.ToArray());
-                }
-
+    private async IAsyncEnumerable<Microsoft.Extensions.AI.ChatResponseUpdate> ProcessStreamingUpdateAsync(
+        ChatMessageStreamingUpdate update,
+        List<ChatMessage> prompts,
+        IEnumerable<Microsoft.Extensions.AI.AIFunction> functions,
+        ChatClient chatClient,
+        ChatCompletionOptions subSequenceContext,
+        Dictionary<string, object> linkContext,
+        string currentPrompt,
+        AICompletionContext context,
+        Dictionary<int, (string ToolCallId, string FunctionName, List<byte> ArgumentBytes)> accumulatedToolCalls,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        // Accumulate tool call updates as they arrive.
+        foreach (var toolCallUpdate in update.ToolCallUpdates)
+        {
+            if (!accumulatedToolCalls.TryGetValue(toolCallUpdate.Index, out var accumulated))
+            {
+                accumulated = (toolCallUpdate.ToolCallId, toolCallUpdate.FunctionName, new List<byte>());
                 accumulatedToolCalls[toolCallUpdate.Index] = accumulated;
             }
 
-            if (update.FinishReason == ChatFinishReason.ToolCalls)
+            // Update ToolCallId and FunctionName if they are provided in this chunk.
+            if (!string.IsNullOrEmpty(toolCallUpdate.ToolCallId))
             {
-                // Convert accumulated tool call data to ChatToolCall objects.
-                var toolCalls = accumulatedToolCalls.Values
-                    .Where(tc => !string.IsNullOrEmpty(tc.ToolCallId) && !string.IsNullOrEmpty(tc.FunctionName))
-                    .Select(tc => ChatToolCall.CreateFunctionToolCall(
-                        tc.ToolCallId,
-                        tc.FunctionName,
-                        BinaryData.FromBytes(tc.ArgumentBytes.ToArray())))
-                    .ToList();
+                accumulated.ToolCallId = toolCallUpdate.ToolCallId;
+            }
 
-                await ProcessToolCallsAsync(prompts, toolCalls, functions);
+            if (!string.IsNullOrEmpty(toolCallUpdate.FunctionName))
+            {
+                accumulated.FunctionName = toolCallUpdate.FunctionName;
+            }
 
-                // Clear accumulated tool calls for the next potential round.
-                accumulatedToolCalls.Clear();
+            // Append function arguments bytes.
+            if (toolCallUpdate.FunctionArgumentsUpdate is not null)
+            {
+                accumulated.ArgumentBytes.AddRange(toolCallUpdate.FunctionArgumentsUpdate.ToArray());
+            }
 
-                // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
-                subSequenceContext ??= GetOptions(context, functions);
+            accumulatedToolCalls[toolCallUpdate.Index] = accumulated;
+        }
 
+        if (update.FinishReason == ChatFinishReason.ToolCalls)
+        {
+            // Convert accumulated tool call data to ChatToolCall objects.
+            var toolCalls = accumulatedToolCalls.Values
+                .Where(tc => !string.IsNullOrEmpty(tc.ToolCallId) && !string.IsNullOrEmpty(tc.FunctionName))
+                .Select(tc => ChatToolCall.CreateFunctionToolCall(
+                    tc.ToolCallId,
+                    tc.FunctionName,
+                    BinaryData.FromBytes(tc.ArgumentBytes.ToArray())))
+                .ToList();
+
+            await ProcessToolCallsAsync(prompts, toolCalls, functions);
+
+            // Clear accumulated tool calls for the next potential round.
+            accumulatedToolCalls.Clear();
+
+            // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
+            subSequenceContext ??= GetOptions(context, functions);
+
+            try
+            {
                 await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, subSequenceContext, cancellationToken))
                 {
                     var result = new Microsoft.Extensions.AI.ChatResponseUpdate
@@ -344,72 +400,156 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                     yield return result;
                 }
             }
-            else
+            catch (ClientResultException ex)
             {
-                var result = new Microsoft.Extensions.AI.ChatResponseUpdate
-                {
-                    ResponseId = update.CompletionId,
-                    CreatedAt = update.CreatedAt,
-                    ModelId = update.Model,
-                    Contents = update.ContentUpdate.Select(x => new Microsoft.Extensions.AI.TextContent(x.Text))
-                    .Cast<Microsoft.Extensions.AI.AIContent>()
-                    .ToList(),
-                };
-
-                if (update.FinishReason is not null)
-                {
-                    result.FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(update.FinishReason?.ToString());
-                }
-
-                if (update.Role is not null)
-                {
-                    result.Role = new Microsoft.Extensions.AI.ChatRole(update.Role.ToString().ToLowerInvariant());
-                }
-
-#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-                var updateContext = update.GetMessageContext();
-#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-
-                if (updateContext?.Citations is not null && updateContext.Citations.Count > 0)
-                {
-                    linkContext ??= new Dictionary<string, object>
-                    {
-                        { "prompt", currentPrompt },
-                    };
-
-                    var contentItemIds = new HashSet<string>();
-                    var references = new Dictionary<string, AICompletionReference>();
-                    foreach (var citation in updateContext.Citations)
-                    {
-                        if (string.IsNullOrEmpty(citation.FilePath))
-                        {
-                            continue;
-                        }
-
-                        contentItemIds.Add(citation.FilePath);
-                        var templateIndex = references.Count + 1;
-
-                        var template = $"[doc{templateIndex}]";
-
-                        references[template] = new AICompletionReference
-                        {
-                            Text = string.IsNullOrEmpty(citation.Title) ? template : citation.Title,
-                            Index = templateIndex,
-                            Link = _linkGenerator.GetContentItemPath(citation.FilePath, linkContext),
-                            Title = citation.Title,
-                        };
-                    }
-
-                    result.AdditionalProperties = new Microsoft.Extensions.AI.AdditionalPropertiesDictionary
-                    {
-                        {"ContentItemIds", contentItemIds },
-                        {"References", references },
-                    };
-                }
-
-                yield return result;
+                LogClientResultException(ex, context, null);
+                throw;
             }
         }
+        else
+        {
+            var result = new Microsoft.Extensions.AI.ChatResponseUpdate
+            {
+                ResponseId = update.CompletionId,
+                CreatedAt = update.CreatedAt,
+                ModelId = update.Model,
+                Contents = update.ContentUpdate.Select(x => new Microsoft.Extensions.AI.TextContent(x.Text))
+                .Cast<Microsoft.Extensions.AI.AIContent>()
+                .ToList(),
+            };
+
+            if (update.FinishReason is not null)
+            {
+                result.FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(update.FinishReason?.ToString());
+            }
+
+            if (update.Role is not null)
+            {
+                result.Role = new Microsoft.Extensions.AI.ChatRole(update.Role.ToString().ToLowerInvariant());
+            }
+
+#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+            var updateContext = update.GetMessageContext();
+#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
+            if (updateContext?.Citations is not null && updateContext.Citations.Count > 0)
+            {
+                linkContext ??= new Dictionary<string, object>
+                {
+                    { "prompt", currentPrompt },
+                };
+
+                var contentItemIds = new HashSet<string>();
+                var references = new Dictionary<string, AICompletionReference>();
+                foreach (var citation in updateContext.Citations)
+                {
+                    if (string.IsNullOrEmpty(citation.FilePath))
+                    {
+                        continue;
+                    }
+
+                    contentItemIds.Add(citation.FilePath);
+                    var templateIndex = references.Count + 1;
+
+                    var template = $"[doc{templateIndex}]";
+
+                    references[template] = new AICompletionReference
+                    {
+                        Text = string.IsNullOrEmpty(citation.Title) ? template : citation.Title,
+                        Index = templateIndex,
+                        Link = _linkGenerator.GetContentItemPath(citation.FilePath, linkContext),
+                        Title = citation.Title,
+                    };
+                }
+
+                result.AdditionalProperties = new Microsoft.Extensions.AI.AdditionalPropertiesDictionary
+                {
+                    {"ContentItemIds", contentItemIds },
+                    {"References", references },
+                };
+            }
+
+            yield return result;
+        }
+    }
+
+    private void LogClientResultException(ClientResultException ex, AICompletionContext context, string deploymentName)
+    {
+        var errorDetails = new System.Text.StringBuilder();
+        errorDetails.AppendLine("Azure OpenAI request failed.");
+        errorDetails.AppendLine($"Status Code: {ex.Status}");
+
+        if (!string.IsNullOrEmpty(context.ConnectionName))
+        {
+            errorDetails.AppendLine($"Connection: {context.ConnectionName}");
+        }
+
+        if (!string.IsNullOrEmpty(deploymentName))
+        {
+            errorDetails.AppendLine($"Deployment: {deploymentName}");
+        }
+        else if (!string.IsNullOrEmpty(context.DeploymentId))
+        {
+            errorDetails.AppendLine($"Deployment: {context.DeploymentId}");
+        }
+
+        // Try to extract response body for more details
+        if (ex.GetRawResponse() is PipelineResponse response)
+        {
+            try
+            {
+                if (response.Content is not null)
+                {
+                    var content = response.Content.ToString();
+                    if (!string.IsNullOrWhiteSpace(content))
+                    {
+                        errorDetails.AppendLine($"Response Body: {content}");
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore errors when trying to read response content
+            }
+        }
+
+        // Log request parameters that might help diagnose the issue
+        if (context.Temperature.HasValue)
+        {
+            errorDetails.AppendLine($"Temperature: {context.Temperature.Value}");
+        }
+
+        if (context.MaxTokens.HasValue)
+        {
+            errorDetails.AppendLine($"MaxTokens: {context.MaxTokens.Value}");
+        }
+
+        if (context.TopP.HasValue)
+        {
+            errorDetails.AppendLine($"TopP: {context.TopP.Value}");
+        }
+
+        if (context.FrequencyPenalty.HasValue)
+        {
+            errorDetails.AppendLine($"FrequencyPenalty: {context.FrequencyPenalty.Value}");
+        }
+
+        if (context.PresencePenalty.HasValue)
+        {
+            errorDetails.AppendLine($"PresencePenalty: {context.PresencePenalty.Value}");
+        }
+
+        if (!string.IsNullOrEmpty(context.DataSourceId))
+        {
+            errorDetails.AppendLine($"DataSourceId: {context.DataSourceId}");
+        }
+
+        if (!string.IsNullOrEmpty(context.DataSourceType))
+        {
+            errorDetails.AppendLine($"DataSourceType: {context.DataSourceType}");
+        }
+
+        _logger.LogError(ex, errorDetails.ToString());
     }
 
     protected override async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)

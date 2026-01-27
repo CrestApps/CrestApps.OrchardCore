@@ -565,6 +565,29 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
     private LocalizedString GetFriendlyErrorMessage(Exception ex)
     {
+        // Handle ClientResultException from Azure OpenAI SDK
+        if (ex.GetType().FullName == "System.ClientModel.ClientResultException")
+        {
+            // Use reflection to get the Status property
+            var statusProperty = ex.GetType().GetProperty("Status");
+            if (statusProperty != null)
+            {
+                var statusCode = (int)statusProperty.GetValue(ex);
+                
+                return statusCode switch
+                {
+                    401 or 403 => S["Authentication failed. Please check your API credentials and ensure they have the necessary permissions."],
+                    400 => S["Invalid request parameters. The request to the AI service was rejected. Please check your connection settings, deployment configuration, and ensure all parameters are within valid ranges."],
+                    404 => S["The AI deployment or endpoint could not be found. Please verify the deployment name and API endpoint URL."],
+                    429 => S["Rate limit exceeded. Please wait a moment and try again."],
+                    >= 500 => S["The AI service is currently unavailable. Please try again later."],
+                    _ => S["An error occurred while communicating with the AI service. Please check your configuration and try again."]
+                };
+            }
+            
+            return S["An error occurred while communicating with the AI service. Please check your configuration and try again."];
+        }
+
         if (ex is HttpRequestException httpEx)
         {
             if (httpEx.StatusCode is { } code)
