@@ -39,6 +39,12 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
 
     public OmnichannelActivityBatchStatus Status { get; set; }
 
+    public DateTime? LeadCreatedFrom { get; set; }
+
+    public DateTime? LeadCreatedTo { get; set; }
+
+    public bool OnlyPublishedLeads { get; set; } = true;
+
     public OmnichannelActivityBatch Clone()
     {
         return new OmnichannelActivityBatch()
@@ -61,6 +67,9 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             PreventDuplicates = PreventDuplicates,
             UrgencyLevel = UrgencyLevel,
             Status = Status,
+            LeadCreatedFrom = LeadCreatedFrom,
+            LeadCreatedTo = LeadCreatedTo,
+            OnlyPublishedLeads = OnlyPublishedLeads,
         };
     }
 }

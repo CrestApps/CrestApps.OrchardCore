@@ -31,9 +31,9 @@ public sealed class OmnichannelActivityManager : CatalogManager<OmnichannelActiv
         return result;
     }
 
-    public async Task<PageResult<OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize)
+    public async Task<PageResult<OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize, ListOmnichannelActivityFilter filter)
     {
-        var result = await _store.PageManualScheduledAsync(userId, page, pageSize);
+        var result = await _store.PageManualScheduledAsync(userId, page, pageSize, filter);
 
         foreach (var entry in result.Entries)
         {
