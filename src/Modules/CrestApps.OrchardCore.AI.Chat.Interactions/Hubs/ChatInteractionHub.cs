@@ -3,11 +3,11 @@ using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -462,7 +462,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             {
                 SessionId = itemId,
                 MessageId = IdGenerator.GenerateId(),
-                Content = GetFriendlyErrorMessage(ex).Value,
+                Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
             };
 
             await writer.WriteAsync(errorMessage, cancellationToken);
@@ -563,38 +563,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         return history;
     }
 
-    private LocalizedString GetFriendlyErrorMessage(Exception ex)
-    {
-        if (ex is HttpRequestException httpEx)
-        {
-            if (httpEx.StatusCode is { } code)
-            {
-                return code switch
-                {
-                    System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden
-                      => S["Authentication failed. Please check your API credentials."],
-
-                    System.Net.HttpStatusCode.BadRequest
-                      => S["Invalid request. Please verify your connection settings."],
-
-                    System.Net.HttpStatusCode.NotFound
-                      => S["The provider endpoint could not be found. Please verify the API URL."],
-
-                    System.Net.HttpStatusCode.TooManyRequests
-                      => S["Rate limit reached. Please wait and try again later."],
-
-                    >= System.Net.HttpStatusCode.InternalServerError
-                      => S["The provider service is currently unavailable. Please try again later."],
-
-                    _ => S["An error occurred while communicating with the provider."]
-                };
-            }
-
-            return S["Unable to reach the provider. Please check your connection or endpoint URL."];
-        }
-
-        return S["Our service is currently unavailable. Please try again later."];
-    }
 
     /// <summary>
     /// Handles the result of image generation and sends the generated images to the client.
