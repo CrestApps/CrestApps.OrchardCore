@@ -24,6 +24,7 @@
   - [AI Completion using Direct Config Task](#ai-completion-using-direct-config-task)
 - [Deployments with AI Chat](#deployments-with-ai-chat)
 - [Compatibility](#compatibility)
+- [Local Development](#local-development))
 
 ## AI Services Feature
 
@@ -751,6 +752,186 @@ The **AI Services** feature integrates with the **Deployments** module, allowing
 
 ---
 
-## Compatibility  
+## Compatibility
 
-This module is fully compatible with OrchardCore v2.1 and later. However, if you are using OrchardCore versions between `v2.1` and `3.0.0-preview-18562`, you must install the [CrestApps.OrchardCore.Resources module](../CrestApps.OrchardCore.Resources/README.md) module into your web project. Then, enable the `CrestApps.OrchardCore.Resources` feature to ensure all required resource dependencies are available.  
+This module is fully compatible with **OrchardCore v2.1** and later.
+
+> **Note:** If you are using OrchardCore versions between `v2.1` and `3.0.0-preview-18562`, you must install the [CrestApps.OrchardCore.Resources](../CrestApps.OrchardCore.Resources/README.md) module into your web project. Then, enable the `CrestApps.OrchardCore.Resources` feature to ensure all required resource dependencies are available.
+
+---
+
+## Local Development
+
+There are multiple ways to set up a local development environment for testing AI functionalities. You can choose the method that best suits your workflow.
+
+---
+
+### Ollama
+
+You may use the [CrestApps.OrchardCore.Ollama](../CrestApps.OrchardCore.Ollama/README.md) module to connect to a locally hosted Ollama server. This approach allows you to test AI functionalities without relying on external services.
+
+---
+
+### Microsoft Foundry Local
+
+You can also use **Foundry Local** to run OpenAI-compatible models locally or you can use Azure AI Inference feature to connect to any of the available local models. Follow these steps to get started:
+
+#### Install Foundry Local
+
+Install [Foundry Local](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-local/get-started) following the official instructions.
+
+After installation, run an OpenAI-compatible model such as `GPT-OSS-20B`:
+
+```bash
+foundry model run gpt-oss-20b
+```
+
+Once the model finishes downloading and is running, you should see a success message like:
+
+```
+Service is Started on http://127.0.0.1:63457/
+```
+
+> Note: Your local web address may differ. Use the URL displayed in your console.
+
+---
+
+#### Configure Orchard Core
+
+Navigate to your Orchard Core tenant: **Artificial Intelligence >> Provider Connections**. Add a connection to the locally hosted Foundry model.
+
+    > If you don't see this option, enable the `CrestApps.OrchardCore.AI.ConnectionManagement` feature.
+
+There are two options to connect to a model hosted on Foundry Local:
+
+##### Using OpenAI
+
+1. Click **Add Connection** and select **OpenAI**.
+   If you don't see **OpenAI**, enable the `CrestApps.OrchardCore.AzureAIInference` feature.
+
+2. Enter the connection details:
+
+   * **Connection Name:** `Foundry Local` (or any name you prefer)
+
+   * **Model Name:** Use the full model ID. List available models at:
+
+     ```
+     http://127.0.0.1:63457/v1/models
+     ```
+
+     Example: `gpt-oss-20b-cuda-gpu:1`
+
+   * **Deployment Name:** Same as the model ID (`gpt-oss-20b-cuda-gpu:1`)
+
+   * **Endpoint:**
+
+     ```
+     http://127.0.0.1:63457/v1
+     ```
+
+     > Ensure the URL ends with `/v1`.
+
+   * **API Key:** Any value works (e.g., `local`) because Foundry Local does not enforce authentication.
+
+4. Click **Save**. You can now create AI profiles and start chatting using your locally running Foundry instance.
+1. 
+##### Using Azure AI Inference
+
+
+2. Click **Add Connection** and select **Azure AI Inference**.
+   If you don't see **Azure AI Inference**, enable the `CrestApps.OrchardCore.AzureAIInference` feature.
+
+3. Enter the connection details:
+
+   * **Connection Name:** `Foundry Local` (or any name you prefer)
+
+   * **Model Name:** Use the full model ID. List available models at:
+
+     ```
+     http://127.0.0.1:63457/v1/models
+     ```
+
+     Example: `gpt-oss-20b-cuda-gpu:1`
+
+   * **Deployment Name:** Same as the model ID (`gpt-oss-20b-cuda-gpu:1`)
+
+   * **Endpoint:**
+
+     ```
+     http://127.0.0.1:63457/v1
+     ```
+
+     > Ensure the URL ends with `/v1`.
+
+   * **API Key:** Any value works (e.g., `local`) because Foundry Local does not enforce authentication.
+
+4. Click **Save**. You can now create AI profiles and start chatting using your locally running Foundry instance.
+
+---
+
+#### Configure via `appsettings.json`
+
+Alternatively, define your connection in `appsettings.json`:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Providers": {
+        "OpenAI": {
+          "DefaultConnectionName": "foundry-local",
+          "DefaultDeploymentName": "gpt-oss-20b-cuda-gpu:1",
+          "Connections": {
+            "foundry-local": {
+              "Endpoint": "http://127.0.0.1:63457/v1",
+              "DefaultDeploymentName": "gpt-oss-20b-cuda-gpu:1",
+              "ApiKey": "local"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+---
+
+#### Working with Multiple Models
+
+Foundry Local supports running multiple models simultaneously. You can:
+
+* Use the **Deployments UI** to add additional models.
+* Or define multiple connections in `appsettings.json` to connect to different models via separate AI profiles. Here is an example configuration:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Providers": {
+        "OpenAI": {
+          "DefaultConnectionName": "foundry-first",
+          "DefaultDeploymentName": "gpt-oss-20b-cuda-gpu:1",
+          "Connections": {
+            "foundry-first": {
+              "Endpoint": "http://127.0.0.1:63547/v1",
+              "DefaultDeploymentName": "gpt-oss-20b-cuda-gpu:1",
+              "ApiKey": "local"
+            },
+            "foundry-second": {
+              "Endpoint": "http://127.0.0.1:53547/v1",
+              "DefaultDeploymentName": "gpt-oss-20b-cuda-gpu:1",
+              "ApiKey": "local"
+            },
+            "foundry-third": {
+              "Endpoint": "http://127.0.0.1:43547/v1",
+              "DefaultDeploymentName": "gpt-oss-20b-cuda-gpu:1",
+              "ApiKey": "local"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
