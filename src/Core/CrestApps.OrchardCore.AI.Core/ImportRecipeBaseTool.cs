@@ -33,6 +33,11 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
     public override JsonElement JsonSchema => _jsonSchema;
 
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    {
+        ["Strict"] = false,
+    };
+
     protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
