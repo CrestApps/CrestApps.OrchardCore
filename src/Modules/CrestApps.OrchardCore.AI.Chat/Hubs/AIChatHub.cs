@@ -1,7 +1,6 @@
 using System.Text;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Models;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Support;
@@ -10,6 +9,7 @@ using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -20,8 +20,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 
 public class AIChatHub : Hub<IAIChatHubClient>
 {
-    private const string ClientResultExceptionName = "ClientResultException";
-    private static readonly string[] RateLimitIndicators = ["ratelimitreached", "rate limit", "too many requests"];
     private readonly IAuthorizationService _authorizationService;
     private readonly IAIProfileManager _profileManager;
     private readonly IAIChatSessionManager _sessionManager;
@@ -208,7 +206,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             {
                 SessionId = sessionId,
                 MessageId = IdGenerator.GenerateId(),
-                Content = GetFriendlyErrorMessage(ex).Value,
+                Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
             };
 
             await writer.WriteAsync(errorMessage, cancellationToken);
@@ -219,171 +217,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
         }
     }
 
-    private LocalizedString GetFriendlyErrorMessage(Exception ex)
-    {
-        var message = ex.Message ?? string.Empty;
-        var clientStatusCode = TryGetClientResultStatusCode(ex);
-
-        if (clientStatusCode == (int)System.Net.HttpStatusCode.TooManyRequests ||
-            ContainsRateLimitIndicator(message))
-        {
-            var retryAfterMessage = ExtractRetryAfterMessage(message);
-
-            return string.IsNullOrWhiteSpace(retryAfterMessage)
-                ? S["Rate limit reached. Please wait and try again later."]
-                : S["Rate limit reached. {0}", retryAfterMessage];
-        }
-
-        // Handle explicit HttpRequestException with known status codes.
-        if (ex is HttpRequestException httpEx)
-        {
-            // Some HttpRequestExceptions don't have StatusCode populated (e.g., socket errors)
-            if (httpEx.StatusCode is { } code)
-            {
-                return code switch
-                {
-                    System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden
-                      => S["Authentication failed. Please check your API credentials."],
-
-                    System.Net.HttpStatusCode.BadRequest
-                      => S["Invalid request. Please verify your connection settings."],
-
-                    System.Net.HttpStatusCode.NotFound
-                      => S["The provider endpoint could not be found. Please verify the API URL."],
-
-                    System.Net.HttpStatusCode.TooManyRequests
-                      => S["Rate limit reached. Please wait and try again later."],
-
-                    >= System.Net.HttpStatusCode.InternalServerError
-                      => S["The provider service is currently unavailable. Please try again later."],
-
-                    _ => S["An error occurred while communicating with the provider."]
-                };
-            }
-
-            // If no status code, it might be a network or DNS-level failure.
-            return S["Unable to reach the provider. Please check your connection or endpoint URL."];
-        }
-
-        var message = ex.Message ?? string.Empty;
-
-        // Authentication errors.
-        if (message.Contains("401", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("403", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("unauthorized", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("invalid api key", StringComparison.OrdinalIgnoreCase) ||
-            ex.GetType().Name.Contains("Authentication", StringComparison.OrdinalIgnoreCase))
-        {
-            return S["Authentication failed. Please check your API credentials."];
-        }
-
-        // Bad request / invalid parameters
-        if (message.Contains("bad request", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("invalid request", StringComparison.OrdinalIgnoreCase))
-        {
-            return S["Invalid request. Please verify your profile configuration or parameters."];
-        }
-
-        // Not found errors.
-        if (message.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("endpoint not found", StringComparison.OrdinalIgnoreCase))
-        {
-            return S["The provider endpoint could not be found. Please verify the API URL."];
-        }
-
-        // Rate limit / too many requests.
-        if (message.Contains("too many requests", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
-        {
-            return S["Rate limit reached. Please wait and try again later."];
-        }
-
-        // Connectivity / timeout issues.
-        if (ex is TimeoutException || ex is TaskCanceledException)
-        {
-            return S["The request timed out. Please try again later."];
-        }
-
-        if (ex.InnerException is System.Net.Sockets.SocketException ||
-            message.Contains("connection refused", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("name or service not known", StringComparison.OrdinalIgnoreCase))
-        {
-            return S["Unable to reach the provider. Please check your connection or endpoint URL."];
-        }
-
-        // Fallback generic error.
-        return S["Our service is currently unavailable. Please try again later."];
-    }
-
-    private static int? TryGetClientResultStatusCode(Exception ex)
-    {
-        if (ex is null)
-        {
-            return null;
-        }
-
-        var type = ex.GetType();
-        if (!string.Equals(type.Name, ClientResultExceptionName, StringComparison.Ordinal))
-        {
-            return null;
-        }
-
-        try
-        {
-            var statusProperty = type.GetProperty("Status") ?? type.GetProperty("StatusCode");
-            if (statusProperty?.GetValue(ex) is int status)
-            {
-                return status;
-            }
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-
-        return null;
-    }
-
-    private static bool ContainsRateLimitIndicator(string message)
-    {
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            return false;
-        }
-
-        foreach (var indicator in RateLimitIndicators)
-        {
-            if (message.Contains(indicator, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static string ExtractRetryAfterMessage(string message)
-    {
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            return string.Empty;
-        }
-
-        var retryIndex = message.IndexOf("retry after", StringComparison.OrdinalIgnoreCase);
-        if (retryIndex < 0)
-        {
-            return string.Empty;
-        }
-
-        var sentence = message.Substring(retryIndex);
-        var endIndex = sentence.IndexOf('.', StringComparison.Ordinal);
-        if (endIndex >= 0)
-        {
-            sentence = sentence.Substring(0, endIndex + 1);
-        }
-
-        return sentence.Trim();
-    }
 
     private async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, string userPrompt)
     {
