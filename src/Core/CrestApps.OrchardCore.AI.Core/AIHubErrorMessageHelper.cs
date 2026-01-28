@@ -14,9 +14,9 @@ internal static class AIHubErrorMessageHelper
     /// Maps provider exceptions to localized, user-friendly error messages.
     /// </summary>
     /// <param name="ex">The exception thrown during provider communication.</param>
-    /// <param name="localizer">The localizer used to format messages.</param>
+    /// <param name="S">The localizer used to format messages.</param>
     /// <returns>A localized message suitable for end users.</returns>
-    public static LocalizedString GetFriendlyErrorMessage(Exception ex, IStringLocalizer localizer)
+    public static LocalizedString GetFriendlyErrorMessage(Exception ex, IStringLocalizer S)
     {
         var message = ex?.Message ?? string.Empty;
         var clientStatusCode = TryGetClientResultStatusCode(ex);
@@ -27,8 +27,8 @@ internal static class AIHubErrorMessageHelper
             var retryAfterMessage = ExtractRetryAfterMessage(message);
 
             return string.IsNullOrWhiteSpace(retryAfterMessage)
-                ? localizer["Rate limit reached. Please wait and try again later."]
-                : localizer["Rate limit reached. {0}", retryAfterMessage];
+                ? S["Rate limit reached. Please wait and try again later."]
+                : S["Rate limit reached. {0}", retryAfterMessage];
         }
 
         if (ex is HttpRequestException httpEx)
@@ -38,28 +38,28 @@ internal static class AIHubErrorMessageHelper
                 return code switch
                 {
                     System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden
-                      => localizer["Authentication failed. Please check your API credentials."],
+                      => S["Authentication failed. Please check your API credentials."],
 
                     System.Net.HttpStatusCode.BadRequest
-                      => localizer["Invalid request. Please verify your connection settings."],
+                      => S["Invalid request. Please verify your connection settings."],
 
                     System.Net.HttpStatusCode.NotFound
-                      => localizer["The provider endpoint could not be found. Please verify the API URL."],
+                      => S["The provider endpoint could not be found. Please verify the API URL."],
 
                     System.Net.HttpStatusCode.TooManyRequests
-                      => localizer["Rate limit reached. Please wait and try again later."],
+                      => S["Rate limit reached. Please wait and try again later."],
 
                     >= System.Net.HttpStatusCode.InternalServerError
-                      => localizer["The provider service is currently unavailable. Please try again later."],
+                      => S["The provider service is currently unavailable. Please try again later."],
 
-                    _ => localizer["An error occurred while communicating with the provider."]
+                    _ => S["An error occurred while communicating with the provider."]
                 };
             }
 
-            return localizer["Unable to reach the provider. Please check your connection or endpoint URL."];
+            return S["Unable to reach the provider. Please check your connection or endpoint URL."];
         }
 
-        return localizer["Our service is currently unavailable. Please try again later."];
+        return S["Our service is currently unavailable. Please try again later."];
     }
 
     private static int? TryGetClientResultStatusCode(Exception ex)
