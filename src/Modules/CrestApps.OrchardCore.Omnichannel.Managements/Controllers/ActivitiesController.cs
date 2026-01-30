@@ -21,6 +21,7 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Routing;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using OrchardCore.Workflows.Services;
@@ -83,11 +84,12 @@ public sealed class ActivitiesController : Controller
         H = htmlLocalizer;
     }
 
-    [Admin("omnichannel/activities")]
+    [Admin("omnichannel/activities", "OmnichannelActivities")]
     public async Task<IActionResult> Activities(
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
-        [FromServices] IShapeFactory shapeFactory)
+        [FromServices] IShapeFactory shapeFactory,
+        [FromServices] IDisplayManager<ListOmnichannelActivityFilter> filterDisplayManager)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ListActivities))
         {
@@ -98,7 +100,13 @@ public sealed class ActivitiesController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var scheduledResult = await _omnichannelActivityManager.PageManualScheduledAsync(userId, pager.Page, pager.PageSize);
+        // Create a new filter instance and use the display manager to populate it from request parameters
+        var filter = new ListOmnichannelActivityFilter();
+
+        // Build the filter editor (this populates the filter from request parameters via the display driver)
+        var header = await filterDisplayManager.UpdateEditorAsync(filter, _updateModelAccessor.ModelUpdater, isNew: false, string.Empty, string.Empty);
+
+        var scheduledResult = await _omnichannelActivityManager.PageManualScheduledAsync(userId, pager.Page, pager.PageSize, filter);
 
         var pagerShape = await shapeFactory.PagerAsync(pager, scheduledResult.Count);
 
@@ -140,11 +148,21 @@ public sealed class ActivitiesController : Controller
 
         var model = new ListOmnichannelActivityContainer()
         {
+            Header = header,
             Containers = containerSummaries,
             Pager = pagerShape,
         };
 
         return View(model);
+    }
+
+    [HttpPost]
+    [ActionName(nameof(Activities))]
+    [FormValueRequired("submit.Filter")]
+    [Admin("omnichannel/activities", "OmnichannelActivities")]
+    public ActionResult ActivitiesFilterPost()
+    {
+        return RedirectToAction(nameof(Activities));
     }
 
     [Admin("omnichannel/activities/{contentItemId}")]

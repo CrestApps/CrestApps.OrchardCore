@@ -76,6 +76,9 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             model.PreventDuplicates = context.IsNew || batch.PreventDuplicates;
             model.Instructions = batch.Instructions;
             model.UrgencyLevel = batch.UrgencyLevel;
+            model.LeadCreatedFrom = batch.LeadCreatedFrom;
+            model.LeadCreatedTo = batch.LeadCreatedTo;
+            model.OnlyPublishedLeads = context.IsNew || batch.OnlyPublishedLeads;
 
             model.Campaigns = (await _campaignCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.ItemId)).OrderBy(x => x.Text);
 
@@ -172,6 +175,9 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         batch.IncludeDoNoSms = model.IncludeDoNoSms;
         batch.IncludeDoNoEmail = model.IncludeDoNoEmail;
         batch.PreventDuplicates = model.PreventDuplicates;
+        batch.LeadCreatedFrom = model.LeadCreatedFrom;
+        batch.LeadCreatedTo = model.LeadCreatedTo;
+        batch.OnlyPublishedLeads = model.OnlyPublishedLeads;
 
         if (model.ScheduleAt.HasValue)
         {
