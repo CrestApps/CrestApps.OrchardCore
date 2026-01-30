@@ -6,22 +6,26 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 /// </summary>
 public sealed class PromptProcessingOptions
 {
+    public const string SectionName = "CrestApps_AI:ChatInteractions";
+
+    /// <summary>
+    /// When false, heavy intents are excluded from AI intent detection and heavy strategies are not invoked.
+    /// Default is false.
+    /// </summary>
+    public bool EnableHeavyProcessingStrategies { get; set; }
+
     /// <summary>
     /// Gets the dictionary of registered intents and their descriptions.
     /// The key is the intent name (e.g., "DocumentQnA") and the value is the description
     /// used by the AI intent detector to classify user prompts.
     /// </summary>
-    /// <remarks>
-    /// Only intents registered here will be recognized by the AI intent detector and
-    /// processed by their corresponding strategies. To add a custom intent:
-    /// <code>
-    /// services.Configure&lt;DocumentProcessingOptions&gt;(o =&gt;
-    /// {
-    ///     o.Intents.TryAdd("MyCustomIntent", "Description of when this intent should be detected.");
-    /// });
-    /// </code>
-    /// </remarks>
     internal Dictionary<string, string> InternalIntents { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Gets the set of intent names that are considered heavy.
+    /// These intents are filtered out from AI intent detection when <see cref="EnableHeavyProcessingStrategies"/> is false.
+    /// </summary>
+    internal HashSet<string> HeavyIntents { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public IReadOnlyDictionary<string, string> Intents => InternalIntents;
 }

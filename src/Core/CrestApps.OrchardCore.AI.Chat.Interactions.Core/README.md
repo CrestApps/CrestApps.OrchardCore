@@ -16,12 +16,13 @@ This module provides an extensible architecture for processing documents in chat
 
 #### Intent Detection
 
-The `IDocumentIntentDetector` interface allows classification of user intent when documents are attached. Intents are string-based, allowing easy extensibility. Well-known intents are defined in `DocumentIntents`:
+The `IPromptIntentDetector` interface allows classification of user intent for a chat message. Intents are string-based, allowing easy extensibility. Well-known intents are defined in `DocumentIntents`.
 
 **Document-related intents:**
 - `DocumentIntents.DocumentQnA` - Question answering over documents (RAG)
 - `DocumentIntents.SummarizeDocument` - Document summarization
 - `DocumentIntents.AnalyzeTabularData` - CSV/tabular data analysis
+- `DocumentIntents.AnalyzeTabularDataByRow` - Row-by-row tabular processing (heavy)
 - `DocumentIntents.ExtractStructuredData` - Data extraction
 - `DocumentIntents.CompareDocuments` - Document comparison
 - `DocumentIntents.TransformFormat` - Content transformation/reformatting
@@ -34,17 +35,40 @@ The `IDocumentIntentDetector` interface allows classification of user intent whe
 
 #### Processing Strategies
 
-The `IDocumentProcessingStrategy` interface enables custom document processing based on intent:
+Prompt processing is implemented using strategies.
 
-- All strategies are called in sequence for every request
-- Each strategy decides internally whether to contribute context based on the intent
-- Multiple strategies can add context to the same result
-- Strategies can bypass vector search when appropriate
-- Extensible via DI for custom strategies
+##### `IPromptProcessingStrategy`
+
+`IPromptProcessingStrategy` is the base interface for all prompt/document processing strategies:
+
+- Strategies are resolved via DI as `IEnumerable<IPromptProcessingStrategy>`
+- The strategy provider calls all strategies in sequence for each request
+- Each strategy decides internally whether it should contribute context based on the detected intent
+- Multiple strategies can add context to the same request
+
+See: `IPromptProcessingStrategy` and `DocumentProcessingStrategyBase`.
+
+##### `IHeavyPromptProcessingStrategy`
+
+`IHeavyPromptProcessingStrategy` is a marker interface for strategies that are expensive in time/cost:
+
+- May perform many LLM calls per user message (e.g., batching)
+- May process large datasets row-by-row
+- Should be gated behind configuration to avoid unexpected API costs
+
+The default strategy provider filters these at runtime:
+
+- If `PromptProcessingOptions.EnableHeavyProcessingStrategies` is `false` (default), heavy strategies are skipped.
+- If `true`, heavy strategies run normally.
+
+**Important:** Heavy intents are also filtered from AI intent detection when disabled. This prevents the AI classifier from selecting an intent that cannot be processed. Use `AddHeavyPromptProcessingIntent()` to register heavy intents.
+
+Example heavy strategy:
+- `RowLevelTabularAnalysisDocumentProcessingStrategy` (batch processes `.xlsx` / `.csv` row-by-row)
 
 #### Processing Result
 
-The `DocumentProcessingResult` is part of the `DocumentProcessingContext` and allows multiple strategies to contribute:
+The `IntentProcessingResult` is part of the `IntentProcessingContext` and allows multiple strategies to contribute:
 
 - `AdditionalContexts` - List of context entries from all contributing strategies
 - `GetCombinedContext()` - Gets the combined context from all strategies
@@ -58,13 +82,43 @@ The `DocumentProcessingResult` is part of the `DocumentProcessingContext` and al
 **Document Processing Strategies:**
 - `SummarizationDocumentProcessingStrategy` - Full document content for summarization
 - `TabularAnalysisDocumentProcessingStrategy` - Structured data parsing for analysis
+- `RowLevelTabularAnalysisDocumentProcessingStrategy` - Row-by-row tabular processing (heavy)
 - `ExtractionDocumentProcessingStrategy` - Content for data extraction
 - `ComparisonDocumentProcessingStrategy` - Multi-document content for comparison
 - `TransformationDocumentProcessingStrategy` - Content for format transformation
 - `GeneralReferenceDocumentProcessingStrategy` - General document reference
 
-**Image Generation Strategy:**
-- `ImageGenerationDocumentProcessingStrategy` - Generates images using AI image generation models (e.g., DALL-E)
+**Image/Chart Generation Strategies:**
+- `ImageGenerationDocumentProcessingStrategy` - Generates images using AI image generation models
+- `ChartGenerationDocumentProcessingStrategy` - Generates Chart.js configurations
+
+## Configuration
+
+### `CrestApps_AI:ChatInteractions`
+
+This module binds `PromptProcessingOptions` from the configuration section:
+
+- Section: `CrestApps_AI:ChatInteractions`
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `EnableHeavyProcessingStrategies` | `bool` | `false` | When `false`, strategies implementing `IHeavyPromptProcessingStrategy` are skipped and heavy intents are excluded from AI detection. When `true`, heavy strategies and heavy intents are allowed. |
+
+Example `appsettings.json`:
+
+```json
+{
+  "CrestApps_AI": {
+    "ChatInteractions": {
+      "EnableHeavyProcessingStrategies": false
+    }
+  }
+}
+```
+
+Notes:
+- Row-level batching settings are configured separately (see the consuming module documentation).
+- For caching, the system uses `IDistributedCache`. Configure a provider such as Redis or SQL Server for production.
 
 ## Usage
 
@@ -73,15 +127,24 @@ This project is a library consumed by the `AI Chat Interactions` module and its 
 ### Registering Services
 
 ```csharp
-services.AddDocumentProcessingServices()
-    .AddDefaultDocumentProcessingStrategies();
+services
+    .AddPromptRoutingServices()
+    .AddDefaultPromptProcessingStrategies()
+    .AddDefaultDocumentPromptProcessingStrategies();
 ```
 
 ### Adding Custom Strategies
 
 ```csharp
-// Register a custom strategy - it decides internally which intents to handle
-services.AddDocumentProcessingStrategy<MyCustomStrategy>();
+// Register a standard strategy with its intent
+services
+    .AddPromptProcessingIntent("MyIntent", "Description for AI classifier")
+    .AddPromptProcessingStrategy<MyCustomStrategy>();
+
+// Register a heavy strategy with its intent (filtered when heavy processing is disabled)
+services
+    .AddHeavyPromptProcessingIntent("MyHeavyIntent", "Description for AI classifier")
+    .AddPromptProcessingStrategy<MyHeavyStrategy>();
 ```
 
 ### Implementing a Custom Strategy
@@ -89,10 +152,10 @@ services.AddDocumentProcessingStrategy<MyCustomStrategy>();
 ```csharp
 public class MyCustomStrategy : DocumentProcessingStrategyBase
 {
-    public override Task ProcessAsync(DocumentProcessingContext context)
+    public override Task ProcessAsync(IntentProcessingContext context)
     {
         // Check if we should handle this intent
-        if (!string.Equals(context.IntentResult?.Intent, "MyCustomIntent", StringComparison.OrdinalIgnoreCase))
+        if (!CanHandle(context, "MyIntent"))
         {
             return Task.CompletedTask;
         }
@@ -106,4 +169,18 @@ public class MyCustomStrategy : DocumentProcessingStrategyBase
         return Task.CompletedTask;
     }
 }
-```
+
+// Heavy strategy - implement IHeavyPromptProcessingStrategy
+public class MyHeavyStrategy : DocumentProcessingStrategyBase, IHeavyPromptProcessingStrategy
+{
+    public override async Task ProcessAsync(IntentProcessingContext context)
+    {
+        if (!CanHandle(context, "MyHeavyIntent"))
+        {
+            return;
+        }
+
+        // This will only execute when EnableHeavyProcessingStrategies is true
+        // ... expensive processing ...
+    }
+}

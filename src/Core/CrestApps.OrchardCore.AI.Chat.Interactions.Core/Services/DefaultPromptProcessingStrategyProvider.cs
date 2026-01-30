@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 
@@ -7,16 +8,23 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 /// Default implementation of <see cref="IPromptProcessingStrategyProvider"/> that routes
 /// document processing through all registered strategies, allowing multiple to contribute context.
 /// </summary>
+/// <remarks>
+/// Heavy strategies (implementing <see cref="IHeavyPromptProcessingStrategy"/>) are only executed
+/// when <see cref="ChatInteractionOptions.EnableHeavyProcessingStrategies"/> is true.
+/// </remarks>
 public sealed class DefaultPromptProcessingStrategyProvider : IPromptProcessingStrategyProvider
 {
     private readonly IEnumerable<IPromptProcessingStrategy> _strategies;
+    private readonly PromptProcessingOptions _options;
     private readonly ILogger _logger;
 
     public DefaultPromptProcessingStrategyProvider(
         IEnumerable<IPromptProcessingStrategy> strategies,
+        IOptions<PromptProcessingOptions> options,
         ILogger<DefaultPromptProcessingStrategyProvider> logger)
     {
         _strategies = strategies;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -29,10 +37,23 @@ public sealed class DefaultPromptProcessingStrategyProvider : IPromptProcessingS
         ArgumentException.ThrowIfNullOrEmpty(intent);
 
         var isDebugging = _logger.IsEnabled(LogLevel.Debug);
+        var enableHeavyStrategies = _options.EnableHeavyProcessingStrategies;
 
         // Call all strategies, allowing each to contribute context
         foreach (var strategy in _strategies)
         {
+            // Skip heavy strategies if not enabled
+            if (strategy is IHeavyPromptProcessingStrategy && !enableHeavyStrategies)
+            {
+                if (isDebugging)
+                {
+                    _logger.LogDebug(
+                        "Skipping heavy strategy {StrategyType} for intent {Intent} because EnableHeavyProcessingStrategies is false.",
+                        strategy.GetType().Name, intent);
+                }
+                continue;
+            }
+
             try
             {
                 if (isDebugging)

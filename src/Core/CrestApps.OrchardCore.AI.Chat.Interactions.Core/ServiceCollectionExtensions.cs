@@ -25,6 +25,12 @@ public static class ServiceCollectionExtensions
         // Register the strategy provider
         services.TryAddScoped<IPromptProcessingStrategyProvider, DefaultPromptProcessingStrategyProvider>();
 
+        // Register the tabular batch processor (used by heavy processing strategies)
+        services.TryAddScoped<ITabularBatchProcessor, TabularBatchProcessor>();
+
+        // Register the tabular batch result cache (uses IDistributedCache)
+        services.TryAddSingleton<ITabularBatchResultCache, TabularBatchResultCache>();
+
         return services;
     }
 
@@ -50,6 +56,30 @@ public static class ServiceCollectionExtensions
         services.Configure<PromptProcessingOptions>(options =>
         {
             options.InternalIntents.TryAdd(intentName, description);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers a heavy processing intent.
+    /// </summary>
+    /// <remarks>
+    /// Heavy intents are always registered, but are filtered out from AI intent detection when
+    /// <see cref="PromptProcessingOptions.EnableHeavyProcessingStrategies"/> is false.
+    /// </remarks>
+    public static IServiceCollection AddHeavyPromptProcessingIntent(
+        this IServiceCollection services,
+        string intentName,
+        string description)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(intentName);
+        ArgumentException.ThrowIfNullOrEmpty(description);
+
+        services.Configure<PromptProcessingOptions>(options =>
+        {
+            options.InternalIntents.TryAdd(intentName, description);
+            options.HeavyIntents.Add(intentName);
         });
 
         return services;
@@ -96,11 +126,9 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Adds the default document prompt processing strategies with their intent registrations.
     /// </summary>
-    /// <param name="services"></param>
-    /// <returns></returns>
     public static IServiceCollection AddDefaultDocumentPromptProcessingStrategies(this IServiceCollection services)
     {
-        // Register intents for the default strategies
+        // Register intents for the default strategies (including heavy intent)
         services
             .AddPromptProcessingIntent(
                 DocumentIntents.SummarizeDocument,
@@ -108,7 +136,7 @@ public static class ServiceCollectionExtensions
             .AddPromptProcessingIntent(
                 DocumentIntents.AnalyzeTabularData,
                 "The user wants to perform calculations, aggregations, statistics, or data analysis on tabular data (CSV, Excel, etc.).")
-            .AddPromptProcessingIntent(
+            .AddHeavyPromptProcessingIntent(
                 DocumentIntents.AnalyzeTabularDataByRow,
                 "The user wants row-by-row analysis or extraction from tabular data (CSV/Excel), returning one result per row (e.g., classify each record, extract fields, detect escalations, or produce per-row outputs based on transcript/text columns).")
             .AddPromptProcessingIntent(
@@ -124,7 +152,6 @@ public static class ServiceCollectionExtensions
                 DocumentIntents.GeneralChatWithReference,
                 "General conversation that may reference documents but doesn't fit other categories.");
 
-        // Register the strategies
         services
             .AddPromptProcessingStrategy<SummarizationDocumentProcessingStrategy>()
             .AddPromptProcessingStrategy<TabularAnalysisDocumentProcessingStrategy>()
