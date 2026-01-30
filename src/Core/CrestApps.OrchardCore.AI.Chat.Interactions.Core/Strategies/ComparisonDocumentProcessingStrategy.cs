@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 
@@ -10,14 +11,26 @@ public sealed class ComparisonDocumentProcessingStrategy : DocumentProcessingStr
 {
     private const int MaxContextLength = 60000;
 
-    /// <inheritdoc />
-    public override Task ProcessAsync(IntentProcessingContext context)
+    private readonly IChatInteractionDocumentStore _chatInteractionDocumentStore;
+
+    public ComparisonDocumentProcessingStrategy(IChatInteractionDocumentStore chatInteractionDocumentStore)
     {
-        if (!CanHandle(context, DocumentIntents.CompareDocuments) ||
-            context.Interaction.Documents is null ||
-            context.Interaction.Documents.Count == 0)
+        _chatInteractionDocumentStore = chatInteractionDocumentStore;
+    }
+
+    /// <inheritdoc />
+    public override async Task ProcessAsync(IntentProcessingContext context)
+    {
+        if (!CanHandle(context, DocumentIntents.CompareDocuments) || !HasDocuments(context))
         {
-            return Task.CompletedTask;
+            return;
+        }
+
+        // Load full documents if not already loaded
+        if (!HasDocumentContent(context))
+        {
+            var documentIds = context.Interaction.Documents.Select(d => d.DocumentId);
+            context.Documents = (await _chatInteractionDocumentStore.GetAsync(documentIds)).ToList();
         }
 
         var documentContent = GetCombinedDocumentText(context, MaxContextLength);
@@ -33,7 +46,5 @@ public sealed class ComparisonDocumentProcessingStrategy : DocumentProcessingStr
             var prefix = $"The following is the content of {context.Interaction.Documents.Count} documents that the user wants to compare. Each document is separated by '---':";
             context.Result.AddContext(documentContent, prefix, usedVectorSearch: false);
         }
-
-        return Task.CompletedTask;
     }
 }

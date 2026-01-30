@@ -1,15 +1,17 @@
+using CrestApps.OrchardCore.Models;
+
 namespace CrestApps.OrchardCore.AI.Models;
 
 /// <summary>
 /// Represents an attached document for chat interactions.
 /// Used for "chat against own data" functionality.
 /// </summary>
-public sealed class ChatInteractionDocument
+public sealed class ChatInteractionDocument : CatalogItem
 {
     /// <summary>
-    /// Gets or sets the unique identifier for this document.
+    /// Gets or sets the ChatInteractionId the document belongs to.
     /// </summary>
-    public string DocumentId { get; set; }
+    public string ChatInteractionId { get; set; }
 
     /// <summary>
     /// Gets or sets the original file name of the document.

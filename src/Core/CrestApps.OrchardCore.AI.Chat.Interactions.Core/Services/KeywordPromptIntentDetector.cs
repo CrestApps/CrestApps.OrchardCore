@@ -244,7 +244,7 @@ public sealed class KeywordPromptIntentDetector : IPromptIntentDetector
         return false;
     }
 
-    private static bool HasTabularFiles(IList<ChatInteractionDocument> documents)
+    private static bool HasTabularFiles(IList<ChatInteractionDocumentInfo> documents)
     {
         if (documents == null || documents.Count == 0)
         {

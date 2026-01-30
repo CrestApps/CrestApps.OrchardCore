@@ -1,5 +1,4 @@
 using System.Text;
-using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 
@@ -44,7 +43,7 @@ public sealed class OpenXmlDocumentTextExtractor : IDocumentTextExtractor
         }
 
         var sb = new StringBuilder();
-        foreach (var paragraph in body.Descendants<Paragraph>())
+        foreach (var paragraph in body.Descendants<DocumentFormat.OpenXml.Wordprocessing.Paragraph>())
         {
             if (!string.IsNullOrWhiteSpace(paragraph.InnerText))
             {

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
@@ -25,7 +26,8 @@ internal static class RemoveDocumentEndpoint
         RemoveDocumentRequest request,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
-        ISourceCatalogManager<ChatInteraction> interactionManager)
+        ISourceCatalogManager<ChatInteraction> interactionManager,
+        IChatInteractionDocumentStore chatInteractionDocumentStore)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.EditChatInteractions))
         {
@@ -54,15 +56,22 @@ internal static class RemoveDocumentEndpoint
             return TypedResults.Forbid();
         }
 
-        // Find and remove the document
-        var document = interaction.Documents?.FirstOrDefault(d => d.DocumentId == request.DocumentId);
+        // Find and remove the document info from the interaction
+        var documentInfo = interaction.Documents?.FirstOrDefault(d => d.DocumentId == request.DocumentId);
 
-        if (document == null)
+        if (documentInfo == null)
         {
             return TypedResults.NotFound("Document not found.");
         }
 
-        interaction.Documents.Remove(document);
+        interaction.Documents.Remove(documentInfo);
+
+        // Remove the document from the document store
+        var document = await chatInteractionDocumentStore.FindByIdAsync(request.DocumentId);
+        if (document != null)
+        {
+            await chatInteractionDocumentStore.DeleteAsync(document);
+        }
 
         // Save the interaction
         await interactionManager.UpdateAsync(interaction);

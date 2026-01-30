@@ -21,17 +21,20 @@ public sealed class RowLevelTabularAnalysisDocumentProcessingStrategy : Document
 
     private const int BatchProcessingThreshold = 50;
 
+    private readonly IChatInteractionDocumentStore _chatInteractionDocumentStore;
     private readonly ITabularBatchProcessor _batchProcessor;
     private readonly ITabularBatchResultCache _resultCache;
     private readonly RowLevelTabularBatchOptions _settings;
     private readonly ILogger<RowLevelTabularAnalysisDocumentProcessingStrategy> _logger;
 
     public RowLevelTabularAnalysisDocumentProcessingStrategy(
+        IChatInteractionDocumentStore chatInteractionDocumentStore,
         ITabularBatchProcessor batchProcessor,
         ITabularBatchResultCache resultCache,
         IOptions<RowLevelTabularBatchOptions> settings,
         ILogger<RowLevelTabularAnalysisDocumentProcessingStrategy> logger)
     {
+        _chatInteractionDocumentStore = chatInteractionDocumentStore;
         _batchProcessor = batchProcessor;
         _resultCache = resultCache;
         _settings = settings.Value;
@@ -40,17 +43,22 @@ public sealed class RowLevelTabularAnalysisDocumentProcessingStrategy : Document
 
     public override async Task ProcessAsync(IntentProcessingContext context)
     {
-        if (!CanHandle(context, DocumentIntents.AnalyzeTabularDataByRow) ||
-            context.Interaction.Documents is null ||
-            context.Interaction.Documents.Count == 0)
+        if (!CanHandle(context, DocumentIntents.AnalyzeTabularDataByRow) || !HasDocuments(context))
         {
             return;
         }
 
-        var tabularDocuments = GetTabularDocuments(context.Interaction.Documents);
+        var tabularDocuments = await GetTabularDocumentsAsync(context.Interaction.Documents);
 
         if (tabularDocuments.Count == 0)
         {
+            // Load all documents for fallback
+            if (!HasDocumentContent(context))
+            {
+                var documentIds = context.Interaction.Documents.Select(d => d.DocumentId);
+                context.Documents = (await _chatInteractionDocumentStore.GetAsync(documentIds)).ToList();
+            }
+
             var allContent = GetCombinedDocumentText(context);
             context.Result.AddContext(
                 allContent,
@@ -296,6 +304,18 @@ public sealed class RowLevelTabularAnalysisDocumentProcessingStrategy : Document
             usedVectorSearch: false);
     }
 
+    private async Task<List<ChatInteractionDocument>> GetTabularDocumentsAsync(IList<ChatInteractionDocumentInfo> documents)
+    {
+        if (documents == null || documents.Count == 0)
+        {
+            return [];
+        }
+
+        var tabularDocumentIds = documents.Where(doc => IsTabularFile(doc.FileName)).Select(doc => doc.DocumentId);
+
+        return (await _chatInteractionDocumentStore.GetAsync(tabularDocumentIds)).ToList();
+    }
+
     private static int CountTotalDataRows(List<ChatInteractionDocument> documents)
     {
         var totalRows = 0;
@@ -328,26 +348,6 @@ public sealed class RowLevelTabularAnalysisDocumentProcessingStrategy : Document
         }
 
         return builder.ToString();
-    }
-
-    private static List<ChatInteractionDocument> GetTabularDocuments(IList<ChatInteractionDocument> documents)
-    {
-        var result = new List<ChatInteractionDocument>();
-
-        if (documents == null || documents.Count == 0)
-        {
-            return result;
-        }
-
-        foreach (var doc in documents)
-        {
-            if (IsTabularFile(doc.FileName))
-            {
-                result.Add(doc);
-            }
-        }
-
-        return result;
     }
 
     private static bool IsTabularFile(string fileName)

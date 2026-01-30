@@ -20,6 +20,12 @@ public sealed class IntentProcessingContext
     public ChatInteraction Interaction { get; set; }
 
     /// <summary>
+    /// Gets or sets the full documents with text and chunks, loaded on demand.
+    /// This is populated when strategies need access to document content.
+    /// </summary>
+    public IList<ChatInteractionDocument> Documents { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the conversation history (past messages) for context.
     /// This allows strategies to reference previous prompts and responses.
     /// </summary>

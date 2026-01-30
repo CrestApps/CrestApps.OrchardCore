@@ -16,7 +16,7 @@ public abstract class DocumentProcessingStrategyBase : IPromptProcessingStrategy
     /// </summary>
     protected static string GetCombinedDocumentText(IntentProcessingContext context, int? maxLength = null)
     {
-        if (context.Interaction?.Documents == null || context.Interaction.Documents.Count == 0)
+        if (context.Documents == null || context.Documents.Count == 0)
         {
             return string.Empty;
         }
@@ -24,7 +24,7 @@ public abstract class DocumentProcessingStrategyBase : IPromptProcessingStrategy
         var builder = new StringBuilder();
         var totalLength = 0;
 
-        foreach (var doc in context.Interaction.Documents)
+        foreach (var doc in context.Documents)
         {
             if (string.IsNullOrWhiteSpace(doc.Text))
             {
@@ -76,6 +76,7 @@ public abstract class DocumentProcessingStrategyBase : IPromptProcessingStrategy
     /// </summary>
     protected static string GetDocumentMetadata(IntentProcessingContext context)
     {
+        // Use interaction.Documents for metadata (file info) since that's always available
         if (context.Interaction?.Documents == null || context.Interaction.Documents.Count == 0)
         {
             return string.Empty;
@@ -91,6 +92,18 @@ public abstract class DocumentProcessingStrategyBase : IPromptProcessingStrategy
 
         return builder.ToString();
     }
+
+    /// <summary>
+    /// Checks if there are documents attached to the interaction.
+    /// </summary>
+    protected static bool HasDocuments(IntentProcessingContext context)
+        => context.Interaction?.Documents != null && context.Interaction.Documents.Count > 0;
+
+    /// <summary>
+    /// Checks if full document content has been loaded into the context.
+    /// </summary>
+    protected static bool HasDocumentContent(IntentProcessingContext context)
+        => context.Documents != null && context.Documents.Count > 0;
 
     protected static bool CanHandle(IntentProcessingContext context, string intent)
         => string.Equals(context.Result?.Intent, intent, StringComparison.OrdinalIgnoreCase);
