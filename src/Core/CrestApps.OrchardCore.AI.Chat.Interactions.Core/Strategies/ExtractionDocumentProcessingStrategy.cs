@@ -10,14 +10,26 @@ public sealed class ExtractionDocumentProcessingStrategy : DocumentProcessingStr
 {
     private const int MaxContextLength = 50000;
 
-    /// <inheritdoc />
-    public override Task ProcessAsync(IntentProcessingContext context)
+    private readonly IChatInteractionDocumentStore _chatInteractionDocumentStore;
+
+    public ExtractionDocumentProcessingStrategy(IChatInteractionDocumentStore chatInteractionDocumentStore)
     {
-        if (!CanHandle(context, DocumentIntents.ExtractStructuredData) ||
-            context.Interaction.Documents is null ||
-            context.Interaction.Documents.Count == 0)
+        _chatInteractionDocumentStore = chatInteractionDocumentStore;
+    }
+
+    /// <inheritdoc />
+    public override async Task ProcessAsync(IntentProcessingContext context)
+    {
+        if (!CanHandle(context, DocumentIntents.ExtractStructuredData) || !HasDocuments(context))
         {
-            return Task.CompletedTask;
+            return;
+        }
+
+        // Load full documents if not already loaded
+        if (!HasDocumentContent(context))
+        {
+            var documentIds = context.Interaction.Documents.Select(d => d.DocumentId);
+            context.Documents = (await _chatInteractionDocumentStore.GetAsync(documentIds)).ToList();
         }
 
         var documentContent = GetCombinedDocumentText(context, MaxContextLength);
@@ -33,7 +45,5 @@ public sealed class ExtractionDocumentProcessingStrategy : DocumentProcessingStr
             var prefix = "The following is the content of the attached document(s). The user wants to extract structured data or specific information from this content:";
             context.Result.AddContext(documentContent, prefix, usedVectorSearch: false);
         }
-
-        return Task.CompletedTask;
     }
 }

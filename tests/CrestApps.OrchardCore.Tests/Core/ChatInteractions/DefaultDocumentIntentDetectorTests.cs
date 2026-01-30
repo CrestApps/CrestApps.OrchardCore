@@ -222,12 +222,12 @@ public sealed class KeywordPromptIntentDetectorTests
                 ItemId = "test-id",
                 Documents =
                 [
-                    new ChatInteractionDocument
+                    new ChatInteractionDocumentInfo
                     {
                         DocumentId = "doc1",
                         FileName = "document.txt",
                         ContentType = "text/plain",
-                        Text = "Sample document content"
+                        FileSize = 100
                     }
                 ]
             }
@@ -244,12 +244,12 @@ public sealed class KeywordPromptIntentDetectorTests
                 ItemId = "test-id",
                 Documents =
                 [
-                    new ChatInteractionDocument
+                    new ChatInteractionDocumentInfo
                     {
                         DocumentId = "doc1",
                         FileName = "data.csv",
                         ContentType = "text/csv",
-                        Text = "Name,Age,City\nJohn,30,NYC\nJane,25,LA"
+                        FileSize = 100
                     }
                 ]
             }
@@ -266,19 +266,19 @@ public sealed class KeywordPromptIntentDetectorTests
                 ItemId = "test-id",
                 Documents =
                 [
-                    new ChatInteractionDocument
+                    new ChatInteractionDocumentInfo
                     {
                         DocumentId = "doc1",
                         FileName = "document1.txt",
                         ContentType = "text/plain",
-                        Text = "First document content"
+                        FileSize = 100
                     },
-                    new ChatInteractionDocument
+                    new ChatInteractionDocumentInfo
                     {
                         DocumentId = "doc2",
                         FileName = "document2.txt",
                         ContentType = "text/plain",
-                        Text = "Second document content"
+                        FileSize = 100
                     }
                 ]
             }

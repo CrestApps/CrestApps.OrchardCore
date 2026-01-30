@@ -44,9 +44,7 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
     /// <inheritdoc />
     public override async Task ProcessAsync(IntentProcessingContext context)
     {
-        if (!CanHandle(context, DocumentIntents.DocumentQnA) ||
-            context.Interaction.Documents is null ||
-            context.Interaction.Documents.Count == 0)
+        if (!CanHandle(context, DocumentIntents.DocumentQnA) || !HasDocuments(context))
         {
             return;
         }

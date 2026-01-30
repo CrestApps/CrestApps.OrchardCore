@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Endpoints;
@@ -41,6 +43,7 @@ internal static class UploadDocumentEndpoint
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         ISourceCatalogManager<ChatInteraction> interactionManager,
+        IChatInteractionDocumentStore chatInteractionDocumentStore,
         IEnumerable<IDocumentTextExtractor> textExtractors,
         IOptions<ChatInteractionsOptions> extractorOptions,
         IAIClientFactory aIClientFactory,
@@ -190,7 +193,8 @@ internal static class UploadDocumentEndpoint
 
                 var document = new ChatInteractionDocument
                 {
-                    DocumentId = $"{interaction.ItemId}_{interaction.DocumentIndex++}",
+                    ItemId = IdGenerator.GenerateId(),
+                    ChatInteractionId = chatInteractionId,
                     FileName = file.FileName,
                     ContentType = file.ContentType,
                     FileSize = file.Length,
@@ -237,16 +241,18 @@ internal static class UploadDocumentEndpoint
                     logger.LogDebug("Skipping embedding generation for file {FileName} (tabular data or too large)", file.FileName);
                 }
 
-                interaction.Documents.Add(document);
-
-                uploadedDocuments.Add(new
+                var docInfo = new ChatInteractionDocumentInfo
                 {
-                    documentId = document.DocumentId,
-                    fileName = document.FileName,
-                    fileSize = document.FileSize,
-                    uploadedUtc = document.UploadedUtc,
-                    hasEmbeddings = document.Chunks.Count > 0,
-                });
+                    DocumentId = document.ItemId,
+                    FileName = document.FileName,
+                    FileSize = document.FileSize,
+                    ContentType = document.ContentType,
+                };
+
+                uploadedDocuments.Add(docInfo);
+                interaction.Documents.Add(docInfo);
+
+                await chatInteractionDocumentStore.CreateAsync(document);
             }
             catch (Exception ex)
             {
@@ -259,10 +265,7 @@ internal static class UploadDocumentEndpoint
             }
         }
 
-        if (uploadedDocuments.Count > 0)
-        {
-            await interactionManager.UpdateAsync(interaction);
-        }
+        await interactionManager.UpdateAsync(interaction);
 
         return TypedResults.Ok(new
         {

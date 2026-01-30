@@ -90,8 +90,7 @@ else if (!Model.HasVectorSearchService)
                         <div class="text-truncate">
                             <div class="fw-medium small text-truncate">@doc.FileName</div>
                             <small class="text-muted" style="font-size: 0.75rem;">
-                                @FormatFileSize(doc.FileSize) •
-                                @T["Uploaded"] @doc.UploadedUtc.ToLocalTime().ToString("g")
+                                @FormatFileSize(doc.FileSize)
                             </small>
                         </div>
                     </div>
@@ -372,8 +371,7 @@ else if (!Model.HasVectorSearchService)
                 <div class="text-truncate">
                     <div class="fw-medium small text-truncate">${escapeHtml(doc.fileName)}</div>
                     <small class="text-muted" style="font-size: 0.75rem;">
-                        ${formatFileSize(doc.fileSize)} •
-                        @T["Uploaded"] just now
+                        ${formatFileSize(doc.fileSize)}
                     </small>
                 </div>
             `;
