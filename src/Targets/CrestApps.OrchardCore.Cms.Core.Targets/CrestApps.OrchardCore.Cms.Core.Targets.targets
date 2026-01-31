@@ -1,0 +1,8 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <ItemGroup>
+    <!-- Include DLLs from all CrestApps module packages dynamically for the consuming project’s target framework -->
+    <ResolvedFileToPublish Include="$(NuGetPackageRoot)CrestApps.*\lib\$(TargetFramework)\*.dll" />
+  </ItemGroup>
+
+</Project>

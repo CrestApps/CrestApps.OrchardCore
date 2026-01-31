@@ -12,6 +12,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="OrchardCore.Application.Cms.Core.Targets.targets" Pack="true">
+      <PackagePath>build\OrchardCore.Application.Cms.Core.Targets.targets</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\..\..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
 
