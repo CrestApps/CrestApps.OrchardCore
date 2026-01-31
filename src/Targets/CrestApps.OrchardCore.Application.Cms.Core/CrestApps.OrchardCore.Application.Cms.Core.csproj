@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- NuGet properties-->
+    <Title>CrestApps OrchardCore Application CMS Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      This package provides a runtime dependency aggregator for all CrestApps OrchardCore modules.
+      Reference this package to ensure all CrestApps module assemblies are included during dotnet publish and in Docker builds.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS CMS</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\.editorconfig" Link=".editorconfig" />
+  </ItemGroup>
+
+  <!--
+    Using ProjectReference with PrivateAssets="none" ensures that:
+    1. Local solution builds work correctly (projects are built in order)
+    2. When packed, these become proper NuGet dependencies in the .nuspec
+    This mirrors how OrchardCore handles their Application packages.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Agent\CrestApps.OrchardCore.AI.Agent.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat\CrestApps.OrchardCore.AI.Chat.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions\CrestApps.OrchardCore.AI.Chat.Interactions.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Documents\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml\CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Pdf\CrestApps.OrchardCore.AI.Chat.Interactions.Pdf.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Mcp\CrestApps.OrchardCore.AI.Mcp.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AzureAIInference\CrestApps.OrchardCore.AzureAIInference.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.ContentAccessControl\CrestApps.OrchardCore.ContentAccessControl.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Ollama\CrestApps.OrchardCore.Ollama.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Omnichannel\CrestApps.OrchardCore.Omnichannel.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Omnichannel.EventGrid\CrestApps.OrchardCore.Omnichannel.EventGrid.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Omnichannel.Managements\CrestApps.OrchardCore.Omnichannel.Managements.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Omnichannel.Sms\CrestApps.OrchardCore.Omnichannel.Sms.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.OpenAI\CrestApps.OrchardCore.OpenAI.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.OpenAI.Azure\CrestApps.OrchardCore.OpenAI.Azure.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Recipes\CrestApps.OrchardCore.Recipes.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Roles\CrestApps.OrchardCore.Roles.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.SignalR\CrestApps.OrchardCore.SignalR.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Users\CrestApps.OrchardCore.Users.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>
