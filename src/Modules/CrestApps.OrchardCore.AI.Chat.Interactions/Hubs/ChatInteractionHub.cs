@@ -3,11 +3,11 @@ using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.Services;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -17,6 +17,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Entities;
+using OrchardCore.Modules;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
@@ -29,6 +30,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IAICompletionService _completionService;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IClock _clock;
     private readonly ILogger<ChatInteractionHub> _logger;
     private readonly ISession _session;
 
@@ -41,6 +43,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         IAIDataSourceStore dataSourceStore,
         IAICompletionService completionService,
         IServiceProvider serviceProvider,
+        IClock clock,
         ILogger<ChatInteractionHub> logger,
         ISession session,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
@@ -51,6 +54,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         _dataSourceStore = dataSourceStore;
         _completionService = completionService;
         _serviceProvider = serviceProvider;
+        _clock = clock;
         _logger = logger;
         _session = session;
         S = stringLocalizer;
@@ -283,7 +287,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 ChatInteractionId = itemId,
                 Role = ChatRole.User,
                 Text = prompt,
-                CreatedUtc = DateTime.UtcNow,
+                CreatedUtc = _clock.UtcNow,
             };
 
             await _promptStore.CreateAsync(userPrompt);

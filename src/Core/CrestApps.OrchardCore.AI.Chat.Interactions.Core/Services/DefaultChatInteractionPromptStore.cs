@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Indexes;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
+using OrchardCore.Modules;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
@@ -11,10 +12,15 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 /// </summary>
 public sealed class DefaultChatInteractionPromptStore : DocumentCatalog<ChatInteractionPrompt, ChatInteractionPromptIndex>, IChatInteractionPromptStore
 {
-    public DefaultChatInteractionPromptStore(ISession session)
+    private readonly IClock _clock;
+
+    public DefaultChatInteractionPromptStore(
+        ISession session,
+        IClock clock)
         : base(session)
     {
         CollectionName = AIConstants.CollectionName;
+        _clock = clock;
     }
 
     /// <inheritdoc />
@@ -58,7 +64,7 @@ public sealed class DefaultChatInteractionPromptStore : DocumentCatalog<ChatInte
         // Ensure CreatedUtc is set when creating a new prompt
         if (record.CreatedUtc == default)
         {
-            record.CreatedUtc = DateTime.UtcNow;
+            record.CreatedUtc = _clock.UtcNow;
         }
 
         return ValueTask.CompletedTask;

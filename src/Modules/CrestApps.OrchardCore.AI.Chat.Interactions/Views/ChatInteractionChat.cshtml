@@ -23,7 +23,7 @@
 <div class="d-flex flex-column h-100">
     <div class="flex-grow-1 overflow-y-auto rounded-2 border bg-theme p-3 mb-3" id="@chatContainerHtmlId">
         <div class="list-group list-group-flush w-100">
-            <div id="@placeholderHtmlId" class="text-center p-3 @(Model.Prompts.Count > 0 ? "d-none" : "")">
+            <div id="@placeholderHtmlId" class="text-center p-3@(Model.Prompts.Count > 0 ? " d-none" : string.Empty)">
                 <h1>
                     @T["What do you want to know?"]
                 </h1>
