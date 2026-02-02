@@ -40,14 +40,16 @@ public sealed class Startup : StartupBase
         // Register ChatInteractionPrompt store services
         services.AddScoped<DefaultChatInteractionPromptStore>()
             .AddScoped<IChatInteractionPromptStore>(sp => sp.GetRequiredService<DefaultChatInteractionPromptStore>())
-            .AddScoped<ICatalog<ChatInteractionPrompt>>(sp => sp.GetRequiredService<DefaultChatInteractionPromptStore>());
+            .AddScoped<ICatalog<ChatInteractionPrompt>>(sp => sp.GetRequiredService<DefaultChatInteractionPromptStore>())
+            .AddIndexProvider<ChatInteractionPromptIndexProvider>()
+            .AddDataMigration<ChatInteractionPromptIndexMigrations>();
 
         services
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()
             .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionEntryHandler>()
             .AddScoped<ISourceCatalog<ChatInteraction>, DefaultChatInteractionCatalog>()
             .AddIndexProvider<ChatInteractionIndexProvider>()
-            .AddIndexProvider<ChatInteractionPromptIndexProvider>()
+
             .AddPermissionProvider<ChatInteractionPermissionProvider>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>()
@@ -56,8 +58,7 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatInteractionsAdminMenu>()
-            .AddDataMigration<ChatInteractionMigrations>()
-            .AddDataMigration<ChatInteractionPromptIndexMigrations>();
+            .AddDataMigration<ChatInteractionMigrations>();
 
         // Configure PromptProcessingOptions from configuration
         services.Configure<PromptProcessingOptions>(_configuration.GetSection(PromptProcessingOptions.SectionName));
