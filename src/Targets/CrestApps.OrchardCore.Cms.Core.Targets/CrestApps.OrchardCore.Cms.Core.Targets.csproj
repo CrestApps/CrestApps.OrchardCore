@@ -12,8 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="OrchardCore.Application.Cms.Core.Targets.targets" Pack="true">
-      <PackagePath>build\OrchardCore.Application.Cms.Core.Targets.targets</PackagePath>
+    <None Include="CrestApps.OrchardCore.Cms.Core.Targets.targets" Pack="true">
+      <PackagePath>build\CrestApps.OrchardCore.Cms.Core.Targets.targets</PackagePath>
     </None>
   </ItemGroup>
 
