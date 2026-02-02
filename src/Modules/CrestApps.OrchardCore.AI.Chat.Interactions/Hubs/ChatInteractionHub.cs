@@ -25,6 +25,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 {
     private readonly IAuthorizationService _authorizationService;
     private readonly ISourceCatalogManager<ChatInteraction> _interactionManager;
+    private readonly IChatInteractionPromptStore _promptStore;
     private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IAICompletionService _completionService;
     private readonly IServiceProvider _serviceProvider;
@@ -36,6 +37,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     public ChatInteractionHub(
         IAuthorizationService authorizationService,
         ISourceCatalogManager<ChatInteraction> interactionManager,
+        IChatInteractionPromptStore promptStore,
         IAIDataSourceStore dataSourceStore,
         IAICompletionService completionService,
         IServiceProvider serviceProvider,
@@ -45,6 +47,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     {
         _authorizationService = authorizationService;
         _interactionManager = interactionManager;
+        _promptStore = promptStore;
         _dataSourceStore = dataSourceStore;
         _completionService = completionService;
         _serviceProvider = serviceProvider;
@@ -89,19 +92,21 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             return;
         }
 
+        var prompts = await _promptStore.GetPromptsAsync(itemId);
+
         await Clients.Caller.LoadInteraction(new
         {
             interaction.ItemId,
             interaction.Title,
             interaction.ConnectionName,
             interaction.DeploymentId,
-            Messages = interaction.Prompts.Select(message => new AIChatResponseMessageDetailed
+            Messages = prompts.Select(message => new AIChatResponseMessageDetailed
             {
-                Id = message.Id,
+                Id = message.ItemId,
                 Role = message.Role.Value,
                 IsGeneratedPrompt = message.IsGeneratedPrompt,
                 Title = message.Title,
-                Content = message.Content,
+                Content = message.Text,
                 References = message.References,
             })
         });
@@ -226,10 +231,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             return;
         }
 
-        // Clear prompts but keep everything else
-        interaction.Prompts.Clear();
-
-        await _interactionManager.UpdateAsync(interaction);
+        // Clear prompts using the prompt store
+        await _promptStore.DeleteAllPromptsAsync(itemId);
         await _session.SaveChangesAsync();
 
         await Clients.Caller.HistoryCleared(interaction.ItemId);
@@ -273,37 +276,48 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             prompt = prompt.Trim();
 
-            interaction.Prompts.Add(new AIChatSessionPrompt
+            // Create and save user prompt
+            var userPrompt = new ChatInteractionPrompt
             {
-                Id = IdGenerator.GenerateId(),
+                ItemId = IdGenerator.GenerateId(),
+                ChatInteractionId = itemId,
                 Role = ChatRole.User,
-                Content = prompt,
-            });
+                Text = prompt,
+                CreatedUtc = DateTime.UtcNow,
+            };
+
+            await _promptStore.CreateAsync(userPrompt);
 
             if (string.IsNullOrEmpty(interaction.Title))
             {
                 interaction.Title = Str.Truncate(prompt, 255);
+                await _interactionManager.UpdateAsync(interaction);
             }
 
-            var transcript = interaction.Prompts
-                .Where(x => !x.IsGeneratedPrompt)
-                .Select(p => new ChatMessage(p.Role, p.Content));
+            // Load all prompts for building transcript
+            var existingPrompts = await _promptStore.GetPromptsAsync(itemId);
 
-            var assistantMessage = new AIChatSessionPrompt
+            var transcript = existingPrompts
+                .Where(x => !x.IsGeneratedPrompt)
+                .Select(p => new ChatMessage(p.Role, p.Text));
+
+            var assistantPrompt = new ChatInteractionPrompt
             {
-                Id = IdGenerator.GenerateId(),
+                ItemId = IdGenerator.GenerateId(),
+                ChatInteractionId = itemId,
                 Role = ChatRole.Assistant,
+                CreatedUtc = DateTime.UtcNow,
             };
 
             var builder = new StringBuilder();
 
             // Process documents using intent-aware, strategy-based approach
-            var documentProcessingResult = await ReasonAsync(interaction, prompt, cancellationToken);
+            var documentProcessingResult = await ReasonAsync(interaction, existingPrompts, prompt, cancellationToken);
 
             // Handle chart generation results
             if (documentProcessingResult != null && documentProcessingResult.HasGeneratedChart)
             {
-                await HandleChartGenerationResultAsync(writer, interaction, assistantMessage, documentProcessingResult, cancellationToken);
+                await HandleChartGenerationResultAsync(writer, interaction, assistantPrompt, documentProcessingResult, cancellationToken);
                 return;
             }
 
@@ -313,16 +327,14 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 var errorMessage = new CompletionPartialMessage
                 {
                     SessionId = interaction.ItemId,
-                    MessageId = assistantMessage.Id,
+                    MessageId = assistantPrompt.ItemId,
                     Content = documentProcessingResult.ErrorMessage,
                 };
 
                 await writer.WriteAsync(errorMessage, cancellationToken);
 
-                assistantMessage.Content = documentProcessingResult.ErrorMessage;
-                interaction.Prompts.Add(assistantMessage);
-
-                await _interactionManager.UpdateAsync(interaction);
+                assistantPrompt.Text = documentProcessingResult.ErrorMessage;
+                await _promptStore.CreateAsync(assistantPrompt);
                 await _session.SaveChangesAsync(cancellationToken);
 
                 return;
@@ -331,7 +343,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             // Handle image generation results
             if (documentProcessingResult != null && documentProcessingResult.HasGeneratedImages)
             {
-                await HandleImageGenerationResultAsync(writer, interaction, assistantMessage, documentProcessingResult, cancellationToken);
+                await HandleImageGenerationResultAsync(writer, interaction, assistantPrompt, documentProcessingResult, cancellationToken);
                 return;
             }
 
@@ -341,16 +353,14 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 var errorMessage = new CompletionPartialMessage
                 {
                     SessionId = interaction.ItemId,
-                    MessageId = assistantMessage.Id,
+                    MessageId = assistantPrompt.ItemId,
                     Content = documentProcessingResult.ErrorMessage,
                 };
 
                 await writer.WriteAsync(errorMessage, cancellationToken);
 
-                assistantMessage.Content = documentProcessingResult.ErrorMessage;
-                interaction.Prompts.Add(assistantMessage);
-
-                await _interactionManager.UpdateAsync(interaction);
+                assistantPrompt.Text = documentProcessingResult.ErrorMessage;
+                await _promptStore.CreateAsync(assistantPrompt);
                 await _session.SaveChangesAsync(cancellationToken);
 
                 return;
@@ -428,7 +438,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 var partialMessage = new CompletionPartialMessage
                 {
                     SessionId = interaction.ItemId,
-                    MessageId = assistantMessage.Id,
+                    MessageId = assistantPrompt.ItemId,
                     Content = chunk.Text,
                     References = references,
                 };
@@ -438,14 +448,20 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             if (builder.Length > 0)
             {
-                assistantMessage.Content = builder.ToString();
-                assistantMessage.ContentItemIds = contentItemIds.ToList();
-                assistantMessage.References = references;
+                assistantPrompt.Text = builder.ToString();
+                assistantPrompt.References = references;
 
-                interaction.Prompts.Add(assistantMessage);
+                if (contentItemIds.Count > 0)
+                {
+                    assistantPrompt.Put(new ChatInteractionPromptContentMetadata
+                    {
+                        ContentItemIds = contentItemIds.ToList(),
+                    });
+                }
+
+                await _promptStore.CreateAsync(assistantPrompt);
             }
 
-            await _interactionManager.UpdateAsync(interaction);
             await _session.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
@@ -477,7 +493,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     /// Processes prompt using intent-aware, strategy-based approach.
     /// First detects the user's intent, then routes to the appropriate processing strategy.
     /// </summary>
-    private async Task<IntentProcessingResult> ReasonAsync(ChatInteraction interaction, string prompt, CancellationToken cancellationToken)
+    private async Task<IntentProcessingResult> ReasonAsync(ChatInteraction interaction, IReadOnlyCollection<ChatInteractionPrompt> prompts, string prompt, CancellationToken cancellationToken)
     {
         // Get the intent detector
         var intentDetector = _serviceProvider.GetService<IPromptIntentDetector>();
@@ -516,7 +532,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 intent.Name, intent.Confidence, intent.Reason);
 
             // Build conversation history from past prompts (excluding the current prompt which hasn't been added yet)
-            var conversationHistory = BuildConversationHistory(interaction);
+            var conversationHistory = BuildConversationHistory(prompts);
 
             var processingContext = new IntentProcessingContext
             {
@@ -546,18 +562,18 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     /// <summary>
     /// Builds a conversation history from past prompts for context.
     /// </summary>
-    private static List<ChatMessage> BuildConversationHistory(ChatInteraction interaction)
+    private static List<ChatMessage> BuildConversationHistory(IReadOnlyCollection<ChatInteractionPrompt> prompts)
     {
         var history = new List<ChatMessage>();
 
-        if (interaction.Prompts == null || interaction.Prompts.Count == 0)
+        if (prompts == null || prompts.Count == 0)
         {
             return history;
         }
 
-        foreach (var prompt in interaction.Prompts.Where(p => !p.IsGeneratedPrompt))
+        foreach (var prompt in prompts.Where(p => !p.IsGeneratedPrompt))
         {
-            history.Add(new ChatMessage(prompt.Role, prompt.Content));
+            history.Add(new ChatMessage(prompt.Role, prompt.Text));
         }
 
         return history;
@@ -570,7 +586,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private async Task HandleImageGenerationResultAsync(
         ChannelWriter<CompletionPartialMessage> writer,
         ChatInteraction interaction,
-        AIChatSessionPrompt assistantMessage,
+        ChatInteractionPrompt assistantPrompt,
         IntentProcessingResult result,
         CancellationToken cancellationToken)
     {
@@ -582,7 +598,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 var emptyMessage = new CompletionPartialMessage
                 {
                     SessionId = interaction.ItemId,
-                    MessageId = assistantMessage.Id,
+                    MessageId = assistantPrompt.ItemId,
                     Content = result?.ErrorMessage ?? S["No images were generated."].Value,
                 };
 
@@ -613,16 +629,14 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             var partialMessage = new CompletionPartialMessage
             {
                 SessionId = interaction.ItemId,
-                MessageId = assistantMessage.Id,
+                MessageId = assistantPrompt.ItemId,
                 Content = content,
             };
 
             await writer.WriteAsync(partialMessage, cancellationToken);
 
-            assistantMessage.Content = content;
-            interaction.Prompts.Add(assistantMessage);
-
-            await _interactionManager.UpdateAsync(interaction);
+            assistantPrompt.Text = content;
+            await _promptStore.CreateAsync(assistantPrompt);
             await _session.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
@@ -632,7 +646,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             var errorMessage = new CompletionPartialMessage
             {
                 SessionId = interaction.ItemId,
-                MessageId = assistantMessage.Id,
+                MessageId = assistantPrompt.ItemId,
                 Content = S["An error occurred while processing the generated image."].Value,
             };
 
@@ -646,7 +660,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private async Task HandleChartGenerationResultAsync(
         ChannelWriter<CompletionPartialMessage> writer,
         ChatInteraction interaction,
-        AIChatSessionPrompt assistantMessage,
+        ChatInteractionPrompt assistantPrompt,
         IntentProcessingResult result,
         CancellationToken cancellationToken)
     {
@@ -658,7 +672,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 var emptyMessage = new CompletionPartialMessage
                 {
                     SessionId = interaction.ItemId,
-                    MessageId = assistantMessage.Id,
+                    MessageId = assistantPrompt.ItemId,
                     Content = result?.ErrorMessage ?? S["No chart was generated."].Value,
                 };
 
@@ -673,16 +687,14 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             var partialMessage = new CompletionPartialMessage
             {
                 SessionId = interaction.ItemId,
-                MessageId = assistantMessage.Id,
+                MessageId = assistantPrompt.ItemId,
                 Content = content,
             };
 
             await writer.WriteAsync(partialMessage, cancellationToken);
 
-            assistantMessage.Content = content;
-            interaction.Prompts.Add(assistantMessage);
-
-            await _interactionManager.UpdateAsync(interaction);
+            assistantPrompt.Text = content;
+            await _promptStore.CreateAsync(assistantPrompt);
             await _session.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
@@ -692,7 +704,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             var errorMessage = new CompletionPartialMessage
             {
                 SessionId = interaction.ItemId,
-                MessageId = assistantMessage.Id,
+                MessageId = assistantPrompt.ItemId,
                 Content = S["An error occurred while processing the generated chart."].Value,
             };
 

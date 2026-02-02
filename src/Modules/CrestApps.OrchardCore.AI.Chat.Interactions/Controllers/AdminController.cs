@@ -280,7 +280,7 @@ public sealed class AdminController : Controller
         clonedInteraction.ToolInstanceIds = interaction.ToolInstanceIds.ToList();
         clonedInteraction.McpConnectionIds = interaction.McpConnectionIds.ToList();
         clonedInteraction.Documents = interaction.Documents.ToList();
-        clonedInteraction.Prompts = []; // Start with no prompts in the cloned interaction.
+        // Note: Prompts are stored separately, so cloned interactions start with no prompts.
         clonedInteraction.DocumentIndex = interaction.Documents.Count; // Set the document index based on the cloned documents.
 
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions, clonedInteraction))

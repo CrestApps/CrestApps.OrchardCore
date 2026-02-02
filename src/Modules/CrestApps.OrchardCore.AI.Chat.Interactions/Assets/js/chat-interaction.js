@@ -317,7 +317,7 @@ window.chatInteractionManager = function () {
                         // Hide the clear history button since there's no history now
                         const clearHistoryBtn = document.getElementById('clearHistoryBtn');
                         if (clearHistoryBtn) {
-                            clearHistoryBtn.style.display = 'none';
+                            clearHistoryBtn.classList.add('d-none');
                         }
                     });
 
@@ -402,6 +402,12 @@ window.chatInteractionManager = function () {
                         role: 'user',
                         content: trimmedPrompt
                     });
+
+                    // Show the clear history button since we now have prompts
+                    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+                    if (clearHistoryBtn) {
+                        clearHistoryBtn.classList.remove('d-none');
+                    }
 
                     this.streamMessage(trimmedPrompt);
                     this.inputElement.value = '';
@@ -602,6 +608,18 @@ window.chatInteractionManager = function () {
                         } else {
                             this.buttonElement.setAttribute('disabled', true);
                         }
+                    });
+
+                    this.inputElement.addEventListener('paste', (e) => {
+                        // Use setTimeout to allow the paste to complete before checking the value
+                        setTimeout(() => {
+                            this.prompt = this.inputElement.value;
+                            if (this.inputElement.value.trim()) {
+                                this.buttonElement.removeAttribute('disabled');
+                            } else {
+                                this.buttonElement.setAttribute('disabled', true);
+                            }
+                        }, 0);
                     });
 
                     this.buttonElement.addEventListener('click', () => {

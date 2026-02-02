@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
@@ -12,13 +13,16 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
 {
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IChatInteractionPromptStore _promptStore;
 
     public ChatInteractionDisplayDriver(
         IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IChatInteractionPromptStore promptStore)
     {
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
+        _promptStore = promptStore;
     }
 
     public override IDisplayResult Display(ChatInteraction interaction, BuildDisplayContext context)
@@ -34,17 +38,21 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
         );
     }
 
-    public override Task<IDisplayResult> EditAsync(ChatInteraction interaction, BuildEditorContext context)
+    public override async Task<IDisplayResult> EditAsync(ChatInteraction interaction, BuildEditorContext context)
     {
+        var prompts = await _promptStore.GetPromptsAsync(interaction.ItemId);
+
         var headerResult = Initialize<ChatInteractionCapsuleViewModel>("ChatInteractionHeader", model =>
         {
             model.Interaction = interaction;
+            model.Prompts = prompts;
             model.IsNew = context.IsNew;
         }).Location("Header");
 
         var contentResult = Initialize<ChatInteractionCapsuleViewModel>("ChatInteractionChat", model =>
         {
             model.Interaction = interaction;
+            model.Prompts = prompts;
             model.IsNew = context.IsNew;
         }).Location("Content");
 
@@ -78,6 +86,6 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.IsNew = context.IsNew;
         }).Location("Parameters:4#Settings:5");
 
-        return CombineAsync(headerResult, contentResult, titleResult, parametersResult);
+        return Combine(headerResult, contentResult, titleResult, parametersResult);
     }
 }

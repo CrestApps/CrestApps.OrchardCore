@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
@@ -36,11 +37,17 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Register ChatInteractionPrompt store services
+        services.AddScoped<DefaultChatInteractionPromptStore>()
+            .AddScoped<IChatInteractionPromptStore>(sp => sp.GetRequiredService<DefaultChatInteractionPromptStore>())
+            .AddScoped<ICatalog<ChatInteractionPrompt>>(sp => sp.GetRequiredService<DefaultChatInteractionPromptStore>());
+
         services
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()
             .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionEntryHandler>()
             .AddScoped<ISourceCatalog<ChatInteraction>, DefaultChatInteractionCatalog>()
             .AddIndexProvider<ChatInteractionIndexProvider>()
+            .AddIndexProvider<ChatInteractionPromptIndexProvider>()
             .AddPermissionProvider<ChatInteractionPermissionProvider>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>()
@@ -49,7 +56,8 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatInteractionsAdminMenu>()
-            .AddDataMigration<ChatInteractionMigrations>();
+            .AddDataMigration<ChatInteractionMigrations>()
+            .AddDataMigration<ChatInteractionPromptIndexMigrations>();
 
         // Configure PromptProcessingOptions from configuration
         services.Configure<PromptProcessingOptions>(_configuration.GetSection(PromptProcessingOptions.SectionName));
