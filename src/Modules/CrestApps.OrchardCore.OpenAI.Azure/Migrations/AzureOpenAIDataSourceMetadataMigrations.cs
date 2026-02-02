@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Migrations;
@@ -26,10 +27,20 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
     private const string LegacyElasticsearchMetadataName = "AzureAIProfileElasticsearchMetadata";
     private const string LegacyMongoDBMetadataName = "AzureAIProfileMongoDBMetadata";
 
-#pragma warning disable CA1822 // Mark members as static
-    public int Create()
-#pragma warning restore CA1822 // Mark members as static
+    private readonly ShellSettings _shellSettings;
+
+    public AzureOpenAIDataSourceMetadataMigrations(ShellSettings shellSettings)
     {
+        _shellSettings = shellSettings;
+    }
+
+    public int Create()
+    {
+        if (_shellSettings.IsInitializing())
+        {
+            return 1;
+        }
+
         ShellScope.AddDeferredTask(async scope =>
         {
             var dataSourceStore = scope.ServiceProvider.GetRequiredService<IAIDataSourceStore>();
