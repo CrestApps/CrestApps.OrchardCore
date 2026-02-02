@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 
@@ -11,12 +12,26 @@ public sealed class GeneralReferenceDocumentProcessingStrategy : DocumentProcess
 {
     private const int MaxContextLength = 30000;
 
-    /// <inheritdoc />
-    public override Task ProcessAsync(DocumentProcessingContext context)
+    private readonly IChatInteractionDocumentStore _chatInteractionDocumentStore;
+
+    public GeneralReferenceDocumentProcessingStrategy(IChatInteractionDocumentStore chatInteractionDocumentStore)
     {
-        if (!CanHandle(context, DocumentIntents.GeneralChatWithReference))
+        _chatInteractionDocumentStore = chatInteractionDocumentStore;
+    }
+
+    /// <inheritdoc />
+    public override async Task ProcessAsync(IntentProcessingContext context)
+    {
+        if (!CanHandle(context, DocumentIntents.GeneralChatWithReference) || !HasDocuments(context))
         {
-            return Task.CompletedTask;
+            return;
+        }
+
+        // Load full documents if not already loaded
+        if (!HasDocumentContent(context))
+        {
+            var documentIds = context.Interaction.Documents.Select(d => d.DocumentId);
+            context.Documents = (await _chatInteractionDocumentStore.GetAsync(documentIds)).ToList();
         }
 
         var documentContent = GetCombinedDocumentText(context, MaxContextLength);
@@ -32,7 +47,5 @@ public sealed class GeneralReferenceDocumentProcessingStrategy : DocumentProcess
             var prefix = "The following documents are attached for reference. Use this information if relevant to the user's request:";
             context.Result.AddContext(documentContent, prefix, usedVectorSearch: false);
         }
-
-        return Task.CompletedTask;
     }
 }

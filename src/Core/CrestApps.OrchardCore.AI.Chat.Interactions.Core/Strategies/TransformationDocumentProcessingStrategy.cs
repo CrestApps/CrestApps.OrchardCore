@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 
@@ -10,12 +11,26 @@ public sealed class TransformationDocumentProcessingStrategy : DocumentProcessin
 {
     private const int MaxContextLength = 50000;
 
-    /// <inheritdoc />
-    public override Task ProcessAsync(DocumentProcessingContext context)
+    private readonly IChatInteractionDocumentStore _chatInteractionDocumentStore;
+
+    public TransformationDocumentProcessingStrategy(IChatInteractionDocumentStore chatInteractionDocumentStore)
     {
-        if (!CanHandle(context, DocumentIntents.TransformFormat))
+        _chatInteractionDocumentStore = chatInteractionDocumentStore;
+    }
+
+    /// <inheritdoc />
+    public override async Task ProcessAsync(IntentProcessingContext context)
+    {
+        if (!CanHandle(context, DocumentIntents.TransformFormat) || !HasDocuments(context))
         {
-            return Task.CompletedTask;
+            return;
+        }
+
+        // Load full documents if not already loaded
+        if (!HasDocumentContent(context))
+        {
+            var documentIds = context.Interaction.Documents.Select(d => d.DocumentId);
+            context.Documents = (await _chatInteractionDocumentStore.GetAsync(documentIds)).ToList();
         }
 
         var documentContent = GetCombinedDocumentText(context, MaxContextLength);
@@ -31,7 +46,5 @@ public sealed class TransformationDocumentProcessingStrategy : DocumentProcessin
             var prefix = "The following is the content of the attached document(s). The user wants to transform or reformat this content:";
             context.Result.AddContext(documentContent, prefix, usedVectorSearch: false);
         }
-
-        return Task.CompletedTask;
     }
 }

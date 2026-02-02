@@ -6,12 +6,12 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 /// Provider that routes document processing through all registered strategies.
 /// All strategies are called in sequence, allowing multiple strategies to contribute context.
 /// </summary>
-public interface IDocumentProcessingStrategyProvider
+public interface IPromptProcessingStrategyProvider
 {
     /// <summary>
     /// Processes documents by calling all registered strategies.
     /// Each strategy can add context to the result, allowing multiple strategies to contribute.
     /// </summary>
     /// <param name="context">The processing context containing documents, intent, and result to update.</param>
-    Task ProcessAsync(DocumentProcessingContext context);
+    Task ProcessAsync(IntentProcessingContext context);
 }

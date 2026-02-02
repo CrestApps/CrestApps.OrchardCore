@@ -5,41 +5,50 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 
 /// <summary>
-/// AI-based implementation of <see cref="IDocumentIntentDetector"/> that uses a chat model
+/// AI-based implementation of <see cref="IPromptIntentDetector"/> that uses a chat model
 /// to detect user intent. This provides multi-language support and more accurate intent
 /// detection compared to keyword-based approaches.
 /// </summary>
-public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
+public sealed class AIPromptIntentDetector : IPromptIntentDetector
 {
-    private readonly KeywordDocumentIntentDetector _fallbackDetector;
-    private readonly IOptions<DocumentProcessingOptions> _options;
-    private readonly ILogger<AIDocumentIntentDetector> _logger;
+    private readonly AIProviderOptions _aiProviderOptions;
+    private readonly IAIClientFactory _aIClientFactory;
+    private readonly KeywordPromptIntentDetector _fallbackDetector;
+    private readonly PromptProcessingOptions _processingOptions;
+    private readonly ILogger<AIPromptIntentDetector> _logger;
 
-    public AIDocumentIntentDetector(
-        KeywordDocumentIntentDetector fallbackDetector,
-        IOptions<DocumentProcessingOptions> options,
-        ILogger<AIDocumentIntentDetector> logger)
+    // Cached system prompt built once (options are immutable after startup).
+    private string _cachedSystemPrompt;
+    private bool _systemPromptBuilt;
+
+    public AIPromptIntentDetector(
+        IOptions<AIProviderOptions> aiProviderOptions,
+        IAIClientFactory aIClientFactory,
+        KeywordPromptIntentDetector fallbackDetector,
+        IOptions<PromptProcessingOptions> processingOptions,
+        ILogger<AIPromptIntentDetector> logger)
     {
+        _aiProviderOptions = aiProviderOptions.Value;
+        _aIClientFactory = aIClientFactory;
         _fallbackDetector = fallbackDetector;
-        _options = options;
+        _processingOptions = processingOptions.Value;
         _logger = logger;
     }
 
     /// <inheritdoc />
-    public async Task<DocumentIntentResult> DetectAsync(DocumentIntentDetectionContext context)
+    public async Task<DocumentIntent> DetectAsync(DocumentIntentDetectionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         if (string.IsNullOrWhiteSpace(context.Prompt))
         {
-            return DocumentIntentResult.FromIntent(
+            return DocumentIntent.FromName(
                 DocumentIntents.GeneralChatWithReference,
                 0.5f,
                 "No prompt provided, defaulting to general chat.");
@@ -54,17 +63,13 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
 
         // Fall back to keyword-based detection
         _logger.LogDebug("AI-based intent detection unavailable, falling back to keyword-based detection.");
-        return await _fallbackDetector.DetectAsync(context);
+        var fallback = await _fallbackDetector.DetectAsync(context);
+
+        return fallback;
     }
 
-    private async Task<DocumentIntentResult> TryDetectWithAIAsync(DocumentIntentDetectionContext context)
+    private async Task<DocumentIntent> TryDetectWithAIAsync(DocumentIntentDetectionContext context)
     {
-        if (context.ServiceProvider == null)
-        {
-            _logger.LogDebug("ServiceProvider not available in context, cannot use AI-based intent detection.");
-            return null;
-        }
-
         var interaction = context.Interaction;
         if (interaction == null)
         {
@@ -72,18 +77,16 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
             return null;
         }
 
-        // Check if we have any registered intents
-        var intents = _options.Value.InternalIntents;
-        if (intents.Count == 0)
+        var systemPrompt = GetSystemPrompt();
+        if (systemPrompt == null)
         {
-            _logger.LogDebug("No intents registered in DocumentProcessingOptions, cannot use AI-based intent detection.");
+            _logger.LogDebug("No intents available for AI-based intent detection.");
             return null;
         }
 
         try
         {
-            var providerOptions = context.ServiceProvider.GetService<IOptions<AIProviderOptions>>();
-            if (providerOptions?.Value?.Providers == null)
+            if (_aiProviderOptions.Providers == null)
             {
                 _logger.LogDebug("AI provider options not available.");
                 return null;
@@ -92,7 +95,7 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
             var providerName = interaction.Source;
             var connectionName = interaction.ConnectionName;
 
-            if (!providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
+            if (!_aiProviderOptions.Providers.TryGetValue(providerName, out var provider))
             {
                 _logger.LogDebug("Provider '{ProviderName}' not found in configuration.", providerName);
                 return null;
@@ -122,22 +125,12 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
                 return null;
             }
 
-            var clientFactory = context.ServiceProvider.GetService<IAIClientFactory>();
-            if (clientFactory == null)
-            {
-                _logger.LogDebug("AI client factory not available.");
-                return null;
-            }
-
-            var chatClient = await clientFactory.CreateChatClientAsync(providerName, connectionName, deploymentName);
+            var chatClient = await _aIClientFactory.CreateChatClientAsync(providerName, connectionName, deploymentName);
             if (chatClient == null)
             {
                 _logger.LogDebug("Failed to create chat client for intent detection.");
                 return null;
             }
-
-            // Build the dynamic system prompt based on registered intents
-            var systemPrompt = BuildSystemPrompt(intents);
 
             // Build the intent detection request
             var messages = new List<ChatMessage>
@@ -160,7 +153,7 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
                 return null;
             }
 
-            return ParseIntentResponse(response.Text, intents);
+            return ParseIntentResponse(response.Text);
         }
         catch (OperationCanceledException)
         {
@@ -173,16 +166,60 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
         }
     }
 
-    private static string BuildSystemPrompt(Dictionary<string, string> intents)
+    private string GetSystemPrompt()
     {
+        // Options are immutable after startup; build once.
+        if (_systemPromptBuilt)
+        {
+            return _cachedSystemPrompt;
+        }
+
+        _cachedSystemPrompt = BuildSystemPrompt();
+        _systemPromptBuilt = true;
+
+        return _cachedSystemPrompt;
+    }
+
+    private string BuildSystemPrompt()
+    {
+        var allIntents = _processingOptions.InternalIntents;
+        var heavyIntents = _processingOptions.HeavyIntents;
+        var enableHeavy = _processingOptions.EnableHeavyProcessingStrategies;
+
+        // Determine which intents to include.
+        var hasIntents = false;
         var builder = new StringBuilder();
 
         builder.AppendLine("You are an intent classifier for document-related user queries. Analyze the user's prompt and classify their intent into exactly one of these categories:");
         builder.AppendLine();
 
-        foreach (var (intent, description) in intents)
+        foreach (var (intent, description) in allIntents)
         {
+            // Skip heavy intents when heavy processing is disabled.
+            if (!enableHeavy && heavyIntents.Contains(intent))
+            {
+                continue;
+            }
+
             builder.AppendLine($"- {intent}: {description}");
+            hasIntents = true;
+        }
+
+        if (!hasIntents)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("No intents available for system prompt (all intents may be heavy and heavy processing is disabled).");
+            }
+
+            return null;
+        }
+
+        if (!enableHeavy && heavyIntents.Count > 0 && _logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Heavy processing disabled. Excluding heavy intents from AI detection: {Intents}",
+                string.Join(", ", heavyIntents));
         }
 
         builder.AppendLine();
@@ -193,8 +230,19 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
         builder.AppendLine();
         builder.AppendLine("Example response:");
 
-        // Use the first registered intent for the example
-        var firstIntent = intents.Keys.FirstOrDefault() ?? DocumentIntents.DocumentQnA;
+        // Use the first available intent for the example.
+        string firstIntent = null;
+        foreach (var intent in allIntents.Keys)
+        {
+            if (enableHeavy || !heavyIntents.Contains(intent))
+            {
+                firstIntent = intent;
+                break;
+            }
+        }
+
+        firstIntent ??= DocumentIntents.DocumentQnA;
+
         builder.AppendLine($$"""
             {
                 "intent": "{{firstIntent}}",
@@ -205,7 +253,6 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
 
         return builder.ToString();
     }
-
 
     private static string BuildUserMessage(DocumentIntentDetectionContext context)
     {
@@ -227,7 +274,7 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
         return $"User prompt: {context.Prompt}{documentInfo}";
     }
 
-    private DocumentIntentResult ParseIntentResponse(string responseText, Dictionary<string, string> registeredIntents)
+    private DocumentIntent ParseIntentResponse(string responseText)
     {
         try
         {
@@ -242,14 +289,13 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
 
                 if (parsed != null && !string.IsNullOrEmpty(parsed.Intent))
                 {
-                    // Validate the intent is a registered value
-                    var validIntent = ValidateIntent(parsed.Intent, registeredIntents);
+                    var validIntent = ValidateIntent(parsed.Intent);
                     var confidence = Math.Clamp(parsed.Confidence, 0f, 1f);
 
                     _logger.LogDebug("AI detected intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
                         validIntent, confidence, parsed.Reason);
 
-                    return DocumentIntentResult.FromIntent(validIntent, confidence, parsed.Reason ?? "AI-based detection");
+                    return DocumentIntent.FromName(validIntent, confidence, parsed.Reason ?? "AI-based detection");
                 }
             }
 
@@ -263,22 +309,28 @@ public sealed class AIDocumentIntentDetector : IDocumentIntentDetector
         }
     }
 
-    private static string ValidateIntent(string intent, Dictionary<string, string> registeredIntents)
+    private string ValidateIntent(string intent)
     {
-        // Check if the intent is registered (case-insensitive)
-        if (registeredIntents.ContainsKey(intent))
+        var allIntents = _processingOptions.InternalIntents;
+        var heavyIntents = _processingOptions.HeavyIntents;
+        var enableHeavy = _processingOptions.EnableHeavyProcessingStrategies;
+
+        // Check if the intent is available (case-insensitive) and not filtered out.
+        foreach (var key in allIntents.Keys)
         {
-            // Return the properly-cased key from the dictionary
-            foreach (var key in registeredIntents.Keys)
+            if (string.Equals(key, intent, StringComparison.OrdinalIgnoreCase))
             {
-                if (string.Equals(key, intent, StringComparison.OrdinalIgnoreCase))
+                // If it's a heavy intent and heavy is disabled, reject it.
+                if (!enableHeavy && heavyIntents.Contains(key))
                 {
-                    return key;
+                    break;
                 }
+
+                return key;
             }
         }
 
-        // Default to GeneralChatWithReference if unknown
+        // Default to GeneralChatWithReference if unknown or not available.
         return DocumentIntents.GeneralChatWithReference;
     }
 

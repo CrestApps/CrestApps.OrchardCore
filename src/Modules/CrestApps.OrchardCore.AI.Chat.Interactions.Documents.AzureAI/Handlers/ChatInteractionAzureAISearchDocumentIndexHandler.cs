@@ -22,7 +22,7 @@ public sealed class ChatInteractionAzureAISearchDocumentIndexHandler : IDocument
         }
 
         context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.Text, chatInteractionDocument.Text, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.DocumentId, chatInteractionDocument.DocumentId, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.DocumentId, chatInteractionDocument.ItemId, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.InteractionId, interaction.ItemId, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.FileName, chatInteractionDocument.FileName, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.Chunks, chatInteractionDocument.Chunks, DocumentIndexOptions.Store);

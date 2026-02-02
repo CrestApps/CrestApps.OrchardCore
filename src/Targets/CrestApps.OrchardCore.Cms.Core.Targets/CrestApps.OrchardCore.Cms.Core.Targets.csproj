@@ -12,6 +12,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="OrchardCore.Application.Cms.Core.Targets.targets" Pack="true">
+      <PackagePath>build\OrchardCore.Application.Cms.Core.Targets.targets</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\.editorconfig" Link=".editorconfig" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Agent\CrestApps.OrchardCore.AI.Agent.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions\CrestApps.OrchardCore.AI.Chat.Interactions.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Documents\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.csproj" PrivateAssets="none" />

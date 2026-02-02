@@ -14,16 +14,22 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Adds the core document processing services including intent detection and strategy provider.
     /// </summary>
-    public static IServiceCollection AddDocumentProcessingServices(this IServiceCollection services)
+    public static IServiceCollection AddPromptRoutingServices(this IServiceCollection services)
     {
         // Register the keyword-based intent detector as a concrete service (used as fallback)
-        services.TryAddScoped<KeywordDocumentIntentDetector>();
+        services.TryAddScoped<KeywordPromptIntentDetector>();
 
         // Register the AI-based intent detector as the primary implementation
-        services.TryAddScoped<IDocumentIntentDetector, AIDocumentIntentDetector>();
+        services.TryAddScoped<IPromptIntentDetector, AIPromptIntentDetector>();
 
         // Register the strategy provider
-        services.TryAddScoped<IDocumentProcessingStrategyProvider, DefaultDocumentProcessingStrategyProvider>();
+        services.TryAddScoped<IPromptProcessingStrategyProvider, DefaultPromptProcessingStrategyProvider>();
+
+        // Register the tabular batch processor (used by heavy processing strategies)
+        services.TryAddScoped<ITabularBatchProcessor, TabularBatchProcessor>();
+
+        // Register the tabular batch result cache (uses IDistributedCache)
+        services.TryAddSingleton<ITabularBatchResultCache, TabularBatchResultCache>();
 
         return services;
     }
@@ -37,9 +43,9 @@ public static class ServiceCollectionExtensions
     /// <returns>The service collection for chaining.</returns>
     /// <remarks>
     /// Only intents registered via this method will be recognized by the AI intent detector.
-    /// Each intent should have a corresponding strategy registered via <see cref="AddDocumentProcessingStrategy{TStrategy}"/>.
+    /// Each intent should have a corresponding strategy registered via <see cref="AddPromptProcessingStrategy{TStrategy}"/>.
     /// </remarks>
-    public static IServiceCollection AddDocumentIntent(
+    public static IServiceCollection AddPromptProcessingIntent(
         this IServiceCollection services,
         string intentName,
         string description)
@@ -47,9 +53,33 @@ public static class ServiceCollectionExtensions
         ArgumentException.ThrowIfNullOrEmpty(intentName);
         ArgumentException.ThrowIfNullOrEmpty(description);
 
-        services.Configure<DocumentProcessingOptions>(options =>
+        services.Configure<PromptProcessingOptions>(options =>
         {
             options.InternalIntents.TryAdd(intentName, description);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers a heavy processing intent.
+    /// </summary>
+    /// <remarks>
+    /// Heavy intents are always registered, but are filtered out from AI intent detection when
+    /// <see cref="PromptProcessingOptions.EnableHeavyProcessingStrategies"/> is false.
+    /// </remarks>
+    public static IServiceCollection AddHeavyPromptProcessingIntent(
+        this IServiceCollection services,
+        string intentName,
+        string description)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(intentName);
+        ArgumentException.ThrowIfNullOrEmpty(description);
+
+        services.Configure<PromptProcessingOptions>(options =>
+        {
+            options.InternalIntents.TryAdd(intentName, description);
+            options.HeavyIntents.Add(intentName);
         });
 
         return services;
@@ -61,47 +91,75 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <typeparam name="TStrategy">The strategy type.</typeparam>
     /// <param name="services">The service collection.</param>
-    public static IServiceCollection AddDocumentProcessingStrategy<TStrategy>(this IServiceCollection services)
-        where TStrategy : class, IDocumentProcessingStrategy
+    public static IServiceCollection AddPromptProcessingStrategy<TStrategy>(this IServiceCollection services)
+        where TStrategy : class, IPromptProcessingStrategy
     {
-        services.AddScoped<IDocumentProcessingStrategy, TStrategy>();
+        services.AddScoped<IPromptProcessingStrategy, TStrategy>();
         return services;
     }
 
     /// <summary>
     /// Adds the default document processing strategies with their intent registrations.
     /// </summary>
-    public static IServiceCollection AddDefaultDocumentProcessingStrategies(this IServiceCollection services)
+    public static IServiceCollection AddDefaultPromptProcessingStrategies(this IServiceCollection services)
     {
         // Register intents for the default strategies
         services
-            .AddDocumentIntent(
-                DocumentIntents.SummarizeDocument,
-                "The user wants a summary, overview, brief, key points, or outline of document content.")
-            .AddDocumentIntent(
-                DocumentIntents.AnalyzeTabularData,
-                "The user wants to perform calculations, aggregations, statistics, or data analysis on tabular data (CSV, Excel, etc.).")
-            .AddDocumentIntent(
-                DocumentIntents.ExtractStructuredData,
-                "The user wants to extract specific data, parse content into structured formats (JSON, schema), or pull out entities.")
-            .AddDocumentIntent(
-                DocumentIntents.CompareDocuments,
-                "The user wants to compare, contrast, find differences, or analyze similarities between multiple documents.")
-            .AddDocumentIntent(
-                DocumentIntents.TransformFormat,
-                "The user wants to convert, transform, reformat content into another representation (tables, bullet points, different format).")
-            .AddDocumentIntent(
-                DocumentIntents.GeneralChatWithReference,
-                "General conversation that may reference documents but doesn't fit other categories.");
+            .AddPromptProcessingIntent(
+                DocumentIntents.GenerateImage,
+                "The user requests creation of a new image from a text description. Detect when the prompt asks for visuals, illustrations, diagrams, or artwork and capture any optional parameters (style, size, aspect ratio, color palette, level of detail, or composition). The output should be an image-generation task consisting of a refined prompt and metadata suitable for calling an image-generation service.")
+            .AddPromptProcessingIntent(
+                DocumentIntents.GenerateImageWithHistory,
+                "Trigger when the user requests the creation of an image, diagram, or visual that is based on information, data, or discussion from prior chat messages. Detect references to previous conversation, earlier outputs, or chat-based data that should influence the visual. This intent is strictly for generating images that depend on chat history, including summaries, illustrations, or artwork derived from earlier messages, but does not include charts or graphs.")
+            .AddPromptProcessingIntent(
+                DocumentIntents.GenerateChart,
+                "The user wants to create a chart, graph, or data visualization such as bar chart, line chart, pie chart, scatter plot, or histogram. The AI model already receives conversation history, so this intent handles both explicit data in the prompt and references to data from earlier messages.");
 
         // Register the strategies
         services
-            .AddDocumentProcessingStrategy<SummarizationDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<TabularAnalysisDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<ExtractionDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<ComparisonDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<TransformationDocumentProcessingStrategy>()
-            .AddDocumentProcessingStrategy<GeneralReferenceDocumentProcessingStrategy>();
+            .AddPromptProcessingStrategy<ImageGenerationDocumentProcessingStrategy>()
+            .AddPromptProcessingStrategy<ChartGenerationDocumentProcessingStrategy>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the default document prompt processing strategies with their intent registrations.
+    /// </summary>
+    public static IServiceCollection AddDefaultDocumentPromptProcessingStrategies(this IServiceCollection services)
+    {
+        // Register intents for the default strategies (including heavy intent)
+        services
+            .AddPromptProcessingIntent(
+                DocumentIntents.SummarizeDocument,
+                "The user wants a summary, overview, brief, key points, or outline of document content.")
+            .AddPromptProcessingIntent(
+                DocumentIntents.AnalyzeTabularData,
+                "The user wants to perform calculations, aggregations, statistics, or data analysis on tabular data (CSV, Excel, etc.).")
+            .AddHeavyPromptProcessingIntent(
+                DocumentIntents.AnalyzeTabularDataByRow,
+                "The user wants row-by-row analysis or extraction from tabular data (CSV/Excel), returning one result per row (e.g., classify each record, extract fields, detect escalations, or produce per-row outputs based on transcript/text columns).")
+            .AddPromptProcessingIntent(
+                DocumentIntents.ExtractStructuredData,
+                "The user wants to extract specific data, parse content into structured formats (JSON, schema), or pull out entities.")
+            .AddPromptProcessingIntent(
+                DocumentIntents.CompareDocuments,
+                "The user wants to compare, contrast, find differences, or analyze similarities between multiple documents.")
+            .AddPromptProcessingIntent(
+                DocumentIntents.TransformFormat,
+                "The user wants to convert, transform, reformat content into another representation (tables, bullet points, different format).")
+            .AddPromptProcessingIntent(
+                DocumentIntents.GeneralChatWithReference,
+                "General conversation that may reference documents but doesn't fit other categories.");
+
+        services
+            .AddPromptProcessingStrategy<SummarizationDocumentProcessingStrategy>()
+            .AddPromptProcessingStrategy<TabularAnalysisDocumentProcessingStrategy>()
+            .AddPromptProcessingStrategy<RowLevelTabularAnalysisDocumentProcessingStrategy>()
+            .AddPromptProcessingStrategy<ExtractionDocumentProcessingStrategy>()
+            .AddPromptProcessingStrategy<ComparisonDocumentProcessingStrategy>()
+            .AddPromptProcessingStrategy<TransformationDocumentProcessingStrategy>()
+            .AddPromptProcessingStrategy<ImageGenerationDocumentProcessingStrategy>();
 
         return services;
     }

@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
@@ -8,9 +9,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Endpoints;
@@ -20,6 +23,10 @@ internal static class UploadDocumentEndpoint
     // Target chunk size in characters (approximately 500 tokens)
     private const int ChunkSize = 2000;
     private const int ChunkOverlap = 200;
+
+    // Maximum total characters for embedding (to avoid token limit errors)
+    // Most embedding models have 8192 token limit, ~4 chars per token = ~30000 chars max
+    private const int MaxEmbeddingTotalChars = 25000;
 
     public static IEndpointRouteBuilder AddUploadDocumentEndpoint(this IEndpointRouteBuilder builder)
     {
@@ -36,6 +43,7 @@ internal static class UploadDocumentEndpoint
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         ISourceCatalogManager<ChatInteraction> interactionManager,
+        IChatInteractionDocumentStore chatInteractionDocumentStore,
         IEnumerable<IDocumentTextExtractor> textExtractors,
         IOptions<ChatInteractionsOptions> extractorOptions,
         IAIClientFactory aIClientFactory,
@@ -104,21 +112,21 @@ internal static class UploadDocumentEndpoint
             }
         }
 
-        if (string.IsNullOrEmpty(deploymentName))
+        // Embedding generator is optional - only create if we have a deployment name
+        IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator = null;
+        if (!string.IsNullOrEmpty(deploymentName))
         {
-            logger.LogError("Unable to find Embedding Deployment Name for the provider {Provider}", providerName);
+            embeddingGenerator = await aIClientFactory.CreateEmbeddingGeneratorAsync(providerName, connectionName, deploymentName);
 
-            return TypedResults.InternalServerError();
+            if (embeddingGenerator == null)
+            {
+                logger.LogWarning("Failed to create embedding generator for provider {Provider}, connection {Connection}, deployment {Deployment}. Documents will be stored without embeddings.",
+                    interaction.Source, connectionName, deploymentName);
+            }
         }
-
-        var embeddingGenerator = await aIClientFactory.CreateEmbeddingGeneratorAsync(providerName, connectionName, deploymentName);
-
-        if (embeddingGenerator == null)
+        else
         {
-            logger.LogError("Failed to create embedding generator for provider {Provider}, connection {Connection}, deployment {Deployment}",
-                interaction.Source, connectionName, deploymentName);
-
-            return TypedResults.InternalServerError();
+            logger.LogInformation("No embedding deployment configured. Documents will be stored without embeddings for vector search.");
         }
 
         var now = clock.UtcNow;
@@ -185,7 +193,8 @@ internal static class UploadDocumentEndpoint
 
                 var document = new ChatInteractionDocument
                 {
-                    DocumentId = $"{interaction.ItemId}_{interaction.DocumentIndex++}",
+                    ItemId = IdGenerator.GenerateId(),
+                    ChatInteractionId = chatInteractionId,
                     FileName = file.FileName,
                     ContentType = file.ContentType,
                     FileSize = file.Length,
@@ -194,32 +203,56 @@ internal static class UploadDocumentEndpoint
                     Chunks = [],
                 };
 
-                var textChunks = ChunkText(text);
+                // Determine if we should generate embeddings for this file
+                var shouldEmbed = ShouldGenerateEmbeddings(extension, text.Length, embeddingGenerator, extractorOptions.Value);
 
-                if (textChunks.Count > 0)
+                if (shouldEmbed)
                 {
-                    var embedding = await embeddingGenerator.GenerateAsync(textChunks);
+                    var textChunks = ChunkText(text);
 
-                    for (var i = 0; i < textChunks.Count; i++)
+                    // Limit chunks to avoid exceeding token limits
+                    textChunks = LimitChunksForEmbedding(textChunks);
+
+                    if (textChunks.Count > 0)
                     {
-                        document.Chunks.Add(new ChatInteractionDocumentChunk
+                        try
                         {
-                            Text = textChunks[i],
-                            Embedding = embedding[i].Vector.ToArray(),
-                            Index = i,
-                        });
+                            var embedding = await embeddingGenerator.GenerateAsync(textChunks);
+
+                            for (var i = 0; i < textChunks.Count; i++)
+                            {
+                                document.Chunks.Add(new ChatInteractionDocumentChunk
+                                {
+                                    Text = textChunks[i],
+                                    Embedding = embedding[i].Vector.ToArray(),
+                                    Index = i,
+                                });
+                            }
+                        }
+                        catch (Exception embeddingEx)
+                        {
+                            // Log the error but continue without embeddings
+                            logger.LogWarning(embeddingEx, "Failed to generate embeddings for file {FileName}. File will be stored without vector search support.", file.FileName);
+                        }
                     }
                 }
-
-                interaction.Documents.Add(document);
-
-                uploadedDocuments.Add(new
+                else
                 {
-                    documentId = document.DocumentId,
-                    fileName = document.FileName,
-                    fileSize = document.FileSize,
-                    uploadedUtc = document.UploadedUtc,
-                });
+                    logger.LogDebug("Skipping embedding generation for file {FileName} (tabular data or too large)", file.FileName);
+                }
+
+                var docInfo = new ChatInteractionDocumentInfo
+                {
+                    DocumentId = document.ItemId,
+                    FileName = document.FileName,
+                    FileSize = document.FileSize,
+                    ContentType = document.ContentType,
+                };
+
+                uploadedDocuments.Add(docInfo);
+                interaction.Documents.Add(docInfo);
+
+                await chatInteractionDocumentStore.CreateAsync(document);
             }
             catch (Exception ex)
             {
@@ -232,16 +265,68 @@ internal static class UploadDocumentEndpoint
             }
         }
 
-        if (uploadedDocuments.Count > 0)
-        {
-            await interactionManager.UpdateAsync(interaction);
-        }
+        await interactionManager.UpdateAsync(interaction);
 
         return TypedResults.Ok(new
         {
             uploaded = uploadedDocuments,
             failed = failedFiles,
         });
+    }
+
+    /// <summary>
+    /// Determines if embeddings should be generated for a file based on its type and size.
+    /// </summary>
+    private static bool ShouldGenerateEmbeddings(
+        string extension,
+        int textLength,
+        IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
+        ChatInteractionsOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        // No embedding generator available
+        if (embeddingGenerator == null)
+        {
+            return false;
+        }
+
+        // If extension isn't configured as embeddable, don't embed.
+        // This allows admins/devs to explicitly set certain supported file types (e.g. CSV) as non-embeddable.
+        if (!options.EmbeddableFileExtensions.Contains(extension))
+        {
+            return false;
+        }
+
+        // Skip very large files that would exceed token limits
+        if (textLength > MaxEmbeddingTotalChars * 2)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Limits the chunks to stay within embedding token limits.
+    /// </summary>
+    private static List<string> LimitChunksForEmbedding(List<string> chunks)
+    {
+        var limitedChunks = new List<string>();
+        var totalLength = 0;
+
+        foreach (var chunk in chunks)
+        {
+            if (totalLength + chunk.Length > MaxEmbeddingTotalChars)
+            {
+                break;
+            }
+
+            limitedChunks.Add(chunk);
+            totalLength += chunk.Length;
+        }
+
+        return limitedChunks;
     }
 
     private static List<string> ChunkText(string text)

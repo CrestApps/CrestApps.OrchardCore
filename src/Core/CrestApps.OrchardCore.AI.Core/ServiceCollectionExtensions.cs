@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
 
         services
             .AddScoped<IAuthorizationHandler, AIProfileAuthorizationHandler>()
+            .AddScoped<IAuthorizationHandler, AIToolAuthorizationHandler>()
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.CollectionName));
 
         services
@@ -119,7 +120,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddDocumentTextExtractor<T>(this IServiceCollection services, params string[] supportedExtensions)
+    public static IServiceCollection AddDocumentTextExtractor<T>(this IServiceCollection services, params ExtractorExtension[] supportedExtensions)
         where T : class, IDocumentTextExtractor
     {
         services.Configure<ChatInteractionsOptions>(options =>

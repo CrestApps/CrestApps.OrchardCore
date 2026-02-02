@@ -43,6 +43,17 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
             .AsIEmbeddingGenerator();
     }
 
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+    {
+        var endpoint = connection.GetEndpoint();
+
+        return GetClient(connection, endpoint)
+            .GetImageClient(deploymentName)
+            .AsIImageGenerator();
+    }
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
     private AzureOpenAIClient GetClient(AIProviderConnectionEntry connection, Uri endpoint)
     {
         var options = new AzureOpenAIClientOptions

@@ -18,17 +18,12 @@ public sealed class DocumentIntentDetectionContext
     public ChatInteraction Interaction { get; set; }
 
     /// <summary>
-    /// Gets the list of documents attached to the interaction.
+    /// Gets the list of document info attached to the interaction.
     /// </summary>
-    public IList<ChatInteractionDocument> Documents => Interaction?.Documents ?? [];
+    public IList<ChatInteractionDocumentInfo> Documents => Interaction?.Documents ?? [];
 
     /// <summary>
     /// Gets or sets the cancellation token for the operation.
     /// </summary>
     public CancellationToken CancellationToken { get; set; }
-
-    /// <summary>
-    /// Gets or sets the service provider for resolving dependencies.
-    /// </summary>
-    public IServiceProvider ServiceProvider { get; set; }
 }

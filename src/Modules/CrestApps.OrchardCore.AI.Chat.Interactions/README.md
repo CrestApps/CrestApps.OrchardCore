@@ -9,6 +9,9 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 - **Configurable Parameters**: Customize temperature, TopP, max tokens, frequency/presence penalties, and past messages count
 - **Tool Integration**: Select from available AI tools and MCP connections
 - **Connection/Deployment Selection**: Choose specific connections and deployments for each interaction
+- **Prompt Routing (Intent Detection + Strategies)**: Automatically classifies the user prompt and routes it to a registered prompt-processing strategy
+- **Image Generation**: Generate images from text prompts using AI image generation models
+- **Chart Generation**: Generate chart specifications from prompts (for rendering as a chart)
 
 ## Getting Started
 
@@ -17,38 +20,85 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 3. Click **+ New Chat** and select an AI provider
 4. Configure your chat settings and start chatting
 
-
-
 ## Related Features
 
 ### AI Chat Interactions - Documents
 
-For document upload and RAG (Retrieval Augmented Generation) support, see the [Documents feature documentation](./README-Documents.md).
+For document upload and document-aware prompt processing (RAG and non-RAG strategies), see the [Documents feature documentation](../CrestApps.OrchardCore.AI.Chat.Interactions.Documents/README.md).
 
 > Note: The `AI Chat Interactions - Documents` feature is provided on demand and is only enabled when another feature that requires it is enabled (for example one of the document indexing provider features). To configure document indexing you must enable either the `AI Chat Interactions - Documents - Azure AI Search` feature or the `AI Chat Interactions - Documents - Elasticsearch` feature in Orchard Core admin.
 
 The Documents feature supports Elasticsearch and Azure AI Search as embedding and search providers, ensure you enable the corresponding feature for your chosen provider in Orchard Core admin.
 
-## Configuration
+## Prompt Routing (Intent-Based Processing)
 
-### Settings Tab Parameters
+Prompt routing is part of the base `CrestApps.OrchardCore.AI.Chat.Interactions` feature.
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| Title | User-defined name for the interaction | "Untitled" |
-| Connection | AI provider connection to use | Default connection |
-| Deployment | AI model deployment to use | Default deployment |
-| System Instructions | Persona and context for the AI | Empty |
-| Max Response Tokens | Token limit for responses | Provider default |
-| Temperature | Controls randomness (0-2) | Provider default |
-| Top P | Nucleus sampling (0-1) | Provider default |
-| Frequency Penalty | Reduces token repetition (-2 to 2) | Provider default |
-| Presence Penalty | Encourages new topics (-2 to 2) | Provider default |
-| Past Messages | Context window size | Provider default |
+- **Intent detection** is performed by an AI classifier when available.
+- When no intent model is configured/available, the system can fall back to a keyword-based detector.
+- **Strategies** are registered services that decide whether to handle a prompt based on the detected intent.
 
-## Permissions
+### Built-in Intents
 
-| Permission | Description |
-|------------|-------------|
-| `EditChatInteractions` | Allows users to create and manage their own chat interactions |
-| `ManageChatInteractionSettings` | Allows users to configure site-wide chat interaction settings |
+The base module ships with a small set of default intents that enable image and chart experiences.
+
+| Intent | Description | Example Prompts |
+|--------|-------------|-----------------|
+| `GenerateImage` | Generate an image from a text description | "Generate an image of a sunset", "Create a picture of a cat" |
+| `GenerateImageWithHistory` | Generate an image using conversation context | "Based on the above, draw a diagram", "Make a visual of what we discussed" |
+| `GenerateChart` | Generate a chart/graph description or spec | "Create a bar chart", "Draw a pie chart of sales data" |
+
+### Configuration
+
+To enable image generation, configure the `DefaultImagesDeploymentName` in your AI provider connection settings.
+
+**Option 1: Admin UI**
+
+Navigate to **Artificial Intelligence > Provider Connections**, edit your connection, and set the **Images deployment name** field (e.g., `dall-e-3`).
+
+**Option 2: Configuration (appsettings.json)**
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Providers": {
+        "OpenAI": {
+          "Connections": {
+            "default": {
+              "DefaultDeploymentName": "gpt-4o",
+              "DefaultImagesDeploymentName": "dall-e-3"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+#### Intent Detection Model
+
+By default, intent detection uses the same model configured for chat (`DefaultDeploymentName`). For cost optimization, you can configure a separate lightweight model for intent classification:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Providers": {
+        "OpenAI": {
+          "Connections": {
+            "default": {
+              "DefaultDeploymentName": "gpt-4o",
+              "DefaultIntentDeploymentName": "gpt-4o-mini",
+              "DefaultImagesDeploymentName": "dall-e-3"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+> Recommendation: Use a lightweight model like `gpt-4o-mini` for intent detection. Intent classification is a simple task that doesn't require the full capabilities of larger models.

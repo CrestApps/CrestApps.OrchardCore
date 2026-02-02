@@ -1,49 +1,25 @@
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 
 /// <summary>
-/// Well-known document processing intent names.
+/// Detected intent metadata.
 /// </summary>
-public static class DocumentIntents
+public sealed class DocumentIntent
 {
-    /// <summary>
-    /// Question answering over documents (RAG - Retrieval-Augmented Generation).
-    /// Uses vector search to find relevant chunks and inject them as context.
-    /// </summary>
-    public const string DocumentQnA = "DocumentQnA";
+    public required string Name { get; set; }
 
-    /// <summary>
-    /// Summarize the content of one or more documents.
-    /// Bypasses vector search and streams content directly.
-    /// </summary>
-    public const string SummarizeDocument = "SummarizeDocument";
+    public float Confidence { get; set; }
 
-    /// <summary>
-    /// Analyze tabular data (CSV, Excel, etc.).
-    /// Parses structured data and performs calculations or aggregations.
-    /// </summary>
-    public const string AnalyzeTabularData = "AnalyzeTabularData";
+    public string Reason { get; set; }
 
-    /// <summary>
-    /// Extract structured data from documents.
-    /// Focuses on schema extraction, reformatting, or conversion.
-    /// </summary>
-    public const string ExtractStructuredData = "ExtractStructuredData";
+    public static DocumentIntent FromName(string name, float confidence = 1.0f, string reason = null)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(name);
 
-    /// <summary>
-    /// Compare multiple documents.
-    /// Analyzes differences, similarities, or relationships between documents.
-    /// </summary>
-    public const string CompareDocuments = "CompareDocuments";
-
-    /// <summary>
-    /// Transform or reformat document content.
-    /// Converts files into other representations (tables, JSON, bullet points, etc.).
-    /// </summary>
-    public const string TransformFormat = "TransformFormat";
-
-    /// <summary>
-    /// General chat with document reference.
-    /// Fallback when no specific intent is detected.
-    /// </summary>
-    public const string GeneralChatWithReference = "GeneralChatWithReference";
+        return new DocumentIntent
+        {
+            Name = name,
+            Confidence = confidence,
+            Reason = reason,
+        };
+    }
 }

@@ -16,6 +16,8 @@ public class AIProviderConnectionFieldsViewModel
 
     public string DefaultIntentDeploymentName { get; set; }
 
+    public string DefaultImagesDeploymentName { get; set; }
+
     [BindNever]
     public bool IsNew { get; set; }
 }

@@ -6,15 +6,15 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 /// <summary>
 /// Base class for document processing strategies that provides common functionality.
 /// </summary>
-public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrategy
+public abstract class DocumentProcessingStrategyBase : IPromptProcessingStrategy
 {
     /// <inheritdoc />
-    public abstract Task ProcessAsync(DocumentProcessingContext context);
+    public abstract Task ProcessAsync(IntentProcessingContext context);
 
     /// <summary>
     /// Gets the combined text content from all documents.
     /// </summary>
-    protected static string GetCombinedDocumentText(DocumentProcessingContext context, int? maxLength = null)
+    protected static string GetCombinedDocumentText(IntentProcessingContext context, int? maxLength = null)
     {
         if (context.Documents == null || context.Documents.Count == 0)
         {
@@ -74,9 +74,10 @@ public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrate
     /// <summary>
     /// Gets document metadata for context.
     /// </summary>
-    protected static string GetDocumentMetadata(DocumentProcessingContext context)
+    protected static string GetDocumentMetadata(IntentProcessingContext context)
     {
-        if (context.Documents == null || context.Documents.Count == 0)
+        // Use interaction.Documents for metadata (file info) since that's always available
+        if (context.Interaction?.Documents == null || context.Interaction.Documents.Count == 0)
         {
             return string.Empty;
         }
@@ -84,7 +85,7 @@ public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrate
         var builder = new StringBuilder();
         builder.AppendLine("Attached documents:");
 
-        foreach (var doc in context.Documents)
+        foreach (var doc in context.Interaction.Documents)
         {
             builder.AppendLine($"- {doc.FileName ?? "Unknown"} ({FormatFileSize(doc.FileSize)}, {doc.ContentType ?? "unknown type"})");
         }
@@ -92,8 +93,20 @@ public abstract class DocumentProcessingStrategyBase : IDocumentProcessingStrate
         return builder.ToString();
     }
 
-    protected static bool CanHandle(DocumentProcessingContext context, string intent)
-        => string.Equals(context.IntentResult?.Intent, intent, StringComparison.OrdinalIgnoreCase);
+    /// <summary>
+    /// Checks if there are documents attached to the interaction.
+    /// </summary>
+    protected static bool HasDocuments(IntentProcessingContext context)
+        => context.Interaction?.Documents != null && context.Interaction.Documents.Count > 0;
+
+    /// <summary>
+    /// Checks if full document content has been loaded into the context.
+    /// </summary>
+    protected static bool HasDocumentContent(IntentProcessingContext context)
+        => context.Documents != null && context.Documents.Count > 0;
+
+    protected static bool CanHandle(IntentProcessingContext context, string intent)
+        => string.Equals(context.Result?.Intent, intent, StringComparison.OrdinalIgnoreCase);
 
     private static string FormatFileSize(long bytes)
     {

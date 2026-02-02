@@ -12,18 +12,27 @@ public sealed class TabularAnalysisDocumentProcessingStrategy : DocumentProcessi
 {
     private static readonly string[] _tabularExtensions = [".csv", ".tsv", ".xlsx", ".xls"];
 
+    private readonly IChatInteractionDocumentStore _chatInteractionDocumentStore;
+
     // Maximum rows to include in context
     private const int MaxRows = 100;
 
-    /// <inheritdoc />
-    public override Task ProcessAsync(DocumentProcessingContext context)
+    public TabularAnalysisDocumentProcessingStrategy(IChatInteractionDocumentStore chatInteractionDocumentStore)
     {
-        if (!CanHandle(context, DocumentIntents.AnalyzeTabularData))
+        _chatInteractionDocumentStore = chatInteractionDocumentStore;
+    }
+
+    /// <inheritdoc />
+    public override async Task ProcessAsync(IntentProcessingContext context)
+    {
+        if (!CanHandle(context, DocumentIntents.AnalyzeTabularData) ||
+            context.Interaction.Documents is null ||
+            context.Interaction.Documents.Count == 0)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        var tabularDocuments = GetTabularDocuments(context.Documents);
+        var tabularDocuments = await GetTabularDocumentsAsync(context.Interaction.Documents);
 
         if (tabularDocuments.Count == 0)
         {
@@ -33,7 +42,8 @@ public sealed class TabularAnalysisDocumentProcessingStrategy : DocumentProcessi
                 allContent,
                 "The following is the content of the attached documents for analysis:",
                 usedVectorSearch: false);
-            return Task.CompletedTask;
+
+            return;
         }
 
         var builder = new StringBuilder();
@@ -67,7 +77,8 @@ public sealed class TabularAnalysisDocumentProcessingStrategy : DocumentProcessi
                 GetDocumentMetadata(context),
                 "Tabular files are attached but could not be read:",
                 usedVectorSearch: false);
-            return Task.CompletedTask;
+
+            return;
         }
 
         var prefix = processedCount == 1
@@ -75,28 +86,18 @@ public sealed class TabularAnalysisDocumentProcessingStrategy : DocumentProcessi
             : $"The following is tabular data from {processedCount} attached files for analysis:";
 
         context.Result.AddContext(builder.ToString(), prefix, usedVectorSearch: false);
-
-        return Task.CompletedTask;
     }
 
-    private static List<ChatInteractionDocument> GetTabularDocuments(IList<ChatInteractionDocument> documents)
+    private async Task<IReadOnlyCollection<ChatInteractionDocument>> GetTabularDocumentsAsync(IList<ChatInteractionDocumentInfo> documents)
     {
-        var result = new List<ChatInteractionDocument>();
-
         if (documents == null || documents.Count == 0)
         {
-            return result;
+            return [];
         }
 
-        foreach (var doc in documents)
-        {
-            if (IsTabularFile(doc.FileName))
-            {
-                result.Add(doc);
-            }
-        }
+        var tabularDocumentIds = documents.Where(doc => IsTabularFile(doc.FileName)).Select(doc => doc.DocumentId);
 
-        return result;
+        return await _chatInteractionDocumentStore.GetAsync(tabularDocumentIds);
     }
 
     private static bool IsTabularFile(string fileName)
