@@ -297,3 +297,23 @@ public sealed class McpServerStartup : StartupBase
         }
     }
 }
+
+[Feature(McpConstants.Feature.Server)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class McpPromptRecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<McpPromptStep>();
+    }
+}
+
+[Feature(McpConstants.Feature.Server)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class McpPromptDeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<McpPromptDeploymentSource, McpPromptDeploymentStep, McpPromptDeploymentStepDisplayDriver>();
+    }
+}
