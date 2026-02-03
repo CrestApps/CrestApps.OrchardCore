@@ -9,6 +9,7 @@ internal sealed class McpPermissionsProvider : IPermissionProvider
     private readonly IEnumerable<Permission> _allPermissions =
     [
         McpPermissions.ManageMcpConnections,
+        McpPermissions.ManageMcpPrompts,
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()

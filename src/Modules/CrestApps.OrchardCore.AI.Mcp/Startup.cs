@@ -27,6 +27,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using Role = ModelContextProtocol.Protocol.Role;
 
 namespace CrestApps.OrchardCore.AI.Mcp;
 
@@ -129,6 +130,11 @@ public sealed class McpServerStartup : StartupBase
             .AddScheme<McpApiKeyAuthenticationOptions, McpApiKeyAuthenticationHandler>(
                 McpApiKeyAuthenticationDefaults.AuthenticationScheme, options => { });
 
+        // Register MCP Prompt services.
+        services.AddNavigationProvider<McpPromptsAdminMenu>();
+        services.AddScoped<ICatalogEntryHandler<McpPrompt>, McpPromptHandler>();
+        services.AddDisplayDriver<McpPrompt, McpPromptDisplayDriver>();
+
         services.AddMcpServer(options =>
         {
             options.ServerInfo = new()
@@ -201,6 +207,67 @@ public sealed class McpServerStartup : StartupBase
             return new CallToolResult
             {
                 Content = [new TextContentBlock { Text = result?.ToString() ?? string.Empty }]
+            };
+        })
+        .WithListPromptsHandler(async (request, cancellationToken) =>
+        {
+            var manager = request.Services.GetRequiredService<ICatalogManager<McpPrompt>>();
+            var prompts = await manager.GetAllAsync();
+
+            var result = new ListPromptsResult
+            {
+                Prompts = prompts.Select(p => new Prompt
+                {
+                    Name = p.Name,
+                    Description = p.Description,
+                    Arguments = p.Arguments?.Select(a => new PromptArgument
+                    {
+                        Name = a.Name,
+                        Description = a.Description,
+                        Required = a.IsRequired,
+                    }).ToList(),
+                }).ToList()
+            };
+
+            return result;
+        })
+        .WithGetPromptHandler(async (request, cancellationToken) =>
+        {
+            var manager = request.Services.GetRequiredService<ICatalogManager<McpPrompt>>();
+            var prompts = await manager.GetAllAsync();
+            var prompt = prompts.FirstOrDefault(p => p.Name == request.Params.Name);
+
+            if (prompt == null)
+            {
+                throw new McpException($"Prompt '{request.Params.Name}' not found.");
+            }
+
+            var messages = new List<PromptMessage>();
+
+            foreach (var msg in prompt.Messages ?? [])
+            {
+                var content = msg.Content ?? string.Empty;
+
+                // Substitute arguments in the content
+                if (request.Params.Arguments is not null)
+                {
+                    foreach (var arg in request.Params.Arguments)
+                    {
+                        content = content.Replace($"{{{arg.Key}}}", arg.Value.ToString(), StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+
+                messages.Add(new PromptMessage
+                {
+                    Role = msg.Role == McpConstants.Roles.Assistant ? Role.Assistant : Role.User,
+                    Content = new TextContentBlock { Text = content },
+                });
+            }
+
+            return new GetPromptResult
+            {
+                Description = prompt.Description,
+                Messages = messages,
             };
         });
 

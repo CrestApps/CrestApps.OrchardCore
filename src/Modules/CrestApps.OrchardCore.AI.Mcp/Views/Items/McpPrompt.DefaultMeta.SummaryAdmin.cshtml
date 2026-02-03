@@ -1,0 +1,15 @@
+@using CrestApps.OrchardCore.AI.Mcp.Core.Models
+@using OrchardCore.DisplayManagement.Shapes
+
+@model McpPrompt
+
+<div class="metadata-info">
+    @if (!string.IsNullOrEmpty(Model.Author))
+    {
+        <span class="text-muted">@T["Created by {0}", Model.Author]</span>
+    }
+    @if (Model.CreatedUtc != default)
+    {
+        <span class="text-muted">@T["on {0}", Model.CreatedUtc.ToString("g")]</span>
+    }
+</div>
