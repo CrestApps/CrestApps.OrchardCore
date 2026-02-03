@@ -24,15 +24,21 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         S = stringLocalizer;
     }
 
+    protected override void BuildPrefix(ListOmnichannelActivityFilter model, string htmlFieldPrefix)
+    {
+        Prefix = "o";
+    }
+
     public override IDisplayResult Edit(ListOmnichannelActivityFilter filter, BuildEditorContext context)
     {
-        return Initialize<ListOmnichannelActivityFilterViewModel>("ListOmnichannelActivityFilter_Edit", async model =>
+        return Initialize<ListOmnichannelActivityFilterViewModel>("ListOmnichannelActivityFilterFields_Edit", async model =>
         {
             model.UrgencyLevel = filter.UrgencyLevel;
             model.SubjectContentType = filter.SubjectContentType;
-            model.AttemptFrom = filter.AttemptFrom;
-            model.AttemptTo = filter.AttemptTo;
+            model.AttemptFilter = filter.AttemptFilter;
             model.Channel = filter.Channel;
+            model.ScheduledFrom = filter.ScheduledFrom?.ToShortDateString();
+            model.ScheduledTo = filter.ScheduledTo?.ToShortDateString();
 
             model.UrgencyLevels =
             [
@@ -51,6 +57,26 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
                 new(S["Phone"], OmnichannelConstants.Channels.Phone),
                 new(S["SMS"], OmnichannelConstants.Channels.Sms),
                 new(S["Email"], OmnichannelConstants.Channels.Email),
+            ];
+
+            model.AttemptFilters =
+            [
+                new(S["Any attempt"], ""),
+                new(S["No attempts"], "0"),
+                new(S["1 attempt"], "1"),
+                new(S["2 attempts"], "2"),
+                new(S["3 attempts"], "3"),
+                new(S["4 attempts"], "4"),
+                new(S["5 attempts"], "5"),
+                new(S["1+ attempts"], "1+"),
+                new(S["2+ attempts"], "2+"),
+                new(S["3+ attempts"], "3+"),
+                new(S["4+ attempts"], "4+"),
+                new(S["5+ attempts"], "5+"),
+                new(S["2- attempts"], "2-"),
+                new(S["3- attempts"], "3-"),
+                new(S["4- attempts"], "4-"),
+                new(S["5- attempts"], "5-"),
             ];
 
             var subjectContentTypes = new List<SelectListItem>()
@@ -79,8 +105,50 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         filter.SubjectContentType = model.SubjectContentType;
         filter.UrgencyLevel = model.UrgencyLevel;
         filter.Channel = model.Channel;
-        filter.AttemptFrom = model.AttemptFrom;
-        filter.AttemptTo = model.AttemptTo;
+        filter.AttemptFilter = model.AttemptFilter;
+        filter.ScheduledFrom = null;
+        filter.ScheduledTo = null;
+
+        if (!string.IsNullOrEmpty(model.ScheduledFrom) && DateTime.TryParse(model.ScheduledFrom, out var scheduledFrom))
+        {
+            filter.ScheduledFrom = scheduledFrom;
+        }
+
+        if (!string.IsNullOrEmpty(model.ScheduledTo) && DateTime.TryParse(model.ScheduledTo, out var scheduledTo))
+        {
+            filter.ScheduledTo = scheduledTo;
+        }
+
+        // Populate route values so other modules can extend filtering and pagination preserves filter state.
+        if (filter.UrgencyLevel.HasValue)
+        {
+            filter.RouteValues.TryAdd(Prefix + ".UrgencyLevel", filter.UrgencyLevel.Value.ToString());
+        }
+
+        if (!string.IsNullOrEmpty(filter.SubjectContentType))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".SubjectContentType", filter.SubjectContentType);
+        }
+
+        if (!string.IsNullOrEmpty(filter.Channel))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".Channel", filter.Channel);
+        }
+
+        if (!string.IsNullOrEmpty(filter.AttemptFilter))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".AttemptFilter", filter.AttemptFilter);
+        }
+
+        if (filter.ScheduledFrom.HasValue)
+        {
+            filter.RouteValues.TryAdd(Prefix + ".ScheduledFrom", filter.ScheduledFrom.Value.ToShortDateString());
+        }
+
+        if (filter.ScheduledTo.HasValue)
+        {
+            filter.RouteValues.TryAdd(Prefix + ".ScheduledTo", filter.ScheduledTo.Value.ToShortDateString());
+        }
 
         return Edit(filter, context);
     }

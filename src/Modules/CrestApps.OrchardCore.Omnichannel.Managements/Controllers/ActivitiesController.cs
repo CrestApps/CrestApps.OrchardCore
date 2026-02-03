@@ -86,6 +86,7 @@ public sealed class ActivitiesController : Controller
 
     [Admin("omnichannel/activities", "OmnichannelActivities")]
     public async Task<IActionResult> Activities(
+        ListOmnichannelActivityFilter options,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory,
@@ -100,15 +101,15 @@ public sealed class ActivitiesController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        // Create a new filter instance and use the display manager to populate it from request parameters
-        var filter = new ListOmnichannelActivityFilter();
+        options ??= new ListOmnichannelActivityFilter();
 
         // Build the filter editor (this populates the filter from request parameters via the display driver)
-        var header = await filterDisplayManager.UpdateEditorAsync(filter, _updateModelAccessor.ModelUpdater, isNew: false, string.Empty, string.Empty);
+        var header = await filterDisplayManager.UpdateEditorAsync(options, _updateModelAccessor.ModelUpdater, isNew: false);
 
-        var scheduledResult = await _omnichannelActivityManager.PageManualScheduledAsync(userId, pager.Page, pager.PageSize, filter);
+        var scheduledResult = await _omnichannelActivityManager.PageManualScheduledAsync(userId, pager.Page, pager.PageSize, options);
 
-        var pagerShape = await shapeFactory.PagerAsync(pager, scheduledResult.Count);
+        // Maintain previous route data when generating page links.
+        var pagerShape = await shapeFactory.PagerAsync(pager, scheduledResult.Count, options.RouteValues);
 
         var contactsIds = scheduledResult.Entries.Select(x => x.ContactContentItemId)
             .Where(x => !string.IsNullOrEmpty(x))
@@ -160,9 +161,15 @@ public sealed class ActivitiesController : Controller
     [ActionName(nameof(Activities))]
     [FormValueRequired("submit.Filter")]
     [Admin("omnichannel/activities", "OmnichannelActivities")]
-    public ActionResult ActivitiesFilterPost()
+    public async Task<ActionResult> ActivitiesFilterPost(
+        [FromServices] IDisplayManager<ListOmnichannelActivityFilter> filterDisplayManager)
     {
-        return RedirectToAction(nameof(Activities));
+        var options = new ListOmnichannelActivityFilter();
+
+        // Evaluate the values provided in the form post and map them to the filter result and route values.
+        await filterDisplayManager.UpdateEditorAsync(options, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return RedirectToAction(nameof(Activities), options.RouteValues);
     }
 
     [Admin("omnichannel/activities/{contentItemId}")]

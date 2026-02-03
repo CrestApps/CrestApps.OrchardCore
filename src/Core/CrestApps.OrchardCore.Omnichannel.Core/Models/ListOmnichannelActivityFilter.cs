@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Routing;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -10,7 +12,12 @@ public sealed class ListOmnichannelActivityFilter : Entity
 
     public string Channel { get; set; }
 
-    public int? AttemptFrom { get; set; }
+    public string AttemptFilter { get; set; }
 
-    public int? AttemptTo { get; set; }
+    public DateTime? ScheduledFrom { get; set; }
+
+    public DateTime? ScheduledTo { get; set; }
+
+    [BindNever]
+    public RouteValueDictionary RouteValues { get; set; } = [];
 }

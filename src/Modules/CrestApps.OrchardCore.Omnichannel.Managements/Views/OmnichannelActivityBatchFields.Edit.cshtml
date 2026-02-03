@@ -1,8 +1,20 @@
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using OrchardCore
+@using System.Globalization
 
 @model OmnichannelActivityBatchViewModel
+
+@{
+    var leadCreatedFromId = Html.IdFor(m => m.LeadCreatedFrom);
+    var leadCreatedToId = Html.IdFor(m => m.LeadCreatedTo);
+    var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
+    var timePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern;
+}
+
+<style asp-name="flatpickr"></style>
+<script asp-name="flatpickr" at="Foot"></script>
+<script asp-name="flatpickr-culture" at="Foot"></script>
 
 @if (Model.Status != OmnichannelActivityBatchStatus.New)
 {
@@ -76,7 +88,12 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="LeadCreatedFrom" class="@Orchard.GetLabelClasses()">@T["Lead created from"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <input type="datetime-local" asp-for="LeadCreatedFrom" class="form-control" />
+        <input type="text"
+               id="@leadCreatedFromId"
+               name="@Html.NameFor(m => m.LeadCreatedFrom)"
+               value="@Model.LeadCreatedFrom"
+               class="form-control"
+               placeholder="@T["Lead created from"]" />
         <span asp-validation-for="LeadCreatedFrom" class="text-danger"></span>
         <span class="hint">@T["Optionally, only include leads created on or after this date."]</span>
     </div>
@@ -85,11 +102,64 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="LeadCreatedTo" class="@Orchard.GetLabelClasses()">@T["Lead created to"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <input type="datetime-local" asp-for="LeadCreatedTo" class="form-control" />
+        <input type="text"
+               id="@leadCreatedToId"
+               name="@Html.NameFor(m => m.LeadCreatedTo)"
+               value="@Model.LeadCreatedTo"
+               class="form-control"
+               placeholder="@T["Lead created to"]" />
         <span asp-validation-for="LeadCreatedTo" class="text-danger"></span>
         <span class="hint">@T["Optionally, only include leads created on or before this date."]</span>
     </div>
 </div>
+
+<script at="Foot" depends-on="flatpickr,flatpickr-culture">
+    document.addEventListener('DOMContentLoaded', function () {
+
+        var patterns = flatpickrCulture.createFlatpickrDateTimePattern("@datePattern", "@timePattern");
+        var dateTimePattern = patterns.dateTimePattern;
+        var time24hr = patterns.time24hr;
+
+        var fromField = document.getElementById('@leadCreatedFromId');
+        var toField = document.getElementById('@leadCreatedToId');
+
+        var fromPicker = flatpickr(fromField, {
+            enableTime: true,
+            time_24hr: time24hr,
+            dateFormat: dateTimePattern,
+            allowInput: true,
+            onChange: function (selectedDates) {
+                if (selectedDates && selectedDates.length > 0) {
+                    toPicker.set('minDate', selectedDates[0]);
+                } else {
+                    toPicker.set('minDate', null);
+                }
+            }
+        });
+
+        var toPicker = flatpickr(toField, {
+            enableTime: true,
+            time_24hr: time24hr,
+            dateFormat: dateTimePattern,
+            allowInput: true,
+            onChange: function (selectedDates) {
+                if (selectedDates && selectedDates.length > 0) {
+                    fromPicker.set('maxDate', selectedDates[0]);
+                } else {
+                    fromPicker.set('maxDate', null);
+                }
+            }
+        });
+
+        if (fromField.value) {
+            toPicker.set('minDate', fromField.value);
+        }
+
+        if (toField.value) {
+            fromPicker.set('maxDate', toField.value);
+        }
+    });
+</script>
 
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="Instructions" class="@Orchard.GetLabelClasses()">@T["Instructions"]</label>

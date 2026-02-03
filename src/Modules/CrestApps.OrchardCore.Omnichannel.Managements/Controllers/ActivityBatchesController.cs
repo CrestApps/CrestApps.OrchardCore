@@ -378,29 +378,19 @@ public sealed class ActivityBatchesController : Controller
 
                 var activityManager = scope.ServiceProvider.GetRequiredService<IOmnichannelActivityManager>();
 
+                DateTime? leadCreatedFrom = batch.LeadCreatedFrom.HasValue ? await localClock.ConvertToUtcAsync(batch.LeadCreatedFrom.Value) : null;
+                DateTime? leadCreatedTo = batch.LeadCreatedTo.HasValue ? await localClock.ConvertToUtcAsync(batch.LeadCreatedTo.Value) : null;
+
                 while (true)
                 {
                     var contactQuery = readonlySession.Query<ContentItem>();
-
-                    if (campaign.Channel == OmnichannelConstants.Channels.Sms)
-                    {
-                        contactQuery = contactQuery.With<OmnichannelContactIndex>(index => index.PrimaryCellPhoneNumber != null);
-                    }
-                    else if (campaign.Channel == OmnichannelConstants.Channels.Phone)
-                    {
-                        contactQuery = contactQuery.With<OmnichannelContactIndex>(index => index.PrimaryCellPhoneNumber != null || index.PrimaryHomePhoneNumber != null);
-                    }
-                    else if (campaign.Channel == OmnichannelConstants.Channels.Email)
-                    {
-                        contactQuery = contactQuery.With<OmnichannelContactIndex>(index => index.PrimaryEmailAddress != null);
-                    }
 
                     contactQuery = contactQuery.With<ContentItemIndex>(index =>
                         index.ContentType == batch.ContactContentType &&
                         (batch.OnlyPublishedLeads ? index.Published : index.Latest) &&
                         index.DocumentId > documentId &&
-                        (batch.LeadCreatedFrom == null || index.CreatedUtc >= batch.LeadCreatedFrom) &&
-                        (batch.LeadCreatedTo == null || index.CreatedUtc <= batch.LeadCreatedTo))
+                        (leadCreatedFrom == null || index.CreatedUtc >= leadCreatedFrom) &&
+                        (leadCreatedTo == null || index.CreatedUtc <= leadCreatedTo))
                         .OrderBy(x => x.DocumentId);
 
                     // Apply the filters logic

@@ -4,17 +4,19 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
-public sealed class ListOmnichannelActivityFilterViewModel
+public class ListOmnichannelActivityFilterViewModel
 {
     public ActivityUrgencyLevel? UrgencyLevel { get; set; }
 
     public string SubjectContentType { get; set; }
 
-    public int? AttemptFrom { get; set; }
-
-    public int? AttemptTo { get; set; }
+    public string AttemptFilter { get; set; }
 
     public string Channel { get; set; }
+
+    public string ScheduledFrom { get; set; }
+
+    public string ScheduledTo { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> UrgencyLevels { get; set; }
@@ -24,4 +26,7 @@ public sealed class ListOmnichannelActivityFilterViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> Channels { get; set; }
+
+    [BindNever]
+    public IEnumerable<SelectListItem> AttemptFilters { get; set; }
 }

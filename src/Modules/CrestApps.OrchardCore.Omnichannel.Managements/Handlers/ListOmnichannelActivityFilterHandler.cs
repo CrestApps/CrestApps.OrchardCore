@@ -1,5 +1,3 @@
-using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
@@ -25,14 +23,39 @@ public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActiv
             context.Query = context.Query.Where(index => index.Channel == filter.Channel);
         }
 
-        if (filter.AttemptFrom.HasValue)
+        if (!string.IsNullOrEmpty(filter.AttemptFilter))
         {
-            context.Query = context.Query.Where(index => index.Attempts >= filter.AttemptFrom.Value);
+            if (filter.AttemptFilter.EndsWith('+'))
+            {
+                // Handle "1+", "2+", etc. - minimum attempts
+                if (int.TryParse(filter.AttemptFilter.TrimEnd('+'), out var minAttempts))
+                {
+                    context.Query = context.Query.Where(index => index.Attempts >= minAttempts);
+                }
+            }
+            else if (filter.AttemptFilter.EndsWith('-'))
+            {
+                // Handle "2-", "3-", etc. - maximum attempts
+                if (int.TryParse(filter.AttemptFilter.TrimEnd('-'), out var maxAttempts))
+                {
+                    context.Query = context.Query.Where(index => index.Attempts <= maxAttempts);
+                }
+            }
+            else if (int.TryParse(filter.AttemptFilter, out var exactAttempts))
+            {
+                // Handle exact values "0", "1", "2", etc.
+                context.Query = context.Query.Where(index => index.Attempts == exactAttempts);
+            }
         }
 
-        if (filter.AttemptTo.HasValue)
+        if (filter.ScheduledFrom.HasValue)
         {
-            context.Query = context.Query.Where(index => index.Attempts <= filter.AttemptTo.Value);
+            context.Query = context.Query.Where(index => index.ScheduledUtc >= filter.ScheduledFrom.Value);
+        }
+
+        if (filter.ScheduledTo.HasValue)
+        {
+            context.Query = context.Query.Where(index => index.ScheduledUtc <= filter.ScheduledTo.Value);
         }
 
         return Task.CompletedTask;

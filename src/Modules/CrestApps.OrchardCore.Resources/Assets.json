@@ -59,5 +59,39 @@
       "./node_modules/marked/marked.min.js"
     ],
     "output": "wwwroot/scripts/marked.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/flatpickr/dist/flatpickr.js"
+    ],
+    "output": "wwwroot/vendors/flatpickr/js/flatpickr.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/flatpickr/dist/flatpickr.min.js"
+    ],
+    "output": "wwwroot/vendors/flatpickr/js/flatpickr.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/flatpickr/dist/flatpickr.css"
+    ],
+    "output": "wwwroot/vendors/flatpickr/css/flatpickr.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/flatpickr/dist/flatpickr.min.css"
+    ],
+    "output": "wwwroot/vendors/flatpickr/css/flatpickr.min.css"
+  },
+  {
+    "inputs": [
+      "Assets/js/flatpickr-culture.js"
+    ],
+    "output": "wwwroot/scripts/flatpickr-culture.js"
   }
 ]
