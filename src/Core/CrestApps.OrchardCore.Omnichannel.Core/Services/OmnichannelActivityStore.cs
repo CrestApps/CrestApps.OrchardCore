@@ -57,7 +57,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
             await handler.FilteringAsync(context);
         }
 
-        query = context.Query.OrderBy(x => x.ScheduledUtc).ThenBy(x => x.Id);
+        query = context.Query.OrderByDescending(x => x.ScheduledUtc).ThenBy(x => x.Id);
 
         var skip = (Math.Max(page, 1) - 1) * pageSize;
 
