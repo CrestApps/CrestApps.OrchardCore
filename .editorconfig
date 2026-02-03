@@ -1,4 +1,12 @@
-﻿root = true
+root = true
+
+# Keep LF line endings in generated web assets to avoid CI asset validation diffs.
+# This aligns with `.gitattributes` (wwwroot/**/*.js|css => eol=lf).
+[**/wwwroot/**/*.js]
+end_of_line = lf
+
+[**/wwwroot/**/*.css]
+end_of_line = lf
 
 [*]
 end_of_line = crlf

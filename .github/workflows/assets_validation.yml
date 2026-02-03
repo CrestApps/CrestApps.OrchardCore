@@ -26,6 +26,10 @@ jobs:
       run: |
         npm install
         gulp rebuild
+    - name: Normalize line endings (gitattributes)
+      run: |
+        git add --renormalize .
+        git reset --quiet
     - name: Check if git has changes
       shell: pwsh
       run: |
