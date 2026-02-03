@@ -64,7 +64,12 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="ScheduleAt" class="@Orchard.GetLabelClasses()">@T["Schedule at"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <input type="datetime-local" asp-for="ScheduleAt" class="form-control" />
+        <input type="text"
+               id="@Html.IdFor(m => m.ScheduleAt)"
+               name="@Html.NameFor(m => m.ScheduleAt)"
+               value="@Model.ScheduleAt"
+               class="form-control"
+               placeholder="@T["Schedule at"]" />
         <span asp-validation-for="ScheduleAt" class="text-danger"></span>
     </div>
 </div>
@@ -157,6 +162,16 @@
 
         if (toField.value) {
             fromPicker.set('maxDate', toField.value);
+        }
+
+        var scheduleAtField = document.getElementById('@Html.IdFor(m => m.ScheduleAt)');
+        if (scheduleAtField) {
+            flatpickr(scheduleAtField, {
+                enableTime: true,
+                time_24hr: time24hr,
+                dateFormat: dateTimePattern,
+                allowInput: true,
+            });
         }
     });
 </script>
