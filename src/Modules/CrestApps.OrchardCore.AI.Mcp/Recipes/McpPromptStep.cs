@@ -35,16 +35,11 @@ internal sealed class McpPromptStep : NamedRecipeStepHandler
 
         foreach (var token in tokens)
         {
-            McpPrompt prompt = null;
-
             var id = token[nameof(McpPrompt.ItemId)]?.GetValue<string>();
 
             var hasId = !string.IsNullOrEmpty(id);
 
-            if (hasId)
-            {
-                prompt = await _manager.FindByIdAsync(id);
-            }
+            McpPrompt prompt = hasId ? await _manager.FindByIdAsync(id) : null;
 
             if (prompt is not null)
             {

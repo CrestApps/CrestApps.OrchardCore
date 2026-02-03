@@ -27,7 +27,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
-using Role = ModelContextProtocol.Protocol.Role;
+using ProtocolRole = ModelContextProtocol.Protocol.Role;
 
 namespace CrestApps.OrchardCore.AI.Mcp;
 
@@ -259,7 +259,7 @@ public sealed class McpServerStartup : StartupBase
 
                 messages.Add(new PromptMessage
                 {
-                    Role = msg.Role == McpConstants.Roles.Assistant ? Role.Assistant : Role.User,
+                    Role = msg.Role == McpConstants.Roles.Assistant ? ProtocolRole.Assistant : ProtocolRole.User,
                     Content = new TextContentBlock { Text = content },
                 });
             }
