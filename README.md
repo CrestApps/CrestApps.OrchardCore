@@ -90,6 +90,22 @@ Extends the **AI Module** by integrating **Azure AI Inference** services. See th
 #### Ollama Module
 Extends the **AI Module** by integrating any **Ollama** model. See the [Ollama Module README](src/Modules/CrestApps.OrchardCore.Ollama/README.md).  
 
+### Omnichannel Suite
+
+The Omnichannel suite provides a unified communication and activity orchestration layer across channels (SMS, Email, Phone, and more), with a mini-CRM UI and optional AI-driven automation.
+
+#### Omnichannel (Orchestrator)
+The foundation of all communication channels. Provides the core orchestration services and generic webhook entry points. See the [Omnichannel README](src/Modules/CrestApps.OrchardCore.Omnichannel/README.md).
+
+#### Omnichannel Management (Mini-CRM)
+A mini-CRM that lets you manage contacts, subjects, campaigns, dispositions, activities, and activity batches, and drive next-activity behavior via Orchard Core Workflows. See the [Omnichannel Management README](src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/README.md).
+
+#### SMS Omnichannel Automation (AI)
+Allows AI to automate chatting with customers/contacts using SMS. You define how the AI should handle conversations, and it acts as an agent communicating through your SMS provider. See the [SMS Omnichannel Automation README](src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/README.md).
+
+#### Omnichannel (Azure Event Grid)
+Integrates Azure Event Grid to receive communication events (e.g. from your SMS provider) and route them into Omnichannel. See the [Omnichannel Event Grid README](src/Modules/CrestApps.OrchardCore.Omnichannel.EventGrid/README.md).
+
 ### Standard Modules
 
 #### Users Module

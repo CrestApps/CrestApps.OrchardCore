@@ -21,6 +21,7 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Routing;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using OrchardCore.Workflows.Services;
@@ -83,11 +84,13 @@ public sealed class ActivitiesController : Controller
         H = htmlLocalizer;
     }
 
-    [Admin("omnichannel/activities")]
+    [Admin("omnichannel/activities", "OmnichannelActivities")]
     public async Task<IActionResult> Activities(
+        ListOmnichannelActivityFilter options,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
-        [FromServices] IShapeFactory shapeFactory)
+        [FromServices] IShapeFactory shapeFactory,
+        [FromServices] IDisplayManager<ListOmnichannelActivityFilter> filterDisplayManager)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ListActivities))
         {
@@ -98,9 +101,15 @@ public sealed class ActivitiesController : Controller
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var scheduledResult = await _omnichannelActivityManager.PageManualScheduledAsync(userId, pager.Page, pager.PageSize);
+        options ??= new ListOmnichannelActivityFilter();
 
-        var pagerShape = await shapeFactory.PagerAsync(pager, scheduledResult.Count);
+        // Build the filter editor (this populates the filter from request parameters via the display driver)
+        var header = await filterDisplayManager.UpdateEditorAsync(options, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        var scheduledResult = await _omnichannelActivityManager.PageManualScheduledAsync(userId, pager.Page, pager.PageSize, options);
+
+        // Maintain previous route data when generating page links.
+        var pagerShape = await shapeFactory.PagerAsync(pager, scheduledResult.Count, options.RouteValues);
 
         var contactsIds = scheduledResult.Entries.Select(x => x.ContactContentItemId)
             .Where(x => !string.IsNullOrEmpty(x))
@@ -140,11 +149,27 @@ public sealed class ActivitiesController : Controller
 
         var model = new ListOmnichannelActivityContainer()
         {
+            Header = header,
             Containers = containerSummaries,
             Pager = pagerShape,
         };
 
         return View(model);
+    }
+
+    [HttpPost]
+    [ActionName(nameof(Activities))]
+    [FormValueRequired("submit.Filter")]
+    [Admin("omnichannel/activities", "OmnichannelActivities")]
+    public async Task<ActionResult> ActivitiesFilterPost(
+        [FromServices] IDisplayManager<ListOmnichannelActivityFilter> filterDisplayManager)
+    {
+        var options = new ListOmnichannelActivityFilter();
+
+        // Evaluate the values provided in the form post and map them to the filter result and route values.
+        await filterDisplayManager.UpdateEditorAsync(options, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return RedirectToAction(nameof(Activities), options.RouteValues);
     }
 
     [Admin("omnichannel/activities/{contentItemId}")]

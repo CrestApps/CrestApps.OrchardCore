@@ -1,0 +1,107 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore
+@using System.Globalization
+
+@model ListOmnichannelActivityFilterViewModel
+@{
+    var pattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
+    var scheduledFromId = Html.IdFor(m => m.ScheduledFrom);
+    var scheduledToId = Html.IdFor(m => m.ScheduledTo);
+}
+
+<style asp-name="flatpickr"></style>
+<script asp-name="flatpickr" at="Foot"></script>
+<script asp-name="flatpickr-culture" at="Foot"></script>
+
+<div class="col-lg-2">
+    <select asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels" class="form-select"></select>
+</div>
+
+<div class="col-lg-2">
+    <select asp-for="SubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select"></select>
+</div>
+
+<div class="col-lg-2">
+    <select asp-for="Channel" asp-items="Model.Channels" class="form-select"></select>
+</div>
+
+<div class="col-lg-2">
+    <select asp-for="AttemptFilter" asp-items="Model.AttemptFilters" class="form-select"></select>
+</div>
+
+<div class="col-lg-2">
+    <input type="text"
+           id="@scheduledFromId"
+           name="@Html.NameFor(m => m.ScheduledFrom)"
+           value="@Model.ScheduledFrom"
+           class="form-control"
+           placeholder="@T["Scheduled from"]" />
+</div>
+
+<div class="col-lg-2">
+    <input type="text"
+           id="@scheduledToId"
+           name="@Html.NameFor(m => m.ScheduledTo)"
+           value="@Model.ScheduledTo"
+           class="form-control"
+           placeholder="@T["Scheduled to"]" />
+</div>
+
+<script at="Foot" depends-on="flatpickr">
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const csharpDatePatternToFlatpickr = (pattern) => {
+            if (!pattern || typeof pattern !== "string") {
+                return pattern;
+            }
+
+            // Order matters: longer tokens first
+            return pattern
+            // Year
+            .replace(/yyyy/g, "Y")
+            .replace(/yyy/g, "Y")
+            .replace(/yy/g, "y")
+            .replace(/y/g, "y")
+
+            // Month
+            .replace(/MM/g, "m")
+            .replace(/M/g, "n")
+
+            // Day
+            .replace(/dd/g, "d")
+            .replace(/d/g, "j");
+        }
+
+        var pattern = csharpDatePatternToFlatpickr("@pattern") ?? "Y-m-d"
+        var fromPicker = flatpickr('#@scheduledFromId', {
+            dateFormat: pattern,
+            allowInput: true,
+            onChange: function (selectedDates) {
+                if (selectedDates.length > 0) {
+                    toPicker.set('minDate', selectedDates[0]);
+                }
+            }
+        });
+
+        var toPicker = flatpickr('#@scheduledToId', {
+            dateFormat: pattern,
+            allowInput: true,
+            onChange: function (selectedDates) {
+                if (selectedDates.length > 0) {
+                    fromPicker.set('maxDate', selectedDates[0]);
+                }
+            }
+        });
+
+        // Set initial constraints if values exist
+        var fromValue = document.getElementById('@scheduledFromId').value;
+        var toValue = document.getElementById('@scheduledToId').value;
+        
+        if (fromValue) {
+            toPicker.set('minDate', fromValue);
+        }
+        if (toValue) {
+            fromPicker.set('maxDate', toValue);
+        }
+    });
+</script>

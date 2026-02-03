@@ -1,8 +1,18 @@
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using OrchardCore
+@using System.Globalization
 
 @model EditOmnichannelActivity
+
+@{
+    var datePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
+    var timePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern;
+}
+
+<style asp-name="flatpickr"></style>
+<script asp-name="flatpickr" at="Foot"></script>
+<script asp-name="flatpickr-culture" at="Foot"></script>
 
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="CampaignId" class="@Orchard.GetLabelClasses()">@T["Campaign"]</label>
@@ -27,10 +37,31 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="ScheduleAt" class="@Orchard.GetLabelClasses()">@T["Schedule at"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <input type="datetime-local" asp-for="ScheduleAt" class="form-control" />
+        <input type="text"
+               id="@Html.IdFor(m => m.ScheduleAt)"
+               name="@Html.NameFor(m => m.ScheduleAt)"
+               value="@Model.ScheduleAt"
+               class="form-control"
+               placeholder="@T["Schedule at"]" />
         <span asp-validation-for="ScheduleAt" class="text-danger"></span>
     </div>
 </div>
+
+<script at="Foot" depends-on="flatpickr,flatpickr-culture">
+    document.addEventListener('DOMContentLoaded', function () {
+        var patterns = flatpickrCulture.createFlatpickrDateTimePattern("@datePattern", "@timePattern");
+
+        var scheduleAtField = document.getElementById('@Html.IdFor(m => m.ScheduleAt)');
+        if (scheduleAtField) {
+            flatpickr(scheduleAtField, {
+                enableTime: true,
+                time_24hr: patterns.time24hr,
+                dateFormat: patterns.dateTimePattern,
+                allowInput: true,
+            });
+        }
+    });
+</script>
 
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="UserId" class="@Orchard.GetLabelClasses()">@T["User(s) to assign activities to"]</label>

@@ -77,17 +77,40 @@
     <div class="@Orchard.GetWrapperClasses("schedule-date-wrapper", "d-none")">
         <label asp-for="ScheduleDate" class="@Orchard.GetLabelClasses()">@T["Schedule next activity at"]</label>
         <div class="@Orchard.GetEndClasses()">
-            <input type="datetime-local" asp-for="ScheduleDate" class="form-control" />
+            <input type="text"
+                   id="@Html.IdFor(m => m.ScheduleDate)"
+                   name="@Html.NameFor(m => m.ScheduleDate)"
+                   value="@Model.ScheduleDate"
+                   class="form-control"
+                   placeholder="@T["Schedule next activity at"]" />
             <span asp-validation-for="ScheduleDate" class="text-danger"></span>
         </div>
     </div>
 </div>
 
-<script>
+<style asp-name="flatpickr"></style>
+<script asp-name="flatpickr" at="Foot"></script>
+<script asp-name="flatpickr-culture" at="Foot"></script>
+
+<script at="Foot" depends-on="flatpickr,flatpickr-culture">
     document.addEventListener("DOMContentLoaded", function () {
+        var datePattern = '@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern';
+        var timePattern = '@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern';
+        var patterns = flatpickrCulture.createFlatpickrDateTimePattern(datePattern, timePattern);
+
         const dispositionMenu = document.getElementById("@Html.IdFor(x => x.DispositionId)");
         const parent = dispositionMenu.closest('.activity-wrapper');
         const scheduleWrapper = parent.querySelector(".schedule-date-wrapper");
+        const scheduleDateInput = document.getElementById("@Html.IdFor(x => x.ScheduleDate)");
+
+        if (scheduleDateInput) {
+            flatpickr(scheduleDateInput, {
+                enableTime: true,
+                time_24hr: patterns.time24hr,
+                dateFormat: patterns.dateTimePattern,
+                allowInput: true,
+            });
+        }
 
         function toggleScheduleWrapper() {
             const selectedOption = dispositionMenu.options[dispositionMenu.selectedIndex];

@@ -8,10 +8,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivity, OmnichannelActivityIndex>, IOmnichannelActivityStore
 {
-    public OmnichannelActivityStore(ISession session)
+    private readonly IEnumerable<IListOmnichannelActivityFilterHandler> _handlers;
+
+    public OmnichannelActivityStore(
+        ISession session,
+        IEnumerable<IListOmnichannelActivityFilterHandler> handlers)
         : base(session)
     {
         CollectionName = OmnichannelConstants.CollectionName;
+        _handlers = handlers;
     }
 
     public async Task<PageResult<OmnichannelActivity>> PageContactManualScheduledAsync(string contentContentItemId, int page, int pageSize)
@@ -35,16 +40,24 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         };
     }
 
-    public async Task<PageResult<OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize)
+    public async Task<PageResult<OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize, ListOmnichannelActivityFilter filter)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
+        ArgumentNullException.ThrowIfNull(filter);
 
         var query = Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(index =>
                         index.AssignedToId == userId &&
                         index.Status == ActivityStatus.NotStated &&
-                        index.InteractionType == ActivityInteractionType.Manual, collection: OmnichannelConstants.CollectionName)
-                    .OrderBy(x => x.ScheduledUtc)
-                    .ThenBy(x => x.Id);
+                        index.InteractionType == ActivityInteractionType.Manual, collection: OmnichannelConstants.CollectionName);
+
+        var context = new ListOmnichannelActivityFilterContext(filter, query);
+
+        foreach (var handler in _handlers)
+        {
+            await handler.FilteringAsync(context);
+        }
+
+        query = context.Query.OrderByDescending(x => x.ScheduledUtc).ThenBy(x => x.Id);
 
         var skip = (Math.Max(page, 1) - 1) * pageSize;
 
