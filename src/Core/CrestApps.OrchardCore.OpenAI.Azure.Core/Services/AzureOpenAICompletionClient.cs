@@ -186,13 +186,15 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                     }
 
                     contentItemIds.Add(citation.FilePath);
-                    var template = $"[doc{references.Count + 1}]";
+                    var templateIndex = references.Count + 1;
+                    var template = $"[doc{templateIndex}]";
 
                     references[template] = new AICompletionReference
                     {
                         Text = string.IsNullOrEmpty(citation.Title) ? template : citation.Title,
                         Link = _linkGenerator.GetContentItemPath(citation.FilePath, linkContext),
                         Title = citation.Title,
+                        Index = templateIndex,
                     };
                 }
 
