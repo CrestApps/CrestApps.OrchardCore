@@ -5,18 +5,17 @@
 <a asp-route-action="Edit" asp-route-controller="Prompts" asp-route-id="@Model.ItemId" class="text-body">
     <strong>@Model.DisplayText</strong>
 </a>
-@if (!string.IsNullOrEmpty(Model.Name))
+@if (!string.IsNullOrEmpty(Model.Prompt?.Name))
 {
-    <span class="text-muted ms-2">(@Model.Name)</span>
+    <span class="text-muted ms-2">(@Model.Prompt.Name)</span>
 }
-@if (!string.IsNullOrEmpty(Model.Description))
+@if (!string.IsNullOrEmpty(Model.Prompt?.Description))
 {
-    <p class="text-muted mb-0 mt-1">@Model.Description</p>
+    <p class="text-muted mb-0 mt-1">@Model.Prompt.Description</p>
 }
-<div class="text-muted small mt-1">
-    @T["{0} message(s)", Model.Messages?.Count ?? 0]
-    @if (Model.Arguments?.Count > 0)
-    {
-        <span> | @T["{0} argument(s)", Model.Arguments.Count]</span>
-    }
-</div>
+@if (Model.Prompt?.Arguments?.Count > 0)
+{
+    <div class="text-muted small mt-1">
+        @T["{0} argument(s)", Model.Prompt.Arguments.Count]
+    </div>
+}

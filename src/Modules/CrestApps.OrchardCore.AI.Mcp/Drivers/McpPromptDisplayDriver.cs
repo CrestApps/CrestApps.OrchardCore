@@ -1,7 +1,7 @@
-using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.Extensions.Localization;
+using ModelContextProtocol.Protocol;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
@@ -26,38 +26,25 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
         );
     }
 
-    public override IDisplayResult Edit(McpPrompt prompt, BuildEditorContext context)
+    public override IDisplayResult Edit(McpPrompt entry, BuildEditorContext context)
     {
         return Initialize<McpPromptFieldsViewModel>("McpPromptFields_Edit", model =>
         {
-            model.DisplayText = prompt.DisplayText;
-            model.Name = prompt.Name;
-            model.Description = prompt.Description;
-            model.Arguments = prompt.Arguments?.Select(a => new McpPromptArgumentViewModel
+            model.DisplayText = entry.DisplayText;
+            model.Name = entry.Prompt?.Name;
+            model.Title = entry.Prompt?.Title;
+            model.Description = entry.Prompt?.Description;
+            model.Arguments = entry.Prompt?.Arguments?.Select(a => new McpPromptArgumentViewModel
             {
                 Name = a.Name,
+                Title = a.Title,
                 Description = a.Description,
-                IsRequired = a.IsRequired,
+                Required = a.Required ?? false,
             }).ToList() ?? [];
-            model.Messages = prompt.Messages?.Select(m => new McpPromptMessageViewModel
-            {
-                Role = m.Role,
-                Content = m.Content,
-            }).ToList() ?? [];
-
-            // Ensure at least one message exists for new prompts
-            if (model.Messages.Count == 0)
-            {
-                model.Messages.Add(new McpPromptMessageViewModel
-                {
-                    Role = McpConstants.Roles.User,
-                    Content = string.Empty,
-                });
-            }
         }).Location("Content:1");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(McpPrompt prompt, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(McpPrompt entry, UpdateEditorContext context)
     {
         var model = new McpPromptFieldsViewModel();
 
@@ -65,7 +52,7 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
 
         if (string.IsNullOrWhiteSpace(model.DisplayText))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The Title is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The Display Text is required."]);
         }
 
         if (string.IsNullOrWhiteSpace(model.Name))
@@ -73,53 +60,25 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["The Name is required."]);
         }
 
-        // Filter out empty messages
-        var validMessages = model.Messages?
-            .Where(m => !string.IsNullOrWhiteSpace(m.Role) || !string.IsNullOrWhiteSpace(m.Content))
-            .ToList() ?? [];
-
-        if (validMessages.Count == 0)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Messages), S["At least one message is required."]);
-        }
-        else
-        {
-            for (int i = 0; i < validMessages.Count; i++)
-            {
-                var message = validMessages[i];
-                if (string.IsNullOrWhiteSpace(message.Role))
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, $"Messages[{i}].Role", S["Message {0} requires a role.", i + 1]);
-                }
-                if (string.IsNullOrWhiteSpace(message.Content))
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, $"Messages[{i}].Content", S["Message {0} requires content.", i + 1]);
-                }
-            }
-        }
-
         // Validate arguments if provided
         var validArguments = model.Arguments?
             .Where(a => !string.IsNullOrWhiteSpace(a.Name))
             .ToList() ?? [];
 
-        prompt.DisplayText = model.DisplayText;
-        prompt.Name = model.Name;
-        prompt.Description = model.Description;
+        entry.DisplayText = model.DisplayText;
+        entry.Prompt ??= new Prompt { Name = string.Empty };
+        entry.Prompt.Name = model.Name ?? string.Empty;
+        entry.Prompt.Title = model.Title;
+        entry.Prompt.Description = model.Description;
 
-        prompt.Arguments = validArguments.Select(a => new McpPromptArgument
+        entry.Prompt.Arguments = validArguments.Select(a => new PromptArgument
         {
-            Name = a.Name,
+            Name = a.Name ?? string.Empty,
+            Title = a.Title,
             Description = a.Description,
-            IsRequired = a.IsRequired,
+            Required = a.Required,
         }).ToList();
 
-        prompt.Messages = validMessages.Select(m => new McpPromptMessage
-        {
-            Role = m.Role,
-            Content = m.Content,
-        }).ToList();
-
-        return Edit(prompt, context);
+        return Edit(entry, context);
     }
 }

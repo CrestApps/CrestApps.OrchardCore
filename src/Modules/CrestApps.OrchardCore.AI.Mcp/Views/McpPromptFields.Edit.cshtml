@@ -1,15 +1,14 @@
-@using CrestApps.OrchardCore.AI.Mcp.Core
 @using CrestApps.OrchardCore.AI.Mcp.ViewModels
 @using OrchardCore
 
 @model McpPromptFieldsViewModel
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DisplayText" class="@Orchard.GetLabelClasses()">@T["Title"]</label>
+    <label asp-for="DisplayText" class="@Orchard.GetLabelClasses()">@T["Display Text"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="text" asp-for="DisplayText" class="form-control" />
         <span asp-validation-for="DisplayText" class="text-danger"></span>
-        <span class="hint">@T["The display title for this prompt."]</span>
+        <span class="hint">@T["The display text for this prompt in the admin UI."]</span>
     </div>
 </div>
 
@@ -19,6 +18,15 @@
         <input type="text" asp-for="Name" class="form-control" />
         <span asp-validation-for="Name" class="text-danger"></span>
         <span class="hint">@T["The unique name used to identify this prompt when called by MCP clients."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Title" class="@Orchard.GetLabelClasses()">@T["Title"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+        <span class="hint">@T["An optional human-readable title for this prompt."]</span>
     </div>
 </div>
 
@@ -33,7 +41,7 @@
 
 <fieldset class="mb-3">
     <legend>@T["Arguments"]</legend>
-    <div class="hint mb-2">@T["Define the arguments that can be passed to this prompt. Arguments can be referenced in messages using {argumentName} syntax."]</div>
+    <div class="hint mb-2">@T["Define the arguments that can be passed to this prompt."]</div>
 
     <div id="arguments-container">
         @for (int i = 0; i < Model.Arguments.Count; i++)
@@ -41,18 +49,22 @@
             <div class="card mb-2 argument-item" data-index="@i">
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label">@T["Name"]</label>
                             <input type="text" name="@Html.NameFor(m => m.Arguments[i].Name)" value="@Model.Arguments[i].Name" class="form-control" placeholder="@T["Argument name"]" />
                         </div>
-                        <div class="col-md-5">
+                        <div class="col-md-3">
+                            <label class="form-label">@T["Title"]</label>
+                            <input type="text" name="@Html.NameFor(m => m.Arguments[i].Title)" value="@Model.Arguments[i].Title" class="form-control" placeholder="@T["Argument title"]" />
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label">@T["Description"]</label>
                             <input type="text" name="@Html.NameFor(m => m.Arguments[i].Description)" value="@Model.Arguments[i].Description" class="form-control" placeholder="@T["Argument description"]" />
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-1">
                             <label class="form-label">@T["Required"]</label>
                             <div class="form-check">
-                                <input type="checkbox" name="@Html.NameFor(m => m.Arguments[i].IsRequired)" value="true" class="form-check-input" @(Model.Arguments[i].IsRequired ? "checked" : "") />
+                                <input type="checkbox" name="@Html.NameFor(m => m.Arguments[i].Required)" value="true" class="form-check-input" @(Model.Arguments[i].Required ? "checked" : "") />
                             </div>
                         </div>
                         <div class="col-md-1 d-flex align-items-end">
@@ -71,75 +83,13 @@
     </button>
 </fieldset>
 
-<fieldset class="mb-3">
-    <legend>@T["Messages"]</legend>
-    <div class="hint mb-2">@T["Define the messages that make up this prompt. Messages are sent in order to the AI model."]</div>
-
-    <div id="messages-container">
-        @for (int i = 0; i < Model.Messages.Count; i++)
-        {
-            <div class="card mb-2 message-item" data-index="@i">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <label class="form-label">@T["Role"]</label>
-                            <select name="@Html.NameFor(m => m.Messages[i].Role)" class="form-select">
-                                @{
-                                    var isUserRole = Model.Messages[i].Role == McpConstants.Roles.User;
-                                    var isAssistantRole = Model.Messages[i].Role == McpConstants.Roles.Assistant;
-                                }
-                                @if (isUserRole)
-                                {
-                                    <option value="@McpConstants.Roles.User" selected>@T["User"]</option>
-                                }
-                                else
-                                {
-                                    <option value="@McpConstants.Roles.User">@T["User"]</option>
-                                }
-                                @if (isAssistantRole)
-                                {
-                                    <option value="@McpConstants.Roles.Assistant" selected>@T["Assistant"]</option>
-                                }
-                                else
-                                {
-                                    <option value="@McpConstants.Roles.Assistant">@T["Assistant"]</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-8">
-                            <label class="form-label">@T["Content"]</label>
-                            <textarea name="@Html.NameFor(m => m.Messages[i].Content)" class="form-control" rows="3" placeholder="@T["Message content..."]">@Model.Messages[i].Content</textarea>
-                        </div>
-                        <div class="col-md-1 d-flex align-items-end">
-                            <button type="button" class="btn btn-danger btn-sm remove-message" title="@T["Remove message"]">
-                                <i class="fa-solid fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
-    </div>
-
-    <button type="button" class="btn btn-secondary btn-sm" id="add-message">
-        <i class="fa-solid fa-plus"></i> @T["Add Message"]
-    </button>
-</fieldset>
-
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
         const argumentsContainer = document.getElementById('arguments-container');
-        const messagesContainer = document.getElementById('messages-container');
         const addArgumentBtn = document.getElementById('add-argument');
-        const addMessageBtn = document.getElementById('add-message');
 
         function getNextArgumentIndex() {
             const items = argumentsContainer.querySelectorAll('.argument-item');
-            return items.length;
-        }
-
-        function getNextMessageIndex() {
-            const items = messagesContainer.querySelectorAll('.message-item');
             return items.length;
         }
 
@@ -149,51 +99,26 @@
                 <div class="card mb-2 argument-item" data-index="${index}">
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">@T["Name"]</label>
                                 <input type="text" name="${prefix}[${index}].Name" class="form-control" placeholder="@T["Argument name"]" />
                             </div>
-                            <div class="col-md-5">
+                            <div class="col-md-3">
+                                <label class="form-label">@T["Title"]</label>
+                                <input type="text" name="${prefix}[${index}].Title" class="form-control" placeholder="@T["Argument title"]" />
+                            </div>
+                            <div class="col-md-4">
                                 <label class="form-label">@T["Description"]</label>
                                 <input type="text" name="${prefix}[${index}].Description" class="form-control" placeholder="@T["Argument description"]" />
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-1">
                                 <label class="form-label">@T["Required"]</label>
                                 <div class="form-check">
-                                    <input type="checkbox" name="${prefix}[${index}].IsRequired" value="true" class="form-check-input" />
+                                    <input type="checkbox" name="${prefix}[${index}].Required" value="true" class="form-check-input" />
                                 </div>
                             </div>
                             <div class="col-md-1 d-flex align-items-end">
                                 <button type="button" class="btn btn-danger btn-sm remove-argument" title="@T["Remove argument"]">
-                                    <i class="fa-solid fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            return html;
-        }
-
-        function createMessageItem(index) {
-            const prefix = '@Html.NameFor(m => m.Messages)';
-            const html = `
-                <div class="card mb-2 message-item" data-index="${index}">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3">
-                                <label class="form-label">@T["Role"]</label>
-                                <select name="${prefix}[${index}].Role" class="form-select">
-                                    <option value="@McpConstants.Roles.User" selected>@T["User"]</option>
-                                    <option value="@McpConstants.Roles.Assistant">@T["Assistant"]</option>
-                                </select>
-                            </div>
-                            <div class="col-md-8">
-                                <label class="form-label">@T["Content"]</label>
-                                <textarea name="${prefix}[${index}].Content" class="form-control" rows="3" placeholder="@T["Message content..."]"></textarea>
-                            </div>
-                            <div class="col-md-1 d-flex align-items-end">
-                                <button type="button" class="btn btn-danger btn-sm remove-message" title="@T["Remove message"]">
                                     <i class="fa-solid fa-times"></i>
                                 </button>
                             </div>
@@ -209,23 +134,9 @@
             argumentsContainer.insertAdjacentHTML('beforeend', createArgumentItem(index));
         });
 
-        addMessageBtn.addEventListener('click', function () {
-            const index = getNextMessageIndex();
-            messagesContainer.insertAdjacentHTML('beforeend', createMessageItem(index));
-        });
-
         argumentsContainer.addEventListener('click', function (e) {
             if (e.target.classList.contains('remove-argument') || e.target.closest('.remove-argument')) {
                 const item = e.target.closest('.argument-item');
-                if (item) {
-                    item.remove();
-                }
-            }
-        });
-
-        messagesContainer.addEventListener('click', function (e) {
-            if (e.target.classList.contains('remove-message') || e.target.closest('.remove-message')) {
-                const item = e.target.closest('.message-item');
                 if (item) {
                     item.remove();
                 }

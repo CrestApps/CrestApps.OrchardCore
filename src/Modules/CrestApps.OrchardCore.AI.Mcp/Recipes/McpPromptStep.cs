@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
+using ModelContextProtocol.Protocol;
 using OrchardCore.Modules;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -39,26 +40,26 @@ internal sealed class McpPromptStep : NamedRecipeStepHandler
 
             var hasId = !string.IsNullOrEmpty(id);
 
-            McpPrompt prompt = hasId ? await _manager.FindByIdAsync(id) : null;
+            McpPrompt entry = hasId ? await _manager.FindByIdAsync(id) : null;
 
-            if (prompt is not null)
+            if (entry is not null)
             {
                 // Update existing prompt
-                PopulatePrompt(prompt, token);
-                await _manager.UpdateAsync(prompt);
+                PopulateEntry(entry, token);
+                await _manager.UpdateAsync(entry);
             }
             else
             {
                 // Create new prompt
-                prompt = await _manager.NewAsync(token);
-                PopulatePrompt(prompt, token);
+                entry = await _manager.NewAsync(token);
+                PopulateEntry(entry, token);
 
                 if (hasId && IdValidator.IsValid(id))
                 {
-                    prompt.ItemId = id;
+                    entry.ItemId = id;
                 }
 
-                var validationResult = await _manager.ValidateAsync(prompt);
+                var validationResult = await _manager.ValidateAsync(entry);
 
                 if (!validationResult.Succeeded)
                 {
@@ -70,64 +71,61 @@ internal sealed class McpPromptStep : NamedRecipeStepHandler
                     continue;
                 }
 
-                await _manager.CreateAsync(prompt);
+                await _manager.CreateAsync(entry);
             }
         }
     }
 
-    private static void PopulatePrompt(McpPrompt prompt, JsonObject token)
+    private static void PopulateEntry(McpPrompt entry, JsonObject token)
     {
         var displayText = token[nameof(McpPrompt.DisplayText)]?.GetValue<string>();
         if (!string.IsNullOrWhiteSpace(displayText))
         {
-            prompt.DisplayText = displayText;
+            entry.DisplayText = displayText;
         }
 
-        var name = token[nameof(McpPrompt.Name)]?.GetValue<string>();
-        if (!string.IsNullOrWhiteSpace(name))
+        // Populate the Prompt from token
+        var promptData = token[nameof(McpPrompt.Prompt)]?.AsObject();
+        if (promptData is not null)
         {
-            prompt.Name = name;
-        }
+            entry.Prompt ??= new Prompt { Name = string.Empty };
 
-        var description = token[nameof(McpPrompt.Description)]?.GetValue<string>();
-        if (!string.IsNullOrWhiteSpace(description))
-        {
-            prompt.Description = description;
-        }
+            var name = promptData[nameof(Prompt.Name)]?.GetValue<string>();
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                entry.Prompt.Name = name;
+            }
 
-        var argumentsArray = token[nameof(McpPrompt.Arguments)]?.AsArray();
-        if (argumentsArray is not null)
-        {
-            prompt.Arguments = argumentsArray
-                .Where(a => a is not null)
-                .Select(a =>
-                {
-                    var obj = a.AsObject();
-                    return new McpPromptArgument
+            var title = promptData[nameof(Prompt.Title)]?.GetValue<string>();
+            if (!string.IsNullOrWhiteSpace(title))
+            {
+                entry.Prompt.Title = title;
+            }
+
+            var description = promptData[nameof(Prompt.Description)]?.GetValue<string>();
+            if (!string.IsNullOrWhiteSpace(description))
+            {
+                entry.Prompt.Description = description;
+            }
+
+            var argumentsArray = promptData[nameof(Prompt.Arguments)]?.AsArray();
+            if (argumentsArray is not null)
+            {
+                entry.Prompt.Arguments = argumentsArray
+                    .Where(a => a is not null)
+                    .Select(a =>
                     {
-                        Name = obj[nameof(McpPromptArgument.Name)]?.GetValue<string>(),
-                        Description = obj[nameof(McpPromptArgument.Description)]?.GetValue<string>(),
-                        IsRequired = obj[nameof(McpPromptArgument.IsRequired)]?.GetValue<bool>() ?? false,
-                    };
-                })
-                .ToList();
-        }
-
-        var messagesArray = token[nameof(McpPrompt.Messages)]?.AsArray();
-        if (messagesArray is not null)
-        {
-            prompt.Messages = messagesArray
-                .Where(m => m is not null)
-                .Select(m =>
-                {
-                    var obj = m.AsObject();
-                    return new McpPromptMessage
-                    {
-                        Role = obj[nameof(McpPromptMessage.Role)]?.GetValue<string>(),
-                        Content = obj[nameof(McpPromptMessage.Content)]?.GetValue<string>(),
-                    };
-                })
-                .ToList();
+                        var obj = a.AsObject();
+                        return new PromptArgument
+                        {
+                            Name = obj[nameof(PromptArgument.Name)]?.GetValue<string>() ?? string.Empty,
+                            Title = obj[nameof(PromptArgument.Title)]?.GetValue<string>(),
+                            Description = obj[nameof(PromptArgument.Description)]?.GetValue<string>(),
+                            Required = obj[nameof(PromptArgument.Required)]?.GetValue<bool>(),
+                        };
+                    })
+                    .ToList();
+            }
         }
     }
 

@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Mcp.Deployments.Steps;
 using CrestApps.OrchardCore.Services;
+using ModelContextProtocol.Protocol;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Deployments.Sources;
@@ -17,7 +18,7 @@ internal sealed class McpPromptDeploymentSource : DeploymentSourceBase<McpPrompt
 
     protected override async Task ProcessAsync(McpPromptDeploymentStep step, DeploymentPlanResult result)
     {
-        var prompts = await _store.GetAllAsync();
+        var entries = await _store.GetAllAsync();
 
         var promptsData = new JsonArray();
 
@@ -25,45 +26,41 @@ internal sealed class McpPromptDeploymentSource : DeploymentSourceBase<McpPrompt
             ? []
             : step.PromptIds ?? [];
 
-        foreach (var prompt in prompts)
+        foreach (var entry in entries)
         {
-            if (promptIds.Length > 0 && !promptIds.Contains(prompt.ItemId))
+            if (promptIds.Length > 0 && !promptIds.Contains(entry.ItemId))
             {
                 continue;
             }
 
             var argumentsArray = new JsonArray();
-            foreach (var arg in prompt.Arguments ?? [])
+            foreach (var arg in entry.Prompt?.Arguments ?? [])
             {
                 argumentsArray.Add(new JsonObject
                 {
-                    { nameof(McpPromptArgument.Name), arg.Name },
-                    { nameof(McpPromptArgument.Description), arg.Description },
-                    { nameof(McpPromptArgument.IsRequired), arg.IsRequired },
+                    { nameof(PromptArgument.Name), arg.Name },
+                    { nameof(PromptArgument.Title), arg.Title },
+                    { nameof(PromptArgument.Description), arg.Description },
+                    { nameof(PromptArgument.Required), arg.Required },
                 });
             }
 
-            var messagesArray = new JsonArray();
-            foreach (var msg in prompt.Messages ?? [])
+            var promptData = new JsonObject
             {
-                messagesArray.Add(new JsonObject
-                {
-                    { nameof(McpPromptMessage.Role), msg.Role },
-                    { nameof(McpPromptMessage.Content), msg.Content },
-                });
-            }
+                { nameof(Prompt.Name), entry.Prompt?.Name },
+                { nameof(Prompt.Title), entry.Prompt?.Title },
+                { nameof(Prompt.Description), entry.Prompt?.Description },
+                { nameof(Prompt.Arguments), argumentsArray },
+            };
 
             var deploymentInfo = new JsonObject()
             {
-                { nameof(McpPrompt.ItemId), prompt.ItemId },
-                { nameof(McpPrompt.DisplayText), prompt.DisplayText },
-                { nameof(McpPrompt.Name), prompt.Name },
-                { nameof(McpPrompt.Description), prompt.Description },
-                { nameof(McpPrompt.Author), prompt.Author },
-                { nameof(McpPrompt.CreatedUtc), prompt.CreatedUtc },
-                { nameof(McpPrompt.OwnerId), prompt.OwnerId },
-                { nameof(McpPrompt.Arguments), argumentsArray },
-                { nameof(McpPrompt.Messages), messagesArray },
+                { nameof(McpPrompt.ItemId), entry.ItemId },
+                { nameof(McpPrompt.DisplayText), entry.DisplayText },
+                { nameof(McpPrompt.Author), entry.Author },
+                { nameof(McpPrompt.CreatedUtc), entry.CreatedUtc },
+                { nameof(McpPrompt.OwnerId), entry.OwnerId },
+                { nameof(McpPrompt.Prompt), promptData },
             };
 
             promptsData.Add(deploymentInfo);

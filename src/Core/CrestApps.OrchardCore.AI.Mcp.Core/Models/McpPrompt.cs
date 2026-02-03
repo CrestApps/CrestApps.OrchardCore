@@ -1,27 +1,18 @@
 using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Services;
+using ModelContextProtocol.Protocol;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Core.Models;
 
 /// <summary>
-/// Represents an MCP prompt that can be exposed via the MCP server.
+/// Represents an MCP prompt entry that wraps the SDK's Prompt class and adds catalog metadata.
 /// </summary>
 public sealed class McpPrompt : CatalogItem, IDisplayTextAwareModel, ICloneable<McpPrompt>
 {
     /// <summary>
-    /// Gets or sets the display text (title) for the prompt.
+    /// Gets or sets the display text (title) for the prompt in the admin UI.
     /// </summary>
     public string DisplayText { get; set; }
-
-    /// <summary>
-    /// Gets or sets the unique name for the prompt used by MCP clients.
-    /// </summary>
-    public string Name { get; set; }
-
-    /// <summary>
-    /// Gets or sets the description of what the prompt does.
-    /// </summary>
-    public string Description { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC date and time when the prompt was created.
@@ -39,32 +30,42 @@ public sealed class McpPrompt : CatalogItem, IDisplayTextAwareModel, ICloneable<
     public string OwnerId { get; set; }
 
     /// <summary>
-    /// Gets or sets the list of arguments that can be passed to this prompt.
+    /// Gets or sets the MCP SDK Prompt instance containing the prompt definition.
     /// </summary>
-    public List<McpPromptArgument> Arguments { get; set; } = [];
+    public Prompt Prompt { get; set; }
 
     /// <summary>
-    /// Gets or sets the list of messages that make up this prompt.
-    /// </summary>
-    public List<McpPromptMessage> Messages { get; set; } = [];
-
-    /// <summary>
-    /// Creates a deep copy of this prompt.
+    /// Creates a deep copy of this prompt entry.
     /// </summary>
     public McpPrompt Clone()
     {
-        return new McpPrompt()
+        var clone = new McpPrompt()
         {
             ItemId = ItemId,
             DisplayText = DisplayText,
-            Name = Name,
-            Description = Description,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,
             Properties = Properties,
-            Arguments = Arguments?.Select(a => a.Clone()).ToList() ?? [],
-            Messages = Messages?.Select(m => m.Clone()).ToList() ?? [],
         };
+
+        if (Prompt != null)
+        {
+            clone.Prompt = new Prompt
+            {
+                Name = Prompt.Name ?? string.Empty,
+                Title = Prompt.Title,
+                Description = Prompt.Description,
+                Arguments = Prompt.Arguments?.Select(a => new PromptArgument
+                {
+                    Name = a.Name ?? string.Empty,
+                    Title = a.Title,
+                    Description = a.Description,
+                    Required = a.Required,
+                }).ToList(),
+            };
+        }
+
+        return clone;
     }
 }

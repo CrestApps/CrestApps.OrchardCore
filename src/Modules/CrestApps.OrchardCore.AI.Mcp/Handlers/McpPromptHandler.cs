@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
+using ModelContextProtocol.Protocol;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
@@ -40,39 +41,19 @@ internal sealed class McpPromptHandler : CatalogEntryHandlerBase<McpPrompt>
             context.Result.Fail(new ValidationResult(S["Display text is required."], [nameof(McpPrompt.DisplayText)]));
         }
 
-        if (string.IsNullOrEmpty(context.Model.Name))
+        if (context.Model.Prompt == null || string.IsNullOrEmpty(context.Model.Prompt.Name))
         {
-            context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(McpPrompt.Name)]));
+            context.Result.Fail(new ValidationResult(S["Name is required."], ["Prompt.Name"]));
         }
 
-        if (context.Model.Messages == null || context.Model.Messages.Count == 0)
+        if (context.Model.Prompt?.Arguments != null)
         {
-            context.Result.Fail(new ValidationResult(S["At least one message is required."], [nameof(McpPrompt.Messages)]));
-        }
-        else
-        {
-            for (int i = 0; i < context.Model.Messages.Count; i++)
+            for (int i = 0; i < context.Model.Prompt.Arguments.Count; i++)
             {
-                var message = context.Model.Messages[i];
-                if (string.IsNullOrWhiteSpace(message.Role))
-                {
-                    context.Result.Fail(new ValidationResult(S["Message {0} requires a role.", i + 1], [$"Messages[{i}].Role"]));
-                }
-                if (string.IsNullOrWhiteSpace(message.Content))
-                {
-                    context.Result.Fail(new ValidationResult(S["Message {0} requires content.", i + 1], [$"Messages[{i}].Content"]));
-                }
-            }
-        }
-
-        if (context.Model.Arguments != null)
-        {
-            for (int i = 0; i < context.Model.Arguments.Count; i++)
-            {
-                var argument = context.Model.Arguments[i];
+                var argument = context.Model.Prompt.Arguments[i];
                 if (string.IsNullOrWhiteSpace(argument.Name))
                 {
-                    context.Result.Fail(new ValidationResult(S["Argument {0} requires a name.", i + 1], [$"Arguments[{i}].Name"]));
+                    context.Result.Fail(new ValidationResult(S["Argument {0} requires a name.", i + 1], [$"Prompt.Arguments[{i}].Name"]));
                 }
             }
         }
@@ -80,18 +61,18 @@ internal sealed class McpPromptHandler : CatalogEntryHandlerBase<McpPrompt>
         return Task.CompletedTask;
     }
 
-    private Task PopulateAsync(McpPrompt prompt, JsonNode data, bool isNew)
+    private Task PopulateAsync(McpPrompt entry, JsonNode data, bool isNew)
     {
         if (isNew)
         {
-            prompt.CreatedUtc = _clock.UtcNow;
+            entry.CreatedUtc = _clock.UtcNow;
 
             var user = _httpContextAccessor.HttpContext?.User;
 
             if (user is not null)
             {
-                prompt.Author = user.Identity.Name;
-                prompt.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+                entry.Author = user.Identity.Name;
+                entry.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             }
         }
 
@@ -99,21 +80,32 @@ internal sealed class McpPromptHandler : CatalogEntryHandlerBase<McpPrompt>
 
         if (!string.IsNullOrWhiteSpace(displayText))
         {
-            prompt.DisplayText = displayText;
+            entry.DisplayText = displayText;
         }
 
-        var name = data?[nameof(McpPrompt.Name)]?.ToString();
-
-        if (!string.IsNullOrWhiteSpace(name))
+        // Populate the Prompt from data if provided
+        var promptData = data?[nameof(McpPrompt.Prompt)];
+        if (promptData != null)
         {
-            prompt.Name = name;
-        }
+            entry.Prompt ??= new Prompt { Name = string.Empty };
 
-        var description = data?[nameof(McpPrompt.Description)]?.ToString();
+            var name = promptData[nameof(Prompt.Name)]?.ToString();
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                entry.Prompt.Name = name;
+            }
 
-        if (!string.IsNullOrWhiteSpace(description))
-        {
-            prompt.Description = description;
+            var title = promptData[nameof(Prompt.Title)]?.ToString();
+            if (!string.IsNullOrWhiteSpace(title))
+            {
+                entry.Prompt.Title = title;
+            }
+
+            var description = promptData[nameof(Prompt.Description)]?.ToString();
+            if (!string.IsNullOrWhiteSpace(description))
+            {
+                entry.Prompt.Description = description;
+            }
         }
 
         return Task.CompletedTask;

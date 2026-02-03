@@ -27,7 +27,6 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
-using ProtocolRole = ModelContextProtocol.Protocol.Role;
 
 namespace CrestApps.OrchardCore.AI.Mcp;
 
@@ -212,21 +211,14 @@ public sealed class McpServerStartup : StartupBase
         .WithListPromptsHandler(async (request, cancellationToken) =>
         {
             var manager = request.Services.GetRequiredService<ICatalogManager<McpPrompt>>();
-            var prompts = await manager.GetAllAsync();
+            var entries = await manager.GetAllAsync();
 
             var result = new ListPromptsResult
             {
-                Prompts = prompts.Select(p => new Prompt
-                {
-                    Name = p.Name,
-                    Description = p.Description,
-                    Arguments = p.Arguments?.Select(a => new PromptArgument
-                    {
-                        Name = a.Name,
-                        Description = a.Description,
-                        Required = a.IsRequired,
-                    }).ToList(),
-                }).ToList()
+                Prompts = entries
+                    .Where(e => e.Prompt != null)
+                    .Select(e => e.Prompt)
+                    .ToList()
             };
 
             return result;
@@ -234,40 +226,18 @@ public sealed class McpServerStartup : StartupBase
         .WithGetPromptHandler(async (request, cancellationToken) =>
         {
             var manager = request.Services.GetRequiredService<ICatalogManager<McpPrompt>>();
-            var prompts = await manager.GetAllAsync();
-            var prompt = prompts.FirstOrDefault(p => p.Name == request.Params.Name);
+            var entries = await manager.GetAllAsync();
+            var entry = entries.FirstOrDefault(e => e.Prompt?.Name == request.Params.Name);
 
-            if (prompt == null)
+            if (entry?.Prompt == null)
             {
                 throw new McpException($"Prompt '{request.Params.Name}' not found.");
             }
 
-            var messages = new List<PromptMessage>();
-
-            foreach (var msg in prompt.Messages ?? [])
-            {
-                var content = msg.Content ?? string.Empty;
-
-                // Substitute arguments in the content
-                if (request.Params.Arguments is not null)
-                {
-                    foreach (var arg in request.Params.Arguments)
-                    {
-                        content = content.Replace($"{{{arg.Key}}}", arg.Value.ToString(), StringComparison.OrdinalIgnoreCase);
-                    }
-                }
-
-                messages.Add(new PromptMessage
-                {
-                    Role = msg.Role == McpConstants.Roles.Assistant ? ProtocolRole.Assistant : ProtocolRole.User,
-                    Content = new TextContentBlock { Text = content },
-                });
-            }
-
             return new GetPromptResult
             {
-                Description = prompt.Description,
-                Messages = messages,
+                Description = entry.Prompt.Description,
+                Messages = [],
             };
         });
 

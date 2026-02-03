@@ -17,11 +17,4 @@ public static class McpConstants
 
         public const string Sse = "sse";
     }
-
-    public static class Roles
-    {
-        public const string User = "user";
-
-        public const string Assistant = "assistant";
-    }
 }
