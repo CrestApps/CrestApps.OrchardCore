@@ -1,17 +1,14 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using ModelContextProtocol.Protocol;
-using OrchardCore.Modules;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Recipes;
 
-[Feature(McpConstants.Feature.Server)]
 internal sealed class McpPromptStep : NamedRecipeStepHandler
 {
     public const string StepKey = "McpPrompt";

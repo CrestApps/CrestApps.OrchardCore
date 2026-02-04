@@ -36,19 +36,19 @@ internal sealed class McpPromptHandler : CatalogEntryHandlerBase<McpPrompt>
 
     public override Task ValidatingAsync(ValidatingContext<McpPrompt> context)
     {
-        if (string.IsNullOrEmpty(context.Model.DisplayText))
-        {
-            context.Result.Fail(new ValidationResult(S["Display text is required."], [nameof(McpPrompt.DisplayText)]));
-        }
-
-        if (context.Model.Prompt == null || string.IsNullOrEmpty(context.Model.Prompt.Name))
+        if (string.IsNullOrEmpty(context.Model.Prompt?.Name))
         {
             context.Result.Fail(new ValidationResult(S["Name is required."], ["Prompt.Name"]));
         }
 
+        if (string.IsNullOrEmpty(context.Model.Prompt?.Title))
+        {
+            context.Result.Fail(new ValidationResult(S["Title is required."], ["Prompt.Title"]));
+        }
+
         if (context.Model.Prompt?.Arguments != null)
         {
-            for (int i = 0; i < context.Model.Prompt.Arguments.Count; i++)
+            for (var i = 0; i < context.Model.Prompt.Arguments.Count; i++)
             {
                 var argument = context.Model.Prompt.Arguments[i];
                 if (string.IsNullOrWhiteSpace(argument.Name))

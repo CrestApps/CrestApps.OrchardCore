@@ -1,11 +1,9 @@
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Modules;
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Services;
 
-[Feature(McpConstants.Feature.Server)]
 internal sealed class McpPromptsAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
