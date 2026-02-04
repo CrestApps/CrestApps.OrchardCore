@@ -1,8 +1,8 @@
 @using CrestApps.OrchardCore.AI.Mcp.Core.Models
 
-@model McpPrompt
+@model ShapeViewModel<McpPrompt>
 
 <div>
-    <a asp-route-action="Edit" asp-route-controller="Prompts" asp-route-id="@Model.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
-    <a asp-route-action="Delete" asp-route-controller="Prompts" asp-route-id="@Model.ItemId" class="btn btn-danger btn-sm" data-title="@T["Delete Prompt"]" data-message="@T["Are you sure you want to delete this prompt?"]" data-ok-text="@T["Delete"]" data-cancel-text="@T["Cancel"]" itemprop="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+    <a asp-route-action="Edit" asp-route-controller="Prompts" asp-route-id="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+    <a asp-route-action="Delete" asp-route-controller="Prompts" asp-route-id="@Model.Value.ItemId" class="btn btn-danger btn-sm" data-title="@T["Delete Prompt"]" data-message="@T["Are you sure you want to delete this prompt?"]" data-ok-text="@T["Delete"]" data-cancel-text="@T["Cancel"]" itemprop="RemoveUrl UnsafeUrl">@T["Delete"]</a>
 </div>

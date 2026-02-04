@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.1.11312.151 d18.0
+VisualStudioVersion = 18.1.11312.151
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}"
 EndProject
@@ -116,6 +116,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions.Core", "src\Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj", "{7C269FA8-9271-4B17-B57D-13CF78C39492}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch", "src\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch.csproj", "{0A065220-6718-4E8E-98FA-45D885BFD20C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Samples.McpClient", "src\Startup\CrestApps.OrchardCore.Samples.McpClient\CrestApps.OrchardCore.Samples.McpClient.csproj", "{BCBB9115-AB44-685E-CE04-2DF9D3611DE3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -667,6 +669,18 @@ Global
 		{0A065220-6718-4E8E-98FA-45D885BFD20C}.Release|x64.Build.0 = Release|Any CPU
 		{0A065220-6718-4E8E-98FA-45D885BFD20C}.Release|x86.ActiveCfg = Release|Any CPU
 		{0A065220-6718-4E8E-98FA-45D885BFD20C}.Release|x86.Build.0 = Release|Any CPU
+		{BCBB9115-AB44-685E-CE04-2DF9D3611DE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCBB9115-AB44-685E-CE04-2DF9D3611DE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCBB9115-AB44-685E-CE04-2DF9D3611DE3}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BCBB9115-AB44-685E-CE04-2DF9D3611DE3}.Debug|x64.Build.0 = Debug|Any CPU
+		{BCBB9115-AB44-685E-CE04-2DF9D3611DE3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BCBB9115-AB44-685E-CE04-2DF9D3611DE3}.Debug|x86.Build.0 = Debug|Any CPU
+		{BCBB9115-AB44-685E-CE04-2DF9D3611DE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCBB9115-AB44-685E-CE04-2DF9D3611DE3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCBB9115-AB44-685E-CE04-2DF9D3611DE3}.Release|x64.ActiveCfg = Release|Any CPU
+		{BCBB9115-AB44-685E-CE04-2DF9D3611DE3}.Release|x64.Build.0 = Release|Any CPU
+		{BCBB9115-AB44-685E-CE04-2DF9D3611DE3}.Release|x86.ActiveCfg = Release|Any CPU
+		{BCBB9115-AB44-685E-CE04-2DF9D3611DE3}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -717,6 +731,7 @@ Global
 		{1DF22DE5-589B-91D7-D04A-AD3C2E128003} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
 		{7C269FA8-9271-4B17-B57D-13CF78C39492} = {EC2B9CAB-56C8-4421-ACA2-43C09B71DAB5}
 		{0A065220-6718-4E8E-98FA-45D885BFD20C} = {C8D22F16-3D2B-4053-B0D5-A1F5EA5A91C2}
+		{BCBB9115-AB44-685E-CE04-2DF9D3611DE3} = {447572DA-8B6F-49E6-84C9-28FFF3B71CF5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0E9F9B00-7078-4EA8-87A9-0B2E74375F1E}

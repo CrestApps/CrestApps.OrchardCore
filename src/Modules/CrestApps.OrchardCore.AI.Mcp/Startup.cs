@@ -258,7 +258,7 @@ public sealed class McpServerStartup : StartupBase
     {
         var mcpServerOptions = serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
 
-        var endpoint = routes.MapMcp();
+        var endpoint = routes.MapMcp("mcp");
 
         // Only require authorization if not using anonymous access.
         if (mcpServerOptions.AuthenticationType != McpServerAuthenticationType.None)

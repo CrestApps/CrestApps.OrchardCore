@@ -1,21 +1,21 @@
 @using CrestApps.OrchardCore.AI.Mcp.Core.Models
 
-@model McpPrompt
+@model ShapeViewModel<McpPrompt>
 
-<a asp-route-action="Edit" asp-route-controller="Prompts" asp-route-id="@Model.ItemId" class="text-body">
-    <strong>@Model.DisplayText</strong>
+<a asp-route-action="Edit" asp-route-controller="Prompts" asp-route-id="@Model.Value.ItemId" class="text-body">
+    <strong>@Model.Value.DisplayText</strong>
 </a>
-@if (!string.IsNullOrEmpty(Model.Prompt?.Name))
+@if (!string.IsNullOrEmpty(Model.Value.Prompt?.Name))
 {
-    <span class="text-muted ms-2">(@Model.Prompt.Name)</span>
+    <span class="text-muted ms-2">(@Model.Value.Prompt.Name)</span>
 }
-@if (!string.IsNullOrEmpty(Model.Prompt?.Description))
+@if (!string.IsNullOrEmpty(Model.Value.Prompt?.Description))
 {
-    <p class="text-muted mb-0 mt-1">@Model.Prompt.Description</p>
+    <p class="text-muted mb-0 mt-1">@Model.Value.Prompt.Description</p>
 }
-@if (Model.Prompt?.Arguments?.Count > 0)
+@if (Model.Value.Prompt?.Arguments?.Count > 0)
 {
     <div class="text-muted small mt-1">
-        @T["{0} argument(s)", Model.Prompt.Arguments.Count]
+        @T["{0} argument(s)", Model.Value.Prompt.Arguments.Count]
     </div>
 }

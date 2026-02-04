@@ -146,6 +146,10 @@ Prefer configuration through code? Here's how to define the same connection usin
 
 The **Model Context Protocol (MCP) Server Feature** allows your Orchard Core application to expose its AI tools and capabilities to external MCP clients. This feature supports the SSE transport type, enabling real-time communication. For more information, refer to the [MCP Server Documentation](./README-server.md).
 
+#### Prompt Support
+
+The MCP server also exposes MCP prompts registered in Orchard Core, so clients can list and invoke prompts via `ListPrompts` and `GetPrompt`.
+
 ---
 
 ### Admin Chat UI with Time MCP Server Integration (MCP Demonstration)
