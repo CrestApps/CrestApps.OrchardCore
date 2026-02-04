@@ -78,12 +78,6 @@ internal sealed class McpPromptStep : NamedRecipeStepHandler
 
     private static void PopulateEntry(McpPrompt entry, JsonObject token)
     {
-        var displayText = token[nameof(McpPrompt.DisplayText)]?.GetValue<string>();
-        if (!string.IsNullOrWhiteSpace(displayText))
-        {
-            entry.DisplayText = displayText;
-        }
-
         // Populate the Prompt from token
         var promptData = token[nameof(McpPrompt.Prompt)]?.AsObject();
         if (promptData is not null)

@@ -130,9 +130,9 @@ public sealed class McpServerStartup : StartupBase
                 McpApiKeyAuthenticationDefaults.AuthenticationScheme, options => { });
 
         // Register MCP Prompt services.
-        services.AddNavigationProvider<McpPromptsAdminMenu>();
-        services.AddScoped<ICatalogEntryHandler<McpPrompt>, McpPromptHandler>();
-        services.AddDisplayDriver<McpPrompt, McpPromptDisplayDriver>();
+        services.AddNavigationProvider<McpPromptsAdminMenu>()
+            .AddScoped<ICatalogEntryHandler<McpPrompt>, McpPromptHandler>()
+            .AddDisplayDriver<McpPrompt, McpPromptDisplayDriver>();
 
         services.AddMcpServer(options =>
         {
@@ -229,7 +229,7 @@ public sealed class McpServerStartup : StartupBase
             var entries = await manager.GetAllAsync();
             var entry = entries.FirstOrDefault(e => e.Prompt?.Name == request.Params.Name);
 
-            if (entry?.Prompt == null)
+            if (entry?.Prompt is null)
             {
                 throw new McpException($"Prompt '{request.Params.Name}' not found.");
             }
@@ -258,7 +258,7 @@ public sealed class McpServerStartup : StartupBase
     {
         var mcpServerOptions = serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
 
-        var endpoint = routes.MapMcp("mcp");
+        var endpoint = routes.MapMcp();
 
         // Only require authorization if not using anonymous access.
         if (mcpServerOptions.AuthenticationType != McpServerAuthenticationType.None)

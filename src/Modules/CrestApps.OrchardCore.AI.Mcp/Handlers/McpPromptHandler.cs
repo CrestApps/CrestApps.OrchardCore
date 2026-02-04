@@ -76,13 +76,6 @@ internal sealed class McpPromptHandler : CatalogEntryHandlerBase<McpPrompt>
             }
         }
 
-        var displayText = data?[nameof(McpPrompt.DisplayText)]?.ToString();
-
-        if (!string.IsNullOrWhiteSpace(displayText))
-        {
-            entry.DisplayText = displayText;
-        }
-
         // Populate the Prompt from data if provided
         var promptData = data?[nameof(McpPrompt.Prompt)];
         if (promptData != null)

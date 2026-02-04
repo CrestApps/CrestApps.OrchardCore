@@ -2,8 +2,6 @@ namespace CrestApps.OrchardCore.AI.Mcp.ViewModels;
 
 public class McpPromptFieldsViewModel
 {
-    public string DisplayText { get; set; }
-
     public string Name { get; set; }
 
     public string Title { get; set; }

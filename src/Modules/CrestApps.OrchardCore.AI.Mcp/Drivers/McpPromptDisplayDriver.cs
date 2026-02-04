@@ -30,7 +30,6 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
     {
         return Initialize<McpPromptFieldsViewModel>("McpPromptFields_Edit", model =>
         {
-            model.DisplayText = entry.DisplayText;
             model.Name = entry.Prompt?.Name;
             model.Title = entry.Prompt?.Title;
             model.Description = entry.Prompt?.Description;
@@ -50,9 +49,9 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.DisplayText))
+        if (string.IsNullOrWhiteSpace(model.Title))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The Display Text is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Title), S["The Title is required."]);
         }
 
         if (string.IsNullOrWhiteSpace(model.Name))
@@ -65,7 +64,6 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
             .Where(a => !string.IsNullOrWhiteSpace(a.Name))
             .ToList() ?? [];
 
-        entry.DisplayText = model.DisplayText;
         entry.Prompt ??= new Prompt { Name = string.Empty };
         entry.Prompt.Name = model.Name ?? string.Empty;
         entry.Prompt.Title = model.Title;
