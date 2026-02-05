@@ -19,4 +19,20 @@ public class SftpConnectionViewModel
     public string Passphrase { get; set; }
 
     public bool HasPassphrase { get; set; }
+
+    public string ProxyType { get; set; }
+
+    public string ProxyHost { get; set; }
+
+    public int? ProxyPort { get; set; }
+
+    public string ProxyUsername { get; set; }
+
+    public string ProxyPassword { get; set; }
+
+    public bool HasProxyPassword { get; set; }
+
+    public int? ConnectionTimeout { get; set; }
+
+    public int? KeepAliveInterval { get; set; }
 }

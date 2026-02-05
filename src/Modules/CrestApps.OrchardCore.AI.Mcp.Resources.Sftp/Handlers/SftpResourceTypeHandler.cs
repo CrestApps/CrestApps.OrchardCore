@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Handlers;
 /// Handles sftp:// URI resources by reading content from SFTP servers.
 /// Connection details are stored in the resource's SftpConnectionMetadata.
 /// </summary>
-public sealed class SftpResourceTypeHandler : IMcpResourceTypeHandler
+public sealed class SftpResourceTypeHandler : McpResourceTypeHandlerBase
 {
     private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
     private readonly IDataProtectionProvider _dataProtectionProvider;
@@ -23,33 +23,24 @@ public sealed class SftpResourceTypeHandler : IMcpResourceTypeHandler
     public SftpResourceTypeHandler(
         IDataProtectionProvider dataProtectionProvider,
         ILogger<SftpResourceTypeHandler> logger)
+        : base(SftpResourceConstants.Type)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
     }
 
-    public string Type => SftpResourceConstants.Type;
-
-    public async Task<ReadResourceResult> ReadAsync(McpResource resource, CancellationToken cancellationToken = default)
+    protected override async Task<ReadResourceResult> GetResultAsync(McpResource resource, McpResourceUri resourceUri, CancellationToken cancellationToken)
     {
-        var uri = resource.Resource?.Uri;
-
-        if (string.IsNullOrEmpty(uri))
-        {
-            throw new InvalidOperationException("Resource URI is required.");
-        }
-
-        // Parse the sftp:// URI
-        if (!Uri.TryCreate(uri, UriKind.Absolute, out var sftpUri) || sftpUri.Scheme != "sftp")
-        {
-            throw new InvalidOperationException($"Invalid SFTP URI: {uri}. Expected format: sftp://host/path");
-        }
-
         // Get connection details from metadata
         var metadata = resource.As<SftpConnectionMetadata>();
 
-        var host = metadata?.Host ?? sftpUri.Host;
-        var port = metadata?.Port ?? (sftpUri.IsDefaultPort ? 22 : sftpUri.Port);
+        var host = metadata?.Host;
+        if (string.IsNullOrEmpty(host))
+        {
+            return CreateErrorResult(resource.Resource.Uri, "SFTP host is required in the connection metadata.");
+        }
+
+        var port = metadata?.Port ?? 22;
         var username = metadata?.Username;
 
         // Unprotect credentials if present
@@ -94,7 +85,8 @@ public sealed class SftpResourceTypeHandler : IMcpResourceTypeHandler
             }
         }
 
-        var remotePath = sftpUri.AbsolutePath;
+        // The path portion of the resource URI is the remote file path.
+        var remotePath = "/" + resourceUri.Path;
 
         _logger.LogDebug("Reading SFTP resource from: {Host}:{Port}{Path}", host, port, remotePath);
 
@@ -117,12 +109,62 @@ public sealed class SftpResourceTypeHandler : IMcpResourceTypeHandler
 
         if (authMethods.Count == 0)
         {
-            throw new InvalidOperationException("No authentication method provided. Please provide a password or private key.");
+            return CreateErrorResult(resource.Resource.Uri, "No authentication method provided. Please provide a password or private key.");
         }
 
-        var connectionInfo = new ConnectionInfo(host, port, username, authMethods.ToArray());
+        // Build connection info with optional proxy support.
+        ConnectionInfo connectionInfo;
+
+        if (Enum.TryParse<ProxyTypes>(metadata?.ProxyType, ignoreCase: true, out var proxyType) &&
+            proxyType != ProxyTypes.None &&
+            !string.IsNullOrEmpty(metadata?.ProxyHost))
+        {
+            // Unprotect proxy password if present.
+            string proxyPassword = null;
+            if (!string.IsNullOrEmpty(metadata?.ProxyPassword))
+            {
+                try
+                {
+                    proxyPassword = protector.Unprotect(metadata.ProxyPassword);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to unprotect SFTP proxy password for resource {ResourceId}", resource.ItemId);
+                }
+            }
+
+            var proxyPort = metadata?.ProxyPort ?? 1080;
+
+            connectionInfo = new ConnectionInfo(
+                host, port, username,
+                proxyType, metadata.ProxyHost, proxyPort,
+                metadata?.ProxyUsername, proxyPassword,
+                authMethods.ToArray());
+        }
+        else
+        {
+            connectionInfo = new ConnectionInfo(host, port, username, authMethods.ToArray());
+        }
+
+        // Apply timeout settings.
+        if (metadata?.ConnectionTimeout is > 0)
+        {
+            connectionInfo.Timeout = TimeSpan.FromSeconds(metadata.ConnectionTimeout.Value);
+        }
+
+        // Apply keep-alive interval.
+        if (metadata?.KeepAliveInterval is > 0)
+        {
+            connectionInfo.ChannelCloseTimeout = TimeSpan.FromSeconds(metadata.KeepAliveInterval.Value);
+        }
 
         using var client = new SftpClient(connectionInfo);
+
+        // Apply keep-alive on the client.
+        if (metadata?.KeepAliveInterval is > 0)
+        {
+            client.KeepAliveInterval = TimeSpan.FromSeconds(metadata.KeepAliveInterval.Value);
+        }
 
         await Task.Run(() => client.Connect(), cancellationToken);
 
@@ -152,7 +194,7 @@ public sealed class SftpResourceTypeHandler : IMcpResourceTypeHandler
                 [
                     new TextResourceContents
                     {
-                        Uri = uri,
+                        Uri = resource.Resource.Uri,
                         MimeType = mimeType,
                         Text = content,
                     }

@@ -1,0 +1,159 @@
+@page
+@model CrestApps.OrchardCore.Samples.McpClient.Pages.ResourcesModel
+
+@{
+    IReadOnlyList<string> GetParameters(string uri) => CrestApps.OrchardCore.Samples.McpClient.Pages.ResourcesModel.ExtractParameters(uri);
+    var index = 0;
+}
+
+<h1>Resources</h1>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="d-flex align-items-center gap-3 mb-3">
+    <p class="text-muted mb-0">Resources registered on the MCP server. Click "Read" to retrieve the content.</p>
+    <form method="post" asp-page-handler="Refresh" class="d-inline">
+        <button class="btn btn-secondary btn-sm" type="submit">Refresh</button>
+    </form>
+</div>
+
+@if (Model.Resources?.Count > 0)
+{
+    <div class="list-group">
+        @foreach (var resource in Model.Resources)
+        {
+            var parameters = GetParameters(resource.Uri);
+            var hasParams = parameters.Count > 0;
+            var collapseId = $"params-{index}";
+            index++;
+
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="me-3" style="min-width:0">
+                        <div class="fw-semibold">@(resource.Title ?? resource.Name)</div>
+                        <code class="small text-break">@resource.Uri</code>
+                        @if (!string.IsNullOrWhiteSpace(resource.Description))
+                        {
+                            <div><small class="text-muted">@resource.Description</small></div>
+                        }
+                    </div>
+                    <div class="flex-shrink-0">
+                        @if (hasParams)
+                        {
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#@collapseId"
+                                    aria-expanded="false"
+                                    aria-controls="@collapseId"
+                                    title="Provide parameter values">
+                                &#9662;
+                            </button>
+                        }
+                        else
+                        {
+                            <form method="post" asp-page-handler="ReadResource">
+                                <input type="hidden" name="resourceUri" value="@resource.Uri" />
+                                <button class="btn btn-primary btn-sm" type="submit">Read</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+
+                @if (hasParams)
+                {
+                    <div class="collapse mt-2" id="@collapseId">
+                        <form method="post" asp-page-handler="ReadResource" data-parameterized>
+                            <input type="hidden" name="resourceUri" data-template="@resource.Uri" value="@resource.Uri" />
+                            <div class="row g-2 align-items-end">
+                                @foreach (var param in parameters)
+                                {
+                                    <div class="col-auto">
+                                        <label class="form-label small mb-0">@param</label>
+                                        <input type="text" data-param="@param" class="form-control form-control-sm" placeholder="@param" required />
+                                    </div>
+                                }
+                                <div class="col-auto">
+                                    <button class="btn btn-primary btn-sm" type="submit">Read</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+else
+{
+    <p class="text-muted">No resources were returned by the MCP server.</p>
+}
+
+@if (Model.ReadResult is not null)
+{
+    <div class="card mt-4">
+        <div class="card-header">Resource Content: <code>@Model.SelectedResourceUri</code></div>
+        <div class="card-body">
+            @if (Model.ReadResult.Contents?.Count > 0)
+            {
+                @foreach (var content in Model.ReadResult.Contents)
+                {
+                    <div class="mb-3">
+                        @if (content is ModelContextProtocol.Protocol.TextResourceContents textContent)
+                        {
+                            @if (!string.IsNullOrWhiteSpace(textContent.MimeType))
+                            {
+                                <div class="mb-1">
+                                    <span class="badge bg-info text-dark">@textContent.MimeType</span>
+                                </div>
+                            }
+                            <pre class="bg-light p-3 rounded">@textContent.Text</pre>
+                        }
+                        else if (content is ModelContextProtocol.Protocol.BlobResourceContents blobContent)
+                        {
+                            <p>
+                                <span class="badge bg-warning text-dark">Binary</span>
+                                @if (!string.IsNullOrWhiteSpace(blobContent.MimeType))
+                                {
+                                    <span class="badge bg-info text-dark">@blobContent.MimeType</span>
+                                }
+                            </p>
+                            <p class="text-muted">Binary content (@(blobContent.Blob?.Length ?? 0) base64 characters)</p>
+                        }
+                        else
+                        {
+                            <p class="text-muted">Unsupported content type.</p>
+                        }
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted">No content returned.</p>
+            }
+        </div>
+    </div>
+}
+
+<script>
+    // Before submitting a parameterized form, replace {param} placeholders in the URI
+    // with the actual values the user typed so the server receives the resolved URI.
+    document.querySelectorAll('form[data-parameterized]').forEach(function (form) {
+        form.addEventListener('submit', function () {
+            var uriInput = form.querySelector('input[name="resourceUri"]');
+            var uri = uriInput.dataset.template;
+
+            form.querySelectorAll('input[data-param]').forEach(function (input) {
+                var paramName = input.dataset.param;
+                uri = uri.split('{' + paramName + '}').join(input.value);
+            });
+
+            uriInput.value = uri;
+        });
+    });
+</script>

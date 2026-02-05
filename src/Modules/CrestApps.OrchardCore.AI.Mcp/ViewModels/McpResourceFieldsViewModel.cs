@@ -4,11 +4,9 @@ namespace CrestApps.OrchardCore.AI.Mcp.ViewModels;
 
 public class McpResourceFieldsViewModel
 {
-    public string Uri { get; set; }
+    public string Path { get; set; }
 
     public string Name { get; set; }
-
-    public string Title { get; set; }
 
     public string Description { get; set; }
 
@@ -23,7 +21,14 @@ public class McpResourceFieldsViewModel
     public string Source { get; set; }
 
     /// <summary>
-    /// Gets or sets the URI patterns for the resource type, to display as help text in the UI.
+    /// <summary>
+    /// Gets or sets the system-generated item identifier.
+    /// </summary>
+    [BindNever]
+    public string McpPromptItemId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the URI path patterns for the resource type, to display as help text in the UI.
     /// </summary>
     [BindNever]
     public string[] UriPatterns { get; set; } = [];

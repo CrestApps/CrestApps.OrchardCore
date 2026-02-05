@@ -12,10 +12,10 @@ using YesSql;
 namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 
 /// <summary>
-/// Strategy for handling content type based URIs.
+/// Strategy for handling content type based URI paths.
 /// Supports:
-/// - content://{contentType}/list - List all content items of a type
-/// - content://{contentType}/{contentItemId} - Get a specific content item by type and ID
+/// - {contentType}/list - List all content items of a type
+/// - {contentType}/{contentItemId} - Get a specific content item by type and ID
 /// </summary>
 public sealed class ContentByTypeResourceStrategy : IContentResourceStrategyProvider
 {
@@ -38,36 +38,53 @@ public sealed class ContentByTypeResourceStrategy : IContentResourceStrategyProv
 
     public string[] UriPatterns =>
     [
-        "content://{contentType}/list",
-        "content://{contentType}/{contentItemId}",
+        "{contentType}/list",
+        "{contentType}/{contentItemId}",
     ];
 
-    public bool CanHandle(Uri uri)
+    public bool CanHandle(McpResourceUri uri)
     {
-        // Matches content://{contentType}/... where host is NOT "id"
-        return uri.Scheme == "content" &&
-               !string.Equals(uri.Host, "id", StringComparison.OrdinalIgnoreCase) &&
-               !string.IsNullOrEmpty(uri.Host);
+        // Matches any path with at least one segment that does NOT start with "id/"
+        // (id/ paths are handled by ContentByIdResourceStrategy).
+        return !string.IsNullOrEmpty(uri.Path) &&
+               !uri.Path.StartsWith("id/", StringComparison.OrdinalIgnoreCase);
     }
 
-    public async Task<ReadResourceResult> ReadAsync(McpResource resource, Uri uri, CancellationToken cancellationToken = default)
+    public async Task<ReadResourceResult> ReadAsync(McpResource resource, McpResourceUri uri, CancellationToken cancellationToken = default)
     {
-        var contentType = uri.Host;
-        var path = uri.AbsolutePath.TrimStart('/');
+        // Path is "{contentType}/{rest}" - split into first segment (contentType) and remainder.
+        var slashIndex = uri.Path.IndexOf('/');
 
-        _logger.LogDebug("Reading content by type: {ContentType}, path: {Path}", contentType, path);
+        string contentType;
+        string rest;
+
+        if (slashIndex < 0)
+        {
+            contentType = uri.Path;
+            rest = string.Empty;
+        }
+        else
+        {
+            contentType = uri.Path[..slashIndex];
+            rest = uri.Path[(slashIndex + 1)..];
+        }
+
+        _logger.LogDebug("Reading content by type: {ContentType}, path: {Path}", contentType, rest);
 
         string json;
 
-        if (string.Equals(path, "list", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(path))
+        if (string.Equals(rest, "list", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(rest))
         {
-            // List all content items of this type
             json = await ListContentItemsByTypeAsync(contentType, cancellationToken);
         }
         else
         {
-            // Get specific content item by ID within this type
-            json = await GetContentItemByTypeAndIdAsync(contentType, path, cancellationToken);
+            json = await GetContentItemByTypeAndIdAsync(contentType, rest, cancellationToken);
+
+            if (json is null)
+            {
+                return McpResourceTypeHandlerBase.CreateErrorResult(uri.ToString(), $"Content item not found: {rest} (type: {contentType})");
+            }
         }
 
         return new ReadResourceResult
@@ -102,14 +119,12 @@ public sealed class ContentByTypeResourceStrategy : IContentResourceStrategyProv
 
         if (contentItem is null)
         {
-            throw new InvalidOperationException($"Content item not found: {contentItemId}");
+            return null;
         }
 
-        // Verify the content type matches
         if (!string.Equals(contentItem.ContentType, contentType, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException(
-                $"Content item {contentItemId} is of type '{contentItem.ContentType}', not '{contentType}'.");
+            return null;
         }
 
         return JsonSerializer.Serialize(contentItem, _jsonOptions.SerializerOptions);

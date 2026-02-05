@@ -1,0 +1,76 @@
+using CrestApps.OrchardCore.AI.Mcp.Core;
+using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.Logging;
+using ModelContextProtocol.Protocol;
+using OrchardCore.Media;
+
+namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
+
+/// <summary>
+/// Handles media:// URI resources by reading content from Orchard Core's media store.
+/// </summary>
+public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
+{
+    public const string TypeName = "media";
+
+    private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
+    private readonly IMediaFileStore _mediaFileStore;
+    private readonly ILogger _logger;
+
+    public MediaResourceTypeHandler(
+        IMediaFileStore mediaFileStore,
+        ILogger<MediaResourceTypeHandler> logger)
+        : base(TypeName)
+    {
+        _mediaFileStore = mediaFileStore;
+        _logger = logger;
+    }
+
+    protected override async Task<ReadResourceResult> GetResultAsync(McpResource resource, McpResourceUri resourceUri, CancellationToken cancellationToken)
+    {
+        var mediaPath = resourceUri.Path;
+
+        if (string.IsNullOrEmpty(mediaPath))
+        {
+            return CreateErrorResult(resource.Resource.Uri, $"Media URI '{resource.Resource.Uri}' does not contain a valid path.");
+        }
+
+        _logger.LogDebug("Reading media resource from: {MediaPath}", mediaPath);
+
+        var fileInfo = await _mediaFileStore.GetFileInfoAsync(mediaPath);
+
+        if (fileInfo is null)
+        {
+            return CreateErrorResult(resource.Resource.Uri, $"Media file not found: {mediaPath}");
+        }
+
+        // Determine MIME type.
+        var mimeType = resource.Resource?.MimeType;
+        if (string.IsNullOrEmpty(mimeType))
+        {
+            if (!_contentTypeProvider.TryGetContentType(mediaPath, out mimeType))
+            {
+                mimeType = "application/octet-stream";
+            }
+        }
+
+        // Read file content from the media store.
+        using var stream = await _mediaFileStore.GetFileStreamAsync(mediaPath);
+        using var reader = new StreamReader(stream);
+        var content = await reader.ReadToEndAsync(cancellationToken);
+
+        return new ReadResourceResult
+        {
+            Contents =
+            [
+                new TextResourceContents
+                {
+                    Uri = resource.Resource.Uri,
+                    MimeType = mimeType,
+                    Text = content,
+                }
+            ]
+        };
+    }
+}

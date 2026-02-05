@@ -41,6 +41,13 @@ public sealed class SftpResourceDisplayDriver : DisplayDriver<McpResource>
             model.HasPassword = !string.IsNullOrEmpty(metadata?.Password);
             model.HasPrivateKey = !string.IsNullOrEmpty(metadata?.PrivateKey);
             model.HasPassphrase = !string.IsNullOrEmpty(metadata?.Passphrase);
+            model.ProxyType = metadata?.ProxyType;
+            model.ProxyHost = metadata?.ProxyHost;
+            model.ProxyPort = metadata?.ProxyPort;
+            model.ProxyUsername = metadata?.ProxyUsername;
+            model.HasProxyPassword = !string.IsNullOrEmpty(metadata?.ProxyPassword);
+            model.ConnectionTimeout = metadata?.ConnectionTimeout;
+            model.KeepAliveInterval = metadata?.KeepAliveInterval;
         }).Location("Content:5");
     }
 
@@ -71,6 +78,7 @@ public sealed class SftpResourceDisplayDriver : DisplayDriver<McpResource>
         var hasNewPassword = !string.IsNullOrWhiteSpace(model.Password);
         var hasNewPrivateKey = !string.IsNullOrWhiteSpace(model.PrivateKey);
         var hasNewPassphrase = !string.IsNullOrWhiteSpace(model.Passphrase);
+        var hasNewProxyPassword = !string.IsNullOrWhiteSpace(model.ProxyPassword);
 
         // Require at least one authentication method
         var hasExistingAuth = !string.IsNullOrEmpty(metadata?.Password) || !string.IsNullOrEmpty(metadata?.PrivateKey);
@@ -97,11 +105,23 @@ public sealed class SftpResourceDisplayDriver : DisplayDriver<McpResource>
             protectedPassphrase = protector.Protect(model.Passphrase);
         }
 
+        string protectedProxyPassword = null;
+        if (hasNewProxyPassword)
+        {
+            protectedProxyPassword = protector.Protect(model.ProxyPassword);
+        }
+
         resource.Alter<SftpConnectionMetadata>(m =>
         {
             m.Host = model.Host;
             m.Port = model.Port;
             m.Username = model.Username;
+            m.ProxyType = model.ProxyType;
+            m.ProxyHost = model.ProxyHost;
+            m.ProxyPort = model.ProxyPort;
+            m.ProxyUsername = model.ProxyUsername;
+            m.ConnectionTimeout = model.ConnectionTimeout;
+            m.KeepAliveInterval = model.KeepAliveInterval;
 
             if (hasNewPassword)
             {
@@ -116,6 +136,11 @@ public sealed class SftpResourceDisplayDriver : DisplayDriver<McpResource>
             if (hasNewPassphrase)
             {
                 m.Passphrase = protectedPassphrase;
+            }
+
+            if (hasNewProxyPassword)
+            {
+                m.ProxyPassword = protectedProxyPassword;
             }
         });
 

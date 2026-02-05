@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.Extensions.Localization;
@@ -39,6 +40,7 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
         {
             model.IsNew = context.IsNew;
             model.Source = entry.Source;
+            model.McpPromptItemId = entry.ItemId;
             model.DisplayText = entry.DisplayText;
 
             // Get the URI patterns from the options for this resource type
@@ -51,9 +53,13 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
 
             if (entry.Resource is not null)
             {
-                model.Uri = entry.Resource.Uri;
+                // Extract the path portion from the full URI ({scheme}://{itemId}/{path}).
+                if (McpResourceUri.TryParse(entry.Resource.Uri, out var resourceUri))
+                {
+                    model.Path = resourceUri.Path;
+                }
+
                 model.Name = entry.Resource.Name;
-                model.Title = entry.Resource.Title;
                 model.Description = entry.Resource.Description;
                 model.MimeType = entry.Resource.MimeType;
             }
@@ -71,9 +77,9 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The Display Text is required."]);
         }
 
-        if (string.IsNullOrWhiteSpace(model.Uri))
+        if (string.IsNullOrWhiteSpace(model.Path))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Uri), S["The URI is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Path), S["The path is required."]);
         }
 
         if (string.IsNullOrWhiteSpace(model.Name))
@@ -88,9 +94,12 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
             Uri = string.Empty,
             Name = string.Empty,
         };
-        entry.Resource.Uri = model.Uri ?? string.Empty;
+
+        // Construct the full URI from the protocol (source type), item ID, and user-provided path.
+        entry.Resource.Uri = McpResourceUri.Build(entry.Source, entry.ItemId, model.Path);
+
         entry.Resource.Name = model.Name ?? string.Empty;
-        entry.Resource.Title = model.Title;
+        entry.Resource.Title = entry.DisplayText;
         entry.Resource.Description = model.Description;
         entry.Resource.MimeType = model.MimeType;
 

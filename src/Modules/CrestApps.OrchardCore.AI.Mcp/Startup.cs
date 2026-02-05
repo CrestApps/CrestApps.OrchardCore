@@ -151,7 +151,7 @@ public sealed class McpServerStartup : StartupBase
         {
             entry.DisplayName = S["File"];
             entry.Description = S["Reads content from local files."];
-            entry.UriPatterns = ["file://{itemId}/{path}"];
+            entry.UriPatterns = ["{path}"];
         });
 
         services.AddMcpServer(options =>
@@ -277,22 +277,19 @@ public sealed class McpServerStartup : StartupBase
         })
         .WithReadResourceHandler(async (request, cancellationToken) =>
         {
-            // Parse the ItemId from the URI: {protocol}://{itemId}/{path}
-            if (!Uri.TryCreate(request.Params.Uri, UriKind.Absolute, out var uri))
+            // Parse the URI: {scheme}://{itemId}/{path}
+            if (!McpResourceUri.TryParse(request.Params.Uri, out var resourceUri))
             {
                 throw new McpException($"Invalid URI format: '{request.Params.Uri}'.");
             }
 
-            // The host portion of the URI contains the ItemId
-            var itemId = uri.Host;
-
-            if (string.IsNullOrEmpty(itemId))
+            if (string.IsNullOrEmpty(resourceUri.ItemId))
             {
                 throw new McpException($"Resource URI '{request.Params.Uri}' does not contain a valid ItemId.");
             }
 
             var manager = request.Services.GetRequiredService<ISourceCatalogManager<McpResource>>();
-            var entry = await manager.FindByIdAsync(itemId);
+            var entry = await manager.FindByIdAsync(resourceUri.ItemId);
 
             if (entry?.Resource is null)
             {
@@ -307,7 +304,7 @@ public sealed class McpServerStartup : StartupBase
                 throw new McpException($"No handler found for resource type '{entry.Source}'.");
             }
 
-            return await handler.ReadAsync(entry, cancellationToken);
+            return await handler.ReadAsync(entry, resourceUri, cancellationToken);
         });
 
         // Configure authorization policy.
@@ -401,9 +398,9 @@ public sealed class McpContentResourceStartup : StartupBase
             // Patterns are dynamically aggregated from registered IContentResourceStrategyProvider implementations.
             entry.UriPatterns =
             [
-                "content://id/{contentItemId}",
-                "content://{contentType}/{contentItemId}",
-                "content://{contentType}/list",
+                "id/{contentItemId}",
+                "{contentType}/{contentItemId}",
+                "{contentType}/list",
             ];
         });
     }
@@ -425,12 +422,30 @@ public sealed class McpRecipeSchemaResourceStartup : StartupBase
         services.AddMcpResourceType<RecipeSchemaResourceTypeHandler>(RecipeSchemaResourceTypeHandler.TypeName, entry =>
         {
             entry.DisplayName = S["Recipe Schema"];
-            entry.Description = S["Provides JSON schema definitions for recipe steps and content types."];
-            entry.UriPatterns =
-            [
-                "recipe-schema://recipe-step/{stepName}",
-                "recipe-schema://content-type/{contentTypeName}",
-            ];
+            entry.Description = S["Provides JSON schema definitions for recipe steps."];
+            entry.UriPatterns = ["{step-name}"];
+        });
+    }
+}
+
+[Feature(McpConstants.Feature.Server)]
+[RequireFeatures("OrchardCore.Media")]
+public sealed class McpMediaResourceStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public McpMediaResourceStartup(IStringLocalizer<McpMediaResourceStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddMcpResourceType<MediaResourceTypeHandler>(MediaResourceTypeHandler.TypeName, entry =>
+        {
+            entry.DisplayName = S["Media"];
+            entry.Description = S["Reads files from Orchard Core's media store."];
+            entry.UriPatterns = ["{path}"];
         });
     }
 }

@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 /// Handles content:// URI resources by delegating to registered IContentResourceStrategyProvider implementations.
 /// This allows for extensible content URI handling where each strategy can define its own patterns.
 /// </summary>
-public sealed class ContentResourceTypeHandler : IMcpResourceTypeHandler
+public sealed class ContentResourceTypeHandler : McpResourceTypeHandlerBase
 {
     public const string TypeName = "content";
 
@@ -19,43 +19,30 @@ public sealed class ContentResourceTypeHandler : IMcpResourceTypeHandler
     public ContentResourceTypeHandler(
         IEnumerable<IContentResourceStrategyProvider> strategyProviders,
         ILogger<ContentResourceTypeHandler> logger)
+        : base(TypeName)
     {
         _strategyProviders = strategyProviders;
         _logger = logger;
     }
 
-    public string Type => TypeName;
-
-    public async Task<ReadResourceResult> ReadAsync(McpResource resource, CancellationToken cancellationToken = default)
+    protected override async Task<ReadResourceResult> GetResultAsync(McpResource resource, McpResourceUri resourceUri, CancellationToken cancellationToken)
     {
-        var uriString = resource.Resource?.Uri;
+        _logger.LogDebug("Reading content resource: {Uri}", resource.Resource.Uri);
 
-        if (string.IsNullOrEmpty(uriString))
-        {
-            throw new InvalidOperationException("Resource URI is required.");
-        }
-
-        // Parse the content:// URI
-        if (!Uri.TryCreate(uriString, UriKind.Absolute, out var uri) || uri.Scheme != "content")
-        {
-            throw new InvalidOperationException($"Invalid content URI: {uriString}. Expected scheme: content://");
-        }
-
-        _logger.LogDebug("Reading content resource: {Uri}", uriString);
-
-        // Find a strategy that can handle this URI
+        // Find a strategy that can handle this URI's path
         foreach (var strategy in _strategyProviders)
         {
-            if (strategy.CanHandle(uri))
+            if (strategy.CanHandle(resourceUri))
             {
-                _logger.LogDebug("Using strategy {Strategy} for URI {Uri}", strategy.GetType().Name, uriString);
-                return await strategy.ReadAsync(resource, uri, cancellationToken);
+                _logger.LogDebug("Using strategy {Strategy} for URI {Uri}", strategy.GetType().Name, resource.Resource.Uri);
+                return await strategy.ReadAsync(resource, resourceUri, cancellationToken);
             }
         }
 
         // No strategy found - provide helpful error with supported patterns
         var supportedPatterns = _strategyProviders.SelectMany(s => s.UriPatterns).Distinct();
-        throw new InvalidOperationException(
-            $"No handler found for content URI: {uriString}. Supported patterns: {string.Join(", ", supportedPatterns)}");
+
+        return CreateErrorResult(resource.Resource.Uri,
+            $"No handler found for content URI: {resource.Resource.Uri}. Supported patterns: {string.Join(", ", supportedPatterns)}");
     }
 }

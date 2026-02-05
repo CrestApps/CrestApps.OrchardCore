@@ -34,4 +34,41 @@ public sealed class SftpConnectionMetadata
     /// Gets or sets the passphrase for the private key (stored encrypted).
     /// </summary>
     public string Passphrase { get; set; }
+
+    /// <summary>
+    /// Gets or sets the proxy type.
+    /// Valid values: "None", "Socks4", "Socks5", "Http".
+    /// </summary>
+    public string ProxyType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the proxy server host.
+    /// </summary>
+    public string ProxyHost { get; set; }
+
+    /// <summary>
+    /// Gets or sets the proxy server port.
+    /// </summary>
+    public int? ProxyPort { get; set; }
+
+    /// <summary>
+    /// Gets or sets the proxy authentication username.
+    /// </summary>
+    public string ProxyUsername { get; set; }
+
+    /// <summary>
+    /// Gets or sets the proxy authentication password (stored encrypted).
+    /// </summary>
+    public string ProxyPassword { get; set; }
+
+    /// <summary>
+    /// Gets or sets the connection timeout in seconds.
+    /// </summary>
+    public int? ConnectionTimeout { get; set; }
+
+    /// <summary>
+    /// Gets or sets the keep-alive interval in seconds.
+    /// When set, periodic keep-alive messages are sent to prevent the connection from being dropped.
+    /// </summary>
+    public int? KeepAliveInterval { get; set; }
 }

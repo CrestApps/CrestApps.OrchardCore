@@ -39,7 +39,12 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
             model.Port = metadata?.Port;
             model.Username = metadata?.Username;
             model.HasPassword = !string.IsNullOrEmpty(metadata?.Password);
-            model.UseSsl = metadata?.UseSsl ?? false;
+            model.EncryptionMode = metadata?.EncryptionMode;
+            model.DataConnectionType = metadata?.DataConnectionType;
+            model.ValidateAnyCertificate = metadata?.ValidateAnyCertificate ?? false;
+            model.ConnectTimeout = metadata?.ConnectTimeout;
+            model.ReadTimeout = metadata?.ReadTimeout;
+            model.RetryAttempts = metadata?.RetryAttempts;
         }).Location("Content:5");
     }
 
@@ -81,7 +86,12 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
             m.Host = model.Host;
             m.Port = model.Port;
             m.Username = model.Username;
-            m.UseSsl = model.UseSsl;
+            m.EncryptionMode = model.EncryptionMode;
+            m.DataConnectionType = model.DataConnectionType;
+            m.ValidateAnyCertificate = model.ValidateAnyCertificate;
+            m.ConnectTimeout = model.ConnectTimeout;
+            m.ReadTimeout = model.ReadTimeout;
+            m.RetryAttempts = model.RetryAttempts;
 
             if (hasNewPassword)
             {

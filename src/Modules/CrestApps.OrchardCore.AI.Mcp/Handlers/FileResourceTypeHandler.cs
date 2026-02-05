@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 /// <summary>
 /// Handles file:// URI resources by reading content from local files.
 /// </summary>
-public sealed class FileResourceTypeHandler : IMcpResourceTypeHandler
+public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
 {
     public const string TypeName = "file";
 
@@ -17,32 +17,26 @@ public sealed class FileResourceTypeHandler : IMcpResourceTypeHandler
     private readonly ILogger _logger;
 
     public FileResourceTypeHandler(ILogger<FileResourceTypeHandler> logger)
+        : base(TypeName)
     {
         _logger = logger;
     }
 
-    public string Type => TypeName;
-
-    public async Task<ReadResourceResult> ReadAsync(McpResource resource, CancellationToken cancellationToken = default)
+    protected override async Task<ReadResourceResult> GetResultAsync(McpResource resource, McpResourceUri resourceUri, CancellationToken cancellationToken)
     {
-        var uri = resource.Resource?.Uri;
+        var filePath = resourceUri.Path;
+        var hasPath = !string.IsNullOrEmpty(filePath);
 
-        if (string.IsNullOrEmpty(uri))
+        if (!hasPath || !File.Exists(filePath))
         {
-            throw new InvalidOperationException("Resource URI is required.");
-        }
+            _logger.LogDebug("File not found for resource URI: {ResourceUri}", resourceUri.Uri);
 
-        // Parse the file:// URI to get the file path
-        if (!Uri.TryCreate(uri, UriKind.Absolute, out var fileUri) || fileUri.Scheme != "file")
-        {
-            throw new InvalidOperationException($"Invalid file URI: {uri}. Expected format: file:///path/to/file");
-        }
+            if (!hasPath)
+            {
+                return CreateErrorResult(resource.Resource.Uri, "File not found");
+            }
 
-        var filePath = fileUri.LocalPath;
-
-        if (!File.Exists(filePath))
-        {
-            throw new FileNotFoundException($"File not found: {filePath}");
+            return CreateErrorResult(resource.Resource.Uri, $"File not found: {filePath}");
         }
 
         _logger.LogDebug("Reading file resource from: {FilePath}", filePath);
@@ -66,7 +60,7 @@ public sealed class FileResourceTypeHandler : IMcpResourceTypeHandler
             [
                 new TextResourceContents
                 {
-                    Uri = uri,
+                    Uri = resource.Resource.Uri,
                     MimeType = mimeType,
                     Text = content,
                 }

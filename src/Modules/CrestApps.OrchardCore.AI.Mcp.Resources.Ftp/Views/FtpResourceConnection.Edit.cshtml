@@ -37,9 +37,60 @@
 </div>
 
 <div class="mb-3">
+    <label asp-for="EncryptionMode" class="form-label">@T["Encryption Mode"]</label>
+    <select asp-for="EncryptionMode" class="form-select">
+        <option value="">@T["None (Plain FTP)"]</option>
+        <option value="Explicit">@T["Explicit (STARTTLS)"]</option>
+        <option value="Implicit">@T["Implicit (Port 990)"]</option>
+        <option value="Auto">@T["Auto Detect"]</option>
+    </select>
+    <span asp-validation-for="EncryptionMode" class="text-danger"></span>
+    <span class="hint">@T["The SSL/TLS encryption mode for FTP connections."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="DataConnectionType" class="form-label">@T["Data Connection Type"]</label>
+    <select asp-for="DataConnectionType" class="form-select">
+        <option value="">@T["Auto Passive (Default)"]</option>
+        <option value="PASV">@T["PASV"]</option>
+        <option value="PASVEX">@T["PASVEX"]</option>
+        <option value="EPSV">@T["EPSV"]</option>
+        <option value="AutoActive">@T["Auto Active"]</option>
+        <option value="PORT">@T["PORT"]</option>
+        <option value="EPRT">@T["EPRT"]</option>
+    </select>
+    <span asp-validation-for="DataConnectionType" class="text-danger"></span>
+    <span class="hint">@T["The type of data connection to use. Passive mode is recommended for most scenarios."]</span>
+</div>
+
+<div class="mb-3">
     <div class="form-check">
-        <input asp-for="UseSsl" class="form-check-input" />
-        <label asp-for="UseSsl" class="form-check-label">@T["Use SSL/TLS"]</label>
+        <input asp-for="ValidateAnyCertificate" class="form-check-input" />
+        <label asp-for="ValidateAnyCertificate" class="form-check-label">@T["Accept Any Certificate"]</label>
     </div>
-    <span class="hint">@T["Enable SSL/TLS encryption for secure FTP connections (FTPS)."]</span>
+    <span class="hint">@T["Accept any SSL/TLS certificate, including self-signed certificates. Use with caution."]</span>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="mb-3">
+            <label asp-for="ConnectTimeout" class="form-label">@T["Connect Timeout (seconds)"]</label>
+            <input asp-for="ConnectTimeout" type="number" class="form-control" placeholder="@T["Default"]" />
+            <span asp-validation-for="ConnectTimeout" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="mb-3">
+            <label asp-for="ReadTimeout" class="form-label">@T["Read Timeout (seconds)"]</label>
+            <input asp-for="ReadTimeout" type="number" class="form-control" placeholder="@T["Default"]" />
+            <span asp-validation-for="ReadTimeout" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="mb-3">
+            <label asp-for="RetryAttempts" class="form-label">@T["Retry Attempts"]</label>
+            <input asp-for="RetryAttempts" type="number" class="form-control" placeholder="@T["Default"]" />
+            <span asp-validation-for="RetryAttempts" class="text-danger"></span>
+        </div>
+    </div>
 </div>

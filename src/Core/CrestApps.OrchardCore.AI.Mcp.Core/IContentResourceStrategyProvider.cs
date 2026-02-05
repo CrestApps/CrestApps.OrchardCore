@@ -10,23 +10,23 @@ namespace CrestApps.OrchardCore.AI.Mcp.Core;
 public interface IContentResourceStrategyProvider
 {
     /// <summary>
-    /// Gets the URI patterns this strategy can handle.
+    /// Gets the URI path patterns this strategy can handle.
     /// </summary>
     string[] UriPatterns { get; }
 
     /// <summary>
-    /// Determines whether this strategy can handle the given URI.
+    /// Determines whether this strategy can handle the given resource URI.
     /// </summary>
-    /// <param name="uri">The parsed URI to check.</param>
+    /// <param name="uri">The parsed resource URI.</param>
     /// <returns>True if this strategy can handle the URI; otherwise, false.</returns>
-    bool CanHandle(Uri uri);
+    bool CanHandle(McpResourceUri uri);
 
     /// <summary>
     /// Reads the resource content for the given URI.
     /// </summary>
     /// <param name="resource">The MCP resource definition.</param>
-    /// <param name="uri">The parsed URI.</param>
+    /// <param name="uri">The parsed resource URI.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The resource content result.</returns>
-    Task<ReadResourceResult> ReadAsync(McpResource resource, Uri uri, CancellationToken cancellationToken = default);
+    Task<ReadResourceResult> ReadAsync(McpResource resource, McpResourceUri uri, CancellationToken cancellationToken = default);
 }

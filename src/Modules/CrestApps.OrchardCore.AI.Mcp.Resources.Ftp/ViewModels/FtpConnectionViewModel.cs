@@ -12,5 +12,15 @@ public class FtpConnectionViewModel
 
     public bool HasPassword { get; set; }
 
-    public bool UseSsl { get; set; }
+    public string EncryptionMode { get; set; }
+
+    public string DataConnectionType { get; set; }
+
+    public bool ValidateAnyCertificate { get; set; }
+
+    public int? ConnectTimeout { get; set; }
+
+    public int? ReadTimeout { get; set; }
+
+    public int? RetryAttempts { get; set; }
 }

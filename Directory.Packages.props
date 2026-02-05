@@ -45,6 +45,7 @@
     <PackageVersion Include="OrchardCore.Liquid.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Logging.NLog" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Media" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Media.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Module.Targets" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Navigation.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Notifications.Core" Version="$(OrchardCoreVersion)" />

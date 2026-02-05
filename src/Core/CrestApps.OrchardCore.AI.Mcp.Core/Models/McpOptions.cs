@@ -46,9 +46,11 @@ public sealed class McpResourceTypeEntry
     public LocalizedString Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the URI patterns supported by this resource type.
-    /// This is displayed in the UI to help users understand what URI formats are valid.
-    /// Example: ["file:///{path}", "content://id/{contentItemId}", "content://{contentType}/list"]
+    /// Gets or sets the path patterns supported by this resource type.
+    /// These are displayed in the UI to help users understand what path formats are valid.
+    /// The full URI is constructed as {type}://{itemId}/{path} where {type} is the resource type
+    /// and {itemId} is the system-generated identifier.
+    /// Example: ["{path}", "id/{contentItemId}", "{contentType}/list"]
     /// </summary>
     public string[] UriPatterns { get; set; } = [];
 }

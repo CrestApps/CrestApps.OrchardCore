@@ -10,7 +10,7 @@ using OrchardCore.Json;
 namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 
 /// <summary>
-/// Strategy for handling content://id/{contentItemId} URIs.
+/// Strategy for handling content URIs with the path pattern: id/{contentItemId}.
 /// Returns a specific content item by its ID.
 /// </summary>
 public sealed class ContentByIdResourceStrategy : IContentResourceStrategyProvider
@@ -29,22 +29,22 @@ public sealed class ContentByIdResourceStrategy : IContentResourceStrategyProvid
         _logger = logger;
     }
 
-    public string[] UriPatterns => ["content://id/{contentItemId}"];
+    public string[] UriPatterns => ["id/{contentItemId}"];
 
-    public bool CanHandle(Uri uri)
+    public bool CanHandle(McpResourceUri uri)
     {
-        // Matches content://id/{contentItemId}
-        return uri.Scheme == "content" &&
-               string.Equals(uri.Host, "id", StringComparison.OrdinalIgnoreCase);
+        // Matches path starting with "id/"
+        return uri.Path.StartsWith("id/", StringComparison.OrdinalIgnoreCase);
     }
 
-    public async Task<ReadResourceResult> ReadAsync(McpResource resource, Uri uri, CancellationToken cancellationToken = default)
+    public async Task<ReadResourceResult> ReadAsync(McpResource resource, McpResourceUri uri, CancellationToken cancellationToken = default)
     {
-        var contentItemId = uri.AbsolutePath.TrimStart('/');
+        // Path is "id/{contentItemId}" - extract the content item ID after "id/".
+        var contentItemId = uri.Path["id/".Length..];
 
         if (string.IsNullOrEmpty(contentItemId))
         {
-            throw new InvalidOperationException("Content item ID is required in the URI path.");
+            return McpResourceTypeHandlerBase.CreateErrorResult(uri.ToString(), "Content item ID is required in the URI path.");
         }
 
         _logger.LogDebug("Reading content item by ID: {ContentItemId}", contentItemId);
@@ -53,7 +53,7 @@ public sealed class ContentByIdResourceStrategy : IContentResourceStrategyProvid
 
         if (contentItem is null)
         {
-            throw new InvalidOperationException($"Content item not found: {contentItemId}");
+            return McpResourceTypeHandlerBase.CreateErrorResult(uri.ToString(), $"Content item not found: {contentItemId}");
         }
 
         var json = JsonSerializer.Serialize(contentItem, _jsonOptions.SerializerOptions);

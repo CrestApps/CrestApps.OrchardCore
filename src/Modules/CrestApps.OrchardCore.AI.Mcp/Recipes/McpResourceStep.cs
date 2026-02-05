@@ -113,12 +113,6 @@ internal sealed class McpResourceStep : NamedRecipeStepHandler
                 entry.Resource.Name = name;
             }
 
-            var title = resourceData[nameof(Resource.Title)]?.GetValue<string>();
-            if (!string.IsNullOrWhiteSpace(title))
-            {
-                entry.Resource.Title = title;
-            }
-
             var description = resourceData[nameof(Resource.Description)]?.GetValue<string>();
             if (!string.IsNullOrWhiteSpace(description))
             {
@@ -130,6 +124,12 @@ internal sealed class McpResourceStep : NamedRecipeStepHandler
             {
                 entry.Resource.MimeType = mimeType;
             }
+        }
+
+        // Always derive the MCP resource title from the display text.
+        if (entry.Resource is not null)
+        {
+            entry.Resource.Title = entry.DisplayText;
         }
     }
 

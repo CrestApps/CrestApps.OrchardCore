@@ -1,0 +1,86 @@
+@page
+@model CrestApps.OrchardCore.Samples.McpClient.Pages.ToolsModel
+
+<h1>Tools</h1>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="d-flex align-items-center gap-3 mb-3">
+    <p class="text-muted mb-0">Tools exposed by the MCP server that can be invoked with arguments.</p>
+    <form method="post" asp-page-handler="Refresh" class="d-inline">
+        <button class="btn btn-secondary btn-sm" type="submit">Refresh</button>
+    </form>
+</div>
+
+@if (Model.Tools?.Count > 0)
+{
+    <div class="accordion" id="toolsAccordion">
+        @for (var i = 0; i < Model.Tools.Count; i++)
+        {
+            var tool = Model.Tools[i];
+            var collapseId = $"collapse-tool-{i}";
+            var headerId = $"header-tool-{i}";
+
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="@headerId">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId">
+                        <span class="fw-semibold">@tool.Name</span>
+                        @if (!string.IsNullOrWhiteSpace(tool.Description))
+                        {
+                            <span class="text-muted ms-2">— @tool.Description</span>
+                        }
+                    </button>
+                </h2>
+                <div id="@collapseId" class="accordion-collapse collapse" data-bs-parent="#toolsAccordion">
+                    <div class="accordion-body">
+                        <form method="post" asp-page-handler="CallTool">
+                            <input type="hidden" name="toolName" value="@tool.Name" />
+                            <div class="mb-3">
+                                <label class="form-label">Arguments (JSON)</label>
+                                <textarea name="arguments" class="form-control font-monospace" rows="3" placeholder='{"key": "value"}'></textarea>
+                                <div class="form-text">Provide tool arguments as a JSON object. Leave empty for no arguments.</div>
+                            </div>
+                            <button class="btn btn-primary btn-sm" type="submit">Call Tool</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <p class="text-muted">No tools were returned by the MCP server.</p>
+}
+
+@if (Model.CallResult is not null)
+{
+    <div class="card mt-4">
+        <div class="card-header">Result: @Model.SelectedToolName</div>
+        <div class="card-body">
+            @if (Model.CallResult.Content?.Count > 0)
+            {
+                @foreach (var content in Model.CallResult.Content)
+                {
+                    if (content is ModelContextProtocol.Protocol.TextContentBlock textBlock)
+                    {
+                        <pre class="bg-light p-3 rounded mb-2">@textBlock.Text</pre>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Unsupported content type: @content.Type</p>
+                    }
+                }
+            }
+            else
+            {
+                <p class="text-muted">No content returned.</p>
+            }
+        </div>
+    </div>
+}

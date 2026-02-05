@@ -3,7 +3,7 @@
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Edit MCP Prompt - {0}", Model.DisplayName])</h1>
+    <h1>@RenderTitleSegments(T["New MCP Resource"])</h1>
 </zone>
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">
@@ -15,5 +15,5 @@
     <a class="btn btn-secondary cancel"
        role="button"
        asp-route-action="Index"
-       asp-route-controller="Prompts">@T["Cancel"]</a>
+       asp-route-controller="Resources">@T["Cancel"]</a>
 </form>

@@ -20,5 +20,5 @@ public interface IMcpResourceTypeHandler
     /// <param name="resource">The MCP resource definition.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>A task containing the read resource result.</returns>
-    Task<ReadResourceResult> ReadAsync(McpResource resource, CancellationToken cancellationToken = default);
+    Task<ReadResourceResult> ReadAsync(McpResource resource, McpResourceUri resourceUri, CancellationToken cancellationToken = default);
 }

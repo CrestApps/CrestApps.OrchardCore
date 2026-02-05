@@ -26,7 +26,34 @@ public sealed class FtpConnectionMetadata
     public string Password { get; set; }
 
     /// <summary>
-    /// Gets or sets whether to use SSL/TLS encryption.
+    /// Gets or sets the encryption mode.
+    /// Valid values: "None", "Implicit", "Explicit", "Auto".
     /// </summary>
-    public bool UseSsl { get; set; }
+    public string EncryptionMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the data connection type.
+    /// Valid values: "AutoPassive", "PASV", "PASVEX", "EPSV", "AutoActive", "PORT", "EPRT".
+    /// </summary>
+    public string DataConnectionType { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to accept any SSL/TLS certificate, including self-signed certificates.
+    /// </summary>
+    public bool ValidateAnyCertificate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the connection timeout in seconds.
+    /// </summary>
+    public int? ConnectTimeout { get; set; }
+
+    /// <summary>
+    /// Gets or sets the read timeout in seconds.
+    /// </summary>
+    public int? ReadTimeout { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of retry attempts for failed operations.
+    /// </summary>
+    public int? RetryAttempts { get; set; }
 }

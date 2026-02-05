@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
@@ -95,19 +96,19 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
             var uri = resourceData[nameof(Resource.Uri)]?.ToString();
             if (!string.IsNullOrWhiteSpace(uri))
             {
-                entry.Resource.Uri = uri;
+                // Extract the path portion if a full URI is provided, otherwise treat as a path.
+                var path = McpResourceUri.TryParse(uri, out var parsed)
+                    ? parsed.Path
+                    : uri;
+
+                // Always construct the full URI from the source type, item ID, and path.
+                entry.Resource.Uri = McpResourceUri.Build(entry.Source, entry.ItemId, path);
             }
 
             var name = resourceData[nameof(Resource.Name)]?.ToString();
             if (!string.IsNullOrWhiteSpace(name))
             {
                 entry.Resource.Name = name;
-            }
-
-            var title = resourceData[nameof(Resource.Title)]?.ToString();
-            if (!string.IsNullOrWhiteSpace(title))
-            {
-                entry.Resource.Title = title;
             }
 
             var description = resourceData[nameof(Resource.Description)]?.ToString();
@@ -121,6 +122,12 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
             {
                 entry.Resource.MimeType = mimeType;
             }
+        }
+
+        // Always derive the MCP resource title from the display text.
+        if (entry.Resource is not null)
+        {
+            entry.Resource.Title = entry.DisplayText;
         }
 
         return Task.CompletedTask;
