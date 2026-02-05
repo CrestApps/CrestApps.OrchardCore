@@ -1,19 +1,29 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Mcp.Deployments.Steps;
 using CrestApps.OrchardCore.Services;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using OrchardCore.Deployment;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Deployments.Sources;
 
 internal sealed class McpResourceDeploymentSource : DeploymentSourceBase<McpResourceDeploymentStep>
 {
     private readonly ICatalog<McpResource> _store;
+    private readonly IEnumerable<IMcpResourceHandler> _handlers;
+    private readonly ILogger _logger;
 
-    public McpResourceDeploymentSource(ICatalog<McpResource> store)
+    public McpResourceDeploymentSource(
+        ICatalog<McpResource> store,
+        IEnumerable<IMcpResourceHandler> handlers,
+        ILogger<McpResourceDeploymentSource> logger)
     {
         _store = store;
+        _handlers = handlers;
+        _logger = logger;
     }
 
     protected override async Task ProcessAsync(McpResourceDeploymentStep step, DeploymentPlanResult result)
@@ -51,7 +61,12 @@ internal sealed class McpResourceDeploymentSource : DeploymentSourceBase<McpReso
                 { nameof(McpResource.CreatedUtc), entry.CreatedUtc },
                 { nameof(McpResource.OwnerId), entry.OwnerId },
                 { nameof(McpResource.Resource), resourceData },
+                { nameof(McpResource.Properties), entry.Properties?.DeepClone() },
             };
+
+            var exportingContext = new ExportingMcpResourceContext(entry, deploymentInfo);
+
+            _handlers.Invoke((handler, context) => handler.Exporting(context), exportingContext, _logger);
 
             resourcesData.Add(deploymentInfo);
         }

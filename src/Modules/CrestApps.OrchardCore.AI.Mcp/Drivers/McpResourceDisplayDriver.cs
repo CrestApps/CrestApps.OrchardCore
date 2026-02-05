@@ -1,6 +1,6 @@
+using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using ModelContextProtocol.Protocol;
 using OrchardCore.DisplayManagement.Handlers;
@@ -11,12 +11,12 @@ namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
 
 internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
 {
-    private readonly ISourceCatalog<McpResource> _store;
+    private readonly IMcpResourceStore _store;
 
     internal readonly IStringLocalizer S;
 
     public McpResourceDisplayDriver(
-        ISourceCatalog<McpResource> store,
+        IMcpResourceStore store,
         IStringLocalizer<McpResourceDisplayDriver> stringLocalizer)
     {
         _store = store;
@@ -69,13 +69,10 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
         }
         else
         {
-            // Validate URI uniqueness
-            var existingResources = await _store.GetAllAsync();
-            var duplicate = existingResources.FirstOrDefault(r =>
-                r.ItemId != entry.ItemId &&
-                string.Equals(r.Resource?.Uri, model.Uri, StringComparison.OrdinalIgnoreCase));
+            // Validate URI uniqueness using efficient lookup
+            var duplicate = await _store.FindByUriAsync(model.Uri);
 
-            if (duplicate is not null)
+            if (duplicate is not null && duplicate.ItemId != entry.ItemId)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Uri), S["A resource with the URI '{0}' already exists.", model.Uri]);
             }

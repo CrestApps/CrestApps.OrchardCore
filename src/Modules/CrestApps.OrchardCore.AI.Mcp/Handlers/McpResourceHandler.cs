@@ -1,10 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using ModelContextProtocol.Protocol;
@@ -15,14 +15,14 @@ namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ISourceCatalog<McpResource> _store;
+    private readonly IMcpResourceStore _store;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
     public McpResourceHandler(
         IHttpContextAccessor httpContextAccessor,
-        ISourceCatalog<McpResource> store,
+        IMcpResourceStore store,
         IClock clock,
         IStringLocalizer<McpResourceHandler> stringLocalizer)
     {
@@ -56,13 +56,10 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
         }
         else
         {
-            // Enforce unique URI
-            var existingResources = await _store.GetAllAsync();
-            var duplicate = existingResources.FirstOrDefault(r =>
-                r.ItemId != context.Model.ItemId &&
-                string.Equals(r.Resource?.Uri, context.Model.Resource.Uri, StringComparison.OrdinalIgnoreCase));
+            // Enforce unique URI using efficient lookup
+            var duplicate = await _store.FindByUriAsync(context.Model.Resource.Uri);
 
-            if (duplicate is not null)
+            if (duplicate is not null && duplicate.ItemId != context.Model.ItemId)
             {
                 context.Result.Fail(new ValidationResult(S["A resource with the URI '{0}' already exists.", context.Model.Resource.Uri], ["Resource.Uri"]));
             }

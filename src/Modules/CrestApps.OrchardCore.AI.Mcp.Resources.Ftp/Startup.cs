@@ -22,10 +22,11 @@ public sealed class Startup : StartupBase
     {
         services.AddMcpResourceType<FtpResourceTypeHandler>(FtpResourceConstants.Type, entry =>
         {
-            entry.DisplayName = S["FTP"];
-            entry.Description = S["Reads content from FTP/FTPS servers using ftp:// URIs. Connection credentials are stored securely."];
+            entry.DisplayName = S["FTP/FTPS"];
+            entry.Description = S["Reads content from FTP/FTPS servers."];
         });
 
         services.AddDisplayDriver<McpResource, FtpResourceDisplayDriver>();
+        services.AddScoped<IMcpResourceHandler, FtpMcpResourceHandler>();
     }
 }

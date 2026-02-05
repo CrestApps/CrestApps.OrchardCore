@@ -141,7 +141,9 @@ public sealed class McpServerStartup : StartupBase
             .AddScoped<ICatalogEntryHandler<McpPrompt>, McpPromptHandler>()
             .AddDisplayDriver<McpPrompt, McpPromptDisplayDriver>();
 
-        // Register MCP Resource services.
+        // Register MCP Resource services with custom store that enforces URI uniqueness.
+        services.AddScoped<IMcpResourceStore, McpResourceStore>();
+        services.AddScoped<ISourceCatalog<McpResource>>(sp => sp.GetRequiredService<IMcpResourceStore>());
         services.AddNavigationProvider<McpResourcesAdminMenu>()
             .AddScoped<ICatalogEntryHandler<McpResource>, McpResourceHandler>()
             .AddDisplayDriver<McpResource, McpResourceDisplayDriver>();
@@ -150,7 +152,7 @@ public sealed class McpServerStartup : StartupBase
         services.AddMcpResourceType<FileResourceTypeHandler>(FileResourceTypeHandler.TypeName, entry =>
         {
             entry.DisplayName = S["File"];
-            entry.Description = S["Reads content from local files using file:// URIs."];
+            entry.Description = S["Reads content from local files."];
         });
 
         services.AddMcpServer(options =>
