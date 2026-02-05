@@ -1,0 +1,94 @@
+@page
+@model CrestApps.OrchardCore.Samples.McpClient.Pages.IndexModel
+
+<h1>MCP Client Samples</h1>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        @Model.ErrorMessage
+    </div>
+}
+
+<section class="mb-4">
+    <div class="d-flex align-items-center gap-3">
+        <h2 class="mb-0">Prompts</h2>
+        <form method="post" asp-page-handler="GetPrompts" class="d-inline">
+            <button class="btn btn-secondary btn-sm" type="submit">Refresh</button>
+        </form>
+    </div>
+
+    @if (Model.Prompts?.Count > 0)
+    {
+        <ul class="list-group mt-3">
+            @foreach (var prompt in Model.Prompts)
+            {
+                <li class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="fw-semibold">@prompt.Name</div>
+                            @if (!string.IsNullOrWhiteSpace(prompt.Description))
+                            {
+                                <div class="text-muted">@prompt.Description</div>
+                            }
+                        </div>
+                        <form method="post" asp-page-handler="GetPrompt">
+                            <input type="hidden" name="promptName" value="@prompt.Name" />
+                            <button class="btn btn-primary btn-sm" type="submit">Get Prompt</button>
+                        </form>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p class="text-muted mt-3">No prompts were returned by the MCP server.</p>
+    }
+
+    @if (Model.PromptResult is not null)
+    {
+        <div class="card mt-3">
+            <div class="card-header">Prompt Details: @Model.SelectedPromptName</div>
+            <div class="card-body">
+                @if (!string.IsNullOrWhiteSpace(Model.PromptResult.Description))
+                {
+                    <p>@Model.PromptResult.Description</p>
+                }
+                else
+                {
+                    <p class="text-muted">No description available.</p>
+                }
+            </div>
+        </div>
+    }
+</section>
+
+<section>
+    <div class="d-flex align-items-center gap-3">
+        <h2 class="mb-0">Tools</h2>
+        <form method="post" asp-page-handler="GetTools" class="d-inline">
+            <button class="btn btn-secondary btn-sm" type="submit">Get Tools</button>
+        </form>
+    </div>
+
+    @if (Model.Tools?.Count > 0)
+    {
+        <ul class="list-group mt-3">
+            @foreach (var tool in Model.Tools)
+            {
+                <li class="list-group-item">
+                    <div class="fw-semibold">@tool.Name</div>
+                    @if (!string.IsNullOrWhiteSpace(tool.Description))
+                    {
+                        <div class="text-muted">@tool.Description</div>
+                    }
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p class="text-muted mt-3">No tools were returned by the MCP server.</p>
+    }
+</section>

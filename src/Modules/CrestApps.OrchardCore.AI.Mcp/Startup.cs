@@ -129,6 +129,11 @@ public sealed class McpServerStartup : StartupBase
             .AddScheme<McpApiKeyAuthenticationOptions, McpApiKeyAuthenticationHandler>(
                 McpApiKeyAuthenticationDefaults.AuthenticationScheme, options => { });
 
+        // Register MCP Prompt services.
+        services.AddNavigationProvider<McpPromptsAdminMenu>()
+            .AddScoped<ICatalogEntryHandler<McpPrompt>, McpPromptHandler>()
+            .AddDisplayDriver<McpPrompt, McpPromptDisplayDriver>();
+
         services.AddMcpServer(options =>
         {
             options.ServerInfo = new()
@@ -202,6 +207,38 @@ public sealed class McpServerStartup : StartupBase
             {
                 Content = [new TextContentBlock { Text = result?.ToString() ?? string.Empty }]
             };
+        })
+        .WithListPromptsHandler(async (request, cancellationToken) =>
+        {
+            var manager = request.Services.GetRequiredService<INamedCatalogManager<McpPrompt>>();
+            var entries = await manager.GetAllAsync();
+
+            var result = new ListPromptsResult
+            {
+                Prompts = entries
+                    .Where(e => e.Prompt != null)
+                    .Select(e => e.Prompt)
+                    .ToList()
+            };
+
+            return result;
+        })
+        .WithGetPromptHandler(async (request, cancellationToken) =>
+        {
+            var manager = request.Services.GetRequiredService<INamedCatalogManager<McpPrompt>>();
+            var entries = await manager.GetAllAsync();
+            var entry = entries.FirstOrDefault(e => e.Prompt?.Name == request.Params.Name);
+
+            if (entry?.Prompt is null)
+            {
+                throw new McpException($"Prompt '{request.Params.Name}' not found.");
+            }
+
+            return new GetPromptResult
+            {
+                Description = entry.Prompt.Description,
+                Messages = [],
+            };
         });
 
         // Configure authorization policy.
@@ -228,5 +265,25 @@ public sealed class McpServerStartup : StartupBase
         {
             endpoint.RequireAuthorization(McpServerPolicyName);
         }
+    }
+}
+
+[Feature(McpConstants.Feature.Server)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class McpPromptRecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<McpPromptStep>();
+    }
+}
+
+[Feature(McpConstants.Feature.Server)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class McpPromptDeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<McpPromptDeploymentSource, McpPromptDeploymentStep, McpPromptDeploymentStepDisplayDriver>();
     }
 }
