@@ -48,7 +48,7 @@ public sealed class McpResourceTypeEntry
     /// <summary>
     /// Gets or sets the URI patterns supported by this resource type.
     /// This is displayed in the UI to help users understand what URI formats are valid.
-    /// Example: ["file:///{path}"], ["content://id/{contentItemId}", "content://{contentType}/list"]
+    /// Example: ["file:///{path}", "content://id/{contentItemId}", "content://{contentType}/list"]
     /// </summary>
     public string[] UriPatterns { get; set; } = [];
 }
