@@ -12,7 +12,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = "CrestApps.OrchardCore.AI.Mcp.Resources.Ftp",
     Name = "MCP FTP Resource",
-    Description = "Provides FTP/FTPS resource support for the MCP Server, allowing remote files to be exposed as MCP resources using ftp:// or ftps:// URIs.",
+    Description = "Provides FTP/FTPS resource support for the MCP Server, allowing remote files to be exposed as MCP resources.",
     Category = "Artificial Intelligence",
     Dependencies =
     [
