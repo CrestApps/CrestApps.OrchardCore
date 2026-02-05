@@ -22,6 +22,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAIProfileTemplateManager _templateManager;
     private readonly AIOptions _aiOptions;
     private readonly DefaultAIOptions _defaultAIOptions;
     private readonly AIProviderOptions _connectionOptions;
@@ -36,12 +37,14 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         IOptions<DefaultAIOptions> defaultAIOptions,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
+        IAIProfileTemplateManager templateManager,
         IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
     {
         _profilesCatalog = profilesCatalog;
         _liquidTemplateManager = liquidTemplateManager;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
+        _templateManager = templateManager;
         _aiOptions = aiOptions.Value;
         _defaultAIOptions = defaultAIOptions.Value;
         _connectionOptions = connectionOptions.Value;
@@ -69,6 +72,28 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.DisplayText = profile.DisplayText;
             model.IsNew = context.IsNew;
         }).Location("Content:1");
+
+        IDisplayResult templateResult = null;
+
+        if (context.IsNew)
+        {
+            // Show template selection only when creating a new profile
+            try
+            {
+                var templates = _templateManager.GetTemplatesForSource(profile.Source);
+                var templatesList = templates.Select(t => new SelectListItem(t.DisplayName.Value, t.Name)).ToList();
+                
+                templateResult = Initialize<EditProfileTemplateViewModel>("AIProfileTemplate_Edit", model =>
+                {
+                    model.AvailableTemplates = templatesList;
+                }).Location("Content:1.5");
+            }
+            catch
+            {
+                // If template initialization fails, continue without it
+                templateResult = null;
+            }
+        }
 
         var connectionFieldResult = Initialize<EditConnectionProfileViewModel>("AIProfileConnection_Edit", model =>
         {
@@ -137,7 +162,22 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.IsSystemMessageLocked = profile.GetSettings<AIProfileSettings>().LockSystemMessage;
         }).Location("Content:10");
 
-        return Combine(mainFieldsResult, connectionFieldResult, fieldsResult, parametersResult);
+        // Build the list of display results
+        var results = new List<IDisplayResult>
+        {
+            mainFieldsResult,
+            connectionFieldResult,
+            fieldsResult,
+            parametersResult
+        };
+
+        // Insert template result after main fields if creating a new profile
+        if (context.IsNew && templateResult != null)
+        {
+            results.Insert(1, templateResult);
+        }
+
+        return Combine(results.ToArray());
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
@@ -148,9 +188,22 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
         var connectionModel = new EditConnectionProfileViewModel();
 
+        var templateModel = new EditProfileTemplateViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
         await context.Updater.TryUpdateModelAsync(mainFieldsModel, Prefix);
         await context.Updater.TryUpdateModelAsync(connectionModel, Prefix);
+        await context.Updater.TryUpdateModelAsync(templateModel, Prefix);
+
+        // Apply template if selected during profile creation
+        if (context.IsNew && !string.IsNullOrEmpty(templateModel.SelectedTemplate))
+        {
+            var template = _templateManager.GetTemplate(templateModel.SelectedTemplate);
+            if (template != null)
+            {
+                await template.ApplyAsync(profile);
+            }
+        }
 
         if (context.IsNew)
         {
