@@ -271,9 +271,8 @@ public sealed class McpServerStartup : StartupBase
                 throw new McpException($"Resource '{request.Params.Uri}' not found.");
             }
 
-            // Get the appropriate type handler for this resource
-            var handlers = request.Services.GetServices<IMcpResourceTypeHandler>();
-            var handler = handlers.FirstOrDefault(h => string.Equals(h.Type, entry.Source, StringComparison.OrdinalIgnoreCase));
+            // Get the appropriate type handler for this resource using keyed services
+            var handler = request.Services.GetKeyedService<IMcpResourceTypeHandler>(entry.Source);
 
             if (handler is null)
             {

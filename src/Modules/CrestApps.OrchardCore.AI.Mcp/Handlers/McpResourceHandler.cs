@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using ModelContextProtocol.Protocol;
@@ -14,16 +15,19 @@ namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ISourceCatalog<McpResource> _store;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
     public McpResourceHandler(
         IHttpContextAccessor httpContextAccessor,
+        ISourceCatalog<McpResource> store,
         IClock clock,
         IStringLocalizer<McpResourceHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
+        _store = store;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -34,7 +38,7 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
     public override Task UpdatingAsync(UpdatingContext<McpResource> context)
         => PopulateAsync(context.Model, context.Data, false);
 
-    public override Task ValidatingAsync(ValidatingContext<McpResource> context)
+    public override async Task ValidatingAsync(ValidatingContext<McpResource> context)
     {
         if (string.IsNullOrEmpty(context.Model.Source))
         {
@@ -50,13 +54,24 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
         {
             context.Result.Fail(new ValidationResult(S["URI is required."], ["Resource.Uri"]));
         }
+        else
+        {
+            // Enforce unique URI
+            var existingResources = await _store.GetAllAsync();
+            var duplicate = existingResources.FirstOrDefault(r =>
+                r.ItemId != context.Model.ItemId &&
+                string.Equals(r.Resource?.Uri, context.Model.Resource.Uri, StringComparison.OrdinalIgnoreCase));
+
+            if (duplicate is not null)
+            {
+                context.Result.Fail(new ValidationResult(S["A resource with the URI '{0}' already exists.", context.Model.Resource.Uri], ["Resource.Uri"]));
+            }
+        }
 
         if (string.IsNullOrEmpty(context.Model.Resource?.Name))
         {
             context.Result.Fail(new ValidationResult(S["Name is required."], ["Resource.Name"]));
         }
-
-        return Task.CompletedTask;
     }
 
     private Task PopulateAsync(McpResource entry, JsonNode data, bool isNew)

@@ -14,12 +14,12 @@ namespace CrestApps.OrchardCore.AI.Mcp.Deployments.Drivers;
 
 internal sealed class McpResourceDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, McpResourceDeploymentStep>
 {
-    private readonly ICatalog<McpResource> _store;
+    private readonly ISourceCatalog<McpResource> _store;
 
     internal readonly IStringLocalizer S;
 
     public McpResourceDeploymentStepDisplayDriver(
-        ICatalog<McpResource> store,
+        ISourceCatalog<McpResource> store,
         IStringLocalizer<McpResourceDeploymentStepDisplayDriver> stringLocalizer)
     {
         _store = store;

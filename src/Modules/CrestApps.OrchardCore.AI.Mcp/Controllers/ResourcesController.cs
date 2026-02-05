@@ -29,7 +29,7 @@ public sealed class ResourcesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<McpResource> _displayDriver;
-    private readonly McpResourceOptions _resourceOptions;
+    private readonly McpOptions _mcpOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -40,7 +40,7 @@ public sealed class ResourcesController : Controller
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<McpResource> displayDriver,
-        IOptions<McpResourceOptions> resourceOptions,
+        IOptions<McpOptions> mcpOptions,
         INotifier notifier,
         IHtmlLocalizer<ResourcesController> htmlLocalizer,
         IStringLocalizer<ResourcesController> stringLocalizer)
@@ -49,7 +49,7 @@ public sealed class ResourcesController : Controller
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _displayDriver = displayDriver;
-        _resourceOptions = resourceOptions.Value;
+        _mcpOptions = mcpOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -88,7 +88,7 @@ public sealed class ResourcesController : Controller
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            Sources = _resourceOptions.ResourceTypes.Select(x => x.Key).Order(),
+            Sources = _mcpOptions.ResourceTypes.Select(x => x.Key).Order(),
         };
 
         foreach (var model in result.Entries)
@@ -128,7 +128,7 @@ public sealed class ResourcesController : Controller
             return Forbid();
         }
 
-        if (!_resourceOptions.ResourceTypes.TryGetValue(source, out var entry))
+        if (!_mcpOptions.ResourceTypes.TryGetValue(source, out var entry))
         {
             await _notifier.ErrorAsync(H["Unable to find a resource type with the name '{0}'.", source]);
 
@@ -156,7 +156,7 @@ public sealed class ResourcesController : Controller
             return Forbid();
         }
 
-        if (!_resourceOptions.ResourceTypes.TryGetValue(source, out var entry))
+        if (!_mcpOptions.ResourceTypes.TryGetValue(source, out var entry))
         {
             await _notifier.ErrorAsync(H["Unable to find a resource type with the name '{0}'.", source]);
 

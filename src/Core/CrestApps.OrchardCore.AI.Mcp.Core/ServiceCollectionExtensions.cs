@@ -19,12 +19,19 @@ public static class ServiceCollectionExtensions
         Action<McpResourceTypeEntry> configure = null)
         where THandler : class, IMcpResourceTypeHandler
     {
-        services.Configure<McpResourceOptions>(options =>
+        services.Configure<McpOptions>(options =>
         {
             options.AddResourceType(type, configure);
         });
 
-        services.AddScoped<IMcpResourceTypeHandler, THandler>();
+        // Register the handler implementation
+        services.AddScoped<THandler>();
+
+        // Register by interface for enumeration
+        services.AddScoped<IMcpResourceTypeHandler>(sp => sp.GetRequiredService<THandler>());
+
+        // Register as keyed service for direct lookup by type
+        services.AddKeyedScoped<IMcpResourceTypeHandler>(type, (sp, key) => sp.GetRequiredService<THandler>());
 
         return services;
     }
