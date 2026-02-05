@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
+    <PackageVersion Include="FluentFTP" Version="52.1.0" />
     <PackageVersion Include="JsonSchema.Net" Version="7.4.0" />
     <PackageVersion Include="NuGet.Versioning" Version="7.0.1" />
     <PackageVersion Include="OllamaSharp" Version="5.4.16" />
