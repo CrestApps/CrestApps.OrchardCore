@@ -116,6 +116,13 @@ public sealed class McpServerStartup : StartupBase
 {
     private const string McpServerPolicyName = "McpServerPolicy";
 
+    internal readonly IStringLocalizer S;
+
+    public McpServerStartup(IStringLocalizer<McpServerStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddTransient<IConfigureOptions<McpServerOptions>, McpServerOptionsConfiguration>();
@@ -138,6 +145,13 @@ public sealed class McpServerStartup : StartupBase
         services.AddNavigationProvider<McpResourcesAdminMenu>()
             .AddScoped<ICatalogEntryHandler<McpResource>, McpResourceHandler>()
             .AddDisplayDriver<McpResource, McpResourceDisplayDriver>();
+
+        // Register built-in File resource type handler.
+        services.AddMcpResourceType<FileResourceTypeHandler>(FileResourceTypeHandler.TypeName, entry =>
+        {
+            entry.DisplayName = S["File"];
+            entry.Description = S["Reads content from local files using file:// URIs."];
+        });
 
         services.AddMcpServer(options =>
         {

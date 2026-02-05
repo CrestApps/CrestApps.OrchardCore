@@ -1,0 +1,45 @@
+@using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.ViewModels
+@model FtpConnectionViewModel
+
+<div class="mb-3">
+    <label asp-for="Host" class="form-label">@T["Host"]</label>
+    <input asp-for="Host" class="form-control" />
+    <span asp-validation-for="Host" class="text-danger"></span>
+    <span class="hint">@T["The FTP server hostname (e.g., ftp.example.com)."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Port" class="form-label">@T["Port"]</label>
+    <input asp-for="Port" type="number" class="form-control" placeholder="21" />
+    <span asp-validation-for="Port" class="text-danger"></span>
+    <span class="hint">@T["The FTP server port. Default is 21 for FTP or 990 for implicit FTPS."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Username" class="form-label">@T["Username"]</label>
+    <input asp-for="Username" class="form-control" />
+    <span asp-validation-for="Username" class="text-danger"></span>
+    <span class="hint">@T["The username for FTP authentication."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Password" class="form-label">@T["Password"]</label>
+    @if (Model.HasPassword)
+    {
+        <input asp-for="Password" type="password" class="form-control" placeholder="@T["Keep current password"]" />
+        <span class="hint">@T["Leave empty to keep the current password."]</span>
+    }
+    else
+    {
+        <input asp-for="Password" type="password" class="form-control" />
+    }
+    <span asp-validation-for="Password" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="UseSsl" class="form-check-input" />
+        <label asp-for="UseSsl" class="form-check-label">@T["Use SSL/TLS"]</label>
+    </div>
+    <span class="hint">@T["Enable SSL/TLS encryption for secure FTP connections (FTPS)."]</span>
+</div>

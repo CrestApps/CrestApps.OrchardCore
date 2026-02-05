@@ -1,23 +1,30 @@
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Models;
 using FluentFTP;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Handlers;
 
 /// <summary>
 /// Handles ftp:// and ftps:// URI resources by reading content from FTP servers.
-/// Connection details are stored in the resource's Properties.
+/// Connection details are stored in the resource's FtpConnectionMetadata.
 /// </summary>
 public sealed class FtpResourceTypeHandler : IMcpResourceTypeHandler
 {
     private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
+    private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger _logger;
 
-    public FtpResourceTypeHandler(ILogger<FtpResourceTypeHandler> logger)
+    public FtpResourceTypeHandler(
+        IDataProtectionProvider dataProtectionProvider,
+        ILogger<FtpResourceTypeHandler> logger)
     {
+        _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
     }
 
@@ -39,14 +46,28 @@ public sealed class FtpResourceTypeHandler : IMcpResourceTypeHandler
             throw new InvalidOperationException($"Invalid FTP URI: {uri}. Expected format: ftp://host/path or ftps://host/path");
         }
 
-        // Get connection details from resource properties
-        var host = GetPropertyValue(resource, FtpResourceConstants.Settings.Host) ?? ftpUri.Host;
-        var portString = GetPropertyValue(resource, FtpResourceConstants.Settings.Port);
-        var port = int.TryParse(portString, out var p) ? p : (ftpUri.IsDefaultPort ? 21 : ftpUri.Port);
-        var username = GetPropertyValue(resource, FtpResourceConstants.Settings.Username);
-        var password = GetPropertyValue(resource, FtpResourceConstants.Settings.Password);
-        var useSslString = GetPropertyValue(resource, FtpResourceConstants.Settings.UseSsl);
-        var useSsl = bool.TryParse(useSslString, out var ssl) ? ssl : ftpUri.Scheme == "ftps";
+        // Get connection details from metadata
+        var metadata = resource.As<FtpConnectionMetadata>();
+
+        var host = metadata?.Host ?? ftpUri.Host;
+        var port = metadata?.Port ?? (ftpUri.IsDefaultPort ? 21 : ftpUri.Port);
+        var username = metadata?.Username;
+        var useSsl = metadata?.UseSsl ?? ftpUri.Scheme == "ftps";
+
+        // Unprotect password if present
+        string password = null;
+        if (!string.IsNullOrEmpty(metadata?.Password))
+        {
+            try
+            {
+                var protector = _dataProtectionProvider.CreateProtector(FtpResourceConstants.DataProtectionPurpose);
+                password = protector.Unprotect(metadata.Password);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to unprotect FTP password for resource {ResourceId}", resource.ItemId);
+            }
+        }
 
         var remotePath = ftpUri.AbsolutePath;
 
@@ -103,15 +124,5 @@ public sealed class FtpResourceTypeHandler : IMcpResourceTypeHandler
         {
             await client.Disconnect(cancellationToken);
         }
-    }
-
-    private static string GetPropertyValue(McpResource resource, string key)
-    {
-        if (resource.Properties is not null && resource.Properties.ContainsKey(key))
-        {
-            return resource.Properties[key]?.ToString();
-        }
-
-        return null;
     }
 }

@@ -4,13 +4,15 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 
-namespace CrestApps.OrchardCore.AI.Mcp.Resources.File.Handlers;
+namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 
 /// <summary>
 /// Handles file:// URI resources by reading content from local files.
 /// </summary>
 public sealed class FileResourceTypeHandler : IMcpResourceTypeHandler
 {
+    public const string TypeName = "file";
+
     private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
     private readonly ILogger _logger;
 
@@ -19,7 +21,7 @@ public sealed class FileResourceTypeHandler : IMcpResourceTypeHandler
         _logger = logger;
     }
 
-    public string Type => FileResourceConstants.Type;
+    public string Type => TypeName;
 
     public async Task<ReadResourceResult> ReadAsync(McpResource resource, CancellationToken cancellationToken = default)
     {
@@ -38,7 +40,7 @@ public sealed class FileResourceTypeHandler : IMcpResourceTypeHandler
 
         var filePath = fileUri.LocalPath;
 
-        if (!System.IO.File.Exists(filePath))
+        if (!File.Exists(filePath))
         {
             throw new FileNotFoundException($"File not found: {filePath}");
         }
@@ -56,7 +58,7 @@ public sealed class FileResourceTypeHandler : IMcpResourceTypeHandler
         }
 
         // Read file content
-        var content = await System.IO.File.ReadAllTextAsync(filePath, cancellationToken);
+        var content = await File.ReadAllTextAsync(filePath, cancellationToken);
 
         return new ReadResourceResult
         {
