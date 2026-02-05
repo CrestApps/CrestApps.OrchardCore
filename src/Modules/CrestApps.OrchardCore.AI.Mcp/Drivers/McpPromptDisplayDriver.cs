@@ -17,12 +17,13 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
         S = stringLocalizer;
     }
 
-    public override Task<IDisplayResult> DisplayAsync(McpPrompt prompt, BuildDisplayContext context)
+    public override Task<IDisplayResult> DisplayAsync(McpPrompt entry, BuildDisplayContext context)
     {
         return CombineAsync(
-            View("McpPrompt_Fields_SummaryAdmin", prompt).Location("Content:1"),
-            View("McpPrompt_Buttons_SummaryAdmin", prompt).Location("Actions:5"),
-            View("McpPrompt_DefaultMeta_SummaryAdmin", prompt).Location("Meta:5")
+            View("McpPrompt_Fields_SummaryAdmin", entry).Location("Content:1"),
+            View("McpPrompt_Buttons_SummaryAdmin", entry).Location("Actions:5"),
+            View("McpPrompt_DefaultMeta_SummaryAdmin", entry).Location("Meta:5"),
+            View("McpPrompt_Description_SummaryAdmin", entry).Location("Description:1")
         );
     }
 
@@ -30,16 +31,22 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
     {
         return Initialize<McpPromptFieldsViewModel>("McpPromptFields_Edit", model =>
         {
-            model.Name = entry.Prompt?.Name;
-            model.Title = entry.Prompt?.Title;
-            model.Description = entry.Prompt?.Description;
-            model.Arguments = entry.Prompt?.Arguments?.Select(a => new McpPromptArgumentViewModel
+            model.IsNew = context.IsNew;
+
+            model.Name = entry.Name;
+
+            if (entry.Prompt is not null)
             {
-                Name = a.Name,
-                Title = a.Title,
-                Description = a.Description,
-                Required = a.Required ?? false,
-            }).ToList() ?? [];
+                model.Title = entry.Prompt.Title;
+                model.Description = entry.Prompt.Description;
+                model.Arguments = entry.Prompt.Arguments?.Select(a => new McpPromptArgumentViewModel
+                {
+                    Name = a.Name,
+                    Title = a.Title,
+                    Description = a.Description,
+                    Required = a.Required ?? false,
+                }).ToList() ?? [];
+            }
         }).Location("Content:1");
     }
 
@@ -48,11 +55,6 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
         var model = new McpPromptFieldsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
-        if (string.IsNullOrWhiteSpace(model.Title))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Title), S["The Title is required."]);
-        }
 
         if (string.IsNullOrWhiteSpace(model.Name))
         {
@@ -64,14 +66,20 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
             .Where(a => !string.IsNullOrWhiteSpace(a.Name))
             .ToList() ?? [];
 
-        entry.Prompt ??= new Prompt { Name = string.Empty };
-        entry.Prompt.Name = model.Name ?? string.Empty;
+        var name = model.Name ?? string.Empty;
+
+        entry.Name = name;
+        entry.Prompt ??= new Prompt
+        {
+            Name = name,
+        };
+        entry.Prompt.Name = name;
         entry.Prompt.Title = model.Title;
         entry.Prompt.Description = model.Description;
 
         entry.Prompt.Arguments = validArguments.Select(a => new PromptArgument
         {
-            Name = a.Name ?? string.Empty,
+            Name = a.Name,
             Title = a.Title,
             Description = a.Description,
             Required = a.Required,

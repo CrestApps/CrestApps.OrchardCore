@@ -41,7 +41,7 @@ internal sealed class McpPromptDeploymentStepDisplayDriver : DisplayDriver<Deplo
                     {
                         model.Names = (await _store.GetAllAsync())
                         .Where(x => step.PromptIds.Contains(x.ItemId))
-                        .Select(x => x.DisplayText);
+                        .Select(x => x.Name);
                     }
                 }).Location("Summary", "Content"),
                 View("McpPromptDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
@@ -54,7 +54,7 @@ internal sealed class McpPromptDeploymentStepDisplayDriver : DisplayDriver<Deplo
         {
             model.IncludeAll = step.IncludeAll;
             model.Prompts = (await _store.GetAllAsync())
-            .Select(prompt => new SelectListItem(prompt.DisplayText, prompt.ItemId)
+            .Select(prompt => new SelectListItem(prompt.Name, prompt.ItemId)
             {
                 Selected = step.PromptIds is not null && step.PromptIds.Contains(prompt.ItemId),
             }).ToArray();

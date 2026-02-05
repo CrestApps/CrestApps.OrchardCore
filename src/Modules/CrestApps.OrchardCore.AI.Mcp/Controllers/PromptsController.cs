@@ -25,7 +25,7 @@ public sealed class PromptsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly ICatalogManager<McpPrompt> _manager;
+    private readonly INamedCatalogManager<McpPrompt> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<McpPrompt> _displayDriver;
@@ -35,7 +35,7 @@ public sealed class PromptsController : Controller
     internal readonly IStringLocalizer S;
 
     public PromptsController(
-        ICatalogManager<McpPrompt> manager,
+        INamedCatalogManager<McpPrompt> manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<McpPrompt> displayDriver,
@@ -149,7 +149,7 @@ public sealed class PromptsController : Controller
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = model.DisplayText,
+            DisplayName = model.Name,
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -181,7 +181,7 @@ public sealed class PromptsController : Controller
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = model.DisplayText,
+            DisplayName = model.Name,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 
@@ -207,7 +207,7 @@ public sealed class PromptsController : Controller
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = model.DisplayText,
+            DisplayName = model.Name,
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
 

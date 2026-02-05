@@ -75,6 +75,11 @@
     </button>
 </fieldset>
 
+<script asp-name="technical-name-generator"></script>
+<script at="Foot" depends-on="technical-name-generator">
+    window.initAutoGenerateTechnicalName('@Html.IdFor(x => x.Title)', '@Html.IdFor(x => x.Name)');
+</script>
+
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
         const argumentsContainer = document.getElementById('arguments-container');

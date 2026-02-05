@@ -7,12 +7,12 @@ namespace CrestApps.OrchardCore.AI.Mcp.Core.Models;
 /// <summary>
 /// Represents an MCP prompt entry that wraps the SDK's Prompt class and adds catalog metadata.
 /// </summary>
-public sealed class McpPrompt : CatalogItem, ICloneable<McpPrompt>
+public sealed class McpPrompt : CatalogItem, INameAwareModel, ICloneable<McpPrompt>
 {
     /// <summary>
-    /// Gets or sets the display text (title) for the prompt in the admin UI.
+    /// Gets or sets the name of the prompt.
     /// </summary>
-    public string DisplayText => (Prompt?.Title ?? Prompt?.Name) ?? "Untitled Prompt";
+    public string Name { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC date and time when the prompt was created.
@@ -42,6 +42,7 @@ public sealed class McpPrompt : CatalogItem, ICloneable<McpPrompt>
         var clone = new McpPrompt()
         {
             ItemId = ItemId,
+            Name = Name,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,
@@ -52,12 +53,12 @@ public sealed class McpPrompt : CatalogItem, ICloneable<McpPrompt>
         {
             clone.Prompt = new Prompt
             {
-                Name = Prompt.Name ?? string.Empty,
+                Name = Prompt.Name ?? clone.Name,
                 Title = Prompt.Title,
                 Description = Prompt.Description,
                 Arguments = Prompt.Arguments?.Select(a => new PromptArgument
                 {
-                    Name = a.Name ?? string.Empty,
+                    Name = a.Name,
                     Title = a.Title,
                     Description = a.Description,
                     Required = a.Required,

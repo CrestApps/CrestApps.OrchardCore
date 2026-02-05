@@ -56,7 +56,7 @@ internal sealed class McpPromptDeploymentSource : DeploymentSourceBase<McpPrompt
             var deploymentInfo = new JsonObject()
             {
                 { nameof(McpPrompt.ItemId), entry.ItemId },
-                { nameof(McpPrompt.DisplayText), entry.DisplayText },
+                { nameof(McpPrompt.Name), entry.Name },
                 { nameof(McpPrompt.Author), entry.Author },
                 { nameof(McpPrompt.CreatedUtc), entry.CreatedUtc },
                 { nameof(McpPrompt.OwnerId), entry.OwnerId },

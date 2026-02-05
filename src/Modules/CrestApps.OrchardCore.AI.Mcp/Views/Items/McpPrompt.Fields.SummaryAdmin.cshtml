@@ -2,20 +2,4 @@
 
 @model ShapeViewModel<McpPrompt>
 
-<a asp-route-action="Edit" asp-route-controller="Prompts" asp-route-id="@Model.Value.ItemId" class="text-body">
-    <strong>@Model.Value.DisplayText</strong>
-</a>
-@if (!string.IsNullOrEmpty(Model.Value.Prompt?.Name))
-{
-    <span class="text-muted ms-2">(@Model.Value.Prompt.Name)</span>
-}
-@if (!string.IsNullOrEmpty(Model.Value.Prompt?.Description))
-{
-    <p class="text-muted mb-0 mt-1">@Model.Value.Prompt.Description</p>
-}
-@if (Model.Value.Prompt?.Arguments?.Count > 0)
-{
-    <div class="text-muted small mt-1">
-        @T["{0} argument(s)", Model.Value.Prompt.Arguments.Count]
-    </div>
-}
+<h5>@(Model.Value.Name)</h5>

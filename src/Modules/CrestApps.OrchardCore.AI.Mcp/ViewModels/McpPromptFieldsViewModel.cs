@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+
 namespace CrestApps.OrchardCore.AI.Mcp.ViewModels;
 
 public class McpPromptFieldsViewModel
@@ -9,6 +11,9 @@ public class McpPromptFieldsViewModel
     public string Description { get; set; }
 
     public List<McpPromptArgumentViewModel> Arguments { get; set; } = [];
+
+    [BindNever]
+    public bool IsNew { get; set; }
 }
 
 public class McpPromptArgumentViewModel

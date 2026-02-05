@@ -36,6 +36,11 @@ internal sealed class McpPromptHandler : CatalogEntryHandlerBase<McpPrompt>
 
     public override Task ValidatingAsync(ValidatingContext<McpPrompt> context)
     {
+        if (string.IsNullOrEmpty(context.Model.Name))
+        {
+            context.Result.Fail(new ValidationResult(S["Name is required."], ["Name"]));
+        }
+
         if (string.IsNullOrEmpty(context.Model.Prompt?.Name))
         {
             context.Result.Fail(new ValidationResult(S["Name is required."], ["Prompt.Name"]));
@@ -76,17 +81,22 @@ internal sealed class McpPromptHandler : CatalogEntryHandlerBase<McpPrompt>
             }
         }
 
+        var name = data?[nameof(McpPrompt.Name)]?.ToString();
+
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            entry.Name = name;
+        }
+
         // Populate the Prompt from data if provided
         var promptData = data?[nameof(McpPrompt.Prompt)];
+
         if (promptData != null)
         {
-            entry.Prompt ??= new Prompt { Name = string.Empty };
-
-            var name = promptData[nameof(Prompt.Name)]?.ToString();
-            if (!string.IsNullOrWhiteSpace(name))
+            entry.Prompt ??= new Prompt
             {
-                entry.Prompt.Name = name;
-            }
+                Name = name,
+            };
 
             var title = promptData[nameof(Prompt.Title)]?.ToString();
             if (!string.IsNullOrWhiteSpace(title))

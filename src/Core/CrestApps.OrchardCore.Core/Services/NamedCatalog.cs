@@ -33,6 +33,11 @@ public class NamedCatalog<T> : Catalog<T>, INamedCatalog<T>
 
     protected static bool OrdinalIgnoreCaseEquals(string str1, string str2)
     {
+        if (str1 is null)
+        {
+            return str2 is null;
+        }
+
         return str1.Equals(str2, StringComparison.OrdinalIgnoreCase);
     }
 }

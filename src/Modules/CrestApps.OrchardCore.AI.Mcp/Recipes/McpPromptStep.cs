@@ -13,12 +13,12 @@ internal sealed class McpPromptStep : NamedRecipeStepHandler
 {
     public const string StepKey = "McpPrompt";
 
-    private readonly ICatalogManager<McpPrompt> _manager;
+    private readonly INamedCatalogManager<McpPrompt> _manager;
 
     internal readonly IStringLocalizer S;
 
     public McpPromptStep(
-        ICatalogManager<McpPrompt> manager,
+        INamedCatalogManager<McpPrompt> manager,
         IStringLocalizer<McpPromptStep> stringLocalizer)
          : base(StepKey)
     {
@@ -77,11 +77,18 @@ internal sealed class McpPromptStep : NamedRecipeStepHandler
     {
         // Populate the Prompt from token
         var promptData = token[nameof(McpPrompt.Prompt)]?.AsObject();
+
+        var name = promptData[nameof(McpPrompt.Name)]?.GetValue<string>();
+
+        entry.Name = name;
+
         if (promptData is not null)
         {
-            entry.Prompt ??= new Prompt { Name = string.Empty };
+            entry.Prompt ??= new Prompt
+            {
+                Name = string.Empty,
+            };
 
-            var name = promptData[nameof(Prompt.Name)]?.GetValue<string>();
             if (!string.IsNullOrWhiteSpace(name))
             {
                 entry.Prompt.Name = name;

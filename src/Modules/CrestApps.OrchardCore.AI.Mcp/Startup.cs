@@ -210,7 +210,7 @@ public sealed class McpServerStartup : StartupBase
         })
         .WithListPromptsHandler(async (request, cancellationToken) =>
         {
-            var manager = request.Services.GetRequiredService<ICatalogManager<McpPrompt>>();
+            var manager = request.Services.GetRequiredService<INamedCatalogManager<McpPrompt>>();
             var entries = await manager.GetAllAsync();
 
             var result = new ListPromptsResult
@@ -225,7 +225,7 @@ public sealed class McpServerStartup : StartupBase
         })
         .WithGetPromptHandler(async (request, cancellationToken) =>
         {
-            var manager = request.Services.GetRequiredService<ICatalogManager<McpPrompt>>();
+            var manager = request.Services.GetRequiredService<INamedCatalogManager<McpPrompt>>();
             var entries = await manager.GetAllAsync();
             var entry = entries.FirstOrDefault(e => e.Prompt?.Name == request.Params.Name);
 
