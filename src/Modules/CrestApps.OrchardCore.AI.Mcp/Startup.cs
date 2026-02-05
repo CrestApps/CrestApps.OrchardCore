@@ -141,9 +141,7 @@ public sealed class McpServerStartup : StartupBase
             .AddScoped<ICatalogEntryHandler<McpPrompt>, McpPromptHandler>()
             .AddDisplayDriver<McpPrompt, McpPromptDisplayDriver>();
 
-        // Register MCP Resource services with custom store that enforces URI uniqueness.
-        services.AddScoped<IMcpResourceStore, McpResourceStore>();
-        services.AddScoped<ISourceCatalog<McpResource>>(sp => sp.GetRequiredService<IMcpResourceStore>());
+        // Register MCP Resource services.
         services.AddNavigationProvider<McpResourcesAdminMenu>()
             .AddScoped<ICatalogEntryHandler<McpResource>, McpResourceHandler>()
             .AddDisplayDriver<McpResource, McpResourceDisplayDriver>();
@@ -153,7 +151,7 @@ public sealed class McpServerStartup : StartupBase
         {
             entry.DisplayName = S["File"];
             entry.Description = S["Reads content from local files."];
-            entry.UriPatterns = ["file:///{path}"];
+            entry.UriPatterns = ["file://{itemId}/{path}"];
         });
 
         services.AddMcpServer(options =>
@@ -279,9 +277,22 @@ public sealed class McpServerStartup : StartupBase
         })
         .WithReadResourceHandler(async (request, cancellationToken) =>
         {
+            // Parse the ItemId from the URI: {protocol}://{itemId}/{path}
+            if (!Uri.TryCreate(request.Params.Uri, UriKind.Absolute, out var uri))
+            {
+                throw new McpException($"Invalid URI format: '{request.Params.Uri}'.");
+            }
+
+            // The host portion of the URI contains the ItemId
+            var itemId = uri.Host;
+
+            if (string.IsNullOrEmpty(itemId))
+            {
+                throw new McpException($"Resource URI '{request.Params.Uri}' does not contain a valid ItemId.");
+            }
+
             var manager = request.Services.GetRequiredService<ISourceCatalogManager<McpResource>>();
-            var entries = await manager.GetAllAsync();
-            var entry = entries.FirstOrDefault(e => e.Resource?.Uri == request.Params.Uri);
+            var entry = await manager.FindByIdAsync(itemId);
 
             if (entry?.Resource is null)
             {
