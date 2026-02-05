@@ -153,6 +153,7 @@ public sealed class McpServerStartup : StartupBase
         {
             entry.DisplayName = S["File"];
             entry.Description = S["Reads content from local files."];
+            entry.UriPattern = S["file:///{path}"];
         });
 
         services.AddMcpServer(options =>
@@ -362,5 +363,49 @@ public sealed class McpResourceDeploymentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<McpResourceDeploymentSource, McpResourceDeploymentStep, McpResourceDeploymentStepDisplayDriver>();
+    }
+}
+
+[Feature(McpConstants.Feature.Server)]
+[RequireFeatures("OrchardCore.ContentManagement")]
+public sealed class McpContentResourceStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public McpContentResourceStartup(IStringLocalizer<McpContentResourceStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddMcpResourceType<ContentResourceTypeHandler>(ContentResourceTypeHandler.TypeName, entry =>
+        {
+            entry.DisplayName = S["Content"];
+            entry.Description = S["Reads content items from Orchard Core."];
+            entry.UriPattern = S["content://id/{contentItemId}"];
+        });
+    }
+}
+
+[Feature(McpConstants.Feature.Server)]
+[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+public sealed class McpRecipeSchemaResourceStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public McpRecipeSchemaResourceStartup(IStringLocalizer<McpRecipeSchemaResourceStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddMcpResourceType<RecipeSchemaResourceTypeHandler>(RecipeSchemaResourceTypeHandler.TypeName, entry =>
+        {
+            entry.DisplayName = S["Recipe Schema"];
+            entry.Description = S["Provides JSON schema definitions for recipe steps and content types."];
+            entry.UriPattern = S["recipe-schema://recipe-step/{stepName} or recipe-schema://content-type/{contentTypeName}"];
+        });
     }
 }

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -12,14 +13,17 @@ namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
 internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
 {
     private readonly IMcpResourceStore _store;
+    private readonly McpOptions _mcpOptions;
 
     internal readonly IStringLocalizer S;
 
     public McpResourceDisplayDriver(
         IMcpResourceStore store,
+        IOptions<McpOptions> mcpOptions,
         IStringLocalizer<McpResourceDisplayDriver> stringLocalizer)
     {
         _store = store;
+        _mcpOptions = mcpOptions.Value;
         S = stringLocalizer;
     }
 
@@ -40,6 +44,14 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
             model.IsNew = context.IsNew;
             model.Source = entry.Source;
             model.DisplayText = entry.DisplayText;
+
+            // Get the URI pattern from the options for this resource type
+            if (!string.IsNullOrEmpty(entry.Source) &&
+                _mcpOptions.ResourceTypes.TryGetValue(entry.Source, out var typeEntry) &&
+                typeEntry.UriPattern is not null)
+            {
+                model.UriPattern = typeEntry.UriPattern.Value;
+            }
 
             if (entry.Resource is not null)
             {

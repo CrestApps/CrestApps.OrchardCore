@@ -44,4 +44,11 @@ public sealed class McpResourceTypeEntry
     public LocalizedString DisplayName { get; set; }
 
     public LocalizedString Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the URI pattern supported by this resource type.
+    /// This is displayed in the UI to help users understand what URI formats are valid.
+    /// Example: "file://{path}", "content://{contentItemId}", "recipe-schema://recipe-step/{stepName}"
+    /// </summary>
+    public LocalizedString UriPattern { get; set; }
 }

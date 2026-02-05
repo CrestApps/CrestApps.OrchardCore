@@ -35,7 +35,14 @@
     <div class="@Orchard.GetEndClasses()">
         <input type="text" asp-for="Uri" class="form-control" />
         <span asp-validation-for="Uri" class="text-danger"></span>
-        <span class="hint">@T["The unique identifier for this resource. Format depends on the resource type."]</span>
+        @if (!string.IsNullOrEmpty(Model.UriPattern))
+        {
+            <span class="hint">@T["The unique identifier for this resource. Supported pattern: {0}", Model.UriPattern]</span>
+        }
+        else
+        {
+            <span class="hint">@T["The unique identifier for this resource. Format depends on the resource type."]</span>
+        }
     </div>
 </div>
 
