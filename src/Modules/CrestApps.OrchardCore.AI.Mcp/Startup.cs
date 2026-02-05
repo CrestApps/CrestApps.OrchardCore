@@ -134,6 +134,11 @@ public sealed class McpServerStartup : StartupBase
             .AddScoped<ICatalogEntryHandler<McpPrompt>, McpPromptHandler>()
             .AddDisplayDriver<McpPrompt, McpPromptDisplayDriver>();
 
+        // Register MCP Resource services.
+        services.AddNavigationProvider<McpResourcesAdminMenu>()
+            .AddScoped<ICatalogEntryHandler<McpResource>, McpResourceHandler>()
+            .AddDisplayDriver<McpResource, McpResourceDisplayDriver>();
+
         services.AddMcpServer(options =>
         {
             options.ServerInfo = new()
@@ -239,6 +244,43 @@ public sealed class McpServerStartup : StartupBase
                 Description = entry.Prompt.Description,
                 Messages = [],
             };
+        })
+        .WithListResourcesHandler(async (request, cancellationToken) =>
+        {
+            var manager = request.Services.GetRequiredService<ISourceCatalogManager<McpResource>>();
+            var entries = await manager.GetAllAsync();
+
+            var result = new ListResourcesResult
+            {
+                Resources = entries
+                    .Where(e => e.Resource != null)
+                    .Select(e => e.Resource)
+                    .ToList()
+            };
+
+            return result;
+        })
+        .WithReadResourceHandler(async (request, cancellationToken) =>
+        {
+            var manager = request.Services.GetRequiredService<ISourceCatalogManager<McpResource>>();
+            var entries = await manager.GetAllAsync();
+            var entry = entries.FirstOrDefault(e => e.Resource?.Uri == request.Params.Uri);
+
+            if (entry?.Resource is null)
+            {
+                throw new McpException($"Resource '{request.Params.Uri}' not found.");
+            }
+
+            // Get the appropriate type handler for this resource
+            var handlers = request.Services.GetServices<IMcpResourceTypeHandler>();
+            var handler = handlers.FirstOrDefault(h => string.Equals(h.Type, entry.Source, StringComparison.OrdinalIgnoreCase));
+
+            if (handler is null)
+            {
+                throw new McpException($"No handler found for resource type '{entry.Source}'.");
+            }
+
+            return await handler.ReadAsync(entry, cancellationToken);
         });
 
         // Configure authorization policy.
@@ -285,5 +327,25 @@ public sealed class McpPromptDeploymentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<McpPromptDeploymentSource, McpPromptDeploymentStep, McpPromptDeploymentStepDisplayDriver>();
+    }
+}
+
+[Feature(McpConstants.Feature.Server)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class McpResourceRecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<McpResourceStep>();
+    }
+}
+
+[Feature(McpConstants.Feature.Server)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class McpResourceDeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<McpResourceDeploymentSource, McpResourceDeploymentStep, McpResourceDeploymentStepDisplayDriver>();
     }
 }

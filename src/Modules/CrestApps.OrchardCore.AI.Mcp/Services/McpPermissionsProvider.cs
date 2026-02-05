@@ -10,6 +10,7 @@ internal sealed class McpPermissionsProvider : IPermissionProvider
     [
         McpPermissions.ManageMcpConnections,
         McpPermissions.ManageMcpPrompts,
+        McpPermissions.ManageMcpResources,
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()

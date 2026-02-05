@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.AI.Mcp.Core.Models
+
+@model ShapeViewModel<McpResource>
+
+@if (!string.IsNullOrEmpty(Model.Value.Resource?.Description))
+{
+    <small class="text-muted">@Model.Value.Resource.Description</small>
+}

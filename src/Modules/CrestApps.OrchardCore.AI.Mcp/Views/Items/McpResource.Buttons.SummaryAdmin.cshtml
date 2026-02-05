@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.AI.Mcp.Core.Models
+
+@model ShapeViewModel<McpResource>
+
+<div>
+    <a asp-route-action="Edit" asp-route-controller="Resources" asp-route-id="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+
+    <a asp-route-action="Delete" asp-route-controller="Resources" asp-route-id="@Model.Value.ItemId" class="btn btn-danger btn-sm" data-title="@T["Delete"]" data-message="@T["Are you sure you want to delete this resource?"]" data-ok-text="@T["Delete"]" data-cancel-text="@T["Cancel"]" itemprop="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+</div>
