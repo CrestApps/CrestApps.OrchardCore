@@ -2,6 +2,45 @@
 
 CrestApps provides a collection of open-source modules designed to enhance **Orchard Core**, a powerful application framework built on **ASP.NET Core**.  
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Project Structure](#project-structure)
+  - [Example Structure](#example-structure)
+- [Available Modules](#available-modules)
+  - [Artificial Intelligence Suite](#artificial-intelligence-suite)
+    - [AI Module](#ai-module)
+    - [AI Chat Module](#ai-chat-module)
+    - [AI Chat Interactions Module](#ai-chat-interactions-module)
+    - [Orchard Core AI Agent Module](#orchard-core-ai-agent-module)
+    - [Model Context Protocol (MCP) Module](#model-context-protocol-mcp-module)
+    - [Azure OpenAI Module](#azure-openai-module)
+    - [OpenAI Module](#openai-module)
+    - [Azure AI Inference Module](#azure-ai-inference-module)
+    - [Ollama Module](#ollama-module)
+  - [Omnichannel Suite](#omnichannel-suite)
+    - [Omnichannel (Orchestrator)](#omnichannel-orchestrator)
+    - [Omnichannel Management (Mini-CRM)](#omnichannel-management-mini-crm)
+    - [SMS Omnichannel Automation (AI)](#sms-omnichannel-automation-ai)
+    - [Omnichannel (Azure Event Grid)](#omnichannel-azure-event-grid)
+  - [Standard Modules](#standard-modules)
+    - [Users Module](#users-module)
+    - [SignalR Module](#signalr-module)
+    - [Enhanced Roles Module](#enhanced-roles-module)
+    - [Content Access Control Module](#content-access-control-module)
+    - [Resources Module](#resources-module)
+    - [CrestApps Recipes Module](#crestapps-recipes-module)
+- [Getting Started](#getting-started)
+  - [Running Locally](#running-locally)
+- [Package Management](#package-management)
+  - [Production Packages](#production-packages)
+  - [Preview Package Feed](#preview-package-feed)
+  - [Adding the Preview Feed](#adding-the-preview-feed)
+    - [In Visual Studio](#in-visual-studio)
+    - [Via NuGet.config](#via-nugetconfig)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Overview
 
 Orchard Core offers a **flexible and scalable** foundation for building dynamic, data-driven websites and applications. CrestApps modules are developed to further improve this framework, focusing on:  

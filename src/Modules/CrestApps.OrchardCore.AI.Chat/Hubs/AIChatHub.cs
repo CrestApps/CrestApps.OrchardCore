@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Models;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Support;
@@ -9,7 +10,6 @@ using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
-using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -186,7 +186,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             else
             {
                 // At this point, we are dealing with a chat profile.
-                await ProcessChatPromptAsync(writer, profile, sessionId, prompt.Trim(), cancellationToken);
+                await ProcessChatPromptAsync(writer, profile, sessionId, prompt?.Trim(), cancellationToken);
             }
 
             await _session.SaveChangesAsync(cancellationToken);
