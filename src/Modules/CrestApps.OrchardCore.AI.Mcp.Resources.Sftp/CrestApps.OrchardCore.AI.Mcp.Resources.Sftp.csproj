@@ -3,13 +3,13 @@
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
-    <Title>CrestApps OrchardCore AI MCP FTP Resource</Title>
+    <Title>CrestApps OrchardCore AI MCP SFTP Resource</Title>
     <Description>
       $(CrestAppsDescription)
 
-      Provides FTP/FTPS resource support for the MCP Server, allowing remote files to be exposed as MCP resources.
+      Provides SFTP resource support for the MCP Server, allowing remote files to be exposed as MCP resources.
     </Description>
-    <PackageTags>$(PackageTags) OrchardCoreCMS AI MCP ModelContextProtocol FTP FTPS</PackageTags>
+    <PackageTags>$(PackageTags) OrchardCoreCMS AI MCP ModelContextProtocol SFTP SSH</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,7 +19,7 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
-    <PackageReference Include="FluentFTP" />
+    <PackageReference Include="SSH.NET" />
   </ItemGroup>
 
   <ItemGroup>

@@ -23,8 +23,8 @@ public class McpResourceFieldsViewModel
     public string Source { get; set; }
 
     /// <summary>
-    /// Gets or sets the URI pattern for the resource type, to display as help text in the UI.
+    /// Gets or sets the URI patterns for the resource type, to display as help text in the UI.
     /// </summary>
     [BindNever]
-    public string UriPattern { get; set; }
+    public string[] UriPatterns { get; set; } = [];
 }

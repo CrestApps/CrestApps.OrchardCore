@@ -45,12 +45,12 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
             model.Source = entry.Source;
             model.DisplayText = entry.DisplayText;
 
-            // Get the URI pattern from the options for this resource type
+            // Get the URI patterns from the options for this resource type
             if (!string.IsNullOrEmpty(entry.Source) &&
                 _mcpOptions.ResourceTypes.TryGetValue(entry.Source, out var typeEntry) &&
-                typeEntry.UriPattern is not null)
+                typeEntry.UriPatterns is not null)
             {
-                model.UriPattern = typeEntry.UriPattern.Value;
+                model.UriPatterns = typeEntry.UriPatterns;
             }
 
             if (entry.Resource is not null)

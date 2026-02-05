@@ -11,7 +11,8 @@ using OrchardCore.Entities;
 namespace CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Handlers;
 
 /// <summary>
-/// Handles ftp:// and ftps:// URI resources by reading content from FTP servers.
+/// Handles ftp:// URI resources by reading content from FTP/FTPS servers.
+/// For FTPS (secure FTP), enable UseSsl in the connection metadata.
 /// Connection details are stored in the resource's FtpConnectionMetadata.
 /// </summary>
 public sealed class FtpResourceTypeHandler : IMcpResourceTypeHandler
@@ -39,11 +40,10 @@ public sealed class FtpResourceTypeHandler : IMcpResourceTypeHandler
             throw new InvalidOperationException("Resource URI is required.");
         }
 
-        // Parse the ftp:// or ftps:// URI
-        if (!Uri.TryCreate(uri, UriKind.Absolute, out var ftpUri) ||
-            (ftpUri.Scheme != "ftp" && ftpUri.Scheme != "ftps"))
+        // Parse the ftp:// URI - ftps is handled via UseSsl metadata setting
+        if (!Uri.TryCreate(uri, UriKind.Absolute, out var ftpUri) || ftpUri.Scheme != "ftp")
         {
-            throw new InvalidOperationException($"Invalid FTP URI: {uri}. Expected format: ftp://host/path or ftps://host/path");
+            throw new InvalidOperationException($"Invalid FTP URI: {uri}. Expected format: ftp://host/path");
         }
 
         // Get connection details from metadata
@@ -52,7 +52,7 @@ public sealed class FtpResourceTypeHandler : IMcpResourceTypeHandler
         var host = metadata?.Host ?? ftpUri.Host;
         var port = metadata?.Port ?? (ftpUri.IsDefaultPort ? 21 : ftpUri.Port);
         var username = metadata?.Username;
-        var useSsl = metadata?.UseSsl ?? ftpUri.Scheme == "ftps";
+        var useSsl = metadata?.UseSsl ?? false;
 
         // Unprotect password if present
         string password = null;

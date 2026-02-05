@@ -153,7 +153,7 @@ public sealed class McpServerStartup : StartupBase
         {
             entry.DisplayName = S["File"];
             entry.Description = S["Reads content from local files."];
-            entry.UriPattern = S["file:///{path}"];
+            entry.UriPatterns = ["file:///{path}"];
         });
 
         services.AddMcpServer(options =>
@@ -379,11 +379,21 @@ public sealed class McpContentResourceStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Register the content resource strategy providers for extensibility.
+        services.AddScoped<IContentResourceStrategyProvider, ContentByIdResourceStrategy>();
+        services.AddScoped<IContentResourceStrategyProvider, ContentByTypeResourceStrategy>();
+
         services.AddMcpResourceType<ContentResourceTypeHandler>(ContentResourceTypeHandler.TypeName, entry =>
         {
             entry.DisplayName = S["Content"];
             entry.Description = S["Reads content items from Orchard Core."];
-            entry.UriPattern = S["content://id/{contentItemId}"];
+            // Patterns are dynamically aggregated from registered IContentResourceStrategyProvider implementations.
+            entry.UriPatterns =
+            [
+                "content://id/{contentItemId}",
+                "content://{contentType}/{contentItemId}",
+                "content://{contentType}/list",
+            ];
         });
     }
 }
@@ -405,7 +415,11 @@ public sealed class McpRecipeSchemaResourceStartup : StartupBase
         {
             entry.DisplayName = S["Recipe Schema"];
             entry.Description = S["Provides JSON schema definitions for recipe steps and content types."];
-            entry.UriPattern = S["recipe-schema://recipe-step/{stepName} or recipe-schema://content-type/{contentTypeName}"];
+            entry.UriPatterns =
+            [
+                "recipe-schema://recipe-step/{stepName}",
+                "recipe-schema://content-type/{contentTypeName}",
+            ];
         });
     }
 }

@@ -24,7 +24,7 @@ public sealed class Startup : StartupBase
         {
             entry.DisplayName = S["FTP/FTPS"];
             entry.Description = S["Reads content from FTP/FTPS servers."];
-            entry.UriPattern = S["ftp://{host}/{path} or ftps://{host}/{path}"];
+            entry.UriPatterns = ["ftp://{host}/{path}"];
         });
 
         services.AddDisplayDriver<McpResource, FtpResourceDisplayDriver>();

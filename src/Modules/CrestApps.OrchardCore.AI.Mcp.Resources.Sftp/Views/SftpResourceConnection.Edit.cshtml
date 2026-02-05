@@ -1,0 +1,68 @@
+@using CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.ViewModels
+@model SftpConnectionViewModel
+
+<div class="mb-3">
+    <label asp-for="Host" class="form-label">@T["Host"]</label>
+    <input asp-for="Host" class="form-control" />
+    <span asp-validation-for="Host" class="text-danger"></span>
+    <span class="hint">@T["The SFTP server hostname (e.g., sftp.example.com)."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Port" class="form-label">@T["Port"]</label>
+    <input asp-for="Port" type="number" class="form-control" placeholder="22" />
+    <span asp-validation-for="Port" class="text-danger"></span>
+    <span class="hint">@T["The SFTP server port. Default is 22."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Username" class="form-label">@T["Username"]</label>
+    <input asp-for="Username" class="form-control" />
+    <span asp-validation-for="Username" class="text-danger"></span>
+    <span class="hint">@T["The username for SFTP authentication."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Password" class="form-label">@T["Password"]</label>
+    @if (Model.HasPassword)
+    {
+        <input asp-for="Password" type="password" class="form-control" placeholder="@T["Keep current password"]" />
+        <span class="hint">@T["Leave empty to keep the current password."]</span>
+    }
+    else
+    {
+        <input asp-for="Password" type="password" class="form-control" />
+    }
+    <span asp-validation-for="Password" class="text-danger"></span>
+    <span class="hint">@T["The password for password-based authentication. Optional if using private key."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="PrivateKey" class="form-label">@T["Private Key"]</label>
+    @if (Model.HasPrivateKey)
+    {
+        <textarea asp-for="PrivateKey" class="form-control" rows="5" placeholder="@T["Keep current private key"]"></textarea>
+        <span class="hint">@T["Leave empty to keep the current private key."]</span>
+    }
+    else
+    {
+        <textarea asp-for="PrivateKey" class="form-control" rows="5" placeholder="-----BEGIN RSA PRIVATE KEY-----"></textarea>
+    }
+    <span asp-validation-for="PrivateKey" class="text-danger"></span>
+    <span class="hint">@T["The private key for key-based authentication. Optional if using password."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Passphrase" class="form-label">@T["Passphrase"]</label>
+    @if (Model.HasPassphrase)
+    {
+        <input asp-for="Passphrase" type="password" class="form-control" placeholder="@T["Keep current passphrase"]" />
+        <span class="hint">@T["Leave empty to keep the current passphrase."]</span>
+    }
+    else
+    {
+        <input asp-for="Passphrase" type="password" class="form-control" />
+    }
+    <span asp-validation-for="Passphrase" class="text-danger"></span>
+    <span class="hint">@T["The passphrase for the private key. Only required if the private key is encrypted."]</span>
+</div>
