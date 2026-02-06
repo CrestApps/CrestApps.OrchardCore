@@ -22,12 +22,12 @@ public sealed class AIProvider
 public sealed class AIProviderConnectionEntry : ReadOnlyDictionary<string, object>
 {
     public AIProviderConnectionEntry(AIProviderConnectionEntry connection)
-        : base(connection)
+        : base(new Dictionary<string, object>(connection, StringComparer.OrdinalIgnoreCase))
     {
     }
 
     public AIProviderConnectionEntry(IDictionary<string, object> dictionary)
-        : base(dictionary)
+        : base(new Dictionary<string, object>(dictionary, StringComparer.OrdinalIgnoreCase))
     {
     }
 }

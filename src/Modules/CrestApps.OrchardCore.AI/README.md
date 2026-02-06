@@ -63,11 +63,13 @@ Below is an example configuration:
           "DefaultConnectionName": "<!-- The default connection name to use from the Connections list -->",
           "DefaultDeploymentName": "<!-- The default deployment name -->",
           "DefaultEmbeddingDeploymentName": "<!-- The default embedding deployment name (optional, for embedding services) -->",
+          "DefaultSpeechToTextDeploymentName": "<!-- The default speech-to-text deployment name (optional, for speech-to-text service)-->",
           "DefaultIntentDeploymentName": "<!-- The default deployment name for intent detection (optional) -->",
           "DefaultImagesDeploymentName": "<!-- The default deployment name for image generation (optional, e.g., 'dall-e-3') -->",
           "Connections": {
             "<!-- Connection name goes here -->": {
               "DefaultDeploymentName": "<!-- The default deployment name for this connection -->",
+              "DefaultSpeechToTextDeploymentName": "<!-- The speech-to-text deployment name (optional) -->",
               "DefaultIntentDeploymentName": "<!-- The intent detection deployment name (optional, lightweight model recommended) -->",
               "DefaultImagesDeploymentName": "<!-- The image generation deployment name (optional, e.g., 'dall-e-3') -->"
               // Provider-specific settings go here
@@ -86,6 +88,7 @@ Below is an example configuration:
 |---------|-------------|----------|
 | `DefaultDeploymentName` | The default model for chat completions | Yes |
 | `DefaultEmbeddingDeploymentName` | The model for generating embeddings (for RAG/vector search) | No |
+| `DefaultSpeechToTextDeploymentName` | The model for speech-to-text transcription (e.g., `whisper-1`). Required for voice input features. | No |
 | `DefaultIntentDeploymentName` | A lightweight model for intent classification (e.g., `gpt-4o-mini`). If not set, falls back to `DefaultDeploymentName`. | No |
 | `DefaultImagesDeploymentName` | The model for image generation (e.g., `dall-e-3`). Required for image generation features. | No |
 
@@ -107,6 +110,59 @@ Each provider can define multiple connections, and the `DefaultConnectionName` d
 
 ---
 
+### Connection Types
+
+When configuring provider connections, you can specify the connection type using the `Type` property. This allows you to define connections for different purposes within the same provider.
+
+**Available Connection Types:**
+
+- **`Chat`** (default) - For chat/completion models
+- **`Embedding`** - For embedding models  
+- **`SpeechToText`** - For speech-to-text models (voice input)
+
+If no `Type` is specified, `Chat` is used as the default.
+
+**Usage Example:**
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Providers": {
+        "<!-- Provider name goes here (valid values: 'OpenAI', 'Azure', 'AzureAIInference', or 'Ollama') -->": {
+          "Connections": {
+            "ChatConnection": {
+              "Type": "Chat",
+              "DefaultDeploymentName": "gpt-4",
+              "Endpoint": "https://api.openai.com/v1",
+              "ApiKey": "your-api-key"
+            },
+            "EmbeddingConnection": {
+              "Type": "Embedding",
+              "DefaultDeploymentName": "text-embedding-3-small",
+              "Endpoint": "https://api.openai.com/v1",
+              "ApiKey": "your-api-key"
+            },
+            "WhisperConnection": {
+              "Type": "SpeechToText",
+              "DefaultDeploymentName": "whisper-1",
+              "Endpoint": "https://api.openai.com/v1",
+              "ApiKey": "your-api-key"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+For provider-specific configuration examples, see:
+- [OpenAI Configuration Guide](../CrestApps.OrchardCore.OpenAI/README.md)
+- [Azure OpenAI Configuration Guide](../CrestApps.OrchardCore.OpenAI.Azure/README.md)
+
+---
+
 ### Provider Configuration
 
 The following providers are supported **out of the box**:
@@ -122,9 +178,9 @@ Each provider requires its own connection and deployment settings. The `DefaultC
 
 ### Microsoft.AI.Extensions
 
-The AI module is built on top of [Microsoft.Extensions.AI](https://www.nuget.org/packages/Microsoft.Extensions.AI), making it easy to integrate AI services into your application. We provide the `IAIClientFactory` service, which allows you to easily create standard services such as `IChatClient` and `IEmbeddingGenerator` for any of your configured providers and connections.
+The AI module is built on top of [Microsoft.Extensions.AI](https://www.nuget.org/packages/Microsoft.Extensions.AI), making it easy to integrate AI services into your application. We provide the `IAIClientFactory` service, which allows you to easily create standard services such as `IChatClient`,  `IEmbeddingGenerator` and `ISpeechToTextClient` for any of your configured providers and connections.
 
-Simply inject `IAIClientFactory` into your service and use the `CreateChatClientAsync` or `CreateEmbeddingGeneratorAsync` methods to obtain the required client.
+Simply inject `IAIClientFactory` into your service and use the `CreateChatClientAsync`, `CreateEmbeddingGeneratorAsync` or `CreateISpeechToTextClientAsync` methods to obtain the required client.
 
 ### AI Deployments Feature
 

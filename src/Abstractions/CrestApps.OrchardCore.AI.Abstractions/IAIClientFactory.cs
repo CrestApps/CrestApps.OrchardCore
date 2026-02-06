@@ -31,6 +31,18 @@ public interface IAIClientFactory
     ValueTask<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(string providerName, string connectionName, string deploymentName);
 
     /// <summary>
+    /// Asynchronously creates an <see cref="ISpeechToTextClient"/> instance for the given provider, connection, and deployment.
+    /// </summary>
+    /// <param name="providerName">The name of the AI provider (e.g., "OpenAI", "AzureOpenAI").</param>
+    /// <param name="connectionName">The name of the connection configuration to use.</param>
+    /// <param name="deploymentName">The name of the deployment or model to use.</param>
+    /// <returns>
+    /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation, with the created <see cref="ISpeechToTextClient"/>.
+    /// </returns>
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(string providerName, string connectionName, string deploymentName);
+
+    /// <summary>
     /// Asynchronously creates an <see cref="IImageGenerator"/> instance for the given provider, connection, and deployment.
     /// </summary>
     /// <param name="providerName">The name of the AI provider (e.g., "OpenAI", "AzureOpenAI").</param>
