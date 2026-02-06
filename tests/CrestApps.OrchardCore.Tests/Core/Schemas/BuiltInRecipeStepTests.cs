@@ -1,6 +1,10 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using OrchardCore.Security.Permissions;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
+using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Core.Schemas;
 
@@ -18,6 +22,23 @@ public sealed class BuiltInRecipeStepTests
             => Task.FromResult<IEnumerable<string>>(_testThemeIds);
     }
 
+    private static IPermissionService CreatePermissionService()
+    {
+        var permissions = new[]
+        {
+            new Permission("PermissionA", "Permission A"),
+            new Permission("PermissionB", "Permission B")
+        };
+
+        var permissionService = new Mock<IPermissionService>();
+        permissionService.Setup(service => service.GetPermissionsAsync())
+            .Returns(new ValueTask<IEnumerable<Permission>>(permissions));
+        permissionService.Setup(service => service.FindByNameAsync(It.IsAny<string>()))
+            .ReturnsAsync((Permission)null);
+
+        return permissionService.Object;
+    }
+
     private static IRecipeStep CreateStep(Type stepType)
     {
         if (stepType == typeof(FeatureRecipeStep))
@@ -28,6 +49,16 @@ public sealed class BuiltInRecipeStepTests
         if (stepType == typeof(ThemesRecipeStep))
         {
             return new ThemesRecipeStep(new StubFeatureSchemaProvider());
+        }
+
+        if (stepType == typeof(ContentRecipeStep))
+        {
+            return new ContentRecipeStep(CreateContentDefinitionManager());
+        }
+
+        if (stepType == typeof(RolesRecipeStep))
+        {
+            return new RolesRecipeStep(CreatePermissionService());
         }
 
         return (IRecipeStep)Activator.CreateInstance(stepType);
@@ -198,7 +229,7 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task ContentRecipeStep_SchemaRequiresDataWithContentType()
     {
-        var step = new ContentRecipeStep();
+        var step = new ContentRecipeStep(CreateContentDefinitionManager());
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
         Assert.Contains("\"ContentType\"", json);
         Assert.Contains("\"data\"", json);
@@ -207,7 +238,7 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task RolesRecipeStep_SchemaContainsPermissionBehavior()
     {
-        var step = new RolesRecipeStep();
+        var step = new RolesRecipeStep(CreatePermissionService());
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
         Assert.Contains("\"PermissionBehavior\"", json);
         Assert.Contains("\"Add\"", json);
@@ -242,5 +273,15 @@ public sealed class BuiltInRecipeStepTests
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
         Assert.Contains("\"ContentTypes\"", json);
         Assert.Contains("\"ContentParts\"", json);
+    }
+
+    private static IContentDefinitionManager CreateContentDefinitionManager()
+    {
+        var manager = new Mock<IContentDefinitionManager>();
+        var definitions = Array.Empty<ContentTypeDefinition>();
+
+        manager.Setup(m => m.ListTypeDefinitionsAsync()).ReturnsAsync(definitions);
+
+        return manager.Object;
     }
 }
