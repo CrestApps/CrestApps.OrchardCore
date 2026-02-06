@@ -17,12 +17,16 @@ internal sealed class McpResourcesAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Artificial Intelligence"], ai => ai
-                .Add(S["MCP Resources"], S["MCP Resources"].PrefixPosition(), resources => resources
-                    .AddClass("ai-mcp-resources")
-                    .Id("aiMcpResources")
-                    .Action("Index", "Resources", "CrestApps.OrchardCore.AI.Mcp")
-                    .Permission(McpPermissions.ManageMcpResources)
-                    .LocalNav()
+                .Add(S["Model Context Protocol"], S["Model Context Protocol"].PrefixPosition(), mcp => mcp
+                    .AddClass("ai-mcp")
+                    .Id("aiMcp")
+                    .Add(S["Resources"], S["Resources"].PrefixPosition(), resources => resources
+                        .AddClass("ai-mcp-resources")
+                        .Id("aiMcpResources")
+                        .Action("Index", "Resources", "CrestApps.OrchardCore.AI.Mcp")
+                        .Permission(McpPermissions.ManageMcpResources)
+                        .LocalNav()
+                    )
                 )
             );
 

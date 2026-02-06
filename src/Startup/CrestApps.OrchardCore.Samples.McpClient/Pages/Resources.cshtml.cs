@@ -18,10 +18,6 @@ public sealed partial class ResourcesModel : PageModel
 
     public IList<McpClientResource> Resources { get; private set; } = [];
 
-    public string SelectedResourceUri { get; private set; }
-
-    public ReadResourceResult ReadResult { get; private set; }
-
     public string ErrorMessage { get; private set; }
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
@@ -40,27 +36,37 @@ public sealed partial class ResourcesModel : PageModel
     {
         if (string.IsNullOrWhiteSpace(resourceUri))
         {
-            ErrorMessage = "Resource URI is required.";
-            await LoadResourcesAsync(cancellationToken);
-
-            return Page();
+            return new JsonResult(new { error = "Resource URI is required." });
         }
 
         try
         {
             var client = await _clientFactory.CreateAsync(cancellationToken);
+            var result = await client.ReadResourceAsync(new Uri(resourceUri), options: null, cancellationToken);
 
-            SelectedResourceUri = resourceUri;
-            ReadResult = await client.ReadResourceAsync(new Uri(resourceUri), options: null, cancellationToken);
+            var contents = new List<object>();
+
+            if (result.Contents?.Count > 0)
+            {
+                foreach (var content in result.Contents)
+                {
+                    if (content is TextResourceContents textContent)
+                    {
+                        contents.Add(new { type = "text", mimeType = textContent.MimeType, text = textContent.Text });
+                    }
+                    else if (content is BlobResourceContents blobContent)
+                    {
+                        contents.Add(new { type = "blob", mimeType = blobContent.MimeType, length = blobContent.Blob?.Length ?? 0 });
+                    }
+                }
+            }
+
+            return new JsonResult(new { contents });
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            return new JsonResult(new { error = ex.Message });
         }
-
-        await LoadResourcesAsync(cancellationToken);
-
-        return Page();
     }
 
     /// <summary>

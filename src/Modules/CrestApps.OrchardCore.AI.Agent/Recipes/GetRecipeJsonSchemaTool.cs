@@ -42,14 +42,14 @@ public sealed class GetRecipeJsonSchemaTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var recipeStepsService = arguments.Services.GetRequiredService<RecipeStepsService>();
+        var recipeSchemaService = arguments.Services.GetRequiredService<RecipeSchemaService>();
         var recipeSteps = arguments.Services.GetRequiredService<IEnumerable<IRecipeStep>>();
 
         arguments.TryGetFirstString("step", out var requestedStep);
 
         var stepSchemas = new Dictionary<string, JsonSchema>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var stepName in recipeStepsService.GetRecipeStepNames())
+        foreach (var stepName in recipeSchemaService.GetStepNames())
         {
             if (!string.IsNullOrWhiteSpace(requestedStep)
                 && !string.Equals(requestedStep, stepName, StringComparison.OrdinalIgnoreCase))

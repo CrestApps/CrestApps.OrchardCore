@@ -151,7 +151,7 @@ public sealed class McpServerStartup : StartupBase
         {
             entry.DisplayName = S["File"];
             entry.Description = S["Reads content from local files."];
-            entry.UriPatterns = ["{path}"];
+            entry.UriPatterns = ["filesystem/{path}"];
         });
 
         services.AddMcpServer(options =>
@@ -423,7 +423,12 @@ public sealed class McpRecipeSchemaResourceStartup : StartupBase
         {
             entry.DisplayName = S["Recipe Schema"];
             entry.Description = S["Provides JSON schema definitions for recipe steps."];
-            entry.UriPatterns = ["{step-name}"];
+            entry.UriPatterns =
+            [
+                "recipe",
+                "recipe/{recipe-name}",
+                "step/{step-name}"
+            ];
         });
     }
 }

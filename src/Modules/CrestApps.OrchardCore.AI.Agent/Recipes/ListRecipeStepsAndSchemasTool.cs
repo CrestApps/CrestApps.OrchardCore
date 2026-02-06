@@ -36,12 +36,12 @@ public sealed class ListRecipeStepsAndSchemasTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var recipeStepsService = arguments.Services.GetRequiredService<RecipeStepsService>();
+        var recipeSchemaService = arguments.Services.GetRequiredService<RecipeSchemaService>();
         var recipeSteps = arguments.Services.GetRequiredService<IEnumerable<IRecipeStep>>();
 
         var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var stepName in recipeStepsService.GetRecipeStepNames())
+        foreach (var stepName in recipeSchemaService.GetStepNames())
         {
             JsonSchema schema = null;
 

@@ -27,7 +27,7 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
         var filePath = resourceUri.Path;
         var hasPath = !string.IsNullOrEmpty(filePath);
 
-        if (!hasPath || !File.Exists(filePath))
+        if (!hasPath || !File.Exists(filePath) || !filePath.StartsWith("filesystem/", StringComparison.OrdinalIgnoreCase))
         {
             _logger.LogDebug("File not found for resource URI: {ResourceUri}", resourceUri.Uri);
 
