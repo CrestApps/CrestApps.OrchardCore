@@ -1,0 +1,33 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels
+
+@model TryAgainActivityTaskViewModel
+
+<div class="mb-3">
+    <label class="form-label" asp-for="NormalizedUserName">@T["Activity owner"]</label>
+    <select class="form-select" asp-for="NormalizedUserName" asp-items="Model.Users">
+        <option value="">@T["Same owner as the completed activity"]</option>
+    </select>
+    <span class="hint">@T["Optionally, you may assign the new activity to another user."]</span>
+</div>
+
+<div class="mb-3">
+    <label class="form-label" asp-for="UrgencyLevel">@T["Urgency level"]</label>
+    <select class="form-select" asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels">
+        <option value="">@T["Same level as the completed activity"]</option>
+    </select>
+    <span class="hint">@T["Optionally, you may assign the new activity a different urgency level."]</span>
+</div>
+
+<div class="mb-3" asp-validation-class-for="MaxAttempt">
+    <label asp-for="MaxAttempt" class="form-label">@T["Max attempt"]</label>
+    <input type="number" asp-for="MaxAttempt" class="form-control" min="1" />
+    <span asp-validation-for="MaxAttempt"></span>
+    <span class="hint">@T["When a maximum number of attempts is set, the workflow will stop creating new attempts once this limit is reached. Leave it blank to have no max attempt."]</span>
+</div>
+
+<div class="mb-3" asp-validation-class-for="DefaultScheduleHours">
+    <label asp-for="DefaultScheduleHours" class="form-label">@T["Default schedule (in hour)"]</label>
+    <input type="number" asp-for="DefaultScheduleHours" class="form-control" min="1" />
+    <span asp-validation-for="DefaultScheduleHours"></span>
+    <span class="hint">@T["If no next schedule date is selected, this value (in hours) determines when the next attempt will be scheduled. For example, 24 = 1 day from now."]</span>
+</div>

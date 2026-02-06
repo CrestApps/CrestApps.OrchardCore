@@ -1,13 +1,15 @@
 window.chatInteractionManager = function () {
 
-    const renderer = new marked.Renderer();
-
-    // Modify the link rendering to open in a new tab
-    renderer.link = function (data) {
-        return `<a href="${data.href}" target="_blank" rel="noopener noreferrer">${data.text}</a>`;
-    };
-
+    // Defaults (can be overridden by instanceConfig)
     var defaultConfig = {
+        // UI defaults for generated media
+        generatedImageAltText: 'Generated Image',
+        generatedImageMaxWidth: 400,
+        generatedChartMaxWidth: 900,
+        downloadImageTitle: 'Download image',
+        downloadChartTitle: 'Download chart as image',
+        downloadChartButtonText: 'Download',
+
         messageTemplate: `
             <div class="list-group">
                 <div v-for="(message, index) in messages" :key="index" class="list-group-item">
@@ -28,12 +30,192 @@ window.chatInteractionManager = function () {
                 </div>
             </div>
         `,
-        indicatorTemplate: `<div class="spinner-grow spinner-grow-sm" role="status"><span class="visually-hidden">Loading...</span></div>`
+        indicatorTemplate: `<div class="spinner-grow spinner-grow-sm" role="status"><span class="visually-hidden">Loading...</span></div>`,
+        // Localizable strings
+        untitledText: 'Untitled',
+        clearHistoryTitle: 'Clear History',
+        clearHistoryMessage: 'Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved.',
+        clearHistoryOkText: 'Yes',
+        clearHistoryCancelText: 'Cancel'
     };
+
+    const renderer = new marked.Renderer();
+
+    // Modify the link rendering to open in a new tab
+    renderer.link = function (data) {
+        return `<a href="${data.href}" target="_blank" rel="noopener noreferrer">${data.text}</a>`;
+    };
+
+    // Custom image renderer for generated images with thumbnail styling and download button
+    renderer.image = function (data) {
+        const src = data.href;
+        const alt = data.text || defaultConfig.generatedImageAltText;
+        const maxWidth = defaultConfig.generatedImageMaxWidth;
+        return `<div class="generated-image-container">
+            <img src="${src}" alt="${alt}" class="img-thumbnail" style="max-width: ${maxWidth}px; height: auto;" />
+            <div class="mt-2">
+                <a href="${src}" target="_blank" download title="${defaultConfig.downloadImageTitle}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fa-solid fa-download"></i>
+                </a>
+            </div>
+        </div>`;
+    };
+
+    // Chart counter for unique IDs
+    let chartCounter = 0;
+
+    function createChartHtml(chartId) {
+        const chartMaxWidth = defaultConfig.generatedChartMaxWidth;
+
+        return `<div class="chart-container" style="position: relative; width: 100%; max-width: ${chartMaxWidth}px; margin: 0 auto; height: 480px;">
+            <canvas id="${chartId}" class="img-thumbnail" width="${chartMaxWidth}" height="480" style="width: 100%; height: 480px;"></canvas>
+        </div>
+        <div class="mt-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadChart('${chartId}')" title="${defaultConfig.downloadChartTitle}">
+                <i class="fa-solid fa-download"></i> ${defaultConfig.downloadChartButtonText}
+            </button>
+        </div>`;
+    }
+
+    // Extract a [chart:{...json...}] marker. This avoids regex issues with nested brackets.
+    function tryExtractChartMarker(text) {
+        const token = '[chart:';
+        const start = text.indexOf(token);
+        if (start < 0) {
+            return null;
+        }
+
+        // Find JSON object boundary by balancing braces
+        const jsonStart = start + token.length;
+        let i = jsonStart;
+        while (i < text.length && (text[i] === ' ' || text[i] === '\n' || text[i] === '\r' || text[i] === '\t')) {
+            i++;
+        }
+
+        if (i >= text.length || text[i] !== '{') {
+            return null;
+        }
+
+        let depth = 0;
+        let inString = false;
+        let escape = false;
+
+        for (; i < text.length; i++) {
+            const ch = text[i];
+
+            if (inString) {
+                if (escape) {
+                    escape = false;
+                    continue;
+                }
+                if (ch === '\\') {
+                    escape = true;
+                    continue;
+                }
+                if (ch === '"') {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (ch === '"') {
+                inString = true;
+                continue;
+            }
+
+            if (ch === '{') {
+                depth++;
+            } else if (ch === '}') {
+                depth--;
+                if (depth === 0) {
+                    const jsonEnd = i;
+                    // Expect closing bracket after JSON
+                    const closeBracketIndex = text.indexOf(']', jsonEnd + 1);
+                    if (closeBracketIndex < 0) {
+                        return null;
+                    }
+
+                    const json = text.substring(jsonStart, jsonEnd + 1).trim();
+                    return {
+                        startIndex: start,
+                        endIndex: closeBracketIndex + 1,
+                        json: json
+                    };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    function renderChartsInMessage(message) {
+        if (!message || !message._pendingCharts || !message._pendingCharts.length) {
+            return;
+        }
+
+        for (const c of message._pendingCharts) {
+            const canvas = document.getElementById(c.chartId);
+            if (!canvas) {
+                continue;
+            }
+
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js is not available on the page.');
+                continue;
+            }
+
+            try {
+                // Destroy existing chart instance if re-rendering
+                if (canvas._chartInstance) {
+                    canvas._chartInstance.destroy();
+                }
+
+                const cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
+                cfg.options ??= {};
+                cfg.options.responsive = true;
+                cfg.options.maintainAspectRatio = false;
+
+                canvas._chartInstance = new Chart(canvas, cfg);
+            } catch (e) {
+                console.error('Error creating chart:', e);
+            }
+        }
+
+        // Prevent re-render work
+        message._pendingCharts = [];
+    }
+
+    // Replace chart markers in content with chart placeholders and collect configs.
+    function processChartMarkers(content, message) {
+        if (!content) {
+            return content;
+        }
+
+        let result = content;
+        message._pendingCharts ??= [];
+
+        // Only replace markers when we can fully extract them.
+        while (true) {
+            const extracted = tryExtractChartMarker(result);
+            if (!extracted) {
+                break;
+            }
+
+            const chartId = `chat_chart_${++chartCounter}`;
+            message._pendingCharts.push({ chartId: chartId, config: extracted.json });
+
+            const html = createChartHtml(chartId);
+            result = result.substring(0, extracted.startIndex) + html + result.substring(extracted.endIndex);
+        }
+
+        return result;
+    }
 
     const initialize = (instanceConfig) => {
 
         const config = Object.assign({}, defaultConfig, instanceConfig);
+        // Keep defaultConfig in sync so renderers use overridden values
+        defaultConfig = config;
 
         if (!config.signalRHubUrl) {
             console.error('The signalRHubUrl is required.');
@@ -73,7 +255,10 @@ window.chatInteractionManager = function () {
                     isNavigatingAway: false,
                     stream: null,
                     messages: [],
-                    prompt: ''
+                    prompt: '',
+                    initialFieldValues: new Map(),
+                    settingsDirty: false,
+                    saveSettingsTimeout: null
                 };
             },
             methods: {
@@ -88,16 +273,26 @@ window.chatInteractionManager = function () {
 
                     this.connection.on("LoadInteraction", (data) => {
                         this.initializeInteraction(data.itemId, true);
-                        this.messages = [];
-
-                        // Update the title field if it exists
+                        this.messages = [];// Update the title field if it exists
                         const titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
                         if (titleInput && data.title) {
                             titleInput.value = data.title;
                         }
 
                         (data.messages ?? []).forEach(msg => {
+                            // Ensure persisted chart markers are rendered too
+                            if (msg && msg.content) {
+                                msg.content = processChartMarkers(msg.content.trim(), msg);
+                                if (msg.content.includes('class="chart-container"')) {
+                                    msg.htmlContent = msg.content;
+                                }
+                            }
+
                             this.addMessage(msg);
+
+                            this.$nextTick(() => {
+                                renderChartsInMessage(msg);
+                            });
                         });
                     });
 
@@ -106,7 +301,7 @@ window.chatInteractionManager = function () {
                         // Use a more specific selector to only target history list items, not other elements like the Clear History button
                         const historyItem = document.querySelector(`.chat-interaction-history-item[data-interaction-id="${itemId}"]`);
                         if (historyItem) {
-                            historyItem.textContent = title || 'Untitled';
+                            historyItem.textContent = title || config.untitledText;
                         }
                     });
 
@@ -118,11 +313,11 @@ window.chatInteractionManager = function () {
                         // Clear messages and show placeholder
                         this.messages = [];
                         this.showPlaceholder();
-                        
+
                         // Hide the clear history button since there's no history now
                         const clearHistoryBtn = document.getElementById('clearHistoryBtn');
                         if (clearHistoryBtn) {
-                            clearHistoryBtn.style.display = 'none';
+                            clearHistoryBtn.classList.add('d-none');
                         }
                     });
 
@@ -143,6 +338,10 @@ window.chatInteractionManager = function () {
                 addMessage(message) {
                     if (message.content) {
                         let processedContent = message.content.trim();
+
+                        // Process chart markers first (before markdown parsing)
+                        processedContent = processChartMarkers(processedContent, message);
+
                         if (message.references && typeof message.references === "object" && Object.keys(message.references).length) {
                             for (const [key, value] of Object.entries(message.references)) {
                                 processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
@@ -156,19 +355,21 @@ window.chatInteractionManager = function () {
                         }
 
                         message.content = processedContent;
-                        message.htmlContent = marked.parse(processedContent, { renderer });
+
+                        // If we inserted chart HTML, don't markdown-parse
+                        if (processedContent.includes('class="chart-container"')) {
+                            message.htmlContent = processedContent;
+                        } else {
+                            message.htmlContent = marked.parse(processedContent, { renderer });
+                        }
                     }
 
                     this.addMessageInternal(message);
                     this.hidePlaceholder();
-                    
-                    // Show clear history button when messages exist
-                    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-                    if (clearHistoryBtn && message.role !== 'indicator') {
-                        clearHistoryBtn.style.display = '';
-                    }
-                    
+
                     this.$nextTick(() => {
+                        // Render any pending charts once the DOM is updated
+                        renderChartsInMessage(message);
                         this.scrollToBottom();
                     });
                 },
@@ -201,6 +402,12 @@ window.chatInteractionManager = function () {
                         role: 'user',
                         content: trimmedPrompt
                     });
+
+                    // Show the clear history button since we now have prompts
+                    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+                    if (clearHistoryBtn) {
+                        clearHistoryBtn.classList.remove('d-none');
+                    }
 
                     this.streamMessage(trimmedPrompt);
                     this.inputElement.value = '';
@@ -260,11 +467,22 @@ window.chatInteractionManager = function () {
                                 }
 
                                 message.content = content;
-                                message.htmlContent = marked.parse(content, { renderer });
+
+                                // Process chart markers before markdown parsing
+                                let htmlContent = processChartMarkers(content, message);
+
+                                if (htmlContent.includes('class="chart-container"')) {
+                                    message.htmlContent = htmlContent;
+                                } else {
+                                    message.htmlContent = marked.parse(htmlContent, { renderer });
+                                }
 
                                 this.messages[messageIndex] = message;
 
-                                this.scrollToBottom();
+                                this.$nextTick(() => {
+                                    renderChartsInMessage(message);
+                                    this.scrollToBottom();
+                                });
                             },
                             complete: () => {
                                 this.processReferences(references, messageIndex);
@@ -392,6 +610,18 @@ window.chatInteractionManager = function () {
                         }
                     });
 
+                    this.inputElement.addEventListener('paste', (e) => {
+                        // Use setTimeout to allow the paste to complete before checking the value
+                        setTimeout(() => {
+                            this.prompt = this.inputElement.value;
+                            if (this.inputElement.value.trim()) {
+                                this.buttonElement.removeAttribute('disabled');
+                            } else {
+                                this.buttonElement.setAttribute('disabled', true);
+                            }
+                        }, 0);
+                    });
+
                     this.buttonElement.addEventListener('click', () => {
                         if (this.stream != null) {
                             this.stream.dispose();
@@ -426,14 +656,62 @@ window.chatInteractionManager = function () {
                         this.addMessage(config.messages[i]);
                     }
 
-                    // Add event listeners for settings fields to save on change
-                    const settingsInputs = document.querySelectorAll('input[name="ChatInteraction.Title"], select[name="ChatInteraction.ConnectionName"], select[name="ChatInteraction.DeploymentId"], textarea[name="ChatInteraction.SystemMessage"], input[name="ChatInteraction.Temperature"], input[name="ChatInteraction.TopP"], input[name="ChatInteraction.FrequencyPenalty"], input[name="ChatInteraction.PresencePenalty"], input[name="ChatInteraction.MaxTokens"], input[name="ChatInteraction.PastMessagesCount"]');
+                    // Add event listeners for all settings fields with "ChatInteraction." prefix
+                    // Exclude tool-related inputs (they have special handling with debouncing)
+                    const settingsInputs = document.querySelectorAll(
+                        'input[name^="ChatInteraction."]:not([name*=".Tools["]), ' +
+                        'select[name^="ChatInteraction."]:not([name*=".Tools["]), ' +
+                        'textarea[name^="ChatInteraction."]:not([name*=".Tools["])'
+                    );
+
                     settingsInputs.forEach(input => {
-                        input.addEventListener('blur', () => this.saveSettings());
-                        // Also save on change for select elements
-                        if (input.tagName === 'SELECT') {
-                            input.addEventListener('change', () => this.saveSettings());
+                        const isCheckbox = input.type === 'checkbox';
+                        const isSelect = input.tagName === 'SELECT';
+
+                        // Checkboxes & selects save immediately
+                        if (isCheckbox || isSelect) {
+                            input.addEventListener('change', () => {
+                                this.settingsDirty = true;
+                                this.debouncedSaveSettings();
+                            });
+                            return;
                         }
+
+                        // Text / textarea / number inputs → save on blur if changed
+                        input.addEventListener('focus', () => {
+                            this.initialFieldValues.set(input, input.value);
+                        });
+
+                        input.addEventListener('blur', () => {
+                            const initialValue = this.initialFieldValues.get(input);
+                            const hasChanged =
+                                initialValue !== undefined && input.value !== initialValue;
+
+                            if (hasChanged) {
+                                this.settingsDirty = true;
+                                this.debouncedSaveSettings();
+                            }
+
+                            this.initialFieldValues.delete(input);
+                        });
+                    });
+
+                    // Add event listeners for tool checkboxes with debouncing (850ms)
+                    const toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]');
+                    toolCheckboxes.forEach(checkbox => {
+                        checkbox.addEventListener('change', () => {
+                            this.settingsDirty = true;
+                            this.debouncedSaveSettings();
+                        });
+                    });
+
+                    // Add event listeners for "Select All" group toggle checkboxes with debouncing (850ms)
+                    const groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
+                    groupToggleCheckboxes.forEach(toggle => {
+                        toggle.addEventListener('change', () => {
+                            this.settingsDirty = true;
+                            this.debouncedSaveSettings();
+                        });
                     });
 
                     // Add event listener for clear history button
@@ -453,16 +731,49 @@ window.chatInteractionManager = function () {
                 clearHistory(itemId) {
                     const self = this;
                     confirmDialog({
-                        title: 'Clear History',
-                        message: 'Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved.',
-                        okText: 'Yes',
-                        cancelText: 'Cancel',
-                        callback: function(confirmed) {
+                        title: config.clearHistoryTitle,
+                        message: config.clearHistoryMessage,
+                        okText: config.clearHistoryOkText,
+                        cancelText: config.clearHistoryCancelText,
+                        callback: function (confirmed) {
                             if (confirmed) {
                                 self.connection.invoke("ClearHistory", itemId).catch(err => console.error('Error clearing history:', err));
                             }
                         }
                     });
+                },
+                debouncedSaveSettings() {
+                    // Clear any existing timeout to reset the debounce timer
+                    if (this.saveSettingsTimeout) {
+                        clearTimeout(this.saveSettingsTimeout);
+                    }
+                    // Set a new timeout to save after 850ms of no changes
+                    this.saveSettingsTimeout = setTimeout(() => {
+                        if (this.settingsDirty) {
+                            this.saveSettings();
+                            this.settingsDirty = false;
+                        }
+                        this.saveSettingsTimeout = null;
+                    }, 850);
+                },
+                getSelectedToolNames() {
+                    // Find all checked tool checkboxes and get the corresponding ItemId values
+                    const toolNames = [];
+                    const toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]:checked');
+
+                    toolCheckboxes.forEach(checkbox => {
+                        // Extract the base name pattern to find the corresponding hidden ItemId input
+                        // Checkbox name: ChatInteraction.Tools[Content Definitions][0].IsSelected
+                        // Hidden name:   ChatInteraction.Tools[Content Definitions][0].ItemId
+                        const baseName = checkbox.name.replace('.IsSelected', '.ItemId');
+                        const hiddenInput = document.querySelector(`input[type="hidden"][name="${baseName}"]`);
+
+                        if (hiddenInput && hiddenInput.value) {
+                            toolNames.push(hiddenInput.value);
+                        }
+                    });
+
+                    return toolNames;
                 },
                 saveSettings() {
                     const itemId = this.getItemId();
@@ -480,9 +791,14 @@ window.chatInteractionManager = function () {
                     const presencePenaltyInput = document.querySelector('input[name="ChatInteraction.PresencePenalty"]');
                     const maxTokensInput = document.querySelector('input[name="ChatInteraction.MaxTokens"]');
                     const pastMessagesCountInput = document.querySelector('input[name="ChatInteraction.PastMessagesCount"]');
+                    const dataSourceIdInput = document.querySelector('select[name="ChatInteraction.DataSourceId"]');
+                    const strictnessInput = document.querySelector('input[name="ChatInteraction.Strictness"]');
+                    const topNDocumentsInput = document.querySelector('input[name="ChatInteraction.TopNDocuments"]');
+                    const isInScopeInput = document.querySelector('input[name="ChatInteraction.IsInScope"]');
+                    const filterInput = document.querySelector('input[name="ChatInteraction.Filter"]');
 
                     const settings = {
-                        title: titleInput?.value || 'Untitled',
+                        title: titleInput?.value || config.untitledText,
                         connectionName: connectionNameInput?.value || null,
                         deploymentId: deploymentIdInput?.value || null,
                         systemMessage: systemMessageInput?.value || null,
@@ -491,7 +807,13 @@ window.chatInteractionManager = function () {
                         frequencyPenalty: frequencyPenaltyInput?.value ? parseFloat(frequencyPenaltyInput.value) : null,
                         presencePenalty: presencePenaltyInput?.value ? parseFloat(presencePenaltyInput.value) : null,
                         maxTokens: maxTokensInput?.value ? parseInt(maxTokensInput.value) : null,
-                        pastMessagesCount: pastMessagesCountInput?.value ? parseInt(pastMessagesCountInput.value) : null
+                        pastMessagesCount: pastMessagesCountInput?.value ? parseInt(pastMessagesCountInput.value) : null,
+                        dataSourceId: dataSourceIdInput?.value || null,
+                        strictness: strictnessInput?.value ? parseInt(strictnessInput.value) : null,
+                        topNDocuments: topNDocumentsInput?.value ? parseInt(topNDocumentsInput.value) : null,
+                        filter: filterInput.value,
+                        isInScope: isInScopeInput?.checked ?? true,
+                        toolNames: this.getSelectedToolNames()
                     };
 
                     this.connection.invoke(
@@ -506,7 +828,13 @@ window.chatInteractionManager = function () {
                         settings.frequencyPenalty,
                         settings.presencePenalty,
                         settings.maxTokens,
-                        settings.pastMessagesCount
+                        settings.pastMessagesCount,
+                        settings.dataSourceId,
+                        settings.strictness,
+                        settings.topNDocuments,
+                        settings.filter,
+                        settings.isInScope,
+                        settings.toolNames
                     ).catch(err => console.error('Error saving settings:', err));
                 },
                 initializeInteraction(itemId, force) {
@@ -550,3 +878,18 @@ window.chatInteractionManager = function () {
         initialize: initialize
     };
 }();
+
+// Global function for downloading charts as images
+window.downloadChart = function (chartId) {
+    const canvas = document.getElementById(chartId);
+    if (!canvas) {
+        console.error('Chart canvas not found:', chartId);
+        return;
+    }
+
+    // Create a temporary link element
+    const link = document.createElement('a');
+    link.download = 'chart-' + chartId + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+};

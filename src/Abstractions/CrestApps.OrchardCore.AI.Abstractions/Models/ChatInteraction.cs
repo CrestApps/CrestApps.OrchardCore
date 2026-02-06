@@ -95,15 +95,10 @@ public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
     public IList<string> McpConnectionIds { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the collection of prompts/messages in this interaction.
-    /// </summary>
-    public IList<AIChatSessionPrompt> Prompts { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets the collection of attached documents for "chat against own data" functionality.
     /// Only applicable when Source is AzureOpenAIOwnData.
     /// </summary>
-    public IList<ChatInteractionDocument> Documents { get; set; } = [];
+    public IList<ChatInteractionDocumentInfo> Documents { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the UTC date and time when the interaction was created.

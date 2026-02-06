@@ -5,6 +5,13 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 
 public abstract class AIClientProviderBase : IAIClientProvider
 {
+    private readonly IServiceProvider _serviceProvider;
+
+    protected AIClientProviderBase(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+    }
+
     public bool CanHandle(string providerName)
         => string.Equals(GetProviderName(), providerName, StringComparison.OrdinalIgnoreCase);
 
@@ -20,7 +27,11 @@ public abstract class AIClientProviderBase : IAIClientProvider
             throw new ArgumentException("A deployment name must be provided, either directly or as a default in the connection settings.");
         }
 
-        return ValueTask.FromResult(GetChatClient(connection, deploymentName));
+        var client = GetChatClient(connection, deploymentName);
+
+        var builder = new ChatClientBuilder(client);
+
+        return ValueTask.FromResult(builder.Build(_serviceProvider));
     }
 
     public ValueTask<IEmbeddingGenerator<string, Embedding<float>>> GetEmbeddingGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null)
@@ -35,7 +46,11 @@ public abstract class AIClientProviderBase : IAIClientProvider
             throw new ArgumentException("An embedding deployment name must be provided, either directly or as a default in the connection settings.");
         }
 
-        return ValueTask.FromResult(GetEmbeddingGenerator(connection, deploymentName));
+        var client = GetEmbeddingGenerator(connection, deploymentName);
+
+        var builder = new EmbeddingGeneratorBuilder<string, Embedding<float>>(client);
+
+        return ValueTask.FromResult(builder.Build(_serviceProvider));
     }
 
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
@@ -55,6 +70,25 @@ public abstract class AIClientProviderBase : IAIClientProvider
         return ValueTask.FromResult(GetSpeechToTextClient(connection, deploymentName));
     }
 
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    public ValueTask<IImageGenerator> GetImageGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null)
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    {
+        if (string.IsNullOrEmpty(deploymentName))
+        {
+            deploymentName = connection.GetDefaultImagesDeploymentName(false);
+        }
+
+        if (string.IsNullOrEmpty(deploymentName))
+        {
+            throw new ArgumentException("An image deployment name must be provided, either directly or as a default in the connection settings.");
+        }
+
+        var generator = GetImageGenerator(connection, deploymentName);
+
+        return ValueTask.FromResult(generator);
+    }
+
     protected abstract string GetProviderName();
 
     protected abstract IChatClient GetChatClient(AIProviderConnectionEntry connection, string deploymentName);
@@ -63,5 +97,7 @@ public abstract class AIClientProviderBase : IAIClientProvider
 
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     protected abstract ISpeechToTextClient GetSpeechToTextClient(AIProviderConnectionEntry connection, string deploymentName);
+
+    protected abstract IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName);
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 }

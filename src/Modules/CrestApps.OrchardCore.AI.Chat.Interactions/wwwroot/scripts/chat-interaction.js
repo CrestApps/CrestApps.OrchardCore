@@ -3,29 +3,192 @@
 ** Any changes made directly to this file will be overwritten next time its asset group is processed by Gulp.
 */
 
-function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
-function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
-function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
-function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
+function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
+function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 window.chatInteractionManager = function () {
+  // Defaults (can be overridden by instanceConfig)
+  var defaultConfig = {
+    // UI defaults for generated media
+    generatedImageAltText: 'Generated Image',
+    generatedImageMaxWidth: 400,
+    generatedChartMaxWidth: 900,
+    downloadImageTitle: 'Download image',
+    downloadChartTitle: 'Download chart as image',
+    downloadChartButtonText: 'Download',
+    messageTemplate: "\n            <div class=\"list-group\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                    <div class=\"d-flex align-items-center\">\n                        <div class=\"p-2\">\n                            <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'\"></i>\n                        </div>\n                        <div class=\"p-2 lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent || message.content\"></div>\n                        </div>\n                    </div>\n                    <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"!isIndicator(message)\">\n                        <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                            <i class=\"fa-solid fa-copy fa-lg\"></i>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
+    indicatorTemplate: "<div class=\"spinner-grow spinner-grow-sm\" role=\"status\"><span class=\"visually-hidden\">Loading...</span></div>",
+    // Localizable strings
+    untitledText: 'Untitled',
+    clearHistoryTitle: 'Clear History',
+    clearHistoryMessage: 'Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved.',
+    clearHistoryOkText: 'Yes',
+    clearHistoryCancelText: 'Cancel'
+  };
   var renderer = new marked.Renderer();
 
   // Modify the link rendering to open in a new tab
   renderer.link = function (data) {
     return "<a href=\"".concat(data.href, "\" target=\"_blank\" rel=\"noopener noreferrer\">").concat(data.text, "</a>");
   };
-  var defaultConfig = {
-    messageTemplate: "\n            <div class=\"list-group\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                    <div class=\"d-flex align-items-center\">\n                        <div class=\"p-2\">\n                            <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'\"></i>\n                        </div>\n                        <div class=\"p-2 lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent || message.content\"></div>\n                        </div>\n                    </div>\n                    <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"!isIndicator(message)\">\n                        <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                            <i class=\"fa-solid fa-copy fa-lg\"></i>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
-    indicatorTemplate: "<div class=\"spinner-grow spinner-grow-sm\" role=\"status\"><span class=\"visually-hidden\">Loading...</span></div>"
+
+  // Custom image renderer for generated images with thumbnail styling and download button
+  renderer.image = function (data) {
+    var src = data.href;
+    var alt = data.text || defaultConfig.generatedImageAltText;
+    var maxWidth = defaultConfig.generatedImageMaxWidth;
+    return "<div class=\"generated-image-container\">\n            <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n            <div class=\"mt-2\">\n                <a href=\"").concat(src, "\" target=\"_blank\" download title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary\">\n                    <i class=\"fa-solid fa-download\"></i>\n                </a>\n            </div>\n        </div>");
   };
+
+  // Chart counter for unique IDs
+  var chartCounter = 0;
+  function createChartHtml(chartId) {
+    var chartMaxWidth = defaultConfig.generatedChartMaxWidth;
+    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: ".concat(chartMaxWidth, "px; margin: 0 auto; height: 480px;\">\n            <canvas id=\"").concat(chartId, "\" class=\"img-thumbnail\" width=\"").concat(chartMaxWidth, "\" height=\"480\" style=\"width: 100%; height: 480px;\"></canvas>\n        </div>\n        <div class=\"mt-2\">\n            <button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadChart('").concat(chartId, "')\" title=\"").concat(defaultConfig.downloadChartTitle, "\">\n                <i class=\"fa-solid fa-download\"></i> ").concat(defaultConfig.downloadChartButtonText, "\n            </button>\n        </div>");
+  }
+
+  // Extract a [chart:{...json...}] marker. This avoids regex issues with nested brackets.
+  function tryExtractChartMarker(text) {
+    var token = '[chart:';
+    var start = text.indexOf(token);
+    if (start < 0) {
+      return null;
+    }
+
+    // Find JSON object boundary by balancing braces
+    var jsonStart = start + token.length;
+    var i = jsonStart;
+    while (i < text.length && (text[i] === ' ' || text[i] === '\n' || text[i] === '\r' || text[i] === '\t')) {
+      i++;
+    }
+    if (i >= text.length || text[i] !== '{') {
+      return null;
+    }
+    var depth = 0;
+    var inString = false;
+    var escape = false;
+    for (; i < text.length; i++) {
+      var ch = text[i];
+      if (inString) {
+        if (escape) {
+          escape = false;
+          continue;
+        }
+        if (ch === '\\') {
+          escape = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      if (ch === '{') {
+        depth++;
+      } else if (ch === '}') {
+        depth--;
+        if (depth === 0) {
+          var jsonEnd = i;
+          // Expect closing bracket after JSON
+          var closeBracketIndex = text.indexOf(']', jsonEnd + 1);
+          if (closeBracketIndex < 0) {
+            return null;
+          }
+          var json = text.substring(jsonStart, jsonEnd + 1).trim();
+          return {
+            startIndex: start,
+            endIndex: closeBracketIndex + 1,
+            json: json
+          };
+        }
+      }
+    }
+    return null;
+  }
+  function renderChartsInMessage(message) {
+    if (!message || !message._pendingCharts || !message._pendingCharts.length) {
+      return;
+    }
+    var _iterator = _createForOfIteratorHelper(message._pendingCharts),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var c = _step.value;
+        var canvas = document.getElementById(c.chartId);
+        if (!canvas) {
+          continue;
+        }
+        if (typeof Chart === 'undefined') {
+          console.error('Chart.js is not available on the page.');
+          continue;
+        }
+        try {
+          var _cfg$options;
+          // Destroy existing chart instance if re-rendering
+          if (canvas._chartInstance) {
+            canvas._chartInstance.destroy();
+          }
+          var cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
+          (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
+          cfg.options.responsive = true;
+          cfg.options.maintainAspectRatio = false;
+          canvas._chartInstance = new Chart(canvas, cfg);
+        } catch (e) {
+          console.error('Error creating chart:', e);
+        }
+      }
+
+      // Prevent re-render work
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+    message._pendingCharts = [];
+  }
+
+  // Replace chart markers in content with chart placeholders and collect configs.
+  function processChartMarkers(content, message) {
+    var _message$_pendingChar;
+    if (!content) {
+      return content;
+    }
+    var result = content;
+    (_message$_pendingChar = message._pendingCharts) !== null && _message$_pendingChar !== void 0 ? _message$_pendingChar : message._pendingCharts = [];
+
+    // Only replace markers when we can fully extract them.
+    while (true) {
+      var extracted = tryExtractChartMarker(result);
+      if (!extracted) {
+        break;
+      }
+      var chartId = "chat_chart_".concat(++chartCounter);
+      message._pendingCharts.push({
+        chartId: chartId,
+        config: extracted.json
+      });
+      var html = createChartHtml(chartId);
+      result = result.substring(0, extracted.startIndex) + html + result.substring(extracted.endIndex);
+    }
+    return result;
+  }
   var initialize = function initialize(instanceConfig) {
     var config = Object.assign({}, defaultConfig, instanceConfig);
+    // Keep defaultConfig in sync so renderers use overridden values
+    defaultConfig = config;
     if (!config.signalRHubUrl) {
       console.error('The signalRHubUrl is required.');
       return;
@@ -59,7 +222,10 @@ window.chatInteractionManager = function () {
           isNavigatingAway: false,
           stream: null,
           messages: [],
-          prompt: ''
+          prompt: '',
+          initialFieldValues: new Map(),
+          settingsDirty: false,
+          saveSettingsTimeout: null
         };
       },
       methods: {
@@ -68,23 +234,32 @@ window.chatInteractionManager = function () {
         },
         startConnection: function startConnection() {
           var _this = this;
-          return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
-            return _regeneratorRuntime().wrap(function _callee$(_context) {
-              while (1) switch (_context.prev = _context.next) {
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+            var _t;
+            return _regenerator().w(function (_context) {
+              while (1) switch (_context.p = _context.n) {
                 case 0:
                   _this.connection = new signalR.HubConnectionBuilder().withUrl(config.signalRHubUrl).withAutomaticReconnect().build();
                   _this.connection.on("LoadInteraction", function (data) {
                     var _data$messages;
                     _this.initializeInteraction(data.itemId, true);
-                    _this.messages = [];
-
-                    // Update the title field if it exists
+                    _this.messages = []; // Update the title field if it exists
                     var titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
                     if (titleInput && data.title) {
                       titleInput.value = data.title;
                     }
                     ((_data$messages = data.messages) !== null && _data$messages !== void 0 ? _data$messages : []).forEach(function (msg) {
+                      // Ensure persisted chart markers are rendered too
+                      if (msg && msg.content) {
+                        msg.content = processChartMarkers(msg.content.trim(), msg);
+                        if (msg.content.includes('class="chart-container"')) {
+                          msg.htmlContent = msg.content;
+                        }
+                      }
                       _this.addMessage(msg);
+                      _this.$nextTick(function () {
+                        renderChartsInMessage(msg);
+                      });
                     });
                   });
                   _this.connection.on("SettingsSaved", function (itemId, title) {
@@ -92,7 +267,7 @@ window.chatInteractionManager = function () {
                     // Use a more specific selector to only target history list items, not other elements like the Clear History button
                     var historyItem = document.querySelector(".chat-interaction-history-item[data-interaction-id=\"".concat(itemId, "\"]"));
                     if (historyItem) {
-                      historyItem.textContent = title || 'Untitled';
+                      historyItem.textContent = title || config.untitledText;
                     }
                   });
                   _this.connection.on("ReceiveError", function (error) {
@@ -106,24 +281,23 @@ window.chatInteractionManager = function () {
                     // Hide the clear history button since there's no history now
                     var clearHistoryBtn = document.getElementById('clearHistoryBtn');
                     if (clearHistoryBtn) {
-                      clearHistoryBtn.style.display = 'none';
+                      clearHistoryBtn.classList.add('d-none');
                     }
                   });
-                  _context.prev = 5;
-                  _context.next = 8;
+                  _context.p = 1;
+                  _context.n = 2;
                   return _this.connection.start();
-                case 8:
-                  _context.next = 13;
+                case 2:
+                  _context.n = 4;
                   break;
-                case 10:
-                  _context.prev = 10;
-                  _context.t0 = _context["catch"](5);
-                  console.error("SignalR Connection Error: ", _context.t0);
-                case 13:
-                case "end":
-                  return _context.stop();
+                case 3:
+                  _context.p = 3;
+                  _t = _context.v;
+                  console.error("SignalR Connection Error: ", _t);
+                case 4:
+                  return _context.a(2);
               }
-            }, _callee, null, [[5, 10]]);
+            }, _callee, null, [[1, 3]]);
           }))();
         },
         addMessageInternal: function addMessageInternal(message) {
@@ -146,6 +320,9 @@ window.chatInteractionManager = function () {
           var _this3 = this;
           if (message.content) {
             var processedContent = message.content.trim();
+
+            // Process chart markers first (before markdown parsing)
+            processedContent = processChartMarkers(processedContent, message);
             if (message.references && _typeof(message.references) === "object" && Object.keys(message.references).length) {
               for (var _i = 0, _Object$entries = Object.entries(message.references); _i < _Object$entries.length; _i++) {
                 var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
@@ -161,19 +338,21 @@ window.chatInteractionManager = function () {
               }
             }
             message.content = processedContent;
-            message.htmlContent = marked.parse(processedContent, {
-              renderer: renderer
-            });
+
+            // If we inserted chart HTML, don't markdown-parse
+            if (processedContent.includes('class="chart-container"')) {
+              message.htmlContent = processedContent;
+            } else {
+              message.htmlContent = marked.parse(processedContent, {
+                renderer: renderer
+              });
+            }
           }
           this.addMessageInternal(message);
           this.hidePlaceholder();
-
-          // Show clear history button when messages exist
-          var clearHistoryBtn = document.getElementById('clearHistoryBtn');
-          if (clearHistoryBtn && message.role !== 'indicator') {
-            clearHistoryBtn.style.display = '';
-          }
           this.$nextTick(function () {
+            // Render any pending charts once the DOM is updated
+            renderChartsInMessage(message);
             _this3.scrollToBottom();
           });
         },
@@ -204,6 +383,12 @@ window.chatInteractionManager = function () {
             role: 'user',
             content: trimmedPrompt
           });
+
+          // Show the clear history button since we now have prompts
+          var clearHistoryBtn = document.getElementById('clearHistoryBtn');
+          if (clearHistoryBtn) {
+            clearHistoryBtn.classList.remove('d-none');
+          }
           this.streamMessage(trimmedPrompt);
           this.inputElement.value = '';
           this.prompt = '';
@@ -256,11 +441,21 @@ window.chatInteractionManager = function () {
                 content += processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
               }
               message.content = content;
-              message.htmlContent = marked.parse(content, {
-                renderer: renderer
-              });
+
+              // Process chart markers before markdown parsing
+              var htmlContent = processChartMarkers(content, message);
+              if (htmlContent.includes('class="chart-container"')) {
+                message.htmlContent = htmlContent;
+              } else {
+                message.htmlContent = marked.parse(htmlContent, {
+                  renderer: renderer
+                });
+              }
               _this4.messages[messageIndex] = message;
-              _this4.scrollToBottom();
+              _this4.$nextTick(function () {
+                renderChartsInMessage(message);
+                _this4.scrollToBottom();
+              });
             },
             complete: function complete() {
               var _this4$stream;
@@ -380,6 +575,17 @@ window.chatInteractionManager = function () {
               _this6.buttonElement.setAttribute('disabled', true);
             }
           });
+          this.inputElement.addEventListener('paste', function (e) {
+            // Use setTimeout to allow the paste to complete before checking the value
+            setTimeout(function () {
+              _this6.prompt = _this6.inputElement.value;
+              if (_this6.inputElement.value.trim()) {
+                _this6.buttonElement.removeAttribute('disabled');
+              } else {
+                _this6.buttonElement.setAttribute('disabled', true);
+              }
+            }, 0);
+          });
           this.buttonElement.addEventListener('click', function () {
             if (_this6.stream != null) {
               _this6.stream.dispose();
@@ -405,18 +611,53 @@ window.chatInteractionManager = function () {
             this.addMessage(config.messages[_i6]);
           }
 
-          // Add event listeners for settings fields to save on change
-          var settingsInputs = document.querySelectorAll('input[name="ChatInteraction.Title"], select[name="ChatInteraction.ConnectionName"], select[name="ChatInteraction.DeploymentId"], textarea[name="ChatInteraction.SystemMessage"], input[name="ChatInteraction.Temperature"], input[name="ChatInteraction.TopP"], input[name="ChatInteraction.FrequencyPenalty"], input[name="ChatInteraction.PresencePenalty"], input[name="ChatInteraction.MaxTokens"], input[name="ChatInteraction.PastMessagesCount"]');
+          // Add event listeners for all settings fields with "ChatInteraction." prefix
+          // Exclude tool-related inputs (they have special handling with debouncing)
+          var settingsInputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["])');
           settingsInputs.forEach(function (input) {
-            input.addEventListener('blur', function () {
-              return _this6.saveSettings();
-            });
-            // Also save on change for select elements
-            if (input.tagName === 'SELECT') {
+            var isCheckbox = input.type === 'checkbox';
+            var isSelect = input.tagName === 'SELECT';
+
+            // Checkboxes & selects save immediately
+            if (isCheckbox || isSelect) {
               input.addEventListener('change', function () {
-                return _this6.saveSettings();
+                _this6.settingsDirty = true;
+                _this6.debouncedSaveSettings();
               });
+              return;
             }
+
+            // Text / textarea / number inputs → save on blur if changed
+            input.addEventListener('focus', function () {
+              _this6.initialFieldValues.set(input, input.value);
+            });
+            input.addEventListener('blur', function () {
+              var initialValue = _this6.initialFieldValues.get(input);
+              var hasChanged = initialValue !== undefined && input.value !== initialValue;
+              if (hasChanged) {
+                _this6.settingsDirty = true;
+                _this6.debouncedSaveSettings();
+              }
+              _this6.initialFieldValues["delete"](input);
+            });
+          });
+
+          // Add event listeners for tool checkboxes with debouncing (850ms)
+          var toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]');
+          toolCheckboxes.forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () {
+              _this6.settingsDirty = true;
+              _this6.debouncedSaveSettings();
+            });
+          });
+
+          // Add event listeners for "Select All" group toggle checkboxes with debouncing (850ms)
+          var groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
+          groupToggleCheckboxes.forEach(function (toggle) {
+            toggle.addEventListener('change', function () {
+              _this6.settingsDirty = true;
+              _this6.debouncedSaveSettings();
+            });
           });
 
           // Add event listener for clear history button
@@ -438,10 +679,10 @@ window.chatInteractionManager = function () {
         clearHistory: function clearHistory(itemId) {
           var self = this;
           confirmDialog({
-            title: 'Clear History',
-            message: 'Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved.',
-            okText: 'Yes',
-            cancelText: 'Cancel',
+            title: config.clearHistoryTitle,
+            message: config.clearHistoryMessage,
+            okText: config.clearHistoryOkText,
+            cancelText: config.clearHistoryCancelText,
             callback: function callback(confirmed) {
               if (confirmed) {
                 self.connection.invoke("ClearHistory", itemId)["catch"](function (err) {
@@ -451,7 +692,39 @@ window.chatInteractionManager = function () {
             }
           });
         },
+        debouncedSaveSettings: function debouncedSaveSettings() {
+          var _this7 = this;
+          // Clear any existing timeout to reset the debounce timer
+          if (this.saveSettingsTimeout) {
+            clearTimeout(this.saveSettingsTimeout);
+          }
+          // Set a new timeout to save after 850ms of no changes
+          this.saveSettingsTimeout = setTimeout(function () {
+            if (_this7.settingsDirty) {
+              _this7.saveSettings();
+              _this7.settingsDirty = false;
+            }
+            _this7.saveSettingsTimeout = null;
+          }, 850);
+        },
+        getSelectedToolNames: function getSelectedToolNames() {
+          // Find all checked tool checkboxes and get the corresponding ItemId values
+          var toolNames = [];
+          var toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]:checked');
+          toolCheckboxes.forEach(function (checkbox) {
+            // Extract the base name pattern to find the corresponding hidden ItemId input
+            // Checkbox name: ChatInteraction.Tools[Content Definitions][0].IsSelected
+            // Hidden name:   ChatInteraction.Tools[Content Definitions][0].ItemId
+            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
+            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
+            if (hiddenInput && hiddenInput.value) {
+              toolNames.push(hiddenInput.value);
+            }
+          });
+          return toolNames;
+        },
         saveSettings: function saveSettings() {
+          var _isInScopeInput$check;
           var itemId = this.getItemId();
           if (!itemId) {
             return;
@@ -466,8 +739,13 @@ window.chatInteractionManager = function () {
           var presencePenaltyInput = document.querySelector('input[name="ChatInteraction.PresencePenalty"]');
           var maxTokensInput = document.querySelector('input[name="ChatInteraction.MaxTokens"]');
           var pastMessagesCountInput = document.querySelector('input[name="ChatInteraction.PastMessagesCount"]');
+          var dataSourceIdInput = document.querySelector('select[name="ChatInteraction.DataSourceId"]');
+          var strictnessInput = document.querySelector('input[name="ChatInteraction.Strictness"]');
+          var topNDocumentsInput = document.querySelector('input[name="ChatInteraction.TopNDocuments"]');
+          var isInScopeInput = document.querySelector('input[name="ChatInteraction.IsInScope"]');
+          var filterInput = document.querySelector('input[name="ChatInteraction.Filter"]');
           var settings = {
-            title: (titleInput === null || titleInput === void 0 ? void 0 : titleInput.value) || 'Untitled',
+            title: (titleInput === null || titleInput === void 0 ? void 0 : titleInput.value) || config.untitledText,
             connectionName: (connectionNameInput === null || connectionNameInput === void 0 ? void 0 : connectionNameInput.value) || null,
             deploymentId: (deploymentIdInput === null || deploymentIdInput === void 0 ? void 0 : deploymentIdInput.value) || null,
             systemMessage: (systemMessageInput === null || systemMessageInput === void 0 ? void 0 : systemMessageInput.value) || null,
@@ -476,9 +754,15 @@ window.chatInteractionManager = function () {
             frequencyPenalty: frequencyPenaltyInput !== null && frequencyPenaltyInput !== void 0 && frequencyPenaltyInput.value ? parseFloat(frequencyPenaltyInput.value) : null,
             presencePenalty: presencePenaltyInput !== null && presencePenaltyInput !== void 0 && presencePenaltyInput.value ? parseFloat(presencePenaltyInput.value) : null,
             maxTokens: maxTokensInput !== null && maxTokensInput !== void 0 && maxTokensInput.value ? parseInt(maxTokensInput.value) : null,
-            pastMessagesCount: pastMessagesCountInput !== null && pastMessagesCountInput !== void 0 && pastMessagesCountInput.value ? parseInt(pastMessagesCountInput.value) : null
+            pastMessagesCount: pastMessagesCountInput !== null && pastMessagesCountInput !== void 0 && pastMessagesCountInput.value ? parseInt(pastMessagesCountInput.value) : null,
+            dataSourceId: (dataSourceIdInput === null || dataSourceIdInput === void 0 ? void 0 : dataSourceIdInput.value) || null,
+            strictness: strictnessInput !== null && strictnessInput !== void 0 && strictnessInput.value ? parseInt(strictnessInput.value) : null,
+            topNDocuments: topNDocumentsInput !== null && topNDocumentsInput !== void 0 && topNDocumentsInput.value ? parseInt(topNDocumentsInput.value) : null,
+            filter: filterInput.value,
+            isInScope: (_isInScopeInput$check = isInScopeInput === null || isInScopeInput === void 0 ? void 0 : isInScopeInput.checked) !== null && _isInScopeInput$check !== void 0 ? _isInScopeInput$check : true,
+            toolNames: this.getSelectedToolNames()
           };
-          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount)["catch"](function (err) {
+          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId, settings.strictness, settings.topNDocuments, settings.filter, settings.isInScope, settings.toolNames)["catch"](function (err) {
             return console.error('Error saving settings:', err);
           });
         },
@@ -499,18 +783,17 @@ window.chatInteractionManager = function () {
         }
       },
       mounted: function mounted() {
-        var _this7 = this;
-        _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
-          return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-            while (1) switch (_context2.prev = _context2.next) {
+        var _this8 = this;
+        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+          return _regenerator().w(function (_context2) {
+            while (1) switch (_context2.n) {
               case 0:
-                _context2.next = 2;
-                return _this7.startConnection();
+                _context2.n = 1;
+                return _this8.startConnection();
+              case 1:
+                _this8.initializeApp();
               case 2:
-                _this7.initializeApp();
-              case 3:
-              case "end":
-                return _context2.stop();
+                return _context2.a(2);
             }
           }, _callee2);
         }))();
@@ -534,3 +817,18 @@ window.chatInteractionManager = function () {
     initialize: initialize
   };
 }();
+
+// Global function for downloading charts as images
+window.downloadChart = function (chartId) {
+  var canvas = document.getElementById(chartId);
+  if (!canvas) {
+    console.error('Chart canvas not found:', chartId);
+    return;
+  }
+
+  // Create a temporary link element
+  var link = document.createElement('a');
+  link.download = 'chart-' + chartId + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+};

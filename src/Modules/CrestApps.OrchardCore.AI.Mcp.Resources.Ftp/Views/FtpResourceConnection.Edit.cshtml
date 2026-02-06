@@ -1,0 +1,96 @@
+@using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.ViewModels
+@model FtpConnectionViewModel
+
+<div class="mb-3">
+    <label asp-for="Host" class="form-label">@T["Host"]</label>
+    <input asp-for="Host" class="form-control" />
+    <span asp-validation-for="Host" class="text-danger"></span>
+    <span class="hint">@T["The FTP server hostname (e.g., ftp.example.com)."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Port" class="form-label">@T["Port"]</label>
+    <input asp-for="Port" type="number" class="form-control" placeholder="21" />
+    <span asp-validation-for="Port" class="text-danger"></span>
+    <span class="hint">@T["The FTP server port. Default is 21 for FTP or 990 for implicit FTPS."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Username" class="form-label">@T["Username"]</label>
+    <input asp-for="Username" class="form-control" />
+    <span asp-validation-for="Username" class="text-danger"></span>
+    <span class="hint">@T["The username for FTP authentication."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Password" class="form-label">@T["Password"]</label>
+    @if (Model.HasPassword)
+    {
+        <input asp-for="Password" type="password" class="form-control" placeholder="@T["Keep current password"]" />
+        <span class="hint">@T["Leave empty to keep the current password."]</span>
+    }
+    else
+    {
+        <input asp-for="Password" type="password" class="form-control" />
+    }
+    <span asp-validation-for="Password" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="EncryptionMode" class="form-label">@T["Encryption Mode"]</label>
+    <select asp-for="EncryptionMode" class="form-select">
+        <option value="">@T["None (Plain FTP)"]</option>
+        <option value="Explicit">@T["Explicit (STARTTLS)"]</option>
+        <option value="Implicit">@T["Implicit (Port 990)"]</option>
+        <option value="Auto">@T["Auto Detect"]</option>
+    </select>
+    <span asp-validation-for="EncryptionMode" class="text-danger"></span>
+    <span class="hint">@T["The SSL/TLS encryption mode for FTP connections."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="DataConnectionType" class="form-label">@T["Data Connection Type"]</label>
+    <select asp-for="DataConnectionType" class="form-select">
+        <option value="">@T["Auto Passive (Default)"]</option>
+        <option value="PASV">@T["PASV"]</option>
+        <option value="PASVEX">@T["PASVEX"]</option>
+        <option value="EPSV">@T["EPSV"]</option>
+        <option value="AutoActive">@T["Auto Active"]</option>
+        <option value="PORT">@T["PORT"]</option>
+        <option value="EPRT">@T["EPRT"]</option>
+    </select>
+    <span asp-validation-for="DataConnectionType" class="text-danger"></span>
+    <span class="hint">@T["The type of data connection to use. Passive mode is recommended for most scenarios."]</span>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="ValidateAnyCertificate" class="form-check-input" />
+        <label asp-for="ValidateAnyCertificate" class="form-check-label">@T["Accept Any Certificate"]</label>
+    </div>
+    <span class="hint">@T["Accept any SSL/TLS certificate, including self-signed certificates. Use with caution."]</span>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="mb-3">
+            <label asp-for="ConnectTimeout" class="form-label">@T["Connect Timeout (seconds)"]</label>
+            <input asp-for="ConnectTimeout" type="number" class="form-control" placeholder="@T["Default"]" />
+            <span asp-validation-for="ConnectTimeout" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="mb-3">
+            <label asp-for="ReadTimeout" class="form-label">@T["Read Timeout (seconds)"]</label>
+            <input asp-for="ReadTimeout" type="number" class="form-control" placeholder="@T["Default"]" />
+            <span asp-validation-for="ReadTimeout" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="mb-3">
+            <label asp-for="RetryAttempts" class="form-label">@T["Retry Attempts"]</label>
+            <input asp-for="RetryAttempts" type="number" class="form-control" placeholder="@T["Default"]" />
+            <span asp-validation-for="RetryAttempts" class="text-danger"></span>
+        </div>
+    </div>
+</div>

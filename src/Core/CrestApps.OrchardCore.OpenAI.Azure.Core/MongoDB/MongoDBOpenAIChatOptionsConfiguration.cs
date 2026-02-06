@@ -2,9 +2,11 @@ using System.Text.Json;
 using Azure.AI.OpenAI.Chat;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDB;
 using CrestApps.OrchardCore.OpenAI.Core;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Models;
@@ -15,13 +17,16 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
 {
     private readonly IAIDataSourceManager _aIDataSourceManager;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly ILogger _logger;
 
     public MongoDBOpenAIChatOptionsConfiguration(
         IAIDataSourceManager aIDataSourceManager,
-        IDataProtectionProvider dataProtectionProvider)
+        IDataProtectionProvider dataProtectionProvider,
+        ILogger<MongoDBOpenAIChatOptionsConfiguration> logger)
     {
         _aIDataSourceManager = aIDataSourceManager;
         _dataProtectionProvider = dataProtectionProvider;
+        _logger = logger;
     }
 
     public async Task InitializeConfigurationAsync(CompletionServiceConfigureContext context)
@@ -31,7 +36,7 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             return;
         }
 
-        if (context.AdditionalProperties is null || !context.AdditionalProperties.TryGetValue("DataSource", out var ds))
+        if (context.AdditionalProperties is null || !context.AdditionalProperties.TryGetValue("DataSource", out _))
         {
             var dataSource = await _aIDataSourceManager.FindByIdAsync(context.CompletionContext.DataSourceId);
 
@@ -69,51 +74,57 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             return;
         }
 
-        if (!dataSource.TryGet<AzureAIProfileMongoDBMetadata>(out var dataSourceMetadata))
+        if (!dataSource.TryGet<AzureMongoDBDataSourceMetadata>(out var mongoMetadata))
         {
             return;
         }
 
         var authentication = new Dictionary<string, object>();
 
-        if (dataSourceMetadata.Authentication?.Type is not null &&
-            string.Equals("username_and_password", dataSourceMetadata.Authentication.Type, StringComparison.OrdinalIgnoreCase))
+        if (mongoMetadata.Authentication?.Type is not null &&
+            string.Equals("username_and_password", mongoMetadata.Authentication.Type, StringComparison.OrdinalIgnoreCase))
         {
             authentication["type"] = "username_and_password";
-            authentication["username"] = dataSourceMetadata.Authentication.Username;
+            authentication["username"] = mongoMetadata.Authentication.Username;
 
             var password = string.Empty;
 
-            if (!string.IsNullOrWhiteSpace(dataSourceMetadata.Authentication.Password))
+            if (!string.IsNullOrWhiteSpace(mongoMetadata.Authentication.Password))
             {
                 var protector = _dataProtectionProvider.CreateProtector(AzureOpenAIConstants.MongoDataProtectionPurpose);
 
-                password = protector.Unprotect(dataSourceMetadata.Authentication.Password);
+                password = protector.Unprotect(mongoMetadata.Authentication.Password);
             }
 
             authentication["password"] = password;
         }
         else
         {
-            throw new NotSupportedException($"Unsupported authentication type: {dataSourceMetadata.Authentication?.Type}");
+            throw new NotSupportedException($"Unsupported authentication type: {mongoMetadata.Authentication?.Type}");
         }
 
         var mongoDbDataSource = new
         {
-            type = "mongo_db",
+            type = dataSource.Type,
             parameters = new Dictionary<string, object>
             {
-                ["endpoint"] = dataSourceMetadata.EndpointName,
-                ["collection_name"] = dataSourceMetadata.CollectionName,
-                ["database_name"] = dataSourceMetadata.DatabaseName,
-                ["index_name"] = dataSourceMetadata.IndexName,
-                ["app_name"] = dataSourceMetadata.AppName,
+                ["endpoint"] = mongoMetadata.EndpointName,
+                ["collection_name"] = mongoMetadata.CollectionName,
+                ["database_name"] = mongoMetadata.DatabaseName,
+                ["index_name"] = mongoMetadata.IndexName,
+                ["app_name"] = mongoMetadata.AppName,
                 ["authentication"] = authentication,
                 ["semantic_configuration"] = "default",
                 ["query_type"] = "simple",
-                ["in_scope"] = true,
             },
         };
+
+        // Get RAG parameters from AIProfile metadata
+        var ragParams = indexProfile.As<AzureRagChatMetadata>();
+
+        mongoDbDataSource.parameters["top_n_documents"] = ragParams.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments;
+        mongoDbDataSource.parameters["strictness"] = ragParams.Strictness ?? AzureOpenAIConstants.DefaultStrictness;
+        mongoDbDataSource.parameters["in_scope"] = ragParams.IsInScope;
 
 #pragma warning disable SCME0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         var dataSources = new List<object>()
@@ -156,7 +167,7 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
             return;
         }
 
-        if (!dataSource.TryGet<AzureAIProfileMongoDBMetadata>(out var dataSourceMetadata))
+        if (!dataSource.TryGet<AzureMongoDBDataSourceMetadata>(out var mongoMetadata))
         {
             return;
         }
@@ -164,33 +175,38 @@ public sealed class MongoDBOpenAIChatOptionsConfiguration : IOpenAIChatOptionsCo
 #pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         DataSourceAuthentication credentials = null;
 
-        if (dataSourceMetadata.Authentication?.Type is not null)
+        if (mongoMetadata.Authentication?.Type is not null)
         {
-            if (string.Equals("username_and_password", dataSourceMetadata.Authentication.Type, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals("username_and_password", mongoMetadata.Authentication.Type, StringComparison.OrdinalIgnoreCase))
             {
                 var protector = _dataProtectionProvider.CreateProtector(AzureOpenAIConstants.MongoDataProtectionPurpose);
 
                 string password = null;
 
-                if (!string.IsNullOrWhiteSpace(dataSourceMetadata.Authentication.Password))
+                if (!string.IsNullOrWhiteSpace(mongoMetadata.Authentication.Password))
                 {
-                    password = protector.Unprotect(dataSourceMetadata.Authentication.Password);
+                    password = protector.Unprotect(mongoMetadata.Authentication.Password);
                 }
 
-                credentials = DataSourceAuthentication.FromUsernameAndPassword(dataSourceMetadata.Authentication.Username, password);
+                credentials = DataSourceAuthentication.FromUsernameAndPassword(mongoMetadata.Authentication.Username, password);
             }
+        }
+
+        if (!string.IsNullOrWhiteSpace(context.Filter))
+        {
+            _logger.LogWarning("MongoDB data source does not support filter parameter. The provided filter '{Filter}' will be ignored.", context.Filter);
         }
 
         options.AddDataSource(new MongoDBChatDataSource()
         {
-            EndpointName = dataSourceMetadata.EndpointName,
-            CollectionName = dataSourceMetadata.CollectionName,
-            AppName = dataSourceMetadata.AppName,
-            IndexName = dataSourceMetadata.IndexName,
+            IndexName = mongoMetadata.IndexName,
+            EndpointName = mongoMetadata.EndpointName,
+            CollectionName = mongoMetadata.CollectionName,
+            AppName = mongoMetadata.AppName,
             Authentication = credentials,
-            Strictness = dataSourceMetadata.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
-            TopNDocuments = dataSourceMetadata.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
-            InScope = true,
+            Strictness = context.Strictness ?? AzureOpenAIConstants.DefaultStrictness,
+            TopNDocuments = context.TopNDocuments ?? AzureOpenAIConstants.DefaultTopNDocuments,
+            InScope = context.IsInScope ?? true,
             OutputContexts = DataSourceOutputContexts.Citations,
         });
 #pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.

@@ -2,9 +2,10 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Services;
-using Json.Schema;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.AI.Core;
 
@@ -15,46 +16,39 @@ public abstract class ImportRecipeBaseTool : AIFunction
         PropertyNameCaseInsensitive = true,
     };
 
-    private readonly RecipeExecutionService _recipeExecutionService;
-    private readonly RecipeStepsService _recipeStepsService;
-    private readonly IEnumerable<IRecipeStep> _recipeSteps;
-
-    public override JsonElement JsonSchema { get; }
-
-    protected ImportRecipeBaseTool(
-        RecipeExecutionService recipeExecutionService,
-        RecipeStepsService RecipeStepsService,
-        IEnumerable<IRecipeStep> recipeSteps)
-    {
-        _recipeExecutionService = recipeExecutionService;
-        _recipeStepsService = RecipeStepsService;
-        _recipeSteps = recipeSteps;
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {
-                "recipe": {
-                  "type": "string",
-                  "description": "A JSON string representing an Orchard Core recipe to import."
-                }
-              },
-              "required": ["recipe"],
-              "additionalProperties": false
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+        """
+        {
+          "type": "object",
+          "properties": {
+            "recipe": {
+              "type": "string",
+              "description": "A JSON string representing an Orchard Core recipe to import."
             }
-            """, JsonSerializerOptions);
-    }
+          },
+          "required": ["recipe"],
+          "additionalProperties": false
+        }
+        """);
+
+    public override JsonElement JsonSchema => _jsonSchema;
+
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    {
+        ["Strict"] = false,
+    };
 
     protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
 
         if (!arguments.TryGetFirstString("recipe", out var recipe))
         {
             return ValueTask.FromResult<object>(MissingArgument());
         }
 
-        return ProcessRecipeAsync(recipe, cancellationToken);
+        return ProcessRecipeAsync(arguments.Services, recipe, cancellationToken);
     }
 
     protected static string MissingArgument(string name = "recipe")
@@ -63,14 +57,20 @@ public abstract class ImportRecipeBaseTool : AIFunction
     }
 
 #pragma warning disable IDE0060 // Remove unused parameter
-    protected async ValueTask<object> ProcessRecipeAsync(string json, CancellationToken cancellationToken)
+    protected static async ValueTask<object> ProcessRecipeAsync(IServiceProvider services, string json, CancellationToken cancellationToken)
 #pragma warning restore IDE0060 // Remove unused parameter
     {
+        ArgumentNullException.ThrowIfNull(services, nameof(services));
+
+        var recipeExecutionService = services.GetRequiredService<RecipeExecutionService>();
+        var recipeSchemaService = services.GetRequiredService<RecipeSchemaService>();
+        var recipeSteps = services.GetRequiredService<IEnumerable<IRecipeStep>>();
+
         var data = JsonSerializer.Deserialize<JsonObject>(json, RecipeSerializerOptions);
 
         var stepSchemas = new Dictionary<string, JsonSchema>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var stepName in _recipeStepsService.GetRecipeStepNames())
+        foreach (var stepName in recipeSchemaService.GetStepNames())
         {
             if (stepSchemas.ContainsKey(stepName))
             {
@@ -79,7 +79,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
             var added = false;
 
-            foreach (var recipeStep in _recipeSteps)
+            foreach (var recipeStep in recipeSteps)
             {
                 if (!string.Equals(recipeStep.Name, stepName, StringComparison.OrdinalIgnoreCase))
                 {
@@ -144,7 +144,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
             """;
         }
 
-        if (await _recipeExecutionService.ExecuteRecipeAsync(data))
+        if (await recipeExecutionService.ExecuteRecipeAsync(data))
         {
             return "Recipe was successfully imported";
         }

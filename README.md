@@ -2,6 +2,45 @@
 
 CrestApps provides a collection of open-source modules designed to enhance **Orchard Core**, a powerful application framework built on **ASP.NET Core**.  
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Project Structure](#project-structure)
+  - [Example Structure](#example-structure)
+- [Available Modules](#available-modules)
+  - [Artificial Intelligence Suite](#artificial-intelligence-suite)
+    - [AI Module](#ai-module)
+    - [AI Chat Module](#ai-chat-module)
+    - [AI Chat Interactions Module](#ai-chat-interactions-module)
+    - [Orchard Core AI Agent Module](#orchard-core-ai-agent-module)
+    - [Model Context Protocol (MCP) Module](#model-context-protocol-mcp-module)
+    - [Azure OpenAI Module](#azure-openai-module)
+    - [OpenAI Module](#openai-module)
+    - [Azure AI Inference Module](#azure-ai-inference-module)
+    - [Ollama Module](#ollama-module)
+  - [Omnichannel Suite](#omnichannel-suite)
+    - [Omnichannel (Orchestrator)](#omnichannel-orchestrator)
+    - [Omnichannel Management (Mini-CRM)](#omnichannel-management-mini-crm)
+    - [SMS Omnichannel Automation (AI)](#sms-omnichannel-automation-ai)
+    - [Omnichannel (Azure Event Grid)](#omnichannel-azure-event-grid)
+  - [Standard Modules](#standard-modules)
+    - [Users Module](#users-module)
+    - [SignalR Module](#signalr-module)
+    - [Enhanced Roles Module](#enhanced-roles-module)
+    - [Content Access Control Module](#content-access-control-module)
+    - [Resources Module](#resources-module)
+    - [CrestApps Recipes Module](#crestapps-recipes-module)
+- [Getting Started](#getting-started)
+  - [Running Locally](#running-locally)
+- [Package Management](#package-management)
+  - [Production Packages](#production-packages)
+  - [Preview Package Feed](#preview-package-feed)
+  - [Adding the Preview Feed](#adding-the-preview-feed)
+    - [In Visual Studio](#in-visual-studio)
+    - [Via NuGet.config](#via-nugetconfig)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Overview
 
 Orchard Core offers a **flexible and scalable** foundation for building dynamic, data-driven websites and applications. CrestApps modules are developed to further improve this framework, focusing on:  
@@ -57,7 +96,10 @@ Enables ad-hoc AI chat experiences with configurable parameters, document upload
 Enhances the **AI Module** by providing AI Agents to perform tasks on your Orchard Core site. For more details, see the [Orchard Core AI Agent Module README](src/Modules/CrestApps.OrchardCore.AI.Agent/README.md).
 
 #### Model Context Protocol (MCP) Module
-Enhances the **AI Module** by adding support for connecting to any **MCP server**, whether hosted locally or remotely. For more details, see the [MCP Module README](src/Modules/CrestApps.OrchardCore.AI.Mcp/README.md).
+Provides support for the Model Context Protocol (MCP) and contains multiple features:
+
+- **MCP Client (feature)** — Client-side components to connect to remote MCP servers. See [README](src/Modules/CrestApps.OrchardCore.AI.Mcp/README.md) file for details.
+- **MCP Server (feature)** — Enables Orchard Core to act as an MCP server, exposing AI tools and capabilities to external MCP-compatible clients such as AI agents, IDEs, copilots, and automation tools. See [README-server](src/Modules/CrestApps.OrchardCore.AI.Mcp/README-server.md) file for details.
 
 #### Azure OpenAI Module
 Extends the **AI Module** by integrating **Azure OpenAI** services. See the [Azure OpenAI Module README](src/Modules/CrestApps.OrchardCore.OpenAI.Azure/README.md).  
@@ -86,6 +128,22 @@ Extends the **AI Module** by integrating **Azure AI Inference** services. See th
 
 #### Ollama Module
 Extends the **AI Module** by integrating any **Ollama** model. See the [Ollama Module README](src/Modules/CrestApps.OrchardCore.Ollama/README.md).  
+
+### Omnichannel Suite
+
+The Omnichannel suite provides a unified communication and activity orchestration layer across channels (SMS, Email, Phone, and more), with a mini-CRM UI and optional AI-driven automation.
+
+#### Omnichannel (Orchestrator)
+The foundation of all communication channels. Provides the core orchestration services and generic webhook entry points. See the [Omnichannel README](src/Modules/CrestApps.OrchardCore.Omnichannel/README.md).
+
+#### Omnichannel Management (Mini-CRM)
+A mini-CRM that lets you manage contacts, subjects, campaigns, dispositions, activities, and activity batches, and drive next-activity behavior via Orchard Core Workflows. See the [Omnichannel Management README](src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/README.md).
+
+#### SMS Omnichannel Automation (AI)
+Allows AI to automate chatting with customers/contacts using SMS. You define how the AI should handle conversations, and it acts as an agent communicating through your SMS provider. See the [SMS Omnichannel Automation README](src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/README.md).
+
+#### Omnichannel (Azure Event Grid)
+Integrates Azure Event Grid to receive communication events (e.g. from your SMS provider) and route them into Omnichannel. See the [Omnichannel Event Grid README](src/Modules/CrestApps.OrchardCore.Omnichannel.EventGrid/README.md).
 
 ### Standard Modules
 
@@ -142,7 +200,7 @@ Follow these steps to get started with CrestApps:
 This project is actively maintained and evolves alongside Orchard Core.
 
 * If you're using Orchard Core versions from `2.1` up to `2.3`, please use package version `1.2.x`.
-* For Orchard Core `3.0.0-preview-18823` and later, please use version `2.0.0-beta-0007` or newer.
+* For Orchard Core `3.0.0-preview-18908` and later, please use version `2.0.0-beta-0009` or newer.
 
 **Note:** In Orchard Core v3 multiple breaking changes were introduced to improve the framework. As a result, we had to divide development into two branches to maintain compatibility.
 
@@ -189,4 +247,4 @@ We welcome contributions from the community! To contribute:
 
 ## License
 
-CrestApps is licensed under the **MIT License**. See the [LICENSE](https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt) file for more details.  
+CrestApps is licensed under the **MIT License**. See the [LICENSE](https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt) file for more details.

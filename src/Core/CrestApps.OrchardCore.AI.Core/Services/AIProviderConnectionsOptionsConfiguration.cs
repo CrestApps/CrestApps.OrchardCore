@@ -67,6 +67,8 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
                 mappingContext.Values["DefaultDeploymentName"] = connection.DefaultDeploymentName;
                 mappingContext.Values["DefaultEmbeddingDeploymentName"] = connection.DefaultEmbeddingDeploymentName;
                 mappingContext.Values["DefaultSpeechToTextDeploymentName"] = connection.DefaultSpeechToTextDeploymentName;
+                mappingContext.Values["DefaultIntentDeploymentName"] = connection.DefaultIntentDeploymentName;
+                mappingContext.Values["DefaultImagesDeploymentName"] = connection.DefaultImagesDeploymentName;
                 mappingContext.Values["ConnectionNameAlias"] = connection.Name;
 
                 _handlers.Invoke((handler, ctx) => handler.Initializing(ctx), mappingContext, _logger);

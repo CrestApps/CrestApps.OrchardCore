@@ -1,0 +1,143 @@
+@using CrestApps.OrchardCore.AI.Mcp.ViewModels
+@using OrchardCore
+
+@model McpPromptFieldsViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Title" class="@Orchard.GetLabelClasses()">@T["Title"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+        <span class="hint">@T["An optional human-readable title for this prompt."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Name" class="@Orchard.GetLabelClasses()">@T["Name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["The unique name used to identify this prompt when called by MCP clients."]</span>
+    </div>
+</div>
+
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Description" class="@Orchard.GetLabelClasses()">@T["Description"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+        <span class="hint">@T["A description of what this prompt does."]</span>
+    </div>
+</div>
+
+<fieldset class="mb-3">
+    <legend>@T["Arguments"]</legend>
+    <div class="hint mb-2">@T["Define the arguments that can be passed to this prompt."]</div>
+
+    <div id="arguments-container">
+        @for (int i = 0; i < Model.Arguments.Count; i++)
+        {
+            <div class="card mb-2 argument-item" data-index="@i">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label">@T["Name"]</label>
+                            <input type="text" name="@Html.NameFor(m => m.Arguments[i].Name)" value="@Model.Arguments[i].Name" class="form-control" placeholder="@T["Argument name"]" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">@T["Title"]</label>
+                            <input type="text" name="@Html.NameFor(m => m.Arguments[i].Title)" value="@Model.Arguments[i].Title" class="form-control" placeholder="@T["Argument title"]" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">@T["Description"]</label>
+                            <input type="text" name="@Html.NameFor(m => m.Arguments[i].Description)" value="@Model.Arguments[i].Description" class="form-control" placeholder="@T["Argument description"]" />
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">@T["Required"]</label>
+                            <div class="form-check">
+                                <input type="checkbox" name="@Html.NameFor(m => m.Arguments[i].Required)" value="true" class="form-check-input" @(Model.Arguments[i].Required ? "checked" : "") />
+                            </div>
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button type="button" class="btn btn-danger btn-sm remove-argument" title="@T["Remove argument"]">
+                                <i class="fa-solid fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <button type="button" class="btn btn-secondary btn-sm" id="add-argument">
+        <i class="fa-solid fa-plus"></i> @T["Add Argument"]
+    </button>
+</fieldset>
+
+<script asp-name="technical-name-generator"></script>
+<script at="Foot" depends-on="technical-name-generator">
+    window.initAutoGenerateTechnicalName('@Html.IdFor(x => x.Title)', '@Html.IdFor(x => x.Name)');
+</script>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        const argumentsContainer = document.getElementById('arguments-container');
+        const addArgumentBtn = document.getElementById('add-argument');
+
+        function getNextArgumentIndex() {
+            const items = argumentsContainer.querySelectorAll('.argument-item');
+            return items.length;
+        }
+
+        function createArgumentItem(index) {
+            const prefix = '@Html.NameFor(m => m.Arguments)';
+            const html = `
+                <div class="card mb-2 argument-item" data-index="${index}">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">@T["Name"]</label>
+                                <input type="text" name="${prefix}[${index}].Name" class="form-control" placeholder="@T["Argument name"]" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">@T["Title"]</label>
+                                <input type="text" name="${prefix}[${index}].Title" class="form-control" placeholder="@T["Argument title"]" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">@T["Description"]</label>
+                                <input type="text" name="${prefix}[${index}].Description" class="form-control" placeholder="@T["Argument description"]" />
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label">@T["Required"]</label>
+                                <div class="form-check">
+                                    <input type="checkbox" name="${prefix}[${index}].Required" value="true" class="form-check-input" />
+                                </div>
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button type="button" class="btn btn-danger btn-sm remove-argument" title="@T["Remove argument"]">
+                                    <i class="fa-solid fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return html;
+        }
+
+        addArgumentBtn.addEventListener('click', function () {
+            const index = getNextArgumentIndex();
+            argumentsContainer.insertAdjacentHTML('beforeend', createArgumentItem(index));
+        });
+
+        argumentsContainer.addEventListener('click', function (e) {
+            if (e.target.classList.contains('remove-argument') || e.target.closest('.remove-argument')) {
+                const item = e.target.closest('.argument-item');
+                if (item) {
+                    item.remove();
+                }
+            }
+        });
+    });
+</script>

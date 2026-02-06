@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Contents;
@@ -20,51 +21,45 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         MergeArrayHandling = MergeArrayHandling.Replace,
     };
 
-    private readonly IContentManager _contentManager;
-    private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthorizationService _authorizationService;
-
-    public CreateOrUpdateContentTool(
-        IContentManager contentManager,
-        IContentDefinitionManager contentDefinitionManager,
-        IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
-    {
-        _contentManager = contentManager;
-        _contentDefinitionManager = contentDefinitionManager;
-        _httpContextAccessor = httpContextAccessor;
-        _authorizationService = authorizationService;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {
-                "contentItem": {
-                  "type": "string",
-                  "description": "A JSON string representing the content item to create or update. To perform an update, the object must include a valid 'ContentItemId'."
-                },
-                "isDraft": {
-                  "type": "boolean",
-                  "description": "Indicates whether the content item should be saved as a draft. If set to false, the item will be published immediately."
-                }
-              },
-              "required": ["contentItem", "isDraft"],
-              "additionalProperties": false
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+        """
+        {
+          "type": "object",
+          "properties": {
+            "contentItem": {
+              "type": "string",
+              "description": "A JSON string representing the content item to create or update. To perform an update, the object must include a valid 'ContentItemId'."
+            },
+            "isDraft": {
+              "type": "boolean",
+              "description": "Indicates whether the content item should be saved as a draft. If set to false, the item will be published immediately."
             }
-            """, JsonSerializerOptions);
-    }
+          },
+          "required": ["contentItem", "isDraft"],
+          "additionalProperties": false
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Creates a new content item or updates an existing one by creating a new version.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
+
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    {
+        ["Strict"] = false,
+    };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var contentManager = arguments.Services.GetRequiredService<IContentManager>();
+        var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
 
         if (!arguments.TryGetFirstString("contentItem", out var json))
         {
@@ -78,7 +73,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
         var model = JsonSerializer.Deserialize<ContentItem>(json, JsonSerializerOptions);
 
-        var contentItem = await _contentManager.GetAsync(model.ContentItemId, VersionOptions.DraftRequired);
+        var contentItem = await contentManager.GetAsync(model.ContentItemId, VersionOptions.DraftRequired);
 
         if (contentItem is null)
         {
@@ -87,22 +82,22 @@ public sealed class CreateOrUpdateContentTool : AIFunction
                 return "A Content type is required";
             }
 
-            if (await _contentDefinitionManager.GetTypeDefinitionAsync(model.ContentType) == null)
+            if (await contentDefinitionManager.GetTypeDefinitionAsync(model.ContentType) == null)
             {
                 return "Unknown content type. Before creating content item, first create content type definition.";
             }
 
-            contentItem = await _contentManager.NewAsync(model.ContentType);
-            contentItem.Owner = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            contentItem = await contentManager.NewAsync(model.ContentType);
+            contentItem.Owner = httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.PublishContent, contentItem))
+            if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, CommonPermissions.PublishContent, contentItem))
             {
                 return "The current user does not have permission to publish the content item";
             }
 
             contentItem.Merge(model);
 
-            var result = await _contentManager.ValidateAsync(contentItem);
+            var result = await contentManager.ValidateAsync(contentItem);
 
             if (!result.Succeeded)
             {
@@ -110,21 +105,21 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             }
             else
             {
-                await _contentManager.CreateAsync(contentItem, VersionOptions.Draft);
+                await contentManager.CreateAsync(contentItem, VersionOptions.Draft);
             }
         }
         else
         {
-            if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, CommonPermissions.EditContent, contentItem))
+            if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, CommonPermissions.EditContent, contentItem))
             {
                 return "The current user does not have permission to edit the content item";
             }
 
             contentItem.Merge(model, _updateJsonMergeSettings);
 
-            await _contentManager.UpdateAsync(contentItem);
+            await contentManager.UpdateAsync(contentItem);
 
-            var result = await _contentManager.ValidateAsync(contentItem);
+            var result = await contentManager.ValidateAsync(contentItem);
 
             if (!result.Succeeded)
             {
@@ -134,13 +129,13 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
         if (isDraft)
         {
-            await _contentManager.SaveDraftAsync(contentItem);
+            await contentManager.SaveDraftAsync(contentItem);
 
             return "A draft content item was successfully saved.";
         }
         else
         {
-            await _contentManager.PublishAsync(contentItem);
+            await contentManager.PublishAsync(contentItem);
 
             return "A content item was successfully published.";
         }

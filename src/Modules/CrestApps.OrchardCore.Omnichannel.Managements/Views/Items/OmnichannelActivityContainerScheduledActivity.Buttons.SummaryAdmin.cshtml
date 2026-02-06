@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using Microsoft.AspNetCore.Authorization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OmnichannelActivityContainer>
+
+@inject IAuthorizationService AuthorizationService
+
+@if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.CompleteActivity, Model.Value.Activity))
+{
+    <a asp-action="Complete"
+       asp-route-id="@Model.Value.Activity.ItemId"
+       class="btn btn-success btn-sm">@T["Complete"]</a>
+}
+
+@if (await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.EditActivity, Model.Value.Activity))
+{
+    <a asp-action="Edit"
+       asp-route-id="@Model.Value.Activity.ItemId"
+       class="btn btn-primary btn-sm">@T["Edit"]</a>
+}
+

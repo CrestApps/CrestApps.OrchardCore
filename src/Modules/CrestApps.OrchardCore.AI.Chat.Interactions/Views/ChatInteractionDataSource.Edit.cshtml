@@ -1,19 +1,111 @@
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using CrestApps.OrchardCore.OpenAI.Azure.Core
 @using OrchardCore
 
 @model EditChatInteractionDataSourceViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DataSourceId" class="@Orchard.GetLabelClasses()">
-        @T["Data Source"]
-        <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="@T["Select a data source for your own data. This connects to Azure AI Search, Elasticsearch, or MongoDB where your indexed data is stored."]" aria-label="@T["Information about data source parameter"]">
+<div class="mb-3">
+    <label asp-for="DataSourceId" class="form-label">
+        @T["Data source"]
+        <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="@T["The data-source where your data is stored."]" aria-label="@T["Information about data source parameter"]">
             <i class="fa-solid fa-circle-question"></i>
         </span>
     </label>
-    <div class="@Orchard.GetEndClasses()">
-        <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select" name="ChatInteraction.DataSourceId">
-            <option value="">@T["Select a data source"]</option>
-        </select>
-        <span class="hint">@T["The data source where your indexed data is stored."]</span>
+    <select asp-for="DataSourceId" class="form-select">
+        <option value="">@T["Select a data source"]</option>
+        @foreach (var source in Model.DataSources.OrderBy(x => x.DisplayText))
+        {
+            @if (source.ItemId == Model.DataSourceId)
+            {
+                <option value="@source.ItemId" data-source-type="@source.Type" selected="selected">@source.DisplayText</option>
+                continue;
+            }
+
+            <option value="@source.ItemId" data-source-type="@source.Type">@source.DisplayText</option>
+        }
+    </select>
+</div>
+
+<div class="mb-3 d-none data-source-dependent data-source-dependent-any">
+    <label asp-for="Strictness" class="form-label">
+        @T["Strictness"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Strictness sets the threshold to categorize documents as relevant to your queries. Raising strictness means a higher threshold for relevance and filtering out more documents that are less relevant for responses. Very high strictness could cause failure to generate responses due to limited available documents. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultStrictness]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <input type="number" class="form-control" asp-for="Strictness" step="1" min="1" max="5">
+</div>
+
+<div class="mb-3 d-none data-source-dependent data-source-dependent-any">
+    <label asp-for="TopNDocuments" class="form-label">
+        @T["Total retrieved documents"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["This specifies the number of top-scoring documents from your data index used to generate responses. You want to increase the value when you have short documents or want to provide more context. Leave it blank to use the current default of {0}.", AzureOpenAIConstants.DefaultTopNDocuments]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <input type="number" class="form-control" asp-for="TopNDocuments" step="1" min="3" max="20">
+</div>
+
+<div class="mb-3 d-none data-source-dependent data-source-dependent-any">
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" asp-for="IsInScope" />
+
+        <label class="form-check-label" asp-for="IsInScope">
+            @T["Limit responses to indexed data"]
+            <span class="text-muted" data-bs-toggle="tooltip" title="@T["When enabled, the model will only generate responses using your Azure OpenAI On Your Data index (is_scope = true). If disabled, the model may use its general knowledge in addition to your data."]">
+                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+            </span>
+        </label>
     </div>
 </div>
+
+<div class="mb-3 d-none data-source-dependent @("data-source-dependent-" + AzureOpenAIConstants.DataSourceTypes.AzureAISearch)">
+    <label asp-for="Filter" class="form-label">
+        @T["Filter"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Optional OData filter expression to query a subset of indexed data. Example: category eq 'documentation' or status ne 'archived'. Leave blank to search all data."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <input type="text" class="form-control" asp-for="Filter">
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const dataSourceSelect = document.getElementById('@Html.IdFor(x => x.DataSourceId)');
+
+        function toggleDataSourceDependentElements() {
+            const dependentElements = document.querySelectorAll('.data-source-dependent');
+
+            if (dataSourceSelect && dependentElements.length > 0) {
+
+                const option = dataSourceSelect.selectedOptions?.[0];
+                const type = option?.dataset.sourceType;
+                const hasDataSource = dataSourceSelect.value && dataSourceSelect.value.trim() !== '';
+
+                dependentElements.forEach(element => {
+
+                    if (!hasDataSource) {
+                        element.classList.add('d-none');
+
+                        return;
+                    }
+
+                    if (element.classList.contains('data-source-dependent-any') || element.classList.contains('data-source-dependent-' + type)) {
+                        element.classList.remove('d-none');
+                    } else {
+                        element.classList.add('d-none');
+                    }
+                });
+            }
+        }
+
+        // Initial check on page load
+        toggleDataSourceDependentElements();
+
+        if (dataSourceSelect) {
+            // Listen for changes on the data source select
+            dataSourceSelect.addEventListener('change', toggleDataSourceDependentElements);
+        }
+    });
+</script>

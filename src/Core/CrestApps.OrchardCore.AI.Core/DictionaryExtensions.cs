@@ -34,6 +34,12 @@ public static class DictionaryExtensions
     public static string GetDefaultSpeechToTextDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
         => entry.GetStringValue("DefaultSpeechToTextDeploymentName", throwException);
 
+    public static string GetDefaultIntentDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("DefaultIntentDeploymentName", throwException);
+
+    public static string GetDefaultImagesDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("DefaultImagesDeploymentName", throwException);
+
     public static string GetStringValue(this IDictionary<string, object> entry, string key, bool throwException = false)
     {
         if (entry.TryGetValue(key, out var value))

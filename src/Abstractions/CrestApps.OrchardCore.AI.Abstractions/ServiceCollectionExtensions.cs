@@ -10,10 +10,18 @@ public static class ServiceCollectionExtensions
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
-        services.AddScoped<TTool>();
+        services.AddSingleton<TTool>();
+        services.AddKeyedSingleton<AITool>(name, (sp, key) => sp.GetRequiredService<TTool>());
+
         services.Configure<AIToolDefinitionOptions>(o =>
         {
-            o.Add<TTool>(name, configure);
+            o.Add<TTool>(name, (t) =>
+            {
+
+                configure(t);
+
+                t.Name = name;
+            });
         });
 
         return services;

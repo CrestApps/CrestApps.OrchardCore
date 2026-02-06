@@ -1,0 +1,139 @@
+@using CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.ViewModels
+@model SftpConnectionViewModel
+
+<div class="mb-3">
+    <label asp-for="Host" class="form-label">@T["Host"]</label>
+    <input asp-for="Host" class="form-control" />
+    <span asp-validation-for="Host" class="text-danger"></span>
+    <span class="hint">@T["The SFTP server hostname (e.g., sftp.example.com)."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Port" class="form-label">@T["Port"]</label>
+    <input asp-for="Port" type="number" class="form-control" placeholder="22" />
+    <span asp-validation-for="Port" class="text-danger"></span>
+    <span class="hint">@T["The SFTP server port. Default is 22."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Username" class="form-label">@T["Username"]</label>
+    <input asp-for="Username" class="form-control" />
+    <span asp-validation-for="Username" class="text-danger"></span>
+    <span class="hint">@T["The username for SFTP authentication."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Password" class="form-label">@T["Password"]</label>
+    @if (Model.HasPassword)
+    {
+        <input asp-for="Password" type="password" class="form-control" placeholder="@T["Keep current password"]" />
+        <span class="hint">@T["Leave empty to keep the current password."]</span>
+    }
+    else
+    {
+        <input asp-for="Password" type="password" class="form-control" />
+    }
+    <span asp-validation-for="Password" class="text-danger"></span>
+    <span class="hint">@T["The password for password-based authentication. Optional if using private key."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="PrivateKey" class="form-label">@T["Private Key"]</label>
+    @if (Model.HasPrivateKey)
+    {
+        <textarea asp-for="PrivateKey" class="form-control" rows="5" placeholder="@T["Keep current private key"]"></textarea>
+        <span class="hint">@T["Leave empty to keep the current private key."]</span>
+    }
+    else
+    {
+        <textarea asp-for="PrivateKey" class="form-control" rows="5" placeholder="-----BEGIN RSA PRIVATE KEY-----"></textarea>
+    }
+    <span asp-validation-for="PrivateKey" class="text-danger"></span>
+    <span class="hint">@T["The private key for key-based authentication. Optional if using password."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Passphrase" class="form-label">@T["Passphrase"]</label>
+    @if (Model.HasPassphrase)
+    {
+        <input asp-for="Passphrase" type="password" class="form-control" placeholder="@T["Keep current passphrase"]" />
+        <span class="hint">@T["Leave empty to keep the current passphrase."]</span>
+    }
+    else
+    {
+        <input asp-for="Passphrase" type="password" class="form-control" />
+    }
+    <span asp-validation-for="Passphrase" class="text-danger"></span>
+    <span class="hint">@T["The passphrase for the private key. Only required if the private key is encrypted."]</span>
+</div>
+
+<fieldset class="mb-3">
+    <legend class="h6">@T["Proxy Settings"]</legend>
+
+    <div class="mb-3">
+        <label asp-for="ProxyType" class="form-label">@T["Proxy Type"]</label>
+        <select asp-for="ProxyType" class="form-select">
+            <option value="">@T["None"]</option>
+            <option value="Http">@T["HTTP"]</option>
+            <option value="Socks4">@T["SOCKS4"]</option>
+            <option value="Socks5">@T["SOCKS5"]</option>
+        </select>
+        <span asp-validation-for="ProxyType" class="text-danger"></span>
+        <span class="hint">@T["The type of proxy to use for the SFTP connection."]</span>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label asp-for="ProxyHost" class="form-label">@T["Proxy Host"]</label>
+                <input asp-for="ProxyHost" class="form-control" />
+                <span asp-validation-for="ProxyHost" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="mb-3">
+                <label asp-for="ProxyPort" class="form-label">@T["Proxy Port"]</label>
+                <input asp-for="ProxyPort" type="number" class="form-control" placeholder="1080" />
+                <span asp-validation-for="ProxyPort" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ProxyUsername" class="form-label">@T["Proxy Username"]</label>
+        <input asp-for="ProxyUsername" class="form-control" />
+        <span asp-validation-for="ProxyUsername" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ProxyPassword" class="form-label">@T["Proxy Password"]</label>
+        @if (Model.HasProxyPassword)
+        {
+            <input asp-for="ProxyPassword" type="password" class="form-control" placeholder="@T["Keep current password"]" />
+            <span class="hint">@T["Leave empty to keep the current proxy password."]</span>
+        }
+        else
+        {
+            <input asp-for="ProxyPassword" type="password" class="form-control" />
+        }
+        <span asp-validation-for="ProxyPassword" class="text-danger"></span>
+    </div>
+</fieldset>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label asp-for="ConnectionTimeout" class="form-label">@T["Connection Timeout (seconds)"]</label>
+            <input asp-for="ConnectionTimeout" type="number" class="form-control" placeholder="@T["Default"]" />
+            <span asp-validation-for="ConnectionTimeout" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label asp-for="KeepAliveInterval" class="form-label">@T["Keep-Alive Interval (seconds)"]</label>
+            <input asp-for="KeepAliveInterval" type="number" class="form-control" placeholder="@T["Disabled"]" />
+            <span asp-validation-for="KeepAliveInterval" class="text-danger"></span>
+            <span class="hint">@T["Sends periodic keep-alive messages to prevent the connection from being dropped by firewalls or NAT devices."]</span>
+        </div>
+    </div>
+</div>

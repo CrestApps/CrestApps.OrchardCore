@@ -8,6 +8,11 @@ namespace CrestApps.OrchardCore.Ollama.Services;
 
 public sealed class OllamaAIClientProvider : AIClientProviderBase
 {
+    public OllamaAIClientProvider(IServiceProvider serviceProvider)
+        : base(serviceProvider)
+    {
+    }
+
     protected override string GetProviderName()
         => OllamaConstants.ProviderName;
 
@@ -26,5 +31,12 @@ public sealed class OllamaAIClientProvider : AIClientProviderBase
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     {
         throw new NotSupportedException("Ollama does not currently support speech-to-text functionality.");
+    }
+
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    {
+        throw new NotSupportedException("Ollama does not support image generation.");
     }
 }

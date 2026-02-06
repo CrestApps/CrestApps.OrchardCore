@@ -1,0 +1,9 @@
+@model ActivityViewModel<NewActivityTask>
+@using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Tasks
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+<header>
+    <h4><i class="fa-solid fa-envelope" aria-hidden="true"></i>@Model.Activity.GetTitleOrDefault(() => T["New Activity"])</h4>
+</header>
+<em>&quot;@Model.Activity.DisplayText&quot;</em>

@@ -545,7 +545,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             else
             {
                 // At this point, we are dealing with a chat profile.
-                await ProcessChatPromptAsync(writer, profile, sessionId, prompt.Trim(), cancellationToken);
+                await ProcessChatPromptAsync(writer, profile, sessionId, prompt?.Trim(), cancellationToken);
             }
 
             await _session.SaveChangesAsync(cancellationToken);
@@ -565,7 +565,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             {
                 SessionId = sessionId,
                 MessageId = IdGenerator.GenerateId(),
-                Content = GetFriendlyErrorMessage(ex).Value,
+                Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
             };
 
             await writer.WriteAsync(errorMessage, cancellationToken);

@@ -1,0 +1,77 @@
+@page
+@model CrestApps.OrchardCore.Samples.McpClient.Pages.PromptsModel
+
+<h1>Prompts</h1>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        @Model.ErrorMessage
+    </div>
+}
+
+<div class="d-flex align-items-center gap-3 mb-3">
+    <p class="text-muted mb-0">Prompts registered on the MCP server. Click "Get Prompt" to retrieve details.</p>
+    <form method="post" asp-page-handler="Refresh" class="d-inline">
+        <button class="btn btn-secondary btn-sm" type="submit">Refresh</button>
+    </form>
+</div>
+
+@if (Model.Prompts?.Count > 0)
+{
+    <ul class="list-group">
+        @foreach (var prompt in Model.Prompts)
+        {
+            <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="fw-semibold">@prompt.Name</div>
+                        @if (!string.IsNullOrWhiteSpace(prompt.Description))
+                        {
+                            <div class="text-muted">@prompt.Description</div>
+                        }
+                    </div>
+                    <form method="post" asp-page-handler="GetPrompt">
+                        <input type="hidden" name="promptName" value="@prompt.Name" />
+                        <button class="btn btn-primary btn-sm" type="submit">Get Prompt</button>
+                    </form>
+                </div>
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p class="text-muted">No prompts were returned by the MCP server.</p>
+}
+
+@if (Model.PromptResult is not null)
+{
+    <div class="card mt-4">
+        <div class="card-header">Prompt Details: @Model.SelectedPromptName</div>
+        <div class="card-body">
+            @if (!string.IsNullOrWhiteSpace(Model.PromptResult.Description))
+            {
+                <p><strong>Description:</strong> @Model.PromptResult.Description</p>
+            }
+
+            @if (Model.PromptResult.Messages?.Count > 0)
+            {
+                <h6>Messages</h6>
+                @foreach (var message in Model.PromptResult.Messages)
+                {
+                    <div class="card mb-2">
+                        <div class="card-body p-2">
+                            <span class="badge bg-secondary me-1">@message.Role</span>
+                            <span>@message.Content</span>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted">No messages returned for this prompt.</p>
+            }
+        </div>
+    </div>
+}

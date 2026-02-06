@@ -20,7 +20,11 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
     protected override string GetProviderName()
         => AzureOpenAIConstants.ProviderName;
 
-    public AzureOpenAIClientProvider(ILoggerFactory loggerFactory, ILogger<AzureOpenAIClientProvider> logger)
+    public AzureOpenAIClientProvider(
+        IServiceProvider serviceProvider,
+        ILoggerFactory loggerFactory,
+        ILogger<AzureOpenAIClientProvider> logger)
+        : base(serviceProvider)
     {
         _loggerFactory = loggerFactory;
         _logger = logger;
@@ -64,6 +68,17 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
 
         return new AzureSpeechToTextClient(region, subscriptionKey, _logger);
     }
+
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+    {
+        var endpoint = connection.GetEndpoint();
+
+        return GetClient(connection, endpoint)
+            .GetImageClient(deploymentName)
+            .AsIImageGenerator();
+    }
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
     private AzureOpenAIClient GetClient(AIProviderConnectionEntry connection, Uri endpoint)
     {

@@ -232,7 +232,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.PromptTemplate), S["Prompt template is required."]);
             }
-            else if (!_liquidTemplateManager.Validate(model.PromptTemplate, out var errors))
+            else if (!_liquidTemplateManager.Validate(model.PromptTemplate, out _))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.PromptTemplate), S["Invalid liquid template used for Prompt template."]);
             }

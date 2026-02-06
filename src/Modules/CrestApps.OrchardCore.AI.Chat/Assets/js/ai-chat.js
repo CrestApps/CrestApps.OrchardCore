@@ -217,11 +217,11 @@ window.openAIChatManager = function () {
                         content: trimmedPrompt
                     });
 
-                    this.streamMessage(trimmedPrompt);
+                    this.streamMessage(this.getProfileId(), trimmedPrompt, null);
                     this.inputElement.value = '';
                     this.prompt = '';
                 },
-                streamMessage(trimmedPrompt) {
+                streamMessage(profileId, trimmedPrompt, sessionProfileId) {
 
                     if (this.stream) {
                         this.stream.dispose();
@@ -238,7 +238,7 @@ window.openAIChatManager = function () {
                     var messageIndex = this.messages.length;
                     var currentSessionId = this.getSessionId();
 
-                    this.stream = this.connection.stream("SendMessage", this.getProfileId(), trimmedPrompt, currentSessionId, null)
+                    this.stream = this.connection.stream("SendMessage", profileId, trimmedPrompt, currentSessionId, sessionProfileId)
                         .subscribe({
                             next: (chunk) => {
                                 let message = this.messages[messageIndex];
@@ -254,6 +254,7 @@ window.openAIChatManager = function () {
                                     messageIndex = this.messages.length;
                                     let newMessage = {
                                         role: "assistant",
+                                        title: chunk.title,
                                         content: "",
                                         htmlContent: "",
                                     };
@@ -261,6 +262,10 @@ window.openAIChatManager = function () {
                                     this.messages.push(newMessage);
 
                                     message = newMessage;
+                                }
+
+                                if (chunk.title && (!message.title || message.title !== chunk.title)) {
+                                    message.title = chunk.title;
                                 }
 
                                 if (chunk.references && typeof chunk.references === "object" && Object.keys(chunk.references).length) {
@@ -371,17 +376,18 @@ window.openAIChatManager = function () {
                         return;
                     }
 
-                    let profileId = element.getAttribute('data-profile-id');
+                    let templateProfileId = element.getAttribute('data-profile-id');
                     let sessionId = this.getSessionId();
+                    let sessionProfileId = this.getProfileId();
 
-                    if (!profileId || !sessionId) {
+                    if (!templateProfileId || !sessionId) {
 
                         console.error('The given element is missing data-profile-id or the session has not yet started.');
                         return;
                     }
 
-                    this.showTypingIndicator();
-                    this.streamMessage(null);
+                    // streamMessage() already shows the typing indicator.
+                    this.streamMessage(templateProfileId, null, sessionProfileId);
                 },
                 createSessionUrl(baseUrl, param, value) {
 

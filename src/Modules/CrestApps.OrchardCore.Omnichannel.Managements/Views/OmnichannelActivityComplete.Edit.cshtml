@@ -1,0 +1,133 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore
+
+@model OmnichannelActivityViewModel
+
+<dl class="mb-3">
+    <dt>@T["Interaction type"]</dt>
+    <dd>@Model.InteractionType</dd>
+
+    <dt>@T["Channel"]</dt>
+    <dd>@Model.Channel</dd>
+
+    <dt>@T["Campaign"]</dt>
+    <dd>@Model.CampaignTitle</dd>
+
+    <dt>@T["Urgency level"]</dt>
+    <dd>
+        @{
+            var value = Model.UrgencyLevel switch
+            {
+                ActivityUrgencyLevel.VeryLow => T["Very low"],
+                ActivityUrgencyLevel.Low => T["Low"],
+                ActivityUrgencyLevel.Medium => T["Medium"],
+                ActivityUrgencyLevel.High => T["High"],
+                ActivityUrgencyLevel.VeryHigh => T["Very high"],
+                _ => T["Normal"],
+            };
+
+            @value
+        }
+    </dd>
+
+    <dt>@T["Assigned to"]</dt>
+    <dd>@Model.AssignedToName</dd>
+
+    <dt>@T["Scheduled at"]</dt>
+    <dd>@Model.ScheduledLocal.ToString("g")</dd>
+
+    @if (Model.CompletedLocal.HasValue)
+    {
+        <dt>@T["Completed by"]</dt>
+        <dd>@Model.CompletedByName</dd>
+
+        <dt>@T["Completed at"]</dt>
+        <dd>@Model.CompletedLocal.Value.ToString("g")</dd>
+    }
+
+    <dt>@T["Instructions"]</dt>
+    <dd>@Model.Instructions</dd>
+
+</dl>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Notes" class="@Orchard.GetLabelClasses()">@T["Notes"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="Notes" class="form-control"></textarea>
+        <span asp-validation-for="Notes" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="activity-wrapper">
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="DispositionId" class="@Orchard.GetLabelClasses()">@T["Disposition"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <select asp-for="DispositionId" class="form-select">
+                <option value="">@T["Select a disposition"]</option>
+                @foreach (var disposition in Model.Dispositions)
+                {
+                    <option value="@disposition.ItemId" data-capture-date="@disposition.CaptureDate.ToString().ToLowerInvariant()">@disposition.DisplayText</option>
+                }
+            </select>
+            <span asp-validation-for="DispositionId" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses("schedule-date-wrapper", "d-none")">
+        <label asp-for="ScheduleDate" class="@Orchard.GetLabelClasses()">@T["Schedule next activity at"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="text"
+                   id="@Html.IdFor(m => m.ScheduleDate)"
+                   name="@Html.NameFor(m => m.ScheduleDate)"
+                   value="@Model.ScheduleDate"
+                   class="form-control"
+                   placeholder="@T["Schedule next activity at"]" />
+            <span asp-validation-for="ScheduleDate" class="text-danger"></span>
+        </div>
+    </div>
+</div>
+
+<style asp-name="flatpickr"></style>
+<script asp-name="flatpickr" at="Foot"></script>
+<script asp-name="flatpickr-culture" at="Foot"></script>
+
+<script at="Foot" depends-on="flatpickr,flatpickr-culture">
+    document.addEventListener("DOMContentLoaded", function () {
+        var datePattern = '@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern';
+        var timePattern = '@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern';
+        var patterns = flatpickrCulture.createFlatpickrDateTimePattern(datePattern, timePattern);
+
+        const dispositionMenu = document.getElementById("@Html.IdFor(x => x.DispositionId)");
+        const parent = dispositionMenu.closest('.activity-wrapper');
+        const scheduleWrapper = parent.querySelector(".schedule-date-wrapper");
+        const scheduleDateInput = document.getElementById("@Html.IdFor(x => x.ScheduleDate)");
+
+        if (scheduleDateInput) {
+            flatpickr(scheduleDateInput, {
+                enableTime: true,
+                time_24hr: patterns.time24hr,
+                dateFormat: patterns.dateTimePattern,
+                allowInput: true,
+            });
+        }
+
+        function toggleScheduleWrapper() {
+            const selectedOption = dispositionMenu.options[dispositionMenu.selectedIndex];
+            const captureDate = selectedOption.getAttribute("data-capture-date");
+
+            if (captureDate === "true") {
+                scheduleWrapper.classList.remove("d-none");
+            } else {
+                scheduleWrapper.classList.add("d-none");
+            }
+        }
+
+        // Run on page load in case a disposition is already selected
+        toggleScheduleWrapper();
+
+        // Run whenever selection changes
+        dispositionMenu.addEventListener("change", toggleScheduleWrapper);
+    });
+</script>
+

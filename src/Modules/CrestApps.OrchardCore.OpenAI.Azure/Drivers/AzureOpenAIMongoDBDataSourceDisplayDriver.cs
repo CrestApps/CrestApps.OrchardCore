@@ -27,48 +27,45 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
 
     public override IDisplayResult Edit(AIDataSource dataSource, BuildEditorContext context)
     {
-        if (dataSource.ProfileSource != AzureOpenAIConstants.AzureOpenAIOwnData ||
+        if (dataSource.ProfileSource != AzureOpenAIConstants.ProviderName ||
             dataSource.Type != AzureOpenAIConstants.DataSourceTypes.MongoDB)
         {
             return null;
         }
 
-        return Initialize<AzureProfileMongoDBViewModel>("AzureOpenAIProfileMongoDB_Edit", model =>
+        return Initialize<AzureMongoDBDataSourceViewModel>("AzureOpenAIMongoDBDataSource_Edit", model =>
         {
-            var metadata = dataSource.As<AzureAIProfileMongoDBMetadata>();
-
-            model.EndpointName = metadata.EndpointName;
-            model.AppName = metadata.AppName;
-            model.CollectionName = metadata.CollectionName;
-            model.Username = metadata.Authentication?.Username;
-            model.HasPassword = !string.IsNullOrEmpty(metadata.Authentication?.Password);
-            model.Strictness = metadata.Strictness;
-            model.TopNDocuments = metadata.TopNDocuments;
-            model.IndexName = metadata.IndexName;
-            model.DatabaseName = metadata.DatabaseName;
+            var metadata = dataSource.As<AzureMongoDBDataSourceMetadata>();
+            model.IndexName = metadata?.IndexName;
+            model.EndpointName = metadata?.EndpointName;
+            model.AppName = metadata?.AppName;
+            model.CollectionName = metadata?.CollectionName;
+            model.Username = metadata?.Authentication?.Username;
+            model.HasPassword = !string.IsNullOrEmpty(metadata?.Authentication?.Password);
+            model.DatabaseName = metadata?.DatabaseName;
         }).Location("Content:3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
-        if (dataSource.ProfileSource != AzureOpenAIConstants.AzureOpenAIOwnData ||
+        if (dataSource.ProfileSource != AzureOpenAIConstants.ProviderName ||
             dataSource.Type != AzureOpenAIConstants.DataSourceTypes.MongoDB)
         {
             return null;
         }
 
-        var model = new AzureProfileMongoDBViewModel();
+        var model = new AzureMongoDBDataSourceViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
-        if (string.IsNullOrWhiteSpace(model.EndpointName))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.EndpointName), S["The endpoint name is required."]);
-        }
 
         if (string.IsNullOrWhiteSpace(model.IndexName))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexName), S["The index name is required."]);
+        }
+
+        if (string.IsNullOrWhiteSpace(model.EndpointName))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.EndpointName), S["The endpoint name is required."]);
         }
 
         if (string.IsNullOrWhiteSpace(model.CollectionName))
@@ -86,7 +83,7 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Username), S["The username is required."]);
         }
 
-        var metadata = dataSource.As<AzureAIProfileMongoDBMetadata>();
+        var metadata = dataSource.As<AzureMongoDBDataSourceMetadata>();
 
         metadata.Authentication ??= new AzureAIProfileMongoDBAuthenticationType();
 
@@ -104,12 +101,10 @@ public sealed class AzureOpenAIMongoDBDataSourceDisplayDriver : DisplayDriver<AI
             metadata.Authentication.Password = protector.Protect(model.Password);
         }
 
-        metadata.EndpointName = model.EndpointName;
         metadata.IndexName = model.IndexName;
+        metadata.EndpointName = model.EndpointName;
         metadata.AppName = model.AppName;
         metadata.CollectionName = model.CollectionName;
-        metadata.Strictness = model.Strictness;
-        metadata.TopNDocuments = model.TopNDocuments;
         metadata.Authentication.Username = model.Username;
         metadata.DatabaseName = model.DatabaseName;
         dataSource.Put(metadata);

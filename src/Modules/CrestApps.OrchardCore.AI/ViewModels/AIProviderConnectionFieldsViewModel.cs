@@ -16,6 +16,10 @@ public class AIProviderConnectionFieldsViewModel
 
     public string DefaultSpeechToTextDeploymentName { get; set; }
 
+    public string DefaultIntentDeploymentName { get; set; }
+
+    public string DefaultImagesDeploymentName { get; set; }
+
     [BindNever]
     public bool IsNew { get; set; }
 }

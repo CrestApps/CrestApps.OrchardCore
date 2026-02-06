@@ -9,9 +9,4 @@ internal static class JsonHelpers
     {
         ReferenceHandler = ReferenceHandler.Preserve,
     };
-
-    public static JsonSerializerOptions Indented = new()
-    {
-        WriteIndented = true,
-    };
 }

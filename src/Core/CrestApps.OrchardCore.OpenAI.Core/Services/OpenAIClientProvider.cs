@@ -9,6 +9,11 @@ namespace CrestApps.OrchardCore.OpenAI.Core.Services;
 
 public sealed class OpenAIClientProvider : AIClientProviderBase
 {
+    public OpenAIClientProvider(IServiceProvider serviceProvider)
+        : base(serviceProvider)
+    {
+    }
+
     protected override string GetProviderName()
         => OpenAIConstants.ProviderName;
 
@@ -17,8 +22,8 @@ public sealed class OpenAIClientProvider : AIClientProviderBase
         var client = GetOpenAIClient(connection);
 
         return client
-            .GetChatClient(deploymentName)
-            .AsIChatClient();
+             .GetChatClient(deploymentName)
+             .AsIChatClient();
     }
 
     protected override IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator(AIProviderConnectionEntry connection, string deploymentName)
@@ -38,6 +43,18 @@ public sealed class OpenAIClientProvider : AIClientProviderBase
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         return client.GetAudioClient(deploymentName)
             .AsISpeechToTextClient();
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    }
+
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    {
+        var client = GetOpenAIClient(connection);
+
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        return client.GetImageClient(deploymentName)
+            .AsIImageGenerator();
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     }
 

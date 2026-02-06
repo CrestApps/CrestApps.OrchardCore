@@ -1,0 +1,53 @@
+@page
+@model CrestApps.OrchardCore.Samples.McpClient.Pages.IndexModel
+
+<h1>MCP Client Samples</h1>
+
+<p class="lead">This sample app connects to the MCP server hosted by <strong>CrestApps.OrchardCore.Cms.Web</strong> and demonstrates listing tools, prompts, and resources.</p>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">Prerequisites</h5>
+        <ol class="mb-0">
+            <li>Start the Aspire AppHost.</li>
+            <li>Enable the <strong>MCP Server</strong> feature on the default tenant.
+                <ul>
+                    <li>Feature ID: <code>CrestApps.OrchardCore.AI.Mcp.Server</code></li>
+                    <li>Admin UI: <strong>Configuration → Features</strong></li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+</div>
+
+<p>Use the navigation tabs above to explore each MCP capability:</p>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Tools</h5>
+                <p class="card-text">List all tools exposed by the MCP server and invoke them with custom arguments.</p>
+                <a asp-page="/Tools" class="btn btn-primary btn-sm">Go to Tools</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Prompts</h5>
+                <p class="card-text">List all MCP prompts and retrieve the details of each prompt.</p>
+                <a asp-page="/Prompts" class="btn btn-primary btn-sm">Go to Prompts</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Resources</h5>
+                <p class="card-text">List all MCP resources and read their content by URI.</p>
+                <a asp-page="/Resources" class="btn btn-primary btn-sm">Go to Resources</a>
+            </div>
+        </div>
+    </div>
+</div>

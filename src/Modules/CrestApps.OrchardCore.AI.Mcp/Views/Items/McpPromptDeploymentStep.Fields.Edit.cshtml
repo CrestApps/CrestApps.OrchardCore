@@ -1,0 +1,40 @@
+@using CrestApps.OrchardCore.AI.Mcp.ViewModels
+
+@model McpPromptStepViewModel
+
+<h5 class="mb-3">@T["MCP Prompts"]</h5>
+
+<div class="mb-3">
+    <div class="form-check">
+        <label class="form-check-label">
+            <input class="form-check-input" asp-for="IncludeAll" data-bs-toggle="collapse" role="button" data-bs-target="#prompts-list" aria-expanded="false" aria-controls="prompts-list" />
+            @T["Include all MCP prompts"]
+        </label>
+    </div>
+</div>
+
+<div id="prompts-list" class="collapse@(Model.IncludeAll ? string.Empty : " show")">
+    <div class="hint mb-1">@T["The MCP prompts to export as part of the plan."]</div>
+
+    <ul class="list-group mb-3">
+        @for (int i = 0; i < Model.Prompts.Length; i++)
+        {
+            var option = Model.Prompts[i];
+            <li class="list-group-item">
+                <div class="form-check">
+                    <label class="form-check-label">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               name="@Html.NameFor(m => m.Prompts[i].Selected)"
+                               value="true"
+                        @(option.Selected ? "checked" : "") />
+                        <input type="hidden" name="@Html.NameFor(m => m.Prompts[i].Text)" value="@option.Text" />
+                        <input type="hidden" name="@Html.NameFor(m => m.Prompts[i].Value)" value="@option.Value" />
+                        @option.Text
+                    </label>
+                </div>
+            </li>
+        }
+    </ul>
+
+</div>

@@ -20,6 +20,7 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
         IDistributedCache distributedCache,
         IOptions<AIProviderOptions> providerOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
+        IServiceProvider serviceProvider,
         IOptions<DefaultAIOptions> defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore,
         IEnumerable<IOpenAIChatOptionsConfiguration> openAIChatOptionsConfigurations
@@ -28,6 +29,7 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
             aIClientFactory,
             distributedCache,
             loggerFactory,
+            serviceProvider,
             providerOptions.Value,
             defaultOptions.Value,
             handlers,
@@ -43,6 +45,7 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
         IDistributedCache distributedCache,
         AIProviderOptions providerOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
+        IServiceProvider serviceProvider,
         DefaultAIOptions defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore,
         IEnumerable<IOpenAIChatOptionsConfiguration> openAIChatOptionsConfigurations
@@ -51,6 +54,7 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
             aIClientFactory,
             distributedCache,
             loggerFactory,
+            serviceProvider,
             providerOptions,
             defaultOptions,
             handlers,

@@ -18,7 +18,7 @@ var elasticsearch = builder.AddElasticsearch("Elasticsearch", password)
 
 var redis = builder.AddRedis("Redis");
 
-builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("OrchardCoreCMS")
+var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("OrchardCoreCMS")
     .WithReference(redis)
     .WithReference(ollama)
     .WaitFor(redis)
@@ -43,6 +43,12 @@ builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("OrchardCoreCMS")
         options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__Ollama__Connections__Default__Endpoint", "http://localhost:11434");
         options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__Providers__Ollama__Connections__Default__DefaultDeploymentName", ollamaModelName);
     });
+
+builder.AddProject<Projects.CrestApps_OrchardCore_Samples_McpClient>("McpClientSample")
+    .WithReference(orchardCore)
+    .WaitFor(orchardCore)
+    .WithHttpsEndpoint(5002, name: "HttpsMcpClient")
+    .WithEnvironment("Mcp__Endpoint", "https://localhost:5001/mcp/sse");
 
 var app = builder.Build();
 

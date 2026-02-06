@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
@@ -12,56 +13,53 @@ public sealed class GetContentItemSchemaTool : AIFunction
 {
     public const string TheName = "getSampleContentItemForContentType";
 
-    private readonly IContentManager _contentManager;
-    private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly DocumentJsonSerializerOptions _options;
-
-    public GetContentItemSchemaTool(
-        IContentManager contentManager,
-        IContentDefinitionManager contentDefinitionManager,
-        IOptions<DocumentJsonSerializerOptions> options)
-    {
-        _contentManager = contentManager;
-        _contentDefinitionManager = contentDefinitionManager;
-        _options = options.Value;
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-              "type": "object",
-              "properties": {
-                "contentType": {
-                  "type": "string",
-                  "description": "The name of the Orchard Core content type to generate a sample JSON structure for."
-                }
-              },
-              "required": ["contentType"],
-              "additionalProperties": false
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+        """
+        {
+          "type": "object",
+          "properties": {
+            "contentType": {
+              "type": "string",
+              "description": "The name of the Orchard Core content type to generate a sample JSON structure for."
             }
-            """, JsonSerializerOptions);
-    }
+          },
+          "required": ["contentType"],
+          "additionalProperties": false
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Creates a new content item or updates an existing one by creating a new version.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
+
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    {
+        ["Strict"] = false,
+    };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var contentManager = arguments.Services.GetRequiredService<IContentManager>();
+        var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
+        var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
 
         if (!arguments.TryGetFirstString("contentType", out var contentType))
         {
             return "Unable to find a contentType argument in the function arguments.";
         }
 
-        if (await _contentDefinitionManager.GetTypeDefinitionAsync(contentType) is null)
+        if (await contentDefinitionManager.GetTypeDefinitionAsync(contentType) is null)
         {
             return "The given content type does not exists";
         }
 
-        var contentItem = await _contentManager.NewAsync(contentType);
+        var contentItem = await contentManager.NewAsync(contentType);
 
-        return JsonSerializer.Serialize(contentItem, _options.SerializerOptions);
+        return JsonSerializer.Serialize(contentItem, options.SerializerOptions);
     }
 }

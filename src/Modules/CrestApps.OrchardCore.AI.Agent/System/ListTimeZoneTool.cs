@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Agent.System;
@@ -8,30 +9,33 @@ public sealed class ListTimeZoneTool : AIFunction
 {
     public const string TheName = "listTimeZones";
 
-    private readonly IClock _clock;
-
-    public ListTimeZoneTool(IClock clock)
-    {
-        _clock = clock;
-
-        JsonSchema = JsonSerializer.Deserialize<JsonElement>(
-            """
-            {
-                "additionalProperties": false,
-                "required": []
-            }
-            """, JsonSerializerOptions);
-
-    }
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+        """
+        {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+        """);
 
     public override string Name => TheName;
 
     public override string Description => "Retrieves a list of time zones from the system.";
 
-    public override JsonElement JsonSchema { get; }
+    public override JsonElement JsonSchema => _jsonSchema;
+
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    {
+        ["Strict"] = false,
+    };
 
     protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        return ValueTask.FromResult<object>(JsonSerializer.Serialize(_clock.GetTimeZones()));
+        ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var clock = arguments.Services.GetRequiredService<IClock>();
+
+        return ValueTask.FromResult<object>(JsonSerializer.Serialize(clock.GetTimeZones()));
     }
 }

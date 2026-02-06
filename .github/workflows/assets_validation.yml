@@ -24,8 +24,12 @@ jobs:
     - uses: actions/checkout@v4
     - name: Rebuild packages
       run: |
-        npm install
+        npm ci
         gulp rebuild
+    - name: Normalize line endings (gitattributes)
+      run: |
+        git add --renormalize .
+        git reset --quiet
     - name: Check if git has changes
       shell: pwsh
       run: |

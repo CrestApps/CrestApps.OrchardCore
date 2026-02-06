@@ -3,38 +3,40 @@
 ** Any changes made directly to this file will be overwritten next time its asset group is processed by Gulp.
 */
 
-function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
+function _regeneratorValues(e) { if (null != e) { var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"], r = 0; if (t) return t.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) return { next: function next() { return e && r >= e.length && (e = void 0), { value: e && e[r++], done: !e }; } }; } throw new TypeError(_typeof(e) + " is not iterable"); }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _iterableToArray(iter) { if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter); }
-function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) return _arrayLikeToArray(arr); }
-function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
-function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
-function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
-function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
-function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
-function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
-function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
+function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
 function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
-function _defineProperty(obj, key, value) { key = _toPropertyKey(key); if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, _toPropertyKey(descriptor.key), descriptor); } }
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
 function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
-function _wrapNativeSuper(Class) { var _cache = typeof Map === "function" ? new Map() : undefined; _wrapNativeSuper = function _wrapNativeSuper(Class) { if (Class === null || !_isNativeFunction(Class)) return Class; if (typeof Class !== "function") { throw new TypeError("Super expression must either be null or a function"); } if (typeof _cache !== "undefined") { if (_cache.has(Class)) return _cache.get(Class); _cache.set(Class, Wrapper); } function Wrapper() { return _construct(Class, arguments, _getPrototypeOf(this).constructor); } Wrapper.prototype = Object.create(Class.prototype, { constructor: { value: Wrapper, enumerable: false, writable: true, configurable: true } }); return _setPrototypeOf(Wrapper, Class); }; return _wrapNativeSuper(Class); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _wrapNativeSuper(t) { var r = "function" == typeof Map ? new Map() : void 0; return _wrapNativeSuper = function _wrapNativeSuper(t) { if (null === t || !_isNativeFunction(t)) return t; if ("function" != typeof t) throw new TypeError("Super expression must either be null or a function"); if (void 0 !== r) { if (r.has(t)) return r.get(t); r.set(t, Wrapper); } function Wrapper() { return _construct(t, arguments, _getPrototypeOf(this).constructor); } return Wrapper.prototype = Object.create(t.prototype, { constructor: { value: Wrapper, enumerable: !1, writable: !0, configurable: !0 } }), _setPrototypeOf(Wrapper, t); }, _wrapNativeSuper(t); }
 function _construct(t, e, r) { if (_isNativeReflectConstruct()) return Reflect.construct.apply(null, arguments); var o = [null]; o.push.apply(o, e); var p = new (t.bind.apply(t, o))(); return r && _setPrototypeOf(p, r.prototype), p; }
 function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
-function _isNativeFunction(fn) { try { return Function.toString.call(fn).indexOf("[native code]") !== -1; } catch (e) { return typeof fn === "function"; } }
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+function _isNativeFunction(t) { try { return -1 !== Function.toString.call(t).indexOf("[native code]"); } catch (n) { return "function" == typeof t; } }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 (function webpackUniversalModuleDefinition(root, factory) {
   if ((typeof exports === "undefined" ? "undefined" : _typeof(exports)) === 'object' && (typeof module === "undefined" ? "undefined" : _typeof(module)) === 'object') module.exports = factory();else if (typeof define === 'function' && define.amd) define([], factory);else if ((typeof exports === "undefined" ? "undefined" : _typeof(exports)) === 'object') exports["signalR"] = factory();else root["signalR"] = factory();
@@ -198,7 +200,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }
       _inherits(_HttpError, _Error);
       return _createClass(_HttpError);
-    }( /*#__PURE__*/_wrapNativeSuper(Error));
+    }(/*#__PURE__*/_wrapNativeSuper(Error));
     /** Error thrown when a timeout elapses. */
     var _TimeoutError = /*#__PURE__*/function (_Error2) {
       /** Constructs a new instance of {@link @microsoft/signalr.TimeoutError}.
@@ -218,7 +220,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }
       _inherits(_TimeoutError, _Error2);
       return _createClass(_TimeoutError);
-    }( /*#__PURE__*/_wrapNativeSuper(Error));
+    }(/*#__PURE__*/_wrapNativeSuper(Error));
     /** Error thrown when an action is aborted. */
     var _AbortError = /*#__PURE__*/function (_Error3) {
       /** Constructs a new instance of {@link AbortError}.
@@ -238,7 +240,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }
       _inherits(_AbortError, _Error3);
       return _createClass(_AbortError);
-    }( /*#__PURE__*/_wrapNativeSuper(Error));
+    }(/*#__PURE__*/_wrapNativeSuper(Error));
     /** Error thrown when the selected transport is unsupported by the browser. */
     /** @private */
     var UnsupportedTransportError = /*#__PURE__*/function (_Error4) {
@@ -261,7 +263,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }
       _inherits(UnsupportedTransportError, _Error4);
       return _createClass(UnsupportedTransportError);
-    }( /*#__PURE__*/_wrapNativeSuper(Error));
+    }(/*#__PURE__*/_wrapNativeSuper(Error));
     /** Error thrown when the selected transport is disabled by the browser. */
     /** @private */
     var DisabledTransportError = /*#__PURE__*/function (_Error5) {
@@ -284,7 +286,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }
       _inherits(DisabledTransportError, _Error5);
       return _createClass(DisabledTransportError);
-    }( /*#__PURE__*/_wrapNativeSuper(Error));
+    }(/*#__PURE__*/_wrapNativeSuper(Error));
     /** Error thrown when the selected transport cannot be started. */
     /** @private */
     var FailedToStartTransportError = /*#__PURE__*/function (_Error6) {
@@ -307,7 +309,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }
       _inherits(FailedToStartTransportError, _Error6);
       return _createClass(FailedToStartTransportError);
-    }( /*#__PURE__*/_wrapNativeSuper(Error));
+    }(/*#__PURE__*/_wrapNativeSuper(Error));
     /** Error thrown when the negotiation with the server failed to complete. */
     /** @private */
     var FailedToNegotiateWithServerError = /*#__PURE__*/function (_Error7) {
@@ -328,7 +330,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }
       _inherits(FailedToNegotiateWithServerError, _Error7);
       return _createClass(FailedToNegotiateWithServerError);
-    }( /*#__PURE__*/_wrapNativeSuper(Error));
+    }(/*#__PURE__*/_wrapNativeSuper(Error));
     /** Error thrown when multiple errors have occurred. */
     /** @private */
     var AggregateErrors = /*#__PURE__*/function (_Error8) {
@@ -350,7 +352,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }
       _inherits(AggregateErrors, _Error8);
       return _createClass(AggregateErrors);
-    }( /*#__PURE__*/_wrapNativeSuper(Error));
+    }(/*#__PURE__*/_wrapNativeSuper(Error));
     ; // CONCATENATED MODULE: ./src/HttpClient.ts
     // Licensed to the .NET Foundation under one or more agreements.
     // The .NET Foundation licenses this file to you under the MIT license.
@@ -558,17 +560,17 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
     }
     /** @private */
     function _sendMessage() {
-      _sendMessage = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee28(logger, transportName, httpClient, url, content, options) {
-        var headers, _getUserAgentHeader11, _getUserAgentHeader12, name, value, responseType, response;
-        return _regeneratorRuntime().wrap(function _callee28$(_context29) {
-          while (1) switch (_context29.prev = _context29.next) {
+      _sendMessage = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee26(logger, transportName, httpClient, url, content, options) {
+        var headers, _getUserAgentHeader1, _getUserAgentHeader10, name, value, responseType, response;
+        return _regenerator().w(function (_context27) {
+          while (1) switch (_context27.n) {
             case 0:
               headers = {};
-              _getUserAgentHeader11 = getUserAgentHeader(), _getUserAgentHeader12 = _slicedToArray(_getUserAgentHeader11, 2), name = _getUserAgentHeader12[0], value = _getUserAgentHeader12[1];
+              _getUserAgentHeader1 = getUserAgentHeader(), _getUserAgentHeader10 = _slicedToArray(_getUserAgentHeader1, 2), name = _getUserAgentHeader10[0], value = _getUserAgentHeader10[1];
               headers[name] = value;
               logger.log(_LogLevel.Trace, "(".concat(transportName, " transport) sending data. ").concat(getDataDetail(content, options.logMessageContent), "."));
               responseType = isArrayBuffer(content) ? "arraybuffer" : "text";
-              _context29.next = 7;
+              _context27.n = 1;
               return httpClient.post(url, {
                 content: content,
                 headers: _objectSpread(_objectSpread({}, headers), options.headers),
@@ -576,14 +578,13 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                 timeout: options.timeout,
                 withCredentials: options.withCredentials
               });
-            case 7:
-              response = _context29.sent;
+            case 1:
+              response = _context27.v;
               logger.log(_LogLevel.Trace, "(".concat(transportName, " transport) request complete. Response status: ").concat(response.statusCode, "."));
-            case 9:
-            case "end":
-              return _context29.stop();
+            case 2:
+              return _context27.a(2);
           }
-        }, _callee28);
+        }, _callee26);
       }));
       return _sendMessage.apply(this, arguments);
     }
@@ -784,30 +785,30 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       return _createClass(FetchHttpClient, [{
         key: "send",
         value: (function () {
-          var _send = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(request) {
-            var _this10 = this;
-            var abortController, error, timeoutId, msTimeout, response, errorMessage, content, payload;
-            return _regeneratorRuntime().wrap(function _callee$(_context) {
-              while (1) switch (_context.prev = _context.next) {
+          var _send = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(request) {
+            var _this0 = this;
+            var abortController, error, timeoutId, msTimeout, response, errorMessage, content, payload, _t;
+            return _regenerator().w(function (_context) {
+              while (1) switch (_context.p = _context.n) {
                 case 0:
                   if (!(request.abortSignal && request.abortSignal.aborted)) {
-                    _context.next = 2;
+                    _context.n = 1;
                     break;
                   }
                   throw new _AbortError();
-                case 2:
+                case 1:
                   if (request.method) {
-                    _context.next = 4;
+                    _context.n = 2;
                     break;
                   }
                   throw new Error("No method defined.");
-                case 4:
+                case 2:
                   if (request.url) {
-                    _context.next = 6;
+                    _context.n = 3;
                     break;
                   }
                   throw new Error("No url defined.");
-                case 6:
+                case 3:
                   abortController = new this._abortControllerType();
                   // Hook our abortSignal into the abort controller
                   if (request.abortSignal) {
@@ -823,7 +824,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     msTimeout = request.timeout;
                     timeoutId = setTimeout(function () {
                       abortController.abort();
-                      _this10._logger.log(_LogLevel.Warning, "Timeout from HTTP request.");
+                      _this0._logger.log(_LogLevel.Warning, "Timeout from HTTP request.");
                       error = new _TimeoutError();
                     }, msTimeout);
                   }
@@ -839,8 +840,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                       request.headers["Content-Type"] = "text/plain;charset=UTF-8";
                     }
                   }
-                  _context.prev = 12;
-                  _context.next = 15;
+                  _context.p = 4;
+                  _context.n = 5;
                   return this._fetchType(request.url, {
                     body: request.content,
                     cache: "no-cache",
@@ -853,52 +854,49 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     redirect: "follow",
                     signal: abortController.signal
                   });
-                case 15:
-                  response = _context.sent;
-                  _context.next = 24;
+                case 5:
+                  response = _context.v;
+                  _context.n = 8;
                   break;
-                case 18:
-                  _context.prev = 18;
-                  _context.t0 = _context["catch"](12);
+                case 6:
+                  _context.p = 6;
+                  _t = _context.v;
                   if (!error) {
-                    _context.next = 22;
+                    _context.n = 7;
                     break;
                   }
                   throw error;
-                case 22:
-                  this._logger.log(_LogLevel.Warning, "Error from HTTP request. ".concat(_context.t0, "."));
-                  throw _context.t0;
-                case 24:
-                  _context.prev = 24;
+                case 7:
+                  this._logger.log(_LogLevel.Warning, "Error from HTTP request. ".concat(_t, "."));
+                  throw _t;
+                case 8:
+                  _context.p = 8;
                   if (timeoutId) {
                     clearTimeout(timeoutId);
                   }
                   if (request.abortSignal) {
                     request.abortSignal.onabort = null;
                   }
-                  return _context.finish(24);
-                case 28:
+                  return _context.f(8);
+                case 9:
                   if (response.ok) {
-                    _context.next = 33;
+                    _context.n = 11;
                     break;
                   }
-                  _context.next = 31;
+                  _context.n = 10;
                   return deserializeContent(response, "text");
-                case 31:
-                  errorMessage = _context.sent;
+                case 10:
+                  errorMessage = _context.v;
                   throw new _HttpError(errorMessage || response.statusText, response.status);
-                case 33:
+                case 11:
                   content = deserializeContent(response, request.responseType);
-                  _context.next = 36;
+                  _context.n = 12;
                   return content;
-                case 36:
-                  payload = _context.sent;
-                  return _context.abrupt("return", new _HttpResponse(response.status, response.statusText, payload));
-                case 38:
-                case "end":
-                  return _context.stop();
+                case 12:
+                  payload = _context.v;
+                  return _context.a(2, new _HttpResponse(response.status, response.statusText, payload));
               }
-            }, _callee, this, [[12, 18, 24, 28]]);
+            }, _callee, this, [[4, 6, 8, 9]]);
           }));
           function send(_x7) {
             return _send.apply(this, arguments);
@@ -943,18 +941,18 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
     // The .NET Foundation licenses this file to you under the MIT license.
     var XhrHttpClient = /*#__PURE__*/function (_HttpClient3) {
       function XhrHttpClient(logger) {
-        var _this11;
+        var _this1;
         _classCallCheck(this, XhrHttpClient);
-        _this11 = _callSuper(this, XhrHttpClient);
-        _this11._logger = logger;
-        return _this11;
+        _this1 = _callSuper(this, XhrHttpClient);
+        _this1._logger = logger;
+        return _this1;
       }
       /** @inheritDoc */
       _inherits(XhrHttpClient, _HttpClient3);
       return _createClass(XhrHttpClient, [{
         key: "send",
         value: function send(request) {
-          var _this12 = this;
+          var _this10 = this;
           // Check that abort was not signaled before calling send
           if (request.abortSignal && request.abortSignal.aborted) {
             return Promise.reject(new _AbortError());
@@ -1010,11 +1008,11 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
               }
             };
             xhr.onerror = function () {
-              _this12._logger.log(_LogLevel.Warning, "Error from HTTP request. ".concat(xhr.status, ": ").concat(xhr.statusText, "."));
+              _this10._logger.log(_LogLevel.Warning, "Error from HTTP request. ".concat(xhr.status, ": ").concat(xhr.statusText, "."));
               reject(new _HttpError(xhr.statusText, xhr.status));
             };
             xhr.ontimeout = function () {
-              _this12._logger.log(_LogLevel.Warning, "Timeout from HTTP request.");
+              _this10._logger.log(_LogLevel.Warning, "Timeout from HTTP request.");
               reject(new _TimeoutError());
             };
             xhr.send(request.content);
@@ -1030,17 +1028,17 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
     var _DefaultHttpClient = /*#__PURE__*/function (_HttpClient4) {
       /** Creates a new instance of the {@link @microsoft/signalr.DefaultHttpClient}, using the provided {@link @microsoft/signalr.ILogger} to log messages. */
       function _DefaultHttpClient(logger) {
-        var _this13;
+        var _this11;
         _classCallCheck(this, _DefaultHttpClient);
-        _this13 = _callSuper(this, _DefaultHttpClient);
+        _this11 = _callSuper(this, _DefaultHttpClient);
         if (typeof fetch !== "undefined" || Platform.isNode) {
-          _this13._httpClient = new FetchHttpClient(logger);
+          _this11._httpClient = new FetchHttpClient(logger);
         } else if (typeof XMLHttpRequest !== "undefined") {
-          _this13._httpClient = new XhrHttpClient(logger);
+          _this11._httpClient = new XhrHttpClient(logger);
         } else {
           throw new Error("No usable HttpClient found.");
         }
-        return _this13;
+        return _this11;
       }
       /** @inheritDoc */
       _inherits(_DefaultHttpClient, _HttpClient4);
@@ -1269,10 +1267,10 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       return _createClass(MessageBuffer, [{
         key: "_send",
         value: function () {
-          var _send2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(message) {
-            var serializedMessage, backpressurePromise, backpressurePromiseResolver, backpressurePromiseRejector;
-            return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-              while (1) switch (_context2.prev = _context2.next) {
+          var _send2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(message) {
+            var serializedMessage, backpressurePromise, backpressurePromiseResolver, backpressurePromiseRejector, _t2;
+            return _regenerator().w(function (_context2) {
+              while (1) switch (_context2.p = _context2.n) {
                 case 0:
                   serializedMessage = this._protocol.writeMessage(message);
                   backpressurePromise = Promise.resolve(); // Only count invocation messages. Acks, pings, etc. don't need to be resent on reconnect
@@ -1293,28 +1291,27 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     }
                     this._messages.push(new BufferedItem(serializedMessage, this._totalMessageCount, backpressurePromiseResolver, backpressurePromiseRejector));
                   }
-                  _context2.prev = 3;
+                  _context2.p = 1;
                   if (this._reconnectInProgress) {
-                    _context2.next = 7;
+                    _context2.n = 2;
                     break;
                   }
-                  _context2.next = 7;
+                  _context2.n = 2;
                   return this._connection.send(serializedMessage);
-                case 7:
-                  _context2.next = 12;
+                case 2:
+                  _context2.n = 4;
                   break;
-                case 9:
-                  _context2.prev = 9;
-                  _context2.t0 = _context2["catch"](3);
+                case 3:
+                  _context2.p = 3;
+                  _t2 = _context2.v;
                   this._disconnected();
-                case 12:
-                  _context2.next = 14;
+                case 4:
+                  _context2.n = 5;
                   return backpressurePromise;
-                case 14:
-                case "end":
-                  return _context2.stop();
+                case 5:
+                  return _context2.a(2);
               }
-            }, _callee2, this, [[3, 9]]);
+            }, _callee2, this, [[1, 3]]);
           }));
           function _send(_x8) {
             return _send2.apply(this, arguments);
@@ -1400,53 +1397,52 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_resend",
         value: function () {
-          var _resend2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
-            var sequenceId, messages, _iterator4, _step4, element;
-            return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-              while (1) switch (_context3.prev = _context3.next) {
+          var _resend2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+            var sequenceId, messages, _iterator4, _step4, element, _t3;
+            return _regenerator().w(function (_context3) {
+              while (1) switch (_context3.p = _context3.n) {
                 case 0:
                   sequenceId = this._messages.length !== 0 ? this._messages[0]._id : this._totalMessageCount + 1;
-                  _context3.next = 3;
+                  _context3.n = 1;
                   return this._connection.send(this._protocol.writeMessage({
                     type: _MessageType.Sequence,
                     sequenceId: sequenceId
                   }));
-                case 3:
+                case 1:
                   // Get a local variable to the _messages, just in case messages are acked while resending
                   // Which would slice the _messages array (which creates a new copy)
                   messages = this._messages;
                   _iterator4 = _createForOfIteratorHelper(messages);
-                  _context3.prev = 5;
+                  _context3.p = 2;
                   _iterator4.s();
-                case 7:
+                case 3:
                   if ((_step4 = _iterator4.n()).done) {
-                    _context3.next = 13;
+                    _context3.n = 5;
                     break;
                   }
                   element = _step4.value;
-                  _context3.next = 11;
+                  _context3.n = 4;
                   return this._connection.send(element._message);
-                case 11:
-                  _context3.next = 7;
+                case 4:
+                  _context3.n = 3;
                   break;
-                case 13:
-                  _context3.next = 18;
+                case 5:
+                  _context3.n = 7;
                   break;
-                case 15:
-                  _context3.prev = 15;
-                  _context3.t0 = _context3["catch"](5);
-                  _iterator4.e(_context3.t0);
-                case 18:
-                  _context3.prev = 18;
+                case 6:
+                  _context3.p = 6;
+                  _t3 = _context3.v;
+                  _iterator4.e(_t3);
+                case 7:
+                  _context3.p = 7;
                   _iterator4.f();
-                  return _context3.finish(18);
-                case 21:
+                  return _context3.f(7);
+                case 8:
                   this._reconnectInProgress = false;
-                case 22:
-                case "end":
-                  return _context3.stop();
+                case 9:
+                  return _context3.a(2);
               }
-            }, _callee3, this, [[5, 15, 18, 21]]);
+            }, _callee3, this, [[2, 6, 7, 8]]);
           }));
           function _resend() {
             return _resend2.apply(this, arguments);
@@ -1496,37 +1492,37 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_ackTimer",
         value: function _ackTimer() {
-          var _this14 = this;
+          var _this12 = this;
           if (this._ackTimerHandle === undefined) {
-            this._ackTimerHandle = setTimeout( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
-              return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-                while (1) switch (_context4.prev = _context4.next) {
+            this._ackTimerHandle = setTimeout(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+              var _t4;
+              return _regenerator().w(function (_context4) {
+                while (1) switch (_context4.p = _context4.n) {
                   case 0:
-                    _context4.prev = 0;
-                    if (_this14._reconnectInProgress) {
-                      _context4.next = 4;
+                    _context4.p = 0;
+                    if (_this12._reconnectInProgress) {
+                      _context4.n = 1;
                       break;
                     }
-                    _context4.next = 4;
-                    return _this14._connection.send(_this14._protocol.writeMessage({
+                    _context4.n = 1;
+                    return _this12._connection.send(_this12._protocol.writeMessage({
                       type: _MessageType.Ack,
-                      sequenceId: _this14._latestReceivedSequenceId
+                      sequenceId: _this12._latestReceivedSequenceId
                     }));
-                  case 4:
-                    _context4.next = 8;
+                  case 1:
+                    _context4.n = 3;
                     break;
-                  case 6:
-                    _context4.prev = 6;
-                    _context4.t0 = _context4["catch"](0);
-                  case 8:
-                    clearTimeout(_this14._ackTimerHandle);
-                    _this14._ackTimerHandle = undefined;
+                  case 2:
+                    _context4.p = 2;
+                    _t4 = _context4.v;
+                  case 3:
+                    clearTimeout(_this12._ackTimerHandle);
+                    _this12._ackTimerHandle = undefined;
                     // 1 second delay so we don't spam Ack messages if there are many messages being received at once.
-                  case 10:
-                  case "end":
-                    return _context4.stop();
+                  case 4:
+                    return _context4.a(2);
                 }
-              }, _callee4, null, [[0, 6]]);
+              }, _callee4, null, [[0, 2]]);
             })), 1000);
           }
         }
@@ -1563,11 +1559,11 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
     /** Represents a connection to a SignalR Hub. */
     var _HubConnection = /*#__PURE__*/function () {
       function _HubConnection(connection, logger, protocol, reconnectPolicy, serverTimeoutInMilliseconds, keepAliveIntervalInMilliseconds, statefulReconnectBufferSize) {
-        var _this15 = this;
+        var _this13 = this;
         _classCallCheck(this, _HubConnection);
         this._nextKeepAlive = 0;
         this._freezeEventListener = function () {
-          _this15._logger.log(_LogLevel.Warning, "The page is being frozen, this will likely lead to the connection being closed and messages being lost. For more information see the docs at https://learn.microsoft.com/aspnet/core/signalr/javascript-client#bsleep");
+          _this13._logger.log(_LogLevel.Warning, "The page is being frozen, this will likely lead to the connection being closed and messages being lost. For more information see the docs at https://learn.microsoft.com/aspnet/core/signalr/javascript-client#bsleep");
         };
         Arg.isRequired(connection, "connection");
         Arg.isRequired(logger, "logger");
@@ -1581,10 +1577,10 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
         this._reconnectPolicy = reconnectPolicy;
         this._handshakeProtocol = new HandshakeProtocol();
         this.connection.onreceive = function (data) {
-          return _this15._processIncomingData(data);
+          return _this13._processIncomingData(data);
         };
         this.connection.onclose = function (error) {
-          return _this15._connectionClosed(error);
+          return _this13._connectionClosed(error);
         };
         this._callbacks = {};
         this._methods = {};
@@ -1646,22 +1642,23 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_startWithStateTransitions",
         value: function () {
-          var _startWithStateTransitions2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
-            return _regeneratorRuntime().wrap(function _callee5$(_context5) {
-              while (1) switch (_context5.prev = _context5.next) {
+          var _startWithStateTransitions2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
+            var _t5;
+            return _regenerator().w(function (_context5) {
+              while (1) switch (_context5.p = _context5.n) {
                 case 0:
                   if (!(this._connectionState !== _HubConnectionState.Disconnected)) {
-                    _context5.next = 2;
+                    _context5.n = 1;
                     break;
                   }
-                  return _context5.abrupt("return", Promise.reject(new Error("Cannot start a HubConnection that is not in the 'Disconnected' state.")));
-                case 2:
+                  return _context5.a(2, Promise.reject(new Error("Cannot start a HubConnection that is not in the 'Disconnected' state.")));
+                case 1:
                   this._connectionState = _HubConnectionState.Connecting;
                   this._logger.log(_LogLevel.Debug, "Starting HubConnection.");
-                  _context5.prev = 4;
-                  _context5.next = 7;
+                  _context5.p = 2;
+                  _context5.n = 3;
                   return this._startInternal();
-                case 7:
+                case 3:
                   if (Platform.isBrowser) {
                     // Log when the browser freezes the tab so users know why their connection unexpectedly stopped working
                     window.document.addEventListener("freeze", this._freezeEventListener);
@@ -1669,19 +1666,18 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   this._connectionState = _HubConnectionState.Connected;
                   this._connectionStarted = true;
                   this._logger.log(_LogLevel.Debug, "HubConnection connected successfully.");
-                  _context5.next = 18;
+                  _context5.n = 5;
                   break;
-                case 13:
-                  _context5.prev = 13;
-                  _context5.t0 = _context5["catch"](4);
+                case 4:
+                  _context5.p = 4;
+                  _t5 = _context5.v;
                   this._connectionState = _HubConnectionState.Disconnected;
-                  this._logger.log(_LogLevel.Debug, "HubConnection failed to start successfully because of error '".concat(_context5.t0, "'."));
-                  return _context5.abrupt("return", Promise.reject(_context5.t0));
-                case 18:
-                case "end":
-                  return _context5.stop();
+                  this._logger.log(_LogLevel.Debug, "HubConnection failed to start successfully because of error '".concat(_t5, "'."));
+                  return _context5.a(2, Promise.reject(_t5));
+                case 5:
+                  return _context5.a(2);
               }
-            }, _callee5, this, [[4, 13]]);
+            }, _callee5, this, [[2, 4]]);
           }));
           function _startWithStateTransitions() {
             return _startWithStateTransitions2.apply(this, arguments);
@@ -1691,23 +1687,23 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_startInternal",
         value: function () {
-          var _startInternal2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
-            var _this16 = this;
-            var handshakePromise, version, handshakeRequest, useStatefulReconnect;
-            return _regeneratorRuntime().wrap(function _callee6$(_context6) {
-              while (1) switch (_context6.prev = _context6.next) {
+          var _startInternal2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
+            var _this14 = this;
+            var handshakePromise, version, handshakeRequest, useStatefulReconnect, _t6;
+            return _regenerator().w(function (_context6) {
+              while (1) switch (_context6.p = _context6.n) {
                 case 0:
                   this._stopDuringStartError = undefined;
                   this._receivedHandshakeResponse = false;
                   // Set up the promise before any connection is (re)started otherwise it could race with received messages
                   handshakePromise = new Promise(function (resolve, reject) {
-                    _this16._handshakeResolver = resolve;
-                    _this16._handshakeRejecter = reject;
+                    _this14._handshakeResolver = resolve;
+                    _this14._handshakeRejecter = reject;
                   });
-                  _context6.next = 5;
+                  _context6.n = 1;
                   return this.connection.start(this._protocol.transferFormat);
-                case 5:
-                  _context6.prev = 5;
+                case 1:
+                  _context6.p = 1;
                   version = this._protocol.version;
                   if (!this.connection.features.reconnect) {
                     // Stateful Reconnect starts with HubProtocol version 2, newer clients connecting to older servers will fail to connect due to
@@ -1719,59 +1715,58 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     version: version
                   };
                   this._logger.log(_LogLevel.Debug, "Sending handshake request.");
-                  _context6.next = 12;
+                  _context6.n = 2;
                   return this._sendMessage(this._handshakeProtocol.writeHandshakeRequest(handshakeRequest));
-                case 12:
+                case 2:
                   this._logger.log(_LogLevel.Information, "Using HubProtocol '".concat(this._protocol.name, "'."));
                   // defensively cleanup timeout in case we receive a message from the server before we finish start
                   this._cleanupTimeout();
                   this._resetTimeoutPeriod();
                   this._resetKeepAliveInterval();
-                  _context6.next = 18;
+                  _context6.n = 3;
                   return handshakePromise;
-                case 18:
+                case 3:
                   if (!this._stopDuringStartError) {
-                    _context6.next = 20;
+                    _context6.n = 4;
                     break;
                   }
                   throw this._stopDuringStartError;
-                case 20:
+                case 4:
                   useStatefulReconnect = this.connection.features.reconnect || false;
                   if (useStatefulReconnect) {
                     this._messageBuffer = new MessageBuffer(this._protocol, this.connection, this._statefulReconnectBufferSize);
                     this.connection.features.disconnected = this._messageBuffer._disconnected.bind(this._messageBuffer);
                     this.connection.features.resend = function () {
-                      if (_this16._messageBuffer) {
-                        return _this16._messageBuffer._resend();
+                      if (_this14._messageBuffer) {
+                        return _this14._messageBuffer._resend();
                       }
                     };
                   }
                   if (this.connection.features.inherentKeepAlive) {
-                    _context6.next = 25;
+                    _context6.n = 5;
                     break;
                   }
-                  _context6.next = 25;
+                  _context6.n = 5;
                   return this._sendMessage(this._cachedPingMessage);
-                case 25:
-                  _context6.next = 35;
+                case 5:
+                  _context6.n = 8;
                   break;
-                case 27:
-                  _context6.prev = 27;
-                  _context6.t0 = _context6["catch"](5);
-                  this._logger.log(_LogLevel.Debug, "Hub handshake failed with error '".concat(_context6.t0, "' during start(). Stopping HubConnection."));
+                case 6:
+                  _context6.p = 6;
+                  _t6 = _context6.v;
+                  this._logger.log(_LogLevel.Debug, "Hub handshake failed with error '".concat(_t6, "' during start(). Stopping HubConnection."));
                   this._cleanupTimeout();
                   this._cleanupPingTimer();
                   // HttpConnection.stop() should not complete until after the onclose callback is invoked.
                   // This will transition the HubConnection to the disconnected state before HttpConnection.stop() completes.
-                  _context6.next = 34;
-                  return this.connection.stop(_context6.t0);
-                case 34:
-                  throw _context6.t0;
-                case 35:
-                case "end":
-                  return _context6.stop();
+                  _context6.n = 7;
+                  return this.connection.stop(_t6);
+                case 7:
+                  throw _t6;
+                case 8:
+                  return _context6.a(2);
               }
-            }, _callee6, this, [[5, 27]]);
+            }, _callee6, this, [[1, 6]]);
           }));
           function _startInternal() {
             return _startInternal2.apply(this, arguments);
@@ -1785,32 +1780,31 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "stop",
         value: (function () {
-          var _stop = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee7() {
-            var startPromise;
-            return _regeneratorRuntime().wrap(function _callee7$(_context7) {
-              while (1) switch (_context7.prev = _context7.next) {
+          var _stop = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7() {
+            var startPromise, _t7;
+            return _regenerator().w(function (_context7) {
+              while (1) switch (_context7.p = _context7.n) {
                 case 0:
                   // Capture the start promise before the connection might be restarted in an onclose callback.
                   startPromise = this._startPromise;
                   this.connection.features.reconnect = false;
                   this._stopPromise = this._stopInternal();
-                  _context7.next = 5;
+                  _context7.n = 1;
                   return this._stopPromise;
-                case 5:
-                  _context7.prev = 5;
-                  _context7.next = 8;
+                case 1:
+                  _context7.p = 1;
+                  _context7.n = 2;
                   return startPromise;
-                case 8:
-                  _context7.next = 12;
+                case 2:
+                  _context7.n = 4;
                   break;
-                case 10:
-                  _context7.prev = 10;
-                  _context7.t0 = _context7["catch"](5);
-                case 12:
-                case "end":
-                  return _context7.stop();
+                case 3:
+                  _context7.p = 3;
+                  _t7 = _context7.v;
+                case 4:
+                  return _context7.a(2);
               }
-            }, _callee7, this, [[5, 10]]);
+            }, _callee7, this, [[1, 3]]);
           }));
           function stop() {
             return _stop.apply(this, arguments);
@@ -1856,24 +1850,24 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_sendCloseMessage",
         value: function () {
-          var _sendCloseMessage2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee8() {
-            return _regeneratorRuntime().wrap(function _callee8$(_context8) {
-              while (1) switch (_context8.prev = _context8.next) {
+          var _sendCloseMessage2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8() {
+            var _t8;
+            return _regenerator().w(function (_context8) {
+              while (1) switch (_context8.p = _context8.n) {
                 case 0:
-                  _context8.prev = 0;
-                  _context8.next = 3;
+                  _context8.p = 0;
+                  _context8.n = 1;
                   return this._sendWithProtocol(this._createCloseMessage());
-                case 3:
-                  _context8.next = 7;
+                case 1:
+                  _context8.n = 3;
                   break;
-                case 5:
-                  _context8.prev = 5;
-                  _context8.t0 = _context8["catch"](0);
-                case 7:
-                case "end":
-                  return _context8.stop();
+                case 2:
+                  _context8.p = 2;
+                  _t8 = _context8.v;
+                case 3:
+                  return _context8.a(2);
               }
-            }, _callee8, this, [[0, 5]]);
+            }, _callee8, this, [[0, 2]]);
           }));
           function _sendCloseMessage() {
             return _sendCloseMessage2.apply(this, arguments);
@@ -1890,7 +1884,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "stream",
         value: function stream(methodName) {
-          var _this17 = this;
+          var _this15 = this;
           for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
             args[_key - 1] = arguments[_key];
           }
@@ -1903,10 +1897,10 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
           var promiseQueue;
           var subject = new _Subject();
           subject.cancelCallback = function () {
-            var cancelInvocation = _this17._createCancelInvocation(invocationDescriptor.invocationId);
-            delete _this17._callbacks[invocationDescriptor.invocationId];
+            var cancelInvocation = _this15._createCancelInvocation(invocationDescriptor.invocationId);
+            delete _this15._callbacks[invocationDescriptor.invocationId];
             return promiseQueue.then(function () {
-              return _this17._sendWithProtocol(cancelInvocation);
+              return _this15._sendWithProtocol(cancelInvocation);
             });
           };
           this._callbacks[invocationDescriptor.invocationId] = function (invocationEvent, error) {
@@ -1928,7 +1922,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
           };
           promiseQueue = this._sendWithProtocol(invocationDescriptor)["catch"](function (e) {
             subject.error(e);
-            delete _this17._callbacks[invocationDescriptor.invocationId];
+            delete _this15._callbacks[invocationDescriptor.invocationId];
           });
           this._launchStreams(streams, promiseQueue);
           return subject;
@@ -1989,7 +1983,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "invoke",
         value: function invoke(methodName) {
-          var _this18 = this;
+          var _this16 = this;
           for (var _len3 = arguments.length, args = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
             args[_key3 - 1] = arguments[_key3];
           }
@@ -2000,7 +1994,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
           var invocationDescriptor = this._createInvocation(methodName, args, false, streamIds);
           var p = new Promise(function (resolve, reject) {
             // invocationId will always have a value for a non-blocking invocation
-            _this18._callbacks[invocationDescriptor.invocationId] = function (invocationEvent, error) {
+            _this16._callbacks[invocationDescriptor.invocationId] = function (invocationEvent, error) {
               if (error) {
                 reject(error);
                 return;
@@ -2017,12 +2011,12 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                 }
               }
             };
-            var promiseQueue = _this18._sendWithProtocol(invocationDescriptor)["catch"](function (e) {
+            var promiseQueue = _this16._sendWithProtocol(invocationDescriptor)["catch"](function (e) {
               reject(e);
               // invocationId will always have a value for a non-blocking invocation
-              delete _this18._callbacks[invocationDescriptor.invocationId];
+              delete _this16._callbacks[invocationDescriptor.invocationId];
             });
-            _this18._launchStreams(streams, promiseQueue);
+            _this16._launchStreams(streams, promiseQueue);
           });
           return p;
         }
@@ -2101,7 +2095,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_processIncomingData",
         value: function _processIncomingData(data) {
-          var _this19 = this;
+          var _this17 = this;
           this._cleanupTimeout();
           if (!this._receivedHandshakeResponse) {
             data = this._processHandshakeResponse(data);
@@ -2123,7 +2117,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                 switch (message.type) {
                   case _MessageType.Invocation:
                     this._invokeClientMethod(message)["catch"](function (e) {
-                      _this19._logger.log(_LogLevel.Error, "Invoke client method threw error: ".concat(getErrorString(e)));
+                      _this17._logger.log(_LogLevel.Error, "Invoke client method threw error: ".concat(getErrorString(e)));
                     });
                     break;
                   case _MessageType.StreamItem:
@@ -2226,11 +2220,11 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_resetTimeoutPeriod",
         value: function _resetTimeoutPeriod() {
-          var _this20 = this;
+          var _this18 = this;
           if (!this.connection.features || !this.connection.features.inherentKeepAlive) {
             // Set the timeout timer
             this._timeoutHandle = setTimeout(function () {
-              return _this20.serverTimeout();
+              return _this18.serverTimeout();
             }, this.serverTimeoutInMilliseconds);
             // Set keepAlive timer if there isn't one
             if (this._pingServerHandle === undefined) {
@@ -2239,31 +2233,31 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                 nextPing = 0;
               }
               // The timer needs to be set from a networking callback to avoid Chrome timer throttling from causing timers to run once a minute
-              this._pingServerHandle = setTimeout( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee9() {
-                return _regeneratorRuntime().wrap(function _callee9$(_context9) {
-                  while (1) switch (_context9.prev = _context9.next) {
+              this._pingServerHandle = setTimeout(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
+                var _t9;
+                return _regenerator().w(function (_context9) {
+                  while (1) switch (_context9.p = _context9.n) {
                     case 0:
-                      if (!(_this20._connectionState === _HubConnectionState.Connected)) {
-                        _context9.next = 9;
+                      if (!(_this18._connectionState === _HubConnectionState.Connected)) {
+                        _context9.n = 4;
                         break;
                       }
-                      _context9.prev = 1;
-                      _context9.next = 4;
-                      return _this20._sendMessage(_this20._cachedPingMessage);
-                    case 4:
-                      _context9.next = 9;
+                      _context9.p = 1;
+                      _context9.n = 2;
+                      return _this18._sendMessage(_this18._cachedPingMessage);
+                    case 2:
+                      _context9.n = 4;
                       break;
-                    case 6:
-                      _context9.prev = 6;
-                      _context9.t0 = _context9["catch"](1);
+                    case 3:
+                      _context9.p = 3;
+                      _t9 = _context9.v;
                       // We don't care about the error. It should be seen elsewhere in the client.
                       // The connection is probably in a bad or closed state now, cleanup the timer so it stops triggering
-                      _this20._cleanupPingTimer();
-                    case 9:
-                    case "end":
-                      return _context9.stop();
+                      _this18._cleanupPingTimer();
+                    case 4:
+                      return _context9.a(2);
                   }
-                }, _callee9, null, [[1, 6]]);
+                }, _callee9, null, [[1, 3]]);
               })), nextPing);
             }
           }
@@ -2280,87 +2274,87 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_invokeClientMethod",
         value: function () {
-          var _invokeClientMethod2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee10(invocationMessage) {
-            var methodName, methods, methodsCopy, expectsResponse, res, exception, completionMessage, _iterator7, _step7, m, prevRes;
-            return _regeneratorRuntime().wrap(function _callee10$(_context10) {
-              while (1) switch (_context10.prev = _context10.next) {
+          var _invokeClientMethod2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0(invocationMessage) {
+            var methodName, methods, methodsCopy, expectsResponse, res, exception, completionMessage, _iterator7, _step7, m, prevRes, _t0, _t1;
+            return _regenerator().w(function (_context0) {
+              while (1) switch (_context0.p = _context0.n) {
                 case 0:
                   methodName = invocationMessage.target.toLowerCase();
                   methods = this._methods[methodName];
                   if (methods) {
-                    _context10.next = 9;
+                    _context0.n = 2;
                     break;
                   }
                   this._logger.log(_LogLevel.Warning, "No client method with the name '".concat(methodName, "' found."));
                   // No handlers provided by client but the server is expecting a response still, so we send an error
                   if (!invocationMessage.invocationId) {
-                    _context10.next = 8;
+                    _context0.n = 1;
                     break;
                   }
                   this._logger.log(_LogLevel.Warning, "No result given for '".concat(methodName, "' method and invocation ID '").concat(invocationMessage.invocationId, "'."));
-                  _context10.next = 8;
+                  _context0.n = 1;
                   return this._sendWithProtocol(this._createCompletionMessage(invocationMessage.invocationId, "Client didn't provide a result.", null));
-                case 8:
-                  return _context10.abrupt("return");
-                case 9:
+                case 1:
+                  return _context0.a(2);
+                case 2:
                   // Avoid issues with handlers removing themselves thus modifying the list while iterating through it
                   methodsCopy = methods.slice(); // Server expects a response
                   expectsResponse = invocationMessage.invocationId ? true : false; // We preserve the last result or exception but still call all handlers
                   _iterator7 = _createForOfIteratorHelper(methodsCopy);
-                  _context10.prev = 12;
+                  _context0.p = 3;
                   _iterator7.s();
-                case 14:
+                case 4:
                   if ((_step7 = _iterator7.n()).done) {
-                    _context10.next = 31;
+                    _context0.n = 9;
                     break;
                   }
                   m = _step7.value;
-                  _context10.prev = 16;
+                  _context0.p = 5;
                   prevRes = res;
-                  _context10.next = 20;
+                  _context0.n = 6;
                   return m.apply(this, invocationMessage.arguments);
-                case 20:
-                  res = _context10.sent;
+                case 6:
+                  res = _context0.v;
                   if (expectsResponse && res && prevRes) {
                     this._logger.log(_LogLevel.Error, "Multiple results provided for '".concat(methodName, "'. Sending error to server."));
                     completionMessage = this._createCompletionMessage(invocationMessage.invocationId, "Client provided multiple results.", null);
                   }
                   // Ignore exception if we got a result after, the exception will be logged
                   exception = undefined;
-                  _context10.next = 29;
+                  _context0.n = 8;
                   break;
-                case 25:
-                  _context10.prev = 25;
-                  _context10.t0 = _context10["catch"](16);
-                  exception = _context10.t0;
-                  this._logger.log(_LogLevel.Error, "A callback for the method '".concat(methodName, "' threw error '").concat(_context10.t0, "'."));
-                case 29:
-                  _context10.next = 14;
+                case 7:
+                  _context0.p = 7;
+                  _t0 = _context0.v;
+                  exception = _t0;
+                  this._logger.log(_LogLevel.Error, "A callback for the method '".concat(methodName, "' threw error '").concat(_t0, "'."));
+                case 8:
+                  _context0.n = 4;
                   break;
-                case 31:
-                  _context10.next = 36;
+                case 9:
+                  _context0.n = 11;
                   break;
-                case 33:
-                  _context10.prev = 33;
-                  _context10.t1 = _context10["catch"](12);
-                  _iterator7.e(_context10.t1);
-                case 36:
-                  _context10.prev = 36;
+                case 10:
+                  _context0.p = 10;
+                  _t1 = _context0.v;
+                  _iterator7.e(_t1);
+                case 11:
+                  _context0.p = 11;
                   _iterator7.f();
-                  return _context10.finish(36);
-                case 39:
+                  return _context0.f(11);
+                case 12:
                   if (!completionMessage) {
-                    _context10.next = 44;
+                    _context0.n = 14;
                     break;
                   }
-                  _context10.next = 42;
+                  _context0.n = 13;
                   return this._sendWithProtocol(completionMessage);
-                case 42:
-                  _context10.next = 51;
+                case 13:
+                  _context0.n = 17;
                   break;
-                case 44:
+                case 14:
                   if (!expectsResponse) {
-                    _context10.next = 50;
+                    _context0.n = 16;
                     break;
                   }
                   // If there is an exception that means either no result was given or a handler after a result threw
@@ -2373,20 +2367,19 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     // Client didn't provide a result or throw from a handler, server expects a response so we send an error
                     completionMessage = this._createCompletionMessage(invocationMessage.invocationId, "Client didn't provide a result.", null);
                   }
-                  _context10.next = 48;
+                  _context0.n = 15;
                   return this._sendWithProtocol(completionMessage);
-                case 48:
-                  _context10.next = 51;
+                case 15:
+                  _context0.n = 17;
                   break;
-                case 50:
+                case 16:
                   if (res) {
                     this._logger.log(_LogLevel.Error, "Result given for '".concat(methodName, "' method but server is not expecting a result."));
                   }
-                case 51:
-                case "end":
-                  return _context10.stop();
+                case 17:
+                  return _context0.a(2);
               }
-            }, _callee10, this, [[12, 33, 36, 39], [16, 25]]);
+            }, _callee0, this, [[5, 7], [3, 10, 11, 12]]);
           }));
           function _invokeClientMethod(_x9) {
             return _invokeClientMethod2.apply(this, arguments);
@@ -2424,7 +2417,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_completeClose",
         value: function _completeClose(error) {
-          var _this21 = this;
+          var _this19 = this;
           if (this._connectionStarted) {
             this._connectionState = _HubConnectionState.Disconnected;
             this._connectionStarted = false;
@@ -2437,7 +2430,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
             }
             try {
               this._closedCallbacks.forEach(function (c) {
-                return c.apply(_this21, [error]);
+                return c.apply(_this19, [error]);
               });
             } catch (e) {
               this._logger.log(_LogLevel.Error, "An onclose callback called with error '".concat(error, "' threw error '").concat(e, "'."));
@@ -2447,24 +2440,24 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_reconnect",
         value: function () {
-          var _reconnect2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee11(error) {
-            var _this22 = this;
-            var reconnectStartTime, previousReconnectAttempts, retryError, nextRetryDelay;
-            return _regeneratorRuntime().wrap(function _callee11$(_context11) {
-              while (1) switch (_context11.prev = _context11.next) {
+          var _reconnect2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee1(error) {
+            var _this20 = this;
+            var reconnectStartTime, previousReconnectAttempts, retryError, nextRetryDelay, _t10;
+            return _regenerator().w(function (_context1) {
+              while (1) switch (_context1.p = _context1.n) {
                 case 0:
                   reconnectStartTime = Date.now();
                   previousReconnectAttempts = 0;
                   retryError = error !== undefined ? error : new Error("Attempting to reconnect due to a unknown error.");
                   nextRetryDelay = this._getNextRetryDelay(previousReconnectAttempts++, 0, retryError);
                   if (!(nextRetryDelay === null)) {
-                    _context11.next = 8;
+                    _context1.n = 1;
                     break;
                   }
                   this._logger.log(_LogLevel.Debug, "Connection not reconnecting because the IRetryPolicy returned null on the first reconnect attempt.");
                   this._completeClose(error);
-                  return _context11.abrupt("return");
-                case 8:
+                  return _context1.a(2);
+                case 1:
                   this._connectionState = _HubConnectionState.Reconnecting;
                   if (error) {
                     this._logger.log(_LogLevel.Information, "Connection reconnecting because of error '".concat(error, "'."));
@@ -2472,64 +2465,64 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     this._logger.log(_LogLevel.Information, "Connection reconnecting.");
                   }
                   if (!(this._reconnectingCallbacks.length !== 0)) {
-                    _context11.next = 15;
+                    _context1.n = 2;
                     break;
                   }
                   try {
                     this._reconnectingCallbacks.forEach(function (c) {
-                      return c.apply(_this22, [error]);
+                      return c.apply(_this20, [error]);
                     });
                   } catch (e) {
                     this._logger.log(_LogLevel.Error, "An onreconnecting callback called with error '".concat(error, "' threw error '").concat(e, "'."));
                   }
                   // Exit early if an onreconnecting callback called connection.stop().
                   if (!(this._connectionState !== _HubConnectionState.Reconnecting)) {
-                    _context11.next = 15;
+                    _context1.n = 2;
                     break;
                   }
                   this._logger.log(_LogLevel.Debug, "Connection left the reconnecting state in onreconnecting callback. Done reconnecting.");
-                  return _context11.abrupt("return");
-                case 15:
+                  return _context1.a(2);
+                case 2:
                   if (!(nextRetryDelay !== null)) {
-                    _context11.next = 43;
+                    _context1.n = 8;
                     break;
                   }
                   this._logger.log(_LogLevel.Information, "Reconnect attempt number ".concat(previousReconnectAttempts, " will start in ").concat(nextRetryDelay, " ms."));
-                  _context11.next = 19;
+                  _context1.n = 3;
                   return new Promise(function (resolve) {
-                    _this22._reconnectDelayHandle = setTimeout(resolve, nextRetryDelay);
+                    _this20._reconnectDelayHandle = setTimeout(resolve, nextRetryDelay);
                   });
-                case 19:
+                case 3:
                   this._reconnectDelayHandle = undefined;
                   if (!(this._connectionState !== _HubConnectionState.Reconnecting)) {
-                    _context11.next = 23;
+                    _context1.n = 4;
                     break;
                   }
                   this._logger.log(_LogLevel.Debug, "Connection left the reconnecting state during reconnect delay. Done reconnecting.");
-                  return _context11.abrupt("return");
-                case 23:
-                  _context11.prev = 23;
-                  _context11.next = 26;
+                  return _context1.a(2);
+                case 4:
+                  _context1.p = 4;
+                  _context1.n = 5;
                   return this._startInternal();
-                case 26:
+                case 5:
                   this._connectionState = _HubConnectionState.Connected;
                   this._logger.log(_LogLevel.Information, "HubConnection reconnected successfully.");
                   if (this._reconnectedCallbacks.length !== 0) {
                     try {
                       this._reconnectedCallbacks.forEach(function (c) {
-                        return c.apply(_this22, [_this22.connection.connectionId]);
+                        return c.apply(_this20, [_this20.connection.connectionId]);
                       });
                     } catch (e) {
                       this._logger.log(_LogLevel.Error, "An onreconnected callback called with connectionId '".concat(this.connection.connectionId, "; threw error '").concat(e, "'."));
                     }
                   }
-                  return _context11.abrupt("return");
-                case 32:
-                  _context11.prev = 32;
-                  _context11.t0 = _context11["catch"](23);
-                  this._logger.log(_LogLevel.Information, "Reconnect attempt failed because of error '".concat(_context11.t0, "'."));
+                  return _context1.a(2);
+                case 6:
+                  _context1.p = 6;
+                  _t10 = _context1.v;
+                  this._logger.log(_LogLevel.Information, "Reconnect attempt failed because of error '".concat(_t10, "'."));
                   if (!(this._connectionState !== _HubConnectionState.Reconnecting)) {
-                    _context11.next = 39;
+                    _context1.n = 7;
                     break;
                   }
                   this._logger.log(_LogLevel.Debug, "Connection moved to the '".concat(this._connectionState, "' from the reconnecting state during reconnect attempt. Done reconnecting."));
@@ -2537,23 +2530,21 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   if (this._connectionState === _HubConnectionState.Disconnecting) {
                     this._completeClose();
                   }
-                  return _context11.abrupt("return");
-                case 39:
-                  retryError = _context11.t0 instanceof Error ? _context11.t0 : new Error(_context11.t0.toString());
+                  return _context1.a(2);
+                case 7:
+                  retryError = _t10 instanceof Error ? _t10 : new Error(_t10.toString());
                   nextRetryDelay = this._getNextRetryDelay(previousReconnectAttempts++, Date.now() - reconnectStartTime, retryError);
-                case 41:
-                  _context11.next = 15;
+                  _context1.n = 2;
                   break;
-                case 43:
+                case 8:
                   this._logger.log(_LogLevel.Information, "Reconnect retries have been exhausted after ".concat(Date.now() - reconnectStartTime, " ms and ").concat(previousReconnectAttempts, " failed attempts. Connection disconnecting."));
                   this._completeClose();
-                case 45:
-                case "end":
-                  return _context11.stop();
+                case 9:
+                  return _context1.a(2);
               }
-            }, _callee11, this, [[23, 32]]);
+            }, _callee1, this, [[4, 6]]);
           }));
-          function _reconnect(_x10) {
+          function _reconnect(_x0) {
             return _reconnect2.apply(this, arguments);
           }
           return _reconnect;
@@ -2575,7 +2566,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_cancelCallbacksWithError",
         value: function _cancelCallbacksWithError(error) {
-          var _this23 = this;
+          var _this21 = this;
           var callbacks = this._callbacks;
           this._callbacks = {};
           Object.keys(callbacks).forEach(function (key) {
@@ -2583,7 +2574,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
             try {
               callback(null, error);
             } catch (e) {
-              _this23._logger.log(_LogLevel.Error, "Stream 'error' callback called with '".concat(error, "' threw error: ").concat(getErrorString(e)));
+              _this21._logger.log(_LogLevel.Error, "Stream 'error' callback called with '".concat(error, "' threw error: ").concat(getErrorString(e)));
             }
           });
         }
@@ -2644,7 +2635,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_launchStreams",
         value: function _launchStreams(streams, promiseQueue) {
-          var _this24 = this;
+          var _this22 = this;
           if (streams.length === 0) {
             return;
           }
@@ -2658,7 +2649,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
             streams[streamId].subscribe({
               complete: function complete() {
                 promiseQueue = promiseQueue.then(function () {
-                  return _this24._sendWithProtocol(_this24._createCompletionMessage(streamId));
+                  return _this22._sendWithProtocol(_this22._createCompletionMessage(streamId));
                 });
               },
               error: function error(err) {
@@ -2671,12 +2662,12 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   message = "Unknown error";
                 }
                 promiseQueue = promiseQueue.then(function () {
-                  return _this24._sendWithProtocol(_this24._createCompletionMessage(streamId, message));
+                  return _this22._sendWithProtocol(_this22._createCompletionMessage(streamId, message));
                 });
               },
               next: function next(item) {
                 promiseQueue = promiseQueue.then(function () {
-                  return _this24._sendWithProtocol(_this24._createStreamItemMessage(streamId, item));
+                  return _this22._sendWithProtocol(_this22._createStreamItemMessage(streamId, item));
                 });
               }
             });
@@ -2817,61 +2808,58 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
     /** @private */
     var AccessTokenHttpClient = /*#__PURE__*/function (_HttpClient5) {
       function AccessTokenHttpClient(innerClient, accessTokenFactory) {
-        var _this25;
+        var _this23;
         _classCallCheck(this, AccessTokenHttpClient);
-        _this25 = _callSuper(this, AccessTokenHttpClient);
-        _this25._innerClient = innerClient;
-        _this25._accessTokenFactory = accessTokenFactory;
-        return _this25;
+        _this23 = _callSuper(this, AccessTokenHttpClient);
+        _this23._innerClient = innerClient;
+        _this23._accessTokenFactory = accessTokenFactory;
+        return _this23;
       }
       _inherits(AccessTokenHttpClient, _HttpClient5);
       return _createClass(AccessTokenHttpClient, [{
         key: "send",
         value: function () {
-          var _send3 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee12(request) {
+          var _send3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee10(request) {
             var allowRetry, response;
-            return _regeneratorRuntime().wrap(function _callee12$(_context12) {
-              while (1) switch (_context12.prev = _context12.next) {
+            return _regenerator().w(function (_context10) {
+              while (1) switch (_context10.n) {
                 case 0:
                   allowRetry = true;
                   if (!(this._accessTokenFactory && (!this._accessToken || request.url && request.url.indexOf("/negotiate?") > 0))) {
-                    _context12.next = 6;
+                    _context10.n = 2;
                     break;
                   }
                   // don't retry if the request is a negotiate or if we just got a potentially new token from the access token factory
                   allowRetry = false;
-                  _context12.next = 5;
+                  _context10.n = 1;
                   return this._accessTokenFactory();
-                case 5:
-                  this._accessToken = _context12.sent;
-                case 6:
+                case 1:
+                  this._accessToken = _context10.v;
+                case 2:
                   this._setAuthorizationHeader(request);
-                  _context12.next = 9;
+                  _context10.n = 3;
                   return this._innerClient.send(request);
-                case 9:
-                  response = _context12.sent;
+                case 3:
+                  response = _context10.v;
                   if (!(allowRetry && response.statusCode === 401 && this._accessTokenFactory)) {
-                    _context12.next = 18;
+                    _context10.n = 6;
                     break;
                   }
-                  _context12.next = 13;
+                  _context10.n = 4;
                   return this._accessTokenFactory();
-                case 13:
-                  this._accessToken = _context12.sent;
+                case 4:
+                  this._accessToken = _context10.v;
                   this._setAuthorizationHeader(request);
-                  _context12.next = 17;
+                  _context10.n = 5;
                   return this._innerClient.send(request);
-                case 17:
-                  return _context12.abrupt("return", _context12.sent);
-                case 18:
-                  return _context12.abrupt("return", response);
-                case 19:
-                case "end":
-                  return _context12.stop();
+                case 5:
+                  return _context10.a(2, _context10.v);
+                case 6:
+                  return _context10.a(2, response);
               }
-            }, _callee12, this);
+            }, _callee10, this);
           }));
-          function send(_x11) {
+          function send(_x1) {
             return _send3.apply(this, arguments);
           }
           return send;
@@ -2986,10 +2974,10 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "connect",
         value: function () {
-          var _connect = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee13(url, transferFormat) {
+          var _connect = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee11(url, transferFormat) {
             var _getUserAgentHeader, _getUserAgentHeader2, name, value, headers, pollOptions, pollUrl, response;
-            return _regeneratorRuntime().wrap(function _callee13$(_context13) {
-              while (1) switch (_context13.prev = _context13.next) {
+            return _regenerator().w(function (_context11) {
+              while (1) switch (_context11.n) {
                 case 0:
                   Arg.isRequired(url, "url");
                   Arg.isRequired(transferFormat, "transferFormat");
@@ -2998,11 +2986,11 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   this._logger.log(_LogLevel.Trace, "(LongPolling transport) Connecting.");
                   // Allow binary format on Node and Browsers that support binary content (indicated by the presence of responseType property)
                   if (!(transferFormat === _TransferFormat.Binary && typeof XMLHttpRequest !== "undefined" && typeof new XMLHttpRequest().responseType !== "string")) {
-                    _context13.next = 7;
+                    _context11.n = 1;
                     break;
                   }
                   throw new Error("Binary protocols over XmlHttpRequest not implementing advanced features are not supported.");
-                case 7:
+                case 1:
                   _getUserAgentHeader = getUserAgentHeader(), _getUserAgentHeader2 = _slicedToArray(_getUserAgentHeader, 2), name = _getUserAgentHeader2[0], value = _getUserAgentHeader2[1];
                   headers = _objectSpread(_defineProperty({}, name, value), this._options.headers);
                   pollOptions = {
@@ -3018,10 +3006,10 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   // Server uses first long polling request to finish initializing connection and it returns without data
                   pollUrl = "".concat(url, "&_=").concat(Date.now());
                   this._logger.log(_LogLevel.Trace, "(LongPolling transport) polling: ".concat(pollUrl, "."));
-                  _context13.next = 15;
+                  _context11.n = 2;
                   return this._httpClient.get(pollUrl, pollOptions);
-                case 15:
-                  response = _context13.sent;
+                case 2:
+                  response = _context11.v;
                   if (response.statusCode !== 200) {
                     this._logger.log(_LogLevel.Error, "(LongPolling transport) Unexpected response code: ".concat(response.statusCode, "."));
                     // Mark running as false so that the poll immediately ends and runs the close logic
@@ -3031,13 +3019,12 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     this._running = true;
                   }
                   this._receiving = this._poll(this._url, pollOptions);
-                case 18:
-                case "end":
-                  return _context13.stop();
+                case 3:
+                  return _context11.a(2);
               }
-            }, _callee13, this);
+            }, _callee11, this);
           }));
-          function connect(_x12, _x13) {
+          function connect(_x10, _x11) {
             return _connect.apply(this, arguments);
           }
           return connect;
@@ -3045,24 +3032,24 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_poll",
         value: function () {
-          var _poll2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee14(url, pollOptions) {
-            var pollUrl, response;
-            return _regeneratorRuntime().wrap(function _callee14$(_context14) {
-              while (1) switch (_context14.prev = _context14.next) {
+          var _poll2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee12(url, pollOptions) {
+            var pollUrl, response, _t11;
+            return _regenerator().w(function (_context12) {
+              while (1) switch (_context12.p = _context12.n) {
                 case 0:
-                  _context14.prev = 0;
+                  _context12.p = 0;
                 case 1:
                   if (!this._running) {
-                    _context14.next = 16;
+                    _context12.n = 6;
                     break;
                   }
-                  _context14.prev = 2;
+                  _context12.p = 2;
                   pollUrl = "".concat(url, "&_=").concat(Date.now());
                   this._logger.log(_LogLevel.Trace, "(LongPolling transport) polling: ".concat(pollUrl, "."));
-                  _context14.next = 7;
+                  _context12.n = 3;
                   return this._httpClient.get(pollUrl, pollOptions);
-                case 7:
-                  response = _context14.sent;
+                case 3:
+                  response = _context12.v;
                   if (response.statusCode === 204) {
                     this._logger.log(_LogLevel.Information, "(LongPolling transport) Poll terminated by server.");
                     this._running = false;
@@ -3083,43 +3070,42 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                       this._logger.log(_LogLevel.Trace, "(LongPolling transport) Poll timed out, reissuing.");
                     }
                   }
-                  _context14.next = 14;
+                  _context12.n = 5;
                   break;
-                case 11:
-                  _context14.prev = 11;
-                  _context14.t0 = _context14["catch"](2);
+                case 4:
+                  _context12.p = 4;
+                  _t11 = _context12.v;
                   if (!this._running) {
                     // Log but disregard errors that occur after stopping
-                    this._logger.log(_LogLevel.Trace, "(LongPolling transport) Poll errored after shutdown: ".concat(_context14.t0.message));
+                    this._logger.log(_LogLevel.Trace, "(LongPolling transport) Poll errored after shutdown: ".concat(_t11.message));
                   } else {
-                    if (_context14.t0 instanceof _TimeoutError) {
+                    if (_t11 instanceof _TimeoutError) {
                       // Ignore timeouts and reissue the poll.
                       this._logger.log(_LogLevel.Trace, "(LongPolling transport) Poll timed out, reissuing.");
                     } else {
                       // Close the connection with the error as the result.
-                      this._closeError = _context14.t0;
+                      this._closeError = _t11;
                       this._running = false;
                     }
                   }
-                case 14:
-                  _context14.next = 1;
+                case 5:
+                  _context12.n = 1;
                   break;
-                case 16:
-                  _context14.prev = 16;
+                case 6:
+                  _context12.p = 6;
                   this._logger.log(_LogLevel.Trace, "(LongPolling transport) Polling complete.");
                   // We will reach here with pollAborted==false when the server returned a response causing the transport to stop.
                   // If pollAborted==true then client initiated the stop and the stop method will raise the close event after DELETE is sent.
                   if (!this.pollAborted) {
                     this._raiseOnClose();
                   }
-                  return _context14.finish(16);
-                case 20:
-                case "end":
-                  return _context14.stop();
+                  return _context12.f(6);
+                case 7:
+                  return _context12.a(2);
               }
-            }, _callee14, this, [[0,, 16, 20], [2, 11]]);
+            }, _callee12, this, [[2, 4], [0,, 6, 7]]);
           }));
-          function _poll(_x14, _x15) {
+          function _poll(_x12, _x13) {
             return _poll2.apply(this, arguments);
           }
           return _poll;
@@ -3127,24 +3113,21 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "send",
         value: function () {
-          var _send4 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee15(data) {
-            return _regeneratorRuntime().wrap(function _callee15$(_context15) {
-              while (1) switch (_context15.prev = _context15.next) {
+          var _send4 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee13(data) {
+            return _regenerator().w(function (_context13) {
+              while (1) switch (_context13.n) {
                 case 0:
                   if (this._running) {
-                    _context15.next = 2;
+                    _context13.n = 1;
                     break;
                   }
-                  return _context15.abrupt("return", Promise.reject(new Error("Cannot send until the transport is connected")));
-                case 2:
-                  return _context15.abrupt("return", sendMessage(this._logger, "LongPolling", this._httpClient, this._url, data, this._options));
-                case 3:
-                case "end":
-                  return _context15.stop();
+                  return _context13.a(2, Promise.reject(new Error("Cannot send until the transport is connected")));
+                case 1:
+                  return _context13.a(2, sendMessage(this._logger, "LongPolling", this._httpClient, this._url, data, this._options));
               }
-            }, _callee15, this);
+            }, _callee13, this);
           }));
-          function send(_x16) {
+          function send(_x14) {
             return _send4.apply(this, arguments);
           }
           return send;
@@ -3152,19 +3135,19 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "stop",
         value: function () {
-          var _stop2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee16() {
-            var headers, _getUserAgentHeader3, _getUserAgentHeader4, name, value, deleteOptions, error;
-            return _regeneratorRuntime().wrap(function _callee16$(_context16) {
-              while (1) switch (_context16.prev = _context16.next) {
+          var _stop2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee14() {
+            var headers, _getUserAgentHeader3, _getUserAgentHeader4, name, value, deleteOptions, error, _t12;
+            return _regenerator().w(function (_context14) {
+              while (1) switch (_context14.p = _context14.n) {
                 case 0:
                   this._logger.log(_LogLevel.Trace, "(LongPolling transport) Stopping polling.");
                   // Tell receiving loop to stop, abort any current request, and then wait for it to finish
                   this._running = false;
                   this._pollAbort.abort();
-                  _context16.prev = 3;
-                  _context16.next = 6;
+                  _context14.p = 1;
+                  _context14.n = 2;
                   return this._receiving;
-                case 6:
+                case 2:
                   // Send DELETE to clean up long polling on the server
                   this._logger.log(_LogLevel.Trace, "(LongPolling transport) sending DELETE request to ".concat(this._url, "."));
                   headers = {};
@@ -3175,17 +3158,17 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     timeout: this._options.timeout,
                     withCredentials: this._options.withCredentials
                   };
-                  _context16.prev = 11;
-                  _context16.next = 14;
+                  _context14.p = 3;
+                  _context14.n = 4;
                   return this._httpClient["delete"](this._url, deleteOptions);
-                case 14:
-                  _context16.next = 19;
+                case 4:
+                  _context14.n = 6;
                   break;
-                case 16:
-                  _context16.prev = 16;
-                  _context16.t0 = _context16["catch"](11);
-                  error = _context16.t0;
-                case 19:
+                case 5:
+                  _context14.p = 5;
+                  _t12 = _context14.v;
+                  error = _t12;
+                case 6:
                   if (error) {
                     if (error instanceof _HttpError) {
                       if (error.statusCode === 404) {
@@ -3197,18 +3180,17 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   } else {
                     this._logger.log(_LogLevel.Trace, "(LongPolling transport) DELETE request accepted.");
                   }
-                case 20:
-                  _context16.prev = 20;
+                case 7:
+                  _context14.p = 7;
                   this._logger.log(_LogLevel.Trace, "(LongPolling transport) Stop finished.");
                   // Raise close event here instead of in polling
                   // It needs to happen after the DELETE request is sent
                   this._raiseOnClose();
-                  return _context16.finish(20);
-                case 24:
-                case "end":
-                  return _context16.stop();
+                  return _context14.f(7);
+                case 8:
+                  return _context14.a(2);
               }
-            }, _callee16, this, [[3,, 20, 24], [11, 16]]);
+            }, _callee14, this, [[3, 5], [1,, 7, 8]]);
           }));
           function stop() {
             return _stop2.apply(this, arguments);
@@ -3247,10 +3229,10 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       return _createClass(ServerSentEventsTransport, [{
         key: "connect",
         value: function () {
-          var _connect2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee17(url, transferFormat) {
-            var _this26 = this;
-            return _regeneratorRuntime().wrap(function _callee17$(_context17) {
-              while (1) switch (_context17.prev = _context17.next) {
+          var _connect2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee15(url, transferFormat) {
+            var _this24 = this;
+            return _regenerator().w(function (_context15) {
+              while (1) switch (_context15.n) {
                 case 0:
                   Arg.isRequired(url, "url");
                   Arg.isRequired(transferFormat, "transferFormat");
@@ -3261,7 +3243,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   if (this._accessToken) {
                     url += (url.indexOf("?") < 0 ? "?" : "&") + "access_token=".concat(encodeURIComponent(this._accessToken));
                   }
-                  return _context17.abrupt("return", new Promise(function (resolve, reject) {
+                  return _context15.a(2, new Promise(function (resolve, reject) {
                     var opened = false;
                     if (transferFormat !== _TransferFormat.Text) {
                       reject(new Error("The Server-Sent Events transport only supports the 'Text' transfer format"));
@@ -3269,12 +3251,12 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     }
                     var eventSource;
                     if (Platform.isBrowser || Platform.isWebWorker) {
-                      eventSource = new _this26._options.EventSource(url, {
-                        withCredentials: _this26._options.withCredentials
+                      eventSource = new _this24._options.EventSource(url, {
+                        withCredentials: _this24._options.withCredentials
                       });
                     } else {
                       // Non-browser passes cookies via the dictionary
-                      var cookies = _this26._httpClient.getCookieString(url);
+                      var cookies = _this24._httpClient.getCookieString(url);
                       var headers = {};
                       headers.Cookie = cookies;
                       var _getUserAgentHeader5 = getUserAgentHeader(),
@@ -3282,19 +3264,19 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                         name = _getUserAgentHeader6[0],
                         value = _getUserAgentHeader6[1];
                       headers[name] = value;
-                      eventSource = new _this26._options.EventSource(url, {
-                        withCredentials: _this26._options.withCredentials,
-                        headers: _objectSpread(_objectSpread({}, headers), _this26._options.headers)
+                      eventSource = new _this24._options.EventSource(url, {
+                        withCredentials: _this24._options.withCredentials,
+                        headers: _objectSpread(_objectSpread({}, headers), _this24._options.headers)
                       });
                     }
                     try {
                       eventSource.onmessage = function (e) {
-                        if (_this26.onreceive) {
+                        if (_this24.onreceive) {
                           try {
-                            _this26._logger.log(_LogLevel.Trace, "(SSE transport) data received. ".concat(getDataDetail(e.data, _this26._options.logMessageContent), "."));
-                            _this26.onreceive(e.data);
+                            _this24._logger.log(_LogLevel.Trace, "(SSE transport) data received. ".concat(getDataDetail(e.data, _this24._options.logMessageContent), "."));
+                            _this24.onreceive(e.data);
                           } catch (error) {
-                            _this26._close(error);
+                            _this24._close(error);
                             return;
                           }
                         }
@@ -3303,14 +3285,14 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                       eventSource.onerror = function (e) {
                         // EventSource doesn't give any useful information about server side closes.
                         if (opened) {
-                          _this26._close();
+                          _this24._close();
                         } else {
                           reject(new Error("EventSource failed to connect. The connection could not be found on the server," + " either the connection ID is not present on the server, or a proxy is refusing/buffering the connection." + " If you have multiple servers check that sticky sessions are enabled."));
                         }
                       };
                       eventSource.onopen = function () {
-                        _this26._logger.log(_LogLevel.Information, "SSE connected to ".concat(_this26._url));
-                        _this26._eventSource = eventSource;
+                        _this24._logger.log(_LogLevel.Information, "SSE connected to ".concat(_this24._url));
+                        _this24._eventSource = eventSource;
                         opened = true;
                         resolve();
                       };
@@ -3319,13 +3301,10 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                       return;
                     }
                   }));
-                case 7:
-                case "end":
-                  return _context17.stop();
               }
-            }, _callee17, this);
+            }, _callee15, this);
           }));
-          function connect(_x17, _x18) {
+          function connect(_x15, _x16) {
             return _connect2.apply(this, arguments);
           }
           return connect;
@@ -3333,24 +3312,21 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "send",
         value: function () {
-          var _send5 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee18(data) {
-            return _regeneratorRuntime().wrap(function _callee18$(_context18) {
-              while (1) switch (_context18.prev = _context18.next) {
+          var _send5 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee16(data) {
+            return _regenerator().w(function (_context16) {
+              while (1) switch (_context16.n) {
                 case 0:
                   if (this._eventSource) {
-                    _context18.next = 2;
+                    _context16.n = 1;
                     break;
                   }
-                  return _context18.abrupt("return", Promise.reject(new Error("Cannot send until the transport is connected")));
-                case 2:
-                  return _context18.abrupt("return", sendMessage(this._logger, "SSE", this._httpClient, this._url, data, this._options));
-                case 3:
-                case "end":
-                  return _context18.stop();
+                  return _context16.a(2, Promise.reject(new Error("Cannot send until the transport is connected")));
+                case 1:
+                  return _context16.a(2, sendMessage(this._logger, "SSE", this._httpClient, this._url, data, this._options));
               }
-            }, _callee18, this);
+            }, _callee16, this);
           }));
-          function send(_x19) {
+          function send(_x17) {
             return _send5.apply(this, arguments);
           }
           return send;
@@ -3394,29 +3370,29 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       return _createClass(WebSocketTransport, [{
         key: "connect",
         value: function () {
-          var _connect3 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee19(url, transferFormat) {
-            var _this27 = this;
+          var _connect3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee17(url, transferFormat) {
+            var _this25 = this;
             var token;
-            return _regeneratorRuntime().wrap(function _callee19$(_context19) {
-              while (1) switch (_context19.prev = _context19.next) {
+            return _regenerator().w(function (_context17) {
+              while (1) switch (_context17.n) {
                 case 0:
                   Arg.isRequired(url, "url");
                   Arg.isRequired(transferFormat, "transferFormat");
                   Arg.isIn(transferFormat, _TransferFormat, "transferFormat");
                   this._logger.log(_LogLevel.Trace, "(WebSockets transport) Connecting.");
                   if (!this._accessTokenFactory) {
-                    _context19.next = 8;
+                    _context17.n = 2;
                     break;
                   }
-                  _context19.next = 7;
+                  _context17.n = 1;
                   return this._accessTokenFactory();
-                case 7:
-                  token = _context19.sent;
-                case 8:
-                  return _context19.abrupt("return", new Promise(function (resolve, reject) {
+                case 1:
+                  token = _context17.v;
+                case 2:
+                  return _context17.a(2, new Promise(function (resolve, reject) {
                     url = url.replace(/^http/, "ws");
                     var webSocket;
-                    var cookies = _this27._httpClient.getCookieString(url);
+                    var cookies = _this25._httpClient.getCookieString(url);
                     var opened = false;
                     if (Platform.isNode || Platform.isReactNative) {
                       var headers = {};
@@ -3432,8 +3408,8 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                         headers[HeaderNames.Cookie] = cookies;
                       }
                       // Only pass headers when in non-browser environments
-                      webSocket = new _this27._webSocketConstructor(url, undefined, {
-                        headers: _objectSpread(_objectSpread({}, headers), _this27._headers)
+                      webSocket = new _this25._webSocketConstructor(url, undefined, {
+                        headers: _objectSpread(_objectSpread({}, headers), _this25._headers)
                       });
                     } else {
                       if (token) {
@@ -3442,14 +3418,14 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     }
                     if (!webSocket) {
                       // Chrome is not happy with passing 'undefined' as protocol
-                      webSocket = new _this27._webSocketConstructor(url);
+                      webSocket = new _this25._webSocketConstructor(url);
                     }
                     if (transferFormat === _TransferFormat.Binary) {
                       webSocket.binaryType = "arraybuffer";
                     }
                     webSocket.onopen = function (_event) {
-                      _this27._logger.log(_LogLevel.Information, "WebSocket connected to ".concat(url, "."));
-                      _this27._webSocket = webSocket;
+                      _this25._logger.log(_LogLevel.Information, "WebSocket connected to ".concat(url, "."));
+                      _this25._webSocket = webSocket;
                       opened = true;
                       resolve();
                     };
@@ -3461,15 +3437,15 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                       } else {
                         error = "There was an error with the transport";
                       }
-                      _this27._logger.log(_LogLevel.Information, "(WebSockets transport) ".concat(error, "."));
+                      _this25._logger.log(_LogLevel.Information, "(WebSockets transport) ".concat(error, "."));
                     };
                     webSocket.onmessage = function (message) {
-                      _this27._logger.log(_LogLevel.Trace, "(WebSockets transport) data received. ".concat(getDataDetail(message.data, _this27._logMessageContent), "."));
-                      if (_this27.onreceive) {
+                      _this25._logger.log(_LogLevel.Trace, "(WebSockets transport) data received. ".concat(getDataDetail(message.data, _this25._logMessageContent), "."));
+                      if (_this25.onreceive) {
                         try {
-                          _this27.onreceive(message.data);
+                          _this25.onreceive(message.data);
                         } catch (error) {
-                          _this27._close(error);
+                          _this25._close(error);
                           return;
                         }
                       }
@@ -3478,7 +3454,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                       // Don't call close handler if connection was never established
                       // We'll reject the connect call instead
                       if (opened) {
-                        _this27._close(event);
+                        _this25._close(event);
                       } else {
                         var error = null;
                         // ErrorEvent is a browser only type we need to check if the type exists before using it
@@ -3491,13 +3467,10 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                       }
                     };
                   }));
-                case 9:
-                case "end":
-                  return _context19.stop();
               }
-            }, _callee19, this);
+            }, _callee17, this);
           }));
-          function connect(_x20, _x21) {
+          function connect(_x18, _x19) {
             return _connect3.apply(this, arguments);
           }
           return connect;
@@ -3609,55 +3582,54 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       return _createClass(HttpConnection, [{
         key: "start",
         value: function () {
-          var _start = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee20(transferFormat) {
+          var _start = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee18(transferFormat) {
             var message, _message3;
-            return _regeneratorRuntime().wrap(function _callee20$(_context20) {
-              while (1) switch (_context20.prev = _context20.next) {
+            return _regenerator().w(function (_context18) {
+              while (1) switch (_context18.n) {
                 case 0:
                   transferFormat = transferFormat || _TransferFormat.Binary;
                   Arg.isIn(transferFormat, _TransferFormat, "transferFormat");
                   this._logger.log(_LogLevel.Debug, "Starting connection with transfer format '".concat(_TransferFormat[transferFormat], "'."));
                   if (!(this._connectionState !== "Disconnected" /* ConnectionState.Disconnected */)) {
-                    _context20.next = 5;
+                    _context18.n = 1;
                     break;
                   }
-                  return _context20.abrupt("return", Promise.reject(new Error("Cannot start an HttpConnection that is not in the 'Disconnected' state.")));
-                case 5:
+                  return _context18.a(2, Promise.reject(new Error("Cannot start an HttpConnection that is not in the 'Disconnected' state.")));
+                case 1:
                   this._connectionState = "Connecting" /* ConnectionState.Connecting */;
                   this._startInternalPromise = this._startInternal(transferFormat);
-                  _context20.next = 9;
+                  _context18.n = 2;
                   return this._startInternalPromise;
-                case 9:
+                case 2:
                   if (!(this._connectionState === "Disconnecting" /* ConnectionState.Disconnecting */)) {
-                    _context20.next = 17;
+                    _context18.n = 4;
                     break;
                   }
                   // stop() was called and transitioned the client into the Disconnecting state.
                   message = "Failed to start the HttpConnection before stop() was called.";
                   this._logger.log(_LogLevel.Error, message);
                   // We cannot await stopPromise inside startInternal since stopInternal awaits the startInternalPromise.
-                  _context20.next = 14;
+                  _context18.n = 3;
                   return this._stopPromise;
-                case 14:
-                  return _context20.abrupt("return", Promise.reject(new _AbortError(message)));
-                case 17:
+                case 3:
+                  return _context18.a(2, Promise.reject(new _AbortError(message)));
+                case 4:
                   if (!(this._connectionState !== "Connected" /* ConnectionState.Connected */)) {
-                    _context20.next = 21;
+                    _context18.n = 5;
                     break;
                   }
                   // stop() was called and transitioned the client into the Disconnecting state.
                   _message3 = "HttpConnection.startInternal completed gracefully but didn't enter the connection into the connected state!";
                   this._logger.log(_LogLevel.Error, _message3);
-                  return _context20.abrupt("return", Promise.reject(new _AbortError(_message3)));
-                case 21:
+                  return _context18.a(2, Promise.reject(new _AbortError(_message3)));
+                case 5:
                   this._connectionStarted = true;
-                case 22:
-                case "end":
-                  return _context20.stop();
+                case 6:
+                  return _context18.a(2);
               }
-            }, _callee20, this);
+            }, _callee18, this);
           }));
-          function start(_x22) {
+          function start(_x20) {
             return _start.apply(this, arguments);
           }
           return start;
@@ -3677,43 +3649,42 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "stop",
         value: function () {
-          var _stop3 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee21(error) {
-            var _this28 = this;
-            return _regeneratorRuntime().wrap(function _callee21$(_context21) {
-              while (1) switch (_context21.prev = _context21.next) {
+          var _stop3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee19(error) {
+            var _this26 = this;
+            return _regenerator().w(function (_context19) {
+              while (1) switch (_context19.n) {
                 case 0:
                   if (!(this._connectionState === "Disconnected" /* ConnectionState.Disconnected */)) {
-                    _context21.next = 3;
+                    _context19.n = 1;
                     break;
                   }
                   this._logger.log(_LogLevel.Debug, "Call to HttpConnection.stop(".concat(error, ") ignored because the connection is already in the disconnected state."));
-                  return _context21.abrupt("return", Promise.resolve());
-                case 3:
+                  return _context19.a(2, Promise.resolve());
+                case 1:
                   if (!(this._connectionState === "Disconnecting" /* ConnectionState.Disconnecting */)) {
-                    _context21.next = 6;
+                    _context19.n = 2;
                     break;
                   }
                   this._logger.log(_LogLevel.Debug, "Call to HttpConnection.stop(".concat(error, ") ignored because the connection is already in the disconnecting state."));
-                  return _context21.abrupt("return", this._stopPromise);
-                case 6:
+                  return _context19.a(2, this._stopPromise);
+                case 2:
                   this._connectionState = "Disconnecting" /* ConnectionState.Disconnecting */;
                   this._stopPromise = new Promise(function (resolve) {
                     // Don't complete stop() until stopConnection() completes.
-                    _this28._stopPromiseResolver = resolve;
+                    _this26._stopPromiseResolver = resolve;
                   });
                   // stopInternal should never throw so just observe it.
-                  _context21.next = 10;
+                  _context19.n = 3;
                   return this._stopInternal(error);
-                case 10:
-                  _context21.next = 12;
+                case 3:
+                  _context19.n = 4;
                   return this._stopPromise;
-                case 12:
-                case "end":
-                  return _context21.stop();
+                case 4:
+                  return _context19.a(2);
               }
-            }, _callee21, this);
+            }, _callee19, this);
           }));
-          function stop(_x23) {
+          function stop(_x21) {
             return _stop3.apply(this, arguments);
           }
           return stop;
@@ -3721,52 +3692,52 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_stopInternal",
         value: function () {
-          var _stopInternal2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee22(error) {
-            return _regeneratorRuntime().wrap(function _callee22$(_context22) {
-              while (1) switch (_context22.prev = _context22.next) {
+          var _stopInternal2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee20(error) {
+            var _t13, _t14;
+            return _regenerator().w(function (_context20) {
+              while (1) switch (_context20.p = _context20.n) {
                 case 0:
                   // Set error as soon as possible otherwise there is a race between
                   // the transport closing and providing an error and the error from a close message
                   // We would prefer the close message error.
                   this._stopError = error;
-                  _context22.prev = 1;
-                  _context22.next = 4;
+                  _context20.p = 1;
+                  _context20.n = 2;
                   return this._startInternalPromise;
-                case 4:
-                  _context22.next = 8;
+                case 2:
+                  _context20.n = 4;
                   break;
-                case 6:
-                  _context22.prev = 6;
-                  _context22.t0 = _context22["catch"](1);
-                case 8:
+                case 3:
+                  _context20.p = 3;
+                  _t13 = _context20.v;
+                case 4:
                   if (!this.transport) {
-                    _context22.next = 21;
+                    _context20.n = 9;
                     break;
                   }
-                  _context22.prev = 9;
-                  _context22.next = 12;
+                  _context20.p = 5;
+                  _context20.n = 6;
                   return this.transport.stop();
-                case 12:
-                  _context22.next = 18;
+                case 6:
+                  _context20.n = 8;
                   break;
-                case 14:
-                  _context22.prev = 14;
-                  _context22.t1 = _context22["catch"](9);
-                  this._logger.log(_LogLevel.Error, "HttpConnection.transport.stop() threw error '".concat(_context22.t1, "'."));
+                case 7:
+                  _context20.p = 7;
+                  _t14 = _context20.v;
+                  this._logger.log(_LogLevel.Error, "HttpConnection.transport.stop() threw error '".concat(_t14, "'."));
                   this._stopConnection();
-                case 18:
+                case 8:
                   this.transport = undefined;
-                  _context22.next = 22;
+                  _context20.n = 10;
                   break;
-                case 21:
+                case 9:
                   this._logger.log(_LogLevel.Debug, "HttpConnection.transport is undefined in HttpConnection.stop() because start() failed.");
-                case 22:
-                case "end":
-                  return _context22.stop();
+                case 10:
+                  return _context20.a(2);
               }
-            }, _callee22, this, [[1, 6], [9, 14]]);
+            }, _callee20, this, [[5, 7], [1, 3]]);
           }));
-          function _stopInternal(_x24) {
+          function _stopInternal(_x22) {
             return _stopInternal2.apply(this, arguments);
           }
           return _stopInternal;
@@ -3774,70 +3745,70 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_startInternal",
         value: function () {
-          var _startInternal3 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee23(transferFormat) {
-            var _this29 = this;
-            var url, negotiateResponse, redirects, _loop2;
-            return _regeneratorRuntime().wrap(function _callee23$(_context24) {
-              while (1) switch (_context24.prev = _context24.next) {
+          var _startInternal3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee21(transferFormat) {
+            var _this27 = this;
+            var url, negotiateResponse, redirects, _loop2, _t15;
+            return _regenerator().w(function (_context22) {
+              while (1) switch (_context22.p = _context22.n) {
                 case 0:
                   // Store the original base url and the access token factory since they may change
                   // as part of negotiating
                   url = this.baseUrl;
                   this._accessTokenFactory = this._options.accessTokenFactory;
                   this._httpClient._accessTokenFactory = this._accessTokenFactory;
-                  _context24.prev = 3;
+                  _context22.p = 1;
                   if (!this._options.skipNegotiation) {
-                    _context24.next = 14;
+                    _context22.n = 5;
                     break;
                   }
                   if (!(this._options.transport === _HttpTransportType.WebSockets)) {
-                    _context24.next = 11;
+                    _context22.n = 3;
                     break;
                   }
                   // No need to add a connection ID in this case
                   this.transport = this._constructTransport(_HttpTransportType.WebSockets);
                   // We should just call connect directly in this case.
                   // No fallback or negotiate in this case.
-                  _context24.next = 9;
+                  _context22.n = 2;
                   return this._startTransport(url, transferFormat);
-                case 9:
-                  _context24.next = 12;
+                case 2:
+                  _context22.n = 4;
                   break;
-                case 11:
+                case 3:
                   throw new Error("Negotiation can only be skipped when using the WebSocket transport directly.");
-                case 12:
-                  _context24.next = 23;
+                case 4:
+                  _context22.n = 10;
                   break;
-                case 14:
+                case 5:
                   negotiateResponse = null;
                   redirects = 0;
-                  _loop2 = /*#__PURE__*/_regeneratorRuntime().mark(function _loop2() {
+                  _loop2 = /*#__PURE__*/_regenerator().m(function _loop2() {
                     var accessToken;
-                    return _regeneratorRuntime().wrap(function _loop2$(_context23) {
-                      while (1) switch (_context23.prev = _context23.next) {
+                    return _regenerator().w(function (_context21) {
+                      while (1) switch (_context21.n) {
                         case 0:
-                          _context23.next = 2;
-                          return _this29._getNegotiationResponse(url);
-                        case 2:
-                          negotiateResponse = _context23.sent;
-                          if (!(_this29._connectionState === "Disconnecting" /* ConnectionState.Disconnecting */ || _this29._connectionState === "Disconnected" /* ConnectionState.Disconnected */)) {
-                            _context23.next = 5;
+                          _context21.n = 1;
+                          return _this27._getNegotiationResponse(url);
+                        case 1:
+                          negotiateResponse = _context21.v;
+                          if (!(_this27._connectionState === "Disconnecting" /* ConnectionState.Disconnecting */ || _this27._connectionState === "Disconnected" /* ConnectionState.Disconnected */)) {
+                            _context21.n = 2;
                             break;
                           }
                           throw new _AbortError("The connection was stopped during negotiation.");
-                        case 5:
+                        case 2:
                           if (!negotiateResponse.error) {
-                            _context23.next = 7;
+                            _context21.n = 3;
                             break;
                           }
                           throw new Error(negotiateResponse.error);
-                        case 7:
+                        case 3:
                           if (!negotiateResponse.ProtocolVersion) {
-                            _context23.next = 9;
+                            _context21.n = 4;
                             break;
                           }
                           throw new Error("Detected a connection attempt to an ASP.NET SignalR Server. This client only supports connecting to an ASP.NET Core SignalR Server. See https://aka.ms/signalr-core-differences for details.");
-                        case 9:
+                        case 4:
                           if (negotiateResponse.url) {
                             url = negotiateResponse.url;
                           }
@@ -3845,37 +3816,36 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                             // Replace the current access token factory with one that uses
                             // the returned access token
                             accessToken = negotiateResponse.accessToken;
-                            _this29._accessTokenFactory = function () {
+                            _this27._accessTokenFactory = function () {
                               return accessToken;
                             };
                             // set the factory to undefined so the AccessTokenHttpClient won't retry with the same token, since we know it won't change until a connection restart
-                            _this29._httpClient._accessToken = accessToken;
-                            _this29._httpClient._accessTokenFactory = undefined;
+                            _this27._httpClient._accessToken = accessToken;
+                            _this27._httpClient._accessTokenFactory = undefined;
                           }
                           redirects++;
-                        case 12:
-                        case "end":
-                          return _context23.stop();
+                        case 5:
+                          return _context21.a(2);
                       }
                     }, _loop2);
                   });
-                case 17:
-                  return _context24.delegateYield(_loop2(), "t0", 18);
-                case 18:
+                case 6:
+                  return _context22.d(_regeneratorValues(_loop2()), 7);
+                case 7:
                   if (negotiateResponse.url && redirects < MAX_REDIRECTS) {
-                    _context24.next = 17;
+                    _context22.n = 6;
                     break;
                   }
-                case 19:
+                case 8:
                   if (!(redirects === MAX_REDIRECTS && negotiateResponse.url)) {
-                    _context24.next = 21;
+                    _context22.n = 9;
                     break;
                   }
                   throw new Error("Negotiate redirection limit exceeded.");
-                case 21:
-                  _context24.next = 23;
+                case 9:
+                  _context22.n = 10;
                   return this._createTransport(url, this._options.transport, negotiateResponse, transferFormat);
-                case 23:
+                case 10:
                   if (this.transport instanceof LongPollingTransport) {
                     this.features.inherentKeepAlive = true;
                   }
@@ -3888,24 +3858,23 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                   // stop() is waiting on us via this.startInternalPromise so keep this.transport around so it can clean up.
                   // This is the only case startInternal can exit in neither the connected nor disconnected state because stopConnection()
                   // will transition to the disconnected state. start() will wait for the transition using the stopPromise.
-                  _context24.next = 34;
+                  _context22.n = 12;
                   break;
-                case 27:
-                  _context24.prev = 27;
-                  _context24.t1 = _context24["catch"](3);
-                  this._logger.log(_LogLevel.Error, "Failed to start the connection: " + _context24.t1);
+                case 11:
+                  _context22.p = 11;
+                  _t15 = _context22.v;
+                  this._logger.log(_LogLevel.Error, "Failed to start the connection: " + _t15);
                   this._connectionState = "Disconnected" /* ConnectionState.Disconnected */;
                   this.transport = undefined;
                   // if start fails, any active calls to stop assume that start will complete the stop promise
                   this._stopPromiseResolver();
-                  return _context24.abrupt("return", Promise.reject(_context24.t1));
-                case 34:
-                case "end":
-                  return _context24.stop();
+                  return _context22.a(2, Promise.reject(_t15));
+                case 12:
+                  return _context22.a(2);
               }
-            }, _callee23, this, [[3, 27]]);
+            }, _callee21, this, [[1, 11]]);
           }));
-          function _startInternal(_x25) {
+          function _startInternal(_x23) {
             return _startInternal3.apply(this, arguments);
           }
           return _startInternal;
@@ -3913,32 +3882,32 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_getNegotiationResponse",
         value: function () {
-          var _getNegotiationResponse2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee24(url) {
-            var headers, _getUserAgentHeader9, _getUserAgentHeader10, name, value, negotiateUrl, response, negotiateResponse, errorMessage;
-            return _regeneratorRuntime().wrap(function _callee24$(_context25) {
-              while (1) switch (_context25.prev = _context25.next) {
+          var _getNegotiationResponse2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee22(url) {
+            var headers, _getUserAgentHeader9, _getUserAgentHeader0, name, value, negotiateUrl, response, negotiateResponse, errorMessage, _t16;
+            return _regenerator().w(function (_context23) {
+              while (1) switch (_context23.p = _context23.n) {
                 case 0:
                   headers = {};
-                  _getUserAgentHeader9 = getUserAgentHeader(), _getUserAgentHeader10 = _slicedToArray(_getUserAgentHeader9, 2), name = _getUserAgentHeader10[0], value = _getUserAgentHeader10[1];
+                  _getUserAgentHeader9 = getUserAgentHeader(), _getUserAgentHeader0 = _slicedToArray(_getUserAgentHeader9, 2), name = _getUserAgentHeader0[0], value = _getUserAgentHeader0[1];
                   headers[name] = value;
                   negotiateUrl = this._resolveNegotiateUrl(url);
                   this._logger.log(_LogLevel.Debug, "Sending negotiation request: ".concat(negotiateUrl, "."));
-                  _context25.prev = 5;
-                  _context25.next = 8;
+                  _context23.p = 1;
+                  _context23.n = 2;
                   return this._httpClient.post(negotiateUrl, {
                     content: "",
                     headers: _objectSpread(_objectSpread({}, headers), this._options.headers),
                     timeout: this._options.timeout,
                     withCredentials: this._options.withCredentials
                   });
-                case 8:
-                  response = _context25.sent;
+                case 2:
+                  response = _context23.v;
                   if (!(response.statusCode !== 200)) {
-                    _context25.next = 11;
+                    _context23.n = 3;
                     break;
                   }
-                  return _context25.abrupt("return", Promise.reject(new Error("Unexpected status code returned from negotiate '".concat(response.statusCode, "'"))));
-                case 11:
+                  return _context23.a(2, Promise.reject(new Error("Unexpected status code returned from negotiate '".concat(response.statusCode, "'"))));
+                case 3:
                   negotiateResponse = JSON.parse(response.content);
                   if (!negotiateResponse.negotiateVersion || negotiateResponse.negotiateVersion < 1) {
                     // Negotiate version 0 doesn't use connectionToken
@@ -3946,30 +3915,27 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
                     negotiateResponse.connectionToken = negotiateResponse.connectionId;
                   }
                   if (!(negotiateResponse.useStatefulReconnect && this._options._useStatefulReconnect !== true)) {
-                    _context25.next = 15;
+                    _context23.n = 4;
                     break;
                   }
-                  return _context25.abrupt("return", Promise.reject(new FailedToNegotiateWithServerError("Client didn't negotiate Stateful Reconnect but the server did.")));
-                case 15:
-                  return _context25.abrupt("return", negotiateResponse);
-                case 18:
-                  _context25.prev = 18;
-                  _context25.t0 = _context25["catch"](5);
-                  errorMessage = "Failed to complete negotiation with the server: " + _context25.t0;
-                  if (_context25.t0 instanceof _HttpError) {
-                    if (_context25.t0.statusCode === 404) {
+                  return _context23.a(2, Promise.reject(new FailedToNegotiateWithServerError("Client didn't negotiate Stateful Reconnect but the server did.")));
+                case 4:
+                  return _context23.a(2, negotiateResponse);
+                case 5:
+                  _context23.p = 5;
+                  _t16 = _context23.v;
+                  errorMessage = "Failed to complete negotiation with the server: " + _t16;
+                  if (_t16 instanceof _HttpError) {
+                    if (_t16.statusCode === 404) {
                       errorMessage = errorMessage + " Either this is not a SignalR endpoint or there is a proxy blocking the connection.";
                     }
                   }
                   this._logger.log(_LogLevel.Error, errorMessage);
-                  return _context25.abrupt("return", Promise.reject(new FailedToNegotiateWithServerError(errorMessage)));
-                case 24:
-                case "end":
-                  return _context25.stop();
+                  return _context23.a(2, Promise.reject(new FailedToNegotiateWithServerError(errorMessage)));
               }
-            }, _callee24, this, [[5, 18]]);
+            }, _callee22, this, [[1, 5]]);
           }));
-          function _getNegotiationResponse(_x26) {
+          function _getNegotiationResponse(_x24) {
             return _getNegotiationResponse2.apply(this, arguments);
           }
           return _getNegotiationResponse;
@@ -3985,118 +3951,115 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_createTransport",
         value: function () {
-          var _createTransport2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee25(url, requestedTransport, negotiateResponse, requestedTransferFormat) {
-            var connectUrl, transportExceptions, transports, negotiate, _iterator8, _step8, endpoint, transportOrError, message;
-            return _regeneratorRuntime().wrap(function _callee25$(_context26) {
-              while (1) switch (_context26.prev = _context26.next) {
+          var _createTransport2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee23(url, requestedTransport, negotiateResponse, requestedTransferFormat) {
+            var connectUrl, transportExceptions, transports, negotiate, _iterator8, _step8, endpoint, transportOrError, message, _t17, _t18, _t19;
+            return _regenerator().w(function (_context24) {
+              while (1) switch (_context24.p = _context24.n) {
                 case 0:
                   connectUrl = this._createConnectUrl(url, negotiateResponse.connectionToken);
                   if (!this._isITransport(requestedTransport)) {
-                    _context26.next = 8;
+                    _context24.n = 2;
                     break;
                   }
                   this._logger.log(_LogLevel.Debug, "Connection was provided an instance of ITransport, using that directly.");
                   this.transport = requestedTransport;
-                  _context26.next = 6;
+                  _context24.n = 1;
                   return this._startTransport(connectUrl, requestedTransferFormat);
-                case 6:
+                case 1:
                   this.connectionId = negotiateResponse.connectionId;
-                  return _context26.abrupt("return");
-                case 8:
+                  return _context24.a(2);
+                case 2:
                   transportExceptions = [];
                   transports = negotiateResponse.availableTransports || [];
                   negotiate = negotiateResponse;
                   _iterator8 = _createForOfIteratorHelper(transports);
-                  _context26.prev = 12;
+                  _context24.p = 3;
                   _iterator8.s();
-                case 14:
+                case 4:
                   if ((_step8 = _iterator8.n()).done) {
-                    _context26.next = 53;
+                    _context24.n = 14;
                     break;
                   }
                   endpoint = _step8.value;
                   transportOrError = this._resolveTransportOrError(endpoint, requestedTransport, requestedTransferFormat, (negotiate === null || negotiate === void 0 ? void 0 : negotiate.useStatefulReconnect) === true);
                   if (!(transportOrError instanceof Error)) {
-                    _context26.next = 22;
+                    _context24.n = 5;
                     break;
                   }
                   // Store the error and continue, we don't want to cause a re-negotiate in these cases
                   transportExceptions.push("".concat(endpoint.transport, " failed:"));
                   transportExceptions.push(transportOrError);
-                  _context26.next = 51;
+                  _context24.n = 13;
                   break;
-                case 22:
+                case 5:
                   if (!this._isITransport(transportOrError)) {
-                    _context26.next = 51;
+                    _context24.n = 13;
                     break;
                   }
                   this.transport = transportOrError;
                   if (negotiate) {
-                    _context26.next = 35;
+                    _context24.n = 10;
                     break;
                   }
-                  _context26.prev = 25;
-                  _context26.next = 28;
+                  _context24.p = 6;
+                  _context24.n = 7;
                   return this._getNegotiationResponse(url);
-                case 28:
-                  negotiate = _context26.sent;
-                  _context26.next = 34;
+                case 7:
+                  negotiate = _context24.v;
+                  _context24.n = 9;
                   break;
-                case 31:
-                  _context26.prev = 31;
-                  _context26.t0 = _context26["catch"](25);
-                  return _context26.abrupt("return", Promise.reject(_context26.t0));
-                case 34:
+                case 8:
+                  _context24.p = 8;
+                  _t17 = _context24.v;
+                  return _context24.a(2, Promise.reject(_t17));
+                case 9:
                   connectUrl = this._createConnectUrl(url, negotiate.connectionToken);
-                case 35:
-                  _context26.prev = 35;
-                  _context26.next = 38;
+                case 10:
+                  _context24.p = 10;
+                  _context24.n = 11;
                   return this._startTransport(connectUrl, requestedTransferFormat);
-                case 38:
+                case 11:
                   this.connectionId = negotiate.connectionId;
-                  return _context26.abrupt("return");
-                case 42:
-                  _context26.prev = 42;
-                  _context26.t1 = _context26["catch"](35);
-                  this._logger.log(_LogLevel.Error, "Failed to start the transport '".concat(endpoint.transport, "': ").concat(_context26.t1));
+                  return _context24.a(2);
+                case 12:
+                  _context24.p = 12;
+                  _t18 = _context24.v;
+                  this._logger.log(_LogLevel.Error, "Failed to start the transport '".concat(endpoint.transport, "': ").concat(_t18));
                   negotiate = undefined;
-                  transportExceptions.push(new FailedToStartTransportError("".concat(endpoint.transport, " failed: ").concat(_context26.t1), _HttpTransportType[endpoint.transport]));
+                  transportExceptions.push(new FailedToStartTransportError("".concat(endpoint.transport, " failed: ").concat(_t18), _HttpTransportType[endpoint.transport]));
                   if (!(this._connectionState !== "Connecting" /* ConnectionState.Connecting */)) {
-                    _context26.next = 51;
+                    _context24.n = 13;
                     break;
                   }
                   message = "Failed to select transport before stop() was called.";
                   this._logger.log(_LogLevel.Debug, message);
-                  return _context26.abrupt("return", Promise.reject(new _AbortError(message)));
-                case 51:
-                  _context26.next = 14;
+                  return _context24.a(2, Promise.reject(new _AbortError(message)));
+                case 13:
+                  _context24.n = 4;
                   break;
-                case 53:
-                  _context26.next = 58;
+                case 14:
+                  _context24.n = 16;
                   break;
-                case 55:
-                  _context26.prev = 55;
-                  _context26.t2 = _context26["catch"](12);
-                  _iterator8.e(_context26.t2);
-                case 58:
-                  _context26.prev = 58;
+                case 15:
+                  _context24.p = 15;
+                  _t19 = _context24.v;
+                  _iterator8.e(_t19);
+                case 16:
+                  _context24.p = 16;
                   _iterator8.f();
-                  return _context26.finish(58);
-                case 61:
+                  return _context24.f(16);
+                case 17:
                   if (!(transportExceptions.length > 0)) {
-                    _context26.next = 63;
+                    _context24.n = 18;
                     break;
                   }
-                  return _context26.abrupt("return", Promise.reject(new AggregateErrors("Unable to connect to the server with any of the available transports. ".concat(transportExceptions.join(" ")), transportExceptions)));
-                case 63:
-                  return _context26.abrupt("return", Promise.reject(new Error("None of the transports supported by the client are supported by the server.")));
-                case 64:
-                case "end":
-                  return _context26.stop();
+                  return _context24.a(2, Promise.reject(new AggregateErrors("Unable to connect to the server with any of the available transports. ".concat(transportExceptions.join(" ")), transportExceptions)));
+                case 18:
+                  return _context24.a(2, Promise.reject(new Error("None of the transports supported by the client are supported by the server.")));
               }
-            }, _callee25, this, [[12, 55, 58, 61], [25, 31], [35, 42]]);
+            }, _callee23, this, [[10, 12], [6, 8], [3, 15, 16, 17]]);
           }));
-          function _createTransport(_x27, _x28, _x29, _x30) {
+          function _createTransport(_x25, _x26, _x27, _x28) {
             return _createTransport2.apply(this, arguments);
           }
           return _createTransport;
@@ -4124,57 +4087,56 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_startTransport",
         value: function _startTransport(url, transferFormat) {
-          var _this30 = this;
+          var _this28 = this;
           this.transport.onreceive = this.onreceive;
           if (this.features.reconnect) {
             this.transport.onclose = /*#__PURE__*/function () {
-              var _ref3 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee26(e) {
-                var callStop;
-                return _regeneratorRuntime().wrap(function _callee26$(_context27) {
-                  while (1) switch (_context27.prev = _context27.next) {
+              var _ref3 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee24(e) {
+                var callStop, _t20;
+                return _regenerator().w(function (_context25) {
+                  while (1) switch (_context25.p = _context25.n) {
                     case 0:
                       callStop = false;
-                      if (!_this30.features.reconnect) {
-                        _context27.next = 15;
+                      if (!_this28.features.reconnect) {
+                        _context25.n = 6;
                         break;
                       }
-                      _context27.prev = 2;
-                      _this30.features.disconnected();
-                      _context27.next = 6;
-                      return _this30.transport.connect(url, transferFormat);
-                    case 6:
-                      _context27.next = 8;
-                      return _this30.features.resend();
-                    case 8:
-                      _context27.next = 13;
+                      _context25.p = 1;
+                      _this28.features.disconnected();
+                      _context25.n = 2;
+                      return _this28.transport.connect(url, transferFormat);
+                    case 2:
+                      _context25.n = 3;
+                      return _this28.features.resend();
+                    case 3:
+                      _context25.n = 5;
                       break;
-                    case 10:
-                      _context27.prev = 10;
-                      _context27.t0 = _context27["catch"](2);
+                    case 4:
+                      _context25.p = 4;
+                      _t20 = _context25.v;
                       callStop = true;
-                    case 13:
-                      _context27.next = 17;
+                    case 5:
+                      _context25.n = 7;
                       break;
-                    case 15:
-                      _this30._stopConnection(e);
-                      return _context27.abrupt("return");
-                    case 17:
+                    case 6:
+                      _this28._stopConnection(e);
+                      return _context25.a(2);
+                    case 7:
                       if (callStop) {
-                        _this30._stopConnection(e);
+                        _this28._stopConnection(e);
                       }
-                    case 18:
-                    case "end":
-                      return _context27.stop();
+                    case 8:
+                      return _context25.a(2);
                   }
-                }, _callee26, null, [[2, 10]]);
+                }, _callee24, null, [[1, 4]]);
               }));
-              return function (_x31) {
+              return function (_x29) {
                 return _ref3.apply(this, arguments);
               };
             }();
           } else {
             this.transport.onclose = function (e) {
-              return _this30._stopConnection(e);
+              return _this28._stopConnection(e);
             };
           }
           return this.transport.connect(url, transferFormat);
@@ -4222,7 +4184,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_stopConnection",
         value: function _stopConnection(error) {
-          var _this31 = this;
+          var _this29 = this;
           this._logger.log(_LogLevel.Debug, "HttpConnection.stopConnection(".concat(error, ") called while in state ").concat(this._connectionState, "."));
           this.transport = undefined;
           // If we have a stopError, it takes precedence over the error from the transport
@@ -4248,7 +4210,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
           }
           if (this._sendQueue) {
             this._sendQueue.stop()["catch"](function (e) {
-              _this31._logger.log(_LogLevel.Error, "TransportSendQueue.stop() threw error '".concat(e, "'."));
+              _this29._logger.log(_LogLevel.Error, "TransportSendQueue.stop() threw error '".concat(e, "'."));
             });
             this._sendQueue = undefined;
           }
@@ -4352,51 +4314,50 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
       }, {
         key: "_sendLoop",
         value: function () {
-          var _sendLoop2 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee27() {
-            var transportResult, data;
-            return _regeneratorRuntime().wrap(function _callee27$(_context28) {
-              while (1) switch (_context28.prev = _context28.next) {
+          var _sendLoop2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee25() {
+            var transportResult, data, _t21;
+            return _regenerator().w(function (_context26) {
+              while (1) switch (_context26.p = _context26.n) {
                 case 0:
                   if (!true) {
-                    _context28.next = 22;
+                    _context26.n = 7;
                     break;
                   }
-                  _context28.next = 3;
+                  _context26.n = 1;
                   return this._sendBufferedData.promise;
-                case 3:
+                case 1:
                   if (this._executing) {
-                    _context28.next = 6;
+                    _context26.n = 2;
                     break;
                   }
                   if (this._transportResult) {
                     this._transportResult.reject("Connection stopped.");
                   }
-                  return _context28.abrupt("break", 22);
-                case 6:
+                  return _context26.a(3, 7);
+                case 2:
                   this._sendBufferedData = new PromiseSource();
                   transportResult = this._transportResult;
                   this._transportResult = undefined;
                   data = typeof this._buffer[0] === "string" ? this._buffer.join("") : TransportSendQueue._concatBuffers(this._buffer);
                   this._buffer.length = 0;
-                  _context28.prev = 11;
-                  _context28.next = 14;
+                  _context26.p = 3;
+                  _context26.n = 4;
                   return this._transport.send(data);
-                case 14:
+                case 4:
                   transportResult.resolve();
-                  _context28.next = 20;
+                  _context26.n = 6;
                   break;
-                case 17:
-                  _context28.prev = 17;
-                  _context28.t0 = _context28["catch"](11);
-                  transportResult.reject(_context28.t0);
-                case 20:
-                  _context28.next = 0;
+                case 5:
+                  _context26.p = 5;
+                  _t21 = _context26.v;
+                  transportResult.reject(_t21);
+                case 6:
+                  _context26.n = 0;
                   break;
-                case 22:
-                case "end":
-                  return _context28.stop();
+                case 7:
+                  return _context26.a(2);
               }
-            }, _callee27, this, [[11, 17]]);
+            }, _callee25, this, [[3, 5]]);
           }));
           function _sendLoop() {
             return _sendLoop2.apply(this, arguments);
@@ -4432,11 +4393,11 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
     }();
     var PromiseSource = /*#__PURE__*/function () {
       function PromiseSource() {
-        var _this32 = this;
+        var _this30 = this;
         _classCallCheck(this, PromiseSource);
         this.promise = new Promise(function (resolve, reject) {
           var _ref4;
-          return _ref4 = [resolve, reject], _this32._resolver = _ref4[0], _this32._rejecter = _ref4[1], _ref4;
+          return _ref4 = [resolve, reject], _this30._resolver = _ref4[0], _this30._rejecter = _ref4[1], _ref4;
         });
       }
       return _createClass(PromiseSource, [{
@@ -4488,11 +4449,11 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
           // Parse the messages
           var messages = TextMessageFormat.parse(input);
           var hubMessages = [];
-          var _iterator10 = _createForOfIteratorHelper(messages),
-            _step10;
+          var _iterator0 = _createForOfIteratorHelper(messages),
+            _step0;
           try {
-            for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
-              var message = _step10.value;
+            for (_iterator0.s(); !(_step0 = _iterator0.n()).done;) {
+              var message = _step0.value;
               var parsedMessage = JSON.parse(message);
               if (typeof parsedMessage.type !== "number") {
                 throw new Error("Invalid payload.");
@@ -4527,9 +4488,9 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
               hubMessages.push(parsedMessage);
             }
           } catch (err) {
-            _iterator10.e(err);
+            _iterator0.e(err);
           } finally {
-            _iterator10.f();
+            _iterator0.f();
           }
           return hubMessages;
         }
