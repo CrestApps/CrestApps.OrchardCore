@@ -6,6 +6,7 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Extensions.Features;
+using OrchardCore.Recipes.Services;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Core.Schemas;
@@ -74,6 +75,14 @@ public sealed class BuiltInRecipeStepTests
         if (stepType == typeof(ContentRecipeStep))
         {
             return new ContentRecipeStep(CreateContentDefinitionManager());
+        }
+
+        if (stepType == typeof(RecipesRecipeStep))
+        {
+            var recipeHarvester = new Mock<IRecipeHarvester>();
+            recipeHarvester.Setup(h => h.HarvestRecipesAsync()).ReturnsAsync([]);
+
+            return new RecipesRecipeStep([recipeHarvester.Object], CreateShellFeaturesManager());
         }
 
         if (stepType == typeof(RolesRecipeStep))
