@@ -4,6 +4,8 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using OrchardCore.Security.Permissions;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Extensions.Features;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Core.Schemas;
@@ -12,6 +14,24 @@ public sealed class BuiltInRecipeStepTests
 {
     private static readonly string[] _testFeatureIds = ["OrchardCore.Contents", "OrchardCore.Media", "OrchardCore.Workflows"];
     private static readonly string[] _testThemeIds = ["TheAdmin", "TheTheme", "SafeMode"];
+
+    private static IShellFeaturesManager CreateShellFeaturesManager()
+    {
+        var features = _testFeatureIds
+            .Select(id =>
+            {
+                var featureInfo = new Mock<IFeatureInfo>();
+                featureInfo.SetupGet(f => f.Id).Returns(id);
+                return featureInfo.Object;
+            })
+            .ToArray();
+
+        var manager = new Mock<IShellFeaturesManager>();
+        manager.Setup(m => m.GetAvailableFeaturesAsync())
+            .ReturnsAsync(features);
+
+        return manager.Object;
+    }
 
     private sealed class StubFeatureSchemaProvider : IFeatureSchemaProvider
     {
@@ -43,7 +63,7 @@ public sealed class BuiltInRecipeStepTests
     {
         if (stepType == typeof(FeatureRecipeStep))
         {
-            return new FeatureRecipeStep(new StubFeatureSchemaProvider());
+            return new FeatureRecipeStep(CreateShellFeaturesManager());
         }
 
         if (stepType == typeof(ThemesRecipeStep))
@@ -207,7 +227,7 @@ public sealed class BuiltInRecipeStepTests
     [Fact]
     public async Task FeatureRecipeStep_SchemaContainsEnableDisableAndFeatureEnums()
     {
-        var step = new FeatureRecipeStep(new StubFeatureSchemaProvider());
+        var step = new FeatureRecipeStep(CreateShellFeaturesManager());
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
         Assert.Contains("\"enable\"", json);
         Assert.Contains("\"disable\"", json);

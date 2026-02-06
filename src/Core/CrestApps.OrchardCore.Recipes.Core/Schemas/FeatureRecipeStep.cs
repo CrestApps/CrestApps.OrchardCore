@@ -1,3 +1,5 @@
+using OrchardCore.Environment.Shell;
+
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
 /// <summary>
@@ -5,13 +7,13 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 /// </summary>
 public sealed class FeatureRecipeStep : IRecipeStep
 {
-    private readonly IFeatureSchemaProvider _featureProvider;
+    private readonly IShellFeaturesManager _shellFeaturesManager;
     private JsonSchema _cached;
     public string Name => "feature";
 
-    public FeatureRecipeStep(IFeatureSchemaProvider featureProvider)
+    public FeatureRecipeStep(IShellFeaturesManager shellFeaturesManager)
     {
-        _featureProvider = featureProvider;
+        _shellFeaturesManager = shellFeaturesManager;
     }
 
     public async ValueTask<JsonSchema> GetSchemaAsync()
@@ -21,11 +23,11 @@ public sealed class FeatureRecipeStep : IRecipeStep
             return _cached;
         }
 
-        var featureIds = await _featureProvider.GetFeatureIdsAsync();
+        var features = await _shellFeaturesManager.GetAvailableFeaturesAsync();
 
         var featureItemSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.String)
-            .Enum(featureIds);
+            .Enum(features.Select(f => f.Id));
 
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)

@@ -56,6 +56,20 @@ public sealed class RecipesStartup : StartupBase
             o.Category = S["Recipes"];
         });
 
+        services.AddAITool<GetRecipeJsonSchemaTool>(GetRecipeJsonSchemaTool.TheName, (o) =>
+        {
+            o.Title = S["Get Orchard Core Recipe JSON Schema"];
+            o.Description = S["Returns a JSON Schema definition for Orchard Core recipes or a specific recipe step."];
+            o.Category = S["Recipes"];
+        });
+
+        services.AddAITool<ListRecipeStepsAndSchemasTool>(ListRecipeStepsAndSchemasTool.TheName, (o) =>
+        {
+            o.Title = S["List Orchard Core Recipe Steps and Schemas"];
+            o.Description = S["Lists all available Orchard Core recipe steps and returns their JSON schema definitions."];
+            o.Category = S["Recipes"];
+        });
+
         services.AddAITool<ImportOrchardTool>(ImportOrchardTool.TheName, (o) =>
         {
             o.Title = S["Import Orchard Core Recipe"];
