@@ -103,7 +103,7 @@ public sealed class ContactMethodMigrations : DataMigration
         await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.EmailAddress, type => type
             .Creatable()
             .Stereotype(OmnichannelConstants.Sterotypes.ContactMethod)
-            .DisplayedAs("Email Address")
+            .WithDisplayName("Email Address")
             .WithPart("TitlePart", part => part
                 .WithPosition("1")
                 .WithSettings(new TitlePartSettings()
@@ -118,7 +118,7 @@ public sealed class ContactMethodMigrations : DataMigration
         );
 
         await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.PhoneNumber, type => type
-            .DisplayedAs("Phone Number")
+            .WithDisplayName("Phone Number")
             .Creatable()
             .Stereotype(OmnichannelConstants.Sterotypes.ContactMethod)
             .WithPart<TitlePart>(part => part
