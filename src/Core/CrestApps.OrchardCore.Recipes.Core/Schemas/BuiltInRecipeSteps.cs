@@ -68,15 +68,14 @@ public sealed class ThemesRecipeStep : IRecipeStep
         }
 
         var themeIds = await _featureProvider.GetThemeIdsAsync();
-        var themeItemSchema = new JsonSchemaBuilder()
-            .Type(SchemaValueType.String)
-            .Enum(themeIds);
 
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("themes")),
-                ("site", themeItemSchema
+                ("site", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .Enum(themeIds)
                     .Description("The theme ID to use for the front-end site.")),
                 ("admin", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
@@ -207,17 +206,37 @@ public sealed class MediaProfilesRecipeStep : IRecipeStep
     }
 
     private static JsonSchema CreateSchema()
-        => new JsonSchemaBuilder()
+    {
+        var profileItemSchema = new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Hint", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                ("Width", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
+                ("Height", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
+                ("Mode", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .Enum(MediaProfileEnums.ResizeModes)
+                    .Description("The image resize mode.")),
+                ("Format", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .Enum(MediaProfileEnums.OutputFormats)
+                    .Description("The output image format.")),
+                ("Quality", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
+                ("BackgroundColor", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+            .AdditionalProperties(true);
+
+        return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("MediaProfiles")),
                 ("MediaProfiles", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .AdditionalProperties(true)
-                    .Description("A dictionary keyed by profile name. Each value is a profile object with Hint, Width, Height, Mode, Format, Quality, BackgroundColor.")))
+                    .Description("A dictionary keyed by profile name. Each value is a media profile object.")))
             .Required("name", "MediaProfiles")
             .AdditionalProperties(true)
             .Build();
+    }
 }
 
 /// <summary>
