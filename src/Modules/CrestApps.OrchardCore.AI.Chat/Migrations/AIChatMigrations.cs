@@ -27,7 +27,7 @@ internal sealed class AIChatMigrations : DataMigration
             .Securable(false)
             .Creatable(false)
             .Versionable(false)
-            .DisplayedAs("Artificial Intelligence Chat")
+            .WithDisplayName("Artificial Intelligence Chat")
             .WithDescription("A widget to add a Artificial Intelligence Chat.")
             .WithPart("AIProfilePart")
             .Stereotype("Widget")
