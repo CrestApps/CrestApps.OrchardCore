@@ -53,4 +53,24 @@ public abstract class PartSettingsSchemaBase : IContentDefinitionSchemaDefinitio
             .Properties((settingsKey, innerSettings))
             .AdditionalProperties(true)
             .Build();
+
+    protected static JsonSchemaBuilder BoolProp()
+        => new JsonSchemaBuilder().Type(SchemaValueType.Boolean);
+
+    protected static JsonSchemaBuilder StringArray()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder().Type(SchemaValueType.String));
+
+    protected static (string, JsonSchemaBuilder) Prop(string name, JsonSchemaBuilder schema)
+        => (name, schema);
+
+    /// <summary>
+    /// Builds a settings-object with <c>additionalProperties: false</c>.
+    /// </summary>
+    protected static JsonSchemaBuilder Obj(params (string, JsonSchemaBuilder)[] props)
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(props)
+            .AdditionalProperties(false);
 }

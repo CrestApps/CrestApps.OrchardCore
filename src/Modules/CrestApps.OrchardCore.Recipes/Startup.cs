@@ -16,7 +16,7 @@ public sealed class Startup : StartupBase
 }
 
 [RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class RecipeCoreStartup : StartupBase
+public sealed class SettingsRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {

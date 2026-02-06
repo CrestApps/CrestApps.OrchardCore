@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Agent.ContentTypes;
 using CrestApps.OrchardCore.AI.Agent.Features;
 using CrestApps.OrchardCore.AI.Agent.Recipes;
 using CrestApps.OrchardCore.AI.Agent.Roles;
+using CrestApps.OrchardCore.AI.Agent.Services;
 using CrestApps.OrchardCore.AI.Agent.System;
 using CrestApps.OrchardCore.AI.Agent.Tenants;
 using CrestApps.OrchardCore.AI.Agent.Users;

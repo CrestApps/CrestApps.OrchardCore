@@ -165,28 +165,3 @@ public sealed class AuditTrailPartSchema : PartSettingsSchemaBase
                 .Default(true)
                 .Description("Show the comment input field."))));
 }
-
-// ── Shared tiny helpers so the definitions above stay terse ──
-
-file static class Dsl
-{
-    public static JsonSchemaBuilder BoolProp()
-        => new JsonSchemaBuilder().Type(SchemaValueType.Boolean);
-
-    public static JsonSchemaBuilder StringArray()
-        => new JsonSchemaBuilder()
-            .Type(SchemaValueType.Array)
-            .Items(new JsonSchemaBuilder().Type(SchemaValueType.String));
-
-    public static (string, JsonSchemaBuilder) Prop(string name, JsonSchemaBuilder schema)
-        => (name, schema);
-
-    /// <summary>
-    /// Builds a settings-object builder with <c>additionalProperties: false</c>.
-    /// </summary>
-    public static JsonSchemaBuilder Obj(params (string, JsonSchemaBuilder)[] props)
-        => new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(props)
-            .AdditionalProperties(false);
-}

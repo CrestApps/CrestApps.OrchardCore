@@ -1,6 +1,4 @@
-using CrestApps.OrchardCore.Recipes.Core.Schemas;
-
-namespace CrestApps.OrchardCore.Recipes.Core.Services;
+namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
 /// <summary>
 /// Schema for the "ContentDefinition" recipe step.
