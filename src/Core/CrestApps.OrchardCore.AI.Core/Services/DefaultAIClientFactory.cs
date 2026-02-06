@@ -81,27 +81,19 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
         ArgumentException.ThrowIfNullOrEmpty(connectionName);
 
         if (!_options.Providers.TryGetValue(providerName, out var provider))
-        {
             throw new ArgumentException($"Provider '{providerName}' not found.");
         }
 
         if (!provider.Connections.TryGetValue(connectionName, out var connection))
-        {
             throw new ArgumentException($"Connection '{connectionName}' not found with in the provider '{providerName}'.");
-        }
 
         foreach (var clientProvider in _clientProviders)
-        {
             if (!clientProvider.CanHandle(providerName))
-            {
                 continue;
-            }
 
             return clientProvider.GetSpeechToTextClientAsync(connection, deploymentName);
-        }
 
         throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{providerName}'.");
-    }
 
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     public ValueTask<IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null)

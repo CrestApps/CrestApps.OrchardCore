@@ -24,6 +24,7 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory,
         ILogger<AzureOpenAIClientProvider> logger)
+        ILoggerFactory loggerFactory)
         : base(serviceProvider)
     {
         _loggerFactory = loggerFactory;
@@ -60,14 +61,12 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
         var subscriptionKey = connection.GetStringValue("SpeechAPIKey");
 
         if (string.IsNullOrEmpty(region) || string.IsNullOrEmpty(subscriptionKey))
-        {
             throw new InvalidOperationException(
                 "Azure Speech-to-Text requires 'SpeechRegion' and 'SpeechAPIKey' to be configured in the connection. " +
                 "These are separate from Azure OpenAI settings and use the Azure Cognitive Services Speech service.");
         }
 
         return new AzureSpeechToTextClient(region, subscriptionKey, _logger);
-    }
 
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     protected override IImageGenerator GetImageGenerator(AIProviderConnectionEntry connection, string deploymentName)

@@ -46,6 +46,7 @@ public interface IAIClientProvider
     /// <param name="connection">The connection entry containing provider configuration.</param>
     /// <param name="deploymentName">The optional deployment name to use.</param>
     /// <returns>A <see cref="ValueTask{IImageGenerator}"/> representing the asynchronous operation.</returns>
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     ValueTask<IImageGenerator> GetImageGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null);
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 }

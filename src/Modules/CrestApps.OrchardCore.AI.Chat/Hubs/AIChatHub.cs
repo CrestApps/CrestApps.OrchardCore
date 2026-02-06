@@ -580,12 +580,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         // Handle explicit HttpRequestException with known status codes.
         if (ex is HttpRequestException httpEx)
-        {
             // Some HttpRequestExceptions don't have StatusCode populated (e.g., socket errors)
             if (httpEx.StatusCode is { } code)
-            {
                 return code switch
-                {
                     System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden
                       => S["Authentication failed. Please check your API credentials."],
 
@@ -607,7 +604,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             // If no status code, it might be a network or DNS-level failure.
             return S["Unable to reach the provider. Please check your connection or endpoint URL."];
-        }
 
         var message = ex.Message ?? string.Empty;
 
@@ -617,47 +613,33 @@ public class AIChatHub : Hub<IAIChatHubClient>
         message.Contains("unauthorized", StringComparison.OrdinalIgnoreCase) ||
         message.Contains("invalid api key", StringComparison.OrdinalIgnoreCase) ||
         ex.GetType().Name.Contains("Authentication", StringComparison.OrdinalIgnoreCase))
-        {
             return S["Authentication failed. Please check your API credentials."];
-        }
 
         // Bad request / invalid parameters
         if (message.Contains("bad request", StringComparison.OrdinalIgnoreCase) ||
             message.Contains("invalid request", StringComparison.OrdinalIgnoreCase))
-        {
             return S["Invalid request. Please verify your profile configuration or parameters."];
-        }
 
         // Not found errors.
         if (message.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
             message.Contains("endpoint not found", StringComparison.OrdinalIgnoreCase))
-        {
             return S["The provider endpoint could not be found. Please verify the API URL."];
-        }
 
         // Rate limit / too many requests.
         if (message.Contains("too many requests", StringComparison.OrdinalIgnoreCase) ||
             message.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
-        {
             return S["Rate limit reached. Please wait and try again later."];
-        }
 
         // Connectivity / timeout issues.
         if (ex is TimeoutException || ex is TaskCanceledException)
-        {
             return S["The request timed out. Please try again later."];
-        }
 
         if (ex.InnerException is System.Net.Sockets.SocketException ||
             message.Contains("connection refused", StringComparison.OrdinalIgnoreCase) ||
             message.Contains("name or service not known", StringComparison.OrdinalIgnoreCase))
-        {
-            return S["Unable to reach the provider. Please check your connection or endpoint URL."];
-        }
 
         // Fallback generic error.
         return S["Our service is currently unavailable. Please try again later."];
-    }
 
     private async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, string userPrompt)
     {
