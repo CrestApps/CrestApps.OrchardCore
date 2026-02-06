@@ -11,7 +11,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<RecipeExecutionService>();
-        services.AddScoped<RecipeStepsService>();
+        services.AddScoped<RecipeSchemaService>();
     }
 }
 

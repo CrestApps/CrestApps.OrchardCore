@@ -6,8 +6,10 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
+    <PackageVersion Include="FluentFTP" Version="52.1.0" />
     <PackageVersion Include="NuGet.Versioning" Version="7.0.1" />
     <PackageVersion Include="OllamaSharp" Version="5.4.16" />
+    <PackageVersion Include="SSH.NET" Version="2024.2.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.4.7" />
     <PackageVersion Include="YesSql.Core" Version="5.4.7" />
     <PackageVersion Include="ModelContextProtocol" Version="0.7.0-preview.1" />
@@ -42,6 +44,7 @@
     <PackageVersion Include="OrchardCore.Liquid.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Logging.NLog" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Media" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Media.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Module.Targets" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Navigation.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Notifications.Core" Version="$(OrchardCoreVersion)" />

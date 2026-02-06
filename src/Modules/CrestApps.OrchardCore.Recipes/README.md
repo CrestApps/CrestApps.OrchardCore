@@ -62,7 +62,7 @@ services.AddScoped<IRecipeStep, SettingsSchemaStep>();
 
 ## Using Recipe Steps
 
-* **Retrieve available recipe steps:** Use the `RecipeStepsService` to get a list of all registered recipe step names.
+* **Retrieve available recipe steps:** Use the `RecipeSchemaService` to get a list of all registered recipe step names.
 * **Validate and execute recipes:** Use the `RecipeExecutionService` alongside the step schemas to validate a recipe payload before importing.
 
 ## How schemas stay accurate

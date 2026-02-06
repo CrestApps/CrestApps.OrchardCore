@@ -63,14 +63,14 @@ public abstract class ImportRecipeBaseTool : AIFunction
         ArgumentNullException.ThrowIfNull(services, nameof(services));
 
         var recipeExecutionService = services.GetRequiredService<RecipeExecutionService>();
-        var recipeStepsService = services.GetRequiredService<RecipeStepsService>();
+        var recipeSchemaService = services.GetRequiredService<RecipeSchemaService>();
         var recipeSteps = services.GetRequiredService<IEnumerable<IRecipeStep>>();
 
         var data = JsonSerializer.Deserialize<JsonObject>(json, RecipeSerializerOptions);
 
         var stepSchemas = new Dictionary<string, JsonSchema>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var stepName in recipeStepsService.GetRecipeStepNames())
+        foreach (var stepName in recipeSchemaService.GetStepNames())
         {
             if (stepSchemas.ContainsKey(stepName))
             {

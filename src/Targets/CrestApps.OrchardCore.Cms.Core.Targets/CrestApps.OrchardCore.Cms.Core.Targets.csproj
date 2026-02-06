@@ -18,10 +18,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\..\.editorconfig" Link=".editorconfig" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Agent\CrestApps.OrchardCore.AI.Agent.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions\CrestApps.OrchardCore.AI.Chat.Interactions.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Documents\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.csproj" PrivateAssets="none" />
@@ -31,6 +27,8 @@
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml\CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat\CrestApps.OrchardCore.AI.Chat.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Mcp\CrestApps.OrchardCore.AI.Mcp.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Mcp.Resources.Ftp\CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Mcp.Resources.Sftp\CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AzureAIInference\CrestApps.OrchardCore.AzureAIInference.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.ContentAccessControl\CrestApps.OrchardCore.ContentAccessControl.csproj" PrivateAssets="none" />

@@ -24,7 +24,7 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = McpConstants.Feature.Stdio,
-    Name = "Model Context Protocol (Local MCP) Client",
+    Name = "Model Context Protocol (MCP) Local Client",
     Description = "Extends the Model Context Protocol Client with standard input/output (STDIO) transport for connecting to local MCP servers.",
     Category = "Artificial Intelligence",
     Dependencies =

@@ -17,12 +17,16 @@ internal sealed class McpPromptsAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Artificial Intelligence"], ai => ai
-                .Add(S["MCP Prompts"], S["MCP Prompts"].PrefixPosition(), prompts => prompts
-                    .AddClass("ai-mcp-prompts")
-                    .Id("aiMcpPrompts")
-                    .Action("Index", "Prompts", "CrestApps.OrchardCore.AI.Mcp")
-                    .Permission(McpPermissions.ManageMcpPrompts)
-                    .LocalNav()
+                .Add(S["Model Context Protocol"], S["Model Context Protocol"].PrefixPosition(), mcp => mcp
+                    .AddClass("ai-mcp")
+                    .Id("aiMcp")
+                    .Add(S["Prompts"], S["Prompts"].PrefixPosition(), prompts => prompts
+                        .AddClass("ai-mcp-prompts")
+                        .Id("aiMcpPrompts")
+                        .Action("Index", "Prompts", "CrestApps.OrchardCore.AI.Mcp")
+                        .Permission(McpPermissions.ManageMcpPrompts)
+                        .LocalNav()
+                    )
                 )
             );
 

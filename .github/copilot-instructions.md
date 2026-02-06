@@ -136,6 +136,7 @@ tests/
 2. Add module project file following existing patterns
 3. Include `Manifest.cs` with module definition
 4. Add module reference to appropriate target package
+5. **Update Targets**: Add a reference to the new module in the targets project `src/Targets/CrestApps.OrchardCore.Cms.Core.Targets/CrestApps.OrchardCore.Cms.Core.Targets.targets` so it is discoverable by Orchard Core.
 
 ### Working with AI Modules
 - **Base AI Module**: `CrestApps.OrchardCore.AI` - start here for AI-related changes

@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.AI.Mcp.Core.Models
+@using Microsoft.Extensions.Options
+
+@inject IOptions<McpOptions> Options
+@{
+    string source = Model.Source;
+
+    if (!Options.Value.ResourceTypes.TryGetValue(source, out var entry))
+    {
+        return;
+    }
+}
+
+<div class="col">
+    <div class="card h-100">
+        <div class="card-body">
+            <h4>@(entry.DisplayName)</h4>
+            <p class="hint">@(entry.Description)</p>
+
+        </div>
+
+        <div class="card-footer text-muted text-sm-end">
+            <a class="btn btn-primary btn-sm"
+               asp-route-action="Create"
+               asp-route-controller="Resources"
+               asp-route-source="@entry.Type">@T["Add"]</a>
+        </div>
+
+    </div>
+</div>

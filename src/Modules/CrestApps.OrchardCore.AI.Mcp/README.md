@@ -150,6 +150,149 @@ The **Model Context Protocol (MCP) Server Feature** allows your Orchard Core app
 
 The MCP server also exposes MCP prompts registered in Orchard Core, so clients can list and invoke prompts via `ListPrompts` and `GetPrompt`.
 
+#### Resource Support
+
+The MCP server exposes MCP resources registered in Orchard Core, allowing clients to access various data sources through the MCP protocol. See [MCP Resources](#mcp-resources) for details.
+
+---
+
+## MCP Resources
+
+MCP Resources allow you to expose various data sources through the MCP protocol. Resources are type-based, with each type having its own handler that knows how to read and process the resource content.
+
+### Built-in Resource Types
+
+| Type | URI Pattern | Description |
+|------|-------------|-------------|
+| **File** | `file://{itemId}/{path}` | Local file system access |
+| **Content** | `content://{itemId}/...` | Orchard Core content items |
+| **Recipe Schema** | `recipe-schema://{itemId}/...` | JSON schema definitions |
+| **FTP/FTPS** | `ftp://{itemId}/{path}` | Remote files via FTP (separate module) |
+| **SFTP** | `sftp://{itemId}/{path}` | Remote files via SSH (separate module) |
+
+### Creating Resources via Admin UI
+
+1. Navigate to **Artificial Intelligence** → **MCP Resources**
+2. Click **Add Resource**
+3. Select a resource type (e.g., File, Content, FTP)
+4. Fill in the required fields:
+   - **Display Text**: A friendly name for the resource
+   - **URI**: The resource URI following the type's pattern
+   - **Name**: The MCP resource name (used by clients)
+   - **Title**: Optional human-readable title
+   - **Description**: Optional description
+   - **MIME Type**: Content type of the resource
+5. Configure type-specific settings (e.g., FTP connection details)
+6. Save the resource
+
+### Content Resource Strategies
+
+The Content resource type supports multiple URI patterns through the strategy provider pattern:
+
+| Pattern | Description |
+|---------|-------------|
+| `content://{itemId}/id/{contentItemId}` | Get a specific content item by ID |
+| `content://{itemId}/{contentType}/list` | List all content items of a type |
+| `content://{itemId}/{contentType}/{contentItemId}` | Get content item by type and ID |
+
+#### Extending Content Resources
+
+You can add custom content resource strategies by implementing `IContentResourceStrategyProvider`:
+
+```csharp
+public class SearchContentResourceStrategy : IContentResourceStrategyProvider
+{
+    public string[] UriPatterns => ["content://{itemId}/{contentType}/search"];
+    
+    public bool CanHandle(Uri uri)
+    {
+        // Check if URI matches your pattern
+        return uri.Segments.Length >= 4 && 
+               uri.Segments[^1].TrimEnd('/') == "search";
+    }
+    
+    public async Task<ReadResourceResult> ReadAsync(
+        McpResource resource, 
+        Uri uri, 
+        CancellationToken cancellationToken)
+    {
+        // Implement your search logic
+    }
+}
+```
+
+Register your strategy in `Startup.cs`:
+
+```csharp
+services.AddContentResourceStrategy<SearchContentResourceStrategy>();
+```
+
+The strategy's URI patterns are automatically added to the Content resource type's displayed patterns in the UI.
+
+### Registering Custom Resource Types
+
+You can register custom resource types with their handlers:
+
+```csharp
+services.AddMcpResourceType<DatabaseResourceTypeHandler>("database", entry =>
+{
+    entry.DisplayName = S["Database"];
+    entry.Description = S["Query data from databases."];
+    entry.UriPatterns = ["db://{itemId}/{table}/{id}"];
+});
+```
+
+Implement the handler:
+
+```csharp
+public class DatabaseResourceTypeHandler : IMcpResourceTypeHandler
+{
+    public string Type => "database";
+    
+    public async Task<ReadResourceResult> ReadAsync(
+        McpResource resource, 
+        CancellationToken cancellationToken)
+    {
+        var uri = new Uri(resource.Resource.Uri);
+        // Parse URI and query database
+        // Return ReadResourceResult with content
+    }
+}
+```
+
+### Resource Type Modules
+
+Additional resource type handlers are available as separate modules:
+
+- **[FTP/FTPS](../CrestApps.OrchardCore.AI.Mcp.Resources.Ftp/README.md)** - Access files on FTP servers
+- **[SFTP](../CrestApps.OrchardCore.AI.Mcp.Resources.Sftp/README.md)** - Access files via SSH/SFTP
+
+### Recipe Support
+
+Resources can be exported and imported via recipes:
+
+```json
+{
+  "steps": [
+    {
+      "name": "McpResource",
+      "Resources": [
+        {
+          "Source": "file",
+          "DisplayText": "Configuration File",
+          "Resource": {
+            "Uri": "file://abc123/etc/config.json",
+            "Name": "config-file",
+            "Description": "Application configuration",
+            "MimeType": "application/json"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
 ---
 
 ### Admin Chat UI with Time MCP Server Integration (MCP Demonstration)

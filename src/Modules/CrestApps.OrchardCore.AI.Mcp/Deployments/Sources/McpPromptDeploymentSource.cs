@@ -9,9 +9,9 @@ namespace CrestApps.OrchardCore.AI.Mcp.Deployments.Sources;
 
 internal sealed class McpPromptDeploymentSource : DeploymentSourceBase<McpPromptDeploymentStep>
 {
-    private readonly ICatalog<McpPrompt> _store;
+    private readonly INamedCatalog<McpPrompt> _store;
 
-    public McpPromptDeploymentSource(ICatalog<McpPrompt> store)
+    public McpPromptDeploymentSource(INamedCatalog<McpPrompt> store)
     {
         _store = store;
     }

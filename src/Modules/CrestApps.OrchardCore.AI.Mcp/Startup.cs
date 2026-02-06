@@ -116,6 +116,13 @@ public sealed class McpServerStartup : StartupBase
 {
     private const string McpServerPolicyName = "McpServerPolicy";
 
+    internal readonly IStringLocalizer S;
+
+    public McpServerStartup(IStringLocalizer<McpServerStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddTransient<IConfigureOptions<McpServerOptions>, McpServerOptionsConfiguration>();
@@ -133,6 +140,19 @@ public sealed class McpServerStartup : StartupBase
         services.AddNavigationProvider<McpPromptsAdminMenu>()
             .AddScoped<ICatalogEntryHandler<McpPrompt>, McpPromptHandler>()
             .AddDisplayDriver<McpPrompt, McpPromptDisplayDriver>();
+
+        // Register MCP Resource services.
+        services.AddNavigationProvider<McpResourcesAdminMenu>()
+            .AddScoped<ICatalogEntryHandler<McpResource>, McpResourceHandler>()
+            .AddDisplayDriver<McpResource, McpResourceDisplayDriver>();
+
+        // Register built-in File resource type handler.
+        services.AddMcpResourceType<FileResourceTypeHandler>(FileResourceTypeHandler.TypeName, entry =>
+        {
+            entry.DisplayName = S["File"];
+            entry.Description = S["Reads content from local files."];
+            entry.UriPatterns = ["filesystem/{path}"];
+        });
 
         services.AddMcpServer(options =>
         {
@@ -239,6 +259,52 @@ public sealed class McpServerStartup : StartupBase
                 Description = entry.Prompt.Description,
                 Messages = [],
             };
+        })
+        .WithListResourcesHandler(async (request, cancellationToken) =>
+        {
+            var manager = request.Services.GetRequiredService<ISourceCatalogManager<McpResource>>();
+            var entries = await manager.GetAllAsync();
+
+            var result = new ListResourcesResult
+            {
+                Resources = entries
+                    .Where(e => e.Resource != null)
+                    .Select(e => e.Resource)
+                    .ToList()
+            };
+
+            return result;
+        })
+        .WithReadResourceHandler(async (request, cancellationToken) =>
+        {
+            // Parse the URI: {scheme}://{itemId}/{path}
+            if (!McpResourceUri.TryParse(request.Params.Uri, out var resourceUri))
+            {
+                throw new McpException($"Invalid URI format: '{request.Params.Uri}'.");
+            }
+
+            if (string.IsNullOrEmpty(resourceUri.ItemId))
+            {
+                throw new McpException($"Resource URI '{request.Params.Uri}' does not contain a valid ItemId.");
+            }
+
+            var manager = request.Services.GetRequiredService<ISourceCatalogManager<McpResource>>();
+            var entry = await manager.FindByIdAsync(resourceUri.ItemId);
+
+            if (entry?.Resource is null)
+            {
+                throw new McpException($"Resource '{request.Params.Uri}' not found.");
+            }
+
+            // Get the appropriate type handler for this resource using keyed services
+            var handler = request.Services.GetKeyedService<IMcpResourceTypeHandler>(entry.Source);
+
+            if (handler is null)
+            {
+                throw new McpException($"No handler found for resource type '{entry.Source}'.");
+            }
+
+            return await handler.ReadAsync(entry, resourceUri, cancellationToken);
         });
 
         // Configure authorization policy.
@@ -285,5 +351,106 @@ public sealed class McpPromptDeploymentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<McpPromptDeploymentSource, McpPromptDeploymentStep, McpPromptDeploymentStepDisplayDriver>();
+    }
+}
+
+[Feature(McpConstants.Feature.Server)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class McpResourceRecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<McpResourceStep>();
+    }
+}
+
+[Feature(McpConstants.Feature.Server)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class McpResourceDeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<McpResourceDeploymentSource, McpResourceDeploymentStep, McpResourceDeploymentStepDisplayDriver>();
+    }
+}
+
+[Feature(McpConstants.Feature.Server)]
+[RequireFeatures("OrchardCore.ContentManagement")]
+public sealed class McpContentResourceStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public McpContentResourceStartup(IStringLocalizer<McpContentResourceStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Register the content resource strategy providers for extensibility.
+        services.AddScoped<IContentResourceStrategyProvider, ContentByIdResourceStrategy>();
+        services.AddScoped<IContentResourceStrategyProvider, ContentByTypeResourceStrategy>();
+
+        services.AddMcpResourceType<ContentResourceTypeHandler>(ContentResourceTypeHandler.TypeName, entry =>
+        {
+            entry.DisplayName = S["Content"];
+            entry.Description = S["Reads content items from Orchard Core."];
+            // Patterns are dynamically aggregated from registered IContentResourceStrategyProvider implementations.
+            entry.UriPatterns =
+            [
+                "id/{contentItemId}",
+                "{contentType}/{contentItemId}",
+                "{contentType}/list",
+            ];
+        });
+    }
+}
+
+[Feature(McpConstants.Feature.Server)]
+[RequireFeatures("CrestApps.OrchardCore.Recipes")]
+public sealed class McpRecipeSchemaResourceStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public McpRecipeSchemaResourceStartup(IStringLocalizer<McpRecipeSchemaResourceStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddMcpResourceType<RecipeSchemaResourceTypeHandler>(RecipeSchemaResourceTypeHandler.TypeName, entry =>
+        {
+            entry.DisplayName = S["Recipe Schema"];
+            entry.Description = S["Provides JSON schema definitions for recipe steps."];
+            entry.UriPatterns =
+            [
+                "recipe",
+                "recipe/{recipe-name}",
+                "step/{step-name}"
+            ];
+        });
+    }
+}
+
+[Feature(McpConstants.Feature.Server)]
+[RequireFeatures("OrchardCore.Media")]
+public sealed class McpMediaResourceStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public McpMediaResourceStartup(IStringLocalizer<McpMediaResourceStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddMcpResourceType<MediaResourceTypeHandler>(MediaResourceTypeHandler.TypeName, entry =>
+        {
+            entry.DisplayName = S["Media"];
+            entry.Description = S["Reads files from Orchard Core's media store."];
+            entry.UriPatterns = ["{path}"];
+        });
     }
 }

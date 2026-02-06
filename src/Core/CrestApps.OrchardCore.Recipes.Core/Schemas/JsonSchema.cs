@@ -25,6 +25,9 @@ public sealed class JsonSchema
     public EvaluationResult Evaluate(JsonNode document, EvaluationOptions options = null)
         => new(RunChecks(RawKeywords, document));
 
+    public override string ToString()
+        => RawKeywords?.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) ?? "{}";
+
     // ── Constraint pipeline ─────────────────────────────────
     // Each method returns true when the constraint is satisfied (or absent).
 
