@@ -31,6 +31,12 @@ public sealed class LayersRecipeStep : IRecipeStep
                                 .Description("A JavaScript rule expression, e.g. isHomepage().")),
                             ("LayerRule", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Object)
+                                .Properties(
+                                    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                                    ("ConditionId", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                                    ("Conditions", new JsonSchemaBuilder()
+                                        .Type(SchemaValueType.Array)
+                                        .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))))
                                 .AdditionalProperties(true)
                                 .Description("Structured layer rule object.")))
                         .Required("Name")

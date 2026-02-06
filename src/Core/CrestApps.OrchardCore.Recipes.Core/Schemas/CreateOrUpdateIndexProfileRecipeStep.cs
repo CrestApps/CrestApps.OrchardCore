@@ -24,9 +24,10 @@ public sealed class CreateOrUpdateIndexProfileRecipeStep : IRecipeStep
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
+                            ("Id", new JsonSchemaBuilder().Type(SchemaValueType.String)),
                             ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String)))
-                        .Required("Name", "ProviderName")
+                            ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String)))
                         .AdditionalProperties(true))))
             .Required("name", "Indexes")
             .AdditionalProperties(true)

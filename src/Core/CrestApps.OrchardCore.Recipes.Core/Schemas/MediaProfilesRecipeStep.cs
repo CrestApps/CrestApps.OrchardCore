@@ -40,9 +40,8 @@ public sealed class MediaProfilesRecipeStep : IRecipeStep
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("MediaProfiles")),
                 ("MediaProfiles", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
-                    .AdditionalProperties(true)
-                    .Description("A dictionary keyed by profile name. Each value is a media profile object.")
-                    .Items(profileItemSchema)))
+                    .AdditionalProperties(profileItemSchema)
+                    .Description("A dictionary keyed by profile name. Each value is a media profile object.")))
             .Required("name", "MediaProfiles")
             .AdditionalProperties(true)
             .Build();

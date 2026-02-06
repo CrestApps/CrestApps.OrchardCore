@@ -25,9 +25,15 @@ public sealed class DeploymentRecipeStep : IRecipeStep
                         .Type(SchemaValueType.Object)
                         .Properties(
                             ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("DeploymentSteps", new JsonSchemaBuilder()
+                            ("Steps", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Array)
-                                .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))))
+                                .Items(new JsonSchemaBuilder()
+                                    .Type(SchemaValueType.Object)
+                                    .Properties(
+                                        ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                                        ("Step", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true)))
+                                    .Required("Type", "Step")
+                                    .AdditionalProperties(true))))
                         .Required("Name")
                         .AdditionalProperties(true))))
             .Required("name")

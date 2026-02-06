@@ -21,7 +21,21 @@ public sealed class FeatureProfilesRecipeStep : IRecipeStep
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("FeatureProfiles")),
                 ("FeatureProfiles", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
-                    .AdditionalProperties(true)))
+                    .AdditionalProperties(new JsonSchemaBuilder()
+                        .Type(SchemaValueType.Object)
+                        .Properties(
+                            ("Id", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("FeatureRules", new JsonSchemaBuilder()
+                                .Type(SchemaValueType.Array)
+                                .Items(new JsonSchemaBuilder()
+                                    .Type(SchemaValueType.Object)
+                                    .Properties(
+                                        ("Rule", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                                        ("Expression", new JsonSchemaBuilder().Type(SchemaValueType.String)))
+                                    .Required("Rule", "Expression")
+                                    .AdditionalProperties(true))))
+                        .AdditionalProperties(true))))
             .Required("name", "FeatureProfiles")
             .AdditionalProperties(true)
             .Build();

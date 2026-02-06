@@ -110,6 +110,12 @@ public sealed class JsonSchemaBuilder
         return this;
     }
 
+    public JsonSchemaBuilder AdditionalProperties(JsonSchemaBuilder schema)
+    {
+        _bag["additionalProperties"] = schema;
+        return this;
+    }
+
     // ── minProperties ───────────────────────────────────────
 
     public JsonSchemaBuilder MinProperties(int min)
@@ -216,7 +222,7 @@ public sealed class JsonSchemaBuilder
     private static JsonNode Materialise(string keyword, object raw) => keyword switch
     {
         "type" or "description" or "pattern" => JsonValue.Create((string)raw),
-        "additionalProperties" => JsonValue.Create((bool)raw),
+        "additionalProperties" => raw is bool b ? JsonValue.Create(b) : ((JsonSchemaBuilder)raw).Build().RawKeywords.DeepClone(),
         "minProperties" or "minItems" => JsonValue.Create((int)raw),
         "const" or "default" => ((JsonNode)raw).DeepClone(),
 

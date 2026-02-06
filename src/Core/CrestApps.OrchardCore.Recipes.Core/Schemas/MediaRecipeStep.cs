@@ -25,6 +25,9 @@ public sealed class MediaRecipeStep : IRecipeStep
                         .Type(SchemaValueType.Object)
                         .Properties(
                             ("TargetPath", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+                            ("Path", new JsonSchemaBuilder()
+                                .Type(SchemaValueType.String)
+                                .Description("Alias for TargetPath. Path where the content will be written.")),
                             ("SourcePath", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.String)
                                 .Description("Relative path from the recipe file to the source media.")),

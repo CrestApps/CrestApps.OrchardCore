@@ -19,10 +19,11 @@ public sealed class AzureAIIndexResetRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("azureai-index-reset")),
+                ("IncludeAll", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
                 ("Indices", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))))
-            .Required("name", "Indices")
+            .Required("name")
             .AdditionalProperties(true)
             .Build();
 }
