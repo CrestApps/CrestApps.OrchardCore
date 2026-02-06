@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Workflows.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

@@ -192,11 +192,11 @@ window.openAIChatManager = function () {
             role: 'user',
             content: trimmedPrompt
           });
-          this.streamMessage(trimmedPrompt);
+          this.streamMessage(this.getProfileId(), trimmedPrompt, null);
           this.inputElement.value = '';
           this.prompt = '';
         },
-        streamMessage: function streamMessage(trimmedPrompt) {
+        streamMessage: function streamMessage(profileId, trimmedPrompt, sessionProfileId) {
           var _this5 = this;
           if (this.stream) {
             this.stream.dispose();
@@ -210,7 +210,7 @@ window.openAIChatManager = function () {
           // Get the index after showing typing indicator.
           var messageIndex = this.messages.length;
           var currentSessionId = this.getSessionId();
-          this.stream = this.connection.stream("SendMessage", this.getProfileId(), trimmedPrompt, currentSessionId, null).subscribe({
+          this.stream = this.connection.stream("SendMessage", profileId, trimmedPrompt, currentSessionId, sessionProfileId).subscribe({
             next: function next(chunk) {
               var message = _this5.messages[messageIndex];
               if (!message) {
@@ -222,11 +222,15 @@ window.openAIChatManager = function () {
                 messageIndex = _this5.messages.length;
                 var newMessage = {
                   role: "assistant",
+                  title: chunk.title,
                   content: "",
                   htmlContent: ""
                 };
                 _this5.messages.push(newMessage);
                 message = newMessage;
+              }
+              if (chunk.title && (!message.title || message.title !== chunk.title)) {
+                message.title = chunk.title;
               }
               if (chunk.references && _typeof(chunk.references) === "object" && Object.keys(chunk.references).length) {
                 for (var _i3 = 0, _Object$entries3 = Object.entries(chunk.references); _i3 < _Object$entries3.length; _i3++) {
@@ -328,14 +332,16 @@ window.openAIChatManager = function () {
             console.error('The element paramter is required.');
             return;
           }
-          var profileId = element.getAttribute('data-profile-id');
+          var templateProfileId = element.getAttribute('data-profile-id');
           var sessionId = this.getSessionId();
-          if (!profileId || !sessionId) {
+          var sessionProfileId = this.getProfileId();
+          if (!templateProfileId || !sessionId) {
             console.error('The given element is missing data-profile-id or the session has not yet started.');
             return;
           }
-          this.showTypingIndicator();
-          this.streamMessage(null);
+
+          // streamMessage() already shows the typing indicator.
+          this.streamMessage(templateProfileId, null, sessionProfileId);
         },
         createSessionUrl: function createSessionUrl(baseUrl, param, value) {
           var fullUrl = baseUrl.toLowerCase().startsWith('http') ? baseUrl : window.location.origin + baseUrl;
