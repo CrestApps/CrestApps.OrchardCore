@@ -15,7 +15,8 @@ public sealed class DeploymentRecipeStep : IRecipeStep
     }
 
     private static JsonSchema CreateSchema()
-        => new JsonSchemaBuilder()
+    {
+        return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("deployment")),
@@ -39,4 +40,5 @@ public sealed class DeploymentRecipeStep : IRecipeStep
             .Required("name")
             .AdditionalProperties(true)
             .Build();
+    }
 }

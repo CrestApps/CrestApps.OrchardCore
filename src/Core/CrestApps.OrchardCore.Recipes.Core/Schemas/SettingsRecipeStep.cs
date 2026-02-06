@@ -13,11 +13,13 @@ public sealed class SettingsRecipeStep : IRecipeStep
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();
+
         return ValueTask.FromResult(_cached);
     }
 
     private static JsonSchema CreateSchema()
-        => new JsonSchemaBuilder()
+    {
+        return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("settings")),
@@ -40,4 +42,5 @@ public sealed class SettingsRecipeStep : IRecipeStep
             .Required("name")
             .AdditionalProperties(true)
             .Build();
+    }
 }

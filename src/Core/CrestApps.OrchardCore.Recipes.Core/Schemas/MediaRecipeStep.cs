@@ -15,7 +15,8 @@ public sealed class MediaRecipeStep : IRecipeStep
     }
 
     private static JsonSchema CreateSchema()
-        => new JsonSchemaBuilder()
+    {
+        return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("media")),
@@ -42,4 +43,5 @@ public sealed class MediaRecipeStep : IRecipeStep
             .Required("name", "Files")
             .AdditionalProperties(true)
             .Build();
+    }
 }

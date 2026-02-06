@@ -15,7 +15,8 @@ public sealed class SitemapsRecipeStep : IRecipeStep
     }
 
     private static JsonSchema CreateSchema()
-        => new JsonSchemaBuilder()
+    {
+        return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Sitemaps")),
@@ -25,4 +26,5 @@ public sealed class SitemapsRecipeStep : IRecipeStep
             .Required("name")
             .AdditionalProperties(true)
             .Build();
+    }
 }

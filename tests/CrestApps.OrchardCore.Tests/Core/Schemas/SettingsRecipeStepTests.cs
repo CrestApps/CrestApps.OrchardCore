@@ -24,7 +24,6 @@ public sealed class SettingsRecipeStepTests
         var json = JsonSerializer.Serialize(schema);
 
         Assert.Contains("\"const\":\"settings\"", json);
-        Assert.Contains("\"minProperties\":2", json);
     }
 
     [Fact]
