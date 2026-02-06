@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class FeatureRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
-    public string Name => "Feature";
+    public string Name => "feature";
 
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
@@ -38,7 +38,7 @@ public sealed class FeatureRecipeStep : IRecipeStep
 public sealed class ThemesRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
-    public string Name => "Themes";
+    public string Name => "themes";
 
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
@@ -68,7 +68,7 @@ public sealed class ThemesRecipeStep : IRecipeStep
 public sealed class RecipesRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
-    public string Name => "Recipes";
+    public string Name => "recipes";
 
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
@@ -101,7 +101,7 @@ public sealed class RecipesRecipeStep : IRecipeStep
 public sealed class ContentRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
-    public string Name => "Content";
+    public string Name => "content";
 
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
@@ -136,7 +136,7 @@ public sealed class ContentRecipeStep : IRecipeStep
 public sealed class MediaRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
-    public string Name => "Media";
+    public string Name => "media";
 
     public ValueTask<JsonSchema> GetSchemaAsync()
     {

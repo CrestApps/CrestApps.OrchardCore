@@ -10,11 +10,11 @@ public sealed class BuiltInRecipeStepTests
     /// Verifies that every built-in recipe step returns the expected Name.
     /// </summary>
     [Theory]
-    [InlineData(typeof(FeatureRecipeStep), "Feature")]
-    [InlineData(typeof(ThemesRecipeStep), "Themes")]
-    [InlineData(typeof(RecipesRecipeStep), "Recipes")]
-    [InlineData(typeof(ContentRecipeStep), "Content")]
-    [InlineData(typeof(MediaRecipeStep), "Media")]
+    [InlineData(typeof(FeatureRecipeStep), "feature")]
+    [InlineData(typeof(ThemesRecipeStep), "themes")]
+    [InlineData(typeof(RecipesRecipeStep), "recipes")]
+    [InlineData(typeof(ContentRecipeStep), "content")]
+    [InlineData(typeof(MediaRecipeStep), "media")]
     [InlineData(typeof(MediaProfilesRecipeStep), "MediaProfiles")]
     [InlineData(typeof(RolesRecipeStep), "Roles")]
     [InlineData(typeof(CustomSettingsRecipeStep), "custom-settings")]
