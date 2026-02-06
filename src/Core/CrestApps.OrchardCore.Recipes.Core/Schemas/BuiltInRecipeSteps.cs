@@ -5,31 +5,45 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 /// </summary>
 public sealed class FeatureRecipeStep : IRecipeStep
 {
+    private readonly IFeatureSchemaProvider _featureProvider;
     private JsonSchema _cached;
     public string Name => "feature";
 
-    public ValueTask<JsonSchema> GetSchemaAsync()
+    public FeatureRecipeStep(IFeatureSchemaProvider featureProvider)
     {
-        _cached ??= CreateSchema();
-        return ValueTask.FromResult(_cached);
+        _featureProvider = featureProvider;
     }
 
-    private static JsonSchema CreateSchema()
-        => new JsonSchemaBuilder()
+    public async ValueTask<JsonSchema> GetSchemaAsync()
+    {
+        if (_cached is not null)
+        {
+            return _cached;
+        }
+
+        var featureIds = await _featureProvider.GetFeatureIdsAsync();
+        var featureItemSchema = new JsonSchemaBuilder()
+            .Type(SchemaValueType.String)
+            .Enum(featureIds);
+
+        _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("feature")),
                 ("enable", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+                    .Items(featureItemSchema)
                     .Description("Feature IDs to enable.")),
                 ("disable", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+                    .Items(featureItemSchema)
                     .Description("Feature IDs to disable.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();
+
+        return _cached;
+    }
 }
 
 /// <summary>
@@ -37,29 +51,43 @@ public sealed class FeatureRecipeStep : IRecipeStep
 /// </summary>
 public sealed class ThemesRecipeStep : IRecipeStep
 {
+    private readonly IFeatureSchemaProvider _featureProvider;
     private JsonSchema _cached;
     public string Name => "themes";
 
-    public ValueTask<JsonSchema> GetSchemaAsync()
+    public ThemesRecipeStep(IFeatureSchemaProvider featureProvider)
     {
-        _cached ??= CreateSchema();
-        return ValueTask.FromResult(_cached);
+        _featureProvider = featureProvider;
     }
 
-    private static JsonSchema CreateSchema()
-        => new JsonSchemaBuilder()
+    public async ValueTask<JsonSchema> GetSchemaAsync()
+    {
+        if (_cached is not null)
+        {
+            return _cached;
+        }
+
+        var themeIds = await _featureProvider.GetThemeIdsAsync();
+        var themeItemSchema = new JsonSchemaBuilder()
+            .Type(SchemaValueType.String)
+            .Enum(themeIds);
+
+        _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("themes")),
-                ("site", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.String)
+                ("site", themeItemSchema
                     .Description("The theme ID to use for the front-end site.")),
                 ("admin", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
+                    .Enum(themeIds)
                     .Description("The theme ID to use for the admin dashboard.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();
+
+        return _cached;
+    }
 }
 
 /// <summary>
@@ -116,14 +144,7 @@ public sealed class ContentRecipeStep : IRecipeStep
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("content")),
                 ("data", new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Object)
-                        .Properties(
-                            ("ContentType", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("ContentItemId", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("DisplayText", new JsonSchemaBuilder().Type(SchemaValueType.String)))
-                        .Required("ContentType")
-                        .AdditionalProperties(true))
+                    .Items(ContentCommonSchemas.ContentItemSchema)
                     .MinItems(1)))
             .Required("name", "data")
             .AdditionalProperties(true)
@@ -197,6 +218,18 @@ public sealed class MediaProfilesRecipeStep : IRecipeStep
             .Required("name", "MediaProfiles")
             .AdditionalProperties(true)
             .Build();
+}
+
+/// <summary>
+/// Common enum values used in media profile schemas.
+/// </summary>
+public static class MediaProfileEnums
+{
+    /// <summary>The resize mode values for media profiles.</summary>
+    public static readonly string[] ResizeModes = ["Undefined", "Max", "Crop", "Pad", "BoxPad", "Min", "Stretch"];
+
+    /// <summary>The output format values for media profiles.</summary>
+    public static readonly string[] OutputFormats = ["Undefined", "Bmp", "Gif", "Jpg", "Png", "Tga", "WebP"];
 }
 
 /// <summary>
@@ -484,20 +517,8 @@ public sealed class AdminMenuRecipeStep : IRecipeStep
                             ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
                             ("MenuItems", new JsonSchemaBuilder()
                                 .Type(SchemaValueType.Array)
-                                .Items(new JsonSchemaBuilder()
-                                    .Type(SchemaValueType.Object)
-                                    .Properties(
-                                        ("$type", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                                        ("LinkText", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                                        ("LinkUrl", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                                        ("IconClass", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                                        ("UniqueId", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                                        ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                                        ("Items", new JsonSchemaBuilder()
-                                            .Type(SchemaValueType.Array)
-                                            .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))))
-                                    .Required("$type", "LinkText")
-                                    .AdditionalProperties(true))))
+                                .Items(ContentCommonSchemas.ContentItemSchema)
+                                .Description("The list of menu item content items.")))
                         .Required("Id", "Name", "MenuItems")
                         .AdditionalProperties(true))))
             .Required("name", "data")

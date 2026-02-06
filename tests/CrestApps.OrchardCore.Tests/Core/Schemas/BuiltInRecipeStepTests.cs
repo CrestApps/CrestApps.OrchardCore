@@ -6,6 +6,32 @@ namespace CrestApps.OrchardCore.Tests.Core.Schemas;
 
 public sealed class BuiltInRecipeStepTests
 {
+    private static readonly string[] _testFeatureIds = ["OrchardCore.Contents", "OrchardCore.Media", "OrchardCore.Workflows"];
+    private static readonly string[] _testThemeIds = ["TheAdmin", "TheTheme", "SafeMode"];
+
+    private sealed class StubFeatureSchemaProvider : IFeatureSchemaProvider
+    {
+        public Task<IEnumerable<string>> GetFeatureIdsAsync()
+            => Task.FromResult<IEnumerable<string>>(_testFeatureIds);
+
+        public Task<IEnumerable<string>> GetThemeIdsAsync()
+            => Task.FromResult<IEnumerable<string>>(_testThemeIds);
+    }
+
+    private static IRecipeStep CreateStep(Type stepType)
+    {
+        if (stepType == typeof(FeatureRecipeStep))
+        {
+            return new FeatureRecipeStep(new StubFeatureSchemaProvider());
+        }
+
+        if (stepType == typeof(ThemesRecipeStep))
+        {
+            return new ThemesRecipeStep(new StubFeatureSchemaProvider());
+        }
+
+        return (IRecipeStep)Activator.CreateInstance(stepType);
+    }
     /// <summary>
     /// Verifies that every built-in recipe step returns the expected Name.
     /// </summary>
@@ -46,7 +72,7 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(CommandRecipeStep), "command")]
     public void Name_ReturnsExpected(Type stepType, string expectedName)
     {
-        var step = (IRecipeStep)Activator.CreateInstance(stepType);
+        var step = CreateStep(stepType);
         Assert.Equal(expectedName, step.Name);
     }
 
@@ -91,7 +117,7 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(CommandRecipeStep))]
     public async Task GetSchemaAsync_ProducesValidSerializableSchema(Type stepType)
     {
-        var step = (IRecipeStep)Activator.CreateInstance(stepType);
+        var step = CreateStep(stepType);
         var schema = await step.GetSchemaAsync();
         Assert.NotNull(schema);
 
@@ -141,28 +167,32 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(CommandRecipeStep))]
     public async Task GetSchemaAsync_CachesResult(Type stepType)
     {
-        var step = (IRecipeStep)Activator.CreateInstance(stepType);
+        var step = CreateStep(stepType);
         var first = await step.GetSchemaAsync();
         var second = await step.GetSchemaAsync();
         Assert.Same(first, second);
     }
 
     [Fact]
-    public async Task FeatureRecipeStep_SchemaContainsEnableAndDisable()
+    public async Task FeatureRecipeStep_SchemaContainsEnableDisableAndFeatureEnums()
     {
-        var step = new FeatureRecipeStep();
+        var step = new FeatureRecipeStep(new StubFeatureSchemaProvider());
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
         Assert.Contains("\"enable\"", json);
         Assert.Contains("\"disable\"", json);
+        Assert.Contains("\"OrchardCore.Contents\"", json);
+        Assert.Contains("\"OrchardCore.Media\"", json);
     }
 
     [Fact]
-    public async Task ThemesRecipeStep_SchemaContainsSiteAndAdmin()
+    public async Task ThemesRecipeStep_SchemaContainsSiteAdminAndThemeEnums()
     {
-        var step = new ThemesRecipeStep();
+        var step = new ThemesRecipeStep(new StubFeatureSchemaProvider());
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
         Assert.Contains("\"site\"", json);
         Assert.Contains("\"admin\"", json);
+        Assert.Contains("\"TheAdmin\"", json);
+        Assert.Contains("\"TheTheme\"", json);
     }
 
     [Fact]
@@ -202,8 +232,7 @@ public sealed class BuiltInRecipeStepTests
         var step = new AdminMenuRecipeStep();
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
         Assert.Contains("\"MenuItems\"", json);
-        Assert.Contains("\"$type\"", json);
-        Assert.Contains("\"LinkText\"", json);
+        Assert.Contains("\"ContentType\"", json);
     }
 
     [Fact]

@@ -31,6 +31,7 @@ public sealed class FeatureRecipeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IFeatureSchemaProvider, OrchardFeatureSchemaProvider>();
         services.AddScoped<IRecipeStep, FeatureRecipeStep>();
     }
 }
