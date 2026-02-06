@@ -27,60 +27,24 @@ public sealed class McpResourceTypeHandlerBaseTests
     }
 
     [Fact]
-    public async Task ReadAsync_WithNullUri_ReturnsErrorResult()
+    public async Task ReadAsync_WithNullResourceUri_ThrowsArgumentNullException()
     {
         var handler = new TestHandler("test");
-        var resource = CreateResource(null);
+        var resource = CreateResource("test://item1/some/path");
 
-        var result = await handler.ReadAsync(resource, TestContext.Current.CancellationToken);
-
-        var textContent = Assert.IsType<TextResourceContents>(Assert.Single(result.Contents));
-        Assert.Equal("text/plain", textContent.MimeType);
-        Assert.Equal("Resource URI is required.", textContent.Text);
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => handler.ReadAsync(resource, null, TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task ReadAsync_WithEmptyUri_ReturnsErrorResult()
+    public async Task ReadAsync_WithNullResource_ThrowsArgumentNullException()
     {
         var handler = new TestHandler("test");
-        var resource = CreateResource(string.Empty);
 
-        var result = await handler.ReadAsync(resource, TestContext.Current.CancellationToken);
+        _ = McpResourceUri.TryParse("test://item1/some/path", out var resourceUri);
 
-        var textContent = Assert.IsType<TextResourceContents>(Assert.Single(result.Contents));
-        Assert.Equal("text/plain", textContent.MimeType);
-        Assert.Equal("Resource URI is required.", textContent.Text);
-    }
-
-    [Fact]
-    public async Task ReadAsync_WithInvalidUri_ReturnsErrorResult()
-    {
-        var handler = new TestHandler("test");
-        var resource = CreateResource("not-a-valid-uri");
-
-        var result = await handler.ReadAsync(resource, TestContext.Current.CancellationToken);
-
-        var textContent = Assert.IsType<TextResourceContents>(Assert.Single(result.Contents));
-        Assert.Equal("text/plain", textContent.MimeType);
-        Assert.Contains("Invalid test URI", textContent.Text);
-    }
-
-    [Fact]
-    public async Task ReadAsync_WithNullResource_ReturnsErrorResult()
-    {
-        var handler = new TestHandler("test");
-        var mcpResource = new McpResource
-        {
-            ItemId = "item1",
-            Source = "test",
-            Resource = null,
-        };
-
-        var result = await handler.ReadAsync(mcpResource, TestContext.Current.CancellationToken);
-
-        var textContent = Assert.IsType<TextResourceContents>(Assert.Single(result.Contents));
-        Assert.Equal("text/plain", textContent.MimeType);
-        Assert.Equal("Resource URI is required.", textContent.Text);
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => handler.ReadAsync(null, resourceUri, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -89,7 +53,9 @@ public sealed class McpResourceTypeHandlerBaseTests
         var handler = new TestHandler("test");
         var resource = CreateResource("test://item1/some/path");
 
-        var result = await handler.ReadAsync(resource, TestContext.Current.CancellationToken);
+        _ = McpResourceUri.TryParse("test://item1/some/path", out var resourceUri);
+
+        var result = await handler.ReadAsync(resource, resourceUri, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.NotNull(handler.LastResourceUri);
