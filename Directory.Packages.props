@@ -12,11 +12,14 @@
     <PackageVersion Include="SSH.NET" Version="2024.2.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.4.7" />
     <PackageVersion Include="YesSql.Core" Version="5.4.7" />
-    <PackageVersion Include="ModelContextProtocol" Version="0.7.0-preview.1" />
-    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.7.0-preview.1" />
-    <PackageVersion Include="ModelContextProtocol.Core" Version="0.7.0-preview.1" />
+    <PackageVersion Include="ModelContextProtocol" Version="0.8.0-preview.1" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.8.0-preview.1" />
+    <PackageVersion Include="ModelContextProtocol.Core" Version="0.8.0-preview.1" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.4.1" />
     <PackageVersion Include="PdfPig" Version="0.1.13" />
+    <PackageVersion Include="CrestApps.AgentSkills" Version="1.0.0-beta-0001" />
+    <PackageVersion Include="CrestApps.OrchardCore.AgentSkills" Version="1.0.0-beta-0001" />
+    <PackageVersion Include="CrestApps.OrchardCore.AgentSkills.Mcp" Version="1.0.0-beta-0001" />
   </ItemGroup>
   <ItemGroup>
     <!-- OrchardCore Packages -->

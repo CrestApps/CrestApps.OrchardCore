@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AgentSkills.Mcp.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
@@ -49,6 +50,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>();
         services.AddDisplayDriver<McpConnection, McpConnectionDisplayDriver>();
         services.AddScoped<IAICompletionContextBuilderHandler, McpAICompletionContextBuilderHandler>();
+
+        services.AddOrchardCoreAgentSkillServices();
 
         // Register SSE transport type.
         services
@@ -125,6 +128,9 @@ public sealed class McpServerStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddOrchardCoreAgentSkillServices();
+        services.AddScoped<IMcpServerPromptService, DefaultMcpServerPromptService>();
+        services.AddScoped<IMcpServerResourceService, DefaultMcpServerResourceService>();
         services.AddTransient<IConfigureOptions<McpServerOptions>, McpServerOptionsConfiguration>();
         services.AddPermissionProvider<McpServerPermissionsProvider>();
 
@@ -230,81 +236,33 @@ public sealed class McpServerStartup : StartupBase
         })
         .WithListPromptsHandler(async (request, cancellationToken) =>
         {
-            var manager = request.Services.GetRequiredService<INamedCatalogManager<McpPrompt>>();
-            var entries = await manager.GetAllAsync();
+            var promptService = request.Services.GetRequiredService<IMcpServerPromptService>();
 
-            var result = new ListPromptsResult
+            return new ListPromptsResult
             {
-                Prompts = entries
-                    .Where(e => e.Prompt != null)
-                    .Select(e => e.Prompt)
-                    .ToList()
+                Prompts = await promptService.ListAsync(),
             };
-
-            return result;
         })
         .WithGetPromptHandler(async (request, cancellationToken) =>
         {
-            var manager = request.Services.GetRequiredService<INamedCatalogManager<McpPrompt>>();
-            var entries = await manager.GetAllAsync();
-            var entry = entries.FirstOrDefault(e => e.Prompt?.Name == request.Params.Name);
+            var promptService = request.Services.GetRequiredService<IMcpServerPromptService>();
 
-            if (entry?.Prompt is null)
-            {
-                throw new McpException($"Prompt '{request.Params.Name}' not found.");
-            }
-
-            return new GetPromptResult
-            {
-                Description = entry.Prompt.Description,
-                Messages = [],
-            };
+            return await promptService.GetAsync(request, cancellationToken);
         })
         .WithListResourcesHandler(async (request, cancellationToken) =>
         {
-            var manager = request.Services.GetRequiredService<ISourceCatalogManager<McpResource>>();
-            var entries = await manager.GetAllAsync();
+            var resourceService = request.Services.GetRequiredService<IMcpServerResourceService>();
 
-            var result = new ListResourcesResult
+            return new ListResourcesResult
             {
-                Resources = entries
-                    .Where(e => e.Resource != null)
-                    .Select(e => e.Resource)
-                    .ToList()
+                Resources = await resourceService.ListAsync(),
             };
-
-            return result;
         })
         .WithReadResourceHandler(async (request, cancellationToken) =>
         {
-            // Parse the URI: {scheme}://{itemId}/{path}
-            if (!McpResourceUri.TryParse(request.Params.Uri, out var resourceUri))
-            {
-                throw new McpException($"Invalid URI format: '{request.Params.Uri}'.");
-            }
+            var resourceService = request.Services.GetRequiredService<IMcpServerResourceService>();
 
-            if (string.IsNullOrEmpty(resourceUri.ItemId))
-            {
-                throw new McpException($"Resource URI '{request.Params.Uri}' does not contain a valid ItemId.");
-            }
-
-            var manager = request.Services.GetRequiredService<ISourceCatalogManager<McpResource>>();
-            var entry = await manager.FindByIdAsync(resourceUri.ItemId);
-
-            if (entry?.Resource is null)
-            {
-                throw new McpException($"Resource '{request.Params.Uri}' not found.");
-            }
-
-            // Get the appropriate type handler for this resource using keyed services
-            var handler = request.Services.GetKeyedService<IMcpResourceTypeHandler>(entry.Source);
-
-            if (handler is null)
-            {
-                throw new McpException($"No handler found for resource type '{entry.Source}'.");
-            }
-
-            return await handler.ReadAsync(entry, resourceUri, cancellationToken);
+            return await resourceService.ReadAsync(request, cancellationToken);
         });
 
         // Configure authorization policy.
