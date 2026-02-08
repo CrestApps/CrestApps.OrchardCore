@@ -562,6 +562,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
         try
         {
             // Create a lightweight ChatInteraction from the AI profile for intent processing.
+            // This allows reusing the same intent detection and strategy system without
+            // introducing a direct dependency on AI.Interactions module. Only Source,
+            // ConnectionName, and DeploymentId are needed by the intent detector and strategies.
             var interaction = new ChatInteraction
             {
                 Source = profile.Source,
@@ -625,15 +628,15 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
     private string BuildImageMarkdown(IntentProcessingResult result)
     {
-        var response = result?.GeneratedImages;
-        if (response?.Contents is null || response.Contents.Count == 0)
+        var contents = result?.GeneratedImages?.Contents;
+        if (contents is null || contents.Count == 0)
         {
             return result?.ErrorMessage ?? S["No images were generated."].Value;
         }
 
         var messageBuilder = new StringBuilder();
 
-        foreach (var contentItem in response.Contents)
+        foreach (var contentItem in contents)
         {
             var imageUri = ExtractImageUri(contentItem);
 
