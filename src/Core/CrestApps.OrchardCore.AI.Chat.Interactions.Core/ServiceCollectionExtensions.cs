@@ -88,13 +88,15 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Adds a document processing strategy to the service collection.
     /// Strategies are called in sequence and each decides whether to handle the request.
+    /// Uses <see cref="Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(IServiceCollection, ServiceDescriptor)"/>
+    /// to prevent duplicate registrations when multiple modules register the same strategy.
     /// </summary>
     /// <typeparam name="TStrategy">The strategy type.</typeparam>
     /// <param name="services">The service collection.</param>
     public static IServiceCollection AddPromptProcessingStrategy<TStrategy>(this IServiceCollection services)
         where TStrategy : class, IPromptProcessingStrategy
     {
-        services.AddScoped<IPromptProcessingStrategy, TStrategy>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPromptProcessingStrategy, TStrategy>());
         return services;
     }
 

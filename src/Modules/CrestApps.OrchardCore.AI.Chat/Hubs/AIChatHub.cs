@@ -1,5 +1,7 @@
 using System.Text;
 using System.Threading.Channels;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -10,6 +12,7 @@ using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -27,6 +30,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly ISession _session;
     private readonly IAICompletionService _completionService;
     private readonly IAICompletionContextBuilder _aICompletionContextBuilder;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<AIChatHub> _logger;
 
     protected readonly IStringLocalizer S;
@@ -39,6 +43,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         ISession session,
         IAICompletionService completionService,
         IAICompletionContextBuilder aICompletionContextBuilder,
+        IServiceProvider serviceProvider,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
     {
@@ -49,6 +54,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _session = session;
         _completionService = completionService;
         _aICompletionContextBuilder = aICompletionContextBuilder;
+        _serviceProvider = serviceProvider;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -297,12 +303,67 @@ public class AIChatHub : Hub<IAIChatHubClient>
             Title = profile.PromptSubject,
         };
 
+        // Process prompt using intent-aware, strategy-based approach.
+        var intentResult = await ReasonAsync(profile, chatSession.Prompts, prompt, cancellationToken);
+
+        // Handle chart generation results.
+        if (intentResult != null && intentResult.HasGeneratedChart)
+        {
+            var content = $"[chart:{intentResult.GeneratedChartConfig}]";
+            await WritePartialMessageAsync(writer, chatSession.SessionId, assistantMessage.Id, content, cancellationToken);
+            assistantMessage.Content = content;
+            chatSession.Prompts.Add(assistantMessage);
+            await _sessionManager.SaveAsync(chatSession);
+
+            return;
+        }
+
+        // Handle chart generation errors.
+        if (intentResult != null && intentResult.IsChartGenerationIntent && !intentResult.IsSuccess)
+        {
+            await WritePartialMessageAsync(writer, chatSession.SessionId, assistantMessage.Id, intentResult.ErrorMessage, cancellationToken);
+            assistantMessage.Content = intentResult.ErrorMessage;
+            chatSession.Prompts.Add(assistantMessage);
+            await _sessionManager.SaveAsync(chatSession);
+
+            return;
+        }
+
+        // Handle image generation results.
+        if (intentResult != null && intentResult.HasGeneratedImages)
+        {
+            var content = BuildImageMarkdown(intentResult);
+            await WritePartialMessageAsync(writer, chatSession.SessionId, assistantMessage.Id, content, cancellationToken);
+            assistantMessage.Content = content;
+            chatSession.Prompts.Add(assistantMessage);
+            await _sessionManager.SaveAsync(chatSession);
+
+            return;
+        }
+
+        // Handle image generation errors.
+        if (intentResult != null && intentResult.IsImageGenerationIntent && !intentResult.IsSuccess)
+        {
+            await WritePartialMessageAsync(writer, chatSession.SessionId, assistantMessage.Id, intentResult.ErrorMessage, cancellationToken);
+            assistantMessage.Content = intentResult.ErrorMessage;
+            chatSession.Prompts.Add(assistantMessage);
+            await _sessionManager.SaveAsync(chatSession);
+
+            return;
+        }
+
         var builder = new StringBuilder();
 
         var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
         {
             c.Session = chatSession;
             c.UserMarkdownInResponse = true;
+
+            // Append additional context from intent processing to the system message.
+            if (intentResult != null && intentResult.IsSuccess && intentResult.HasContext)
+            {
+                c.SystemMessage = (c.SystemMessage ?? string.Empty) + "\n\n" + intentResult.GetCombinedContext();
+            }
         });
 
         var contentItemIds = new HashSet<string>();
@@ -474,5 +535,139 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             await writer.WriteAsync(partialMessage, cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Processes prompt using intent-aware, strategy-based approach.
+    /// First detects the user's intent, then routes to the appropriate processing strategy.
+    /// </summary>
+    private async Task<IntentProcessingResult> ReasonAsync(AIProfile profile, IList<AIChatSessionPrompt> prompts, string prompt, CancellationToken cancellationToken)
+    {
+        var intentDetector = _serviceProvider.GetService<IPromptIntentDetector>();
+        if (intentDetector == null)
+        {
+            _logger.LogDebug("Prompt intent detector is not available.");
+
+            return null;
+        }
+
+        var strategyProvider = _serviceProvider.GetService<IPromptProcessingStrategyProvider>();
+        if (strategyProvider == null)
+        {
+            _logger.LogDebug("Prompt processing strategy provider is not available.");
+
+            return null;
+        }
+
+        try
+        {
+            // Create a lightweight ChatInteraction from the AI profile for intent processing.
+            var interaction = new ChatInteraction
+            {
+                Source = profile.Source,
+                ConnectionName = profile.ConnectionName,
+                DeploymentId = profile.DeploymentId,
+            };
+
+            var intentContext = new DocumentIntentDetectionContext
+            {
+                Prompt = prompt,
+                Interaction = interaction,
+                CancellationToken = cancellationToken,
+            };
+
+            var intent = await intentDetector.DetectAsync(intentContext);
+
+            _logger.LogDebug("Detected intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
+                intent.Name, intent.Confidence, intent.Reason);
+
+            // Build conversation history from past prompts.
+            var conversationHistory = prompts
+                .Where(p => !p.IsGeneratedPrompt)
+                .Select(p => new ChatMessage(p.Role, p.Content))
+                .ToList();
+
+            var processingContext = new IntentProcessingContext
+            {
+                Prompt = prompt,
+                Interaction = interaction,
+                ConversationHistory = conversationHistory,
+                CancellationToken = cancellationToken,
+            };
+
+            processingContext.Result.Intent = intent.Name;
+            processingContext.Result.Confidence = intent.Confidence;
+            processingContext.Result.Reason = intent.Reason;
+
+            await strategyProvider.ProcessAsync(processingContext);
+
+            return processingContext.Result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during intent detection or processing.");
+
+            return null;
+        }
+    }
+
+    private static async Task WritePartialMessageAsync(ChannelWriter<CompletionPartialMessage> writer, string sessionId, string messageId, string content, CancellationToken cancellationToken)
+    {
+        var partialMessage = new CompletionPartialMessage
+        {
+            SessionId = sessionId,
+            MessageId = messageId,
+            Content = content,
+        };
+
+        await writer.WriteAsync(partialMessage, cancellationToken);
+    }
+
+    private string BuildImageMarkdown(IntentProcessingResult result)
+    {
+        var response = result?.GeneratedImages;
+        if (response?.Contents is null || response.Contents.Count == 0)
+        {
+            return result?.ErrorMessage ?? S["No images were generated."].Value;
+        }
+
+        var messageBuilder = new StringBuilder();
+
+        foreach (var contentItem in response.Contents)
+        {
+            var imageUri = ExtractImageUri(contentItem);
+
+            if (string.IsNullOrWhiteSpace(imageUri))
+            {
+                continue;
+            }
+
+            messageBuilder.AppendLine($"![Generated Image]({imageUri})");
+            messageBuilder.AppendLine();
+        }
+
+        return messageBuilder.Length > 0
+            ? messageBuilder.ToString()
+            : (result?.ErrorMessage ?? S["No images were generated."].Value);
+    }
+
+    private static string ExtractImageUri(AIContent contentItem)
+    {
+        if (contentItem is null)
+        {
+            return null;
+        }
+
+        if (contentItem is UriContent uriContent)
+        {
+            return uriContent.Uri?.ToString();
+        }
+
+        if (contentItem is DataContent dataContent && dataContent.Uri is not null)
+        {
+            return dataContent.Uri.ToString();
+        }
+
+        return null;
     }
 }
