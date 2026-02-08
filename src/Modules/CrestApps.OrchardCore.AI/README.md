@@ -113,8 +113,8 @@ The following providers are supported **out of the box**:
 
 * **OpenId** — [View configuration guide](../CrestApps.OrchardCore.OpenAI/README.md)
 * **Azure** — [View configuration guide](../CrestApps.OrchardCore.OpenAI.Azure/README.md)
-* **AzureAIInference** — [View configuration guide](../CrestApps.OrchardCore.OpenAI.AzureAIInference/README.md)
-* **Ollama** — [View configuration guide](../CrestApps.OrchardCore.OpenAI.Ollama/README.md)
+* **AzureAIInference** — [View configuration guide](../CrestApps.OrchardCore.AzureAIInference/README.md)
+* **Ollama** — [View configuration guide](../CrestApps.OrchardCore.Ollama/README.md)
 
 Each provider requires its own connection and deployment settings. The `DefaultConnectionName` determines which connection is used when multiple connections are configured.
 
