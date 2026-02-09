@@ -612,8 +612,8 @@ window.chatInteractionManager = function () {
           }
 
           // Add event listeners for all settings fields with "ChatInteraction." prefix
-          // Exclude tool-related inputs (they have special handling with debouncing)
-          var settingsInputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["])');
+          // Exclude tool and MCP connection inputs (they have special handling with debouncing)
+          var settingsInputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])');
           settingsInputs.forEach(function (input) {
             var isCheckbox = input.type === 'checkbox';
             var isSelect = input.tagName === 'SELECT';
@@ -655,6 +655,15 @@ window.chatInteractionManager = function () {
           var groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
           groupToggleCheckboxes.forEach(function (toggle) {
             toggle.addEventListener('change', function () {
+              _this6.settingsDirty = true;
+              _this6.debouncedSaveSettings();
+            });
+          });
+
+          // Add event listeners for MCP connection checkboxes with debouncing (850ms)
+          var mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]');
+          mcpCheckboxes.forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () {
               _this6.settingsDirty = true;
               _this6.debouncedSaveSettings();
             });
@@ -723,6 +732,18 @@ window.chatInteractionManager = function () {
           });
           return toolNames;
         },
+        getSelectedMcpConnectionIds: function getSelectedMcpConnectionIds() {
+          var connectionIds = [];
+          var mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]:checked');
+          mcpCheckboxes.forEach(function (checkbox) {
+            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
+            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
+            if (hiddenInput && hiddenInput.value) {
+              connectionIds.push(hiddenInput.value);
+            }
+          });
+          return connectionIds;
+        },
         saveSettings: function saveSettings() {
           var _isInScopeInput$check;
           var itemId = this.getItemId();
@@ -760,9 +781,10 @@ window.chatInteractionManager = function () {
             topNDocuments: topNDocumentsInput !== null && topNDocumentsInput !== void 0 && topNDocumentsInput.value ? parseInt(topNDocumentsInput.value) : null,
             filter: filterInput.value,
             isInScope: (_isInScopeInput$check = isInScopeInput === null || isInScopeInput === void 0 ? void 0 : isInScopeInput.checked) !== null && _isInScopeInput$check !== void 0 ? _isInScopeInput$check : true,
-            toolNames: this.getSelectedToolNames()
+            toolNames: this.getSelectedToolNames(),
+            mcpConnectionIds: this.getSelectedMcpConnectionIds()
           };
-          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId, settings.strictness, settings.topNDocuments, settings.filter, settings.isInScope, settings.toolNames)["catch"](function (err) {
+          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId, settings.strictness, settings.topNDocuments, settings.filter, settings.isInScope, settings.toolNames, settings.mcpConnectionIds)["catch"](function (err) {
             return console.error('Error saving settings:', err);
           });
         },

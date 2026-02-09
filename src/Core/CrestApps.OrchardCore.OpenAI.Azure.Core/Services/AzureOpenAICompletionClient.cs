@@ -10,8 +10,6 @@ using CrestApps.Azure.Core.Models;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.CodeAnalysis;
@@ -32,8 +30,6 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
     private readonly ILogger _logger;
 
     private IAIToolsService _toolsService;
-    private McpService _mcpService;
-    private ICatalog<McpConnection> _mcpConnectionsStore;
 
     private AzureOpenAIClientOptions _clientOptions;
 
@@ -122,7 +118,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         var chatClient = azureClient.GetChatClient(deploymentName);
 
         var functions = !context.DisableTools
-            ? await GetFunctionsAsync(context.ToolNames, context.InstanceIds, context.McpConnectionIds)
+            ? await GetFunctionsAsync(context.ToolNames, context.InstanceIds)
             : [];
 
         var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
@@ -256,7 +252,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         var chatClient = azureClient.GetChatClient(deploymentName);
 
         var functions = !context.DisableTools
-            ? await GetFunctionsAsync(context.ToolNames, context.InstanceIds, context.McpConnectionIds)
+            ? await GetFunctionsAsync(context.ToolNames, context.InstanceIds)
             : [];
 
         var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
@@ -537,13 +533,12 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         return chatOptions;
     }
 
-    private async Task<IEnumerable<Microsoft.Extensions.AI.AIFunction>> GetFunctionsAsync(string[] toolNames, string[] instanceIds, string[] mcpConnectionIds)
+    private async Task<IEnumerable<Microsoft.Extensions.AI.AIFunction>> GetFunctionsAsync(string[] toolNames, string[] instanceIds)
     {
         var totalToolNames = toolNames?.Length ?? 0;
         var totalInstanceIds = instanceIds?.Length ?? 0;
-        var totalMcpConnectionIds = mcpConnectionIds?.Length ?? 0;
 
-        if (totalToolNames == 0 && totalInstanceIds == 0 && totalMcpConnectionIds == 0)
+        if (totalToolNames == 0 && totalInstanceIds == 0)
         {
             return [];
         }
@@ -588,50 +583,6 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                 functions.Add(function);
 
                 continue;
-            }
-        }
-
-        if (totalMcpConnectionIds > 0)
-        {
-            // Lazily load MCP services in case the MCP feature is disabled.
-            _mcpConnectionsStore ??= _serviceProvider.GetService<ICatalog<McpConnection>>();
-
-            if (_mcpConnectionsStore is not null)
-            {
-                _mcpService ??= _serviceProvider.GetService<McpService>();
-
-                if (_mcpService is not null)
-                {
-                    var connections = (await _mcpConnectionsStore.GetAllAsync())
-                        .ToDictionary(x => x.ItemId);
-
-                    foreach (var mcpConnectionId in mcpConnectionIds)
-                    {
-                        if (!connections.TryGetValue(mcpConnectionId, out var connection))
-                        {
-                            continue;
-                        }
-
-                        var client = await _mcpService.GetOrCreateClientAsync(connection);
-
-                        if (client is null)
-                        {
-                            continue;
-                        }
-
-                        foreach (var tool in await client.ListToolsAsync())
-                        {
-                            if (tool is not Microsoft.Extensions.AI.AIFunction function)
-                            {
-                                continue;
-                            }
-
-                            functions.Add(function);
-
-                            continue;
-                        }
-                    }
-                }
             }
         }
 

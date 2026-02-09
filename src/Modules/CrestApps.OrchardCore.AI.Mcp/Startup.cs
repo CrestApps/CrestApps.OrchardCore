@@ -43,8 +43,11 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>();
+        services.AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>();
         services.AddScoped<IAICompletionServiceHandler, McpConnectionsAICompletionServiceHandler>();
         services.AddScoped<McpService>();
+        services.AddScoped<IMcpServerMetadataProvider, DefaultMcpServerMetadataProvider>();
+        services.AddSingleton<IMcpMetadataPromptGenerator, DefaultMcpMetadataPromptGenerator>();
         services.AddNavigationProvider<McpAdminMenu>();
         services.AddPermissionProvider<McpPermissionsProvider>();
         services.AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>();
@@ -52,6 +55,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<IAICompletionContextBuilderHandler, McpAICompletionContextBuilderHandler>();
 
         services.AddOrchardCoreAgentSkillServices();
+
+        services.AddOptions<McpMetadataCacheOptions>();
 
         // Register SSE transport type.
         services

@@ -72,7 +72,7 @@ internal sealed class AIProfileToolInstancesDisplayDriver : DisplayDriver<AIProf
             }).OrderBy(entry => entry.DisplayText)
             .ToArray();
 
-        }).Location("Content:8Content:8.5#Capabilities:5");
+        }).Location("Content:8#Capabilities:5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

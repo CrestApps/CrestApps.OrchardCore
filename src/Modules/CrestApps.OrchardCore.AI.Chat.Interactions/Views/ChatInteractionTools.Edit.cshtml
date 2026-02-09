@@ -4,6 +4,9 @@
 @model EditChatInteractionToolsViewModel
 
 <div class="mb-3">
+
+    <h5 class="border-bottom pb-2">@T["Tools"]</h5>
+
     @foreach (var tools in Model.Tools)
     {
         var groupKey = tools.Key;

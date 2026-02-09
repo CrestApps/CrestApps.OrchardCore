@@ -18,7 +18,6 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
     private readonly IAIDataSourceStore _dataSourceStore;
     private readonly AIOptions _aiOptions;
 
-
     public ChatInteractionDataSourceDisplayDriver(
         IAIDataSourceStore dataSourceStore,
         IOptions<AIOptions> aiOptions)

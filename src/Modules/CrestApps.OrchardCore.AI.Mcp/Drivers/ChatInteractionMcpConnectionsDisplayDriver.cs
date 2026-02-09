@@ -6,25 +6,24 @@ using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
 
-internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIProfile>
+internal sealed class ChatInteractionMcpConnectionsDisplayDriver : DisplayDriver<ChatInteraction>
 {
     private readonly ICatalog<McpConnection> _store;
 
     internal readonly IStringLocalizer S;
 
-    public AIProfileMcpConnectionsDisplayDriver(
+    public ChatInteractionMcpConnectionsDisplayDriver(
         ICatalog<McpConnection> store,
-        IStringLocalizer<AIProfileMcpConnectionsDisplayDriver> stringLocalizer)
+        IStringLocalizer<ChatInteractionMcpConnectionsDisplayDriver> stringLocalizer)
     {
         _store = store;
         S = stringLocalizer;
     }
 
-    public override async Task<IDisplayResult> EditAsync(AIProfile profile, BuildEditorContext context)
+    public override async Task<IDisplayResult> EditAsync(ChatInteraction interaction, BuildEditorContext context)
     {
         var connections = await _store.GetAllAsync();
 
@@ -33,23 +32,21 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
             return null;
         }
 
-        return Initialize<EditProfileMcpConnectionsViewModel>("EditProfileMcpConnection_Edit", model =>
+        return Initialize<EditChatInteractionMcpConnectionsViewModel>("ChatInteractionMcpConnections_Edit", model =>
         {
-            var mcpMetadata = profile.As<AIProfileMcpMetadata>();
-
             model.Connections = connections
             .Select(entry => new ToolEntry
             {
                 ItemId = entry.ItemId,
                 DisplayText = entry.DisplayText,
-                IsSelected = mcpMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
+                IsSelected = interaction.McpConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
             .ToArray();
 
-        }).Location("Content:5#Capabilities:3");
+        }).Location("Parameters:4#Capabilities:3");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
     {
         var connections = await _store.GetAllAsync();
 
@@ -58,28 +55,23 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
             return null;
         }
 
-        var model = new EditProfileMcpConnectionsViewModel();
+        var model = new EditChatInteractionMcpConnectionsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         var ids = model.Connections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
 
-        var metadata = new AIProfileMcpMetadata();
-
         if (ids is null || ids.Length == 0)
         {
-            metadata.ConnectionIds = [];
+            interaction.McpConnectionIds = [];
         }
         else
         {
-            metadata.ConnectionIds = connections.Select(x => x.ItemId)
+            interaction.McpConnectionIds = connections.Select(x => x.ItemId)
                 .Intersect(ids)
-                .ToArray();
+                .ToList();
         }
 
-        profile.Put(metadata);
-
-        return Edit(profile, context);
+        return Edit(interaction, context);
     }
 }
-

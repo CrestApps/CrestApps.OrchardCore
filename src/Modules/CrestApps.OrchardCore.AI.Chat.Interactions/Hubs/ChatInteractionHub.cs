@@ -134,7 +134,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         int? topNDocuments,
         string filter,
         bool? isInScope,
-        string[] toolNames)
+        string[] toolNames,
+        string[] mcpConnectionIds)
     {
         if (string.IsNullOrWhiteSpace(itemId))
         {
@@ -172,6 +173,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         interaction.MaxTokens = maxTokens;
         interaction.PastMessagesCount = pastMessagesCount;
         interaction.ToolNames = toolNames?.ToList() ?? [];
+        interaction.McpConnectionIds = mcpConnectionIds?.ToList() ?? [];
 
         if (!string.IsNullOrWhiteSpace(dataSourceId))
         {

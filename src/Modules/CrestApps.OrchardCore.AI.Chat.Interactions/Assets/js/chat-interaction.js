@@ -657,11 +657,11 @@ window.chatInteractionManager = function () {
                     }
 
                     // Add event listeners for all settings fields with "ChatInteraction." prefix
-                    // Exclude tool-related inputs (they have special handling with debouncing)
+                    // Exclude tool and MCP connection inputs (they have special handling with debouncing)
                     const settingsInputs = document.querySelectorAll(
-                        'input[name^="ChatInteraction."]:not([name*=".Tools["]), ' +
-                        'select[name^="ChatInteraction."]:not([name*=".Tools["]), ' +
-                        'textarea[name^="ChatInteraction."]:not([name*=".Tools["])'
+                        'input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' +
+                        'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' +
+                        'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])'
                     );
 
                     settingsInputs.forEach(input => {
@@ -709,6 +709,15 @@ window.chatInteractionManager = function () {
                     const groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
                     groupToggleCheckboxes.forEach(toggle => {
                         toggle.addEventListener('change', () => {
+                            this.settingsDirty = true;
+                            this.debouncedSaveSettings();
+                        });
+                    });
+
+                    // Add event listeners for MCP connection checkboxes with debouncing (850ms)
+                    const mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]');
+                    mcpCheckboxes.forEach(checkbox => {
+                        checkbox.addEventListener('change', () => {
                             this.settingsDirty = true;
                             this.debouncedSaveSettings();
                         });
@@ -775,6 +784,21 @@ window.chatInteractionManager = function () {
 
                     return toolNames;
                 },
+                getSelectedMcpConnectionIds() {
+                    const connectionIds = [];
+                    const mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]:checked');
+
+                    mcpCheckboxes.forEach(checkbox => {
+                        const baseName = checkbox.name.replace('.IsSelected', '.ItemId');
+                        const hiddenInput = document.querySelector(`input[type="hidden"][name="${baseName}"]`);
+
+                        if (hiddenInput && hiddenInput.value) {
+                            connectionIds.push(hiddenInput.value);
+                        }
+                    });
+
+                    return connectionIds;
+                },
                 saveSettings() {
                     const itemId = this.getItemId();
                     if (!itemId) {
@@ -813,7 +837,8 @@ window.chatInteractionManager = function () {
                         topNDocuments: topNDocumentsInput?.value ? parseInt(topNDocumentsInput.value) : null,
                         filter: filterInput.value,
                         isInScope: isInScopeInput?.checked ?? true,
-                        toolNames: this.getSelectedToolNames()
+                        toolNames: this.getSelectedToolNames(),
+                        mcpConnectionIds: this.getSelectedMcpConnectionIds()
                     };
 
                     this.connection.invoke(
@@ -834,7 +859,8 @@ window.chatInteractionManager = function () {
                         settings.topNDocuments,
                         settings.filter,
                         settings.isInScope,
-                        settings.toolNames
+                        settings.toolNames,
+                        settings.mcpConnectionIds
                     ).catch(err => console.error('Error saving settings:', err));
                 },
                 initializeInteraction(itemId, force) {

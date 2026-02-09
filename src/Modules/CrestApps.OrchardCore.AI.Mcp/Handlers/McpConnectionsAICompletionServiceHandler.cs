@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.OrchardCore.AI.Mcp.Tools;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Logging;
@@ -9,16 +10,19 @@ namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServiceHandler
 {
     private readonly ISourceCatalog<McpConnection> _store;
-    private readonly McpService _mcpService;
+    private readonly IMcpServerMetadataProvider _metadataProvider;
+    private readonly IMcpMetadataPromptGenerator _promptGenerator;
     private readonly ILogger _logger;
 
     public McpConnectionsAICompletionServiceHandler(
         ISourceCatalog<McpConnection> store,
-        McpService mcpService,
+        IMcpServerMetadataProvider metadataProvider,
+        IMcpMetadataPromptGenerator promptGenerator,
         ILogger<McpConnectionsAICompletionServiceHandler> logger)
     {
         _store = store;
-        _mcpService = mcpService;
+        _metadataProvider = metadataProvider;
+        _promptGenerator = promptGenerator;
         _logger = logger;
     }
 
@@ -40,7 +44,7 @@ public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServ
             return;
         }
 
-        context.ChatOptions.Tools ??= [];
+        var allCapabilities = new List<McpServerCapabilities>();
 
         foreach (var mcpConnectionId in context.CompletionContext.McpConnectionIds)
         {
@@ -51,22 +55,36 @@ public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServ
 
             try
             {
-                var client = await _mcpService.GetOrCreateClientAsync(connection);
+                var capabilities = await _metadataProvider.GetCapabilitiesAsync(connection);
 
-                if (client is null)
+                if (capabilities is not null)
                 {
-                    continue;
-                }
-
-                foreach (var tool in await client.ListToolsAsync())
-                {
-                    context.ChatOptions.Tools.Add(tool);
+                    allCapabilities.Add(capabilities);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unable to get the tools from the connection Id '{ConnectionId}' and Name: '{ConnectionName}'", connection.ItemId, connection.DisplayText);
+                _logger.LogError(ex, "Unable to get capabilities from MCP connection Id '{ConnectionId}' and Name: '{ConnectionName}'.", connection.ItemId, connection.DisplayText);
             }
+        }
+
+        if (allCapabilities.Count == 0)
+        {
+            return;
+        }
+
+        // Inject the unified mcp-invoke tool.
+        context.ChatOptions.Tools ??= [];
+        context.ChatOptions.Tools.Add(new McpInvokeFunction());
+
+        // Inject the metadata system prompt describing available capabilities.
+        var metadataPrompt = _promptGenerator.Generate(allCapabilities);
+
+        if (!string.IsNullOrEmpty(metadataPrompt))
+        {
+            context.CompletionContext.SystemMessage = string.IsNullOrEmpty(context.CompletionContext.SystemMessage)
+                ? metadataPrompt
+                : context.CompletionContext.SystemMessage + Environment.NewLine + metadataPrompt;
         }
     }
 }
