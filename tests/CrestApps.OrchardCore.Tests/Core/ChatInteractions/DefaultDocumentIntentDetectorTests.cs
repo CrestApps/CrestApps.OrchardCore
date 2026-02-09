@@ -213,7 +213,7 @@ public sealed class KeywordPromptIntentDetectorTests
 
     private static PromptRoutingContext CreateContext(string prompt)
     {
-        return new PromptRoutingContext
+        return new PromptRoutingContext(new { })
         {
             Prompt = prompt,
             Documents =
@@ -231,7 +231,7 @@ public sealed class KeywordPromptIntentDetectorTests
 
     private static PromptRoutingContext CreateContextWithCsvDocument(string prompt)
     {
-        return new PromptRoutingContext
+        return new PromptRoutingContext(new { })
         {
             Prompt = prompt,
             Documents =
@@ -249,7 +249,7 @@ public sealed class KeywordPromptIntentDetectorTests
 
     private static PromptRoutingContext CreateContextWithMultipleDocuments(string prompt)
     {
-        return new PromptRoutingContext
+        return new PromptRoutingContext(new { })
         {
             Prompt = prompt,
             Documents =
@@ -274,7 +274,7 @@ public sealed class KeywordPromptIntentDetectorTests
 
     private static PromptRoutingContext CreateContextWithNoDocuments(string prompt)
     {
-        return new PromptRoutingContext
+        return new PromptRoutingContext(new { })
         {
             Prompt = prompt,
             Documents = []

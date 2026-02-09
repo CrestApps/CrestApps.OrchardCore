@@ -28,6 +28,7 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
@@ -201,6 +202,13 @@ public sealed class DeploymentRecipesStartup : StartupBase
 [Feature(AIConstants.Feature.ChatCore)]
 public sealed class ChatCoreStartup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    public ChatCoreStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services

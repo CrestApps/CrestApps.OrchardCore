@@ -536,12 +536,11 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
     private async Task<IntentProcessingResult> ReasonAsync(AIProfile profile, IList<AIChatSessionPrompt> prompts, string prompt, CancellationToken cancellationToken)
     {
-        var request = new PromptRoutingContext
+        var request = new PromptRoutingContext(profile)
         {
             Prompt = prompt,
             Source = profile.Source,
             ConnectionName = profile.ConnectionName,
-            CompletionResource = profile,
             ConversationHistory = prompts
                 .Where(p => !p.IsGeneratedPrompt)
                 .Select(p => new ChatMessage(p.Role, p.Content))

@@ -476,12 +476,11 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     /// </summary>
     private async Task<IntentProcessingResult> ReasonAsync(ChatInteraction interaction, IReadOnlyCollection<ChatInteractionPrompt> prompts, string prompt, CancellationToken cancellationToken)
     {
-        var context = new PromptRoutingContext
+        var context = new PromptRoutingContext(interaction)
         {
             Prompt = prompt,
             Source = interaction.Source,
             ConnectionName = interaction.ConnectionName,
-            CompletionResource = interaction,
             Documents = interaction.Documents ?? [],
             ConversationHistory = BuildConversationHistory(prompts),
             MaxHistoryMessagesForImageGeneration = interaction.PastMessagesCount ?? 5,

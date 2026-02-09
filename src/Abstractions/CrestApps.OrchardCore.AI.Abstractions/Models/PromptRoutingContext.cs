@@ -10,11 +10,18 @@ public sealed class PromptRoutingContext
 
     public string ConnectionName { get; set; }
 
-    public object CompletionResource { get; set; }
+    public object CompletionResource { get; }
 
     public IList<ChatInteractionDocumentInfo> Documents { get; set; } = [];
 
     public IList<ChatMessage> ConversationHistory { get; set; } = [];
 
     public int? MaxHistoryMessagesForImageGeneration { get; set; }
+
+    public PromptRoutingContext(object completionResource)
+    {
+        ArgumentNullException.ThrowIfNull(completionResource);
+
+        CompletionResource = completionResource;
+    }
 }
