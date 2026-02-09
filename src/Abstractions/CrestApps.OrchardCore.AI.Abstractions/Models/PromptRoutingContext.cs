@@ -10,7 +10,7 @@ public sealed class PromptRoutingContext
 
     public string ConnectionName { get; set; }
 
-    public AICompletionContext CompletionContext { get; set; }
+    public object CompletionResource { get; set; }
 
     public IList<ChatInteractionDocumentInfo> Documents { get; set; } = [];
 

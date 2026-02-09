@@ -6,15 +6,18 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultPromptRouter : IPromptRouter
 {
     private readonly IPromptIntentDetector _intentDetector;
+    private readonly IAICompletionContextBuilder _aICompletionContextBuilder;
     private readonly IPromptProcessingStrategyProvider _strategyProvider;
     private readonly ILogger<DefaultPromptRouter> _logger;
 
     public DefaultPromptRouter(
         IPromptIntentDetector intentDetector,
+        IAICompletionContextBuilder aICompletionContextBuilder,
         IPromptProcessingStrategyProvider strategyProvider,
         ILogger<DefaultPromptRouter> logger)
     {
         _intentDetector = intentDetector;
+        _aICompletionContextBuilder = aICompletionContextBuilder;
         _strategyProvider = strategyProvider;
         _logger = logger;
     }
@@ -42,7 +45,7 @@ public sealed class DefaultPromptRouter : IPromptRouter
             {
                 Prompt = context.Prompt,
                 Source = context.Source,
-                CompletionContext = context.CompletionContext,
+                CompletionContext = await _aICompletionContextBuilder.BuildAsync(context.CompletionResource),
                 DocumentInfos = context.Documents ?? [],
                 ConversationHistory = context.ConversationHistory ?? [],
             };

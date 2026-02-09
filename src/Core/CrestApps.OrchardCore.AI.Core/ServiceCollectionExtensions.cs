@@ -143,16 +143,16 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddPromptRoutingServices(this IServiceCollection services)
     {
         // Register the keyword-based intent detector as a concrete service (used as fallback)
-        services.TryAddScoped<KeywordPromptIntentDetector>();
+        services.AddScoped<KeywordPromptIntentDetector>();
 
         // Register the AI-based intent detector as the primary implementation
-        services.TryAddScoped<IPromptIntentDetector, AIPromptIntentDetector>();
+        services.AddScoped<IPromptIntentDetector, AIPromptIntentDetector>();
 
         // Register the strategy provider
-        services.TryAddScoped<IPromptProcessingStrategyProvider, DefaultPromptProcessingStrategyProvider>();
+        services.AddScoped<IPromptProcessingStrategyProvider, DefaultPromptProcessingStrategyProvider>();
 
         // Register the routing service
-        services.TryAddScoped<IPromptRouter, DefaultPromptRouter>();
+        services.AddScoped<IPromptRouter, DefaultPromptRouter>();
 
         return services;
     }

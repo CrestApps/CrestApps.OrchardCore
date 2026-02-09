@@ -11,7 +11,6 @@ using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -29,7 +28,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IAICompletionService _completionService;
     private readonly IAICompletionContextBuilder _completionContextBuilder;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IPromptRouter _promptRouter;
     private readonly IClock _clock;
     private readonly ILogger<ChatInteractionHub> _logger;
     private readonly ISession _session;
@@ -43,7 +42,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         IAIDataSourceStore dataSourceStore,
         IAICompletionService completionService,
         IAICompletionContextBuilder completionContextBuilder,
-        IServiceProvider serviceProvider,
+        IPromptRouter promptRouter,
         IClock clock,
         ILogger<ChatInteractionHub> logger,
         ISession session,
@@ -55,7 +54,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         _dataSourceStore = dataSourceStore;
         _completionService = completionService;
         _completionContextBuilder = completionContextBuilder;
-        _serviceProvider = serviceProvider;
+        _promptRouter = promptRouter;
         _clock = clock;
         _logger = logger;
         _session = session;
@@ -477,28 +476,18 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     /// </summary>
     private async Task<IntentProcessingResult> ReasonAsync(ChatInteraction interaction, IReadOnlyCollection<ChatInteractionPrompt> prompts, string prompt, CancellationToken cancellationToken)
     {
-        var routingService = _serviceProvider.GetService<IPromptRouter>();
-        if (routingService == null)
-        {
-            _logger.LogDebug("Prompt routing service is not available.");
-
-            return null;
-        }
-
-        var completionContext = await _completionContextBuilder.BuildAsync(interaction);
-
-        var request = new PromptRoutingContext
+        var context = new PromptRoutingContext
         {
             Prompt = prompt,
             Source = interaction.Source,
             ConnectionName = interaction.ConnectionName,
-            CompletionContext = completionContext,
+            CompletionResource = interaction,
             Documents = interaction.Documents ?? [],
             ConversationHistory = BuildConversationHistory(prompts),
             MaxHistoryMessagesForImageGeneration = interaction.PastMessagesCount ?? 5,
         };
 
-        return await routingService.RouteAsync(request, cancellationToken);
+        return await _promptRouter.RouteAsync(context, cancellationToken);
     }
 
     /// <summary>

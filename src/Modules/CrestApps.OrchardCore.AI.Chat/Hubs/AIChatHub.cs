@@ -10,7 +10,6 @@ using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -28,7 +27,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly ISession _session;
     private readonly IAICompletionService _completionService;
     private readonly IAICompletionContextBuilder _aICompletionContextBuilder;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IPromptRouter _promptRouter;
     private readonly ILogger<AIChatHub> _logger;
 
     protected readonly IStringLocalizer S;
@@ -41,7 +40,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         ISession session,
         IAICompletionService completionService,
         IAICompletionContextBuilder aICompletionContextBuilder,
-        IServiceProvider serviceProvider,
+        IPromptRouter promptRouter,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
     {
@@ -52,7 +51,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _session = session;
         _completionService = completionService;
         _aICompletionContextBuilder = aICompletionContextBuilder;
-        _serviceProvider = serviceProvider;
+        _promptRouter = promptRouter;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -537,29 +536,19 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
     private async Task<IntentProcessingResult> ReasonAsync(AIProfile profile, IList<AIChatSessionPrompt> prompts, string prompt, CancellationToken cancellationToken)
     {
-        var routingService = _serviceProvider.GetService<IPromptRouter>();
-        if (routingService == null)
-        {
-            _logger.LogDebug("Prompt routing service is not available.");
-
-            return null;
-        }
-
-        var completionContext = await _aICompletionContextBuilder.BuildAsync(profile);
-
         var request = new PromptRoutingContext
         {
             Prompt = prompt,
             Source = profile.Source,
             ConnectionName = profile.ConnectionName,
-            CompletionContext = completionContext,
+            CompletionResource = profile,
             ConversationHistory = prompts
                 .Where(p => !p.IsGeneratedPrompt)
                 .Select(p => new ChatMessage(p.Role, p.Content))
                 .ToList(),
         };
 
-        return await routingService.RouteAsync(request, cancellationToken);
+        return await _promptRouter.RouteAsync(request, cancellationToken);
     }
 
     private static async Task WritePartialMessageAsync(ChannelWriter<CompletionPartialMessage> writer, string sessionId, string messageId, string content, CancellationToken cancellationToken)
