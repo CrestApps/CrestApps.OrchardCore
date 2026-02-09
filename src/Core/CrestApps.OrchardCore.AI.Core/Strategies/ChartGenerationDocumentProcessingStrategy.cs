@@ -1,13 +1,12 @@
 using System.Text;
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
+namespace CrestApps.OrchardCore.AI.Core.Strategies;
 
 /// <summary>
 /// Strategy for handling chart generation requests.
@@ -263,7 +262,7 @@ public sealed class ChartGenerationDocumentProcessingStrategy : DocumentProcessi
         builder.AppendLine("Current request:");
         builder.AppendLine(currentPrompt);
         builder.AppendLine();
-        builder.AppendLine("Generate a Chart.js configuration JSON that visualizes the data from the conversation above based on the current request.");
+        builder.AppendLine("Generate a Chart.js configuration JSON that visualizes the data in the conversation context.");
 
         return builder.ToString();
     }

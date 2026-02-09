@@ -1,8 +1,8 @@
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
+using CrestApps.OrchardCore.AI.Core.Strategies;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.AI;
 using Moq;
 

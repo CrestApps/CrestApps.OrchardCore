@@ -1,14 +1,12 @@
 using System.Text;
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
+namespace CrestApps.OrchardCore.AI.Core.Services;
 
 /// <summary>
 /// AI-based implementation of <see cref="IPromptIntentDetector"/> that uses a chat model

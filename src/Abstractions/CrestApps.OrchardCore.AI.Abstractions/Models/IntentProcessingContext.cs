@@ -1,7 +1,6 @@
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+namespace CrestApps.OrchardCore.AI.Models;
 
 /// <summary>
 /// Context for document processing strategy execution.

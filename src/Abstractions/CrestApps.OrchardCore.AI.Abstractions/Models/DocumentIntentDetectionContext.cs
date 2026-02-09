@@ -1,6 +1,4 @@
-using CrestApps.OrchardCore.AI.Models;
-
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+namespace CrestApps.OrchardCore.AI.Models;
 
 /// <summary>
 /// Context for intent detection, providing the necessary information to classify user intent.

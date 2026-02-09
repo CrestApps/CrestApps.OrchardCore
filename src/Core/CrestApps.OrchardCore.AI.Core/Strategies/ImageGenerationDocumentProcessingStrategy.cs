@@ -1,12 +1,11 @@
 using System.Text;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
+namespace CrestApps.OrchardCore.AI.Core.Strategies;
 
 /// <summary>
 /// Strategy for handling image generation requests.

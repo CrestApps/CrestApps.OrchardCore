@@ -1,7 +1,7 @@
 using System.Text;
 using Microsoft.Extensions.AI;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+namespace CrestApps.OrchardCore.AI.Models;
 
 /// <summary>
 /// Result of document processing containing additional context to inject into the AI completion.

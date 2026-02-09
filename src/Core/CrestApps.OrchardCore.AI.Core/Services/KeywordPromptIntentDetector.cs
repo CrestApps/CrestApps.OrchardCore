@@ -1,7 +1,6 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
+namespace CrestApps.OrchardCore.AI.Core.Services;
 
 /// <summary>
 /// Keyword-based implementation of <see cref="IPromptIntentDetector"/> that uses heuristic-based
@@ -203,8 +202,8 @@ public sealed class KeywordPromptIntentDetector : IPromptIntentDetector
         {
             return Task.FromResult(DocumentIntent.FromName(
                 DocumentIntents.ExtractStructuredData,
-                0.85f,
-                "Data extraction keywords detected."));
+                0.9f,
+                "Extraction keywords detected."));
         }
 
         // Check for transformation intent
@@ -212,36 +211,55 @@ public sealed class KeywordPromptIntentDetector : IPromptIntentDetector
         {
             return Task.FromResult(DocumentIntent.FromName(
                 DocumentIntents.TransformFormat,
-                0.8f,
+                0.85f,
                 "Transformation keywords detected."));
         }
 
-        // Check for question-answering patterns (common RAG use case)
+        // Default to DocumentQnA for question patterns or general queries
         if (IsQuestionPattern(prompt))
         {
             return Task.FromResult(DocumentIntent.FromName(
                 DocumentIntents.DocumentQnA,
-                0.75f,
-                "Question pattern detected, using RAG approach."));
+                0.8f,
+                "Question pattern detected."));
         }
 
-        // Default to document Q&A (existing RAG behavior) for backward compatibility
         return Task.FromResult(DocumentIntent.FromName(
             DocumentIntents.DocumentQnA,
-            0.5f,
-            "No specific intent detected, defaulting to document Q&A."));
+            0.7f,
+            "Default intent for document interaction."));
     }
 
-    private static bool ContainsAnyKeyword(string text, string[] keywords)
+    private static bool ContainsAnyKeyword(string prompt, string[] keywords)
     {
         foreach (var keyword in keywords)
         {
-            if (text.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            if (prompt.Contains(keyword, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
         }
+
         return false;
+    }
+
+    private static bool IsQuestionPattern(string prompt)
+    {
+        return prompt.Contains('?') ||
+               prompt.StartsWith("what", StringComparison.OrdinalIgnoreCase) ||
+               prompt.StartsWith("how", StringComparison.OrdinalIgnoreCase) ||
+               prompt.StartsWith("why", StringComparison.OrdinalIgnoreCase) ||
+               prompt.StartsWith("when", StringComparison.OrdinalIgnoreCase) ||
+               prompt.StartsWith("where", StringComparison.OrdinalIgnoreCase) ||
+               prompt.StartsWith("who", StringComparison.OrdinalIgnoreCase) ||
+               prompt.StartsWith("which", StringComparison.OrdinalIgnoreCase) ||
+               prompt.StartsWith("can you", StringComparison.OrdinalIgnoreCase) ||
+               prompt.StartsWith("could you", StringComparison.OrdinalIgnoreCase) ||
+               prompt.StartsWith("do you", StringComparison.OrdinalIgnoreCase) ||
+               prompt.StartsWith("does", StringComparison.OrdinalIgnoreCase) ||
+               prompt.StartsWith("is", StringComparison.OrdinalIgnoreCase) ||
+               prompt.StartsWith("are", StringComparison.OrdinalIgnoreCase) ||
+               prompt.StartsWith("please", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasTabularFiles(IList<ChatInteractionDocumentInfo> documents)
@@ -253,42 +271,12 @@ public sealed class KeywordPromptIntentDetector : IPromptIntentDetector
 
         foreach (var doc in documents)
         {
-            if (string.IsNullOrEmpty(doc.FileName))
-            {
-                continue;
-            }
-
-            foreach (var ext in _tabularFileExtensions)
-            {
-                if (doc.FileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private static bool IsQuestionPattern(string prompt)
-    {
-        // Check for common question patterns
-        var questionStarters = new[]
-        {
-            "what", "where", "when", "who", "why", "how", "which",
-            "can you", "could you", "tell me", "explain", "describe",
-            "is there", "are there", "does", "do"
-        };
-
-        foreach (var starter in questionStarters)
-        {
-            if (prompt.StartsWith(starter, StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrEmpty(doc.FileName) && _tabularFileExtensions.Any(ext => doc.FileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
             {
                 return true;
             }
         }
 
-        // Check for question mark
-        return prompt.Contains('?');
+        return false;
     }
 }

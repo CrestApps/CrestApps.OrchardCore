@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+namespace CrestApps.OrchardCore.AI.Core;
 
 /// <summary>
 /// Options for configuring document processing intents and their descriptions.
@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 /// </summary>
 public sealed class PromptProcessingOptions
 {
-    public const string SectionName = "CrestApps_AI:ChatInteractions";
+    public const string SectionName = "CrestApps_AI:Chat";
 
     /// <summary>
     /// When false, heavy intents are excluded from AI intent detection and heavy strategies are not invoked.

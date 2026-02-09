@@ -1,7 +1,5 @@
 using System.Text;
 using System.Threading.Channels;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -537,81 +535,37 @@ public class AIChatHub : Hub<IAIChatHubClient>
         }
     }
 
-    /// <summary>
-    /// Processes prompt using intent-aware, strategy-based approach.
-    /// First detects the user's intent, then routes to the appropriate processing strategy.
-    /// </summary>
     private async Task<IntentProcessingResult> ReasonAsync(AIProfile profile, IList<AIChatSessionPrompt> prompts, string prompt, CancellationToken cancellationToken)
     {
-        var intentDetector = _serviceProvider.GetService<IPromptIntentDetector>();
-        if (intentDetector == null)
+        var routingService = _serviceProvider.GetService<IPromptRouter>();
+        if (routingService == null)
         {
-            _logger.LogDebug("Prompt intent detector is not available.");
+            _logger.LogDebug("Prompt routing service is not available.");
 
             return null;
         }
 
-        var strategyProvider = _serviceProvider.GetService<IPromptProcessingStrategyProvider>();
-        if (strategyProvider == null)
+        // Create a lightweight ChatInteraction from the AI profile for intent processing.
+        // This allows reusing the same intent detection and strategy system without
+        // introducing a direct dependency on AI.Interactions module. Only Source,
+        // ConnectionName, and DeploymentId are needed by the intent detector and strategies.
+        var request = new PromptRoutingRequest
         {
-            _logger.LogDebug("Prompt processing strategy provider is not available.");
-
-            return null;
-        }
-
-        try
-        {
-            // Create a lightweight ChatInteraction from the AI profile for intent processing.
-            // This allows reusing the same intent detection and strategy system without
-            // introducing a direct dependency on AI.Interactions module. Only Source,
-            // ConnectionName, and DeploymentId are needed by the intent detector and strategies.
-            var interaction = new ChatInteraction
+            Prompt = prompt,
+            Interaction = new ChatInteraction
             {
                 Source = profile.Source,
                 ConnectionName = profile.ConnectionName,
                 DeploymentId = profile.DeploymentId,
-            };
-
-            var intentContext = new DocumentIntentDetectionContext
-            {
-                Prompt = prompt,
-                Interaction = interaction,
-                CancellationToken = cancellationToken,
-            };
-
-            var intent = await intentDetector.DetectAsync(intentContext);
-
-            _logger.LogDebug("Detected intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
-                intent.Name, intent.Confidence, intent.Reason);
-
-            // Build conversation history from past prompts.
-            var conversationHistory = prompts
+            },
+            ConversationHistory = prompts
                 .Where(p => !p.IsGeneratedPrompt)
                 .Select(p => new ChatMessage(p.Role, p.Content))
-                .ToList();
+                .ToList(),
+            CancellationToken = cancellationToken,
+        };
 
-            var processingContext = new IntentProcessingContext
-            {
-                Prompt = prompt,
-                Interaction = interaction,
-                ConversationHistory = conversationHistory,
-                CancellationToken = cancellationToken,
-            };
-
-            processingContext.Result.Intent = intent.Name;
-            processingContext.Result.Confidence = intent.Confidence;
-            processingContext.Result.Reason = intent.Reason;
-
-            await strategyProvider.ProcessAsync(processingContext);
-
-            return processingContext.Result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during intent detection or processing.");
-
-            return null;
-        }
+        return await routingService.RouteAsync(request);
     }
 
     private static async Task WritePartialMessageAsync(ChannelWriter<CompletionPartialMessage> writer, string sessionId, string messageId, string content, CancellationToken cancellationToken)

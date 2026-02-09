@@ -1,7 +1,7 @@
 using System.Text;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
+namespace CrestApps.OrchardCore.AI.Core.Strategies;
 
 /// <summary>
 /// Base class for document processing strategies that provides common functionality.

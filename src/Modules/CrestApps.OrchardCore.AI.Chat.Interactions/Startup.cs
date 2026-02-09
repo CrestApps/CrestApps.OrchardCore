@@ -60,15 +60,8 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<ChatInteractionsAdminMenu>()
             .AddDataMigration<ChatInteractionMigrations>();
 
-        // Configure PromptProcessingOptions from configuration
-        services.Configure<PromptProcessingOptions>(_configuration.GetSection(PromptProcessingOptions.SectionName));
-
         // Configure RowLevelTabularBatchSettings from configuration
-        services.Configure<RowLevelTabularBatchOptions>(_configuration.GetSection($"{PromptProcessingOptions.SectionName}:BatchProcessing"));
-
-        services
-            .AddPromptRoutingServices()
-            .AddDefaultPromptProcessingStrategies();
+        services.Configure<RowLevelTabularBatchOptions>(_configuration.GetSection("CrestApps_AI:ChatInteractions:BatchProcessing"));
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

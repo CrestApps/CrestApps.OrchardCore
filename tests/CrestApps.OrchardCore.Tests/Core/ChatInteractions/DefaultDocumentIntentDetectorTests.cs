@@ -1,5 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.Tests.Core.ChatInteractions;

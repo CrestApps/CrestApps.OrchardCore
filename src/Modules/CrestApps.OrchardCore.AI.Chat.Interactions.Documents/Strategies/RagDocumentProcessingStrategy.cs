@@ -1,8 +1,7 @@
 using System.Text;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Strategies;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

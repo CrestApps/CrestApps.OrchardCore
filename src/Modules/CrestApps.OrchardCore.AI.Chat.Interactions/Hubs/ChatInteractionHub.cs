@@ -1,7 +1,6 @@
 using System.Text;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -499,68 +498,24 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     /// </summary>
     private async Task<IntentProcessingResult> ReasonAsync(ChatInteraction interaction, IReadOnlyCollection<ChatInteractionPrompt> prompts, string prompt, CancellationToken cancellationToken)
     {
-        // Get the intent detector
-        var intentDetector = _serviceProvider.GetService<IPromptIntentDetector>();
-        if (intentDetector == null)
+        var routingService = _serviceProvider.GetService<IPromptRouter>();
+        if (routingService == null)
         {
-            _logger.LogDebug("Document intent detector is not available.");
+            _logger.LogDebug("Prompt routing service is not available.");
 
-            // Without intent detection we can't route to any strategy.
-            _logger.LogWarning("Document intent detector is not available. Document processing will be skipped.");
             return null;
         }
 
-        // Get the strategy provider
-        var strategyProvider = _serviceProvider.GetService<IPromptProcessingStrategyProvider>();
-        if (strategyProvider == null)
+        var request = new PromptRoutingRequest
         {
-            _logger.LogDebug("Document processing strategy provider is not available.");
+            Prompt = prompt,
+            Interaction = interaction,
+            ConversationHistory = BuildConversationHistory(prompts),
+            MaxHistoryMessagesForImageGeneration = interaction.PastMessagesCount ?? 5,
+            CancellationToken = cancellationToken,
+        };
 
-            _logger.LogWarning("Document processing strategy provider is not available. Document processing will be skipped.");
-            return null;
-        }
-
-        try
-        {
-            // Detect user intent (this works with or without documents)
-            var intentContext = new DocumentIntentDetectionContext
-            {
-                Prompt = prompt,
-                Interaction = interaction,
-                CancellationToken = cancellationToken,
-            };
-
-            var intent = await intentDetector.DetectAsync(intentContext);
-
-            _logger.LogDebug("Detected intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
-                intent.Name, intent.Confidence, intent.Reason);
-
-            // Build conversation history from past prompts (excluding the current prompt which hasn't been added yet)
-            var conversationHistory = BuildConversationHistory(prompts);
-
-            var processingContext = new IntentProcessingContext
-            {
-                Prompt = prompt,
-                Interaction = interaction,
-                ConversationHistory = conversationHistory,
-                MaxHistoryMessagesForImageGeneration = interaction.PastMessagesCount ?? 5,
-                CancellationToken = cancellationToken,
-            };
-
-            processingContext.Result.Intent = intent.Name;
-            processingContext.Result.Confidence = intent.Confidence;
-            processingContext.Result.Reason = intent.Reason;
-
-            await strategyProvider.ProcessAsync(processingContext);
-
-            return processingContext.Result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during intent detection or processing.");
-
-            return null;
-        }
+        return await routingService.RouteAsync(request);
     }
 
     /// <summary>

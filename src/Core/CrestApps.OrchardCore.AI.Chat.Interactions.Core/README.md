@@ -94,11 +94,11 @@ The `IntentProcessingResult` is part of the `IntentProcessingContext` and allows
 
 ## Configuration
 
-### `CrestApps_AI:ChatInteractions`
+### `CrestApps_AI:Chat`
 
 This module binds `PromptProcessingOptions` from the configuration section:
 
-- Section: `CrestApps_AI:ChatInteractions`
+- Section: `CrestApps_AI:Chat`
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
@@ -109,7 +109,7 @@ Example `appsettings.json`:
 ```json
 {
   "CrestApps_AI": {
-    "ChatInteractions": {
+    "Chat": {
       "EnableHeavyProcessingStrategies": false
     }
   }

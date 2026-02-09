@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+namespace CrestApps.OrchardCore.AI;
 
 /// <summary>
 /// Interface for detecting user intent when documents are attached to a chat interaction.

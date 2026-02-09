@@ -1,5 +1,5 @@
 using System.Text;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Strategies;
 using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;

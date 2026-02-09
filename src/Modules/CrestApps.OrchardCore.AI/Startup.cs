@@ -28,6 +28,7 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
@@ -200,12 +201,27 @@ public sealed class DeploymentRecipesStartup : StartupBase
 [Feature(AIConstants.Feature.ChatCore)]
 public sealed class ChatCoreStartup : StartupBase
 {
+    private IShellConfiguration _shellConfiguration;
+
+    public ChatCoreStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
             .AddDataMigration<AIChatSessionIndexMigrations>()
             .AddIndexProvider<AIChatSessionIndexProvider>();
+
+        // Configure PromptProcessingOptions from configuration
+        services.Configure<PromptProcessingOptions>(_shellConfiguration.GetSection(PromptProcessingOptions.SectionName));
+
+        // Register intent detection and strategy routing services for AI Profile chat
+        services
+            .AddPromptRoutingServices()
+            .AddDefaultPromptProcessingStrategies();
     }
 }
 
