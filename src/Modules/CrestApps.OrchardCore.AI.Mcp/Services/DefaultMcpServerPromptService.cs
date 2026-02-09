@@ -10,11 +10,11 @@ namespace CrestApps.OrchardCore.AI.Mcp.Services;
 public sealed class DefaultMcpServerPromptService : IMcpServerPromptService
 {
     private readonly INamedCatalogManager<McpPrompt> _catalogManager;
-    private readonly IPromptProvider _skillPromptProvider;
+    private readonly IMcpPromptProvider _skillPromptProvider;
 
     public DefaultMcpServerPromptService(
         INamedCatalogManager<McpPrompt> catalogManager,
-        IPromptProvider skillPromptProvider)
+        IMcpPromptProvider skillPromptProvider)
     {
         _catalogManager = catalogManager;
         _skillPromptProvider = skillPromptProvider;

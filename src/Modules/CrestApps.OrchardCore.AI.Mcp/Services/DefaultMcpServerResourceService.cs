@@ -12,11 +12,11 @@ namespace CrestApps.OrchardCore.AI.Mcp.Services;
 public sealed class DefaultMcpServerResourceService : IMcpServerResourceService
 {
     private readonly ISourceCatalogManager<McpResource> _catalogManager;
-    private readonly IResourceProvider _skillResourceProvider;
+    private readonly IMcpResourceProvider _skillResourceProvider;
 
     public DefaultMcpServerResourceService(
         ISourceCatalogManager<McpResource> catalogManager,
-        IResourceProvider skillResourceProvider)
+        IMcpResourceProvider skillResourceProvider)
     {
         _catalogManager = catalogManager;
         _skillResourceProvider = skillResourceProvider;

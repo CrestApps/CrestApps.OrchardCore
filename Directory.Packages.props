@@ -17,9 +17,8 @@
     <PackageVersion Include="ModelContextProtocol.Core" Version="0.8.0-preview.1" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.4.1" />
     <PackageVersion Include="PdfPig" Version="0.1.13" />
-    <PackageVersion Include="CrestApps.AgentSkills" Version="1.0.0-beta-0001" />
-    <PackageVersion Include="CrestApps.OrchardCore.AgentSkills" Version="1.0.0-beta-0001" />
-    <PackageVersion Include="CrestApps.OrchardCore.AgentSkills.Mcp" Version="1.0.0-beta-0001" />
+    <PackageVersion Include="CrestApps.OrchardCore.AgentSkills" Version="1.0.0-beta-0003" />
+    <PackageVersion Include="CrestApps.OrchardCore.AgentSkills.Mcp" Version="1.0.0-beta-0003" />
   </ItemGroup>
   <ItemGroup>
     <!-- OrchardCore Packages -->
