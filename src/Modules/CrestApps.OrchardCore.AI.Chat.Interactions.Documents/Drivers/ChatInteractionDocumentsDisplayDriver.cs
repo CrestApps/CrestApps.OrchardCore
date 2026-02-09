@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.ViewModels;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;

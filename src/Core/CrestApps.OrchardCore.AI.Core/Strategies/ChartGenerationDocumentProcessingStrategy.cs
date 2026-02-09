@@ -1,13 +1,12 @@
 using System.Text;
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
+namespace CrestApps.OrchardCore.AI.Core.Strategies;
 
 /// <summary>
 /// Strategy for handling chart generation requests.
@@ -50,7 +49,7 @@ public sealed class ChartGenerationDocumentProcessingStrategy : DocumentProcessi
     }
 
     /// <inheritdoc />
-    public override async Task ProcessAsync(IntentProcessingContext context)
+    public override async Task ProcessAsync(IntentProcessingContext context, CancellationToken cancellationToken = default)
     {
         if (!CanHandle(context, DocumentIntents.GenerateChart))
         {
@@ -60,11 +59,11 @@ public sealed class ChartGenerationDocumentProcessingStrategy : DocumentProcessi
         // Mark this as a chart generation intent
         context.Result.IsChartGenerationIntent = true;
 
-        var interaction = context.Interaction;
-        if (interaction == null)
+        var completionContext = context.CompletionContext;
+        if (completionContext == null)
         {
-            _logger.LogWarning("Interaction is not available in context, cannot generate charts.");
-            context.Result.SetFailed("Interaction is not available for chart generation.");
+            _logger.LogWarning("Completion context is not available, cannot generate charts.");
+            context.Result.SetFailed("Completion context is not available for chart generation.");
             return;
         }
 
@@ -77,8 +76,8 @@ public sealed class ChartGenerationDocumentProcessingStrategy : DocumentProcessi
                 return;
             }
 
-            var providerName = interaction.Source;
-            var connectionName = interaction.ConnectionName;
+            var providerName = context.Source;
+            var connectionName = completionContext.ConnectionName;
 
             if (!_providerOptions.Providers.TryGetValue(providerName, out var provider))
             {
@@ -129,7 +128,7 @@ public sealed class ChartGenerationDocumentProcessingStrategy : DocumentProcessi
                 MaxOutputTokens = 2000,
             };
 
-            var response = await chatClient.GetResponseAsync(messages, chatOptions, context.CancellationToken);
+            var response = await chatClient.GetResponseAsync(messages, chatOptions, cancellationToken);
 
             if (response == null || string.IsNullOrWhiteSpace(response.Text))
             {
@@ -209,13 +208,56 @@ public sealed class ChartGenerationDocumentProcessingStrategy : DocumentProcessi
             }
         }
 
-        // Find the first { and last } to extract JSON object
+        // Find the matching closing brace for the first opening brace.
         var jsonStart = text.IndexOf('{');
-        var jsonEnd = text.LastIndexOf('}');
-
-        if (jsonStart >= 0 && jsonEnd > jsonStart)
+        if (jsonStart < 0)
         {
-            return text[jsonStart..(jsonEnd + 1)];
+            return null;
+        }
+
+        var depth = 0;
+        var inString = false;
+        var escape = false;
+
+        for (var i = jsonStart; i < text.Length; i++)
+        {
+            var c = text[i];
+
+            if (escape)
+            {
+                escape = false;
+                continue;
+            }
+
+            if (c == '\\' && inString)
+            {
+                escape = true;
+                continue;
+            }
+
+            if (c == '"')
+            {
+                inString = !inString;
+                continue;
+            }
+
+            if (inString)
+            {
+                continue;
+            }
+
+            if (c == '{')
+            {
+                depth++;
+            }
+            else if (c == '}')
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    return text[jsonStart..(i + 1)];
+                }
+            }
         }
 
         return null;
@@ -263,7 +305,7 @@ public sealed class ChartGenerationDocumentProcessingStrategy : DocumentProcessi
         builder.AppendLine("Current request:");
         builder.AppendLine(currentPrompt);
         builder.AppendLine();
-        builder.AppendLine("Generate a Chart.js configuration JSON that visualizes the data from the conversation above based on the current request.");
+        builder.AppendLine("Generate a Chart.js configuration JSON that visualizes the data in the conversation context.");
 
         return builder.ToString();
     }

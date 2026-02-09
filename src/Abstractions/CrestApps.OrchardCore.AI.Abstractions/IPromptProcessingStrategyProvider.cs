@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+namespace CrestApps.OrchardCore.AI;
 
 /// <summary>
 /// Provider that routes document processing through all registered strategies.
@@ -13,5 +13,5 @@ public interface IPromptProcessingStrategyProvider
     /// Each strategy can add context to the result, allowing multiple strategies to contribute.
     /// </summary>
     /// <param name="context">The processing context containing documents, intent, and result to update.</param>
-    Task ProcessAsync(IntentProcessingContext context);
+    Task ProcessAsync(IntentProcessingContext context, CancellationToken cancellationToken = default);
 }

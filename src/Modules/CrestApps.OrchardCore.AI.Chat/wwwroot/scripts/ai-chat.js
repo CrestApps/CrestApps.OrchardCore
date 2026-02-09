@@ -5,8 +5,6 @@
 
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -14,19 +12,177 @@ function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present,
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 window.openAIChatManager = function () {
+  // Defaults (can be overridden by instanceConfig)
+  var defaultConfig = {
+    // UI defaults for generated media
+    generatedImageAltText: 'Generated Image',
+    generatedImageMaxWidth: 400,
+    generatedChartMaxWidth: 900,
+    downloadImageTitle: 'Download image',
+    downloadChartTitle: 'Download chart as image',
+    downloadChartButtonText: 'Download',
+    messageTemplate: "\n        <div class=\"list-group\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                <div class=\"d-flex align-items-center\">\n                    <div class=\"p-2\">\n                        <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'\"></i>\n                    </div>\n                    <div class=\"p-2 lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent || message.content\"></div>\n                    </div>\n                </div>\n                <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"!isIndicator(message)\">\n                    <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                        <i class=\"fa-solid fa-copy fa-lg\"></i>\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
+    indicatorTemplate: "<div class=\"spinner-grow spinner-grow-sm\" role=\"status\"><span class=\"visually-hidden\">Loading...</span></div>"
+  };
   var renderer = new marked.Renderer();
 
   // Modify the link rendering to open in a new tab
   renderer.link = function (data) {
     return "<a href=\"".concat(data.href, "\" target=\"_blank\" rel=\"noopener noreferrer\">").concat(data.text, "</a>");
   };
-  var defaultConfig = {
-    messageTemplate: "\n            <div class=\"list-group\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                    <div class=\"d-flex align-items-center\">\n                        <div class=\"p-2\">\n                            <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'\"></i>\n                        </div>\n                        <div class=\"p-2 lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent || message.content\"></div>\n                        </div>\n                    </div>\n                    <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"!isIndicator(message)\">\n                        <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                            <i class=\"fa-solid fa-copy fa-lg\"></i>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
-    indicatorTemplate: "<div class=\"spinner-grow spinner-grow-sm\" role=\"status\"><span class=\"visually-hidden\">Loading...</span></div>"
+
+  // Custom image renderer for generated images with thumbnail styling and download button
+  renderer.image = function (data) {
+    var src = data.href;
+    var alt = data.text || defaultConfig.generatedImageAltText;
+    var maxWidth = defaultConfig.generatedImageMaxWidth;
+    return "<div class=\"generated-image-container\">\n        <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n        <div class=\"mt-2\">\n            <a href=\"").concat(src, "\" target=\"_blank\" download title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary\">\n                <i class=\"fa-solid fa-download\"></i>\n            </a>\n        </div>\n    </div>");
   };
+
+  // Chart counter for unique IDs
+  var chartCounter = 0;
+  function createChartHtml(chartId) {
+    var chartMaxWidth = defaultConfig.generatedChartMaxWidth;
+    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: ".concat(chartMaxWidth, "px; margin: 0 auto; height: 480px;\">\n        <canvas id=\"").concat(chartId, "\" class=\"img-thumbnail\" width=\"").concat(chartMaxWidth, "\" height=\"480\" style=\"width: 100%; height: 480px;\"></canvas>\n    </div>\n    <div class=\"mt-2\">\n        <button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadChart('").concat(chartId, "')\" title=\"").concat(defaultConfig.downloadChartTitle, "\">\n            <i class=\"fa-solid fa-download\"></i> ").concat(defaultConfig.downloadChartButtonText, "\n        </button>\n    </div>");
+  }
+
+  // Extract a [chart:{...json...}] marker. This avoids regex issues with nested brackets.
+  function tryExtractChartMarker(text) {
+    var token = '[chart:';
+    var start = text.indexOf(token);
+    if (start < 0) {
+      return null;
+    }
+
+    // Find JSON object boundary by balancing braces
+    var jsonStart = start + token.length;
+    var i = jsonStart;
+    while (i < text.length && (text[i] === ' ' || text[i] === '\n' || text[i] === '\r' || text[i] === '\t')) {
+      i++;
+    }
+    if (i >= text.length || text[i] !== '{') {
+      return null;
+    }
+    var depth = 0;
+    var inString = false;
+    var escape = false;
+    for (; i < text.length; i++) {
+      var ch = text[i];
+      if (inString) {
+        if (escape) {
+          escape = false;
+          continue;
+        }
+        if (ch === '\\') {
+          escape = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      if (ch === '{') {
+        depth++;
+      } else if (ch === '}') {
+        depth--;
+        if (depth === 0) {
+          var jsonEnd = i;
+          // Expect closing bracket after JSON
+          var closeBracketIndex = text.indexOf(']', jsonEnd + 1);
+          if (closeBracketIndex < 0) {
+            return null;
+          }
+          var json = text.substring(jsonStart, jsonEnd + 1).trim();
+          return {
+            startIndex: start,
+            endIndex: closeBracketIndex + 1,
+            json: json
+          };
+        }
+      }
+    }
+    return null;
+  }
+  function renderChartsInMessage(message) {
+    if (!message || !message._pendingCharts || !message._pendingCharts.length) {
+      return;
+    }
+    var _iterator = _createForOfIteratorHelper(message._pendingCharts),
+      _step;
+    try {
+      for (_iterator.s(); !(_step = _iterator.n()).done;) {
+        var c = _step.value;
+        var canvas = document.getElementById(c.chartId);
+        if (!canvas) {
+          continue;
+        }
+        if (typeof Chart === 'undefined') {
+          console.error('Chart.js is not available on the page.');
+          continue;
+        }
+        try {
+          var _cfg$options;
+          // Destroy existing chart instance if re-rendering
+          if (canvas._chartInstance) {
+            canvas._chartInstance.destroy();
+          }
+          var cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
+          (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
+          cfg.options.responsive = true;
+          cfg.options.maintainAspectRatio = false;
+          canvas._chartInstance = new Chart(canvas, cfg);
+        } catch (e) {
+          console.error('Error creating chart:', e);
+        }
+      }
+
+      // Prevent re-render work
+    } catch (err) {
+      _iterator.e(err);
+    } finally {
+      _iterator.f();
+    }
+    message._pendingCharts = [];
+  }
+
+  // Replace chart markers in content with chart placeholders and collect configs.
+  function processChartMarkers(content, message) {
+    var _message$_pendingChar;
+    if (!content) {
+      return content;
+    }
+    var result = content;
+    (_message$_pendingChar = message._pendingCharts) !== null && _message$_pendingChar !== void 0 ? _message$_pendingChar : message._pendingCharts = [];
+
+    // Only replace markers when we can fully extract them.
+    while (true) {
+      var extracted = tryExtractChartMarker(result);
+      if (!extracted) {
+        break;
+      }
+      var chartId = "chat_chart_".concat(++chartCounter);
+      message._pendingCharts.push({
+        chartId: chartId,
+        config: extracted.json
+      });
+      var html = createChartHtml(chartId);
+      result = result.substring(0, extracted.startIndex) + html + result.substring(extracted.endIndex);
+    }
+    return result;
+  }
   var initialize = function initialize(instanceConfig) {
     var config = Object.assign({}, defaultConfig, instanceConfig);
+    // Keep defaultConfig in sync so renderers use overridden values
+    defaultConfig = config;
     if (!config.signalRHubUrl) {
       console.error('The signalRHubUrl is required.');
       return;
@@ -84,7 +240,17 @@ window.openAIChatManager = function () {
                     _this.initializeSession(data.sessionId, true);
                     _this.messages = [];
                     ((_data$messages = data.messages) !== null && _data$messages !== void 0 ? _data$messages : []).forEach(function (msg) {
+                      // Ensure persisted chart markers are rendered too
+                      if (msg && msg.content) {
+                        msg.content = processChartMarkers(msg.content.trim(), msg);
+                        if (msg.content.includes('class="chart-container"')) {
+                          msg.htmlContent = msg.content;
+                        }
+                      }
                       _this.addMessage(msg);
+                      _this.$nextTick(function () {
+                        renderChartsInMessage(msg);
+                      });
                     });
                   });
                   _this.connection.on("ReceiveError", function (error) {
@@ -126,6 +292,9 @@ window.openAIChatManager = function () {
           var _this3 = this;
           if (message.content) {
             var processedContent = message.content.trim();
+
+            // Process chart markers first (before markdown parsing)
+            processedContent = processChartMarkers(processedContent, message);
             if (message.references && _typeof(message.references) === "object" && Object.keys(message.references).length) {
               for (var _i = 0, _Object$entries = Object.entries(message.references); _i < _Object$entries.length; _i++) {
                 var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
@@ -145,13 +314,21 @@ window.openAIChatManager = function () {
               }
             }
             message.content = processedContent;
-            message.htmlContent = marked.parse(processedContent, {
-              renderer: renderer
-            });
+
+            // If we inserted chart HTML, don't markdown-parse
+            if (processedContent.includes('class="chart-container"')) {
+              message.htmlContent = processedContent;
+            } else {
+              message.htmlContent = marked.parse(processedContent, {
+                renderer: renderer
+              });
+            }
           }
           this.addMessageInternal(message);
           this.hidePlaceholder();
           this.$nextTick(function () {
+            // Render any pending charts once the DOM is updated
+            renderChartsInMessage(message);
             _this3.scrollToBottom();
           });
         },
@@ -256,11 +433,21 @@ window.openAIChatManager = function () {
 
               // Update the existing message
               message.content = content;
-              message.htmlContent = marked.parse(content, {
-                renderer: renderer
-              });
+
+              // Process chart markers before markdown parsing
+              var htmlContent = processChartMarkers(content, message);
+              if (htmlContent.includes('class="chart-container"')) {
+                message.htmlContent = htmlContent;
+              } else {
+                message.htmlContent = marked.parse(htmlContent, {
+                  renderer: renderer
+                });
+              }
               _this5.messages[messageIndex] = message;
-              _this5.scrollToBottom();
+              _this5.$nextTick(function () {
+                renderChartsInMessage(message);
+                _this5.scrollToBottom();
+              });
             },
             complete: function complete() {
               var _this5$stream;
@@ -602,3 +789,16 @@ window.openAIChatManager = function () {
     initialize: initialize
   };
 }();
+
+// Global function for downloading charts as images
+window.downloadChart = function (chartId) {
+  var canvas = document.getElementById(chartId);
+  if (!canvas) {
+    console.error('Chart canvas not found:', chartId);
+    return;
+  }
+  var link = document.createElement('a');
+  link.download = 'chart-' + chartId + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+};

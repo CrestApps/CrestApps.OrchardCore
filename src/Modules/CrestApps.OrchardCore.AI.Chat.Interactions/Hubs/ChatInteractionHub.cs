@@ -1,7 +1,6 @@
 using System.Text;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -12,7 +11,6 @@ using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -29,7 +27,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private readonly IChatInteractionPromptStore _promptStore;
     private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IAICompletionService _completionService;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IAICompletionContextBuilder _completionContextBuilder;
+    private readonly IPromptRouter _promptRouter;
     private readonly IClock _clock;
     private readonly ILogger<ChatInteractionHub> _logger;
     private readonly ISession _session;
@@ -42,7 +41,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         IChatInteractionPromptStore promptStore,
         IAIDataSourceStore dataSourceStore,
         IAICompletionService completionService,
-        IServiceProvider serviceProvider,
+        IAICompletionContextBuilder completionContextBuilder,
+        IPromptRouter promptRouter,
         IClock clock,
         ILogger<ChatInteractionHub> logger,
         ISession session,
@@ -53,7 +53,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         _promptStore = promptStore;
         _dataSourceStore = dataSourceStore;
         _completionService = completionService;
-        _serviceProvider = serviceProvider;
+        _completionContextBuilder = completionContextBuilder;
+        _promptRouter = promptRouter;
         _clock = clock;
         _logger = logger;
         _session = session;
@@ -370,43 +371,19 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 return;
             }
 
-            var systemMessage = interaction.SystemMessage ?? string.Empty;
-            if (documentProcessingResult != null && documentProcessingResult.IsSuccess && documentProcessingResult.HasContext)
+            var completionContext = await _completionContextBuilder.BuildAsync(interaction, c =>
             {
-                // Append document context to the system message
-                systemMessage = systemMessage + "\n\n" + documentProcessingResult.GetCombinedContext();
-            }
+                c.UserMarkdownInResponse = true;
 
-            var completionContext = new AICompletionContext
-            {
-                ConnectionName = interaction.ConnectionName,
-                DeploymentId = interaction.DeploymentId,
-                SystemMessage = systemMessage,
-                Temperature = interaction.Temperature,
-                TopP = interaction.TopP,
-                FrequencyPenalty = interaction.FrequencyPenalty,
-                PresencePenalty = interaction.PresencePenalty,
-                MaxTokens = interaction.MaxTokens,
-                PastMessagesCount = interaction.PastMessagesCount,
-                ToolNames = interaction.ToolNames?.ToArray(),
-                InstanceIds = interaction.ToolInstanceIds?.ToArray(),
-                McpConnectionIds = interaction.McpConnectionIds?.ToArray(),
-                UserMarkdownInResponse = true,
-            };
+                var systemMessage = c.SystemMessage ?? string.Empty;
+                if (documentProcessingResult != null && documentProcessingResult.IsSuccess && documentProcessingResult.HasContext)
+                {
+                    // Append document context to the system message
+                    systemMessage = systemMessage + "\n\n" + documentProcessingResult.GetCombinedContext();
+                }
 
-            if (interaction.TryGet<ChatInteractionDataSourceMetadata>(out var dataSourceMetadata))
-            {
-                completionContext.DataSourceId = dataSourceMetadata.DataSourceId;
-                completionContext.DataSourceType = dataSourceMetadata.DataSourceType;
-            }
-
-            if (interaction.TryGet<AzureRagChatMetadata>(out var ragMetadata))
-            {
-                completionContext.AdditionalProperties["Strictness"] = ragMetadata.Strictness;
-                completionContext.AdditionalProperties["TopNDocuments"] = ragMetadata.TopNDocuments;
-                completionContext.AdditionalProperties["IsInScope"] = ragMetadata.IsInScope;
-                completionContext.AdditionalProperties["Filter"] = ragMetadata.Filter;
-            }
+                c.SystemMessage = systemMessage;
+            });
 
             var contentItemIds = new HashSet<string>();
             var references = new Dictionary<string, AICompletionReference>();
@@ -499,68 +476,17 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     /// </summary>
     private async Task<IntentProcessingResult> ReasonAsync(ChatInteraction interaction, IReadOnlyCollection<ChatInteractionPrompt> prompts, string prompt, CancellationToken cancellationToken)
     {
-        // Get the intent detector
-        var intentDetector = _serviceProvider.GetService<IPromptIntentDetector>();
-        if (intentDetector == null)
+        var context = new PromptRoutingContext(interaction)
         {
-            _logger.LogDebug("Document intent detector is not available.");
+            Prompt = prompt,
+            Source = interaction.Source,
+            ConnectionName = interaction.ConnectionName,
+            Documents = interaction.Documents ?? [],
+            ConversationHistory = BuildConversationHistory(prompts),
+            MaxHistoryMessagesForImageGeneration = interaction.PastMessagesCount ?? 5,
+        };
 
-            // Without intent detection we can't route to any strategy.
-            _logger.LogWarning("Document intent detector is not available. Document processing will be skipped.");
-            return null;
-        }
-
-        // Get the strategy provider
-        var strategyProvider = _serviceProvider.GetService<IPromptProcessingStrategyProvider>();
-        if (strategyProvider == null)
-        {
-            _logger.LogDebug("Document processing strategy provider is not available.");
-
-            _logger.LogWarning("Document processing strategy provider is not available. Document processing will be skipped.");
-            return null;
-        }
-
-        try
-        {
-            // Detect user intent (this works with or without documents)
-            var intentContext = new DocumentIntentDetectionContext
-            {
-                Prompt = prompt,
-                Interaction = interaction,
-                CancellationToken = cancellationToken,
-            };
-
-            var intent = await intentDetector.DetectAsync(intentContext);
-
-            _logger.LogDebug("Detected intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
-                intent.Name, intent.Confidence, intent.Reason);
-
-            // Build conversation history from past prompts (excluding the current prompt which hasn't been added yet)
-            var conversationHistory = BuildConversationHistory(prompts);
-
-            var processingContext = new IntentProcessingContext
-            {
-                Prompt = prompt,
-                Interaction = interaction,
-                ConversationHistory = conversationHistory,
-                MaxHistoryMessagesForImageGeneration = interaction.PastMessagesCount ?? 5,
-                CancellationToken = cancellationToken,
-            };
-
-            processingContext.Result.Intent = intent.Name;
-            processingContext.Result.Confidence = intent.Confidence;
-            processingContext.Result.Reason = intent.Reason;
-
-            await strategyProvider.ProcessAsync(processingContext);
-
-            return processingContext.Result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during intent detection or processing.");
-
-            return null;
-        }
+        return await _promptRouter.RouteAsync(context, cancellationToken);
     }
 
     /// <summary>

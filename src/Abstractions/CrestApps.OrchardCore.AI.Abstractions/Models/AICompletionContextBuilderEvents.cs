@@ -7,29 +7,29 @@ namespace CrestApps.OrchardCore.AI.Models;
 /// This context is provided to <c>BuildingAsync</c> handlers in the
 /// <see cref="IAICompletionContextBuilderHandler"/> pipeline, allowing implementations to enrich,
 /// validate, or otherwise modify the mutable <see cref="Context"/> based on the source
-/// <see cref="Profile"/>.
+/// <see cref="Resource"/>.
 /// </remarks>
 public sealed class AICompletionContextBuildingContext
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AICompletionContextBuildingContext"/> class.
     /// </summary>
-    /// <param name="profile">The source <see cref="AIProfile"/> driving the build.</param>
+    /// <param name="resource">The source resource driving the build.</param>
     /// <param name="context">The mutable <see cref="AICompletionContext"/> being built.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> or <paramref name="context"/> is <see langword="null"/>.</exception>
-    public AICompletionContextBuildingContext(AIProfile profile, AICompletionContext context)
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="resource"/> or <paramref name="context"/> is <see langword="null"/>.</exception>
+    public AICompletionContextBuildingContext(object resource, AICompletionContext context)
     {
-        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(resource);
         ArgumentNullException.ThrowIfNull(context);
 
-        Profile = profile;
+        Resource = resource;
         Context = context;
     }
 
     /// <summary>
-    /// Gets the source <see cref="AIProfile"/> used to seed and configure the completion context.
+    /// Gets the source resource used to seed and configure the completion context.
     /// </summary>
-    public AIProfile Profile { get; }
+    public object Resource { get; }
 
     /// <summary>
     /// Gets the mutable <see cref="AICompletionContext"/> being built. Handlers may mutate this instance.

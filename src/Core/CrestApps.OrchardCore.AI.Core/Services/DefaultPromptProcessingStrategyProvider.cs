@@ -1,8 +1,8 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
+namespace CrestApps.OrchardCore.AI.Core.Services;
 
 /// <summary>
 /// Default implementation of <see cref="IPromptProcessingStrategyProvider"/> that routes
@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 /// </summary>
 /// <remarks>
 /// Heavy strategies (implementing <see cref="IHeavyPromptProcessingStrategy"/>) are only executed
-/// when <see cref="ChatInteractionOptions.EnableHeavyProcessingStrategies"/> is true.
+/// when <see cref="PromptProcessingOptions.EnableHeavyProcessingStrategies"/> is true.
 /// </remarks>
 public sealed class DefaultPromptProcessingStrategyProvider : IPromptProcessingStrategyProvider
 {
@@ -29,7 +29,7 @@ public sealed class DefaultPromptProcessingStrategyProvider : IPromptProcessingS
     }
 
     /// <inheritdoc />
-    public async Task ProcessAsync(IntentProcessingContext context)
+    public async Task ProcessAsync(IntentProcessingContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -62,7 +62,7 @@ public sealed class DefaultPromptProcessingStrategyProvider : IPromptProcessingS
                 }
 
                 var contextCountBefore = context.Result.AdditionalContexts.Count;
-                await strategy.ProcessAsync(context);
+                await strategy.ProcessAsync(context, cancellationToken);
                 var contextCountAfter = context.Result.AdditionalContexts.Count;
 
                 if (isDebugging && contextCountAfter > contextCountBefore)

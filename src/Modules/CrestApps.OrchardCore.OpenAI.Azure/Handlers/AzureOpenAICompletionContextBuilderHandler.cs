@@ -9,7 +9,8 @@ internal sealed class AzureOpenAICompletionContextBuilderHandler : IAICompletion
 {
     public Task BuildingAsync(AICompletionContextBuildingContext context)
     {
-        if (context.Profile.TryGet<AzureRagChatMetadata>(out var ragMetadata))
+        if (context.Resource is AIProfile profile &&
+            profile.TryGet<AzureRagChatMetadata>(out var ragMetadata))
         {
             context.Context.AdditionalProperties["Strictness"] = ragMetadata.Strictness;
             context.Context.AdditionalProperties["TopNDocuments"] = ragMetadata.TopNDocuments;

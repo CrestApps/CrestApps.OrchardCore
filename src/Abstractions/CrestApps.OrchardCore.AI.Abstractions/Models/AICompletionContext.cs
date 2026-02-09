@@ -4,8 +4,6 @@ public class AICompletionContext
 {
     public string ConnectionName { get; set; }
 
-    public AIChatSession Session { get; set; }
-
     public bool UserMarkdownInResponse { get; set; } = true;
 
     public bool DisableTools { get; set; }

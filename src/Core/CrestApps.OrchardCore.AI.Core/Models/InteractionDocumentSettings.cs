@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
+namespace CrestApps.OrchardCore.AI.Core.Models;
 
 public sealed class InteractionDocumentSettings
 {

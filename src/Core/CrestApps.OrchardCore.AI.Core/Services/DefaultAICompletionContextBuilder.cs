@@ -1,7 +1,5 @@
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Entities;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
@@ -19,40 +17,19 @@ public sealed class DefaultAICompletionContextBuilder : IAICompletionContextBuil
         _logger = logger;
     }
 
-    public async ValueTask<AICompletionContext> BuildAsync(AIProfile profile, Action<AICompletionContext> configure = null)
+    public async ValueTask<AICompletionContext> BuildAsync(object resource, Action<AICompletionContext> configure = null)
     {
-        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(resource);
 
-        var context = new AICompletionContext()
-        {
-            ConnectionName = profile.ConnectionName,
-            DeploymentId = profile.DeploymentId,
-        };
+        var context = new AICompletionContext();
 
-        if (profile.TryGet<AIProfileMetadata>(out var metadata))
-        {
-            context.SystemMessage = metadata.SystemMessage;
-            context.Temperature = metadata.Temperature;
-            context.TopP = metadata.TopP;
-            context.FrequencyPenalty = metadata.FrequencyPenalty;
-            context.PresencePenalty = metadata.PresencePenalty;
-            context.MaxTokens = metadata.MaxTokens;
-            context.PastMessagesCount = metadata.PastMessagesCount;
-            context.UseCaching = metadata.UseCaching;
-        }
-
-        if (profile.TryGet<AIProfileFunctionInvocationMetadata>(out var functionInvocationMetadata))
-        {
-            context.ToolNames = functionInvocationMetadata.Names;
-        }
-
-        var building = new AICompletionContextBuildingContext(profile, context);
+        var building = new AICompletionContextBuildingContext(resource, context);
         await _handlers.InvokeAsync((h, c) => h.BuildingAsync(c), building, _logger);
 
         // Allow caller override last.
         configure?.Invoke(context);
 
-        var built = new AICompletionContextBuiltContext(profile, context);
+        var built = new AICompletionContextBuiltContext(resource, context);
         await _handlers.InvokeAsync((h, c) => h.BuiltAsync(c), built, _logger);
 
         return context;

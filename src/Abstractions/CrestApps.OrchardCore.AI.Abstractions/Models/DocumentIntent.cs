@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+namespace CrestApps.OrchardCore.AI.Models;
 
 /// <summary>
 /// Detected intent metadata.
