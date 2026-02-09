@@ -41,16 +41,14 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
     }
 
     /// <inheritdoc />
-    public override async Task ProcessAsync(IntentProcessingContext context)
+    public override async Task ProcessAsync(IntentProcessingContext context, CancellationToken cancellationToken = default)
     {
         if (!CanHandle(context, DocumentIntents.DocumentQnA) || !HasDocuments(context))
         {
             return;
         }
 
-        var interaction = context.Interaction;
         var prompt = context.Prompt;
-        var cancellationToken = context.CancellationToken;
 
         try
         {
@@ -82,8 +80,8 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
             }
 
             // Get embedding for the user's prompt
-            var providerName = interaction.Source;
-            var connectionName = interaction.ConnectionName;
+            var providerName = context.Source;
+            var connectionName = context.CompletionContext?.ConnectionName;
             string deploymentName = null;
 
             if (_providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
@@ -125,7 +123,15 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
             var embedding = embeddings[0];
 
             // Search for similar document chunks
-            var topN = interaction.DocumentTopN ?? settings.TopN;
+            var interactionId = context.CompletionContext?.AdditionalProperties?.TryGetValue("InteractionId", out var idVal) == true
+                ? idVal?.ToString() ?? string.Empty
+                : string.Empty;
+
+            var documentTopN = context.CompletionContext?.AdditionalProperties?.TryGetValue("DocumentTopN", out var topNVal) == true && topNVal is int tn
+                ? tn
+                : (int?)null;
+
+            var topN = documentTopN ?? settings.TopN;
 
             if (topN <= 0)
             {
@@ -135,7 +141,7 @@ public sealed class RagDocumentProcessingStrategy : DocumentProcessingStrategyBa
             var results = await searchService.SearchAsync(
                 indexProfile,
                 embedding.Vector.ToArray(),
-                interaction.ItemId,
+                interactionId,
                 topN,
                 cancellationToken);
 

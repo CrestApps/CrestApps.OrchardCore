@@ -8,7 +8,8 @@ internal sealed class McpAICompletionContextBuilderHandler : IAICompletionContex
 {
     public Task BuildingAsync(AICompletionContextBuildingContext context)
     {
-        if (context.Profile.TryGet<AIProfileMcpMetadata>(out var mcpMetadata))
+        if (context.Resource is AIProfile profile &&
+            profile.TryGet<AIProfileMcpMetadata>(out var mcpMetadata))
         {
             context.Context.McpConnectionIds = mcpMetadata.ConnectionIds;
         }

@@ -23,16 +23,16 @@ public sealed class TabularAnalysisDocumentProcessingStrategy : DocumentProcessi
     }
 
     /// <inheritdoc />
-    public override async Task ProcessAsync(IntentProcessingContext context)
+    public override async Task ProcessAsync(IntentProcessingContext context, CancellationToken cancellationToken = default)
     {
         if (!CanHandle(context, DocumentIntents.AnalyzeTabularData) ||
-            context.Interaction.Documents is null ||
-            context.Interaction.Documents.Count == 0)
+            context.DocumentInfos is null ||
+            context.DocumentInfos.Count == 0)
         {
             return;
         }
 
-        var tabularDocuments = await GetTabularDocumentsAsync(context.Interaction.Documents);
+        var tabularDocuments = await GetTabularDocumentsAsync(context.DocumentInfos);
 
         if (tabularDocuments.Count == 0)
         {

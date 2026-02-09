@@ -28,7 +28,7 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
     }
 
     /// <inheritdoc />
-    public override async Task ProcessAsync(IntentProcessingContext context)
+    public override async Task ProcessAsync(IntentProcessingContext context, CancellationToken cancellationToken = default)
     {
         var isGenerateImage = CanHandle(context, DocumentIntents.GenerateImage);
         var isGenerateImageWithHistory = CanHandle(context, DocumentIntents.GenerateImageWithHistory);
@@ -41,11 +41,11 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
         // Mark this as an image generation intent
         context.Result.IsImageGenerationIntent = true;
 
-        var interaction = context.Interaction;
-        if (interaction == null)
+        var completionContext = context.CompletionContext;
+        if (completionContext == null)
         {
-            _logger.LogWarning("Interaction is not available in context, cannot generate images.");
-            context.Result.SetFailed("Interaction is not available for image generation.");
+            _logger.LogWarning("Completion context is not available, cannot generate images.");
+            context.Result.SetFailed("Completion context is not available for image generation.");
             return;
         }
 
@@ -58,8 +58,8 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
                 return;
             }
 
-            var providerName = interaction.Source;
-            var connectionName = interaction.ConnectionName;
+            var providerName = context.Source;
+            var connectionName = completionContext.ConnectionName;
 
             if (!_providerOptions.Providers.TryGetValue(providerName, out var provider))
             {
@@ -110,7 +110,7 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
             };
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
-            var result = await imageGenerator.GenerateAsync(request, options, context.CancellationToken);
+            var result = await imageGenerator.GenerateAsync(request, options, cancellationToken);
 
             context.Result.GeneratedImages = result;
 

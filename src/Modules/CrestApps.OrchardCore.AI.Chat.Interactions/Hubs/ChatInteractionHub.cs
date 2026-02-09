@@ -28,6 +28,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private readonly IChatInteractionPromptStore _promptStore;
     private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IAICompletionService _completionService;
+    private readonly IAICompletionContextBuilder _completionContextBuilder;
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger<ChatInteractionHub> _logger;
@@ -41,6 +42,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         IChatInteractionPromptStore promptStore,
         IAIDataSourceStore dataSourceStore,
         IAICompletionService completionService,
+        IAICompletionContextBuilder completionContextBuilder,
         IServiceProvider serviceProvider,
         IClock clock,
         ILogger<ChatInteractionHub> logger,
@@ -52,6 +54,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         _promptStore = promptStore;
         _dataSourceStore = dataSourceStore;
         _completionService = completionService;
+        _completionContextBuilder = completionContextBuilder;
         _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
@@ -369,43 +372,19 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 return;
             }
 
-            var systemMessage = interaction.SystemMessage ?? string.Empty;
-            if (documentProcessingResult != null && documentProcessingResult.IsSuccess && documentProcessingResult.HasContext)
+            var completionContext = await _completionContextBuilder.BuildAsync(interaction, c =>
             {
-                // Append document context to the system message
-                systemMessage = systemMessage + "\n\n" + documentProcessingResult.GetCombinedContext();
-            }
+                c.UserMarkdownInResponse = true;
 
-            var completionContext = new AICompletionContext
-            {
-                ConnectionName = interaction.ConnectionName,
-                DeploymentId = interaction.DeploymentId,
-                SystemMessage = systemMessage,
-                Temperature = interaction.Temperature,
-                TopP = interaction.TopP,
-                FrequencyPenalty = interaction.FrequencyPenalty,
-                PresencePenalty = interaction.PresencePenalty,
-                MaxTokens = interaction.MaxTokens,
-                PastMessagesCount = interaction.PastMessagesCount,
-                ToolNames = interaction.ToolNames?.ToArray(),
-                InstanceIds = interaction.ToolInstanceIds?.ToArray(),
-                McpConnectionIds = interaction.McpConnectionIds?.ToArray(),
-                UserMarkdownInResponse = true,
-            };
+                var systemMessage = c.SystemMessage ?? string.Empty;
+                if (documentProcessingResult != null && documentProcessingResult.IsSuccess && documentProcessingResult.HasContext)
+                {
+                    // Append document context to the system message
+                    systemMessage = systemMessage + "\n\n" + documentProcessingResult.GetCombinedContext();
+                }
 
-            if (interaction.TryGet<ChatInteractionDataSourceMetadata>(out var dataSourceMetadata))
-            {
-                completionContext.DataSourceId = dataSourceMetadata.DataSourceId;
-                completionContext.DataSourceType = dataSourceMetadata.DataSourceType;
-            }
-
-            if (interaction.TryGet<AzureRagChatMetadata>(out var ragMetadata))
-            {
-                completionContext.AdditionalProperties["Strictness"] = ragMetadata.Strictness;
-                completionContext.AdditionalProperties["TopNDocuments"] = ragMetadata.TopNDocuments;
-                completionContext.AdditionalProperties["IsInScope"] = ragMetadata.IsInScope;
-                completionContext.AdditionalProperties["Filter"] = ragMetadata.Filter;
-            }
+                c.SystemMessage = systemMessage;
+            });
 
             var contentItemIds = new HashSet<string>();
             var references = new Dictionary<string, AICompletionReference>();
@@ -506,16 +485,20 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             return null;
         }
 
-        var request = new PromptRoutingRequest
+        var completionContext = await _completionContextBuilder.BuildAsync(interaction);
+
+        var request = new PromptRoutingContext
         {
             Prompt = prompt,
-            Interaction = interaction,
+            Source = interaction.Source,
+            ConnectionName = interaction.ConnectionName,
+            CompletionContext = completionContext,
+            Documents = interaction.Documents ?? [],
             ConversationHistory = BuildConversationHistory(prompts),
             MaxHistoryMessagesForImageGeneration = interaction.PastMessagesCount ?? 5,
-            CancellationToken = cancellationToken,
         };
 
-        return await routingService.RouteAsync(request);
+        return await routingService.RouteAsync(request, cancellationToken);
     }
 
     /// <summary>

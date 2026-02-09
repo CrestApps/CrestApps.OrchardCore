@@ -15,5 +15,5 @@ public interface IPromptProcessingStrategy
     /// If this strategy does not handle the intent, it should return without modifying the result.
     /// </summary>
     /// <param name="context">The processing context containing documents, intent, and result to update.</param>
-    Task ProcessAsync(IntentProcessingContext context);
+    Task ProcessAsync(IntentProcessingContext context, CancellationToken cancellationToken = default);
 }

@@ -4,5 +4,5 @@ namespace CrestApps.OrchardCore.AI;
 
 public interface IPromptRouter
 {
-    Task<IntentProcessingResult> RouteAsync(PromptRoutingRequest request);
+    Task<IntentProcessingResult> RouteAsync(PromptRoutingContext context, CancellationToken cancellationToken = default);
 }

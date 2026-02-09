@@ -28,7 +28,8 @@ public interface ITabularBatchProcessor
     Task<IList<TabularBatchResult>> ProcessBatchesAsync(
         IList<TabularBatch> batches,
         string userPrompt,
-        IntentProcessingContext context);
+        IntentProcessingContext context,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Merges batch results into a single output string, preserving row order.

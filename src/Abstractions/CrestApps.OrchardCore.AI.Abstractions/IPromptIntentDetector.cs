@@ -11,7 +11,7 @@ public interface IPromptIntentDetector
     /// <summary>
     /// Detects the user's intent based on their prompt and attached documents.
     /// </summary>
-    /// <param name="context">The context containing the prompt, documents, and interaction.</param>
+    /// <param name="context">The context containing the prompt, documents, and routing information.</param>
     /// <returns>The detected intent metadata.</returns>
-    Task<DocumentIntent> DetectAsync(DocumentIntentDetectionContext context);
+    Task<DocumentIntent> DetectAsync(PromptRoutingContext context, CancellationToken cancellationToken = default);
 }

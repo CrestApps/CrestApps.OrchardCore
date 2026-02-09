@@ -354,7 +354,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
         {
-            c.Session = chatSession;
+            c.AdditionalProperties["Session"] = chatSession;
             c.UserMarkdownInResponse = true;
 
             // Append additional context from intent processing to the system message.
@@ -545,27 +545,21 @@ public class AIChatHub : Hub<IAIChatHubClient>
             return null;
         }
 
-        // Create a lightweight ChatInteraction from the AI profile for intent processing.
-        // This allows reusing the same intent detection and strategy system without
-        // introducing a direct dependency on AI.Interactions module. Only Source,
-        // ConnectionName, and DeploymentId are needed by the intent detector and strategies.
-        var request = new PromptRoutingRequest
+        var completionContext = await _aICompletionContextBuilder.BuildAsync(profile);
+
+        var request = new PromptRoutingContext
         {
             Prompt = prompt,
-            Interaction = new ChatInteraction
-            {
-                Source = profile.Source,
-                ConnectionName = profile.ConnectionName,
-                DeploymentId = profile.DeploymentId,
-            },
+            Source = profile.Source,
+            ConnectionName = profile.ConnectionName,
+            CompletionContext = completionContext,
             ConversationHistory = prompts
                 .Where(p => !p.IsGeneratedPrompt)
                 .Select(p => new ChatMessage(p.Role, p.Content))
                 .ToList(),
-            CancellationToken = cancellationToken,
         };
 
-        return await routingService.RouteAsync(request);
+        return await routingService.RouteAsync(request, cancellationToken);
     }
 
     private static async Task WritePartialMessageAsync(ChannelWriter<CompletionPartialMessage> writer, string sessionId, string messageId, string content, CancellationToken cancellationToken)

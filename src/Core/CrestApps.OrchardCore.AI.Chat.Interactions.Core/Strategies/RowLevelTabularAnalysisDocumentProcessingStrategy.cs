@@ -42,21 +42,21 @@ public sealed class RowLevelTabularAnalysisDocumentProcessingStrategy : Document
         _logger = logger;
     }
 
-    public override async Task ProcessAsync(IntentProcessingContext context)
+    public override async Task ProcessAsync(IntentProcessingContext context, CancellationToken cancellationToken = default)
     {
         if (!CanHandle(context, DocumentIntents.AnalyzeTabularDataByRow) || !HasDocuments(context))
         {
             return;
         }
 
-        var tabularDocuments = await GetTabularDocumentsAsync(context.Interaction.Documents);
+        var tabularDocuments = await GetTabularDocumentsAsync(context.DocumentInfos);
 
         if (tabularDocuments.Count == 0)
         {
             // Load all documents for fallback
             if (!HasDocumentContent(context))
             {
-                var documentIds = context.Interaction.Documents.Select(d => d.DocumentId);
+                var documentIds = context.DocumentInfos.Select(d => d.DocumentId);
                 context.Documents = (await _chatInteractionDocumentStore.GetAsync(documentIds)).ToList();
             }
 
@@ -76,7 +76,7 @@ public sealed class RowLevelTabularAnalysisDocumentProcessingStrategy : Document
         }
         else
         {
-            await ProcessLargeDatasetAsync(context, tabularDocuments);
+            await ProcessLargeDatasetAsync(context, tabularDocuments, cancellationToken);
         }
     }
 
@@ -126,9 +126,11 @@ public sealed class RowLevelTabularAnalysisDocumentProcessingStrategy : Document
         context.Result.AddContext(builder.ToString(), prefix, usedVectorSearch: false);
     }
 
-    private async Task ProcessLargeDatasetAsync(IntentProcessingContext context, List<ChatInteractionDocument> tabularDocuments)
+    private async Task ProcessLargeDatasetAsync(IntentProcessingContext context, List<ChatInteractionDocument> tabularDocuments, CancellationToken cancellationToken)
     {
-        var interactionId = context.Interaction.ItemId;
+        var interactionId = context.CompletionContext?.AdditionalProperties?.TryGetValue("InteractionId", out var id) == true
+            ? id?.ToString() ?? string.Empty
+            : string.Empty;
         var prompt = context.Prompt;
 
         // Check cache first if enabled
@@ -178,7 +180,7 @@ public sealed class RowLevelTabularAnalysisDocumentProcessingStrategy : Document
             return;
         }
 
-        var results = await _batchProcessor.ProcessBatchesAsync(allBatches, prompt, context);
+        var results = await _batchProcessor.ProcessBatchesAsync(allBatches, prompt, context, cancellationToken);
 
         var successCount = results.Count(r => r.Success);
         var failureCount = results.Count - successCount;

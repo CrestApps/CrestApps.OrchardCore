@@ -242,7 +242,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             var transcript = chatSession.Prompts.Where(x => !x.IsGeneratedPrompt)
                 .Select(prompt => new ChatMessage(prompt.Role, prompt.Content));
 
-            var completion = await _aICompletionService.CompleteAsync(campaign.ProviderName, transcript, new AICompletionContext
+            var context = new AICompletionContext
             {
                 ConnectionName = campaign.ConnectionName,
                 DeploymentId = campaign.DeploymentName,
@@ -252,8 +252,11 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                 PresencePenalty = campaign.PresencePenalty,
                 MaxTokens = campaign.MaxTokens,
                 ToolNames = campaign.ToolNames,
-                Session = chatSession,
-            });
+            };
+
+            context.AdditionalProperties["Session"] = chatSession;
+
+            var completion = await _aICompletionService.CompleteAsync(campaign.ProviderName, transcript, context);
 
             bestChoice = completion?.Messages?.FirstOrDefault()?.Text;
 

@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Core.Strategies;
 public abstract class DocumentProcessingStrategyBase : IPromptProcessingStrategy
 {
     /// <inheritdoc />
-    public abstract Task ProcessAsync(IntentProcessingContext context);
+    public abstract Task ProcessAsync(IntentProcessingContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the combined text content from all documents.
@@ -76,8 +76,7 @@ public abstract class DocumentProcessingStrategyBase : IPromptProcessingStrategy
     /// </summary>
     protected static string GetDocumentMetadata(IntentProcessingContext context)
     {
-        // Use interaction.Documents for metadata (file info) since that's always available
-        if (context.Interaction?.Documents == null || context.Interaction.Documents.Count == 0)
+        if (context.DocumentInfos == null || context.DocumentInfos.Count == 0)
         {
             return string.Empty;
         }
@@ -85,7 +84,7 @@ public abstract class DocumentProcessingStrategyBase : IPromptProcessingStrategy
         var builder = new StringBuilder();
         builder.AppendLine("Attached documents:");
 
-        foreach (var doc in context.Interaction.Documents)
+        foreach (var doc in context.DocumentInfos)
         {
             builder.AppendLine($"- {doc.FileName ?? "Unknown"} ({FormatFileSize(doc.FileSize)}, {doc.ContentType ?? "unknown type"})");
         }
@@ -97,7 +96,7 @@ public abstract class DocumentProcessingStrategyBase : IPromptProcessingStrategy
     /// Checks if there are documents attached to the interaction.
     /// </summary>
     protected static bool HasDocuments(IntentProcessingContext context)
-        => context.Interaction?.Documents != null && context.Interaction.Documents.Count > 0;
+        => context.DocumentInfos != null && context.DocumentInfos.Count > 0;
 
     /// <summary>
     /// Checks if full document content has been loaded into the context.

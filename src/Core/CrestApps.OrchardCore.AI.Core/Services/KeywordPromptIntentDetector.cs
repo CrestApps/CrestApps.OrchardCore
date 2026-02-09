@@ -111,7 +111,7 @@ public sealed class KeywordPromptIntentDetector : IPromptIntentDetector
     ];
 
     /// <inheritdoc />
-    public Task<DocumentIntent> DetectAsync(DocumentIntentDetectionContext context)
+    public Task<DocumentIntent> DetectAsync(PromptRoutingContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 

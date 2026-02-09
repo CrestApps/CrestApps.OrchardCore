@@ -14,9 +14,19 @@ public sealed class IntentProcessingContext
     public string Prompt { get; set; }
 
     /// <summary>
-    /// Gets or sets the chat interaction containing documents and configuration.
+    /// Gets or sets the AI provider name (e.g., "OpenAI", "AzureOpenAI").
     /// </summary>
-    public ChatInteraction Interaction { get; set; }
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AI completion context containing connection, deployment, and model settings.
+    /// </summary>
+    public AICompletionContext CompletionContext { get; set; }
+
+    /// <summary>
+    /// Gets or sets the document metadata (file info) attached to the interaction.
+    /// </summary>
+    public IList<ChatInteractionDocumentInfo> DocumentInfos { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the full documents with text and chunks, loaded on demand.
@@ -35,11 +45,6 @@ public sealed class IntentProcessingContext
     /// Default is 5 messages.
     /// </summary>
     public int MaxHistoryMessagesForImageGeneration { get; set; } = 5;
-
-    /// <summary>
-    /// Gets or sets the cancellation token for the operation.
-    /// </summary>
-    public CancellationToken CancellationToken { get; set; }
 
     /// <summary>
     /// Gets the result of intent processing. Multiple strategies can add context to this result.

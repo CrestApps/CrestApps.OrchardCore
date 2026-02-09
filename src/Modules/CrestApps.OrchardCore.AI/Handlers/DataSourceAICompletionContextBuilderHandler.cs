@@ -8,7 +8,8 @@ internal sealed class DataSourceAICompletionContextBuilderHandler : IAICompletio
 {
     public Task BuildingAsync(AICompletionContextBuildingContext context)
     {
-        if (context.Profile.TryGet<AIProfileDataSourceMetadata>(out var dataSourceMetadata))
+        if (context.Resource is AIProfile profile &&
+            profile.TryGet<AIProfileDataSourceMetadata>(out var dataSourceMetadata))
         {
             context.Context.DataSourceType = dataSourceMetadata.DataSourceType;
             context.Context.DataSourceId = dataSourceMetadata.DataSourceId;

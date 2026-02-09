@@ -58,6 +58,7 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatInteractionsAdminMenu>()
+            .AddScoped<IAICompletionContextBuilderHandler, ChatInteractionCompletionContextBuilderHandler>()
             .AddDataMigration<ChatInteractionMigrations>();
 
         // Configure RowLevelTabularBatchSettings from configuration

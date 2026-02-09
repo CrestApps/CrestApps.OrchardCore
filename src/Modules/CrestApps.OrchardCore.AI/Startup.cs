@@ -53,6 +53,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddScoped<IAILinkGenerator, DefaultAILinkGenerator>()
+            .AddScoped<IAICompletionContextBuilderHandler, AIProfileCompletionContextBuilderHandler>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
             .AddNavigationProvider<AIProfileAdminMenu>();

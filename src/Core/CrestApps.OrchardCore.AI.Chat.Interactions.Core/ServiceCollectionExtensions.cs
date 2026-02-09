@@ -1,8 +1,10 @@
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Strategies;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 
@@ -16,6 +18,12 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddDefaultDocumentPromptProcessingStrategies(this IServiceCollection services)
     {
+        // Register the tabular batch processor (used by heavy processing strategies)
+        services.TryAddScoped<ITabularBatchProcessor, TabularBatchProcessor>();
+
+        // Register the tabular batch result cache (uses IDistributedCache)
+        services.TryAddSingleton<ITabularBatchResultCache, TabularBatchResultCache>();
+
         // Register intents for the default strategies (including heavy intent)
         services
             .AddPromptProcessingIntent(

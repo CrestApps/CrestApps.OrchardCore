@@ -143,7 +143,7 @@ internal static class ApiAICompletionEndpoint
 
             var context = await completionContextBuilder.BuildAsync(profile, c =>
             {
-                c.Session = chatSession;
+                c.AdditionalProperties["Session"] = chatSession;
             });
 
             completion = await completionService.CompleteAsync(profile.Source, transcript, context);

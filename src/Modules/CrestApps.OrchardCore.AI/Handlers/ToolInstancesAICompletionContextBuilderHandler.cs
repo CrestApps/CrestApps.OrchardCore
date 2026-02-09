@@ -8,7 +8,8 @@ internal sealed class ToolInstancesAICompletionContextBuilderHandler : IAIComple
 {
     public Task BuildingAsync(AICompletionContextBuildingContext context)
     {
-        if (context.Profile.TryGet<AIProfileFunctionInstancesMetadata>(out var functionInstancesMetadata))
+        if (context.Resource is AIProfile profile &&
+            profile.TryGet<AIProfileFunctionInstancesMetadata>(out var functionInstancesMetadata))
         {
             context.Context.InstanceIds = functionInstancesMetadata.InstanceIds;
         }

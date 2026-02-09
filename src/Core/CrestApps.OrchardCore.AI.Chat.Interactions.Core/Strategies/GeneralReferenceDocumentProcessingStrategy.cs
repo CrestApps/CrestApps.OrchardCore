@@ -20,7 +20,7 @@ public sealed class GeneralReferenceDocumentProcessingStrategy : DocumentProcess
     }
 
     /// <inheritdoc />
-    public override async Task ProcessAsync(IntentProcessingContext context)
+    public override async Task ProcessAsync(IntentProcessingContext context, CancellationToken cancellationToken = default)
     {
         if (!CanHandle(context, DocumentIntents.GeneralChatWithReference) || !HasDocuments(context))
         {
@@ -30,7 +30,7 @@ public sealed class GeneralReferenceDocumentProcessingStrategy : DocumentProcess
         // Load full documents if not already loaded
         if (!HasDocumentContent(context))
         {
-            var documentIds = context.Interaction.Documents.Select(d => d.DocumentId);
+            var documentIds = context.DocumentInfos.Select(d => d.DocumentId);
             context.Documents = (await _chatInteractionDocumentStore.GetAsync(documentIds)).ToList();
         }
 

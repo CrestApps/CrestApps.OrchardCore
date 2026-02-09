@@ -40,7 +40,7 @@ public sealed class AIPromptIntentDetector : IPromptIntentDetector
     }
 
     /// <inheritdoc />
-    public async Task<DocumentIntent> DetectAsync(DocumentIntentDetectionContext context)
+    public async Task<DocumentIntent> DetectAsync(PromptRoutingContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -53,7 +53,7 @@ public sealed class AIPromptIntentDetector : IPromptIntentDetector
         }
 
         // Try AI-based detection first
-        var aiResult = await TryDetectWithAIAsync(context);
+        var aiResult = await TryDetectWithAIAsync(context, cancellationToken);
         if (aiResult != null)
         {
             return aiResult;
@@ -61,17 +61,16 @@ public sealed class AIPromptIntentDetector : IPromptIntentDetector
 
         // Fall back to keyword-based detection
         _logger.LogDebug("AI-based intent detection unavailable, falling back to keyword-based detection.");
-        var fallback = await _fallbackDetector.DetectAsync(context);
+        var fallback = await _fallbackDetector.DetectAsync(context, cancellationToken);
 
         return fallback;
     }
 
-    private async Task<DocumentIntent> TryDetectWithAIAsync(DocumentIntentDetectionContext context)
+    private async Task<DocumentIntent> TryDetectWithAIAsync(PromptRoutingContext context, CancellationToken cancellationToken)
     {
-        var interaction = context.Interaction;
-        if (interaction == null)
+        if (string.IsNullOrEmpty(context.Source))
         {
-            _logger.LogDebug("Interaction not available in context, cannot use AI-based intent detection.");
+            _logger.LogDebug("Source not available in context, cannot use AI-based intent detection.");
             return null;
         }
 
@@ -90,8 +89,8 @@ public sealed class AIPromptIntentDetector : IPromptIntentDetector
                 return null;
             }
 
-            var providerName = interaction.Source;
-            var connectionName = interaction.ConnectionName;
+            var providerName = context.Source;
+            var connectionName = context.ConnectionName;
 
             if (!_aiProviderOptions.Providers.TryGetValue(providerName, out var provider))
             {
@@ -143,7 +142,7 @@ public sealed class AIPromptIntentDetector : IPromptIntentDetector
                 MaxOutputTokens = 200, // Short response expected
             };
 
-            var response = await chatClient.GetResponseAsync(messages, options, context.CancellationToken);
+            var response = await chatClient.GetResponseAsync(messages, options, cancellationToken);
 
             if (response == null || string.IsNullOrWhiteSpace(response.Text))
             {
@@ -252,7 +251,7 @@ public sealed class AIPromptIntentDetector : IPromptIntentDetector
         return builder.ToString();
     }
 
-    private static string BuildUserMessage(DocumentIntentDetectionContext context)
+    private static string BuildUserMessage(PromptRoutingContext context)
     {
         var documentInfo = string.Empty;
 

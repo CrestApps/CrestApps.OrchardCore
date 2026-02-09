@@ -28,14 +28,14 @@ public sealed class DocumentProcessingStrategyTests
         var mockStore = CreateMockDocumentStore(documents);
         var strategy = new SummarizationDocumentProcessingStrategy(mockStore.Object);
 
-        await strategy.ProcessAsync(context);
+        await strategy.ProcessAsync(context, TestContext.Current.CancellationToken);
         Assert.True(context.Result.HasContext);
         Assert.True(context.Result.IsSuccess);
 
         var (wrongContext, wrongDocuments) = CreateProcessingContext(DocumentIntents.DocumentQnA);
         var wrongMockStore = CreateMockDocumentStore(wrongDocuments);
         var wrongStrategy = new SummarizationDocumentProcessingStrategy(wrongMockStore.Object);
-        await wrongStrategy.ProcessAsync(wrongContext);
+        await wrongStrategy.ProcessAsync(wrongContext, TestContext.Current.CancellationToken);
         Assert.False(wrongContext.Result.HasContext);
     }
 
@@ -46,7 +46,7 @@ public sealed class DocumentProcessingStrategyTests
         var mockStore = CreateMockDocumentStore(documents);
         var strategy = new SummarizationDocumentProcessingStrategy(mockStore.Object);
 
-        await strategy.ProcessAsync(context);
+        await strategy.ProcessAsync(context, TestContext.Current.CancellationToken);
 
         Assert.True(context.Result.HasContext);
         Assert.True(context.Result.IsSuccess);
@@ -61,14 +61,14 @@ public sealed class DocumentProcessingStrategyTests
         var mockStore = CreateMockDocumentStore(correctDocuments);
         var strategy = new TabularAnalysisDocumentProcessingStrategy(mockStore.Object);
 
-        await strategy.ProcessAsync(correctContext);
+        await strategy.ProcessAsync(correctContext, TestContext.Current.CancellationToken);
         Assert.True(correctContext.Result.HasContext);
         Assert.True(correctContext.Result.IsSuccess);
 
         var (wrongContext, wrongDocuments) = CreateProcessingContext(DocumentIntents.SummarizeDocument);
         var wrongMockStore = CreateMockDocumentStore(wrongDocuments);
         var wrongStrategy = new TabularAnalysisDocumentProcessingStrategy(wrongMockStore.Object);
-        await wrongStrategy.ProcessAsync(wrongContext);
+        await wrongStrategy.ProcessAsync(wrongContext, TestContext.Current.CancellationToken);
         Assert.False(wrongContext.Result.HasContext);
     }
 
@@ -79,7 +79,7 @@ public sealed class DocumentProcessingStrategyTests
         var mockStore = CreateMockDocumentStore(documents);
         var strategy = new TabularAnalysisDocumentProcessingStrategy(mockStore.Object);
 
-        await strategy.ProcessAsync(context);
+        await strategy.ProcessAsync(context, TestContext.Current.CancellationToken);
 
         Assert.True(context.Result.HasContext);
         Assert.True(context.Result.IsSuccess);
@@ -94,13 +94,13 @@ public sealed class DocumentProcessingStrategyTests
         var mockStore = CreateMockDocumentStore(correctDocuments);
         var strategy = new ExtractionDocumentProcessingStrategy(mockStore.Object);
 
-        await strategy.ProcessAsync(correctContext);
+        await strategy.ProcessAsync(correctContext, TestContext.Current.CancellationToken);
         Assert.True(correctContext.Result.HasContext);
 
         var (wrongContext, wrongDocuments) = CreateProcessingContext(DocumentIntents.SummarizeDocument);
         var wrongMockStore = CreateMockDocumentStore(wrongDocuments);
         var wrongStrategy = new ExtractionDocumentProcessingStrategy(wrongMockStore.Object);
-        await wrongStrategy.ProcessAsync(wrongContext);
+        await wrongStrategy.ProcessAsync(wrongContext, TestContext.Current.CancellationToken);
         Assert.False(wrongContext.Result.HasContext);
     }
 
@@ -111,13 +111,13 @@ public sealed class DocumentProcessingStrategyTests
         var mockStore = CreateMockDocumentStore(correctDocuments);
         var strategy = new ComparisonDocumentProcessingStrategy(mockStore.Object);
 
-        await strategy.ProcessAsync(correctContext);
+        await strategy.ProcessAsync(correctContext, TestContext.Current.CancellationToken);
         Assert.True(correctContext.Result.HasContext);
 
         var (wrongContext, wrongDocuments) = CreateProcessingContext(DocumentIntents.SummarizeDocument);
         var wrongMockStore = CreateMockDocumentStore(wrongDocuments);
         var wrongStrategy = new ComparisonDocumentProcessingStrategy(wrongMockStore.Object);
-        await wrongStrategy.ProcessAsync(wrongContext);
+        await wrongStrategy.ProcessAsync(wrongContext, TestContext.Current.CancellationToken);
         Assert.False(wrongContext.Result.HasContext);
     }
 
@@ -128,13 +128,13 @@ public sealed class DocumentProcessingStrategyTests
         var mockStore = CreateMockDocumentStore(correctDocuments);
         var strategy = new TransformationDocumentProcessingStrategy(mockStore.Object);
 
-        await strategy.ProcessAsync(correctContext);
+        await strategy.ProcessAsync(correctContext, TestContext.Current.CancellationToken);
         Assert.True(correctContext.Result.HasContext);
 
         var (wrongContext, wrongDocuments) = CreateProcessingContext(DocumentIntents.SummarizeDocument);
         var wrongMockStore = CreateMockDocumentStore(wrongDocuments);
         var wrongStrategy = new TransformationDocumentProcessingStrategy(wrongMockStore.Object);
-        await wrongStrategy.ProcessAsync(wrongContext);
+        await wrongStrategy.ProcessAsync(wrongContext, TestContext.Current.CancellationToken);
         Assert.False(wrongContext.Result.HasContext);
     }
 
@@ -145,13 +145,13 @@ public sealed class DocumentProcessingStrategyTests
         var mockStore = CreateMockDocumentStore(correctDocuments);
         var strategy = new GeneralReferenceDocumentProcessingStrategy(mockStore.Object);
 
-        await strategy.ProcessAsync(correctContext);
+        await strategy.ProcessAsync(correctContext, TestContext.Current.CancellationToken);
         Assert.True(correctContext.Result.HasContext);
 
         var (wrongContext, wrongDocuments) = CreateProcessingContext(DocumentIntents.SummarizeDocument);
         var wrongMockStore = CreateMockDocumentStore(wrongDocuments);
         var wrongStrategy = new GeneralReferenceDocumentProcessingStrategy(wrongMockStore.Object);
-        await wrongStrategy.ProcessAsync(wrongContext);
+        await wrongStrategy.ProcessAsync(wrongContext, TestContext.Current.CancellationToken);
         Assert.False(wrongContext.Result.HasContext);
     }
 
@@ -216,15 +216,11 @@ public sealed class DocumentProcessingStrategyTests
             var context = new IntentProcessingContext
             {
                 Prompt = "Test prompt",
-                Interaction = new ChatInteraction
-                {
-                    ItemId = "test-id",
-                    Documents = docInfos
-                },
+                DocumentInfos = docInfos,
             };
             context.Result.Intent = intents[i];
 
-            await strategies[i].ProcessAsync(context);
+            await strategies[i].ProcessAsync(context, TestContext.Current.CancellationToken);
 
             Assert.True(context.Result.HasContext, $"Strategy {strategies[i].GetType().Name} should add context for its intent");
             Assert.True(context.Result.IsSuccess, $"Strategy {strategies[i].GetType().Name} should have success status");
@@ -262,7 +258,7 @@ public sealed class DocumentProcessingStrategyTests
 
         foreach (var strategy in strategies)
         {
-            await strategy.ProcessAsync(context);
+            await strategy.ProcessAsync(context, TestContext.Current.CancellationToken);
         }
 
         // Since we use the same context, it should still have no content after all strategies run
@@ -288,26 +284,22 @@ public sealed class DocumentProcessingStrategyTests
         var context = new IntentProcessingContext
         {
             Prompt = "Summarize and compare",
-            Interaction = new ChatInteraction
-            {
-                ItemId = "test-id",
-                Documents =
-                [
-                    new ChatInteractionDocumentInfo
-                    {
-                        DocumentId = "doc1",
-                        FileName = "document.txt",
-                        ContentType = "text/plain",
-                        FileSize = 100
-                    }
-                ]
-            },
+            DocumentInfos =
+            [
+                new ChatInteractionDocumentInfo
+                {
+                    DocumentId = "doc1",
+                    FileName = "document.txt",
+                    ContentType = "text/plain",
+                    FileSize = 100
+                }
+            ],
         };
         context.Result.Intent = DocumentIntents.SummarizeDocument;
 
         // First strategy adds context
         var summarizationStrategy = new SummarizationDocumentProcessingStrategy(mockStore.Object);
-        await summarizationStrategy.ProcessAsync(context);
+        await summarizationStrategy.ProcessAsync(context, TestContext.Current.CancellationToken);
         Assert.Single(context.Result.AdditionalContexts);
 
         // Manually add more context (simulating multiple strategies contributing)
@@ -370,20 +362,16 @@ public sealed class DocumentProcessingStrategyTests
         var ctx = new IntentProcessingContext
         {
             Prompt = "Test prompt",
-            Interaction = new ChatInteraction
-            {
-                ItemId = "test-id",
-                Documents =
-                [
-                    new ChatInteractionDocumentInfo
-                    {
-                        DocumentId = "doc1",
-                        FileName = "document.txt",
-                        ContentType = "text/plain",
-                        FileSize = 100
-                    }
-                ]
-            },
+            DocumentInfos =
+            [
+                new ChatInteractionDocumentInfo
+                {
+                    DocumentId = "doc1",
+                    FileName = "document.txt",
+                    ContentType = "text/plain",
+                    FileSize = 100
+                }
+            ],
         };
 
         ctx.Result.Intent = intent;
@@ -407,20 +395,16 @@ public sealed class DocumentProcessingStrategyTests
         var ctx = new IntentProcessingContext
         {
             Prompt = "Analyze this data",
-            Interaction = new ChatInteraction
-            {
-                ItemId = "test-id",
-                Documents =
-                [
-                    new ChatInteractionDocumentInfo
-                    {
-                        DocumentId = "doc1",
-                        FileName = "data.csv",
-                        ContentType = "text/csv",
-                        FileSize = 100
-                    }
-                ]
-            },
+            DocumentInfos =
+            [
+                new ChatInteractionDocumentInfo
+                {
+                    DocumentId = "doc1",
+                    FileName = "data.csv",
+                    ContentType = "text/csv",
+                    FileSize = 100
+                }
+            ],
         };
 
         ctx.Result.Intent = DocumentIntents.AnalyzeTabularData;

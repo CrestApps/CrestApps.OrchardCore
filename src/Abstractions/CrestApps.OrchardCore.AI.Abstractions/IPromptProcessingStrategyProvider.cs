@@ -13,5 +13,5 @@ public interface IPromptProcessingStrategyProvider
     /// Each strategy can add context to the result, allowing multiple strategies to contribute.
     /// </summary>
     /// <param name="context">The processing context containing documents, intent, and result to update.</param>
-    Task ProcessAsync(IntentProcessingContext context);
+    Task ProcessAsync(IntentProcessingContext context, CancellationToken cancellationToken = default);
 }

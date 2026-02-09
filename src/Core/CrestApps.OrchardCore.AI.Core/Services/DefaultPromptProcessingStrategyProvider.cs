@@ -29,7 +29,7 @@ public sealed class DefaultPromptProcessingStrategyProvider : IPromptProcessingS
     }
 
     /// <inheritdoc />
-    public async Task ProcessAsync(IntentProcessingContext context)
+    public async Task ProcessAsync(IntentProcessingContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -62,7 +62,7 @@ public sealed class DefaultPromptProcessingStrategyProvider : IPromptProcessingS
                 }
 
                 var contextCountBefore = context.Result.AdditionalContexts.Count;
-                await strategy.ProcessAsync(context);
+                await strategy.ProcessAsync(context, cancellationToken);
                 var contextCountAfter = context.Result.AdditionalContexts.Count;
 
                 if (isDebugging && contextCountAfter > contextCountBefore)

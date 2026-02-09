@@ -19,20 +19,13 @@ public sealed class DefaultPromptRouter : IPromptRouter
         _logger = logger;
     }
 
-    public async Task<IntentProcessingResult> RouteAsync(PromptRoutingRequest request)
+    public async Task<IntentProcessingResult> RouteAsync(PromptRoutingContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(context);
 
         try
         {
-            var intentContext = new DocumentIntentDetectionContext
-            {
-                Prompt = request.Prompt,
-                Interaction = request.Interaction,
-                CancellationToken = request.CancellationToken,
-            };
-
-            var intent = await _intentDetector.DetectAsync(intentContext);
+            var intent = await _intentDetector.DetectAsync(context, cancellationToken);
 
             if (intent == null)
             {
@@ -47,22 +40,23 @@ public sealed class DefaultPromptRouter : IPromptRouter
 
             var processingContext = new IntentProcessingContext
             {
-                Prompt = request.Prompt,
-                Interaction = request.Interaction,
-                ConversationHistory = request.ConversationHistory ?? [],
-                CancellationToken = request.CancellationToken,
+                Prompt = context.Prompt,
+                Source = context.Source,
+                CompletionContext = context.CompletionContext,
+                DocumentInfos = context.Documents ?? [],
+                ConversationHistory = context.ConversationHistory ?? [],
             };
 
-            if (request.MaxHistoryMessagesForImageGeneration.HasValue)
+            if (context.MaxHistoryMessagesForImageGeneration.HasValue)
             {
-                processingContext.MaxHistoryMessagesForImageGeneration = request.MaxHistoryMessagesForImageGeneration.Value;
+                processingContext.MaxHistoryMessagesForImageGeneration = context.MaxHistoryMessagesForImageGeneration.Value;
             }
 
             processingContext.Result.Intent = intent.Name;
             processingContext.Result.Confidence = intent.Confidence;
             processingContext.Result.Reason = intent.Reason;
 
-            await _strategyProvider.ProcessAsync(processingContext);
+            await _strategyProvider.ProcessAsync(processingContext, cancellationToken);
 
             return processingContext.Result;
         }

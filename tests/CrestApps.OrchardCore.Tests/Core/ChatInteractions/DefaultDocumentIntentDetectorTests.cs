@@ -12,7 +12,7 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContext("");
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentIntents.GeneralChatWithReference, result.Name);
     }
@@ -27,7 +27,7 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContext(prompt);
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentIntents.SummarizeDocument, result.Name);
     }
@@ -41,7 +41,7 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContextWithCsvDocument(prompt);
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentIntents.AnalyzeTabularData, result.Name);
     }
@@ -54,7 +54,7 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContextWithCsvDocument(prompt);
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentIntents.AnalyzeTabularDataByRow, result.Name);
     }
@@ -68,7 +68,7 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContext(prompt);
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentIntents.ExtractStructuredData, result.Name);
     }
@@ -81,7 +81,7 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContextWithMultipleDocuments(prompt);
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentIntents.CompareDocuments, result.Name);
     }
@@ -95,7 +95,7 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContext(prompt);
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentIntents.TransformFormat, result.Name);
     }
@@ -109,7 +109,7 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContext(prompt);
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentIntents.DocumentQnA, result.Name);
     }
@@ -119,7 +119,7 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContext("process the document content");
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentIntents.DocumentQnA, result.Name);
     }
@@ -134,7 +134,7 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContextWithNoDocuments(prompt);
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentIntents.GenerateImage, result.Name);
     }
@@ -149,7 +149,7 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContextWithNoDocuments(prompt);
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentIntents.GenerateChart, result.Name);
     }
@@ -162,7 +162,7 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContextWithNoDocuments(prompt);
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentIntents.GenerateChart, result.Name);
     }
@@ -172,7 +172,7 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContextWithNoDocuments("generate an image from that table");
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentIntents.GenerateImageWithHistory, result.Name);
     }
@@ -183,7 +183,7 @@ public sealed class KeywordPromptIntentDetectorTests
         // Image generation should work even without documents
         var context = CreateContextWithNoDocuments("generate an image of a beautiful garden");
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentIntents.GenerateImage, result.Name);
         Assert.True(result.Confidence >= 0.9f);
@@ -194,7 +194,7 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContext("summarize this document");
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.True(result.Confidence > 0);
         Assert.True(result.Confidence <= 1);
@@ -205,95 +205,79 @@ public sealed class KeywordPromptIntentDetectorTests
     {
         var context = CreateContext("summarize this document");
 
-        var result = await _detector.DetectAsync(context);
+        var result = await _detector.DetectAsync(context, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result.Reason);
         Assert.NotEmpty(result.Reason);
     }
 
-    private static DocumentIntentDetectionContext CreateContext(string prompt)
+    private static PromptRoutingContext CreateContext(string prompt)
     {
-        return new DocumentIntentDetectionContext
+        return new PromptRoutingContext
         {
             Prompt = prompt,
-            Interaction = new ChatInteraction
-            {
-                ItemId = "test-id",
-                Documents =
-                [
-                    new ChatInteractionDocumentInfo
-                    {
-                        DocumentId = "doc1",
-                        FileName = "document.txt",
-                        ContentType = "text/plain",
-                        FileSize = 100
-                    }
-                ]
-            }
+            Documents =
+            [
+                new ChatInteractionDocumentInfo
+                {
+                    DocumentId = "doc1",
+                    FileName = "document.txt",
+                    ContentType = "text/plain",
+                    FileSize = 100
+                }
+            ]
         };
     }
 
-    private static DocumentIntentDetectionContext CreateContextWithCsvDocument(string prompt)
+    private static PromptRoutingContext CreateContextWithCsvDocument(string prompt)
     {
-        return new DocumentIntentDetectionContext
+        return new PromptRoutingContext
         {
             Prompt = prompt,
-            Interaction = new ChatInteraction
-            {
-                ItemId = "test-id",
-                Documents =
-                [
-                    new ChatInteractionDocumentInfo
-                    {
-                        DocumentId = "doc1",
-                        FileName = "data.csv",
-                        ContentType = "text/csv",
-                        FileSize = 100
-                    }
-                ]
-            }
+            Documents =
+            [
+                new ChatInteractionDocumentInfo
+                {
+                    DocumentId = "doc1",
+                    FileName = "data.csv",
+                    ContentType = "text/csv",
+                    FileSize = 100
+                }
+            ]
         };
     }
 
-    private static DocumentIntentDetectionContext CreateContextWithMultipleDocuments(string prompt)
+    private static PromptRoutingContext CreateContextWithMultipleDocuments(string prompt)
     {
-        return new DocumentIntentDetectionContext
+        return new PromptRoutingContext
         {
             Prompt = prompt,
-            Interaction = new ChatInteraction
-            {
-                ItemId = "test-id",
-                Documents =
-                [
-                    new ChatInteractionDocumentInfo
-                    {
-                        DocumentId = "doc1",
-                        FileName = "document1.txt",
-                        ContentType = "text/plain",
-                        FileSize = 100
-                    },
-                    new ChatInteractionDocumentInfo
-                    {
-                        DocumentId = "doc2",
-                        FileName = "document2.txt",
-                        ContentType = "text/plain",
-                        FileSize = 100
-                    }
-                ]
-            }
+            Documents =
+            [
+                new ChatInteractionDocumentInfo
+                {
+                    DocumentId = "doc1",
+                    FileName = "document1.txt",
+                    ContentType = "text/plain",
+                    FileSize = 100
+                },
+                new ChatInteractionDocumentInfo
+                {
+                    DocumentId = "doc2",
+                    FileName = "document2.txt",
+                    ContentType = "text/plain",
+                    FileSize = 100
+                }
+            ]
         };
     }
 
-    private static DocumentIntentDetectionContext CreateContextWithNoDocuments(string prompt)
+    private static PromptRoutingContext CreateContextWithNoDocuments(string prompt)
     {
-        return new DocumentIntentDetectionContext
+        return new PromptRoutingContext
         {
             Prompt = prompt,
-            Interaction = new ChatInteraction
-            {
-                ItemId = "test-id",
-                Documents = []
-            }
+            Documents = []
         };
     }
 }

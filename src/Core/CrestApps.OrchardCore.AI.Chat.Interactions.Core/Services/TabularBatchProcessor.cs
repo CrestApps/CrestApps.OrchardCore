@@ -98,7 +98,8 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
     public async Task<IList<TabularBatchResult>> ProcessBatchesAsync(
         IList<TabularBatch> batches,
         string userPrompt,
-        IntentProcessingContext context)
+        IntentProcessingContext context,
+        CancellationToken cancellationToken = default)
     {
         if (batches is null || batches.Count == 0)
         {
@@ -111,7 +112,6 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
         var delayBetweenBatches = _settings.DelayBetweenBatchesMs;
 
         using var semaphore = new SemaphoreSlim(maxConcurrency);
-        var cancellationToken = context.CancellationToken;
         var failureOccurred = false;
         var processedCount = 0;
 
@@ -151,7 +151,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                     await Task.Delay(delayBetweenBatches, cancellationToken);
                 }
 
-                var result = await ProcessSingleBatchAsync(batch, userPrompt, context);
+                var result = await ProcessSingleBatchAsync(batch, userPrompt, context, cancellationToken);
                 results[batch.BatchIndex] = result;
 
                 if (!result.Success)
@@ -223,19 +223,20 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
     private async Task<TabularBatchResult> ProcessSingleBatchAsync(
         TabularBatch batch,
         string userPrompt,
-        IntentProcessingContext context)
+        IntentProcessingContext context,
+        CancellationToken cancellationToken)
     {
         try
         {
-            var interaction = context.Interaction;
-            if (interaction is null)
+            var sourceContext = context.CompletionContext;
+            if (sourceContext is null)
             {
                 return TabularBatchResult.CreateFailure(
                     batch.BatchIndex,
                     batch.RowStartIndex,
                     batch.RowEndIndex,
                     batch.RowCount,
-                    "Interaction context is not available.");
+                    "Completion context is not available.");
             }
 
             // Build the batch-specific prompt with instructions
@@ -244,23 +245,23 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
             // Create completion context for this batch
             var completionContext = new AICompletionContext
             {
-                ConnectionName = interaction.ConnectionName,
-                DeploymentId = interaction.DeploymentId,
-                SystemMessage = GetBatchSystemMessage(batch, interaction.SystemMessage),
-                Temperature = interaction.Temperature ?? 0.1f, // Use low temperature for consistent row processing
-                TopP = interaction.TopP ?? 1.0f,
-                FrequencyPenalty = interaction.FrequencyPenalty,
-                PresencePenalty = interaction.PresencePenalty,
-                MaxTokens = interaction.MaxTokens,
+                ConnectionName = sourceContext.ConnectionName,
+                DeploymentId = sourceContext.DeploymentId,
+                SystemMessage = GetBatchSystemMessage(batch, sourceContext.SystemMessage),
+                Temperature = sourceContext.Temperature ?? 0.1f, // Use low temperature for consistent row processing
+                TopP = sourceContext.TopP ?? 1.0f,
+                FrequencyPenalty = sourceContext.FrequencyPenalty,
+                PresencePenalty = sourceContext.PresencePenalty,
+                MaxTokens = sourceContext.MaxTokens,
                 UserMarkdownInResponse = false, // We want structured output
                 DisableTools = true, // Disable tools for batch processing
             };
 
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(_settings.BatchTimeoutSeconds));
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken, timeoutCts.Token);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
             var response = await _completionService.CompleteAsync(
-                interaction.Source,
+                context.Source,
                 [new ChatMessage(ChatRole.User, batchPrompt)],
                 completionContext,
                 linkedCts.Token);
@@ -288,7 +289,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                 batch.RowCount,
                 outputText);
         }
-        catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             return TabularBatchResult.CreateFailure(
                 batch.BatchIndex,
