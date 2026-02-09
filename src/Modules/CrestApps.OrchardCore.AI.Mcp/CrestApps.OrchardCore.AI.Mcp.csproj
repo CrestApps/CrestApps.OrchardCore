@@ -28,6 +28,7 @@
     <PackageReference Include="OrchardCore.Media.Abstractions" />
     <PackageReference Include="ModelContextProtocol" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    <PackageReference Include="CrestApps.OrchardCore.AgentSkills.Mcp" />
   </ItemGroup>
 
   <ItemGroup>
