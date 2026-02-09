@@ -32,6 +32,15 @@ public interface IAIClientProvider
     ValueTask<IEmbeddingGenerator<string, Embedding<float>>> GetEmbeddingGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null);
 
     /// <summary>
+    /// Gets a speech-to-text client for the specified connection and deployment.
+    /// </summary>
+    /// <param name="connection">The connection entry containing provider configuration.</param>
+    /// <param name="deploymentName">The optional deployment name to use.</param>
+    /// <returns>A <see cref="ValueTask{ISpeechToTextClient}"/> representing the asynchronous operation.</returns>
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    ValueTask<ISpeechToTextClient> GetSpeechToTextClientAsync(AIProviderConnectionEntry connection, string deploymentName = null);
+
+    /// <summary>
     /// Gets an image generator for the specified connection and deployment.
     /// </summary>
     /// <param name="connection">The connection entry containing provider configuration.</param>

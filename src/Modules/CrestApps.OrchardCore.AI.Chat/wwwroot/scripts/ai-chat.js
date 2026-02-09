@@ -52,6 +52,7 @@ window.openAIChatManager = function () {
         return {
           inputElement: null,
           buttonElement: null,
+          microphoneButton: null,
           chatContainer: null,
           placeholder: null,
           isSessionStarted: false,
@@ -61,6 +62,14 @@ window.openAIChatManager = function () {
           chatHistorySection: null,
           widgetIsInitialized: false,
           isSteaming: false,
+          isRecording: false,
+          mediaRecorder: null,
+          audioChunks: [],
+          audioStream: null,
+          recordingMessageId: null,
+          audioSubject: null,
+          audioSubjectCompleted: false,
+          audioInvokePromise: null,
           isNavigatingAway: false,
           stream: null,
           messages: [],
@@ -86,6 +95,26 @@ window.openAIChatManager = function () {
                     ((_data$messages = data.messages) !== null && _data$messages !== void 0 ? _data$messages : []).forEach(function (msg) {
                       _this.addMessage(msg);
                     });
+                  });
+                  _this.connection.on("ReceiveTranscript", function (data) {
+                    // Handle real-time transcript updates from the server
+                    console.log('Received transcript update:', data);
+                    if (data && data.text && _this.recordingMessageId !== null) {
+                      var message = _this.messages[_this.recordingMessageId];
+                      if (message) {
+                        // Append or replace transcript
+                        if (message.content === '...' || message.content === '') {
+                          message.content = data.text;
+                        } else {
+                          message.content += ' ' + data.text;
+                        }
+                        message.htmlContent = marked.parse(message.content, {
+                          renderer: renderer
+                        });
+                        _this.messages[_this.recordingMessageId] = message;
+                        _this.scrollToBottom();
+                      }
+                    }
                   });
                   _this.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
@@ -393,6 +422,18 @@ window.openAIChatManager = function () {
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
           this.placeholder = document.querySelector(config.placeholderElementSelector);
+          if (config.microphoneButtonElementSelector) {
+            this.microphoneButton = document.querySelector(config.microphoneButtonElementSelector);
+            if (this.microphoneButton) {
+              this.microphoneButton.addEventListener('click', function () {
+                if (_this7.isRecording) {
+                  _this7.stopRecording();
+                } else {
+                  _this7.startRecording();
+                }
+              });
+            }
+          }
           this.inputElement.addEventListener('keyup', function (event) {
             if (_this7.stream != null) {
               return;
@@ -562,29 +603,291 @@ window.openAIChatManager = function () {
         },
         copyResponse: function copyResponse(message) {
           navigator.clipboard.writeText(message);
+        },
+        startRecording: function startRecording() {
+          var _this9 = this;
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+            var stream, isOggOpusSupported, workerOptions, RecorderClass, recorderOptions, _t4;
+            return _regenerator().w(function (_context4) {
+              while (1) switch (_context4.p = _context4.n) {
+                case 0:
+                  if (!(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)) {
+                    _context4.n = 1;
+                    break;
+                  }
+                  console.error('Media devices not supported');
+                  alert('Your browser does not support audio recording. Please use a modern browser like Chrome, Edge, or Firefox.');
+                  return _context4.a(2);
+                case 1:
+                  _context4.p = 1;
+                  _context4.n = 2;
+                  return navigator.mediaDevices.getUserMedia({
+                    audio: {
+                      echoCancellation: true,
+                      noiseSuppression: true,
+                      autoGainControl: true,
+                      channelCount: 1,
+                      sampleSize: 16,
+                      sampleRate: 16000
+                    },
+                    video: false
+                  });
+                case 2:
+                  stream = _context4.v;
+                  _this9.audioStream = stream;
+                  _this9.recordingMessageId = null;
+                  _this9.audioSubjectCompleted = false;
+
+                  // Check if browser supports audio/ogg;codecs=opus natively
+                  isOggOpusSupported = window.MediaRecorder && window.MediaRecorder.isTypeSupported('audio/ogg;codecs=opus'); // OpusMediaRecorder worker options for browsers that need polyfill
+                  workerOptions = {
+                    OggOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/OggOpusEncoder.wasm',
+                    WebMOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/WebMOpusEncoder.wasm'
+                  }; // Use OpusMediaRecorder polyfill if native doesn't support ogg/opus
+                  RecorderClass = isOggOpusSupported || !window.OpusMediaRecorder ? window.MediaRecorder : window.OpusMediaRecorder;
+                  recorderOptions = {
+                    mimeType: 'audio/ogg;codecs=opus',
+                    audioBitsPerSecond: 128000
+                  }; // Create MediaRecorder with appropriate options
+                  if (RecorderClass === window.OpusMediaRecorder) {
+                    console.log('Using OpusMediaRecorder polyfill for audio/ogg;codecs=opus');
+                    _this9.mediaRecorder = new RecorderClass(stream, recorderOptions, workerOptions);
+                  } else if (isOggOpusSupported) {
+                    console.log('Using native MediaRecorder with audio/ogg;codecs=opus');
+                    _this9.mediaRecorder = new RecorderClass(stream, recorderOptions);
+                  } else {
+                    // Fallback to webm if ogg not supported and no polyfill
+                    console.log('Falling back to audio/webm');
+                    _this9.mediaRecorder = new RecorderClass(stream, {
+                      mimeType: 'audio/webm'
+                    });
+                  }
+
+                  // Create a SignalR Subject for client-to-server streaming
+                  _this9.audioSubject = new signalR.Subject();
+                  _this9.audioInvokePromise = _this9.connection.send("SendAudioChunk", _this9.getProfileId(), _this9.getSessionId(), _this9.audioSubject)["catch"](function (err) {
+                    console.error('Error sending audio stream:', err);
+                    return {
+                      transcript: '',
+                      sessionId: _this9.getSessionId()
+                    };
+                  });
+                  _this9.mediaRecorder.addEventListener("dataavailable", /*#__PURE__*/function () {
+                    var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(e) {
+                      var data, uint8Array, binaryString, base64, _t2;
+                      return _regenerator().w(function (_context2) {
+                        while (1) switch (_context2.p = _context2.n) {
+                          case 0:
+                            if (!(_this9.audioSubjectCompleted || !_this9.audioSubject)) {
+                              _context2.n = 1;
+                              break;
+                            }
+                            return _context2.a(2);
+                          case 1:
+                            if (!(e.data && e.data.size > 0)) {
+                              _context2.n = 5;
+                              break;
+                            }
+                            _context2.p = 2;
+                            _context2.n = 3;
+                            return e.data.arrayBuffer();
+                          case 3:
+                            data = _context2.v;
+                            uint8Array = new Uint8Array(data);
+                            binaryString = uint8Array.reduce(function (str, _byte) {
+                              return str + String.fromCharCode(_byte);
+                            }, '');
+                            base64 = btoa(binaryString);
+                            console.log('Sending audio chunk, bytes:', data.byteLength, 'base64 length:', base64.length);
+                            if (_this9.audioSubject && !_this9.audioSubjectCompleted) {
+                              _this9.audioSubject.next(base64);
+                            }
+                            _context2.n = 5;
+                            break;
+                          case 4:
+                            _context2.p = 4;
+                            _t2 = _context2.v;
+                            console.error('Error encoding audio chunk:', _t2);
+                          case 5:
+                            return _context2.a(2);
+                        }
+                      }, _callee2, null, [[2, 4]]);
+                    }));
+                    return function (_x) {
+                      return _ref.apply(this, arguments);
+                    };
+                  }());
+                  _this9.mediaRecorder.addEventListener("stop", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+                    var result, finalTranscript, returnedSessionId, message, _t3;
+                    return _regenerator().w(function (_context3) {
+                      while (1) switch (_context3.p = _context3.n) {
+                        case 0:
+                          console.log('MediaRecorder stopped');
+
+                          // Complete the SignalR stream after a short delay to ensure last chunk is sent
+                          setTimeout(function () {
+                            console.log('Completing audio subject');
+                            try {
+                              var _this9$audioSubject;
+                              _this9.audioSubjectCompleted = true;
+                              (_this9$audioSubject = _this9.audioSubject) === null || _this9$audioSubject === void 0 || _this9$audioSubject.complete();
+                            } catch (e) {
+                              console.error('Error completing audio subject:', e);
+                            }
+                          }, 500);
+                          _context3.p = 1;
+                          _context3.n = 2;
+                          return _this9.audioInvokePromise;
+                        case 2:
+                          result = _context3.v;
+                          console.log('Audio invoke result:', result);
+                          finalTranscript = (result === null || result === void 0 ? void 0 : result.transcript) || '';
+                          returnedSessionId = result === null || result === void 0 ? void 0 : result.sessionId;
+                          if (returnedSessionId) {
+                            _this9.setSessionId(returnedSessionId);
+                          }
+                          if (_this9.recordingMessageId !== null) {
+                            message = _this9.messages[_this9.recordingMessageId];
+                            if (message) {
+                              message.content = finalTranscript || message.content || '';
+                              message.htmlContent = marked.parse(message.content, {
+                                renderer: renderer
+                              });
+                              _this9.messages[_this9.recordingMessageId] = message;
+                              _this9.scrollToBottom();
+                            }
+                          }
+                          _context3.n = 4;
+                          break;
+                        case 3:
+                          _context3.p = 3;
+                          _t3 = _context3.v;
+                          console.error('Error finalizing audio stream:', _t3);
+                        case 4:
+                          _context3.p = 4;
+                          _this9.audioSubject = null;
+                          _this9.audioInvokePromise = null;
+                          _this9.audioSubjectCompleted = false;
+                          return _context3.f(4);
+                        case 5:
+                          // Stop all tracks to release the microphone
+                          if (_this9.audioStream) {
+                            _this9.audioStream.getTracks().forEach(function (track) {
+                              return track.stop();
+                            });
+                            _this9.audioStream = null;
+                          }
+
+                          // Finalize recording UI
+                          _context3.n = 6;
+                          return _this9.finalizeRecording();
+                        case 6:
+                          return _context3.a(2);
+                      }
+                    }, _callee3, null, [[1, 3, 4, 5]]);
+                  })));
+                  _this9.mediaRecorder.addEventListener("start", function () {
+                    console.log('MediaRecorder started');
+                  });
+
+                  // Start recording with 1-second timeslice for chunked processing
+                  _this9.mediaRecorder.start(1000);
+                  _this9.isRecording = true;
+
+                  // Show initial transcription message
+                  _this9.recordingMessageId = _this9.messages.length;
+                  _this9.addMessage({
+                    role: 'user',
+                    content: '...',
+                    // placeholder until transcript arrives
+                    isTranscribing: true
+                  });
+                  if (_this9.microphoneButton) {
+                    _this9.microphoneButton.classList.add('btn-danger');
+                    _this9.microphoneButton.classList.remove('btn-outline-secondary');
+                    _this9.microphoneButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
+                  }
+                  _context4.n = 4;
+                  break;
+                case 3:
+                  _context4.p = 3;
+                  _t4 = _context4.v;
+                  console.error('Error accessing microphone:', _t4);
+                  alert('Unable to access microphone. Please check your browser permissions and try again.');
+                case 4:
+                  return _context4.a(2);
+              }
+            }, _callee4, null, [[1, 3]]);
+          }))();
+        },
+        stopRecording: function stopRecording() {
+          console.log('stopRecording called, isRecording:', this.isRecording);
+          if (this.mediaRecorder && this.isRecording) {
+            this.mediaRecorder.stop();
+            this.isRecording = false;
+            if (this.microphoneButton) {
+              this.microphoneButton.classList.remove('btn-danger');
+              this.microphoneButton.classList.add('btn-outline-secondary');
+              this.microphoneButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+            }
+          }
+        },
+        finalizeRecording: function finalizeRecording() {
+          var _this0 = this;
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
+            var message;
+            return _regenerator().w(function (_context5) {
+              while (1) switch (_context5.n) {
+                case 0:
+                  if (_this0.recordingMessageId !== null) {
+                    message = _this0.messages[_this0.recordingMessageId];
+                    if (message) {
+                      // Remove the transcribing flag
+                      delete message.isTranscribing;
+
+                      // If we got transcription, keep it and enable send button
+                      if (message.content && message.content !== '...') {
+                        _this0.inputElement.value = message.content;
+                        _this0.prompt = message.content;
+                        _this0.buttonElement.removeAttribute('disabled');
+                      } else {
+                        // No transcription received, remove the empty message
+                        _this0.messages.splice(_this0.recordingMessageId, 1);
+                      }
+                    }
+                    _this0.recordingMessageId = null;
+                  }
+                case 1:
+                  return _context5.a(2);
+              }
+            }, _callee5);
+          }))();
         }
       },
       mounted: function mounted() {
-        var _this9 = this;
-        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-          return _regenerator().w(function (_context2) {
-            while (1) switch (_context2.n) {
+        var _this1 = this;
+        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
+          return _regenerator().w(function (_context6) {
+            while (1) switch (_context6.n) {
               case 0:
-                _context2.n = 1;
-                return _this9.startConnection();
+                _context6.n = 1;
+                return _this1.startConnection();
               case 1:
-                _this9.initializeApp();
+                _this1.initializeApp();
                 if (config.widget) {
-                  _this9.initializeWidget();
+                  _this1.initializeWidget();
                 }
               case 2:
-                return _context2.a(2);
+                return _context6.a(2);
             }
-          }, _callee2);
+          }, _callee6);
         }))();
         window.addEventListener('beforeunload', this.handleBeforeUnload);
       },
       beforeUnmount: function beforeUnmount() {
+        if (this.isRecording) {
+          this.stopRecording();
+        }
         window.removeEventListener('beforeunload', this.handleBeforeUnload);
         if (this.stream) {
           this.stream.dispose();

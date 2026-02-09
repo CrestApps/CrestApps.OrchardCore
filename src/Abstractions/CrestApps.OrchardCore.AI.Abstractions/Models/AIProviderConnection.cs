@@ -15,6 +15,8 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
 
     public string DefaultEmbeddingDeploymentName { get; set; }
 
+    public string DefaultSpeechToTextDeploymentName { get; set; }
+
     public string DefaultIntentDeploymentName { get; set; }
 
     public string DefaultImagesDeploymentName { get; set; }
@@ -52,6 +54,7 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
             IsDefault = IsDefault,
             DefaultDeploymentName = DefaultDeploymentName,
             DefaultEmbeddingDeploymentName = DefaultEmbeddingDeploymentName,
+            DefaultSpeechToTextDeploymentName = DefaultSpeechToTextDeploymentName,
             DefaultIntentDeploymentName = DefaultIntentDeploymentName,
             DefaultImagesDeploymentName = DefaultImagesDeploymentName,
             CreatedUtc = CreatedUtc,

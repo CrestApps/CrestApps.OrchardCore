@@ -17,6 +17,7 @@
     <PackageReference Include="Microsoft.Extensions.AI" />
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
     <PackageReference Include="Azure.AI.OpenAI" />
+    <PackageReference Include="Microsoft.CognitiveServices.Speech" />
     <PackageReference Include="OrchardCore.Search.Elasticsearch.Core" />
   </ItemGroup>
 

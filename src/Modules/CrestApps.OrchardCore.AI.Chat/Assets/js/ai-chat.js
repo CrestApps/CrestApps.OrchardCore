@@ -65,6 +65,7 @@ window.openAIChatManager = function () {
                 return {
                     inputElement: null,
                     buttonElement: null,
+                    microphoneButton: null,
                     chatContainer: null,
                     placeholder: null,
                     isSessionStarted: false,
@@ -74,6 +75,14 @@ window.openAIChatManager = function () {
                     chatHistorySection: null,
                     widgetIsInitialized: false,
                     isSteaming: false,
+                    isRecording: false,
+                    mediaRecorder: null,
+                    audioChunks: [],
+                    audioStream: null,
+                    recordingMessageId: null,
+                    audioSubject: null,
+                    audioSubjectCompleted: false,
+                    audioInvokePromise: null,
                     isNavigatingAway: false,
                     stream: null,
                     messages: [],
@@ -99,6 +108,25 @@ window.openAIChatManager = function () {
                             this.addMessage(msg);
                         });
 
+                    });
+
+                    this.connection.on("ReceiveTranscript", (data) => {
+                        // Handle real-time transcript updates from the server
+                        console.log('Received transcript update:', data);
+                        if (data && data.text && this.recordingMessageId !== null) {
+                            const message = this.messages[this.recordingMessageId];
+                            if (message) {
+                                // Append or replace transcript
+                                if (message.content === '...' || message.content === '') {
+                                    message.content = data.text;
+                                } else {
+                                    message.content += ' ' + data.text;
+                                }
+                                message.htmlContent = marked.parse(message.content, { renderer });
+                                this.messages[this.recordingMessageId] = message;
+                                this.scrollToBottom();
+                            }
+                        }
                     });
 
                     this.connection.on("ReceiveError", (error) => {
@@ -411,6 +439,20 @@ window.openAIChatManager = function () {
                     this.chatContainer = document.querySelector(config.chatContainerElementSelector);
                     this.placeholder = document.querySelector(config.placeholderElementSelector);
 
+                    if (config.microphoneButtonElementSelector) {
+                        this.microphoneButton = document.querySelector(config.microphoneButtonElementSelector);
+
+                        if (this.microphoneButton) {
+                            this.microphoneButton.addEventListener('click', () => {
+                                if (this.isRecording) {
+                                    this.stopRecording();
+                                } else {
+                                    this.startRecording();
+                                }
+                            });
+                        }
+                    }
+
                     this.inputElement.addEventListener('keyup', event => {
 
                         if (this.stream != null) {
@@ -618,6 +660,205 @@ window.openAIChatManager = function () {
                 },
                 copyResponse(message) {
                     navigator.clipboard.writeText(message);
+                },
+                async startRecording() {
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        console.error('Media devices not supported');
+                        alert('Your browser does not support audio recording. Please use a modern browser like Chrome, Edge, or Firefox.');
+                        return;
+                    }
+
+                    try {
+                        // Request audio with constraints for better quality
+                        const stream = await navigator.mediaDevices.getUserMedia({
+                            audio: {
+                                echoCancellation: true,
+                                noiseSuppression: true,
+                                autoGainControl: true,
+                                channelCount: 1,
+                                sampleSize: 16,
+                                sampleRate: 16000
+                            },
+                            video: false
+                        });
+
+                        this.audioStream = stream;
+                        this.recordingMessageId = null;
+                        this.audioSubjectCompleted = false;
+
+                        // Check if browser supports audio/ogg;codecs=opus natively
+                        const isOggOpusSupported = window.MediaRecorder && window.MediaRecorder.isTypeSupported('audio/ogg;codecs=opus');
+                        
+                        // OpusMediaRecorder worker options for browsers that need polyfill
+                        const workerOptions = {
+                            OggOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/OggOpusEncoder.wasm',
+                            WebMOpusEncoderWasmPath: 'https://cdn.jsdelivr.net/npm/opus-media-recorder@latest/WebMOpusEncoder.wasm'
+                        };
+
+                        // Use OpusMediaRecorder polyfill if native doesn't support ogg/opus
+                        const RecorderClass = (isOggOpusSupported || !window.OpusMediaRecorder) ? window.MediaRecorder : window.OpusMediaRecorder;
+                        
+                        const recorderOptions = {
+                            mimeType: 'audio/ogg;codecs=opus',
+                            audioBitsPerSecond: 128000
+                        };
+
+                        // Create MediaRecorder with appropriate options
+                        if (RecorderClass === window.OpusMediaRecorder) {
+                            console.log('Using OpusMediaRecorder polyfill for audio/ogg;codecs=opus');
+                            this.mediaRecorder = new RecorderClass(stream, recorderOptions, workerOptions);
+                        } else if (isOggOpusSupported) {
+                            console.log('Using native MediaRecorder with audio/ogg;codecs=opus');
+                            this.mediaRecorder = new RecorderClass(stream, recorderOptions);
+                        } else {
+                            // Fallback to webm if ogg not supported and no polyfill
+                            console.log('Falling back to audio/webm');
+                            this.mediaRecorder = new RecorderClass(stream, { mimeType: 'audio/webm' });
+                        }
+
+                        // Create a SignalR Subject for client-to-server streaming
+                        this.audioSubject = new signalR.Subject();
+                        this.audioInvokePromise = this.connection.send(
+                            "SendAudioChunk",
+                            this.getProfileId(),
+                            this.getSessionId(),
+                            this.audioSubject
+                        ).catch(err => {
+                            console.error('Error sending audio stream:', err);
+                            return { transcript: '', sessionId: this.getSessionId() };
+                        });
+
+                        this.mediaRecorder.addEventListener("dataavailable", async (e) => {
+                            if (this.audioSubjectCompleted || !this.audioSubject) {
+                                return;
+                            }
+                            
+                            if (e.data && e.data.size > 0) {
+                                try {
+                                    // Convert blob to base64 to send via SignalR
+                                    const data = await e.data.arrayBuffer();
+                                    const uint8Array = new Uint8Array(data);
+                                    const binaryString = uint8Array.reduce((str, byte) => str + String.fromCharCode(byte), '');
+                                    const base64 = btoa(binaryString);
+                                    
+                                    console.log('Sending audio chunk, bytes:', data.byteLength, 'base64 length:', base64.length);
+                                    
+                                    if (this.audioSubject && !this.audioSubjectCompleted) {
+                                        this.audioSubject.next(base64);
+                                    }
+                                } catch (e) {
+                                    console.error('Error encoding audio chunk:', e);
+                                }
+                            }
+                        });
+
+                        this.mediaRecorder.addEventListener("stop", async () => {
+                            console.log('MediaRecorder stopped');
+                            
+                            // Complete the SignalR stream after a short delay to ensure last chunk is sent
+                            setTimeout(() => {
+                                console.log('Completing audio subject');
+                                try {
+                                    this.audioSubjectCompleted = true;
+                                    this.audioSubject?.complete();
+                                } catch (e) {
+                                    console.error('Error completing audio subject:', e);
+                                }
+                            }, 500);
+
+                            try {
+                                const result = await this.audioInvokePromise;
+                                console.log('Audio invoke result:', result);
+                                const finalTranscript = result?.transcript || '';
+                                const returnedSessionId = result?.sessionId;
+                                if (returnedSessionId) {
+                                    this.setSessionId(returnedSessionId);
+                                }
+                                if (this.recordingMessageId !== null) {
+                                    const message = this.messages[this.recordingMessageId];
+                                    if (message) {
+                                        message.content = finalTranscript || message.content || '';
+                                        message.htmlContent = marked.parse(message.content, { renderer });
+                                        this.messages[this.recordingMessageId] = message;
+                                        this.scrollToBottom();
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Error finalizing audio stream:', e);
+                            } finally {
+                                this.audioSubject = null;
+                                this.audioInvokePromise = null;
+                                this.audioSubjectCompleted = false;
+                            }
+
+                            // Stop all tracks to release the microphone
+                            if (this.audioStream) {
+                                this.audioStream.getTracks().forEach(track => track.stop());
+                                this.audioStream = null;
+                            }
+
+                            // Finalize recording UI
+                            await this.finalizeRecording();
+                        });
+
+                        this.mediaRecorder.addEventListener("start", () => {
+                            console.log('MediaRecorder started');
+                        });
+
+                        // Start recording with 1-second timeslice for chunked processing
+                        this.mediaRecorder.start(1000);
+                        this.isRecording = true;
+
+                        // Show initial transcription message
+                        this.recordingMessageId = this.messages.length;
+                        this.addMessage({
+                            role: 'user',
+                            content: '...', // placeholder until transcript arrives
+                            isTranscribing: true
+                        });
+
+                        if (this.microphoneButton) {
+                            this.microphoneButton.classList.add('btn-danger');
+                            this.microphoneButton.classList.remove('btn-outline-secondary');
+                            this.microphoneButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
+                        }
+                    } catch (error) {
+                        console.error('Error accessing microphone:', error);
+                        alert('Unable to access microphone. Please check your browser permissions and try again.');
+                    }
+                },
+                stopRecording() {
+                    console.log('stopRecording called, isRecording:', this.isRecording);
+                    if (this.mediaRecorder && this.isRecording) {
+                        this.mediaRecorder.stop();
+                        this.isRecording = false;
+
+                        if (this.microphoneButton) {
+                            this.microphoneButton.classList.remove('btn-danger');
+                            this.microphoneButton.classList.add('btn-outline-secondary');
+                            this.microphoneButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+                        }
+                    }
+                },
+                async finalizeRecording() {
+                    if (this.recordingMessageId !== null) {
+                        let message = this.messages[this.recordingMessageId];
+                        if (message) {
+                            // Remove the transcribing flag
+                            delete message.isTranscribing;
+
+                            // If we got transcription, keep it and enable send button
+                            if (message.content && message.content !== '...') {
+                                this.inputElement.value = message.content;
+                                this.prompt = message.content;
+                                this.buttonElement.removeAttribute('disabled');
+                            } else {
+                                // No transcription received, remove the empty message
+                                this.messages.splice(this.recordingMessageId, 1);
+                            }
+                        }
+                        this.recordingMessageId = null;
+                    }
                 }
             },
             mounted() {
@@ -632,6 +873,10 @@ window.openAIChatManager = function () {
                 window.addEventListener('beforeunload', this.handleBeforeUnload);
             },
             beforeUnmount() {
+                if (this.isRecording) {
+                    this.stopRecording();
+                }
+
                 window.removeEventListener('beforeunload', this.handleBeforeUnload);
 
                 if (this.stream) {
