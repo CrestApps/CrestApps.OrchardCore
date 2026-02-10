@@ -11,17 +11,20 @@ public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServ
 {
     private readonly ISourceCatalog<McpConnection> _store;
     private readonly IMcpServerMetadataCacheProvider _metadataProvider;
+    private readonly McpInvokeFunction _mcpInvokeFunction;
     private readonly IMcpMetadataPromptGenerator _promptGenerator;
     private readonly ILogger _logger;
 
     public McpConnectionsAICompletionServiceHandler(
         ISourceCatalog<McpConnection> store,
         IMcpServerMetadataCacheProvider metadataProvider,
+        McpInvokeFunction mcpInvokeFunction,
         IMcpMetadataPromptGenerator promptGenerator,
         ILogger<McpConnectionsAICompletionServiceHandler> logger)
     {
         _store = store;
         _metadataProvider = metadataProvider;
+        _mcpInvokeFunction = mcpInvokeFunction;
         _promptGenerator = promptGenerator;
         _logger = logger;
     }
@@ -75,7 +78,7 @@ public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServ
 
         // Inject the unified mcp-invoke tool.
         context.ChatOptions.Tools ??= [];
-        context.ChatOptions.Tools.Add(new McpInvokeFunction());
+        context.ChatOptions.Tools.Add(_mcpInvokeFunction);
 
         // Inject the metadata system prompt describing available capabilities.
         var metadataPrompt = _promptGenerator.Generate(allCapabilities);

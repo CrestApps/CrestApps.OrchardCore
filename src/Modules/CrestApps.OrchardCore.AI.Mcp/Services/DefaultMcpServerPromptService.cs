@@ -11,13 +11,16 @@ public sealed class DefaultMcpServerPromptService : IMcpServerPromptService
 {
     private readonly INamedCatalogManager<McpPrompt> _catalogManager;
     private readonly IMcpPromptProvider _skillPromptProvider;
+    private readonly IEnumerable<McpServerPrompt> _sdkPrompts;
 
     public DefaultMcpServerPromptService(
         INamedCatalogManager<McpPrompt> catalogManager,
-        IMcpPromptProvider skillPromptProvider)
+        IMcpPromptProvider skillPromptProvider,
+        IEnumerable<McpServerPrompt> sdkPrompts)
     {
         _catalogManager = catalogManager;
         _skillPromptProvider = skillPromptProvider;
+        _sdkPrompts = sdkPrompts;
     }
 
     public async Task<IList<Prompt>> ListAsync()
@@ -34,6 +37,15 @@ public sealed class DefaultMcpServerPromptService : IMcpServerPromptService
         foreach (var skillPrompt in skillPrompts)
         {
             prompts.Add(skillPrompt.ProtocolPrompt);
+        }
+
+        // Include prompts registered via the MCP C# SDK.
+        foreach (var sdkPrompt in _sdkPrompts)
+        {
+            if (!prompts.Any(p => p.Name == sdkPrompt.ProtocolPrompt.Name))
+            {
+                prompts.Add(sdkPrompt.ProtocolPrompt);
+            }
         }
 
         return prompts;
@@ -59,6 +71,14 @@ public sealed class DefaultMcpServerPromptService : IMcpServerPromptService
         if (skillPrompt is not null)
         {
             return await skillPrompt.GetAsync(request, cancellationToken);
+        }
+
+        // Try prompts registered via the MCP C# SDK.
+        var sdkPrompt = _sdkPrompts.FirstOrDefault(p => p.ProtocolPrompt.Name == request.Params.Name);
+
+        if (sdkPrompt is not null)
+        {
+            return await sdkPrompt.GetAsync(request, cancellationToken);
         }
 
         throw new McpException($"Prompt '{request.Params.Name}' not found.");

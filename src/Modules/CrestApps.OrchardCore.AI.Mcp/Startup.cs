@@ -24,6 +24,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using McpServerPrompt = ModelContextProtocol.Server.McpServerPrompt;
+using McpServerResource = ModelContextProtocol.Server.McpServerResource;
+using McpServerTool = ModelContextProtocol.Server.McpServerTool;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -206,46 +209,69 @@ public sealed class McpServerStartup : StartupBase
                 }
             }
 
+            // Include tools registered via the MCP C# SDK (e.g., via [McpServerToolType] attribute).
+            var sdkTools = request.Services.GetService<IEnumerable<McpServerTool>>();
+
+            if (sdkTools is not null)
+            {
+                foreach (var sdkTool in sdkTools)
+                {
+                    if (!tools.Any(t => t.Name == sdkTool.ProtocolTool.Name))
+                    {
+                        tools.Add(sdkTool.ProtocolTool);
+                    }
+                }
+            }
+
             return ValueTask.FromResult(new ListToolsResult { Tools = tools });
         })
         .WithCallToolHandler(async (request, cancellationToken) =>
         {
             var toolDefinitions = request.Services.GetRequiredService<IOptions<AIToolDefinitionOptions>>().Value;
 
-            if (!toolDefinitions.Tools.ContainsKey(request.Params.Name))
+            if (toolDefinitions.Tools.ContainsKey(request.Params.Name))
             {
-                throw new McpException($"Tool '{request.Params.Name}' not found.");
-            }
-
-            if (request.Services.GetKeyedService<AITool>(request.Params.Name) is not AIFunction aiFunction)
-            {
-                throw new McpException($"Failed to create tool '{request.Params.Name}'.");
-            }
-
-            // Convert IDictionary<string, JsonElement> to AIFunctionArguments
-            var arguments = new AIFunctionArguments()
-            {
-                Services = request.Services,
-                Context = new Dictionary<object, object>()
+                if (request.Services.GetKeyedService<AITool>(request.Params.Name) is not AIFunction aiFunction)
                 {
-                    ["mcpRequest"] = request,
-                },
-            };
-
-            if (request.Params.Arguments is not null)
-            {
-                foreach (var kvp in request.Params.Arguments)
-                {
-                    arguments[kvp.Key] = kvp.Value;
+                    throw new McpException($"Failed to create tool '{request.Params.Name}'.");
                 }
+
+                // Convert IDictionary<string, JsonElement> to AIFunctionArguments
+                var arguments = new AIFunctionArguments()
+                {
+                    Services = request.Services,
+                    Context = new Dictionary<object, object>()
+                    {
+                        ["mcpRequest"] = request,
+                    },
+                };
+
+                if (request.Params.Arguments is not null)
+                {
+                    foreach (var kvp in request.Params.Arguments)
+                    {
+                        arguments[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                var result = await aiFunction.InvokeAsync(arguments, cancellationToken);
+
+                return new CallToolResult
+                {
+                    Content = [new TextContentBlock { Text = result?.ToString() ?? string.Empty }]
+                };
             }
 
-            var result = await aiFunction.InvokeAsync(arguments, cancellationToken);
+            // Try tools registered via the MCP C# SDK (e.g., via [McpServerToolType] attribute).
+            var sdkTools = request.Services.GetService<IEnumerable<McpServerTool>>();
+            var sdkTool = sdkTools?.FirstOrDefault(t => t.ProtocolTool.Name == request.Params.Name);
 
-            return new CallToolResult
+            if (sdkTool is not null)
             {
-                Content = [new TextContentBlock { Text = result?.ToString() ?? string.Empty }]
-            };
+                return await sdkTool.InvokeAsync(request, cancellationToken);
+            }
+
+            throw new McpException($"Tool '{request.Params.Name}' not found.");
         })
         .WithListPromptsHandler(async (request, cancellationToken) =>
         {
