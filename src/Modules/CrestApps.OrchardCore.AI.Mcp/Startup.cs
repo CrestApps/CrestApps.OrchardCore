@@ -46,7 +46,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>();
         services.AddScoped<IAICompletionServiceHandler, McpConnectionsAICompletionServiceHandler>();
         services.AddScoped<McpService>();
-        services.AddScoped<IMcpServerMetadataProvider, DefaultMcpServerMetadataProvider>();
+        services.AddScoped<IMcpServerMetadataCacheProvider, DefaultMcpServerMetadataProvider>();
         services.AddSingleton<IMcpMetadataPromptGenerator, DefaultMcpMetadataPromptGenerator>();
         services.AddNavigationProvider<McpAdminMenu>();
         services.AddPermissionProvider<McpPermissionsProvider>();

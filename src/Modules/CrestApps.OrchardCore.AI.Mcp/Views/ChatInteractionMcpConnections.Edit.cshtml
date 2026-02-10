@@ -1,10 +1,10 @@
 @using CrestApps.OrchardCore.AI.Mcp.ViewModels
 
-@model EditChatInteractionMcpConnectionsViewModel
+@model ChatInteractionMcpConnectionsViewModel
 
 @if (Model.Connections is not null && Model.Connections.Length > 0)
 {
-    <h5 class="border-bottom pb-2">@T["MCP Connections"]</h5>
+    <h5 class="border-bottom pb-2">@T["Connections"]</h5>
 
     <div class="mb-3">
         @for (var i = 0; i < Model.Connections.Length; i++)

@@ -32,7 +32,7 @@ internal sealed class ChatInteractionMcpConnectionsDisplayDriver : DisplayDriver
             return null;
         }
 
-        return Initialize<EditChatInteractionMcpConnectionsViewModel>("ChatInteractionMcpConnections_Edit", model =>
+        return Initialize<ChatInteractionMcpConnectionsViewModel>("ChatInteractionMcpConnections_Edit", model =>
         {
             model.Connections = connections
             .Select(entry => new ToolEntry
@@ -55,7 +55,7 @@ internal sealed class ChatInteractionMcpConnectionsDisplayDriver : DisplayDriver
             return null;
         }
 
-        var model = new EditChatInteractionMcpConnectionsViewModel();
+        var model = new ChatInteractionMcpConnectionsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 

@@ -10,13 +10,13 @@ namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 public sealed class McpConnectionsAICompletionServiceHandler : IAICompletionServiceHandler
 {
     private readonly ISourceCatalog<McpConnection> _store;
-    private readonly IMcpServerMetadataProvider _metadataProvider;
+    private readonly IMcpServerMetadataCacheProvider _metadataProvider;
     private readonly IMcpMetadataPromptGenerator _promptGenerator;
     private readonly ILogger _logger;
 
     public McpConnectionsAICompletionServiceHandler(
         ISourceCatalog<McpConnection> store,
-        IMcpServerMetadataProvider metadataProvider,
+        IMcpServerMetadataCacheProvider metadataProvider,
         IMcpMetadataPromptGenerator promptGenerator,
         ILogger<McpConnectionsAICompletionServiceHandler> logger)
     {
