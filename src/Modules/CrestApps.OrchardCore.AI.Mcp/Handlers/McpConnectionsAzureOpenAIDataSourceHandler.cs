@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Mcp.Tools;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
@@ -14,17 +13,20 @@ public sealed class McpConnectionsAzureOpenAIDataSourceHandler : IAzureOpenAIDat
     private readonly ISourceCatalog<McpConnection> _store;
     private readonly IMcpServerMetadataCacheProvider _metadataProvider;
     private readonly IMcpMetadataPromptGenerator _promptGenerator;
+    private readonly McpInvokeFunction _mcpInvokeFunction;
     private readonly ILogger _logger;
 
     public McpConnectionsAzureOpenAIDataSourceHandler(
         ISourceCatalog<McpConnection> store,
         IMcpServerMetadataCacheProvider metadataProvider,
         IMcpMetadataPromptGenerator promptGenerator,
+        McpInvokeFunction mcpInvokeFunction,
         ILogger<McpConnectionsAzureOpenAIDataSourceHandler> logger)
     {
         _store = store;
         _metadataProvider = metadataProvider;
         _promptGenerator = promptGenerator;
+        _mcpInvokeFunction = mcpInvokeFunction;
         _logger = logger;
     }
 
@@ -79,14 +81,9 @@ public sealed class McpConnectionsAzureOpenAIDataSourceHandler : IAzureOpenAIDat
             return;
         }
 
-        // Inject the unified mcp-invoke tool.
-        var mcpFunction = new McpInvokeFunction();
-        context.ChatCompletionOptions.Tools.Add(mcpFunction.ToChatTool());
-
-        if (context.ChatCompletionOptions.Tools.Count > 0)
-        {
-            context.ChatCompletionOptions.ToolChoice = ChatToolChoice.CreateAutoChoice();
-        }
+        // Add the unified mcp-invoke tool as a system function so it is
+        // both registered in ChatCompletionOptions.Tools and available for invocation.
+        context.SystemFunctions.Add(_mcpInvokeFunction);
 
         // Inject the metadata system prompt describing available capabilities.
         var metadataPrompt = _promptGenerator.Generate(allCapabilities);

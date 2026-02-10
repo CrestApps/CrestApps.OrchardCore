@@ -51,18 +51,35 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
             }
         }
 
-        // Read file content
-        var content = await File.ReadAllTextAsync(filePath, cancellationToken);
+        if (IsTextMimeType(mimeType))
+        {
+            var content = await File.ReadAllTextAsync(filePath, cancellationToken);
+
+            return new ReadResourceResult
+            {
+                Contents =
+                [
+                    new TextResourceContents
+                    {
+                        Uri = resource.Resource.Uri,
+                        MimeType = mimeType,
+                        Text = content,
+                    }
+                ]
+            };
+        }
+
+        var bytes = await File.ReadAllBytesAsync(filePath, cancellationToken);
 
         return new ReadResourceResult
         {
             Contents =
             [
-                new TextResourceContents
+                new BlobResourceContents
                 {
                     Uri = resource.Resource.Uri,
                     MimeType = mimeType,
-                    Text = content,
+                    Blob = Convert.ToBase64String(bytes),
                 }
             ]
         };

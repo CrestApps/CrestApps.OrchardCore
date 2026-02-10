@@ -122,7 +122,8 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             : [];
 
         var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
-        await ConfigureOptionsAsync(chatOptions, context, prompts);
+        var systemFunctions = await ConfigureOptionsAsync(chatOptions, context, prompts);
+        var allFunctions = systemFunctions.Count > 0 ? functions.Concat(systemFunctions) : functions;
         try
         {
             var data = await chatClient.CompleteChatAsync(prompts, chatOptions, cancellationToken);
@@ -134,10 +135,10 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
             if (data.Value.FinishReason == ChatFinishReason.ToolCalls)
             {
-                await ProcessToolCallsAsync(prompts, data.Value.ToolCalls, functions);
+                await ProcessToolCallsAsync(prompts, data.Value.ToolCalls, allFunctions);
 
                 // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
-                data = await chatClient.CompleteChatAsync(prompts, GetOptions(context, functions), cancellationToken);
+                data = await chatClient.CompleteChatAsync(prompts, GetOptions(context, allFunctions), cancellationToken);
             }
 
             var role = new Microsoft.Extensions.AI.ChatRole(data.Value.Role.ToString().ToLowerInvariant());
@@ -264,7 +265,8 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
         var prompts = GetPrompts(context, azureMessages);
 
-        await ConfigureOptionsAsync(chatOptions, context, prompts);
+        var systemFunctions = await ConfigureOptionsAsync(chatOptions, context, prompts);
+        var allFunctions = systemFunctions.Count > 0 ? functions.Concat(systemFunctions) : functions;
 
         // Accumulate tool call updates across streaming chunks.
         // Key is the tool call index, value contains the accumulated tool call data.
@@ -312,13 +314,13 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                         BinaryData.FromBytes(tc.ArgumentBytes.ToArray())))
                     .ToList();
 
-                await ProcessToolCallsAsync(prompts, toolCalls, functions);
+                await ProcessToolCallsAsync(prompts, toolCalls, allFunctions);
 
                 // Clear accumulated tool calls for the next potential round.
                 accumulatedToolCalls.Clear();
 
                 // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
-                subSequenceContext ??= GetOptions(context, functions);
+                subSequenceContext ??= GetOptions(context, allFunctions);
 
                 await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, subSequenceContext, cancellationToken))
                 {
@@ -509,7 +511,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         return chatOptions;
     }
 
-    private async ValueTask ConfigureOptionsAsync(ChatCompletionOptions chatOptions, AICompletionContext context, List<ChatMessage> prompts)
+    private async ValueTask<IReadOnlyList<Microsoft.Extensions.AI.AIFunction>> ConfigureOptionsAsync(ChatCompletionOptions chatOptions, AICompletionContext context, List<ChatMessage> prompts)
     {
         var optionsContext = new AzureOpenAIChatOptionsContext(chatOptions, context, prompts);
 
@@ -517,6 +519,21 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         {
             await handler.ConfigureOptionsAsync(optionsContext);
         }
+
+        if (optionsContext.SystemFunctions.Count > 0)
+        {
+            foreach (var function in optionsContext.SystemFunctions)
+            {
+                chatOptions.Tools.Add(function.ToChatTool());
+            }
+
+            if (chatOptions.Tools.Count > 0)
+            {
+                chatOptions.ToolChoice = ChatToolChoice.CreateAutoChoice();
+            }
+        }
+
+        return optionsContext.SystemFunctions;
     }
 
     private static ChatCompletionOptions GetOptions(AICompletionContext context, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)

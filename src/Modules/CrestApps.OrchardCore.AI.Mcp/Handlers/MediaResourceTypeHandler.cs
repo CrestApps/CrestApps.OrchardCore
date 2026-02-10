@@ -57,18 +57,38 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
 
         // Read file content from the media store.
         using var stream = await _mediaFileStore.GetFileStreamAsync(mediaPath);
-        using var reader = new StreamReader(stream);
-        var content = await reader.ReadToEndAsync(cancellationToken);
+
+        if (IsTextMimeType(mimeType))
+        {
+            using var reader = new StreamReader(stream);
+            var content = await reader.ReadToEndAsync(cancellationToken);
+
+            return new ReadResourceResult
+            {
+                Contents =
+                [
+                    new TextResourceContents
+                    {
+                        Uri = resource.Resource.Uri,
+                        MimeType = mimeType,
+                        Text = content,
+                    }
+                ]
+            };
+        }
+
+        var bytes = new byte[fileInfo.Length];
+        await stream.ReadExactlyAsync(bytes, cancellationToken);
 
         return new ReadResourceResult
         {
             Contents =
             [
-                new TextResourceContents
+                new BlobResourceContents
                 {
                     Uri = resource.Resource.Uri,
                     MimeType = mimeType,
-                    Text = content,
+                    Blob = Convert.ToBase64String(bytes),
                 }
             ]
         };

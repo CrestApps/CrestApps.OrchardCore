@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.AI.Mcp.Drivers;
 using CrestApps.OrchardCore.AI.Mcp.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
+using CrestApps.OrchardCore.AI.Mcp.Tools;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.Services;
@@ -43,6 +44,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddSingleton<McpInvokeFunction>();
         services.AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>();
         services.AddScoped<IAICompletionServiceHandler, McpConnectionsAICompletionServiceHandler>();
@@ -167,7 +169,7 @@ public sealed class McpServerStartup : StartupBase
             entry.UriPatterns = ["filesystem/{path}"];
         });
 
-        services.AddMcpServer(options =>
+        _ = services.AddMcpServer(options =>
         {
             options.ServerInfo = new()
             {
@@ -224,6 +226,10 @@ public sealed class McpServerStartup : StartupBase
             var arguments = new AIFunctionArguments()
             {
                 Services = request.Services,
+                Context = new Dictionary<object, object>()
+                {
+                    ["mcpRequest"] = request,
+                },
             };
 
             if (request.Params.Arguments is not null)

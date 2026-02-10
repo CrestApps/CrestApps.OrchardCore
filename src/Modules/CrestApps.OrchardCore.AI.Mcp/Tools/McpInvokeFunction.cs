@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Tools;
 /// A unified AI function that can invoke any MCP server capability (tool, prompt, or resource).
 /// This single function replaces direct injection of individual MCP tools.
 /// </summary>
-internal sealed class McpInvokeFunction : AIFunction
+public sealed class McpInvokeFunction : AIFunction
 {
     public const string FunctionName = "mcp_invoke";
 
@@ -67,8 +67,6 @@ internal sealed class McpInvokeFunction : AIFunction
         var inputs = GetOptionalObjectArgument(arguments, "inputs");
 
         var store = arguments.Services.GetRequiredService<ISourceCatalog<McpConnection>>();
-        var mcpService = arguments.Services.GetRequiredService<McpService>();
-        var logger = arguments.Services.GetRequiredService<ILogger<McpInvokeFunction>>();
 
         var connection = await store.FindByIdAsync(clientId);
 
@@ -76,6 +74,8 @@ internal sealed class McpInvokeFunction : AIFunction
         {
             return JsonSerializer.Serialize(new { error = $"MCP connection '{clientId}' not found." });
         }
+
+        var mcpService = arguments.Services.GetRequiredService<McpService>();
 
         var client = await mcpService.GetOrCreateClientAsync(connection);
 
@@ -86,16 +86,20 @@ internal sealed class McpInvokeFunction : AIFunction
 
         try
         {
-            return type.ToLowerInvariant() switch
+            var content = type.ToLowerInvariant() switch
             {
                 "tool" => await InvokeToolAsync(client, id, inputs, cancellationToken),
                 "prompt" => await InvokePromptAsync(client, id, inputs, cancellationToken),
                 "resource" => await InvokeResourceAsync(client, id, cancellationToken),
                 _ => JsonSerializer.Serialize(new { error = $"Unknown capability type '{type}'. Use 'tool', 'prompt', or 'resource'." }),
             };
+
+            return content;
         }
         catch (Exception ex)
         {
+            var logger = arguments.Services.GetRequiredService<ILogger<McpInvokeFunction>>();
+
             logger.LogError(ex, "Error invoking MCP capability '{Type}/{Id}' on server '{ClientId}'.", type, id, clientId);
 
             return JsonSerializer.Serialize(new { error = $"Error invoking MCP capability: {ex.Message}" });
@@ -142,7 +146,7 @@ internal sealed class McpInvokeFunction : AIFunction
     }
 
     private static async Task<object> InvokeResourceAsync(
-        ModelContextProtocol.Client.McpClient client,
+        McpClient client,
         string resourceUri,
         CancellationToken cancellationToken)
     {

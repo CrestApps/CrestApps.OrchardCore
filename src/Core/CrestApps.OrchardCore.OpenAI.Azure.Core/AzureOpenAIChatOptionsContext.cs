@@ -24,4 +24,6 @@ public sealed class AzureOpenAIChatOptionsContext
     public AICompletionContext CompletionContext { get; }
 
     public List<ChatMessage> Prompts { get; }
+
+    public List<Microsoft.Extensions.AI.AIFunction> SystemFunctions { get; } = [];
 }
