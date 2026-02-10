@@ -2,8 +2,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.Recipes.Core.Services;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement.Metadata;
@@ -47,10 +45,8 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
 
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
         var recipeExecutionService = arguments.Services.GetRequiredService<RecipeExecutionService>();
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.EditContentTypes))
+        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.EditContentTypes))
         {
             return "You do not have permission to edit content definitions.";
         }

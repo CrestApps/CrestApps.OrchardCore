@@ -1,7 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Agent.Services;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -37,10 +36,8 @@ public sealed class ListContentFieldsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var contentMetadataService = arguments.Services.GetRequiredService<ContentMetadataService>();
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ViewContentTypes))
+        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ViewContentTypes))
         {
             return "You do not have permission to view content types.";
         }

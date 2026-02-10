@@ -1,6 +1,5 @@
 using System.Text.Json;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Extensions.Features;
@@ -41,8 +40,6 @@ public sealed class ListStartupRecipesTool : AIFunction
 
         var recipeHarvesters = arguments.Services.GetRequiredService<IEnumerable<IRecipeHarvester>>();
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
         if (!shellSettings.IsDefaultShell())
@@ -50,7 +47,7 @@ public sealed class ListStartupRecipesTool : AIFunction
             return "This function is not supported in this tenant. It can only be used in the default tenant.";
         }
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageRecipes))
+        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageRecipes))
         {
             return "You do not have permission to execute a recipe.";
         }

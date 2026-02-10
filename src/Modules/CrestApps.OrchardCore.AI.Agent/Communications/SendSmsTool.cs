@@ -1,6 +1,5 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Sms;
@@ -46,11 +45,10 @@ public sealed class SendSmsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
         var smsService = arguments.Services.GetRequiredService<ISmsService>();
         var phoneFormatValidator = arguments.Services.GetRequiredService<IPhoneFormatValidator>();
 
-        if (!httpContextAccessor.HttpContext.User.Identity.IsAuthenticated)
+        if (!arguments.IsAuthenticatedOrMcpRequest())
         {
             return "You must login to be able to send SMS message.";
         }

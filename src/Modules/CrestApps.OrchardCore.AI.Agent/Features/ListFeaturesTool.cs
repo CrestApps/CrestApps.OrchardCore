@@ -1,6 +1,5 @@
 using System.Text.Json;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Extensions;
@@ -37,11 +36,9 @@ public sealed class ListFeaturesTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageFeatures))
+        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageFeatures))
         {
             return "The current user does not have permission to manage features.";
         }

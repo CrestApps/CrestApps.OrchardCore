@@ -1,7 +1,5 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
@@ -45,10 +43,8 @@ public sealed class CloneContentTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, CommonPermissions.CloneContent))
+        if (!await arguments.IsAuthorizedAsync(CommonPermissions.CloneContent))
         {
             return "You do not have permission to clone content items.";
         }

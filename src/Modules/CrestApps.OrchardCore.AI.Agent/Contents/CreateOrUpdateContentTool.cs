@@ -2,7 +2,6 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Settings;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,7 +58,6 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
         var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
 
         if (!arguments.TryGetFirstString("contentItem", out var json))
         {
@@ -90,7 +88,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             contentItem = await contentManager.NewAsync(model.ContentType);
             contentItem.Owner = httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, CommonPermissions.PublishContent, contentItem))
+            if (!await arguments.IsAuthorizedAsync(CommonPermissions.PublishContent, contentItem))
             {
                 return "The current user does not have permission to publish the content item";
             }
@@ -110,7 +108,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         }
         else
         {
-            if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, CommonPermissions.EditContent, contentItem))
+            if (!await arguments.IsAuthorizedAsync(CommonPermissions.EditContent, contentItem))
             {
                 return "The current user does not have permission to edit the content item";
             }

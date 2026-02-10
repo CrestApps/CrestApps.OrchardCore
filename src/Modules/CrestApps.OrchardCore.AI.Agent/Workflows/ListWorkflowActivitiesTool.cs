@@ -1,7 +1,5 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Workflows.Activities;
@@ -38,11 +36,9 @@ public sealed class ListWorkflowActivitiesTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
         var activityLibrary = arguments.Services.GetRequiredService<IActivityLibrary>();
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageWorkflows))
+        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageWorkflows))
         {
             return "The current user does not have permission to manage workflows.";
         }
