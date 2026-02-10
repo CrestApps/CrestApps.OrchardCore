@@ -8,11 +8,6 @@ namespace CrestApps.OrchardCore.AI.Mcp.Core.Models;
 public sealed class McpServerCapability
 {
     /// <summary>
-    /// Gets or sets the type of this capability.
-    /// </summary>
-    public McpCapabilityType Type { get; set; }
-
-    /// <summary>
     /// Gets or sets the unique name/identifier of this capability within the server.
     /// </summary>
     public string Name { get; set; }
@@ -30,13 +25,13 @@ public sealed class McpServerCapability
 
     /// <summary>
     /// Gets or sets the MIME type of the resource.
-    /// Only applicable when <see cref="Type"/> is <see cref="McpCapabilityType.Resource"/>.
+    /// Only applicable when this capability is a resource.
     /// </summary>
     public string MimeType { get; set; }
 
     /// <summary>
     /// Gets or sets the URI for resources.
-    /// Only applicable when <see cref="Type"/> is <see cref="McpCapabilityType.Resource"/>.
+    /// Only applicable when this capability is a resource.
     /// </summary>
     public string Uri { get; set; }
 }

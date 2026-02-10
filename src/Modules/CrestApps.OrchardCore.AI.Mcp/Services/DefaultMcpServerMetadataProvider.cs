@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Services;
 
-internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataProvider
+internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataCacheProvider
 {
     private static readonly string _cacheKeyPrefix = "McpServerCapabilities_";
 
@@ -56,14 +56,6 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataProvi
         ArgumentException.ThrowIfNullOrEmpty(connectionId);
 
         await _cache.RemoveAsync(_cacheKeyPrefix + connectionId);
-    }
-
-    public Task InvalidateAllAsync()
-    {
-        // IDistributedCache does not support enumeration; callers should invalidate specific keys
-        // or use a signal-based approach. For now, individual invalidation is supported.
-
-        return Task.CompletedTask;
     }
 
     private async Task<McpServerCapabilities> TryGetCachedCapabilitiesAsync(string cacheKey)
@@ -137,7 +129,6 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataProvi
                 {
                     tools.Add(new McpServerCapability
                     {
-                        Type = McpCapabilityType.Tool,
                         Name = tool.Name,
                         Description = tool.Description,
                         InputSchema = tool.JsonSchema is JsonElement schema ? schema : null,
@@ -156,7 +147,6 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataProvi
                 {
                     prompts.Add(new McpServerCapability
                     {
-                        Type = McpCapabilityType.Prompt,
                         Name = prompt.Name,
                         Description = prompt.Description,
                     });
@@ -174,7 +164,6 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataProvi
                 {
                     resources.Add(new McpServerCapability
                     {
-                        Type = McpCapabilityType.Resource,
                         Name = resource.Name,
                         Description = resource.Description,
                         MimeType = resource.MimeType,

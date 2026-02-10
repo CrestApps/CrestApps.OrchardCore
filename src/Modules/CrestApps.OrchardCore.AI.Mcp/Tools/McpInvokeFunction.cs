@@ -70,8 +70,7 @@ internal sealed class McpInvokeFunction : AIFunction
         var mcpService = arguments.Services.GetRequiredService<McpService>();
         var logger = arguments.Services.GetRequiredService<ILogger<McpInvokeFunction>>();
 
-        var connections = await store.GetAllAsync();
-        var connection = connections.FirstOrDefault(c => c.ItemId == clientId);
+        var connection = await store.FindByIdAsync(clientId);
 
         if (connection is null)
         {

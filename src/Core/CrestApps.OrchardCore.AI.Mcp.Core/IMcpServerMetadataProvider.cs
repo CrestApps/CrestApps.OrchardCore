@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Core;
 /// Provides cached metadata about MCP server capabilities.
 /// Queries MCP servers for available tools, prompts, and resources, and caches the results.
 /// </summary>
-public interface IMcpServerMetadataProvider
+public interface IMcpServerMetadataCacheProvider
 {
     /// <summary>
     /// Gets the capabilities of the specified MCP server connection.
@@ -21,9 +21,4 @@ public interface IMcpServerMetadataProvider
     /// </summary>
     /// <param name="connectionId">The connection identifier to invalidate.</param>
     Task InvalidateAsync(string connectionId);
-
-    /// <summary>
-    /// Invalidates all cached MCP server metadata.
-    /// </summary>
-    Task InvalidateAllAsync();
 }
