@@ -122,6 +122,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             : [];
 
         var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
+        await ConfigureOptionsAsync(chatOptions, context, prompts);
         try
         {
             var data = await chatClient.CompleteChatAsync(prompts, chatOptions, cancellationToken);
@@ -262,6 +263,8 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         ChatCompletionOptions subSequenceContext = null;
 
         var prompts = GetPrompts(context, azureMessages);
+
+        await ConfigureOptionsAsync(chatOptions, context, prompts);
 
         // Accumulate tool call updates across streaming chunks.
         // Key is the tool call index, value contains the accumulated tool call data.
@@ -504,6 +507,16 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         }
 
         return chatOptions;
+    }
+
+    private async ValueTask ConfigureOptionsAsync(ChatCompletionOptions chatOptions, AICompletionContext context, List<ChatMessage> prompts)
+    {
+        var optionsContext = new AzureOpenAIChatOptionsContext(chatOptions, context, prompts);
+
+        foreach (var handler in _azureOpenAIDataSourceHandlers)
+        {
+            await handler.ConfigureOptionsAsync(optionsContext);
+        }
     }
 
     private static ChatCompletionOptions GetOptions(AICompletionContext context, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)

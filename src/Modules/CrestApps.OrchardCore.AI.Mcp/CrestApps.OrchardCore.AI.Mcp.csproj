@@ -35,6 +35,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Mcp.Core\CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.OpenAI.Azure.Core\CrestApps.OrchardCore.OpenAI.Azure.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

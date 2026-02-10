@@ -56,7 +56,6 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
                 [
                     new McpServerCapability
                     {
-                        Type = McpCapabilityType.Tool,
                         Name = "search",
                         Description = "Search the web",
                     },
@@ -91,7 +90,6 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
                 [
                     new McpServerCapability
                     {
-                        Type = McpCapabilityType.Prompt,
                         Name = "summarize",
                         Description = "Summarize text",
                     },
@@ -123,7 +121,6 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
                 [
                     new McpServerCapability
                     {
-                        Type = McpCapabilityType.Resource,
                         Name = "docs",
                         Description = "Documentation files",
                         Uri = "file://docs/readme.md",
@@ -152,7 +149,7 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
                 ConnectionDisplayText = "Server A",
                 Tools =
                 [
-                    new McpServerCapability { Type = McpCapabilityType.Tool, Name = "toolA" },
+                    new McpServerCapability { Name = "toolA" },
                 ],
                 Prompts = [],
                 Resources = [],
@@ -163,7 +160,7 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
                 ConnectionDisplayText = "Server B",
                 Tools =
                 [
-                    new McpServerCapability { Type = McpCapabilityType.Tool, Name = "toolB" },
+                    new McpServerCapability { Name = "toolB" },
                 ],
                 Prompts = [],
                 Resources = [],
@@ -200,7 +197,7 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
                 ConnectionDisplayText = "Active Server",
                 Tools =
                 [
-                    new McpServerCapability { Type = McpCapabilityType.Tool, Name = "myTool" },
+                    new McpServerCapability { Name = "myTool" },
                 ],
                 Prompts = [],
                 Resources = [],
@@ -225,7 +222,7 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
                 ConnectionDisplayText = null,
                 Tools =
                 [
-                    new McpServerCapability { Type = McpCapabilityType.Tool, Name = "tool1" },
+                    new McpServerCapability { Name = "tool1" },
                 ],
                 Prompts = [],
                 Resources = [],
@@ -249,15 +246,15 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
                 ConnectionDisplayText = "Full Server",
                 Tools =
                 [
-                    new McpServerCapability { Type = McpCapabilityType.Tool, Name = "calc" },
+                    new McpServerCapability { Name = "calc" },
                 ],
                 Prompts =
                 [
-                    new McpServerCapability { Type = McpCapabilityType.Prompt, Name = "greet" },
+                    new McpServerCapability { Name = "greet" },
                 ],
                 Resources =
                 [
-                    new McpServerCapability { Type = McpCapabilityType.Resource, Name = "data", Uri = "file://data" },
+                    new McpServerCapability { Name = "data", Uri = "file://data" },
                 ],
             },
         };

@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.AI.Mcp.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -45,6 +46,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>();
         services.AddScoped<IAICompletionServiceHandler, McpConnectionsAICompletionServiceHandler>();
+        services.AddScoped<IAzureOpenAIDataSourceHandler, McpConnectionsAzureOpenAIDataSourceHandler>();
         services.AddScoped<McpService>();
         services.AddScoped<IMcpServerMetadataCacheProvider, DefaultMcpServerMetadataProvider>();
         services.AddSingleton<IMcpMetadataPromptGenerator, DefaultMcpMetadataPromptGenerator>();
