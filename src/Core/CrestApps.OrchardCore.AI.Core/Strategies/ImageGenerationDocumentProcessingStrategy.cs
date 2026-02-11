@@ -89,8 +89,11 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
                 return;
             }
 
-            _logger.LogDebug("Generating image using provider '{ProviderName}', connection '{ConnectionName}', deployment '{DeploymentName}'.",
-                providerName, connectionName, deploymentName);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Generating image using provider '{ProviderName}', connection '{ConnectionName}', deployment '{DeploymentName}'.",
+                    providerName, connectionName, deploymentName);
+            }
 
             var imageGenerator = await _aIClientFactory.CreateImageGeneratorAsync(providerName, connectionName, deploymentName);
 
@@ -114,7 +117,10 @@ public sealed class ImageGenerationDocumentProcessingStrategy : DocumentProcessi
 
             context.Result.GeneratedImages = result;
 
-            _logger.LogDebug("Successfully generated {Count} image(s).", result.Contents?.Count ?? 0);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Successfully generated {Count} image(s).", result.Contents?.Count ?? 0);
+            }
         }
         catch (NotSupportedException ex)
         {

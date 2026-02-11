@@ -94,7 +94,11 @@ public sealed class AIPromptIntentDetector : IPromptIntentDetector
 
             if (!_aiProviderOptions.Providers.TryGetValue(providerName, out var provider))
             {
-                _logger.LogDebug("Provider '{ProviderName}' not found in configuration.", providerName);
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("Provider '{ProviderName}' not found in configuration.", providerName);
+                }
+
                 return null;
             }
 
@@ -105,7 +109,11 @@ public sealed class AIPromptIntentDetector : IPromptIntentDetector
 
             if (string.IsNullOrEmpty(connectionName) || !provider.Connections.TryGetValue(connectionName, out var connection))
             {
-                _logger.LogDebug("Connection '{ConnectionName}' not found for provider '{ProviderName}'.", connectionName, providerName);
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("Connection '{ConnectionName}' not found for provider '{ProviderName}'.", connectionName, providerName);
+                }
+
                 return null;
             }
 
@@ -289,19 +297,31 @@ public sealed class AIPromptIntentDetector : IPromptIntentDetector
                     var validIntent = ValidateIntent(parsed.Intent);
                     var confidence = Math.Clamp(parsed.Confidence, 0f, 1f);
 
-                    _logger.LogDebug("AI detected intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
-                        validIntent, confidence, parsed.Reason);
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+
+                        _logger.LogDebug("AI detected intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
+                            validIntent, confidence, parsed.Reason);
+                    }
 
                     return DocumentIntent.FromName(validIntent, confidence, parsed.Reason ?? "AI-based detection");
                 }
             }
 
-            _logger.LogDebug("Could not parse intent response: {Response}", responseText);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Could not parse intent response: {Response}", responseText);
+            }
+
             return null;
         }
         catch (JsonException ex)
         {
-            _logger.LogDebug(ex, "Failed to parse JSON from AI intent response: {Response}", responseText);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(ex, "Failed to parse JSON from AI intent response: {Response}", responseText);
+            }
+
             return null;
         }
     }

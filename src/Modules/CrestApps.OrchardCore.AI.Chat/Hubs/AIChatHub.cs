@@ -356,10 +356,20 @@ public class AIChatHub : Hub<IAIChatHubClient>
             c.AdditionalProperties["Session"] = chatSession;
             c.UserMarkdownInResponse = true;
 
-            // Append additional context from intent processing to the system message.
-            if (intentResult != null && intentResult.IsSuccess && intentResult.HasContext)
+            if (intentResult != null && intentResult.IsSuccess)
             {
-                c.SystemMessage = (c.SystemMessage ?? string.Empty) + "\n\n" + intentResult.GetCombinedContext();
+                // Append additional context from intent processing to the system message.
+                if (intentResult.HasContext)
+                {
+                    c.SystemMessage = (c.SystemMessage ?? string.Empty) + "\n\n" + intentResult.GetCombinedContext();
+                }
+
+                // Merge tool names requested by strategies into the completion context
+                // so they are resolved by the standard tool registration pipeline.
+                if (intentResult.ToolNames.Count > 0)
+                {
+                    c.ToolNames = [.. c.ToolNames ?? [], .. intentResult.ToolNames];
+                }
             }
         });
 

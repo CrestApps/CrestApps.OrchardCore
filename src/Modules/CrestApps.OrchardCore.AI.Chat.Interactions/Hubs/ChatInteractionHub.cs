@@ -378,10 +378,20 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 c.UserMarkdownInResponse = true;
 
                 var systemMessage = c.SystemMessage ?? string.Empty;
-                if (documentProcessingResult != null && documentProcessingResult.IsSuccess && documentProcessingResult.HasContext)
+                if (documentProcessingResult != null && documentProcessingResult.IsSuccess)
                 {
-                    // Append document context to the system message
-                    systemMessage = systemMessage + "\n\n" + documentProcessingResult.GetCombinedContext();
+                    if (documentProcessingResult.HasContext)
+                    {
+                        // Append document context to the system message
+                        systemMessage = systemMessage + "\n\n" + documentProcessingResult.GetCombinedContext();
+                    }
+
+                    // Merge tool names requested by strategies into the completion context
+                    // so they are resolved by the standard tool registration pipeline.
+                    if (documentProcessingResult.ToolNames.Count > 0)
+                    {
+                        c.ToolNames = [.. c.ToolNames ?? [], .. documentProcessingResult.ToolNames];
+                    }
                 }
 
                 c.SystemMessage = systemMessage;

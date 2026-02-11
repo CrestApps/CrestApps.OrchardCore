@@ -44,7 +44,10 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
 
         if (userPart == null)
         {
-            _logger?.LogTrace("Attempting to access user '{UserName}' full name where the part '{PartName}' is not available.", user.UserName, nameof(UserFullNamePart));
+            if (_logger?.IsEnabled(LogLevel.Trace) == true)
+            {
+                _logger.LogTrace("Attempting to access user '{UserName}' full name where the part '{PartName}' is not available.", user.UserName, nameof(UserFullNamePart));
+            }
 
             return user.UserName;
         }

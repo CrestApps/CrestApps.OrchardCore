@@ -108,7 +108,10 @@ public sealed class RecipeSchemaResourceTypeHandler : McpResourceTypeHandlerBase
             return CreateErrorResult(resource.Resource.Uri, "Step name is required. Use 'step/{step-name}'.");
         }
 
-        _logger.LogDebug("Reading recipe-schema resource for step: {StepName}", stepName);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Reading recipe-schema resource for step: {StepName}", stepName);
+        }
 
         var stepSchema = await _recipeSchemaService.GetStepSchemaAsync(stepName);
 
@@ -133,7 +136,10 @@ public sealed class RecipeSchemaResourceTypeHandler : McpResourceTypeHandlerBase
 
     private async Task<ReadResourceResult> GetRecipeByNameResultAsync(McpResource resource, string recipeName)
     {
-        _logger.LogDebug("Reading recipe-schema resource for recipe: {RecipeName}", recipeName);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Reading recipe-schema resource for recipe: {RecipeName}", recipeName);
+        }
 
         var features = await _shellFeaturesManager.GetAvailableFeaturesAsync();
         var recipe = await FindRecipeByNameAsync(recipeName, features);

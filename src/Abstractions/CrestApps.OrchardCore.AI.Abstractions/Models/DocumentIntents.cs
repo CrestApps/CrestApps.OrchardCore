@@ -26,4 +26,6 @@ public static class DocumentIntents
     public const string GenerateImageWithHistory = "GenerateImageWithHistory";
 
     public const string GenerateChart = "GenerateChart";
+
+    public const string LookingForExternalCapabilities = "LookingForExternalCapabilities";
 }

@@ -87,9 +87,12 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
             batchIndex++;
         }
 
-        _logger.LogDebug(
-            "Split document '{FileName}' into {BatchCount} batches of up to {BatchSize} rows each.",
-            fileName, batches.Count, batchSize);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Split document '{FileName}' into {BatchCount} batches of up to {BatchSize} rows each.",
+                fileName, batches.Count, batchSize);
+        }
 
         return batches;
     }
@@ -278,9 +281,12 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                     "LLM returned empty response.");
             }
 
-            _logger.LogDebug(
-                "Successfully processed batch {BatchIndex} (rows {StartRow}-{EndRow}) from '{FileName}'.",
-                batch.BatchIndex, batch.RowStartIndex, batch.RowEndIndex, batch.FileName);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Successfully processed batch {BatchIndex} (rows {StartRow}-{EndRow}) from '{FileName}'.",
+                    batch.BatchIndex, batch.RowStartIndex, batch.RowEndIndex, batch.FileName);
+            }
 
             return TabularBatchResult.CreateSuccess(
                 batch.BatchIndex,

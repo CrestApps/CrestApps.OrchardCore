@@ -238,7 +238,10 @@ internal static class UploadDocumentEndpoint
                 }
                 else
                 {
-                    logger.LogDebug("Skipping embedding generation for file {FileName} (tabular data or too large)", file.FileName);
+                    if (logger.IsEnabled(LogLevel.Debug))
+                    {
+                        logger.LogDebug("Skipping embedding generation for file {FileName} (tabular data or too large)", file.FileName);
+                    }
                 }
 
                 var docInfo = new ChatInteractionDocumentInfo

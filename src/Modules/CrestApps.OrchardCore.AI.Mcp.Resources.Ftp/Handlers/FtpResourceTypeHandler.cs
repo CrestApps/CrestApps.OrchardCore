@@ -61,7 +61,10 @@ public sealed class FtpResourceTypeHandler : McpResourceTypeHandlerBase
         // The path portion of the resource URI is the remote file path.
         var remotePath = "/" + resourceUri.Path;
 
-        _logger.LogDebug("Reading FTP resource from: {Host}:{Port}{Path}", host, port, remotePath);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Reading FTP resource from: {Host}:{Port}{Path}", host, port, remotePath);
+        }
 
         using var client = new AsyncFtpClient(host, port);
 

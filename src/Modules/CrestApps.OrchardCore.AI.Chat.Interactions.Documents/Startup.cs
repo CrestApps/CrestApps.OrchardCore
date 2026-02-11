@@ -50,12 +50,12 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<IndexProfile, ChatInteractionIndexProfileDisplayDriver>();
 
         // Add document processing services for intent-aware, strategy-based document handling.
-        services
-            .AddDefaultDocumentPromptProcessingStrategies()
-            .AddPromptProcessingIntent(
-                DocumentIntents.DocumentQnA,
-                "The user wants to ask questions about documents, search for information, or find specific content within documents using RAG (Retrieval-Augmented Generation).")
-            .AddPromptProcessingStrategy<RagDocumentProcessingStrategy>();
+        services.AddDefaultDocumentPromptProcessingStrategies();
+
+        services.AddPromptProcessingIntent(
+            DocumentIntents.DocumentQnA,
+            "The user wants to ask questions about documents, search for information, or find specific content within documents using RAG (Retrieval-Augmented Generation).")
+            .WithStrategy<RagDocumentProcessingStrategy>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

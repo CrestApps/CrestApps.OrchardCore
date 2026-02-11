@@ -159,16 +159,28 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Registers a document processing intent that will be recognized by the AI intent detector.
+    /// Returns a builder to fluently configure the intent's strategies and behavior.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="intentName">The unique name of the intent (e.g., "DocumentQnA").</param>
     /// <param name="description">A description of when this intent should be detected, used by the AI classifier.</param>
-    /// <returns>The service collection for chaining.</returns>
+    /// <returns>A builder for further intent configuration.</returns>
     /// <remarks>
     /// Only intents registered via this method will be recognized by the AI intent detector.
-    /// Each intent should have a corresponding strategy registered via <see cref="AddPromptProcessingStrategy{TStrategy}"/>.
+    /// Use the returned builder to attach strategies:
+    /// <code>
+    /// services.AddPromptProcessingIntent("MyIntent", "description")
+    ///     .WithStrategy&lt;MyStrategy&gt;();
+    ///
+    /// services.AddPromptProcessingIntent("MySecondPhaseIntent", "description")
+    ///     .WithSecondPhaseStrategy&lt;MyResolver&gt;();
+    ///
+    /// services.AddPromptProcessingIntent("MyHeavyIntent", "description")
+    ///     .AsHeavy()
+    ///     .WithStrategy&lt;MyHeavyStrategy&gt;();
+    /// </code>
     /// </remarks>
-    public static IServiceCollection AddPromptProcessingIntent(
+    public static PromptProcessingIntentBuilder AddPromptProcessingIntent(
         this IServiceCollection services,
         string intentName,
         string description)
@@ -181,31 +193,7 @@ public static class ServiceCollectionExtensions
             options.InternalIntents.TryAdd(intentName, description);
         });
 
-        return services;
-    }
-
-    /// <summary>
-    /// Registers a heavy processing intent.
-    /// </summary>
-    /// <remarks>
-    /// Heavy intents are always registered, but are filtered out from AI intent detection when
-    /// <see cref="PromptProcessingOptions.EnableHeavyProcessingStrategies"/> is false.
-    /// </remarks>
-    public static IServiceCollection AddHeavyPromptProcessingIntent(
-        this IServiceCollection services,
-        string intentName,
-        string description)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(intentName);
-        ArgumentException.ThrowIfNullOrEmpty(description);
-
-        services.Configure<PromptProcessingOptions>(options =>
-        {
-            options.InternalIntents.TryAdd(intentName, description);
-            options.HeavyIntents.Add(intentName);
-        });
-
-        return services;
+        return new PromptProcessingIntentBuilder(services, intentName);
     }
 
     /// <summary>
@@ -228,22 +216,19 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddDefaultPromptProcessingStrategies(this IServiceCollection services)
     {
-        // Register intents for the default strategies
-        services
-            .AddPromptProcessingIntent(
-                DocumentIntents.GenerateImage,
-                "The user requests creation of a new image from a text description. Detect when the prompt asks for visuals, illustrations, diagrams, or artwork and capture any optional parameters (style, size, aspect ratio, color palette, level of detail, or composition). The output should be an image-generation task consisting of a refined prompt and metadata suitable for calling an image-generation service.")
-            .AddPromptProcessingIntent(
-                DocumentIntents.GenerateImageWithHistory,
-                "Trigger when the user requests the creation of an image, diagram, or visual that is based on information, data, or discussion from prior chat messages. Detect references to previous conversation, earlier outputs, or chat-based data that should influence the visual. This intent is strictly for generating images that depend on chat history, including summaries, illustrations, or artwork derived from earlier messages, but does not include charts or graphs.")
-            .AddPromptProcessingIntent(
-                DocumentIntents.GenerateChart,
-                "The user wants to create a chart, graph, or data visualization such as bar chart, line chart, pie chart, scatter plot, or histogram. The AI model already receives conversation history, so this intent handles both explicit data in the prompt and references to data from earlier messages.");
+        services.AddPromptProcessingIntent(
+            DocumentIntents.GenerateImage,
+            "The user requests creation of a new image from a text description. Detect when the prompt asks for visuals, illustrations, diagrams, or artwork and capture any optional parameters (style, size, aspect ratio, color palette, level of detail, or composition). The output should be an image-generation task consisting of a refined prompt and metadata suitable for calling an image-generation service.")
+            .WithStrategy<ImageGenerationDocumentProcessingStrategy>();
 
-        // Register the strategies
-        services
-            .AddPromptProcessingStrategy<ImageGenerationDocumentProcessingStrategy>()
-            .AddPromptProcessingStrategy<ChartGenerationDocumentProcessingStrategy>();
+        services.AddPromptProcessingIntent(
+            DocumentIntents.GenerateImageWithHistory,
+            "Trigger when the user requests the creation of an image, diagram, or visual that is based on information, data, or discussion from prior chat messages. Detect references to previous conversation, earlier outputs, or chat-based data that should influence the visual. This intent is strictly for generating images that depend on chat history, including summaries, illustrations, or artwork derived from earlier messages, but does not include charts or graphs.");
+
+        services.AddPromptProcessingIntent(
+            DocumentIntents.GenerateChart,
+            "The user wants to create a chart, graph, or data visualization such as bar chart, line chart, pie chart, scatter plot, or histogram. The AI model already receives conversation history, so this intent handles both explicit data in the prompt and references to data from earlier messages.")
+            .WithStrategy<ChartGenerationDocumentProcessingStrategy>();
 
         return services;
     }

@@ -36,7 +36,10 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
             return CreateErrorResult(resource.Resource.Uri, $"Media URI '{resource.Resource.Uri}' does not contain a valid path.");
         }
 
-        _logger.LogDebug("Reading media resource from: {MediaPath}", mediaPath);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Reading media resource from: {MediaPath}", mediaPath);
+        }
 
         var fileInfo = await _mediaFileStore.GetFileInfoAsync(mediaPath);
 

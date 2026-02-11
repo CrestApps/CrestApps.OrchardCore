@@ -107,8 +107,11 @@ public sealed class ChartGenerationDocumentProcessingStrategy : DocumentProcessi
                 return;
             }
 
-            _logger.LogDebug("Generating chart using provider '{ProviderName}', connection '{ConnectionName}', deployment '{DeploymentName}'.",
-                providerName, connectionName, deploymentName);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Generating chart using provider '{ProviderName}', connection '{ConnectionName}', deployment '{DeploymentName}'.",
+                    providerName, connectionName, deploymentName);
+            }
 
             var chatClient = await _aIClientFactory.CreateChatClientAsync(providerName, connectionName, deploymentName);
 

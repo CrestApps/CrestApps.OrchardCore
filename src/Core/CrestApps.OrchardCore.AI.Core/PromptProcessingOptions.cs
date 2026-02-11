@@ -27,5 +27,19 @@ public sealed class PromptProcessingOptions
     /// </summary>
     internal HashSet<string> HeavyIntents { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Gets the set of intent names that require second-phase processing.
+    /// When an intent in this set is detected, second-phase strategies will be executed
+    /// after the first-phase strategies complete.
+    /// </summary>
+    internal HashSet<string> SecondPhaseIntents { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Gets the set of strategy types that should run during the second phase.
+    /// These are registered via
+    /// <see cref="PromptProcessingIntentBuilder.WithSecondPhaseStrategy{TStrategy}"/>.
+    /// </summary>
+    internal HashSet<Type> SecondPhaseStrategyTypes { get; } = [];
+
     public IReadOnlyDictionary<string, string> Intents => InternalIntents;
 }

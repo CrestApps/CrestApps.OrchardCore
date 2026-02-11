@@ -16,6 +16,21 @@ public sealed class IntentProcessingResult
     public List<string> AdditionalContexts { get; } = [];
 
     /// <summary>
+    /// Gets the list of tool names that strategies request to be available for this completion
+    /// request. These are merged into the completion context's <see cref="AICompletionContext.ToolNames"/>
+    /// by the caller, and resolved by the standard tool registration pipeline.
+    /// </summary>
+    public List<string> ToolNames { get; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the current intent requires a second-phase processing pass.
+    /// This is set automatically when the detected intent was registered with
+    /// <c>WithSecondPhaseStrategy&lt;T&gt;()</c> on the intent builder, but can also be set
+    /// by any first-phase strategy to trigger the second-phase pipeline.
+    /// </summary>
+    public bool RequiresSecondPhase { get; set; }
+
+    /// <summary>
     /// Gets or sets whether vector search was used in the processing.
     /// </summary>
     public bool UsedVectorSearch { get; set; }

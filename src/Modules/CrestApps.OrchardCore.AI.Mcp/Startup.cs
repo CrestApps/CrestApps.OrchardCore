@@ -10,9 +10,9 @@ using CrestApps.OrchardCore.AI.Mcp.Drivers;
 using CrestApps.OrchardCore.AI.Mcp.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
+using CrestApps.OrchardCore.AI.Mcp.Strategies;
 using CrestApps.OrchardCore.AI.Mcp.Tools;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -24,15 +24,13 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
-using McpServerPrompt = ModelContextProtocol.Server.McpServerPrompt;
-using McpServerResource = ModelContextProtocol.Server.McpServerResource;
-using McpServerTool = ModelContextProtocol.Server.McpServerTool;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using McpServerTool = ModelContextProtocol.Server.McpServerTool;
 
 namespace CrestApps.OrchardCore.AI.Mcp;
 
@@ -47,11 +45,16 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton<McpInvokeFunction>();
+        services.AddAITool<McpInvokeFunction>(McpInvokeFunction.FunctionName, o =>
+        {
+            o.Description = S["Invoke an MCP server capability (tool, prompt, or resource)."];
+        });
+        services.AddPromptProcessingIntent(
+            DocumentIntents.LookingForExternalCapabilities,
+            S["The user is asking for specific technical details, schemas, configurations, recipes, setup instructions, API documentation, data lookups, or structured reference material where an authoritative external source would provide a more accurate or complete answer than the AI model's general knowledge. Trigger this when the query involves implementation specifics, structured data formats, system configurations, feature enablement steps, or domain-specific technical reference."])
+            .WithSecondPhaseStrategy<McpCapabilitiesProcessingStrategy>();
         services.AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>();
-        services.AddScoped<IAICompletionServiceHandler, McpConnectionsAICompletionServiceHandler>();
-        services.AddScoped<IAzureOpenAIDataSourceHandler, McpConnectionsAzureOpenAIDataSourceHandler>();
         services.AddScoped<McpService>();
         services.AddScoped<IMcpServerMetadataCacheProvider, DefaultMcpServerMetadataProvider>();
         services.AddSingleton<IMcpMetadataPromptGenerator, DefaultMcpMetadataPromptGenerator>();

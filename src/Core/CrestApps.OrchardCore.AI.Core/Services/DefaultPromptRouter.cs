@@ -38,8 +38,11 @@ public sealed class DefaultPromptRouter : IPromptRouter
                     "No intent detected.");
             }
 
-            _logger.LogDebug("Detected intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
-                intent.Name, intent.Confidence, intent.Reason);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Detected intent: {Intent} with confidence {Confidence}. Reason: {Reason}",
+                    intent.Name, intent.Confidence, intent.Reason);
+            }
 
             var processingContext = new IntentProcessingContext
             {

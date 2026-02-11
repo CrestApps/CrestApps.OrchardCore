@@ -139,18 +139,24 @@ public sealed class RowLevelTabularAnalysisDocumentProcessingStrategy : Document
             var cachedResult = TryGetCachedResult(interactionId, tabularDocuments, prompt);
             if (cachedResult is not null)
             {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
                 _logger.LogInformation(
                     "Using cached batch results for interaction {InteractionId}. Batches: {BatchCount}, Rows: {RowCount}",
                     interactionId, cachedResult.TotalBatches, cachedResult.TotalRowsProcessed);
+            }
 
                 AddCachedResultToContext(context, cachedResult);
                 return;
             }
         }
 
-        _logger.LogInformation(
-            "Processing large tabular dataset with batched execution. Documents: {DocCount}",
-            tabularDocuments.Count);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Processing large tabular dataset with batched execution. Documents: {DocCount}",
+                tabularDocuments.Count);
+        }
 
         var allBatches = new List<TabularBatch>();
         var fileNames = new List<string>();
@@ -186,9 +192,12 @@ public sealed class RowLevelTabularAnalysisDocumentProcessingStrategy : Document
         var failureCount = results.Count - successCount;
         var totalRowsProcessed = results.Where(r => r.Success).Sum(r => r.ProcessedRowCount);
 
-        _logger.LogInformation(
-            "Batch processing complete. Successful: {SuccessCount}/{TotalCount}, Rows: {RowCount}",
-            successCount, results.Count, totalRowsProcessed);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Batch processing complete. Successful: {SuccessCount}/{TotalCount}, Rows: {RowCount}",
+                successCount, results.Count, totalRowsProcessed);
+        }
 
         var mergedOutput = _batchProcessor.MergeResults(results, includeHeader: false);
 

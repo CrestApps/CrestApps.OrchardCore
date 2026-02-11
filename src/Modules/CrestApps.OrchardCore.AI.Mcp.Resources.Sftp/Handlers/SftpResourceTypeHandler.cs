@@ -88,7 +88,10 @@ public sealed class SftpResourceTypeHandler : McpResourceTypeHandlerBase
         // The path portion of the resource URI is the remote file path.
         var remotePath = "/" + resourceUri.Path;
 
-        _logger.LogDebug("Reading SFTP resource from: {Host}:{Port}{Path}", host, port, remotePath);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Reading SFTP resource from: {Host}:{Port}{Path}", host, port, remotePath);
+        }
 
         // Build authentication methods
         var authMethods = new List<AuthenticationMethod>();
