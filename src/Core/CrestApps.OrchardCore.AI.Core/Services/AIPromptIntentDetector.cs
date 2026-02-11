@@ -137,10 +137,13 @@ public sealed class AIPromptIntentDetector : IPromptIntentDetector
                 return null;
             }
 
-            // Build the intent detection request
+            // Build the intent detection request, enriching the system prompt with
+            // pre-resolved capability context when available.
+            var effectiveSystemPrompt = AppendCapabilityContext(systemPrompt, context.PreIntentResolution);
+
             var messages = new List<ChatMessage>
             {
-                new(ChatRole.System, systemPrompt),
+                new(ChatRole.System, effectiveSystemPrompt),
                 new(ChatRole.User, BuildUserMessage(context)),
             };
 
@@ -277,6 +280,40 @@ public sealed class AIPromptIntentDetector : IPromptIntentDetector
         }
 
         return $"User prompt: {context.Prompt}{documentInfo}";
+    }
+
+    /// <summary>
+    /// Appends pre-resolved capability summaries to the cached system prompt so the
+    /// intent model can make an informed decision about <see cref="DocumentIntents.LookingForExternalCapabilities"/>.
+    /// </summary>
+    private static string AppendCapabilityContext(string basePrompt, PreIntentResolutionContext resolution)
+    {
+        if (resolution is null || !resolution.HasRelevantCapabilities)
+        {
+            return basePrompt;
+        }
+
+        var builder = new StringBuilder(basePrompt);
+
+        builder.AppendLine();
+        builder.AppendLine("The following external capabilities have been identified as potentially relevant to the user's request.");
+        builder.AppendLine("Consider selecting LookingForExternalCapabilities if the user's query can be answered by one of these:");
+
+        foreach (var candidate in resolution.Candidates)
+        {
+            builder.Append("- ");
+            builder.Append(candidate.Name);
+
+            if (!string.IsNullOrWhiteSpace(candidate.Description))
+            {
+                builder.Append(": ");
+                builder.Append(candidate.Description);
+            }
+
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
     }
 
     private DocumentIntent ParseIntentResponse(string responseText)

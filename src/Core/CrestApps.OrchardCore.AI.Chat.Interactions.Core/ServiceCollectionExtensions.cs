@@ -38,8 +38,7 @@ public static class ServiceCollectionExtensions
         services.AddPromptProcessingIntent(
             DocumentIntents.AnalyzeTabularDataByRow,
             "The user wants row-by-row analysis or extraction from tabular data (CSV/Excel), returning one result per row (e.g., classify each record, extract fields, detect escalations, or produce per-row outputs based on transcript/text columns).")
-            .AsHeavy()
-            .WithStrategy<RowLevelTabularAnalysisDocumentProcessingStrategy>();
+            .WithHeavyStrategy<RowLevelTabularAnalysisDocumentProcessingStrategy>();
 
         services.AddPromptProcessingIntent(
             DocumentIntents.ExtractStructuredData,

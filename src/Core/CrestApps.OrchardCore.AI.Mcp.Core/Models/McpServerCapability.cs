@@ -34,4 +34,11 @@ public sealed class McpServerCapability
     /// Only applicable when this capability is a resource.
     /// </summary>
     public string Uri { get; set; }
+
+    /// <summary>
+    /// Gets or sets the URI template for resource templates.
+    /// Contains parameter placeholders like {name} that must be resolved.
+    /// Only applicable when this capability is a resource template.
+    /// </summary>
+    public string UriTemplate { get; set; }
 }

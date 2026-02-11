@@ -8,4 +8,5 @@ public enum McpCapabilityType
     Tool,
     Prompt,
     Resource,
+    ResourceTemplate,
 }

@@ -47,6 +47,13 @@ public sealed class IntentProcessingContext
     public int MaxHistoryMessagesForImageGeneration { get; set; } = 5;
 
     /// <summary>
+    /// Gets or sets the pre-intent capability resolution result.
+    /// Strategies can use this to access pre-resolved capability candidates,
+    /// avoiding redundant resolution during processing.
+    /// </summary>
+    public PreIntentResolutionContext PreIntentResolution { get; set; }
+
+    /// <summary>
     /// Gets the result of intent processing. Multiple strategies can add context to this result.
     /// This also contains detected intent metadata (Intent/Confidence/Reason).
     /// </summary>

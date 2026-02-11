@@ -71,7 +71,7 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
         Assert.Contains("mcp_invoke", result);
         Assert.Contains("My Server", result);
         Assert.Contains("conn1", result);
-        Assert.Contains("Tools:", result);
+        Assert.Contains("Tools (pass required arguments via 'inputs'):", result);
         Assert.Contains("search", result);
         Assert.Contains("Search the web", result);
     }
@@ -132,8 +132,7 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
         var result = _generator.Generate(capabilities);
 
         Assert.NotNull(result);
-        Assert.Contains("Resources:", result);
-        Assert.Contains("docs", result);
+        Assert.Contains("Resources (use the URI as 'id' when invoking):", result);
         Assert.Contains("file://docs/readme.md", result);
         Assert.Contains("Documentation files", result);
     }
@@ -262,11 +261,11 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
         var result = _generator.Generate(capabilities);
 
         Assert.NotNull(result);
-        Assert.Contains("Tools:", result);
+        Assert.Contains("Tools (pass required arguments via 'inputs'):", result);
         Assert.Contains("calc", result);
         Assert.Contains("Prompts:", result);
         Assert.Contains("greet", result);
-        Assert.Contains("Resources:", result);
-        Assert.Contains("data", result);
+        Assert.Contains("Resources (use the URI as 'id' when invoking):", result);
+        Assert.Contains("file://data", result);
     }
 }

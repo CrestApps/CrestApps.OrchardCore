@@ -14,7 +14,7 @@ public sealed class McpClientFactory
         _loggerFactory = loggerFactory;
     }
 
-    public Task<ModelContextProtocol.Client.McpClient> CreateAsync(CancellationToken cancellationToken)
+    public async Task<ModelContextProtocol.Client.McpClient> CreateAsync(CancellationToken cancellationToken)
     {
         var endpoint = _configuration["Mcp:Endpoint"];
 
@@ -40,6 +40,16 @@ public sealed class McpClientFactory
             },
         };
 
-        return ModelContextProtocol.Client.McpClient.CreateAsync(transport, clientOptions, _loggerFactory, cancellationToken);
+        try
+        {
+            return await ModelContextProtocol.Client.McpClient.CreateAsync(transport, clientOptions, _loggerFactory, cancellationToken);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            throw new InvalidOperationException(
+                $"The MCP server at '{endpoint}' returned a 404 Not Found response. " +
+                "Please ensure the MCP Server feature is enabled on the default tenant in the Orchard Core admin dashboard " +
+                "(Configuration > Features > search for 'MCP Server').", ex);
+        }
     }
 }

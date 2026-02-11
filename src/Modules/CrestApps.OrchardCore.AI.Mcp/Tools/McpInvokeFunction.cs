@@ -33,7 +33,7 @@ public sealed class McpInvokeFunction : AIFunction
             },
             "id": {
               "type": "string",
-              "description": "The name or URI of the capability to invoke."
+              "description": "For tools and prompts, this is the capability name. For resources, this MUST be the fully-resolved resource URI (e.g., 'scheme://host/path') with all template parameters replaced with actual values."
             },
             "inputs": {
               "type": "object",
@@ -150,9 +150,44 @@ public sealed class McpInvokeFunction : AIFunction
         string resourceUri,
         CancellationToken cancellationToken)
     {
+        // If the AI model sent a resource name instead of a URI, try to resolve it.
+        if (!resourceUri.Contains("://"))
+        {
+            var resolvedUri = await TryResolveResourceUriByNameAsync(client, resourceUri, cancellationToken);
+
+            if (resolvedUri is not null)
+            {
+                resourceUri = resolvedUri;
+            }
+        }
+
         var result = await client.ReadResourceAsync(resourceUri, cancellationToken: cancellationToken);
 
         return JsonSerializer.Serialize(result);
+    }
+
+    private static async Task<string> TryResolveResourceUriByNameAsync(
+        McpClient client,
+        string name,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var resources = await client.ListResourcesAsync(cancellationToken: cancellationToken);
+            var match = resources.FirstOrDefault(r =>
+                string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
+
+            if (match is not null)
+            {
+                return match.Uri;
+            }
+        }
+        catch
+        {
+            // Best-effort fallback; ignore errors.
+        }
+
+        return null;
     }
 
     private static string GetRequiredStringArgument(AIFunctionArguments arguments, string name)

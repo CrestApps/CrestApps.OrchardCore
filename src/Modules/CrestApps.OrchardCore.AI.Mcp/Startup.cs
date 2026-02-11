@@ -51,13 +51,17 @@ public sealed class Startup : StartupBase
         });
         services.AddPromptProcessingIntent(
             DocumentIntents.LookingForExternalCapabilities,
-            S["The user is asking for specific technical details, schemas, configurations, recipes, setup instructions, API documentation, data lookups, or structured reference material where an authoritative external source would provide a more accurate or complete answer than the AI model's general knowledge. Trigger this when the query involves implementation specifics, structured data formats, system configurations, feature enablement steps, or domain-specific technical reference."])
-            .WithSecondPhaseStrategy<McpCapabilitiesProcessingStrategy>();
+            "The user is requesting information, actions, or data that may be available through connected external services. This includes invoking tools, querying resources, retrieving data, performing operations, or accessing capabilities that go beyond the AI model's built-in knowledge. Trigger this when the request could benefit from calling an external service to provide a more accurate, complete, or up-to-date response.")
+            .WithStrategy<McpCapabilitiesProcessingStrategy>();
         services.AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>();
         services.AddScoped<McpService>();
         services.AddScoped<IMcpServerMetadataCacheProvider, DefaultMcpServerMetadataProvider>();
         services.AddSingleton<IMcpMetadataPromptGenerator, DefaultMcpMetadataPromptGenerator>();
+        services.AddSingleton<IMcpCapabilityEmbeddingCacheProvider, InMemoryMcpCapabilityEmbeddingCacheProvider>();
+        services.AddScoped<IMcpCapabilityResolver, DefaultMcpCapabilityResolver>();
+        services.AddScoped<IPreIntentCapabilityResolver, McpPreIntentCapabilityResolver>();
+        services.AddOptions<McpCapabilityResolverOptions>();
         services.AddNavigationProvider<McpAdminMenu>();
         services.AddPermissionProvider<McpPermissionsProvider>();
         services.AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>();
@@ -298,6 +302,15 @@ public sealed class McpServerStartup : StartupBase
             return new ListResourcesResult
             {
                 Resources = await resourceService.ListAsync(),
+            };
+        })
+        .WithListResourceTemplatesHandler(async (request, cancellationToken) =>
+        {
+            var resourceService = request.Services.GetRequiredService<IMcpServerResourceService>();
+
+            return new ListResourceTemplatesResult
+            {
+                ResourceTemplates = await resourceService.ListTemplatesAsync(),
             };
         })
         .WithReadResourceHandler(async (request, cancellationToken) =>

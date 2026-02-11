@@ -746,7 +746,16 @@ window.chatInteractionManager = function () {
                         cancelText: config.clearHistoryCancelText,
                         callback: function (confirmed) {
                             if (confirmed) {
-                                self.connection.invoke("ClearHistory", itemId).catch(err => console.error('Error clearing history:', err));
+                                // Cancel any active stream before clearing history.
+                                if (self.stream) {
+                                    self.stream.dispose();
+                                    self.stream = null;
+                                    self.hideTypingIndicator();
+                                    self.streamingFinished();
+                                }
+
+                                self.connection.invoke("ClearHistory", itemId)
+                                    .catch(err => console.error('Error clearing history:', err));
                             }
                         }
                     });

@@ -18,6 +18,13 @@ public sealed class PromptRoutingContext
 
     public int? MaxHistoryMessagesForImageGeneration { get; set; }
 
+    /// <summary>
+    /// Gets or sets the pre-intent capability resolution result. When populated,
+    /// the intent detector can use these capability summaries to make more informed
+    /// routing decisions about external capabilities.
+    /// </summary>
+    public PreIntentResolutionContext PreIntentResolution { get; set; }
+
     public PromptRoutingContext(object completionResource)
     {
         ArgumentNullException.ThrowIfNull(completionResource);

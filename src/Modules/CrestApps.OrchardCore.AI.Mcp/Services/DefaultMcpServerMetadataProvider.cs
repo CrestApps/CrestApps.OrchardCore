@@ -13,17 +13,20 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataCache
 
     private readonly McpService _mcpService;
     private readonly IDistributedCache _cache;
+    private readonly IMcpCapabilityEmbeddingCacheProvider _embeddingCache;
     private readonly McpMetadataCacheOptions _cacheOptions;
     private readonly ILogger _logger;
 
     public DefaultMcpServerMetadataProvider(
         McpService mcpService,
         IDistributedCache cache,
+        IMcpCapabilityEmbeddingCacheProvider embeddingCache,
         IOptions<McpMetadataCacheOptions> cacheOptions,
         ILogger<DefaultMcpServerMetadataProvider> logger)
     {
         _mcpService = mcpService;
         _cache = cache;
+        _embeddingCache = embeddingCache;
         _cacheOptions = cacheOptions.Value;
         _logger = logger;
     }
@@ -56,6 +59,7 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataCache
         ArgumentException.ThrowIfNullOrEmpty(connectionId);
 
         await _cache.RemoveAsync(_cacheKeyPrefix + connectionId);
+        _embeddingCache.Invalidate(connectionId);
     }
 
     private async Task<McpServerCapabilities> TryGetCachedCapabilitiesAsync(string cacheKey)
@@ -176,9 +180,31 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataCache
                 _logger.LogWarning(ex, "Failed to list resources for MCP connection '{ConnectionId}'.", connection.ItemId);
             }
 
+            // Fetch resource templates.
+            var resourceTemplates = new List<McpServerCapability>();
+
+            try
+            {
+                foreach (var template in await client.ListResourceTemplatesAsync())
+                {
+                    resourceTemplates.Add(new McpServerCapability
+                    {
+                        Name = template.Name,
+                        Description = template.Description,
+                        MimeType = template.MimeType,
+                        UriTemplate = template.UriTemplate,
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to list resource templates for MCP connection '{ConnectionId}'.", connection.ItemId);
+            }
+
             capabilities.Tools = tools;
             capabilities.Prompts = prompts;
             capabilities.Resources = resources;
+            capabilities.ResourceTemplates = resourceTemplates;
             capabilities.IsHealthy = true;
         }
         catch (Exception ex)

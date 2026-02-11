@@ -31,6 +31,12 @@ public sealed class McpServerCapabilities
     public IReadOnlyList<McpServerCapability> Resources { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the list of resource template capabilities.
+    /// Resource templates have parameterized URIs (e.g., recipe-schema://id/recipe/{name}).
+    /// </summary>
+    public IReadOnlyList<McpServerCapability> ResourceTemplates { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the UTC date and time when the capabilities were fetched.
     /// </summary>
     public DateTime FetchedUtc { get; set; }

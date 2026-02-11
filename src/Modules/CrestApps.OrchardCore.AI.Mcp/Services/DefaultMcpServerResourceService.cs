@@ -27,6 +27,40 @@ public sealed class DefaultMcpServerResourceService : IMcpServerResourceService
 
     public async Task<IList<Resource>> ListAsync()
     {
+        var allResources = await GetAllResourcesAsync();
+
+        // Only return concrete resources (URIs without template parameters).
+        return allResources
+            .Where(r => r.Uri is null || !r.Uri.Contains('{'))
+            .ToList();
+    }
+
+    public async Task<IList<ResourceTemplate>> ListTemplatesAsync()
+    {
+        var allResources = await GetAllResourcesAsync();
+
+        // Return resources with template parameters as ResourceTemplate objects.
+        var templates = new List<ResourceTemplate>();
+
+        foreach (var resource in allResources)
+        {
+            if (resource.Uri is not null && resource.Uri.Contains('{'))
+            {
+                templates.Add(new ResourceTemplate
+                {
+                    Name = resource.Name,
+                    UriTemplate = resource.Uri,
+                    Description = resource.Description,
+                    MimeType = resource.MimeType,
+                });
+            }
+        }
+
+        return templates;
+    }
+
+    private async Task<IList<Resource>> GetAllResourcesAsync()
+    {
         var entries = await _catalogManager.GetAllAsync();
 
         var resources = entries

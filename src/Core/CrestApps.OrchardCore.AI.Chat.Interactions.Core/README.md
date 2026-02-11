@@ -50,42 +50,35 @@ First-phase strategies are resolved via DI as `IEnumerable<IPromptProcessingStra
 
 See: `IPromptProcessingStrategy` and `DocumentProcessingStrategyBase`.
 
-##### Second-Phase Strategies
+##### Heavy Strategies
 
-Second-phase strategies provide deeper resolution after the first phase. They implement the same `IPromptProcessingStrategy` interface but are registered and resolved separately:
-
-- Register with `.WithSecondPhaseStrategy<T>()` on the intent builder
-- Only execute when the detected intent has a second phase, or when a first-phase strategy sets `IntentProcessingResult.RequiresSecondPhase = true`
-- Resolved by concrete type from DI (not via `IEnumerable<IPromptProcessingStrategy>`)
-- Use for lightweight AI calls, capability matching, or other targeted resolution that should not run on every request
-
-Example: `McpCapabilitiesProcessingStrategy` makes a lightweight AI call with MCP capability metadata to identify which connected servers can handle the user's request.
-
-##### `IHeavyPromptProcessingStrategy`
-
-`IHeavyPromptProcessingStrategy` is a marker interface for strategies that are expensive in time/cost:
+Heavy strategies are strategies that are expensive in time/cost:
 
 - May perform many LLM calls per user message (e.g., batching)
 - May process large datasets row-by-row
 - Should be gated behind configuration to avoid unexpected API costs
 
+Register heavy strategies using the `.WithHeavyStrategy<T>()` builder method, which combines intent marking and strategy registration:
+
+```csharp
+services.AddPromptProcessingIntent("MyHeavyIntent", "description")
+    .WithHeavyStrategy<MyHeavyStrategy>();
+```
+
 The default strategy provider filters these at runtime:
 
-- If `PromptProcessingOptions.EnableHeavyProcessingStrategies` is `false` (default), heavy strategies are skipped.
+- If `PromptProcessingOptions.EnableHeavyProcessingStrategies` is `false` (default), heavy strategies are skipped and heavy intents are excluded from AI detection.
 - If `true`, heavy strategies run normally.
-
-**Important:** Heavy intents are also filtered from AI intent detection when disabled. This prevents the AI classifier from selecting an intent that cannot be processed. Use `.AsHeavy()` on the intent builder to register heavy intents.
 
 Example heavy strategy:
 - `RowLevelTabularAnalysisDocumentProcessingStrategy` (batch processes `.xlsx` / `.csv` row-by-row)
 
 #### Processing Pipeline
 
-The `DefaultPromptProcessingStrategyProvider` orchestrates the two-phase pipeline:
+The `DefaultPromptProcessingStrategyProvider` orchestrates the processing pipeline:
 
 1. **Intent Detection** - The AI classifier selects an intent from all registered intents.
-2. **First Phase** - All first-phase `IPromptProcessingStrategy` implementations run in sequence.
-3. **Second Phase (conditional)** - If the detected intent was registered with `.WithSecondPhaseStrategy<T>()` or any first-phase strategy set `RequiresSecondPhase = true`, all second-phase strategies run.
+2. **Strategy Execution** - All registered `IPromptProcessingStrategy` implementations run in sequence. Each strategy self-filters by checking the detected intent.
 
 #### Processing Result
 
@@ -95,7 +88,6 @@ The `IntentProcessingResult` is part of the `IntentProcessingContext` and allows
 - `GetCombinedContext()` - Gets the combined context from all strategies
 - `HasContext` - Whether any strategy has contributed context
 - `ToolNames` - List of AI tool names to register for the completion call
-- `RequiresSecondPhase` - Whether the second-phase pipeline should run
 - `GeneratedImages` - Contains generated images when image generation intents are processed
 - `HasGeneratedImages` - Whether any images were generated
 - `IsImageGenerationIntent` - Whether the request was for image generation
@@ -128,7 +120,7 @@ This module binds `PromptProcessingOptions` from the configuration section:
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `EnableHeavyProcessingStrategies` | `bool` | `false` | When `false`, strategies implementing `IHeavyPromptProcessingStrategy` are skipped and heavy intents are excluded from AI detection. When `true`, heavy strategies and heavy intents are allowed. |
+| `EnableHeavyProcessingStrategies` | `bool` | `false` | When `false`, strategies registered via `.WithHeavyStrategy<T>()` are skipped and heavy intents are excluded from AI detection. When `true`, heavy strategies and heavy intents are allowed. |
 
 Example `appsettings.json`:
 
@@ -164,18 +156,13 @@ services
 Use the fluent builder pattern returned by `AddPromptProcessingIntent()`:
 
 ```csharp
-// Register an intent with a first-phase strategy
+// Register an intent with a strategy
 services.AddPromptProcessingIntent("MyIntent", "Description for AI classifier")
     .WithStrategy<MyCustomStrategy>();
 
 // Register a heavy intent with a strategy (filtered when heavy processing is disabled)
 services.AddPromptProcessingIntent("MyHeavyIntent", "Description for AI classifier")
-    .AsHeavy()
-    .WithStrategy<MyHeavyStrategy>();
-
-// Register an intent with a second-phase strategy (triggers second-phase pipeline)
-services.AddPromptProcessingIntent("MySecondPhaseIntent", "Description for AI classifier")
-    .WithSecondPhaseStrategy<MyResolver>();
+    .WithHeavyStrategy<MyHeavyStrategy>();
 
 // Register an intent without a strategy (e.g., handled by an existing strategy)
 services.AddPromptProcessingIntent("MyIntent", "Description for AI classifier");
@@ -185,9 +172,9 @@ services.AddPromptProcessingIntent("MyIntent", "Description for AI classifier");
 
 | Method | Description |
 |--------|-------------|
-| `.WithStrategy<T>()` | Registers a first-phase strategy (`IPromptProcessingStrategy`). Runs on every request. |
-| `.WithSecondPhaseStrategy<T>()` | Registers a second-phase strategy (`IPromptProcessingStrategy`). Marks the intent as requiring second-phase processing. Runs only when triggered. |
-| `.AsHeavy()` | Marks the intent as heavy. Excluded from AI detection and strategy execution when `EnableHeavyProcessingStrategies` is `false`. |
+| `.WithStrategy<T>()` | Registers a strategy (`IPromptProcessingStrategy`). Runs on every request; strategies self-filter by intent. |
+| `.WithHeavyStrategy<T>()` | Marks the intent as heavy and registers a strategy. Excluded from AI detection and strategy execution when `EnableHeavyProcessingStrategies` is `false`. |
+| `.AsHeavy()` | Marks only the intent as heavy (without registering a strategy). Excluded from AI detection when `EnableHeavyProcessingStrategies` is `false`. |
 
 ### Implementing a Custom Strategy
 
@@ -212,8 +199,8 @@ public class MyCustomStrategy : DocumentProcessingStrategyBase
     }
 }
 
-// Heavy strategy - implement IHeavyPromptProcessingStrategy marker interface
-public class MyHeavyStrategy : DocumentProcessingStrategyBase, IHeavyPromptProcessingStrategy
+// Heavy strategy - registered via .WithHeavyStrategy<MyHeavyStrategy>()
+public class MyHeavyStrategy : DocumentProcessingStrategyBase
 {
     public override async Task ProcessAsync(IntentProcessingContext context)
     {

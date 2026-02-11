@@ -17,7 +17,7 @@ public sealed class DefaultMcpMetadataPromptGenerator : IMcpMetadataPromptGenera
 
         foreach (var server in capabilities)
         {
-            if (server.Tools.Count > 0 || server.Prompts.Count > 0 || server.Resources.Count > 0)
+            if (server.Tools.Count > 0 || server.Prompts.Count > 0 || server.Resources.Count > 0 || server.ResourceTemplates.Count > 0)
             {
                 hasAnyCapability = true;
 
@@ -34,13 +34,19 @@ public sealed class DefaultMcpMetadataPromptGenerator : IMcpMetadataPromptGenera
 
         sb.AppendLine("You have access to external MCP (Model Context Protocol) servers via the 'mcp_invoke' tool.");
         sb.AppendLine("Use the 'mcp_invoke' tool to call any of the capabilities listed below.");
-        sb.AppendLine("Always specify the correct 'clientId', 'type', and 'id' parameters.");
+        sb.AppendLine();
+        sb.AppendLine("IMPORTANT invocation rules:");
+        sb.AppendLine("- Always specify the correct 'clientId', 'type', and 'id' parameters.");
+        sb.AppendLine("- For tools: set type='tool' and id=<tool name>.");
+        sb.AppendLine("- For prompts: set type='prompt' and id=<prompt name>.");
+        sb.AppendLine("- For resources: set type='resource' and id=<the full resource URI>. Do NOT use the resource name as id.");
+        sb.AppendLine("- For resource templates: set type='resource' and id=<the URI template with all {parameter} placeholders replaced with actual values from the user's request>.");
         sb.AppendLine();
         sb.AppendLine("Available MCP Capabilities:");
 
         foreach (var server in capabilities)
         {
-            if (server.Tools.Count == 0 && server.Prompts.Count == 0 && server.Resources.Count == 0)
+            if (server.Tools.Count == 0 && server.Prompts.Count == 0 && server.Resources.Count == 0 && server.ResourceTemplates.Count == 0)
             {
                 continue;
             }
@@ -53,7 +59,7 @@ public sealed class DefaultMcpMetadataPromptGenerator : IMcpMetadataPromptGenera
 
             if (server.Tools.Count > 0)
             {
-                sb.AppendLine("  Tools:");
+                sb.AppendLine("  Tools (pass required arguments via 'inputs'):");
 
                 foreach (var tool in server.Tools.OrderBy(t => t.Name))
                 {
@@ -64,6 +70,13 @@ public sealed class DefaultMcpMetadataPromptGenerator : IMcpMetadataPromptGenera
                     {
                         sb.Append(": ");
                         sb.Append(tool.Description);
+                    }
+
+                    if (tool.InputSchema.HasValue)
+                    {
+                        sb.AppendLine();
+                        sb.Append("      Parameters: ");
+                        sb.Append(tool.InputSchema.Value.ToString());
                     }
 
                     sb.AppendLine();
@@ -91,24 +104,36 @@ public sealed class DefaultMcpMetadataPromptGenerator : IMcpMetadataPromptGenera
 
             if (server.Resources.Count > 0)
             {
-                sb.AppendLine("  Resources:");
+                sb.AppendLine("  Resources (use the URI as 'id' when invoking):");
 
                 foreach (var resource in server.Resources.OrderBy(r => r.Name))
                 {
                     sb.Append("    - ");
-                    sb.Append(resource.Name);
-
-                    if (!string.IsNullOrEmpty(resource.Uri))
-                    {
-                        sb.Append(" (uri: ");
-                        sb.Append(resource.Uri);
-                        sb.Append(')');
-                    }
+                    sb.Append(resource.Uri ?? resource.Name);
 
                     if (!string.IsNullOrEmpty(resource.Description))
                     {
                         sb.Append(": ");
                         sb.Append(resource.Description);
+                    }
+
+                    sb.AppendLine();
+                }
+            }
+
+            if (server.ResourceTemplates.Count > 0)
+            {
+                sb.AppendLine("  Resource Templates (replace {parameter} placeholders with actual values and use the resolved URI as 'id'):");
+
+                foreach (var template in server.ResourceTemplates.OrderBy(r => r.Name))
+                {
+                    sb.Append("    - ");
+                    sb.Append(template.UriTemplate ?? template.Name);
+
+                    if (!string.IsNullOrEmpty(template.Description))
+                    {
+                        sb.Append(": ");
+                        sb.Append(template.Description);
                     }
 
                     sb.AppendLine();

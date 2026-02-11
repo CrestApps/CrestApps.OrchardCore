@@ -172,12 +172,8 @@ public static class ServiceCollectionExtensions
     /// services.AddPromptProcessingIntent("MyIntent", "description")
     ///     .WithStrategy&lt;MyStrategy&gt;();
     ///
-    /// services.AddPromptProcessingIntent("MySecondPhaseIntent", "description")
-    ///     .WithSecondPhaseStrategy&lt;MyResolver&gt;();
-    ///
     /// services.AddPromptProcessingIntent("MyHeavyIntent", "description")
-    ///     .AsHeavy()
-    ///     .WithStrategy&lt;MyHeavyStrategy&gt;();
+    ///     .WithHeavyStrategy&lt;MyHeavyStrategy&gt;();
     /// </code>
     /// </remarks>
     public static PromptProcessingIntentBuilder AddPromptProcessingIntent(

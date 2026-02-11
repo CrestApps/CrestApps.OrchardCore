@@ -47,21 +47,23 @@ public sealed class PromptProcessingIntentBuilder
     }
 
     /// <summary>
-    /// Registers a second-phase strategy for this intent and marks the intent as requiring
-    /// second-phase processing. When this intent is detected, all registered second-phase
-    /// strategies will be executed after the first-phase strategies complete.
+    /// Marks this intent as heavy and registers a first-phase strategy for it.
+    /// Heavy intents are excluded from AI intent detection and their strategies
+    /// are not invoked when <see cref="PromptProcessingOptions.EnableHeavyProcessingStrategies"/>
+    /// is <c>false</c>.
     /// </summary>
     /// <typeparam name="TStrategy">The strategy type implementing <see cref="IPromptProcessingStrategy"/>.</typeparam>
-    public PromptProcessingIntentBuilder WithSecondPhaseStrategy<TStrategy>()
+    public PromptProcessingIntentBuilder WithHeavyStrategy<TStrategy>()
         where TStrategy : class, IPromptProcessingStrategy
     {
+        AsHeavy();
+
         _services.Configure<PromptProcessingOptions>(options =>
         {
-            options.SecondPhaseIntents.Add(_intentName);
-            options.SecondPhaseStrategyTypes.Add(typeof(TStrategy));
+            options.HeavyStrategyTypes.Add(typeof(TStrategy));
         });
 
-        _services.TryAddScoped<TStrategy>();
+        _services.TryAddEnumerable(ServiceDescriptor.Scoped<IPromptProcessingStrategy, TStrategy>());
 
         return this;
     }

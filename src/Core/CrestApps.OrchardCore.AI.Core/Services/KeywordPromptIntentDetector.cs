@@ -215,6 +215,20 @@ public sealed class KeywordPromptIntentDetector : IPromptIntentDetector
                 "Transformation keywords detected."));
         }
 
+        // Check for pre-resolved external capabilities.
+        // This provides a fallback for LookingForExternalCapabilities
+        // when the AI-based intent detector is unavailable.
+        if (context.PreIntentResolution is not null &&
+            context.PreIntentResolution.HasRelevantCapabilities)
+        {
+            var topScore = context.PreIntentResolution.Candidates[0].Score;
+
+            return Task.FromResult(DocumentIntent.FromName(
+                DocumentIntents.LookingForExternalCapabilities,
+                topScore,
+                "Pre-intent resolution identified relevant external capabilities."));
+        }
+
         // Default to DocumentQnA for question patterns or general queries
         if (IsQuestionPattern(prompt))
         {

@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Strategies;
 /// This is a heavy processing strategy that can make many API calls (40+ for a 1000-row file).
 /// It is only executed when <see cref="ChatInteractionOptions.EnableHeavyProcessingStrategies"/> is true.
 /// </remarks>
-public sealed class RowLevelTabularAnalysisDocumentProcessingStrategy : DocumentProcessingStrategyBase, IHeavyPromptProcessingStrategy
+public sealed class RowLevelTabularAnalysisDocumentProcessingStrategy : DocumentProcessingStrategyBase
 {
     private static readonly string[] _tabularExtensions = [".csv", ".tsv", ".xlsx", ".xls"];
 
