@@ -26,8 +26,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
           "type": "object",
           "properties": {
             "contentItem": {
-              "type": "string",
-              "description": "A JSON string representing the content item to create or update. To perform an update, the object must include a valid 'ContentItemId'."
+              "description": "The content item to create or update. Can be a JSON object or a JSON-encoded string. To perform an update, include a valid 'ContentItemId'."
             },
             "isDraft": {
               "type": "boolean",
@@ -55,9 +54,21 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        if (!arguments.TryGetFirstString("contentItem", out var json))
+        // Accept contentItem as either a JSON string or a JSON object.
+        // Models often send an object even when the schema specifies string.
+        string json;
+
+        if (arguments.TryGetFirstString("contentItem", out var str))
         {
-            return "Unable to find a contentItemId argument in the function arguments.";
+            json = str;
+        }
+        else if (arguments.TryGetFirst("contentItem", out object raw) && raw is JsonElement je && je.ValueKind == JsonValueKind.Object)
+        {
+            json = je.GetRawText();
+        }
+        else
+        {
+            return "Unable to find a contentItem argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirst<bool>("isDraft", out var isDraft))

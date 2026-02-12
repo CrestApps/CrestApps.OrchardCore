@@ -81,7 +81,6 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.MaxTokens = interaction.MaxTokens;
             model.PastMessagesCount = interaction.PastMessagesCount;
             model.ToolNames = interaction.ToolNames?.ToArray();
-            model.ToolInstanceIds = interaction.ToolInstanceIds?.ToArray();
             model.McpConnectionIds = interaction.McpConnectionIds?.ToArray();
             model.IsNew = context.IsNew;
         }).Location("Parameters:4#Settings:5");

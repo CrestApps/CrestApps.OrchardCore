@@ -26,8 +26,6 @@ public class AICompletionContext
 
     public string[] ToolNames { get; set; }
 
-    public string[] InstanceIds { get; set; }
-
     public string[] McpConnectionIds { get; set; }
 
     public string DataSourceId { get; set; }

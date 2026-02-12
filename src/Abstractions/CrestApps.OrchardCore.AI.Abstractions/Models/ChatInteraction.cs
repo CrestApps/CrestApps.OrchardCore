@@ -91,11 +91,6 @@ public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
     public IList<string> ToolNames { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the list of AI tool instance IDs to use.
-    /// </summary>
-    public IList<string> ToolInstanceIds { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets the list of MCP connection IDs to use.
     /// </summary>
     public IList<string> McpConnectionIds { get; set; } = [];

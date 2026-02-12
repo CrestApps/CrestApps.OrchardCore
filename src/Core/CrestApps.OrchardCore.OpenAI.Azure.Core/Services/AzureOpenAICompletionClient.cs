@@ -14,7 +14,6 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.CodeAnalysis;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
@@ -28,10 +27,9 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
     private readonly ILoggerFactory _loggerFactory;
     private readonly IAILinkGenerator _linkGenerator;
     private readonly IEnumerable<IAzureOpenAIDataSourceHandler> _azureOpenAIDataSourceHandlers;
+    private readonly IEnumerable<IAICompletionServiceHandler> _completionServiceHandlers;
     private readonly DefaultAIOptions _defaultOptions;
     private readonly ILogger _logger;
-
-    private IAIToolsService _toolsService;
 
     private AzureOpenAIClientOptions _clientOptions;
 
@@ -42,6 +40,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         ILoggerFactory loggerFactory,
         IAILinkGenerator linkGenerator,
         IEnumerable<IAzureOpenAIDataSourceHandler> azureOpenAIDataSourceHandlers,
+        IEnumerable<IAICompletionServiceHandler> completionServiceHandlers,
         IOptions<DefaultAIOptions> defaultOptions,
         ILogger<AzureOpenAICompletionClient> logger)
         : base(providerOptions.Value)
@@ -51,6 +50,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         _loggerFactory = loggerFactory;
         _linkGenerator = linkGenerator;
         _azureOpenAIDataSourceHandlers = azureOpenAIDataSourceHandlers;
+        _completionServiceHandlers = completionServiceHandlers;
         _defaultOptions = defaultOptions.Value;
         _logger = logger;
     }
@@ -121,9 +121,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
         var chatClient = azureClient.GetChatClient(deploymentName);
 
-        var functions = !context.DisableTools
-            ? await GetFunctionsAsync(context.ToolNames, context.InstanceIds)
-            : [];
+        var functions = await ResolveToolsAsync(context, deploymentName);
 
         var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
         var systemFunctions = await ConfigureOptionsAsync(chatOptions, context, prompts);
@@ -268,9 +266,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
         var chatClient = azureClient.GetChatClient(deploymentName);
 
-        var functions = !context.DisableTools
-            ? await GetFunctionsAsync(context.ToolNames, context.InstanceIds)
-            : [];
+        var functions = await ResolveToolsAsync(context, deploymentName);
 
         var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
 
@@ -495,6 +491,10 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                 {
                     prompts.Add(new ToolChatMessage(toolCall.Id, str));
                 }
+                else if (result is JsonElement element)
+                {
+                    prompts.Add(new ToolChatMessage(toolCall.Id, element.ToString()));
+                }
                 else
                 {
                     var resultJson = JsonSerializer.Serialize(result);
@@ -613,60 +613,36 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         return chatOptions;
     }
 
-    private async Task<IEnumerable<Microsoft.Extensions.AI.AIFunction>> GetFunctionsAsync(string[] toolNames, string[] instanceIds)
+    private async Task<IEnumerable<Microsoft.Extensions.AI.AIFunction>> ResolveToolsAsync(AICompletionContext context, string deploymentName)
     {
-        var totalToolNames = toolNames?.Length ?? 0;
-        var totalInstanceIds = instanceIds?.Length ?? 0;
-
-        if (totalToolNames == 0 && totalInstanceIds == 0)
+        if (context.DisableTools)
         {
             return [];
         }
 
-        _toolsService ??= _serviceProvider.GetService<IAIToolsService>();
+        // Use the same handler pipeline as NamedAICompletionClient to resolve tools.
+        // This ensures authorization checks and consistent tool resolution across all clients.
+        var chatOptions = new Microsoft.Extensions.AI.ChatOptions();
 
-        if (_toolsService is null)
+        var configureContext = new CompletionServiceConfigureContext(chatOptions, context, isFunctionInvocationSupported: true)
+        {
+            DeploymentName = deploymentName,
+            ProviderName = Name,
+            ImplemenationName = Name,
+            IsStreaming = false,
+        };
+
+        foreach (var handler in _completionServiceHandlers)
+        {
+            await handler.ConfigureAsync(configureContext);
+        }
+
+        if (chatOptions.Tools is null || chatOptions.Tools.Count == 0)
         {
             return [];
         }
 
-        var functions = new List<Microsoft.Extensions.AI.AIFunction>();
-
-        if (totalToolNames > 0)
-        {
-            foreach (var name in toolNames)
-            {
-                var tool = await _toolsService.GetByNameAsync(name);
-
-                if (tool is null || tool is not Microsoft.Extensions.AI.AIFunction function)
-                {
-                    continue;
-                }
-
-                functions.Add(function);
-
-                continue;
-            }
-        }
-
-        if (totalInstanceIds > 0)
-        {
-            foreach (var instanceId in instanceIds)
-            {
-                var tool = await _toolsService.GetByInstanceIdAsync(instanceId);
-
-                if (tool is null || tool is not Microsoft.Extensions.AI.AIFunction function)
-                {
-                    continue;
-                }
-
-                functions.Add(function);
-
-                continue;
-            }
-        }
-
-        return functions;
+        return chatOptions.Tools.OfType<Microsoft.Extensions.AI.AIFunction>().ToList();
     }
 
     private static List<ChatMessage> GetPrompts(AICompletionContext context, List<ChatMessage> azureMessages)

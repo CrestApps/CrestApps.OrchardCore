@@ -60,16 +60,4 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
-    public static IServiceCollection AddAIToolSource<TSource>(this IServiceCollection services, string source)
-        where TSource : class, IAIToolSource
-    {
-        ArgumentException.ThrowIfNullOrEmpty(source);
-
-        services.AddScoped<TSource>();
-        services.AddScoped<IAIToolSource>(sp => sp.GetRequiredService<TSource>());
-        services.AddKeyedScoped<IAIToolSource>(source, (sp, key) => sp.GetRequiredService<TSource>());
-
-        return services;
-    }
 }

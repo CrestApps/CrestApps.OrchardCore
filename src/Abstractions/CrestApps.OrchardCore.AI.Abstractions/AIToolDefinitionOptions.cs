@@ -1,5 +1,3 @@
-using Microsoft.Extensions.AI;
-
 namespace CrestApps.OrchardCore.AI;
 
 public sealed class AIToolDefinitionOptions

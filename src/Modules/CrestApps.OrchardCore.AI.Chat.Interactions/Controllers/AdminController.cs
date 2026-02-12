@@ -277,7 +277,6 @@ public sealed class AdminController : Controller
         clonedInteraction.PastMessagesCount = interaction.PastMessagesCount;
         clonedInteraction.DocumentTopN = interaction.DocumentTopN;
         clonedInteraction.ToolNames = interaction.ToolNames.ToList();
-        clonedInteraction.ToolInstanceIds = interaction.ToolInstanceIds.ToList();
         clonedInteraction.McpConnectionIds = interaction.McpConnectionIds.ToList();
         clonedInteraction.Documents = interaction.Documents.ToList();
         clonedInteraction.DocumentIndex = interaction.Documents.Count; // Set the document index based on the cloned documents.

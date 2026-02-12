@@ -66,7 +66,7 @@ public sealed class ProviderConnectionsController : Controller
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIToolInstances))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageProviderConnections))
         {
             return Forbid();
         }
@@ -286,7 +286,7 @@ public sealed class ProviderConnectionsController : Controller
     [Admin("ai/provider/connections", "AIProviderConnectionsIndex")]
     public async Task<ActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIToolInstances))
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageProviderConnections))
         {
             return Forbid();
         }

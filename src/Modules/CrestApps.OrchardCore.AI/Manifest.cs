@@ -33,17 +33,6 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = AIConstants.Feature.Tools,
-    Name = "AI Tool Management",
-    Description = "Provides a way to manage AI Tool instances.",
-    Category = "Artificial Intelligence",
-    Dependencies =
-    [
-        AIConstants.Feature.Area,
-    ]
-)]
-
-[assembly: Feature(
     Id = AIConstants.Feature.DataSources,
     Name = "AI Data Source Management",
     Description = "Provides a way to manage AI data sources.",
