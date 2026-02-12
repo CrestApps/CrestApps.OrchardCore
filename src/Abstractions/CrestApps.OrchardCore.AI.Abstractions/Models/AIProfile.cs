@@ -52,6 +52,12 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
     public string PromptTemplate { get; set; }
 
     /// <summary>
+    /// Gets or sets the name of the orchestrator to use for this profile.
+    /// When <see langword="null"/> or empty, the system default orchestrator is used.
+    /// </summary>
+    public string OrchestratorName { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC timestamp when the profile was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
@@ -84,6 +90,7 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
             DisplayText = DisplayText,
             Source = Source,
             Type = Type,
+            OrchestratorName = OrchestratorName,
             ConnectionName = ConnectionName,
             DeploymentId = DeploymentId,
             TitleType = TitleType,

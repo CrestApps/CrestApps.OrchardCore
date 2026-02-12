@@ -1,22 +1,25 @@
-using CrestApps.OrchardCore.AI.Mcp.Services;
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Core;
 
 namespace CrestApps.OrchardCore.Tests.Core.Mcp;
 
 public sealed class TokenizeTests
 {
+    private readonly LuceneTextTokenizer _tokenizer = new LuceneTextTokenizer();
+
     [Fact]
     public void Tokenize_NullOrEmpty_ReturnsEmpty()
     {
-        Assert.Empty(DefaultMcpCapabilityResolver.Tokenize(null));
-        Assert.Empty(DefaultMcpCapabilityResolver.Tokenize(""));
-        Assert.Empty(DefaultMcpCapabilityResolver.Tokenize("   "));
+        Assert.Empty(_tokenizer.Tokenize(null));
+        Assert.Empty(_tokenizer.Tokenize(""));
+        Assert.Empty(_tokenizer.Tokenize("   "));
     }
 
     [Fact]
     public void Tokenize_SplitsCamelCase()
     {
         // Lucene's WordDelimiterFilter splits camelCase identifiers.
-        var tokens = DefaultMcpCapabilityResolver.Tokenize("findRecipeSchema");
+        var tokens = _tokenizer.Tokenize("findRecipeSchema");
 
         Assert.Contains("find", tokens);
         Assert.Contains("recip", tokens); // Porter stem of "recipe"
@@ -27,7 +30,7 @@ public sealed class TokenizeTests
     public void Tokenize_SplitsConsecutiveUppercase()
     {
         // "JSONSchema" should split into separate tokens.
-        var tokens = DefaultMcpCapabilityResolver.Tokenize("JSONSchema");
+        var tokens = _tokenizer.Tokenize("JSONSchema");
 
         Assert.Contains("json", tokens);
         Assert.Contains("schema", tokens);
@@ -36,7 +39,7 @@ public sealed class TokenizeTests
     [Fact]
     public void Tokenize_SplitsOnSeparators()
     {
-        var tokens = DefaultMcpCapabilityResolver.Tokenize("recipe-schema: Returns JSON definition");
+        var tokens = _tokenizer.Tokenize("recipe-schema: Returns JSON definition");
 
         Assert.Contains("recip", tokens); // Porter stem
         Assert.Contains("schema", tokens);
@@ -48,7 +51,7 @@ public sealed class TokenizeTests
     [Fact]
     public void Tokenize_FiltersStopWords()
     {
-        var tokens = DefaultMcpCapabilityResolver.Tokenize("the schema for this recipe");
+        var tokens = _tokenizer.Tokenize("the schema for this recipe");
 
         // "the", "for", "this" are standard English stop words.
         Assert.DoesNotContain("the", tokens);
@@ -65,7 +68,7 @@ public sealed class TokenizeTests
     {
         // Lucene's English stop words include: the, is, are, was, to, and, but, of, etc.
         // Question words like "what", "how" are NOT in Lucene's stop list.
-        var tokens = DefaultMcpCapabilityResolver.Tokenize("what is the value of this");
+        var tokens = _tokenizer.Tokenize("what is the value of this");
 
         Assert.DoesNotContain("the", tokens);
         Assert.DoesNotContain("of", tokens);
@@ -78,8 +81,8 @@ public sealed class TokenizeTests
     public void Tokenize_AppliesPorterStemming()
     {
         // Porter stemmer normalizes morphological variants.
-        var recipesTokens = DefaultMcpCapabilityResolver.Tokenize("recipes");
-        var recipeTokens = DefaultMcpCapabilityResolver.Tokenize("recipe");
+        var recipesTokens = _tokenizer.Tokenize("recipes");
+        var recipeTokens = _tokenizer.Tokenize("recipe");
 
         // Both should stem to the same form and thus overlap.
         Assert.True(
@@ -91,8 +94,8 @@ public sealed class TokenizeTests
     public void Tokenize_StemMatchesIngForm()
     {
         // "enabling" and "enable" should share a common stem.
-        var gerundTokens = DefaultMcpCapabilityResolver.Tokenize("enabling");
-        var baseTokens = DefaultMcpCapabilityResolver.Tokenize("enable");
+        var gerundTokens = _tokenizer.Tokenize("enabling");
+        var baseTokens = _tokenizer.Tokenize("enable");
 
         Assert.True(
             gerundTokens.Overlaps(baseTokens),
@@ -103,8 +106,8 @@ public sealed class TokenizeTests
     public void Tokenize_StemMatchesEdForm()
     {
         // "configured" and "configure" should share a common stem.
-        var pastTokens = DefaultMcpCapabilityResolver.Tokenize("configured");
-        var baseTokens = DefaultMcpCapabilityResolver.Tokenize("configure");
+        var pastTokens = _tokenizer.Tokenize("configured");
+        var baseTokens = _tokenizer.Tokenize("configure");
 
         Assert.True(
             pastTokens.Overlaps(baseTokens),
@@ -114,7 +117,7 @@ public sealed class TokenizeTests
     [Fact]
     public void Tokenize_RealWorldPrompt_ContainsExpectedTokens()
     {
-        var tokens = DefaultMcpCapabilityResolver.Tokenize(
+        var tokens = _tokenizer.Tokenize(
             "what is OrchardCore recipe schema for enabling OrchardCore.Contents feature?");
 
         // "is" and "for" are English stop words filtered by Lucene.
@@ -131,10 +134,10 @@ public sealed class TokenizeTests
     [Fact]
     public void Tokenize_RealWorldCapability_MatchesPromptTokens()
     {
-        var promptTokens = DefaultMcpCapabilityResolver.Tokenize(
+        var promptTokens = _tokenizer.Tokenize(
             "what is OrchardCore recipe schema for enabling OrchardCore.Contents feature?");
 
-        var capabilityTokens = DefaultMcpCapabilityResolver.Tokenize(
+        var capabilityTokens = _tokenizer.Tokenize(
             "getOrchardCoreRecipeJsonSchema: Returns a JSON Schema definition for Orchard Core recipes or a specific recipe step.");
 
         // Count overlapping tokens.

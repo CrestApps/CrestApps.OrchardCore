@@ -99,15 +99,21 @@
             globalToggle.checked = allVisible.length > 0 && allVisible.every(cb => cb.checked);
         }
 
+        let bulkUpdating = false;
+
         // Group "Select All" toggle.
         container.querySelectorAll('.group-toggle').forEach(toggle => {
             toggle.addEventListener('change', function () {
+                bulkUpdating = true;
+                const checked = this.checked;
                 const checkboxes = container.querySelectorAll(`.group-checkbox[data-group="${this.dataset.group}"]`);
                 checkboxes.forEach(cb => {
                     if (!cb.closest('.tool-item')?.classList.contains('d-none')) {
-                        cb.checked = this.checked;
+                        cb.checked = checked;
+                        cb.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                 });
+                bulkUpdating = false;
                 updateGlobalToggle();
             });
         });
@@ -115,6 +121,7 @@
         // Individual checkbox change.
         container.querySelectorAll('.group-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', function () {
+                if (bulkUpdating) return;
                 updateGroupToggle(this.dataset.group);
                 updateGlobalToggle();
             });
@@ -123,16 +130,20 @@
         // Global "Select All Tools" toggle.
         if (globalToggle) {
             globalToggle.addEventListener('change', function () {
+                bulkUpdating = true;
+                const checked = this.checked;
                 container.querySelectorAll('.group-checkbox').forEach(cb => {
                     if (!cb.closest('.tool-item')?.classList.contains('d-none')) {
-                        cb.checked = globalToggle.checked;
+                        cb.checked = checked;
+                        cb.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                 });
                 container.querySelectorAll('.group-toggle').forEach(t => {
                     if (!t.closest('.tool-group')?.classList.contains('d-none')) {
-                        t.checked = globalToggle.checked;
+                        t.checked = checked;
                     }
                 });
+                bulkUpdating = false;
             });
         }
 

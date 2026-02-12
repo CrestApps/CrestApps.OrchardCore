@@ -1,13 +1,13 @@
-using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Settings;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Contents;
+using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
@@ -55,10 +55,6 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var contentManager = arguments.Services.GetRequiredService<IContentManager>();
-        var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-
         if (!arguments.TryGetFirstString("contentItem", out var json))
         {
             return "Unable to find a contentItemId argument in the function arguments.";
@@ -69,9 +65,17 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             isDraft = false;
         }
 
-        var model = JsonSerializer.Deserialize<ContentItem>(json, JsonSerializerOptions);
+        // Use Utf8JsonReader + JsonDocument.ParseValue to read only the first complete
+        // JSON value, ignoring any trailing characters the model may have appended.
+        var bytes = Encoding.UTF8.GetBytes(json);
+        var reader = new Utf8JsonReader(bytes);
+        using var doc = JsonDocument.ParseValue(ref reader);
+        var model = doc.RootElement.Deserialize<ContentItem>(JsonSerializerOptions);
+
+        var contentManager = arguments.Services.GetRequiredService<IContentManager>();
 
         var contentItem = await contentManager.GetAsync(model.ContentItemId, VersionOptions.DraftRequired);
+        var session = arguments.Services.GetRequiredService<ISession>();
 
         if (contentItem is null)
         {
@@ -80,13 +84,15 @@ public sealed class CreateOrUpdateContentTool : AIFunction
                 return "A Content type is required";
             }
 
-            if (await contentDefinitionManager.GetTypeDefinitionAsync(model.ContentType) == null)
+            var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
+            var contentDefintions = await contentDefinitionManager.GetTypeDefinitionAsync(model.ContentType);
+
+            if (contentDefintions is null)
             {
-                return "Unknown content type. Before creating content item, first create content type definition.";
+                return $"Invalid content type '{model.ContentType}'. In this is a new content type, first create content type definition then created the content item.";
             }
 
             contentItem = await contentManager.NewAsync(model.ContentType);
-            contentItem.Owner = httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (!await arguments.IsAuthorizedAsync(CommonPermissions.PublishContent, contentItem))
             {
@@ -99,7 +105,11 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
             if (!result.Succeeded)
             {
-                return "Unable to create the content item due to the following errors: " + string.Join(", ", result.Errors.Select(x => x.ErrorMessage));
+                return
+                   $"""
+                    Unable to create the content item due to the following errors: {string.Join(", ", result.Errors.Select(x => x.ErrorMessage))}.
+                    For reference, here is the correct content type definition {JsonSerializer.Serialize(contentDefintions, JsonHelpers.ContentDefinitionSerializerOptions)}
+                    """;
             }
             else
             {
@@ -121,7 +131,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
             if (!result.Succeeded)
             {
-                return "Unable to update the content item due to the following errors: " + string.Join(", ", result.Errors.Select(x => x.ErrorMessage));
+                return "Unable to update the content item due to the following errors: " + string.Join(';', result.Errors.Select(x => x.ErrorMessage));
             }
         }
 
@@ -129,13 +139,17 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         {
             await contentManager.SaveDraftAsync(contentItem);
 
-            return "A draft content item was successfully saved.";
+            await session.SaveChangesAsync(cancellationToken);
+
+            return $"A draft content item with id '{contentItem.ContentItemId}' was successfully saved.";
         }
         else
         {
             await contentManager.PublishAsync(contentItem);
 
-            return "A content item was successfully published.";
+            await session.SaveChangesAsync(cancellationToken);
+
+            return $"A content item with id '{contentItem.ContentItemId}' was successfully published.";
         }
     }
 }

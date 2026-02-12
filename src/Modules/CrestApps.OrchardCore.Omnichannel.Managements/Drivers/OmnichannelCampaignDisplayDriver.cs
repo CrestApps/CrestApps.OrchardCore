@@ -111,6 +111,7 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             if (_toolDefinitions.Tools.Count > 0)
             {
                 model.Tools = _toolDefinitions.Tools
+                .Where(tool => !tool.Value.IsSystemTool)
                 .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
                 .OrderBy(group => group.Key)
                 .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry

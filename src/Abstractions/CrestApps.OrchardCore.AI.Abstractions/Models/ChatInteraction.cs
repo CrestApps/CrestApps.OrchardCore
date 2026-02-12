@@ -80,6 +80,12 @@ public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
     public int? DocumentTopN { get; set; }
 
     /// <summary>
+    /// Gets or sets the name of the orchestrator to use for this interaction.
+    /// When <see langword="null"/> or empty, the system default orchestrator is used.
+    /// </summary>
+    public string OrchestratorName { get; set; }
+
+    /// <summary>
     /// Gets or sets the list of AI tool names to use.
     /// </summary>
     public IList<string> ToolNames { get; set; } = [];

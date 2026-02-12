@@ -26,8 +26,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly ISession _session;
     private readonly IAICompletionService _completionService;
-    private readonly IAICompletionContextBuilder _aICompletionContextBuilder;
-    private readonly IPromptRouter _promptRouter;
+    private readonly IAICompletionContextBuilder _completionContextBuilder;
+    private readonly IOrchestrationContextBuilder _orchestrationContextBuilder;
+    private readonly IOrchestratorResolver _orchestratorResolver;
     private readonly ILogger<AIChatHub> _logger;
 
     protected readonly IStringLocalizer S;
@@ -39,8 +40,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
         ILiquidTemplateManager liquidTemplateManager,
         ISession session,
         IAICompletionService completionService,
-        IAICompletionContextBuilder aICompletionContextBuilder,
-        IPromptRouter promptRouter,
+        IAICompletionContextBuilder completionContextBuilder,
+        IOrchestrationContextBuilder orchestrationContextBuilder,
+        IOrchestratorResolver orchestratorResolver,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
     {
@@ -50,8 +52,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _liquidTemplateManager = liquidTemplateManager;
         _session = session;
         _completionService = completionService;
-        _aICompletionContextBuilder = aICompletionContextBuilder;
-        _promptRouter = promptRouter;
+        _completionContextBuilder = completionContextBuilder;
+        _orchestrationContextBuilder = orchestrationContextBuilder;
+        _orchestratorResolver = orchestratorResolver;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -258,7 +261,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
     private async Task<string> GetGeneratedTitleAsync(AIProfile profile, string userPrompt)
     {
-        var context = await _aICompletionContextBuilder.BuildAsync(profile, c =>
+        var context = await _completionContextBuilder.BuildAsync(profile, c =>
         {
             c.SystemMessage = AIConstants.TitleGeneratorSystemMessage;
             c.FrequencyPenalty = 0;
@@ -307,83 +310,23 @@ public class AIChatHub : Hub<IAIChatHubClient>
             Title = profile.PromptSubject,
         };
 
-        // Process prompt using intent-aware, strategy-based approach.
-        var intentResult = await ReasonAsync(profile, chatSession.Prompts, prompt, cancellationToken);
-
-        // Handle chart generation results.
-        if (intentResult != null && intentResult.HasGeneratedChart)
-        {
-            var content = $"[chart:{intentResult.GeneratedChartConfig}]";
-            await WritePartialMessageAsync(writer, chatSession.SessionId, assistantMessage.Id, content, cancellationToken);
-            assistantMessage.Content = content;
-            chatSession.Prompts.Add(assistantMessage);
-            await _sessionManager.SaveAsync(chatSession);
-
-            return;
-        }
-
-        // Handle chart generation errors.
-        if (intentResult != null && intentResult.IsChartGenerationIntent && !intentResult.IsSuccess)
-        {
-            await WritePartialMessageAsync(writer, chatSession.SessionId, assistantMessage.Id, intentResult.ErrorMessage, cancellationToken);
-            assistantMessage.Content = intentResult.ErrorMessage;
-            chatSession.Prompts.Add(assistantMessage);
-            await _sessionManager.SaveAsync(chatSession);
-
-            return;
-        }
-
-        // Handle image generation results.
-        if (intentResult != null && intentResult.HasGeneratedImages)
-        {
-            var content = BuildImageMarkdown(intentResult);
-            await WritePartialMessageAsync(writer, chatSession.SessionId, assistantMessage.Id, content, cancellationToken);
-            assistantMessage.Content = content;
-            chatSession.Prompts.Add(assistantMessage);
-            await _sessionManager.SaveAsync(chatSession);
-
-            return;
-        }
-
-        // Handle image generation errors.
-        if (intentResult != null && intentResult.IsImageGenerationIntent && !intentResult.IsSuccess)
-        {
-            await WritePartialMessageAsync(writer, chatSession.SessionId, assistantMessage.Id, intentResult.ErrorMessage, cancellationToken);
-            assistantMessage.Content = intentResult.ErrorMessage;
-            chatSession.Prompts.Add(assistantMessage);
-            await _sessionManager.SaveAsync(chatSession);
-
-            return;
-        }
-
         var builder = new StringBuilder();
 
-        var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
+        // Build the orchestration context using the handler pipeline.
+        var orchestratorContext = await _orchestrationContextBuilder.BuildAsync(profile, ctx =>
         {
-            c.AdditionalProperties["Session"] = chatSession;
-            c.UserMarkdownInResponse = true;
-
-            if (intentResult != null && intentResult.IsSuccess)
-            {
-                // Append additional context from intent processing to the system message.
-                if (intentResult.HasContext)
-                {
-                    c.SystemMessage = (c.SystemMessage ?? string.Empty) + "\n\n" + intentResult.GetCombinedContext();
-                }
-
-                // Merge tool names requested by strategies into the completion context
-                // so they are resolved by the standard tool registration pipeline.
-                if (intentResult.ToolNames.Count > 0)
-                {
-                    c.ToolNames = [.. c.ToolNames ?? [], .. intentResult.ToolNames];
-                }
-            }
+            ctx.UserMessage = prompt;
+            ctx.ConversationHistory = transcript.ToList();
+            ctx.CompletionContext.AdditionalProperties["Session"] = chatSession;
         });
+
+        // Resolve the orchestrator for this profile and execute the completion.
+        var orchestrator = _orchestratorResolver.Resolve(profile.OrchestratorName);
 
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
 
-        await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, transcript, completionContext, cancellationToken))
+        await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext, cancellationToken))
         {
             if (chunk.AdditionalProperties is not null)
             {
@@ -453,7 +396,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             Title = profile.PromptSubject,
         };
 
-        var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
+        var completionContext = await _completionContextBuilder.BuildAsync(profile, c =>
         {
             c.UserMarkdownInResponse = true;
         });
@@ -515,7 +458,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         var messageId = IdGenerator.GenerateId();
 
-        var completionContext = await _aICompletionContextBuilder.BuildAsync(profile, c =>
+        var completionContext = await _completionContextBuilder.BuildAsync(profile, c =>
         {
             c.UserMarkdownInResponse = true;
         });
@@ -551,79 +494,4 @@ public class AIChatHub : Hub<IAIChatHubClient>
         }
     }
 
-    private async Task<IntentProcessingResult> ReasonAsync(AIProfile profile, IList<AIChatSessionPrompt> prompts, string prompt, CancellationToken cancellationToken)
-    {
-        var request = new PromptRoutingContext(profile)
-        {
-            Prompt = prompt,
-            Source = profile.Source,
-            ConnectionName = profile.ConnectionName,
-            ConversationHistory = prompts
-                .Where(p => !p.IsGeneratedPrompt)
-                .Select(p => new ChatMessage(p.Role, p.Content))
-                .ToList(),
-        };
-
-        return await _promptRouter.RouteAsync(request, cancellationToken);
-    }
-
-    private static async Task WritePartialMessageAsync(ChannelWriter<CompletionPartialMessage> writer, string sessionId, string messageId, string content, CancellationToken cancellationToken)
-    {
-        var partialMessage = new CompletionPartialMessage
-        {
-            SessionId = sessionId,
-            MessageId = messageId,
-            Content = content,
-        };
-
-        await writer.WriteAsync(partialMessage, cancellationToken);
-    }
-
-    private string BuildImageMarkdown(IntentProcessingResult result)
-    {
-        var contents = result?.GeneratedImages?.Contents;
-        if (contents is null || contents.Count == 0)
-        {
-            return result?.ErrorMessage ?? S["No images were generated."].Value;
-        }
-
-        var messageBuilder = new StringBuilder();
-
-        foreach (var contentItem in contents)
-        {
-            var imageUri = ExtractImageUri(contentItem);
-
-            if (string.IsNullOrWhiteSpace(imageUri))
-            {
-                continue;
-            }
-
-            messageBuilder.AppendLine($"![Generated Image]({imageUri})");
-            messageBuilder.AppendLine();
-        }
-
-        return messageBuilder.Length > 0
-            ? messageBuilder.ToString()
-            : (result?.ErrorMessage ?? S["No images were generated."].Value);
-    }
-
-    private static string ExtractImageUri(AIContent contentItem)
-    {
-        if (contentItem is null)
-        {
-            return null;
-        }
-
-        if (contentItem is UriContent uriContent)
-        {
-            return uriContent.Uri?.ToString();
-        }
-
-        if (contentItem is DataContent dataContent && dataContent.Uri is not null)
-        {
-            return dataContent.Uri.ToString();
-        }
-
-        return null;
-    }
 }

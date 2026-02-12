@@ -101,7 +101,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
     public async Task<IList<TabularBatchResult>> ProcessBatchesAsync(
         IList<TabularBatch> batches,
         string userPrompt,
-        IntentProcessingContext context,
+        TabularBatchContext context,
         CancellationToken cancellationToken = default)
     {
         if (batches is null || batches.Count == 0)
@@ -226,7 +226,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
     private async Task<TabularBatchResult> ProcessSingleBatchAsync(
         TabularBatch batch,
         string userPrompt,
-        IntentProcessingContext context,
+        TabularBatchContext context,
         CancellationToken cancellationToken)
     {
         try

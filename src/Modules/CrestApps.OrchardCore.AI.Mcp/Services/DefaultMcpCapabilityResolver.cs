@@ -1,16 +1,8 @@
-using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
-using Lucene.Net.Analysis;
-using Lucene.Net.Analysis.Core;
-using Lucene.Net.Analysis.En;
-using Lucene.Net.Analysis.Miscellaneous;
-using Lucene.Net.Analysis.TokenAttributes;
-using Lucene.Net.Analysis.Util;
-using Lucene.Net.Util;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -33,32 +25,21 @@ namespace CrestApps.OrchardCore.AI.Mcp.Services;
 ///         while keywords catch exact lexical matches (and vice versa).</item>
 /// </list>
 ///
-/// <para><b>Tokenization</b> uses a Lucene.NET analyzer pipeline optimized for code identifiers:
+/// <para><b>Tokenization</b> is delegated to the shared <see cref="ITextTokenizer"/> service,
+/// which uses a Lucene.NET analyzer pipeline optimized for code identifiers:
 /// WhitespaceTokenizer → WordDelimiterFilter (camelCase splitting) → LowerCaseFilter →
-/// StopFilter (English) → PorterStemFilter. A regex pre-processing step handles consecutive
-/// uppercase sequences (e.g., "JSONSchema" → "JSON Schema") to work around a known
-/// Lucene 4.x WordDelimiterFilter limitation.</para>
+/// StopFilter (English) → PorterStemFilter.</para>
 ///
 /// <para><b>Embedding search</b> uses pre-normalized vectors so cosine similarity reduces
 /// to a dot product, avoiding magnitude computation at query time.</para>
 /// </remarks>
 internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
 {
-    private const LuceneVersion _luceneVersion = LuceneVersion.LUCENE_48;
-
-    // Inserts a space between consecutive uppercase sequences and the start of a new word.
-    // Handles a known limitation of Lucene 4.x WordDelimiterFilter where UPPER→letter
-    // transitions don't trigger splits (e.g., "JSONSchema" → "JSON Schema").
-    private static readonly Regex _consecutiveUppercasePattern = new(@"(?<=[A-Z])(?=[A-Z][a-z])", RegexOptions.Compiled);
-
-    // Shared analyzer instance. Lucene.NET analyzers are thread-safe for GetTokenStream()
-    // (the default reuse strategy uses per-thread TokenStream pooling via CloseableThreadLocal).
-    private static readonly CapabilityAnalyzer _sharedAnalyzer = new();
-
     private readonly ISourceCatalog<McpConnection> _store;
     private readonly IMcpServerMetadataCacheProvider _metadataProvider;
     private readonly IMcpCapabilityEmbeddingCacheProvider _embeddingCache;
     private readonly IAIClientFactory _aiClientFactory;
+    private readonly ITextTokenizer _tokenizer;
     private readonly AIProviderOptions _providerOptions;
     private readonly McpCapabilityResolverOptions _resolverOptions;
     private readonly ILogger _logger;
@@ -68,6 +49,7 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
         IMcpServerMetadataCacheProvider metadataProvider,
         IMcpCapabilityEmbeddingCacheProvider embeddingCache,
         IAIClientFactory aiClientFactory,
+        ITextTokenizer tokenizer,
         IOptions<AIProviderOptions> providerOptions,
         IOptions<McpCapabilityResolverOptions> resolverOptions,
         ILogger<DefaultMcpCapabilityResolver> logger)
@@ -76,6 +58,7 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
         _metadataProvider = metadataProvider;
         _embeddingCache = embeddingCache;
         _aiClientFactory = aiClientFactory;
+        _tokenizer = tokenizer;
         _providerOptions = providerOptions.Value;
         _resolverOptions = resolverOptions.Value;
         _logger = logger;
@@ -286,7 +269,7 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
     /// </summary>
     private List<McpCapabilityCandidate> KeywordMatch(string prompt, List<CapabilityEntry> entries)
     {
-        var promptTokens = Tokenize(prompt);
+        var promptTokens = _tokenizer.Tokenize(prompt);
 
         if (promptTokens.Count == 0)
         {
@@ -297,7 +280,7 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
 
         foreach (var entry in entries)
         {
-            var capabilityTokens = Tokenize(entry.Text);
+            var capabilityTokens = _tokenizer.Tokenize(entry.Text);
 
             if (capabilityTokens.Count == 0)
             {
@@ -523,48 +506,6 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
     }
 
     /// <summary>
-    /// Tokenizes text using a shared Lucene.NET analyzer pipeline:
-    /// WhitespaceTokenizer → WordDelimiterFilter (camelCase/PascalCase splitting) →
-    /// LowerCaseFilter → StopFilter (English stop words) → PorterStemFilter.
-    /// A regex pre-processing step handles consecutive uppercase sequences
-    /// (e.g., "JSONSchema" → "JSON Schema") for Lucene 4.x compatibility.
-    /// </summary>
-    internal static HashSet<string> Tokenize(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return [];
-        }
-
-        // Pre-process: split consecutive uppercase sequences before a new word
-        // (e.g., "JSONSchema" → "JSON Schema", "MCPServer" → "MCP Server").
-        // This works around a Lucene 4.x WordDelimiterFilter limitation where
-        // UPPER→letter transitions are not treated as split points.
-        text = _consecutiveUppercasePattern.Replace(text, " ");
-
-        var tokens = new HashSet<string>(StringComparer.Ordinal);
-
-        using var tokenStream = _sharedAnalyzer.GetTokenStream("capability", text);
-
-        var charTermAttr = tokenStream.AddAttribute<ICharTermAttribute>();
-        tokenStream.Reset();
-
-        while (tokenStream.IncrementToken())
-        {
-            var token = charTermAttr.ToString();
-
-            if (token.Length > 0)
-            {
-                tokens.Add(token);
-            }
-        }
-
-        tokenStream.End();
-
-        return tokens;
-    }
-
-    /// <summary>
     /// Normalizes a vector to unit length (L2 norm = 1). When both vectors in a
     /// similarity comparison are pre-normalized, cosine similarity reduces to a
     /// simple dot product, avoiding redundant magnitude computation.
@@ -624,45 +565,5 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
         public string Description;
         public McpCapabilityType Type;
         public string Text;
-    }
-
-    /// <summary>
-    /// Custom Lucene.NET analyzer for MCP capability matching. Applies:
-    /// <list type="number">
-    ///   <item>WhitespaceTokenizer — splits on whitespace, preserving case information
-    ///         for downstream filters. Recommended over StandardTokenizer when using
-    ///         WordDelimiterFilter (per Lucene documentation).</item>
-    ///   <item>WordDelimiterFilter — splits camelCase/PascalCase identifiers
-    ///         (e.g., "getRecipeSchema" → "get", "Recipe", "Schema").</item>
-    ///   <item>LowerCaseFilter — normalizes to lowercase.</item>
-    ///   <item>StopFilter — removes common English stop words using the
-    ///         <see cref="EnglishAnalyzer.DefaultStopSet"/>.</item>
-    ///   <item>PorterStemFilter — applies Porter stemming for morphological normalization
-    ///         (e.g., "recipes" → "recip", "enabling" → "enabl").</item>
-    /// </list>
-    /// <para>Thread-safe: Lucene.NET analyzers use per-thread TokenStream pooling.</para>
-    /// </summary>
-    private sealed class CapabilityAnalyzer : Analyzer
-    {
-        protected override TokenStreamComponents CreateComponents(string fieldName, TextReader reader)
-        {
-            var tokenizer = new WhitespaceTokenizer(_luceneVersion, reader);
-
-            TokenStream filter = new WordDelimiterFilter(
-                _luceneVersion,
-                tokenizer,
-                WordDelimiterFlags.GENERATE_WORD_PARTS
-                | WordDelimiterFlags.GENERATE_NUMBER_PARTS
-                | WordDelimiterFlags.SPLIT_ON_CASE_CHANGE
-                | WordDelimiterFlags.SPLIT_ON_NUMERICS
-                | WordDelimiterFlags.STEM_ENGLISH_POSSESSIVE,
-                CharArraySet.Empty);
-
-            filter = new LowerCaseFilter(_luceneVersion, filter);
-            filter = new StopFilter(_luceneVersion, filter, EnglishAnalyzer.DefaultStopSet);
-            filter = new PorterStemFilter(filter);
-
-            return new TokenStreamComponents(tokenizer, filter);
-        }
     }
 }

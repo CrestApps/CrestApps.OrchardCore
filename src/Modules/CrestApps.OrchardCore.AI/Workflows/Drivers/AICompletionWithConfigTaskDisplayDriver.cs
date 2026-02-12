@@ -67,6 +67,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         var tools = Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
         {
             model.Tools = _toolDefinitions.Tools
+                .Where(tool => !tool.Value.IsSystemTool)
                 .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
                 .OrderBy(group => group.Key)
                 .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry

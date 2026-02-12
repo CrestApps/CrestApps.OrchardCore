@@ -471,8 +471,16 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             {
                 _logger.LogWarning(ex, "Failed to parse arguments for tool call '{FunctionName}'. The model may have generated malformed JSON.", toolCall.FunctionName);
 
+                // Detect truncation: "end of data" in the message indicates the model's output
+                // was cut off (hit the output token limit) rather than being structurally wrong.
+                var errorMessage = ex.Message.Contains("end of data", StringComparison.OrdinalIgnoreCase)
+                    ? "The function arguments were truncated because the response exceeded the output token limit. "
+                      + "Please significantly reduce the size of the arguments. For content creation, use much shorter text, "
+                      + "omit optional fields, or split the operation into multiple smaller calls."
+                    : $"Invalid JSON in function arguments: {ex.Message}. Please fix the JSON structure and try again.";
+
                 prompts.Add(new ToolChatMessage(toolCall.Id,
-                    JsonSerializer.Serialize(new { error = $"Invalid JSON in function arguments: {ex.Message}. Please fix the JSON structure and try again." })));
+                    JsonSerializer.Serialize(new { error = errorMessage })));
 
                 continue;
             }

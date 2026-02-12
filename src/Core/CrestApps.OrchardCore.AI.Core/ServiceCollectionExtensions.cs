@@ -1,7 +1,8 @@
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Orchestration;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Core.Strategies;
+using CrestApps.OrchardCore.AI.Core.Tools;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Services;
@@ -138,93 +139,71 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds the core prompt routing services including intent detection, routing, and strategy provider.
+    /// Adds the orchestration services including the default progressive tool orchestrator,
+    /// tool registry, orchestration context builder, and orchestrator resolver.
     /// </summary>
-    public static IServiceCollection AddPromptRoutingServices(this IServiceCollection services)
+    public static IServiceCollection AddOrchestrationServices(this IServiceCollection services)
     {
-        // Register the keyword-based intent detector as a concrete service (used as fallback)
-        services.AddScoped<KeywordPromptIntentDetector>();
+        services.AddOptions<OrchestratorOptions>();
+        services.AddOptions<ProgressiveToolOrchestratorOptions>();
 
-        // Register the AI-based intent detector as the primary implementation
-        services.AddScoped<IPromptIntentDetector, AIPromptIntentDetector>();
+        // Register the shared tokenizer used by the tool registry and orchestrator.
+        services.TryAddSingleton<ITextTokenizer, LuceneTextTokenizer>();
 
-        // Register the strategy provider
-        services.AddScoped<IPromptProcessingStrategyProvider, DefaultPromptProcessingStrategyProvider>();
+        // Register the orchestration context builder and core handlers.
+        services.AddScoped<IOrchestrationContextBuilder, DefaultOrchestrationContextBuilder>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextHandler, CompletionContextOrchestrationHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextHandler, DocumentOrchestrationHandler>());
 
-        // Register the routing service
-        services.AddScoped<IPromptRouter, DefaultPromptRouter>();
+        // Register the tool registry and default providers.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, LocalToolRegistryProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, SystemToolRegistryProvider>());
+        services.AddScoped<IToolRegistry, DefaultToolRegistry>();
+
+        // Register the default orchestrator.
+        services.AddOrchestrator<ProgressiveToolOrchestrator>(ProgressiveToolOrchestrator.OrchestratorName);
+
+        // Register the resolver.
+        services.AddScoped<IOrchestratorResolver, DefaultOrchestratorResolver>();
+
+        // Register content generation system tools.
+        services.AddAITool<GenerateImageTool>(GenerateImageTool.TheName)
+            .WithTitle("Generate Image")
+            .WithDescription("Generates an image from a text description using an AI image generation model.")
+            .WithPurpose(AIToolPurposes.ContentGeneration);
+
+        services.AddAITool<GenerateChartTool>(GenerateChartTool.TheName)
+            .WithTitle("Generate Chart")
+            .WithDescription("Generates a Chart.js configuration from a data description.")
+            .WithPurpose(AIToolPurposes.ContentGeneration);
 
         return services;
     }
 
     /// <summary>
-    /// Registers a document processing intent that will be recognized by the AI intent detector.
-    /// Returns a builder to fluently configure the intent's strategies and behavior.
+    /// Registers an orchestrator implementation with the given name.
     /// </summary>
+    /// <typeparam name="TOrchestrator">The orchestrator type implementing <see cref="IOrchestrator"/>.</typeparam>
     /// <param name="services">The service collection.</param>
-    /// <param name="intentName">The unique name of the intent (e.g., "DocumentQnA").</param>
-    /// <param name="description">A description of when this intent should be detected, used by the AI classifier.</param>
-    /// <returns>A builder for further intent configuration.</returns>
-    /// <remarks>
-    /// Only intents registered via this method will be recognized by the AI intent detector.
-    /// Use the returned builder to attach strategies:
+    /// <param name="name">The unique name for this orchestrator.</param>
+    /// <returns>The service collection for chaining.</returns>
+    /// <example>
     /// <code>
-    /// services.AddPromptProcessingIntent("MyIntent", "description")
-    ///     .WithStrategy&lt;MyStrategy&gt;();
-    ///
-    /// services.AddPromptProcessingIntent("MyHeavyIntent", "description")
-    ///     .WithHeavyStrategy&lt;MyHeavyStrategy&gt;();
+    /// services.AddOrchestrator&lt;ProgressiveToolOrchestrator&gt;("default");
+    /// services.AddOrchestrator&lt;CopilotOrchestrator&gt;("copilot");
     /// </code>
-    /// </remarks>
-    public static PromptProcessingIntentBuilder AddPromptProcessingIntent(
-        this IServiceCollection services,
-        string intentName,
-        string description)
+    /// </example>
+    public static IServiceCollection AddOrchestrator<TOrchestrator>(this IServiceCollection services, string name)
+        where TOrchestrator : class, IOrchestrator
     {
-        ArgumentException.ThrowIfNullOrEmpty(intentName);
-        ArgumentException.ThrowIfNullOrEmpty(description);
+        ArgumentException.ThrowIfNullOrEmpty(name);
 
-        services.Configure<PromptProcessingOptions>(options =>
+        services.TryAddScoped<TOrchestrator>();
+
+        services.Configure<OrchestratorOptions>(options =>
         {
-            options.InternalIntents.TryAdd(intentName, description);
+            options.Orchestrators[name] = typeof(TOrchestrator);
         });
-
-        return new PromptProcessingIntentBuilder(services, intentName);
-    }
-
-    /// <summary>
-    /// Adds a document processing strategy to the service collection.
-    /// Strategies are called in sequence and each decides whether to handle the request.
-    /// Uses <see cref="Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(IServiceCollection, ServiceDescriptor)"/>
-    /// to prevent duplicate registrations when multiple modules register the same strategy.
-    /// </summary>
-    /// <typeparam name="TStrategy">The strategy type.</typeparam>
-    /// <param name="services">The service collection.</param>
-    public static IServiceCollection AddPromptProcessingStrategy<TStrategy>(this IServiceCollection services)
-        where TStrategy : class, IPromptProcessingStrategy
-    {
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPromptProcessingStrategy, TStrategy>());
-        return services;
-    }
-
-    /// <summary>
-    /// Adds the default prompt processing strategies with their intent registrations.
-    /// </summary>
-    public static IServiceCollection AddDefaultPromptProcessingStrategies(this IServiceCollection services)
-    {
-        services.AddPromptProcessingIntent(
-            DocumentIntents.GenerateImage,
-            "The user requests creation of a new image from a text description. Detect when the prompt asks for visuals, illustrations, diagrams, or artwork and capture any optional parameters (style, size, aspect ratio, color palette, level of detail, or composition). The output should be an image-generation task consisting of a refined prompt and metadata suitable for calling an image-generation service.")
-            .WithStrategy<ImageGenerationDocumentProcessingStrategy>();
-
-        services.AddPromptProcessingIntent(
-            DocumentIntents.GenerateImageWithHistory,
-            "Trigger when the user requests the creation of an image, diagram, or visual that is based on information, data, or discussion from prior chat messages. Detect references to previous conversation, earlier outputs, or chat-based data that should influence the visual. This intent is strictly for generating images that depend on chat history, including summaries, illustrations, or artwork derived from earlier messages, but does not include charts or graphs.");
-
-        services.AddPromptProcessingIntent(
-            DocumentIntents.GenerateChart,
-            "The user wants to create a chart, graph, or data visualization such as bar chart, line chart, pie chart, scatter plot, or histogram. The AI model already receives conversation history, so this intent handles both explicit data in the prompt and references to data from earlier messages.")
-            .WithStrategy<ChartGenerationDocumentProcessingStrategy>();
 
         return services;
     }

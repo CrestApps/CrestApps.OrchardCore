@@ -10,7 +10,6 @@ using CrestApps.OrchardCore.AI.Mcp.Drivers;
 using CrestApps.OrchardCore.AI.Mcp.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
-using CrestApps.OrchardCore.AI.Mcp.Strategies;
 using CrestApps.OrchardCore.AI.Mcp.Tools;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
@@ -49,10 +48,6 @@ public sealed class Startup : StartupBase
         // so it can be resolved by name at runtime but does not appear in the UI tool list.
         services.AddCoreAITool<McpInvokeFunction>(McpInvokeFunction.FunctionName);
 
-        services.AddPromptProcessingIntent(
-            DocumentIntents.LookingForExternalCapabilities,
-            "The user is requesting information, actions, or data that may be available through connected external services. This includes invoking tools, querying resources, retrieving data, performing operations, or accessing capabilities that go beyond the AI model's built-in knowledge. Trigger this when the request could benefit from calling an external service to provide a more accurate, complete, or up-to-date response.")
-            .WithStrategy<McpCapabilitiesProcessingStrategy>();
         services.AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>();
         services.AddScoped<McpService>();
@@ -60,8 +55,8 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IMcpMetadataPromptGenerator, DefaultMcpMetadataPromptGenerator>();
         services.AddSingleton<IMcpCapabilityEmbeddingCacheProvider, InMemoryMcpCapabilityEmbeddingCacheProvider>();
         services.AddScoped<IMcpCapabilityResolver, DefaultMcpCapabilityResolver>();
-        services.AddScoped<IPreIntentCapabilityResolver, McpPreIntentCapabilityResolver>();
         services.AddOptions<McpCapabilityResolverOptions>();
+        services.AddScoped<IToolRegistryProvider, McpToolRegistryProvider>();
         services.AddNavigationProvider<McpAdminMenu>();
         services.AddPermissionProvider<McpPermissionsProvider>();
         services.AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>();

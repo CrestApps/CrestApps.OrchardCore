@@ -4,6 +4,23 @@ using CrestApps.OrchardCore.AI.Models;
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 
 /// <summary>
+/// Lightweight context for tabular batch processing.
+/// Contains only the fields required to call the LLM for batch analysis.
+/// </summary>
+public sealed class TabularBatchContext
+{
+    /// <summary>
+    /// Gets or sets the AI provider name (e.g., "OpenAI", "AzureOpenAI").
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the AI completion context containing connection, deployment, and model settings.
+    /// </summary>
+    public AICompletionContext CompletionContext { get; set; }
+}
+
+/// <summary>
 /// Interface for processing tabular data batches using LLM.
 /// Implementations handle splitting documents into batches, executing LLM calls
 /// with bounded concurrency, and aggregating results.
@@ -28,7 +45,7 @@ public interface ITabularBatchProcessor
     Task<IList<TabularBatchResult>> ProcessBatchesAsync(
         IList<TabularBatch> batches,
         string userPrompt,
-        IntentProcessingContext context,
+        TabularBatchContext context,
         CancellationToken cancellationToken = default);
 
     /// <summary>

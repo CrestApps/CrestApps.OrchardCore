@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Endpoints;
@@ -7,7 +6,7 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Indexes;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Services;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Strategies;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Tools;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
@@ -49,13 +48,14 @@ public sealed class Startup : StartupBase
             .AddIndexProfileHandler<ChatInteractionIndexProfileHandler>()
             .AddDisplayDriver<IndexProfile, ChatInteractionIndexProfileDisplayDriver>();
 
-        // Add document processing services for intent-aware, strategy-based document handling.
-        services.AddDefaultDocumentPromptProcessingStrategies();
+        // Add document processing system tools and supporting services.
+        services.AddDefaultDocumentProcessingServices();
 
-        services.AddPromptProcessingIntent(
-            DocumentIntents.DocumentQnA,
-            "The user wants to ask questions about documents, search for information, or find specific content within documents using RAG (Retrieval-Augmented Generation).")
-            .WithStrategy<RagDocumentProcessingStrategy>();
+        // Register the RAG search system tool.
+        services.AddAITool<SearchDocumentsTool>(SearchDocumentsTool.TheName)
+            .WithTitle("Search Documents")
+            .WithDescription("Searches uploaded or attached documents using semantic vector search.")
+            .WithPurpose(AIToolPurposes.DocumentProcessing);
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

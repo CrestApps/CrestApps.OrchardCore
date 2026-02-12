@@ -44,6 +44,12 @@ internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInte
 
         foreach (var tool in _toolDefinitions.Tools)
         {
+            // Exclude system tools — they are auto-included by the orchestrator.
+            if (tool.Value.IsSystemTool)
+            {
+                continue;
+            }
+
             // Check if user has access to this tool
             if (await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
             {
