@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Indexes;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
@@ -15,6 +16,7 @@ using CrestApps.OrchardCore.SignalR.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -53,7 +55,6 @@ public sealed class Startup : StartupBase
             .AddPermissionProvider<ChatInteractionPermissionProvider>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>()
-            .AddDisplayDriver<ChatInteraction, ChatInteractionDataSourceDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionToolsDisplayDriver>()
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
@@ -63,6 +64,14 @@ public sealed class Startup : StartupBase
 
         // Configure RowLevelTabularBatchSettings from configuration
         services.Configure<RowLevelTabularBatchOptions>(_configuration.GetSection("CrestApps_AI:ChatInteractions:BatchProcessing"));
+
+        services.Configure<HubOptions<ChatInteractionHub>>(options =>
+        {
+            // Allow long-running operations (e.g., multi-step MCP tool calls)
+            // without the server dropping the connection prematurely.
+            options.ClientTimeoutInterval = TimeSpan.FromMinutes(10);
+            options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+        });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -70,5 +79,14 @@ public sealed class Startup : StartupBase
         var hubRouteManager = serviceProvider.GetRequiredService<HubRouteManager>();
 
         hubRouteManager.MapHub<ChatInteractionHub>(routes);
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.DataSources)]
+public sealed class DataSourceStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<ChatInteraction, ChatInteractionDataSourceDisplayDriver>();
     }
 }

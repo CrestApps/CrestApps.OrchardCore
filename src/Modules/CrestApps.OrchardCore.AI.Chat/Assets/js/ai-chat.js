@@ -265,6 +265,11 @@ function processChartMarkers(content, message) {
                         .withAutomaticReconnect()
                         .build();
 
+                    // Allow long-running operations (e.g., multi-step MCP tool calls)
+                    // without the client disconnecting prematurely.
+                    this.connection.serverTimeoutInMilliseconds = 600000;
+                    this.connection.keepAliveIntervalInMilliseconds = 15000;
+
                     this.connection.on("LoadSession", (data) => {
                         this.initializeSession(data.sessionId, true);
                         this.messages = [];
@@ -289,6 +294,24 @@ function processChartMarkers(content, message) {
 
                     this.connection.on("ReceiveError", (error) => {
                         console.error("SignalR Error: ", error);
+                    });
+
+                    this.connection.onreconnecting(() => {
+                        console.warn("SignalR: reconnecting...");
+                    });
+
+                    this.connection.onreconnected(() => {
+                        console.info("SignalR: reconnected.");
+                    });
+
+                    this.connection.onclose((error) => {
+                        if (this.isNavigatingAway) {
+                            return;
+                        }
+
+                        if (error) {
+                            console.warn("SignalR connection closed with error:", error.message || error);
+                        }
                     });
 
                     try {

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 
@@ -37,7 +38,9 @@ public sealed class DefaultMcpMetadataPromptGenerator : IMcpMetadataPromptGenera
         sb.AppendLine();
         sb.AppendLine("IMPORTANT invocation rules:");
         sb.AppendLine("- Always specify the correct 'clientId', 'type', and 'id' parameters.");
-        sb.AppendLine("- For tools: set type='tool' and id=<tool name>.");
+        sb.AppendLine("- For tools: set type='tool', id=<tool name>, and inputs=<object matching the tool's Parameters schema>.");
+        sb.AppendLine("  The 'inputs' object must include all required properties as defined in the tool's Parameters schema. It must be a valid JSON object, with no wrappers (such as code fences) or additional formatting—only pure JSON.");
+        sb.AppendLine("  Example: if a tool has Parameters with required property 'featureIds' (array of strings), call mcp_invoke with inputs={\"featureIds\":[\"value1\",\"value2\"]}.");
         sb.AppendLine("- For prompts: set type='prompt' and id=<prompt name>.");
         sb.AppendLine("- For resources: set type='resource' and id=<the full resource URI>. Do NOT use the resource name as id.");
         sb.AppendLine("- For resource templates: set type='resource' and id=<the URI template with all {parameter} placeholders replaced with actual values from the user's request>.");
@@ -72,14 +75,12 @@ public sealed class DefaultMcpMetadataPromptGenerator : IMcpMetadataPromptGenera
                         sb.Append(tool.Description);
                     }
 
+                    sb.AppendLine();
+
                     if (tool.InputSchema.HasValue)
                     {
-                        sb.AppendLine();
-                        sb.Append("      Parameters: ");
-                        sb.Append(tool.InputSchema.Value.ToString());
+                        AppendParameterSummary(sb, tool.InputSchema.Value);
                     }
-
-                    sb.AppendLine();
                 }
             }
 
@@ -142,5 +143,82 @@ public sealed class DefaultMcpMetadataPromptGenerator : IMcpMetadataPromptGenera
         }
 
         return sb.ToString();
+    }
+
+    private static void AppendParameterSummary(StringBuilder sb, JsonElement schema)
+    {
+        if (schema.ValueKind != JsonValueKind.Object)
+        {
+            return;
+        }
+
+        if (!schema.TryGetProperty("properties", out var properties) || properties.ValueKind != JsonValueKind.Object)
+        {
+            return;
+        }
+
+        var requiredSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (schema.TryGetProperty("required", out var required) && required.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in required.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String)
+                {
+                    requiredSet.Add(item.GetString());
+                }
+            }
+        }
+
+        foreach (var property in properties.EnumerateObject())
+        {
+            var name = property.Name;
+            var isRequired = requiredSet.Contains(name);
+            var typeName = GetTypeName(property.Value);
+            var description = property.Value.TryGetProperty("description", out var desc) && desc.ValueKind == JsonValueKind.String
+                ? desc.GetString()
+                : null;
+
+            sb.Append("      ");
+            sb.Append(name);
+            sb.Append(" (");
+            sb.Append(typeName);
+
+            if (isRequired)
+            {
+                sb.Append(", required");
+            }
+
+            sb.Append(')');
+
+            if (!string.IsNullOrEmpty(description))
+            {
+                sb.Append(": ");
+                sb.Append(description);
+            }
+
+            sb.AppendLine();
+        }
+    }
+
+    private static string GetTypeName(JsonElement propertySchema)
+    {
+        if (!propertySchema.TryGetProperty("type", out var typeElement) || typeElement.ValueKind != JsonValueKind.String)
+        {
+            return "object";
+        }
+
+        var type = typeElement.GetString();
+
+        if (type == "array" && propertySchema.TryGetProperty("items", out var items))
+        {
+            var itemType = items.TryGetProperty("type", out var it) && it.ValueKind == JsonValueKind.String
+                ? it.GetString()
+                : "object";
+
+            return $"{itemType}[]";
+        }
+
+        return type;
     }
 }

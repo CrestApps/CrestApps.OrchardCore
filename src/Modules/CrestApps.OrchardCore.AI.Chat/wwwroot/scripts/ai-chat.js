@@ -235,6 +235,11 @@ window.openAIChatManager = function () {
               while (1) switch (_context.p = _context.n) {
                 case 0:
                   _this.connection = new signalR.HubConnectionBuilder().withUrl(config.signalRHubUrl).withAutomaticReconnect().build();
+
+                  // Allow long-running operations (e.g., multi-step MCP tool calls)
+                  // without the client disconnecting prematurely.
+                  _this.connection.serverTimeoutInMilliseconds = 600000;
+                  _this.connection.keepAliveIntervalInMilliseconds = 15000;
                   _this.connection.on("LoadSession", function (data) {
                     var _data$messages;
                     _this.initializeSession(data.sessionId, true);
@@ -255,6 +260,20 @@ window.openAIChatManager = function () {
                   });
                   _this.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
+                  });
+                  _this.connection.onreconnecting(function () {
+                    console.warn("SignalR: reconnecting...");
+                  });
+                  _this.connection.onreconnected(function () {
+                    console.info("SignalR: reconnected.");
+                  });
+                  _this.connection.onclose(function (error) {
+                    if (_this.isNavigatingAway) {
+                      return;
+                    }
+                    if (error) {
+                      console.warn("SignalR connection closed with error:", error.message || error);
+                    }
                   });
                   _context.p = 1;
                   _context.n = 2;

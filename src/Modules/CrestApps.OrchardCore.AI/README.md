@@ -54,7 +54,7 @@ Below is an example configuration:
         "FrequencyPenalty": 0,
         "PresencePenalty": 0,
         "PastMessagesCount": 10,
-        "MaximumIterationsPerRequest": 1,
+        "MaximumIterationsPerRequest": 10,
         "EnableOpenTelemetry": false,
         "EnableDistributedCaching": true
       },
@@ -79,6 +79,20 @@ Below is an example configuration:
   }
 }
 ```
+
+#### Default Parameters
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `Temperature` | Controls randomness. Lower values produce more deterministic results. | `0` |
+| `MaxOutputTokens` | Maximum number of tokens in the response. | `800` |
+| `TopP` | Controls diversity via nucleus sampling. | `1` |
+| `FrequencyPenalty` | Reduces repetition of token sequences. | `0` |
+| `PresencePenalty` | Encourages the model to explore new topics. | `0` |
+| `PastMessagesCount` | Number of previous messages included as conversation context. | `10` |
+| `MaximumIterationsPerRequest` | Maximum number of tool-call round-trips the model can make per request. Set to a higher value (e.g., `10`) to enable agentic behavior where the model can call tools, evaluate results, and call additional tools as needed. A value of `1` limits the model to a single tool call with no follow-up. | `10` |
+| `EnableOpenTelemetry` | Enables OpenTelemetry tracing for AI requests. | `false` |
+| `EnableDistributedCaching` | Enables distributed caching for AI responses. | `true` |
 
 #### Deployment Name Settings
 

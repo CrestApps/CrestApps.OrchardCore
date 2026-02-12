@@ -9,6 +9,7 @@ using CrestApps.Azure.Core;
 using CrestApps.Azure.Core.Models;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
@@ -27,6 +28,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
     private readonly ILoggerFactory _loggerFactory;
     private readonly IAILinkGenerator _linkGenerator;
     private readonly IEnumerable<IAzureOpenAIDataSourceHandler> _azureOpenAIDataSourceHandlers;
+    private readonly DefaultAIOptions _defaultOptions;
     private readonly ILogger _logger;
 
     private IAIToolsService _toolsService;
@@ -40,6 +42,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         ILoggerFactory loggerFactory,
         IAILinkGenerator linkGenerator,
         IEnumerable<IAzureOpenAIDataSourceHandler> azureOpenAIDataSourceHandlers,
+        IOptions<DefaultAIOptions> defaultOptions,
         ILogger<AzureOpenAICompletionClient> logger)
         : base(providerOptions.Value)
     {
@@ -48,6 +51,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         _loggerFactory = loggerFactory;
         _linkGenerator = linkGenerator;
         _azureOpenAIDataSourceHandlers = azureOpenAIDataSourceHandlers;
+        _defaultOptions = defaultOptions.Value;
         _logger = logger;
     }
 
@@ -133,12 +137,15 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                 return null;
             }
 
-            if (data.Value.FinishReason == ChatFinishReason.ToolCalls)
+            var iterations = 0;
+
+            while (data.Value.FinishReason == ChatFinishReason.ToolCalls && iterations < _defaultOptions.MaximumIterationsPerRequest)
             {
                 await ProcessToolCallsAsync(prompts, data.Value.ToolCalls, allFunctions);
 
                 // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
                 data = await chatClient.CompleteChatAsync(prompts, GetOptions(context, allFunctions), cancellationToken);
+                iterations++;
             }
 
             var role = new Microsoft.Extensions.AI.ChatRole(data.Value.Role.ToString().ToLowerInvariant());
@@ -147,6 +154,14 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             foreach (var choice in data.Value.Content)
             {
                 choices.Add(new Microsoft.Extensions.AI.ChatMessage(role, choice.Text));
+            }
+
+            // Notify the user when the maximum iteration limit was reached while the model still wanted to make tool calls.
+            if (iterations >= _defaultOptions.MaximumIterationsPerRequest && data.Value.FinishReason == ChatFinishReason.ToolCalls)
+            {
+                choices.Add(new Microsoft.Extensions.AI.ChatMessage(Microsoft.Extensions.AI.ChatRole.Assistant,
+                    "\n\n⚠️ The operation reached the maximum number of tool-call iterations and may be incomplete. " +
+                    "Please try again or break the task into smaller steps."));
             }
 
             var result = new Microsoft.Extensions.AI.ChatResponse(choices)
@@ -271,147 +286,148 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         // Accumulate tool call updates across streaming chunks.
         // Key is the tool call index, value contains the accumulated tool call data.
         var accumulatedToolCalls = new Dictionary<int, (string ToolCallId, string FunctionName, List<byte> ArgumentBytes)>();
+        var iterations = 0;
 
-        await foreach (var update in chatClient.CompleteChatStreamingAsync(prompts, chatOptions, cancellationToken))
+        while (iterations <= _defaultOptions.MaximumIterationsPerRequest)
         {
-            // Accumulate tool call updates as they arrive.
-            foreach (var toolCallUpdate in update.ToolCallUpdates)
+            var hasToolCalls = false;
+
+            await foreach (var update in chatClient.CompleteChatStreamingAsync(prompts, chatOptions, cancellationToken))
             {
-                if (!accumulatedToolCalls.TryGetValue(toolCallUpdate.Index, out var accumulated))
+                // Accumulate tool call updates as they arrive.
+                foreach (var toolCallUpdate in update.ToolCallUpdates)
                 {
-                    accumulated = (toolCallUpdate.ToolCallId, toolCallUpdate.FunctionName, new List<byte>());
+                    if (!accumulatedToolCalls.TryGetValue(toolCallUpdate.Index, out var accumulated))
+                    {
+                        accumulated = (toolCallUpdate.ToolCallId, toolCallUpdate.FunctionName, new List<byte>());
+                        accumulatedToolCalls[toolCallUpdate.Index] = accumulated;
+                    }
+
+                    // Update ToolCallId and FunctionName if they are provided in this chunk.
+                    if (!string.IsNullOrEmpty(toolCallUpdate.ToolCallId))
+                    {
+                        accumulated.ToolCallId = toolCallUpdate.ToolCallId;
+                    }
+
+                    if (!string.IsNullOrEmpty(toolCallUpdate.FunctionName))
+                    {
+                        accumulated.FunctionName = toolCallUpdate.FunctionName;
+                    }
+
+                    // Append function arguments bytes.
+                    if (toolCallUpdate.FunctionArgumentsUpdate is not null)
+                    {
+                        accumulated.ArgumentBytes.AddRange(toolCallUpdate.FunctionArgumentsUpdate.ToArray());
+                    }
+
                     accumulatedToolCalls[toolCallUpdate.Index] = accumulated;
                 }
 
-                // Update ToolCallId and FunctionName if they are provided in this chunk.
-                if (!string.IsNullOrEmpty(toolCallUpdate.ToolCallId))
+                if (update.FinishReason == ChatFinishReason.ToolCalls)
                 {
-                    accumulated.ToolCallId = toolCallUpdate.ToolCallId;
+                    // Convert accumulated tool call data to ChatToolCall objects.
+                    var toolCalls = accumulatedToolCalls.Values
+                        .Where(tc => !string.IsNullOrEmpty(tc.ToolCallId) && !string.IsNullOrEmpty(tc.FunctionName))
+                        .Select(tc => ChatToolCall.CreateFunctionToolCall(
+                            tc.ToolCallId,
+                            tc.FunctionName,
+                            BinaryData.FromBytes(tc.ArgumentBytes.ToArray())))
+                        .ToList();
+
+                    await ProcessToolCallsAsync(prompts, toolCalls, allFunctions);
+
+                    // Clear accumulated tool calls for the next iteration.
+                    accumulatedToolCalls.Clear();
+
+                    // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
+                    chatOptions = subSequenceContext ??= GetOptions(context, allFunctions);
+                    hasToolCalls = true;
+                    iterations++;
+
+                    break;
                 }
-
-                if (!string.IsNullOrEmpty(toolCallUpdate.FunctionName))
-                {
-                    accumulated.FunctionName = toolCallUpdate.FunctionName;
-                }
-
-                // Append function arguments bytes.
-                if (toolCallUpdate.FunctionArgumentsUpdate is not null)
-                {
-                    accumulated.ArgumentBytes.AddRange(toolCallUpdate.FunctionArgumentsUpdate.ToArray());
-                }
-
-                accumulatedToolCalls[toolCallUpdate.Index] = accumulated;
-            }
-
-            if (update.FinishReason == ChatFinishReason.ToolCalls)
-            {
-                // Convert accumulated tool call data to ChatToolCall objects.
-                var toolCalls = accumulatedToolCalls.Values
-                    .Where(tc => !string.IsNullOrEmpty(tc.ToolCallId) && !string.IsNullOrEmpty(tc.FunctionName))
-                    .Select(tc => ChatToolCall.CreateFunctionToolCall(
-                        tc.ToolCallId,
-                        tc.FunctionName,
-                        BinaryData.FromBytes(tc.ArgumentBytes.ToArray())))
-                    .ToList();
-
-                await ProcessToolCallsAsync(prompts, toolCalls, allFunctions);
-
-                // Clear accumulated tool calls for the next potential round.
-                accumulatedToolCalls.Clear();
-
-                // Create a new chat option that excludes references to data sources to address the limitations in Azure OpenAI.
-                subSequenceContext ??= GetOptions(context, allFunctions);
-
-                await foreach (var newUpdate in chatClient.CompleteChatStreamingAsync(prompts, subSequenceContext, cancellationToken))
+                else
                 {
                     var result = new Microsoft.Extensions.AI.ChatResponseUpdate
                     {
-                        ResponseId = newUpdate.CompletionId,
-                        CreatedAt = newUpdate.CreatedAt,
-                        ModelId = newUpdate.Model,
-                        Contents = newUpdate.ContentUpdate.Select(x => new Microsoft.Extensions.AI.TextContent(x.Text))
+                        ResponseId = update.CompletionId,
+                        CreatedAt = update.CreatedAt,
+                        ModelId = update.Model,
+                        Contents = update.ContentUpdate.Select(x => new Microsoft.Extensions.AI.TextContent(x.Text))
                         .Cast<Microsoft.Extensions.AI.AIContent>()
                         .ToList(),
                     };
 
-                    if (newUpdate.FinishReason is not null)
+                    if (update.FinishReason is not null)
                     {
-                        result.FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(newUpdate.FinishReason?.ToString());
+                        result.FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(update.FinishReason?.ToString());
                     }
 
-                    if (newUpdate.Role is not null)
+                    if (update.Role is not null)
                     {
-                        result.Role = new Microsoft.Extensions.AI.ChatRole(newUpdate.Role.ToString().ToLowerInvariant());
+                        result.Role = new Microsoft.Extensions.AI.ChatRole(update.Role.ToString().ToLowerInvariant());
+                    }
+
+#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+                    var updateContext = update.GetMessageContext();
+#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
+                    if (updateContext?.Citations is not null && updateContext.Citations.Count > 0)
+                    {
+                        linkContext ??= new Dictionary<string, object>
+                        {
+                            { "prompt", currentPrompt },
+                        };
+
+                        var contentItemIds = new HashSet<string>();
+                        var references = new Dictionary<string, AICompletionReference>();
+                        foreach (var citation in updateContext.Citations)
+                        {
+                            if (string.IsNullOrEmpty(citation.FilePath))
+                            {
+                                continue;
+                            }
+
+                            contentItemIds.Add(citation.FilePath);
+                            var templateIndex = references.Count + 1;
+
+                            var template = $"[doc{templateIndex}]";
+
+                            references[template] = new AICompletionReference
+                            {
+                                Text = string.IsNullOrEmpty(citation.Title) ? template : citation.Title,
+                                Index = templateIndex,
+                                Link = _linkGenerator.GetContentItemPath(citation.FilePath, linkContext),
+                                Title = citation.Title,
+                            };
+                        }
+
+                        result.AdditionalProperties = new Microsoft.Extensions.AI.AdditionalPropertiesDictionary
+                        {
+                            {"ContentItemIds", contentItemIds },
+                            {"References", references },
+                        };
                     }
 
                     yield return result;
                 }
             }
-            else
+
+            if (!hasToolCalls)
             {
-                var result = new Microsoft.Extensions.AI.ChatResponseUpdate
-                {
-                    ResponseId = update.CompletionId,
-                    CreatedAt = update.CreatedAt,
-                    ModelId = update.Model,
-                    Contents = update.ContentUpdate.Select(x => new Microsoft.Extensions.AI.TextContent(x.Text))
-                    .Cast<Microsoft.Extensions.AI.AIContent>()
-                    .ToList(),
-                };
-
-                if (update.FinishReason is not null)
-                {
-                    result.FinishReason = new Microsoft.Extensions.AI.ChatFinishReason(update.FinishReason?.ToString());
-                }
-
-                if (update.Role is not null)
-                {
-                    result.Role = new Microsoft.Extensions.AI.ChatRole(update.Role.ToString().ToLowerInvariant());
-                }
-
-#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-                var updateContext = update.GetMessageContext();
-#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-
-                if (updateContext?.Citations is not null && updateContext.Citations.Count > 0)
-                {
-                    linkContext ??= new Dictionary<string, object>
-                    {
-                        { "prompt", currentPrompt },
-                    };
-
-                    var contentItemIds = new HashSet<string>();
-                    var references = new Dictionary<string, AICompletionReference>();
-                    foreach (var citation in updateContext.Citations)
-                    {
-                        if (string.IsNullOrEmpty(citation.FilePath))
-                        {
-                            continue;
-                        }
-
-                        contentItemIds.Add(citation.FilePath);
-                        var templateIndex = references.Count + 1;
-
-                        var template = $"[doc{templateIndex}]";
-
-                        references[template] = new AICompletionReference
-                        {
-                            Text = string.IsNullOrEmpty(citation.Title) ? template : citation.Title,
-                            Index = templateIndex,
-                            Link = _linkGenerator.GetContentItemPath(citation.FilePath, linkContext),
-                            Title = citation.Title,
-                        };
-                    }
-
-                    result.AdditionalProperties = new Microsoft.Extensions.AI.AdditionalPropertiesDictionary
-                    {
-                        {"ContentItemIds", contentItemIds },
-                        {"References", references },
-                    };
-                }
-
-                yield return result;
+                break;
             }
+        }
+
+        // Notify the user when the maximum iteration limit was reached while the model still wanted to make tool calls.
+        if (iterations > _defaultOptions.MaximumIterationsPerRequest)
+        {
+            yield return new Microsoft.Extensions.AI.ChatResponseUpdate
+            {
+                Contents = [new Microsoft.Extensions.AI.TextContent(
+                    "\n\n⚠️ The operation reached the maximum number of tool-call iterations and may be incomplete. " +
+                    "Please try again or break the task into smaller steps.")],
+            };
         }
     }
 
@@ -425,39 +441,65 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         return null;
     }
 
-    private async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<ChatToolCall> tollCalls, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
+    private async Task ProcessToolCallsAsync(List<ChatMessage> prompts, IEnumerable<ChatToolCall> toolCalls, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
     {
-        if (tollCalls is null || !tollCalls.Any())
+        if (toolCalls is null || !toolCalls.Any())
         {
             return;
         }
 
-        prompts.Add(ChatMessage.CreateAssistantMessage(tollCalls));
+        prompts.Add(ChatMessage.CreateAssistantMessage(toolCalls));
 
-        foreach (var toolCall in tollCalls)
+        foreach (var toolCall in toolCalls)
         {
             var function = functions.FirstOrDefault(x => x.Name == toolCall.FunctionName);
 
             if (function is null)
             {
+                prompts.Add(new ToolChatMessage(toolCall.Id, JsonSerializer.Serialize(new { error = $"Function '{toolCall.FunctionName}' not found." })));
+
                 continue;
             }
 
-            var arguments = toolCall.FunctionArguments.ToObjectFromJson<Microsoft.Extensions.AI.AIFunctionArguments>();
+            Microsoft.Extensions.AI.AIFunctionArguments arguments;
+
+            try
+            {
+                arguments = toolCall.FunctionArguments.ToObjectFromJson<Microsoft.Extensions.AI.AIFunctionArguments>();
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse arguments for tool call '{FunctionName}'. The model may have generated malformed JSON.", toolCall.FunctionName);
+
+                prompts.Add(new ToolChatMessage(toolCall.Id,
+                    JsonSerializer.Serialize(new { error = $"Invalid JSON in function arguments: {ex.Message}. Please fix the JSON structure and try again." })));
+
+                continue;
+            }
 
             arguments.Services = _serviceProvider;
 
-            var result = await function.InvokeAsync(arguments);
-
-            if (result is string str)
+            try
             {
-                prompts.Add(new ToolChatMessage(toolCall.Id, str));
+                var result = await function.InvokeAsync(arguments);
+
+                if (result is string str)
+                {
+                    prompts.Add(new ToolChatMessage(toolCall.Id, str));
+                }
+                else
+                {
+                    var resultJson = JsonSerializer.Serialize(result);
+
+                    prompts.Add(new ToolChatMessage(toolCall.Id, resultJson));
+                }
             }
-            else
+            catch (Exception ex)
             {
-                var resultJson = JsonSerializer.Serialize(result);
+                _logger.LogError(ex, "Error invoking function '{FunctionName}'.", toolCall.FunctionName);
 
-                prompts.Add(new ToolChatMessage(toolCall.Id, resultJson));
+                prompts.Add(new ToolChatMessage(toolCall.Id,
+                    JsonSerializer.Serialize(new { error = $"Error invoking function: {ex.Message}" })));
             }
         }
     }

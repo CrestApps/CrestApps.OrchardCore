@@ -37,7 +37,7 @@ public sealed class McpInvokeFunction : AIFunction
             },
             "inputs": {
               "type": "object",
-              "description": "The input parameters for the invocation. For tools, these are the tool arguments. For prompts, these are the prompt arguments."
+              "description": "The input arguments for the invocation. For tools, these MUST match the tool's Parameters schema exactly — include all required properties with correct types. For prompts, these are the prompt arguments."
             }
           },
           "required": ["clientId", "type", "id"],
@@ -118,7 +118,7 @@ public sealed class McpInvokeFunction : AIFunction
         {
             foreach (var kvp in inputs)
             {
-                args[kvp.Key] = kvp.Value;
+                args[kvp.Key] = kvp.Value is JsonElement je ? ConvertJsonElement(je) : kvp.Value;
             }
         }
 
@@ -222,18 +222,87 @@ public sealed class McpInvokeFunction : AIFunction
             return dict;
         }
 
-        if (value is JsonElement je && je.ValueKind == JsonValueKind.Object)
+        if (value is JsonElement je)
         {
-            var result = new Dictionary<string, object>();
-
-            foreach (var property in je.EnumerateObject())
+            if (je.ValueKind == JsonValueKind.Object)
             {
-                result[property.Name] = property.Value;
+                var result = new Dictionary<string, object>();
+
+                foreach (var property in je.EnumerateObject())
+                {
+                    result[property.Name] = property.Value;
+                }
+
+                return result;
             }
 
-            return result;
+            // Handle the case where the model sends inputs as a JSON string instead of an object.
+            if (je.ValueKind == JsonValueKind.String)
+            {
+                try
+                {
+                    var parsed = JsonDocument.Parse(je.GetString());
+
+                    if (parsed.RootElement.ValueKind == JsonValueKind.Object)
+                    {
+                        var result = new Dictionary<string, object>();
+
+                        foreach (var property in parsed.RootElement.EnumerateObject())
+                        {
+                            result[property.Name] = property.Value;
+                        }
+
+                        return result;
+                    }
+                }
+                catch (JsonException)
+                {
+                    // Not valid JSON, ignore.
+                }
+            }
+        }
+
+        // Handle the case where the value is a raw JSON string.
+        if (value is string str && str.TrimStart().StartsWith('{'))
+        {
+            try
+            {
+                var parsed = JsonDocument.Parse(str);
+
+                if (parsed.RootElement.ValueKind == JsonValueKind.Object)
+                {
+                    var result = new Dictionary<string, object>();
+
+                    foreach (var property in parsed.RootElement.EnumerateObject())
+                    {
+                        result[property.Name] = property.Value;
+                    }
+
+                    return result;
+                }
+            }
+            catch (JsonException)
+            {
+                // Not valid JSON, ignore.
+            }
         }
 
         return null;
+    }
+
+    private static object ConvertJsonElement(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.Number when element.TryGetInt64(out var l) => l,
+            JsonValueKind.Number => element.GetDouble(),
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Null => null,
+            JsonValueKind.Array => element.EnumerateArray().Select(ConvertJsonElement).ToList(),
+            JsonValueKind.Object => element.EnumerateObject().ToDictionary(p => p.Name, p => ConvertJsonElement(p.Value)),
+            _ => element.GetRawText(),
+        };
     }
 }

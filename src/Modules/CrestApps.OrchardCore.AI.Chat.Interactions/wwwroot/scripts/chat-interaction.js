@@ -240,6 +240,11 @@ window.chatInteractionManager = function () {
               while (1) switch (_context.p = _context.n) {
                 case 0:
                   _this.connection = new signalR.HubConnectionBuilder().withUrl(config.signalRHubUrl).withAutomaticReconnect().build();
+
+                  // Allow long-running operations (e.g., multi-step MCP tool calls)
+                  // without the client disconnecting prematurely.
+                  _this.connection.serverTimeoutInMilliseconds = 600000;
+                  _this.connection.keepAliveIntervalInMilliseconds = 15000;
                   _this.connection.on("LoadInteraction", function (data) {
                     var _data$messages;
                     _this.initializeInteraction(data.itemId, true);
@@ -282,6 +287,20 @@ window.chatInteractionManager = function () {
                     var clearHistoryBtn = document.getElementById('clearHistoryBtn');
                     if (clearHistoryBtn) {
                       clearHistoryBtn.classList.add('d-none');
+                    }
+                  });
+                  _this.connection.onreconnecting(function () {
+                    console.warn("SignalR: reconnecting...");
+                  });
+                  _this.connection.onreconnected(function () {
+                    console.info("SignalR: reconnected.");
+                  });
+                  _this.connection.onclose(function (error) {
+                    if (_this.isNavigatingAway) {
+                      return;
+                    }
+                    if (error) {
+                      console.warn("SignalR connection closed with error:", error.message || error);
                     }
                   });
                   _context.p = 1;
@@ -786,7 +805,7 @@ window.chatInteractionManager = function () {
             dataSourceId: (dataSourceIdInput === null || dataSourceIdInput === void 0 ? void 0 : dataSourceIdInput.value) || null,
             strictness: strictnessInput !== null && strictnessInput !== void 0 && strictnessInput.value ? parseInt(strictnessInput.value) : null,
             topNDocuments: topNDocumentsInput !== null && topNDocumentsInput !== void 0 && topNDocumentsInput.value ? parseInt(topNDocumentsInput.value) : null,
-            filter: filterInput.value,
+            filter: (filterInput === null || filterInput === void 0 ? void 0 : filterInput.value) || null,
             isInScope: (_isInScopeInput$check = isInScopeInput === null || isInScopeInput === void 0 ? void 0 : isInScopeInput.checked) !== null && _isInScopeInput$check !== void 0 ? _isInScopeInput$check : true,
             toolNames: this.getSelectedToolNames(),
             mcpConnectionIds: this.getSelectedMcpConnectionIds()

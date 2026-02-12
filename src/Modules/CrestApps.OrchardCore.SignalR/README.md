@@ -19,6 +19,20 @@ public sealed class ChatStartup : StartupBase
 }
 ```
 
+### Configuring Hub options
+
+You can configure options for a specific hub (for example to allow long-running operations
+or tune keep-alive settings) by configuring `HubOptions<T>` in `ConfigureServices`.
+For example:
+
+```csharp
+services.Configure<HubOptions<AIChatHub>>(options =>
+{
+    options.ClientTimeoutInterval = TimeSpan.FromMinutes(10);
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+});
+```
+
 ### Adding Dependencies
 
 In your module's `Manifest` file, declare a dependency on the `CrestApps.OrchardCore.SignalR` feature. Alternatively, you can use the `SignalRConstants.Feature.Area` constant to avoid hardcoded strings.

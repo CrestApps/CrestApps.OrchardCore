@@ -13,13 +13,88 @@
 <h5 class="border-bottom pb-2">@T["User Defined Tools"]</h5>
 
 <div class="mb-3">
-    @for (var i = 0; i < Model.Instances.Length; i++)
-    {
-        <div class="form-check">
-            <input type="hidden" asp-for="Instances[i].ItemId" />
-            <input asp-for="Instances[i].IsSelected" type="checkbox" class="form-check-input">
-            <label class="form-check-label" asp-for="Instances[i].IsSelected">@Model.Instances[i].DisplayText</label>
-            <span class="hint dashed">@Model.Instances[i].Description</span>
-        </div>
-    }
+
+    <div class="mb-3">
+        <input type="text"
+               class="form-control form-control-sm tool-instance-search-input"
+               placeholder="@T["Search tools..."]"
+               aria-label="@T["Search tools"]" />
+    </div>
+
+    <div class="form-check mb-2">
+        <input class="form-check-input global-tool-instance-toggle"
+               type="checkbox"
+               id="selectAllToolInstances" />
+        <label class="form-check-label fw-semibold" for="selectAllToolInstances">
+            @T["Select All"]
+        </label>
+    </div>
+
+    <div class="tool-instances-container">
+        @for (var i = 0; i < Model.Instances.Length; i++)
+        {
+            <div class="form-check tool-instance-item" data-tool-name="@Model.Instances[i].DisplayText" data-tool-description="@Model.Instances[i].Description">
+                <input type="hidden" asp-for="Instances[i].ItemId" />
+                <input asp-for="Instances[i].IsSelected" type="checkbox" class="form-check-input tool-instance-checkbox">
+                <label class="form-check-label" asp-for="Instances[i].IsSelected">@Model.Instances[i].DisplayText</label>
+                <span class="hint dashed">@Model.Instances[i].Description</span>
+            </div>
+        }
+    </div>
+
+    <div class="tool-instance-no-results text-muted small d-none">@T["No tools match your search."]</div>
 </div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+        const container = document.querySelector('.tool-instances-container');
+        if (!container) return;
+
+        const searchInput = document.querySelector('.tool-instance-search-input');
+        const globalToggle = document.querySelector('.global-tool-instance-toggle');
+        const noResults = document.querySelector('.tool-instance-no-results');
+
+        function updateGlobalToggle() {
+            const allVisible = [...container.querySelectorAll('.tool-instance-checkbox')].filter(cb => !cb.closest('.tool-instance-item')?.classList.contains('d-none'));
+            globalToggle.checked = allVisible.length > 0 && allVisible.every(cb => cb.checked);
+        }
+
+        // Individual checkbox change.
+        container.querySelectorAll('.tool-instance-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateGlobalToggle);
+        });
+
+        // Global toggle.
+        if (globalToggle) {
+            globalToggle.addEventListener('change', function () {
+                container.querySelectorAll('.tool-instance-checkbox').forEach(cb => {
+                    if (!cb.closest('.tool-instance-item')?.classList.contains('d-none')) {
+                        cb.checked = globalToggle.checked;
+                    }
+                });
+            });
+        }
+
+        // Search filter.
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const query = this.value.trim().toLowerCase();
+                let anyVisible = false;
+
+                container.querySelectorAll('.tool-instance-item').forEach(item => {
+                    const name = (item.dataset.toolName || '').toLowerCase();
+                    const desc = (item.dataset.toolDescription || '').toLowerCase();
+                    const match = !query || name.includes(query) || desc.includes(query);
+                    item.classList.toggle('d-none', !match);
+                    if (match) anyVisible = true;
+                });
+
+                if (noResults) noResults.classList.toggle('d-none', anyVisible);
+                updateGlobalToggle();
+            });
+        }
+
+        // Set initial toggle state.
+        updateGlobalToggle();
+    });
+</script>

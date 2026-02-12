@@ -11,6 +11,7 @@ using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -25,7 +26,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private readonly IAuthorizationService _authorizationService;
     private readonly ISourceCatalogManager<ChatInteraction> _interactionManager;
     private readonly IChatInteractionPromptStore _promptStore;
-    private readonly IAIDataSourceStore _dataSourceStore;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IAICompletionService _completionService;
     private readonly IAICompletionContextBuilder _completionContextBuilder;
     private readonly IPromptRouter _promptRouter;
@@ -39,7 +40,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         IAuthorizationService authorizationService,
         ISourceCatalogManager<ChatInteraction> interactionManager,
         IChatInteractionPromptStore promptStore,
-        IAIDataSourceStore dataSourceStore,
+        IServiceProvider serviceProvider,
         IAICompletionService completionService,
         IAICompletionContextBuilder completionContextBuilder,
         IPromptRouter promptRouter,
@@ -51,7 +52,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         _authorizationService = authorizationService;
         _interactionManager = interactionManager;
         _promptStore = promptStore;
-        _dataSourceStore = dataSourceStore;
+        _serviceProvider = serviceProvider;
         _completionService = completionService;
         _completionContextBuilder = completionContextBuilder;
         _promptRouter = promptRouter;
@@ -177,23 +178,27 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
         if (!string.IsNullOrWhiteSpace(dataSourceId))
         {
-            var dataSource = await _dataSourceStore.FindByIdAsync(dataSourceId);
-
-            if (dataSource is not null)
+            var dataSourceStore = _serviceProvider.GetService<IAIDataSourceStore>();
+            if (dataSourceStore is not null)
             {
-                interaction.Put(new ChatInteractionDataSourceMetadata()
-                {
-                    DataSourceType = dataSource.Type,
-                    DataSourceId = dataSource.ItemId,
-                });
+                var dataSource = await dataSourceStore.FindByIdAsync(dataSourceId);
 
-                interaction.Put(new AzureRagChatMetadata()
+                if (dataSource is not null)
                 {
-                    Strictness = strictness,
-                    TopNDocuments = topNDocuments,
-                    IsInScope = isInScope ?? true,
-                    Filter = filter,
-                });
+                    interaction.Put(new ChatInteractionDataSourceMetadata()
+                    {
+                        DataSourceType = dataSource.Type,
+                        DataSourceId = dataSource.ItemId,
+                    });
+
+                    interaction.Put(new AzureRagChatMetadata()
+                    {
+                        Strictness = strictness,
+                        TopNDocuments = topNDocuments,
+                        IsInScope = isInScope ?? true,
+                        Filter = filter,
+                    });
+                }
             }
         }
         else
@@ -467,14 +472,21 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             _logger.LogError(ex, "An error occurred while processing the chat interaction.");
 
-            var errorMessage = new CompletionPartialMessage
+            try
             {
-                SessionId = itemId,
-                MessageId = IdGenerator.GenerateId(),
-                Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
-            };
+                var errorMessage = new CompletionPartialMessage
+                {
+                    SessionId = itemId,
+                    MessageId = IdGenerator.GenerateId(),
+                    Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
+                };
 
-            await writer.WriteAsync(errorMessage, cancellationToken);
+                await writer.WriteAsync(errorMessage, CancellationToken.None);
+            }
+            catch (Exception writeEx)
+            {
+                _logger.LogWarning(writeEx, "Failed to write error message to the channel.");
+            }
         }
         finally
         {
@@ -585,14 +597,21 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         {
             _logger.LogError(ex, "Error handling image generation result.");
 
-            var errorMessage = new CompletionPartialMessage
+            try
             {
-                SessionId = interaction.ItemId,
-                MessageId = assistantPrompt.ItemId,
-                Content = S["An error occurred while processing the generated image."].Value,
-            };
+                var errorMessage = new CompletionPartialMessage
+                {
+                    SessionId = interaction.ItemId,
+                    MessageId = assistantPrompt.ItemId,
+                    Content = S["An error occurred while processing the generated image."].Value,
+                };
 
-            await writer.WriteAsync(errorMessage, cancellationToken);
+                await writer.WriteAsync(errorMessage, CancellationToken.None);
+            }
+            catch (Exception writeEx)
+            {
+                _logger.LogWarning(writeEx, "Failed to write error message to the channel.");
+            }
         }
     }
 
@@ -643,14 +662,21 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         {
             _logger.LogError(ex, "Error handling chart generation result.");
 
-            var errorMessage = new CompletionPartialMessage
+            try
             {
-                SessionId = interaction.ItemId,
-                MessageId = assistantPrompt.ItemId,
-                Content = S["An error occurred while processing the generated chart."].Value,
-            };
+                var errorMessage = new CompletionPartialMessage
+                {
+                    SessionId = interaction.ItemId,
+                    MessageId = assistantPrompt.ItemId,
+                    Content = S["An error occurred while processing the generated chart."].Value,
+                };
 
-            await writer.WriteAsync(errorMessage, cancellationToken);
+                await writer.WriteAsync(errorMessage, CancellationToken.None);
+            }
+            catch (Exception writeEx)
+            {
+                _logger.LogWarning(writeEx, "Failed to write error message to the channel.");
+            }
         }
     }
 

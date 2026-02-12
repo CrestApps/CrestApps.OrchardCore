@@ -45,10 +45,10 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<McpInvokeFunction>(McpInvokeFunction.FunctionName, o =>
-        {
-            o.Description = S["Invoke an MCP server capability (tool, prompt, or resource)."];
-        });
+        // Register McpInvokeFunction as a keyed singleton only (not via AddAITool)
+        // so it can be resolved by name at runtime but does not appear in the UI tool list.
+        services.AddCoreAITool<McpInvokeFunction>(McpInvokeFunction.FunctionName);
+
         services.AddPromptProcessingIntent(
             DocumentIntents.LookingForExternalCapabilities,
             "The user is requesting information, actions, or data that may be available through connected external services. This includes invoking tools, querying resources, retrieving data, performing operations, or accessing capabilities that go beyond the AI model's built-in knowledge. Trigger this when the request could benefit from calling an external service to provide a more accurate, complete, or up-to-date response.")

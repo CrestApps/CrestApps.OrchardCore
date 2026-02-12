@@ -205,14 +205,21 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             _logger.LogError(ex, "An error occurred while processing the chat prompt.");
 
-            var errorMessage = new CompletionPartialMessage
+            try
             {
-                SessionId = sessionId,
-                MessageId = IdGenerator.GenerateId(),
-                Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
-            };
+                var errorMessage = new CompletionPartialMessage
+                {
+                    SessionId = sessionId,
+                    MessageId = IdGenerator.GenerateId(),
+                    Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
+                };
 
-            await writer.WriteAsync(errorMessage, cancellationToken);
+                await writer.WriteAsync(errorMessage, CancellationToken.None);
+            }
+            catch (Exception writeEx)
+            {
+                _logger.LogWarning(writeEx, "Failed to write error message to the channel.");
+            }
         }
         finally
         {

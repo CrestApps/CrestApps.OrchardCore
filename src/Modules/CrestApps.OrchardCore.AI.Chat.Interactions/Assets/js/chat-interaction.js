@@ -271,6 +271,11 @@ window.chatInteractionManager = function () {
                         .withAutomaticReconnect()
                         .build();
 
+                    // Allow long-running operations (e.g., multi-step MCP tool calls)
+                    // without the client disconnecting prematurely.
+                    this.connection.serverTimeoutInMilliseconds = 600000;
+                    this.connection.keepAliveIntervalInMilliseconds = 15000;
+
                     this.connection.on("LoadInteraction", (data) => {
                         this.initializeInteraction(data.itemId, true);
                         this.messages = [];// Update the title field if it exists
@@ -318,6 +323,24 @@ window.chatInteractionManager = function () {
                         const clearHistoryBtn = document.getElementById('clearHistoryBtn');
                         if (clearHistoryBtn) {
                             clearHistoryBtn.classList.add('d-none');
+                        }
+                    });
+
+                    this.connection.onreconnecting(() => {
+                        console.warn("SignalR: reconnecting...");
+                    });
+
+                    this.connection.onreconnected(() => {
+                        console.info("SignalR: reconnected.");
+                    });
+
+                    this.connection.onclose((error) => {
+                        if (this.isNavigatingAway) {
+                            return;
+                        }
+
+                        if (error) {
+                            console.warn("SignalR connection closed with error:", error.message || error);
                         }
                     });
 
@@ -844,7 +867,7 @@ window.chatInteractionManager = function () {
                         dataSourceId: dataSourceIdInput?.value || null,
                         strictness: strictnessInput?.value ? parseInt(strictnessInput.value) : null,
                         topNDocuments: topNDocumentsInput?.value ? parseInt(topNDocumentsInput.value) : null,
-                        filter: filterInput.value,
+                        filter: filterInput?.value || null,
                         isInScope: isInScopeInput?.checked ?? true,
                         toolNames: this.getSelectedToolNames(),
                         mcpConnectionIds: this.getSelectedMcpConnectionIds()
