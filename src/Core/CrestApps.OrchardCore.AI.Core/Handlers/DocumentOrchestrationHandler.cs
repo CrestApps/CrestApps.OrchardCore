@@ -1,13 +1,30 @@
+using System.Text;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
 /// <summary>
 /// Orchestration context handler that populates document references
-/// from a <see cref="ChatInteraction"/> resource.
+/// from a <see cref="ChatInteraction"/> resource and enriches the system message
+/// with document metadata so the model knows which documents are available
+/// and which tools to use to access them.
 /// </summary>
-internal sealed class DocumentOrchestrationHandler : IOrchestrationContextHandler
+/// <remarks>
+/// Document processing tools are registered as system tools and are always included
+/// by the orchestrator. This handler provides the model with document metadata
+/// and tool descriptions. The chat interaction ID is resolved server-side from
+/// <see cref="AIToolExecutionContext.Resource"/> — it is never exposed to the model.
+/// </remarks>
+public sealed class DocumentOrchestrationHandler : IOrchestrationContextHandler
 {
+    private readonly AIToolDefinitionOptions _toolDefinitions;
+
+    public DocumentOrchestrationHandler(IOptions<AIToolDefinitionOptions> toolDefinitions)
+    {
+        _toolDefinitions = toolDefinitions.Value;
+    }
+
     public Task BuildingAsync(OrchestrationContextBuildingContext context)
     {
         if (context.Resource is ChatInteraction interaction &&
@@ -20,5 +37,74 @@ internal sealed class DocumentOrchestrationHandler : IOrchestrationContextHandle
     }
 
     public Task BuiltAsync(OrchestrationContextBuiltContext context)
-        => Task.CompletedTask;
+    {
+        if (context.Context.Documents is not { Count: > 0 } ||
+            context.Context.CompletionContext is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        // Discover document processing tools dynamically by purpose
+        // to list their descriptions in the system message.
+        var docTools = _toolDefinitions.Tools
+            .Where(t => t.Value.HasPurpose(AIToolPurposes.DocumentProcessing))
+            .ToList();
+
+        var sb = new StringBuilder();
+        sb.AppendLine("\n\n[Available Documents or attachments]");
+
+        if (docTools.Count > 0)
+        {
+            sb.AppendLine("The user has uploaded the following documents. Use the available document tools to access their content when needed.");
+            sb.AppendLine();
+            sb.AppendLine("Available document tools:");
+
+            foreach (var (name, entry) in docTools)
+            {
+                sb.Append("- ");
+                sb.Append(name);
+                sb.Append(": ");
+                sb.AppendLine(entry.Description ?? entry.Title ?? name);
+            }
+
+            sb.AppendLine();
+        }
+        else
+        {
+            sb.AppendLine("The user has uploaded the following documents.");
+        }
+
+        foreach (var doc in context.Context.Documents)
+        {
+            sb.Append("- ");
+            sb.Append(doc.DocumentId);
+            sb.Append(": \"");
+            sb.Append(doc.FileName);
+            sb.Append("\" (");
+            sb.Append(doc.ContentType ?? "unknown");
+            sb.Append(", ");
+            sb.Append(FormatFileSize(doc.FileSize));
+            sb.AppendLine(")");
+        }
+
+        context.Context.CompletionContext.SystemMessage =
+            (context.Context.CompletionContext.SystemMessage ?? string.Empty) + sb.ToString();
+
+        return Task.CompletedTask;
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+
+        if (bytes < 1024 * 1024)
+        {
+            return $"{bytes / 1024.0:F1} KB";
+        }
+
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
 }

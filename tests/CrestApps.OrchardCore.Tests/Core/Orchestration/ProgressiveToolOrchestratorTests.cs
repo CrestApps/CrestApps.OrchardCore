@@ -118,10 +118,11 @@ public sealed class ProgressiveToolOrchestratorTests
     }
 
     [Fact]
-    public async Task ExecuteStreamingAsync_AboveThresholdNoMcp_ScopesWithoutPlanning()
+    public async Task ExecuteStreamingAsync_AboveThresholdNoMcp_SystemToolsAlwaysIncluded()
     {
         // 35 system tools (no MCP) → exceeds ScopingThreshold (30) but no MCP
-        // → should scope by user message relevance WITHOUT LLM planner call.
+        // → should scope without LLM planner call.
+        // System tools are always included, so all 35 should be present.
         var tools = new List<ToolRegistryEntry>();
         for (var i = 0; i < 35; i++)
         {
@@ -142,8 +143,8 @@ public sealed class ProgressiveToolOrchestratorTests
         Assert.Equal("Response", result);
         // NO planning call should have been made (no MCP, below PlanningThreshold).
         Assert.Equal(0, completionService.CompleteCallCount);
-        // Tools should be scoped (not all 35 passed).
-        Assert.True(context.CompletionContext.ToolNames.Length < 35);
+        // All system tools should be included — they are never filtered.
+        Assert.Equal(35, context.CompletionContext.ToolNames.Length);
     }
 
     [Fact]
@@ -167,7 +168,7 @@ public sealed class ProgressiveToolOrchestratorTests
         var orchestrator = CreateOrchestrator();
         var context = CreateContext("Do something");
 
-        var result = await orchestrator.ScopeToolsAsync(null, context, tools, TestContext.Current.CancellationToken);
+        var result = await orchestrator.ScopeToolsAsync(null, context, tools);
 
         Assert.Equal(5, result.Length);
     }
@@ -198,7 +199,7 @@ public sealed class ProgressiveToolOrchestratorTests
         var orchestrator = CreateOrchestrator();
         var context = CreateContext("Do something");
 
-        var result = await orchestrator.ScopeToolsAsync("   ", context, tools, TestContext.Current.CancellationToken);
+        var result = await orchestrator.ScopeToolsAsync("   ", context, tools);
 
         // All 10 local tools must be included.
         for (var i = 0; i < 10; i++)
@@ -211,7 +212,7 @@ public sealed class ProgressiveToolOrchestratorTests
     }
 
     [Fact]
-    public async Task ScopeToolsAsync_MatchingPlan_SelectsRelevantNonLocalTools()
+    public async Task ScopeToolsAsync_MatchingPlan_SelectsRelevantMcpTools()
     {
         var tools = new List<ToolRegistryEntry>
         {
@@ -224,13 +225,17 @@ public sealed class ProgressiveToolOrchestratorTests
         var context = CreateContext("Create a Jira ticket");
 
         var plan = "Step 1: Create a Jira ticket for the issue.";
-        var result = await orchestrator.ScopeToolsAsync(plan, context, tools, TestContext.Current.CancellationToken);
+        var result = await orchestrator.ScopeToolsAsync(plan, context, tools);
 
+        // MCP tool matched by plan.
         Assert.Contains("createJiraTicket", result);
+        // System tools are always included regardless of relevance.
+        Assert.Contains("parseJson", result);
+        Assert.Contains("updateDatabase", result);
     }
 
     [Fact]
-    public async Task ScopeToolsAsync_LocalToolsAlwaysIncluded()
+    public async Task ScopeToolsAsync_LocalAndSystemToolsAlwaysIncluded()
     {
         var tools = new List<ToolRegistryEntry>
         {
@@ -242,24 +247,27 @@ public sealed class ProgressiveToolOrchestratorTests
         var orchestrator = CreateOrchestrator();
         var context = CreateContext("Create a Jira ticket");
 
-        // Plan mentions only Jira, NOT the user's selected tool.
+        // Plan mentions only Jira, NOT the user's selected tool or system tool.
         var plan = "Step 1: Create a Jira ticket.";
-        var result = await orchestrator.ScopeToolsAsync(plan, context, tools, TestContext.Current.CancellationToken);
+        var result = await orchestrator.ScopeToolsAsync(plan, context, tools);
 
         // Local tool must always be included regardless of plan content.
         Assert.Contains("userSelectedTool", result);
-        // Jira tool should also be included due to plan match.
+        // System tool must always be included regardless of plan content.
+        Assert.Contains("systemImageTool", result);
+        // Jira MCP tool should also be included due to plan match.
         Assert.Contains("mcpJiraTool", result);
     }
 
     [Fact]
-    public async Task ScopeToolsAsync_NoMatchesInPlan_LocalToolsPreservedAndNonLocalFallback()
+    public async Task ScopeToolsAsync_NoMatchesInPlan_LocalAndSystemPreservedAndMcpFallback()
     {
-        // 2 local + 5 MCP tools, plan matches nothing.
+        // 2 local + 1 system + 5 MCP tools, plan matches nothing.
         var tools = new List<ToolRegistryEntry>
         {
             new() { Name = "local0", Description = "Local tool", Source = ToolRegistryEntrySource.Local },
             new() { Name = "local1", Description = "Local tool", Source = ToolRegistryEntrySource.Local },
+            new() { Name = "sys0", Description = "System tool", Source = ToolRegistryEntrySource.System },
         };
         for (var i = 0; i < 5; i++)
         {
@@ -274,13 +282,15 @@ public sealed class ProgressiveToolOrchestratorTests
         var context = CreateContext("Do something");
 
         var plan = "xyz completely unrelated zzz qqq";
-        var result = await orchestrator.ScopeToolsAsync(plan, context, tools, TestContext.Current.CancellationToken);
+        var result = await orchestrator.ScopeToolsAsync(plan, context, tools);
 
         // Local tools always included.
         Assert.Contains("local0", result);
         Assert.Contains("local1", result);
-        // Non-local fallback should also be present.
-        Assert.True(result.Length > 2);
+        // System tools always included.
+        Assert.Contains("sys0", result);
+        // MCP fallback should also be present.
+        Assert.True(result.Length > 3);
     }
 
     [Fact]
@@ -319,7 +329,6 @@ public sealed class ProgressiveToolOrchestratorTests
             completionService ?? new FakeCompletionService("default response"),
             toolRegistry ?? new FakeToolRegistry([]),
             new LuceneTextTokenizer(),
-            Options.Create(new AIToolDefinitionOptions()),
             Options.Create(new ProgressiveToolOrchestratorOptions()),
             NullLogger<ProgressiveToolOrchestrator>.Instance);
     }

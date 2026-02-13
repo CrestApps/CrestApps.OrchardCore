@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -47,6 +48,15 @@ public sealed class ReadDocumentTool : AIFunction
             return "Unable to find a 'document_id' argument in the arguments parameter.";
         }
 
+        var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
+        var executionContext = httpContextAccessor?.HttpContext?.Items[nameof(AIToolExecutionContext)] as AIToolExecutionContext;
+
+        if (executionContext?.Resource is not ChatInteraction interaction)
+        {
+            return "Document access requires an active chat interaction session.";
+        }
+
+        var chatInteractionId = interaction.ItemId;
         var documentStore = arguments.Services.GetService<IChatInteractionDocumentStore>();
 
         if (documentStore is null)
@@ -56,9 +66,9 @@ public sealed class ReadDocumentTool : AIFunction
 
         var document = await documentStore.FindByIdAsync(documentId);
 
-        if (document is null)
+        if (document is null || document.ChatInteractionId != chatInteractionId)
         {
-            return $"Document with ID '{documentId}' was not found.";
+            return $"Document with ID '{documentId}' was not found in this session.";
         }
 
         if (string.IsNullOrWhiteSpace(document.Text))

@@ -150,7 +150,6 @@ public static class ServiceCollectionExtensions
         // Register the orchestration context builder and core handlers.
         services.AddScoped<IOrchestrationContextBuilder, DefaultOrchestrationContextBuilder>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextHandler, CompletionContextOrchestrationHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextHandler, DocumentOrchestrationHandler>());
 
         // Register the tool registry and default providers.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, LocalToolRegistryProvider>());

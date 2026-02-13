@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -62,6 +63,16 @@ public sealed class SearchDocumentsTool : AIFunction
 
         try
         {
+            // Resolve the chat interaction ID from the execution context resource.
+            var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
+            var executionContext = httpContextAccessor?.HttpContext?.Items[nameof(AIToolExecutionContext)] as AIToolExecutionContext;
+
+            if (executionContext?.Resource is not ChatInteraction interaction)
+            {
+                return "Document search requires an active chat interaction session.";
+            }
+
+            var chatInteractionId = interaction.ItemId;
             var siteService = arguments.Services.GetRequiredService<ISiteService>();
             var settings = await siteService.GetSettingsAsync<InteractionDocumentSettings>();
 
@@ -85,13 +96,12 @@ public sealed class SearchDocumentsTool : AIFunction
                 return $"No search service is available for provider '{indexProfile.ProviderName}'.";
             }
 
-            // Resolve the embedding deployment.
-            var context = arguments.Services.GetService<OrchestrationContext>();
+            // Resolve the embedding deployment using the same execution context.
             var providerOptions = arguments.Services.GetRequiredService<IOptions<AIProviderOptions>>().Value;
             var aIClientFactory = arguments.Services.GetRequiredService<IAIClientFactory>();
 
-            var providerName = context?.SourceName;
-            var connectionName = context?.CompletionContext?.ConnectionName;
+            var providerName = executionContext?.ProviderName;
+            var connectionName = executionContext?.ConnectionName;
             string deploymentName = null;
 
             if (!string.IsNullOrEmpty(providerName) &&
@@ -135,15 +145,10 @@ public sealed class SearchDocumentsTool : AIFunction
                 topN = 3;
             }
 
-            // Get the interaction ID from completion context if available.
-            var interactionId = context?.CompletionContext?.AdditionalProperties?.TryGetValue("InteractionId", out var idVal) == true
-                ? idVal?.ToString() ?? string.Empty
-                : string.Empty;
-
             var results = await searchService.SearchAsync(
                 indexProfile,
                 embeddings[0].Vector.ToArray(),
-                interactionId,
+                chatInteractionId,
                 topN,
                 cancellationToken);
 

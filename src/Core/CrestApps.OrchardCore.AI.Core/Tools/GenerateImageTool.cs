@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -38,8 +39,11 @@ public sealed class GenerateImageTool : AIFunction
 
     public override JsonElement JsonSchema => _jsonSchema;
 
-    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } =
-        new Dictionary<string, object>() { ["Strict"] = false };
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    {
+        ["Strict"] = false,
+    };
+
 
     protected override async ValueTask<object> InvokeCoreAsync(
         AIFunctionArguments arguments,
@@ -54,16 +58,28 @@ public sealed class GenerateImageTool : AIFunction
 
         try
         {
-            var providerOptions = arguments.Services.GetRequiredService<IOptions<AIProviderOptions>>().Value;
-            var aIClientFactory = arguments.Services.GetRequiredService<IAIClientFactory>();
-            var context = arguments.Services.GetService<OrchestrationContext>();
+            var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
 
-            var providerName = context?.SourceName;
-            var connectionName = context?.CompletionContext?.ConnectionName;
+            var executionContext = httpContextAccessor.HttpContext?.Items[nameof(AIToolExecutionContext)] as AIToolExecutionContext;
 
-            if (string.IsNullOrEmpty(providerName) || !providerOptions.Providers.TryGetValue(providerName, out var provider))
+            if (executionContext is null)
+            {
+                return $"Image generation is not available. The {nameof(AIToolExecutionContext)} is missing from the HttpContext.";
+            }
+
+            var providerName = executionContext.ProviderName;
+            var connectionName = executionContext.ConnectionName;
+
+            if (string.IsNullOrEmpty(providerName))
             {
                 return "Image generation is not available. AI provider is not configured.";
+            }
+
+            var providerOptions = arguments.Services.GetRequiredService<IOptions<AIProviderOptions>>().Value;
+
+            if (!providerOptions.Providers.TryGetValue(providerName, out var provider))
+            {
+                return "Image generation is not available. AI provider is invalid.";
             }
 
             if (string.IsNullOrEmpty(connectionName))
@@ -82,6 +98,8 @@ public sealed class GenerateImageTool : AIFunction
             {
                 return "Image generation is not available. No image model deployment is configured.";
             }
+
+            var aIClientFactory = arguments.Services.GetRequiredService<IAIClientFactory>();
 
             var imageGenerator = await aIClientFactory.CreateImageGeneratorAsync(providerName, connectionName, deploymentName);
 

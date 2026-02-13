@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -28,29 +29,47 @@ public sealed class ListDocumentsTool : AIFunction
 
     public override JsonElement JsonSchema => _jsonSchema;
 
-    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } =
-        new Dictionary<string, object>() { ["Strict"] = false };
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    {
+        ["Strict"] = false,
+    };
 
-    protected override ValueTask<object> InvokeCoreAsync(
+    protected override async ValueTask<object> InvokeCoreAsync(
         AIFunctionArguments arguments,
         CancellationToken cancellationToken)
     {
-        var context = arguments.Services.GetService<OrchestrationContext>();
+        var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
+        var executionContext = httpContextAccessor?.HttpContext?.Items[nameof(AIToolExecutionContext)] as AIToolExecutionContext;
 
-        if (context?.Documents is null || context.Documents.Count == 0)
+        if (executionContext?.Resource is not ChatInteraction interaction)
         {
-            return new ValueTask<object>("No documents are attached to this session.");
+            return "Document access requires an active chat interaction session.";
         }
 
-        var result = context.Documents.Select(d => new
+        var chatInteractionId = interaction.ItemId;
+        var documentStore = arguments.Services.GetService<IChatInteractionDocumentStore>();
+
+        if (documentStore is null)
         {
-            d.DocumentId,
+            return "Document store is not available.";
+        }
+
+        var documents = await documentStore.GetDocuments(chatInteractionId);
+
+        if (documents is null || documents.Count == 0)
+        {
+            return "No documents are attached to this session.";
+        }
+
+        var result = documents.Select(d => new
+        {
+            d.ItemId,
             d.FileName,
             d.ContentType,
             FileSize = FormatFileSize(d.FileSize),
         });
 
-        return new ValueTask<object>(JsonSerializer.Serialize(result));
+        return JsonSerializer.Serialize(result);
     }
 
     private static string FormatFileSize(long bytes)

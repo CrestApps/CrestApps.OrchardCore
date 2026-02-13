@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Tools;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -21,6 +21,8 @@ public static class ServiceCollectionExtensions
 
         // Register the tabular batch result cache (uses IDistributedCache)
         services.TryAddSingleton<ITabularBatchResultCache, TabularBatchResultCache>();
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextHandler, DocumentOrchestrationHandler>());
 
         // Register document system tools (available when documents are attached).
         services.AddAITool<ListDocumentsTool>(ListDocumentsTool.TheName)

@@ -31,6 +31,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private readonly IOrchestratorResolver _orchestratorResolver;
     private readonly IClock _clock;
     private readonly ILogger<ChatInteractionHub> _logger;
+    private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor _httpContextAccessor;
     private readonly ISession _session;
 
     protected readonly IStringLocalizer S;
@@ -44,6 +45,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         IOrchestratorResolver orchestratorResolver,
         IClock clock,
         ILogger<ChatInteractionHub> logger,
+        Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor,
         ISession session,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
     {
@@ -55,6 +57,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         _orchestratorResolver = orchestratorResolver;
         _clock = clock;
         _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
         _session = session;
         S = stringLocalizer;
     }
@@ -324,6 +327,12 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                     .Where(x => !x.IsGeneratedPrompt)
                     .Select(p => new ChatMessage(p.Role, p.Text))
                     .ToList();
+            });
+
+            _httpContextAccessor.HttpContext.Items.Add(nameof(AIToolExecutionContext), new AIToolExecutionContext(interaction)
+            {
+                ProviderName = orchestratorContext.SourceName,
+                ConnectionName = orchestratorContext.CompletionContext.ConnectionName,
             });
 
             // Resolve the orchestrator for this interaction and execute the completion.

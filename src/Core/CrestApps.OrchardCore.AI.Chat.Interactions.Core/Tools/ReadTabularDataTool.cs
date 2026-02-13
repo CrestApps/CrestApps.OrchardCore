@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -44,7 +45,10 @@ public sealed class ReadTabularDataTool : AIFunction
     public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } =
-        new Dictionary<string, object>() { ["Strict"] = false };
+        new Dictionary<string, object>()
+        {
+            ["Strict"] = false,
+        };
 
     protected override async ValueTask<object> InvokeCoreAsync(
         AIFunctionArguments arguments,
@@ -62,6 +66,15 @@ public sealed class ReadTabularDataTool : AIFunction
             maxRows = DefaultMaxRows;
         }
 
+        var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
+        var executionContext = httpContextAccessor?.HttpContext?.Items[nameof(AIToolExecutionContext)] as AIToolExecutionContext;
+
+        if (executionContext?.Resource is not ChatInteraction interaction)
+        {
+            return "Document access requires an active chat interaction session.";
+        }
+
+        var chatInteractionId = interaction.ItemId;
         var documentStore = arguments.Services.GetService<IChatInteractionDocumentStore>();
 
         if (documentStore is null)
@@ -69,11 +82,12 @@ public sealed class ReadTabularDataTool : AIFunction
             return "Document store is not available.";
         }
 
+        // Query only documents belonging to this interaction to prevent cross-session access.
         var document = await documentStore.FindByIdAsync(documentId);
 
-        if (document is null)
+        if (document is null || document.ChatInteractionId != chatInteractionId)
         {
-            return $"Document with ID '{documentId}' was not found.";
+            return $"Document with ID '{documentId}' was not found in this session.";
         }
 
         if (string.IsNullOrWhiteSpace(document.Text))

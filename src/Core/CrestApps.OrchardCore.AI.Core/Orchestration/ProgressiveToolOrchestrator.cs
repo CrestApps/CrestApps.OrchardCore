@@ -25,7 +25,6 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
     private readonly IAICompletionService _completionService;
     private readonly IToolRegistry _toolRegistry;
     private readonly ITextTokenizer _tokenizer;
-    private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly ProgressiveToolOrchestratorOptions _options;
     private readonly ILogger _logger;
 
@@ -33,14 +32,12 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
         IAICompletionService completionService,
         IToolRegistry toolRegistry,
         ITextTokenizer tokenizer,
-        IOptions<AIToolDefinitionOptions> toolDefinitions,
         IOptions<ProgressiveToolOrchestratorOptions> options,
         ILogger<ProgressiveToolOrchestrator> logger)
     {
         _completionService = completionService;
         _toolRegistry = toolRegistry;
         _tokenizer = tokenizer;
-        _toolDefinitions = toolDefinitions.Value;
         _options = options.Value;
         _logger = logger;
     }
@@ -54,9 +51,6 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(context.CompletionContext);
         ArgumentException.ThrowIfNullOrEmpty(context.SourceName);
-
-        // Enrich system message with document metadata if documents are available.
-        EnrichSystemMessageWithDocuments(context);
 
         // Get the full tool registry for this context.
         var allTools = await _toolRegistry.GetAllAsync(context.CompletionContext, cancellationToken);
@@ -91,7 +85,7 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
                 }
 
                 var plan = await PlanAsync(context, allTools, cancellationToken);
-                var scopedTools = await ScopeToolsAsync(plan, context, allTools, cancellationToken);
+                var scopedTools = await ScopeToolsAsync(plan, context, allTools);
 
                 context.CompletionContext.ToolNames = scopedTools;
 
@@ -113,7 +107,7 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
                         profileToolCount, _options.ScopingThreshold);
                 }
 
-                var scopedTools = await ScopeToolsAsync(null, context, allTools, cancellationToken);
+                var scopedTools = await ScopeToolsAsync(null, context, allTools);
                 context.CompletionContext.ToolNames = scopedTools;
             }
         }
@@ -138,8 +132,10 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
         {
             var userSelectedSummary = BuildToolSummary(
                 availableTools.Where(t => t.Source == ToolRegistryEntrySource.Local));
-            var otherToolSummary = BuildToolSummary(
-                availableTools.Where(t => t.Source != ToolRegistryEntrySource.Local));
+            var systemToolSummary = BuildToolSummary(
+                availableTools.Where(t => t.Source == ToolRegistryEntrySource.System));
+            var mcpToolSummary = BuildToolSummary(
+                availableTools.Where(t => t.Source == ToolRegistryEntrySource.McpServer));
 
             var planningSystemPrompt = $"""
                 You are a task planner. Analyze the user's request and identify what capabilities/tools are needed to fulfill it.
@@ -147,12 +143,15 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
                 The following tools were explicitly selected by the user and are always available:
                 {userSelectedSummary}
 
-                Additional capabilities that may be relevant:
-                {otherToolSummary}
+                The following system tools are always available:
+                {systemToolSummary}
+
+                Additional external capabilities that may be relevant:
+                {mcpToolSummary}
 
                 Respond with a brief plan listing the required steps and which capabilities are needed.
                 Focus on identifying the NAMES of relevant capabilities from the lists above.
-                Prefer using the user-selected tools when they match the request.
+                Prefer using the user-selected and system tools when they match the request.
                 Keep your response concise (under 200 words).
                 """;
 
@@ -202,29 +201,31 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
     /// <para>When a plan is provided (from the LLM planning phase), the plan text is used
     /// for scoring. When no plan is available (lightweight scoping mode), the user's
     /// message and recent conversation context are used instead.</para>
-    /// <para>User-selected local tools are always included in the scoped set because the user
-    /// explicitly chose them for this interaction. Only system and MCP tools are scored
-    /// and filtered by relevance.</para>
+    /// <para>User-selected local tools and system tools are always included in the scoped
+    /// set. Local tools were explicitly chosen for this interaction and system tools are
+    /// unconditionally available by design. Only MCP tools are scored and filtered by
+    /// relevance.</para>
     /// </remarks>
     internal Task<string[]> ScopeToolsAsync(
         string plan,
         OrchestrationContext context,
-        IReadOnlyList<ToolRegistryEntry> allTools,
-        CancellationToken cancellationToken)
+        IReadOnlyList<ToolRegistryEntry> allTools)
     {
-        // User-selected local tools are always preserved — they were explicitly
-        // chosen for this interaction and should not be filtered out.
-        var localToolNames = allTools
-            .Where(t => t.Source == ToolRegistryEntrySource.Local)
+        // Local and system tools are always preserved:
+        // - Local tools were explicitly chosen by the user for this interaction.
+        // - System tools are unconditionally available when their feature is enabled.
+        var alwaysIncludedNames = allTools
+            .Where(t => t.Source == ToolRegistryEntrySource.Local || t.Source == ToolRegistryEntrySource.System)
             .Select(t => t.Name)
             .ToList();
 
-        var nonLocalTools = allTools
-            .Where(t => t.Source != ToolRegistryEntrySource.Local)
+        // Only MCP (externally-provided) tools are subject to relevance scoring.
+        var scorableTools = allTools
+            .Where(t => t.Source == ToolRegistryEntrySource.McpServer)
             .ToList();
 
         // Calculate the remaining budget for scored tools.
-        var remainingBudget = Math.Max(0, _options.InitialToolCount - localToolNames.Count);
+        var remainingBudget = Math.Max(0, _options.InitialToolCount - alwaysIncludedNames.Count);
 
         // Determine the text to score against: plan text if available,
         // otherwise fall back to user message + recent conversation context.
@@ -234,10 +235,10 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
 
         if (string.IsNullOrWhiteSpace(scoringText))
         {
-            // No scoring text available; return local tools + capped non-local tools.
-            var fallbackNames = localToolNames.Concat(
-                nonLocalTools
-                    .Take(Math.Max(remainingBudget, _options.MaxToolCount - localToolNames.Count))
+            // No scoring text available; return always-included tools + capped scorable tools.
+            var fallbackNames = alwaysIncludedNames.Concat(
+                scorableTools
+                    .Take(Math.Max(remainingBudget, _options.MaxToolCount - alwaysIncludedNames.Count))
                     .Select(t => t.Name));
 
             return Task.FromResult(fallbackNames.ToArray());
@@ -247,18 +248,18 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
 
         if (scoringTokens.Count == 0)
         {
-            var fallbackNames = localToolNames.Concat(
-                nonLocalTools
+            var fallbackNames = alwaysIncludedNames.Concat(
+                scorableTools
                     .Take(remainingBudget)
                     .Select(t => t.Name));
 
             return Task.FromResult(fallbackNames.ToArray());
         }
 
-        // Score only non-local tools by relevance.
+        // Score only MCP tools by relevance.
         var scored = new List<(ToolRegistryEntry Entry, double Score)>();
 
-        foreach (var tool in nonLocalTools)
+        foreach (var tool in scorableTools)
         {
             var toolTokens = _tokenizer.Tokenize(tool.Name + " " + (tool.Description ?? string.Empty));
 
@@ -297,99 +298,26 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
             .Select(s => s.Entry.Name)
             .ToList();
 
-        // If no non-local tools matched, fill remaining budget by original order.
+        // If no MCP tools matched, fill remaining budget by original order.
         if (scoredToolNames.Count == 0 && remainingBudget > 0)
         {
-            scoredToolNames = nonLocalTools
+            scoredToolNames = scorableTools
                 .Take(remainingBudget)
                 .Select(t => t.Name)
                 .ToList();
         }
 
-        var scopedToolNames = localToolNames.Concat(scoredToolNames).ToArray();
+        var scopedToolNames = alwaysIncludedNames.Concat(scoredToolNames).ToArray();
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug(
-                "Tool scoping selected {Count} tool(s) from {Total} ({LocalCount} local, {ScoredCount} scored): [{Tools}]",
-                scopedToolNames.Length, allTools.Count, localToolNames.Count, scoredToolNames.Count,
+                "Tool scoping selected {Count} tool(s) from {Total} ({AlwaysCount} local/system, {ScoredCount} scored MCP): [{Tools}]",
+                scopedToolNames.Length, allTools.Count, alwaysIncludedNames.Count, scoredToolNames.Count,
                 string.Join(", ", scopedToolNames));
         }
 
         return Task.FromResult(scopedToolNames);
-    }
-
-    /// <summary>
-    /// Enriches the system message with metadata about available documents so the LLM
-    /// knows it can call document system tools. Tool names are discovered dynamically
-    /// by querying registered tools with <see cref="AIToolPurposes.DocumentProcessing"/> purpose.
-    /// </summary>
-    private void EnrichSystemMessageWithDocuments(OrchestrationContext context)
-    {
-        if (context.Documents is not { Count: > 0 })
-        {
-            return;
-        }
-
-        // Discover document processing tools dynamically by purpose.
-        var docTools = _toolDefinitions.Tools
-            .Where(t => t.Value.HasPurpose(AIToolPurposes.DocumentProcessing))
-            .ToList();
-
-        var sb = new StringBuilder();
-        sb.AppendLine("\n\n[Available Documents or attachments]");
-
-        if (docTools.Count > 0)
-        {
-            sb.AppendLine("The user has uploaded the following documents. Use the available document tools to access their content when needed.");
-            sb.AppendLine();
-            sb.AppendLine("Available document tools:");
-
-            foreach (var (name, entry) in docTools)
-            {
-                sb.Append("- ");
-                sb.Append(name);
-                sb.Append(": ");
-                sb.AppendLine(entry.Description ?? entry.Title ?? name);
-            }
-
-            sb.AppendLine();
-        }
-        else
-        {
-            sb.AppendLine("The user has uploaded the following documents.");
-        }
-
-        foreach (var doc in context.Documents)
-        {
-            sb.Append("- ");
-            sb.Append(doc.DocumentId);
-            sb.Append(": \"");
-            sb.Append(doc.FileName);
-            sb.Append("\" (");
-            sb.Append(doc.ContentType ?? "unknown");
-            sb.Append(", ");
-            sb.Append(FormatFileSize(doc.FileSize));
-            sb.AppendLine(")");
-        }
-
-        context.CompletionContext.SystemMessage =
-            (context.CompletionContext.SystemMessage ?? string.Empty) + sb.ToString();
-    }
-
-    private static string FormatFileSize(long bytes)
-    {
-        if (bytes < 1024)
-        {
-            return $"{bytes} B";
-        }
-
-        if (bytes < 1024 * 1024)
-        {
-            return $"{bytes / 1024.0:F1} KB";
-        }
-
-        return $"{bytes / (1024.0 * 1024.0):F1} MB";
     }
 
     /// <summary>
