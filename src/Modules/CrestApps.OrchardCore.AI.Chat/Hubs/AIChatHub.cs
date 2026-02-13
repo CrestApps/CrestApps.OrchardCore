@@ -29,7 +29,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly IAICompletionContextBuilder _completionContextBuilder;
     private readonly IOrchestrationContextBuilder _orchestrationContextBuilder;
     private readonly IOrchestratorResolver _orchestratorResolver;
-    private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<AIChatHub> _logger;
 
     protected readonly IStringLocalizer S;
@@ -44,7 +43,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
         IAICompletionContextBuilder completionContextBuilder,
         IOrchestrationContextBuilder orchestrationContextBuilder,
         IOrchestratorResolver orchestratorResolver,
-        Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
     {
@@ -57,7 +55,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _completionContextBuilder = completionContextBuilder;
         _orchestrationContextBuilder = orchestrationContextBuilder;
         _orchestratorResolver = orchestratorResolver;
-        _httpContextAccessor = httpContextAccessor;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -323,11 +320,13 @@ public class AIChatHub : Hub<IAIChatHubClient>
             ctx.CompletionContext.AdditionalProperties["Session"] = chatSession;
         });
 
-        _httpContextAccessor.HttpContext.Items.Add(nameof(AIToolExecutionContext), new AIToolExecutionContext(profile)
+        var httpContext = Context.GetHttpContext();
+
+        httpContext.Items[nameof(AIToolExecutionContext)] = new AIToolExecutionContext(profile)
         {
             ProviderName = orchestratorContext.SourceName,
             ConnectionName = orchestratorContext.CompletionContext.ConnectionName,
-        });
+        };
 
         // Resolve the orchestrator for this profile and execute the completion.
         var orchestrator = _orchestratorResolver.Resolve(profile.OrchestratorName);

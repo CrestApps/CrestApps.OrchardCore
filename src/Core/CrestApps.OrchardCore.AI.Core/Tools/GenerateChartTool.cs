@@ -50,7 +50,7 @@ public sealed class GenerateChartTool : AIFunction
 
     public override string Name => TheName;
 
-    public override string Description => "Generates a Chart.js configuration from a data description. Returns chart configuration that can be rendered in the UI.";
+    public override string Description => "Generates a Chart.js chart configuration from a data description. Returns a special [chart:JSON] marker that MUST be included exactly as-is in your response to render the chart in the UI. Never modify, reformat, or replace this marker.";
 
     public override JsonElement JsonSchema => _jsonSchema;
 
@@ -159,7 +159,7 @@ public sealed class GenerateChartTool : AIFunction
                 return "Failed to generate valid chart configuration.";
             }
 
-            return $"[chart:{chartConfig}]";
+            return $"Chart generated successfully. Include the following marker exactly as-is in your response (do NOT modify, convert to an image, or replace it):\n\n[chart:{chartConfig}]";
         }
         catch (Exception ex)
         {

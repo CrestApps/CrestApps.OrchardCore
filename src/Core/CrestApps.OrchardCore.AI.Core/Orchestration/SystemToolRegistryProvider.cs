@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Core.Orchestration;
@@ -31,9 +33,11 @@ internal sealed class SystemToolRegistryProvider : IToolRegistryProvider
 
             entries.Add(new ToolRegistryEntry
             {
+                Id = name,
                 Name = name,
                 Description = entry.Description ?? entry.Title ?? name,
                 Source = ToolRegistryEntrySource.System,
+                ToolFactory = (sp) => ValueTask.FromResult(sp.GetKeyedService<AITool>(name)),
             });
         }
 

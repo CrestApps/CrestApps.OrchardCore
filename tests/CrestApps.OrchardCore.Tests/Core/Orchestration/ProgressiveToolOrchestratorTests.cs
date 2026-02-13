@@ -170,7 +170,7 @@ public sealed class ProgressiveToolOrchestratorTests
 
         var result = await orchestrator.ScopeToolsAsync(null, context, tools);
 
-        Assert.Equal(5, result.Length);
+        Assert.Equal(5, result.Count);
     }
 
     [Fact]
@@ -200,15 +200,16 @@ public sealed class ProgressiveToolOrchestratorTests
         var context = CreateContext("Do something");
 
         var result = await orchestrator.ScopeToolsAsync("   ", context, tools);
+        var resultNames = result.Select(e => e.Name).ToList();
 
         // All 10 local tools must be included.
         for (var i = 0; i < 10; i++)
         {
-            Assert.Contains($"local{i}", result);
+            Assert.Contains($"local{i}", resultNames);
         }
 
         // Total length should be reasonable (local + some non-local).
-        Assert.True(result.Length >= 10);
+        Assert.True(result.Count >= 10);
     }
 
     [Fact]
@@ -226,12 +227,13 @@ public sealed class ProgressiveToolOrchestratorTests
 
         var plan = "Step 1: Create a Jira ticket for the issue.";
         var result = await orchestrator.ScopeToolsAsync(plan, context, tools);
+        var resultNames = result.Select(e => e.Name).ToList();
 
         // MCP tool matched by plan.
-        Assert.Contains("createJiraTicket", result);
+        Assert.Contains("createJiraTicket", resultNames);
         // System tools are always included regardless of relevance.
-        Assert.Contains("parseJson", result);
-        Assert.Contains("updateDatabase", result);
+        Assert.Contains("parseJson", resultNames);
+        Assert.Contains("updateDatabase", resultNames);
     }
 
     [Fact]
@@ -250,13 +252,14 @@ public sealed class ProgressiveToolOrchestratorTests
         // Plan mentions only Jira, NOT the user's selected tool or system tool.
         var plan = "Step 1: Create a Jira ticket.";
         var result = await orchestrator.ScopeToolsAsync(plan, context, tools);
+        var resultNames = result.Select(e => e.Name).ToList();
 
         // Local tool must always be included regardless of plan content.
-        Assert.Contains("userSelectedTool", result);
+        Assert.Contains("userSelectedTool", resultNames);
         // System tool must always be included regardless of plan content.
-        Assert.Contains("systemImageTool", result);
+        Assert.Contains("systemImageTool", resultNames);
         // Jira MCP tool should also be included due to plan match.
-        Assert.Contains("mcpJiraTool", result);
+        Assert.Contains("mcpJiraTool", resultNames);
     }
 
     [Fact]
@@ -283,14 +286,15 @@ public sealed class ProgressiveToolOrchestratorTests
 
         var plan = "xyz completely unrelated zzz qqq";
         var result = await orchestrator.ScopeToolsAsync(plan, context, tools);
+        var resultNames = result.Select(e => e.Name).ToList();
 
         // Local tools always included.
-        Assert.Contains("local0", result);
-        Assert.Contains("local1", result);
+        Assert.Contains("local0", resultNames);
+        Assert.Contains("local1", resultNames);
         // System tools always included.
-        Assert.Contains("sys0", result);
+        Assert.Contains("sys0", resultNames);
         // MCP fallback should also be present.
-        Assert.True(result.Length > 3);
+        Assert.True(result.Count > 3);
     }
 
     [Fact]

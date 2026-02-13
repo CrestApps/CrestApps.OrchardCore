@@ -1,7 +1,10 @@
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core.Orchestration;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
 
@@ -43,6 +46,7 @@ public sealed class LocalToolRegistryProviderTests
         Assert.Contains(result, t => t.Name == "tool1" && t.Description == "First tool");
         Assert.Contains(result, t => t.Name == "tool3" && t.Description == "Third tool");
         Assert.All(result, t => Assert.Equal(ToolRegistryEntrySource.Local, t.Source));
+        Assert.All(result, t => Assert.NotNull(t.ToolFactory));
     }
 
     [Fact]
@@ -79,6 +83,49 @@ public sealed class LocalToolRegistryProviderTests
         Assert.Equal("tool1", result[0].Description);
     }
 
+    [Fact]
+    public async Task GetToolsAsync_SkipsSystemTools()
+    {
+        var options = new AIToolDefinitionOptions();
+        options.SetTool("local_tool", new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+        {
+            Name = "local_tool",
+            Title = "Local",
+            Description = "A local tool",
+            IsSystemTool = false,
+        });
+        options.SetTool("system_tool", new AIToolDefinitionEntry(typeof(Microsoft.Extensions.AI.AIFunction))
+        {
+            Name = "system_tool",
+            Title = "System",
+            Description = "A system tool",
+            IsSystemTool = true,
+        });
+
+        var provider = CreateProviderWithOptions(options);
+
+        var result = await provider.GetToolsAsync(
+            new AICompletionContext { ToolNames = ["local_tool", "system_tool"] },
+            TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        Assert.Equal("local_tool", result[0].Name);
+    }
+
+    [Fact]
+    public async Task GetToolsAsync_SetsIdEqualToName()
+    {
+        var provider = CreateProvider([("my_tool", "My Tool", "A test tool")]);
+
+        var result = await provider.GetToolsAsync(
+            new AICompletionContext { ToolNames = ["my_tool"] },
+            TestContext.Current.CancellationToken);
+
+        Assert.Single(result);
+        Assert.Equal("my_tool", result[0].Id);
+        Assert.Equal("my_tool", result[0].Name);
+    }
+
     private static LocalToolRegistryProvider CreateProvider((string name, string title, string description)[] tools)
     {
         var options = new AIToolDefinitionOptions();
@@ -92,6 +139,17 @@ public sealed class LocalToolRegistryProviderTests
             });
         }
 
-        return new LocalToolRegistryProvider(Options.Create(options));
+        return CreateProviderWithOptions(options);
+    }
+
+    private static LocalToolRegistryProvider CreateProviderWithOptions(AIToolDefinitionOptions options)
+    {
+        var authService = new Mock<IAuthorizationService>();
+        var httpContextAccessor = new Mock<IHttpContextAccessor>();
+
+        // No HttpContext means no user — permission checks are skipped.
+        httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
+
+        return new LocalToolRegistryProvider(Options.Create(options), authService.Object, httpContextAccessor.Object);
     }
 }

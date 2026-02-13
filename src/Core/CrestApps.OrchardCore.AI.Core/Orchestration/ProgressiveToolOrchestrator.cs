@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text;
+using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -58,6 +59,8 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
         // Determine the total configured tool count.
         var profileToolCount = allTools.Count;
 
+        IReadOnlyList<ToolRegistryEntry> scopedEntries;
+
         if (profileToolCount <= _options.ScopingThreshold)
         {
             // Few tools: inject all directly (no scoping or planning overhead).
@@ -68,7 +71,7 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
                     profileToolCount, _options.ScopingThreshold);
             }
 
-            context.CompletionContext.ToolNames = allTools.Select(t => t.Name).ToArray();
+            scopedEntries = allTools;
         }
         else
         {
@@ -85,9 +88,7 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
                 }
 
                 var plan = await PlanAsync(context, allTools, cancellationToken);
-                var scopedTools = await ScopeToolsAsync(plan, context, allTools);
-
-                context.CompletionContext.ToolNames = scopedTools;
+                scopedEntries = await ScopeToolsAsync(plan, context, allTools);
 
                 // Add the plan as additional system context for the execution phase.
                 if (!string.IsNullOrWhiteSpace(plan))
@@ -107,10 +108,14 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
                         profileToolCount, _options.ScopingThreshold);
                 }
 
-                var scopedTools = await ScopeToolsAsync(null, context, allTools);
-                context.CompletionContext.ToolNames = scopedTools;
+                scopedEntries = await ScopeToolsAsync(null, context, allTools);
             }
         }
+
+        // Derive ToolNames from entries (for logging/diagnostics) and store the
+        // entries directly so the handler resolves tools via ToolFactory delegates.
+        context.CompletionContext.ToolNames = scopedEntries.Select(e => e.Name).ToArray();
+        context.CompletionContext.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] = scopedEntries;
 
         // Execute the completion with the scoped tool set.
         await foreach (var chunk in _completionService.CompleteStreamingAsync(
@@ -196,6 +201,8 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
     /// <summary>
     /// Scopes tools by matching a scoring text against the tool registry
     /// using the shared <see cref="ITextTokenizer"/> for consistent tokenization.
+    /// Returns the actual <see cref="ToolRegistryEntry"/> instances so they flow
+    /// directly to the handler without a lossy name-based round-trip.
     /// </summary>
     /// <remarks>
     /// <para>When a plan is provided (from the LLM planning phase), the plan text is used
@@ -206,7 +213,7 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
     /// unconditionally available by design. Only MCP tools are scored and filtered by
     /// relevance.</para>
     /// </remarks>
-    internal Task<string[]> ScopeToolsAsync(
+    internal Task<IReadOnlyList<ToolRegistryEntry>> ScopeToolsAsync(
         string plan,
         OrchestrationContext context,
         IReadOnlyList<ToolRegistryEntry> allTools)
@@ -214,9 +221,8 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
         // Local and system tools are always preserved:
         // - Local tools were explicitly chosen by the user for this interaction.
         // - System tools are unconditionally available when their feature is enabled.
-        var alwaysIncludedNames = allTools
+        var alwaysIncluded = allTools
             .Where(t => t.Source == ToolRegistryEntrySource.Local || t.Source == ToolRegistryEntrySource.System)
-            .Select(t => t.Name)
             .ToList();
 
         // Only MCP (externally-provided) tools are subject to relevance scoring.
@@ -225,7 +231,7 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
             .ToList();
 
         // Calculate the remaining budget for scored tools.
-        var remainingBudget = Math.Max(0, _options.InitialToolCount - alwaysIncludedNames.Count);
+        var remainingBudget = Math.Max(0, _options.InitialToolCount - alwaysIncluded.Count);
 
         // Determine the text to score against: plan text if available,
         // otherwise fall back to user message + recent conversation context.
@@ -236,24 +242,24 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
         if (string.IsNullOrWhiteSpace(scoringText))
         {
             // No scoring text available; return always-included tools + capped scorable tools.
-            var fallbackNames = alwaysIncludedNames.Concat(
+            var fallback = alwaysIncluded.Concat(
                 scorableTools
-                    .Take(Math.Max(remainingBudget, _options.MaxToolCount - alwaysIncludedNames.Count))
-                    .Select(t => t.Name));
+                    .Take(Math.Max(remainingBudget, _options.MaxToolCount - alwaysIncluded.Count)))
+                .ToList();
 
-            return Task.FromResult(fallbackNames.ToArray());
+            return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(fallback);
         }
 
         var scoringTokens = _tokenizer.Tokenize(scoringText);
 
         if (scoringTokens.Count == 0)
         {
-            var fallbackNames = alwaysIncludedNames.Concat(
+            var fallback = alwaysIncluded.Concat(
                 scorableTools
-                    .Take(remainingBudget)
-                    .Select(t => t.Name));
+                    .Take(remainingBudget))
+                .ToList();
 
-            return Task.FromResult(fallbackNames.ToArray());
+            return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(fallback);
         }
 
         // Score only MCP tools by relevance.
@@ -291,33 +297,32 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
             scored.Add((tool, Math.Max(forwardScore, reverseScore)));
         }
 
-        var scoredToolNames = scored
+        var scoredEntries = scored
             .Where(s => s.Score > 0)
             .OrderByDescending(s => s.Score)
             .Take(remainingBudget)
-            .Select(s => s.Entry.Name)
+            .Select(s => s.Entry)
             .ToList();
 
         // If no MCP tools matched, fill remaining budget by original order.
-        if (scoredToolNames.Count == 0 && remainingBudget > 0)
+        if (scoredEntries.Count == 0 && remainingBudget > 0)
         {
-            scoredToolNames = scorableTools
+            scoredEntries = scorableTools
                 .Take(remainingBudget)
-                .Select(t => t.Name)
                 .ToList();
         }
 
-        var scopedToolNames = alwaysIncludedNames.Concat(scoredToolNames).ToArray();
+        var scopedEntries = alwaysIncluded.Concat(scoredEntries).ToList();
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug(
                 "Tool scoping selected {Count} tool(s) from {Total} ({AlwaysCount} local/system, {ScoredCount} scored MCP): [{Tools}]",
-                scopedToolNames.Length, allTools.Count, alwaysIncludedNames.Count, scoredToolNames.Count,
-                string.Join(", ", scopedToolNames));
+                scopedEntries.Count, allTools.Count, alwaysIncluded.Count, scoredEntries.Count,
+                string.Join(", ", scopedEntries.Select(e => e.Name)));
         }
 
-        return Task.FromResult(scopedToolNames);
+        return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(scopedEntries);
     }
 
     /// <summary>
