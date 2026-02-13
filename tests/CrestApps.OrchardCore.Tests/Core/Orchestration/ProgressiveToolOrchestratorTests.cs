@@ -118,11 +118,11 @@ public sealed class ProgressiveToolOrchestratorTests
     }
 
     [Fact]
-    public async Task ExecuteStreamingAsync_AboveThresholdNoMcp_SystemToolsAlwaysIncluded()
+    public async Task ExecuteStreamingAsync_AboveThresholdNoMcp_ScopesByRelevance()
     {
         // 35 system tools (no MCP) → exceeds ScopingThreshold (30) but no MCP
         // → should scope without LLM planner call.
-        // System tools are always included, so all 35 should be present.
+        // All tools are scored by relevance; only relevant ones are included.
         var tools = new List<ToolRegistryEntry>();
         for (var i = 0; i < 35; i++)
         {
@@ -143,8 +143,10 @@ public sealed class ProgressiveToolOrchestratorTests
         Assert.Equal("Response", result);
         // NO planning call should have been made (no MCP, below PlanningThreshold).
         Assert.Equal(0, completionService.CompleteCallCount);
-        // All system tools should be included — they are never filtered.
-        Assert.Equal(35, context.CompletionContext.ToolNames.Length);
+        // Only relevant tools should be selected (the 3 with matching description),
+        // not all 35.
+        Assert.True(context.CompletionContext.ToolNames.Length < 35);
+        Assert.True(context.CompletionContext.ToolNames.Length >= 3);
     }
 
     [Fact]
@@ -213,7 +215,7 @@ public sealed class ProgressiveToolOrchestratorTests
     }
 
     [Fact]
-    public async Task ScopeToolsAsync_MatchingPlan_SelectsRelevantMcpTools()
+    public async Task ScopeToolsAsync_MatchingPlan_SelectsRelevantTools()
     {
         var tools = new List<ToolRegistryEntry>
         {
@@ -229,19 +231,17 @@ public sealed class ProgressiveToolOrchestratorTests
         var result = await orchestrator.ScopeToolsAsync(plan, context, tools);
         var resultNames = result.Select(e => e.Name).ToList();
 
-        // MCP tool matched by plan.
+        // Jira tool matched by plan.
         Assert.Contains("createJiraTicket", resultNames);
-        // System tools are always included regardless of relevance.
-        Assert.Contains("parseJson", resultNames);
-        Assert.Contains("updateDatabase", resultNames);
     }
 
     [Fact]
-    public async Task ScopeToolsAsync_LocalAndSystemToolsAlwaysIncluded()
+    public async Task ScopeToolsAsync_AllToolsScoredUniformlyByRelevance()
     {
         var tools = new List<ToolRegistryEntry>
         {
             new() { Name = "userSelectedTool", Description = "A user selected content tool", Source = ToolRegistryEntrySource.Local },
+            new() { Name = "createJiraTicket", Description = "Create a Jira ticket for issues", Source = ToolRegistryEntrySource.Local },
             new() { Name = "mcpJiraTool", Description = "Create a Jira ticket", Source = ToolRegistryEntrySource.McpServer },
             new() { Name = "mcpSlackTool", Description = "Send a Slack message", Source = ToolRegistryEntrySource.McpServer },
             new() { Name = "systemImageTool", Description = "Generate an image", Source = ToolRegistryEntrySource.System },
@@ -249,21 +249,20 @@ public sealed class ProgressiveToolOrchestratorTests
         var orchestrator = CreateOrchestrator();
         var context = CreateContext("Create a Jira ticket");
 
-        // Plan mentions only Jira, NOT the user's selected tool or system tool.
+        // Plan mentions only Jira.
         var plan = "Step 1: Create a Jira ticket.";
         var result = await orchestrator.ScopeToolsAsync(plan, context, tools);
         var resultNames = result.Select(e => e.Name).ToList();
 
-        // Local tool must always be included regardless of plan content.
-        Assert.Contains("userSelectedTool", resultNames);
-        // System tool must always be included regardless of plan content.
-        Assert.Contains("systemImageTool", resultNames);
-        // Jira MCP tool should also be included due to plan match.
+        // Local and MCP Jira tools should be included due to plan match.
+        Assert.Contains("createJiraTicket", resultNames);
         Assert.Contains("mcpJiraTool", resultNames);
+        // Unrelated tools should not be included when they don't match.
+        Assert.DoesNotContain("mcpSlackTool", resultNames);
     }
 
     [Fact]
-    public async Task ScopeToolsAsync_NoMatchesInPlan_LocalAndSystemPreservedAndMcpFallback()
+    public async Task ScopeToolsAsync_NoMatchesInPlan_FallbackByOriginalOrder()
     {
         // 2 local + 1 system + 5 MCP tools, plan matches nothing.
         var tools = new List<ToolRegistryEntry>
@@ -286,15 +285,9 @@ public sealed class ProgressiveToolOrchestratorTests
 
         var plan = "xyz completely unrelated zzz qqq";
         var result = await orchestrator.ScopeToolsAsync(plan, context, tools);
-        var resultNames = result.Select(e => e.Name).ToList();
 
-        // Local tools always included.
-        Assert.Contains("local0", resultNames);
-        Assert.Contains("local1", resultNames);
-        // System tools always included.
-        Assert.Contains("sys0", resultNames);
-        // MCP fallback should also be present.
-        Assert.True(result.Count > 3);
+        // When no tools match, fallback fills the budget by original order.
+        Assert.True(result.Count > 0);
     }
 
     [Fact]

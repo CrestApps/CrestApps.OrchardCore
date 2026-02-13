@@ -43,7 +43,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
     public override string Name => TheName;
 
-    public override string Description => "Searches uploaded documents using semantic vector search and returns the most relevant text chunks.";
+    public override string Description => "Searches uploaded documents using semantic vector search and returns the most relevant text chunks. This tool ONLY searches uploaded documents. If no relevant content is found, you MUST still answer the user's prompt using your general knowledge.";
 
     public override JsonElement JsonSchema => _jsonSchema;
 
@@ -154,7 +154,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             if (results is null || !results.Any())
             {
-                return "No relevant content was found in the uploaded documents.";
+                return "No relevant content was found in the uploaded documents for this query. Answer using your general knowledge instead.";
             }
 
             var builder = new StringBuilder();

@@ -208,30 +208,18 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
     /// <para>When a plan is provided (from the LLM planning phase), the plan text is used
     /// for scoring. When no plan is available (lightweight scoping mode), the user's
     /// message and recent conversation context are used instead.</para>
-    /// <para>User-selected local tools and system tools are always included in the scoped
-    /// set. Local tools were explicitly chosen for this interaction and system tools are
-    /// unconditionally available by design. Only MCP tools are scored and filtered by
-    /// relevance.</para>
+    /// <para>All tools (local, system, and MCP) are scored uniformly by relevance and
+    /// the top-N are selected based on the configured budget. This ensures only the
+    /// most relevant tools are included regardless of their source.</para>
     /// </remarks>
     internal Task<IReadOnlyList<ToolRegistryEntry>> ScopeToolsAsync(
         string plan,
         OrchestrationContext context,
         IReadOnlyList<ToolRegistryEntry> allTools)
     {
-        // Local and system tools are always preserved:
-        // - Local tools were explicitly chosen by the user for this interaction.
-        // - System tools are unconditionally available when their feature is enabled.
-        var alwaysIncluded = allTools
-            .Where(t => t.Source == ToolRegistryEntrySource.Local || t.Source == ToolRegistryEntrySource.System)
-            .ToList();
-
-        // Only MCP (externally-provided) tools are subject to relevance scoring.
-        var scorableTools = allTools
-            .Where(t => t.Source == ToolRegistryEntrySource.McpServer)
-            .ToList();
-
-        // Calculate the remaining budget for scored tools.
-        var remainingBudget = Math.Max(0, _options.InitialToolCount - alwaysIncluded.Count);
+        // All tools are subject to relevance scoring when the total count
+        // exceeds the scoping threshold. No source gets special treatment.
+        var budget = _options.InitialToolCount;
 
         // Determine the text to score against: plan text if available,
         // otherwise fall back to user message + recent conversation context.
@@ -241,33 +229,32 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
 
         if (string.IsNullOrWhiteSpace(scoringText))
         {
-            // No scoring text available; return always-included tools + capped scorable tools.
-            var fallback = alwaysIncluded.Concat(
-                scorableTools
-                    .Take(Math.Max(remainingBudget, _options.MaxToolCount - alwaysIncluded.Count)))
-                .ToList();
-
-            return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(fallback);
+            // No scoring text available; return capped tools by original order.
+            return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(
+                allTools.Take(Math.Max(budget, _options.MaxToolCount)).ToList());
         }
 
         var scoringTokens = _tokenizer.Tokenize(scoringText);
 
         if (scoringTokens.Count == 0)
         {
-            var fallback = alwaysIncluded.Concat(
-                scorableTools
-                    .Take(remainingBudget))
-                .ToList();
-
-            return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(fallback);
+            return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(
+                allTools.Take(budget).ToList());
         }
 
-        // Score only MCP tools by relevance.
+        // Score all tools uniformly by relevance.
         var scored = new List<(ToolRegistryEntry Entry, double Score)>();
 
-        foreach (var tool in scorableTools)
+        foreach (var tool in allTools)
         {
-            var toolTokens = _tokenizer.Tokenize(tool.Name + " " + (tool.Description ?? string.Empty));
+            var title = tool.Name;
+
+            if (!string.IsNullOrWhiteSpace(tool.Description))
+            {
+                title += ' ' + tool.Description;
+            }
+
+            var toolTokens = _tokenizer.Tokenize(title);
 
             if (toolTokens.Count == 0)
             {
@@ -297,28 +284,26 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
             scored.Add((tool, Math.Max(forwardScore, reverseScore)));
         }
 
-        var scoredEntries = scored
+        var scopedEntries = scored
             .Where(s => s.Score > 0)
             .OrderByDescending(s => s.Score)
-            .Take(remainingBudget)
+            .Take(budget)
             .Select(s => s.Entry)
             .ToList();
 
-        // If no MCP tools matched, fill remaining budget by original order.
-        if (scoredEntries.Count == 0 && remainingBudget > 0)
+        // If no tools matched, fill budget by original order as fallback.
+        if (scopedEntries.Count == 0 && budget > 0)
         {
-            scoredEntries = scorableTools
-                .Take(remainingBudget)
+            scopedEntries = allTools
+                .Take(budget)
                 .ToList();
         }
-
-        var scopedEntries = alwaysIncluded.Concat(scoredEntries).ToList();
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug(
-                "Tool scoping selected {Count} tool(s) from {Total} ({AlwaysCount} local/system, {ScoredCount} scored MCP): [{Tools}]",
-                scopedEntries.Count, allTools.Count, alwaysIncluded.Count, scoredEntries.Count,
+                "Tool scoping selected {Count} tool(s) from {Total}: [{Tools}]",
+                scopedEntries.Count, allTools.Count,
                 string.Join(", ", scopedEntries.Select(e => e.Name)));
         }
 

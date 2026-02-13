@@ -55,7 +55,11 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextHandler
 
         if (docTools.Count > 0)
         {
-            sb.AppendLine("The user has uploaded the following documents. Use the available document tools to access their content when needed.");
+            sb.AppendLine("The user has uploaded the following documents as supplementary context.");
+            sb.AppendLine("Search the uploaded documents first using the document tools before answering.");
+            sb.AppendLine("If the documents contain relevant information, base your answer on that content.");
+            sb.AppendLine("If the documents do not contain relevant information, use your general knowledge to answer instead.");
+            sb.AppendLine("Do not refuse to answer simply because the documents lack the requested information.");
             sb.AppendLine();
             sb.AppendLine("Available document tools:");
 
@@ -71,7 +75,7 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextHandler
         }
         else
         {
-            sb.AppendLine("The user has uploaded the following documents.");
+            sb.AppendLine("The user has uploaded the following documents as supplementary context.");
         }
 
         foreach (var doc in context.Context.Documents)

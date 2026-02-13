@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Contents;
-using YesSql;
+using OrchardCore.Data.Documents;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
@@ -86,7 +86,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
 
         var contentItem = await contentManager.GetAsync(model.ContentItemId, VersionOptions.DraftRequired);
-        var session = arguments.Services.GetRequiredService<ISession>();
+        var documentStore = arguments.Services.GetRequiredService<IDocumentStore>();
 
         if (contentItem is null)
         {
@@ -150,7 +150,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         {
             await contentManager.SaveDraftAsync(contentItem);
 
-            await session.SaveChangesAsync(cancellationToken);
+            await documentStore.CommitAsync();
 
             return $"A draft content item with id '{contentItem.ContentItemId}' was successfully saved.";
         }
@@ -158,7 +158,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         {
             await contentManager.PublishAsync(contentItem);
 
-            await session.SaveChangesAsync(cancellationToken);
+            await documentStore.CommitAsync();
 
             return $"A content item with id '{contentItem.ContentItemId}' was successfully published.";
         }

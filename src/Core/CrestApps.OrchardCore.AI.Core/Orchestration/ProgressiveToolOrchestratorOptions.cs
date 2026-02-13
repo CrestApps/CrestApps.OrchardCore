@@ -7,9 +7,9 @@ public sealed class ProgressiveToolOrchestratorOptions
 {
     /// <summary>
     /// Gets or sets the maximum number of tools to include in the initial scoped set
-    /// when scoping is active. Default is 10.
+    /// when scoping is active. Default is 20.
     /// </summary>
-    public int InitialToolCount { get; set; } = 10;
+    public int InitialToolCount { get; set; } = 20;
 
     /// <summary>
     /// Gets or sets the tool count threshold below which all tools are passed directly

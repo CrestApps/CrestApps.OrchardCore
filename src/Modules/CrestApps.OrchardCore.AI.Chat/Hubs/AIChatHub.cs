@@ -13,8 +13,8 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Data.Documents;
 using OrchardCore.Liquid;
-using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 
@@ -24,7 +24,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly IAIProfileManager _profileManager;
     private readonly IAIChatSessionManager _sessionManager;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
-    private readonly ISession _session;
+    private readonly IDocumentStore _documentStore;
     private readonly IAICompletionService _completionService;
     private readonly IAICompletionContextBuilder _completionContextBuilder;
     private readonly IOrchestrationContextBuilder _orchestrationContextBuilder;
@@ -38,7 +38,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         IAIProfileManager profileManager,
         IAIChatSessionManager sessionManager,
         ILiquidTemplateManager liquidTemplateManager,
-        ISession session,
+        IDocumentStore documentStore,
         IAICompletionService completionService,
         IAICompletionContextBuilder completionContextBuilder,
         IOrchestrationContextBuilder orchestrationContextBuilder,
@@ -50,7 +50,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _profileManager = profileManager;
         _sessionManager = sessionManager;
         _liquidTemplateManager = liquidTemplateManager;
-        _session = session;
+        _documentStore = documentStore;
         _completionService = completionService;
         _completionContextBuilder = completionContextBuilder;
         _orchestrationContextBuilder = orchestrationContextBuilder;
@@ -195,7 +195,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 await ProcessChatPromptAsync(writer, profile, sessionId, prompt?.Trim(), cancellationToken);
             }
 
-            await _session.SaveChangesAsync(cancellationToken);
+            await _documentStore.CommitAsync();
         }
         catch (Exception ex)
         {
