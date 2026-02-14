@@ -2,7 +2,10 @@ using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.DisplayManagement.Notify;
 using USR = OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Controllers;
@@ -12,23 +15,30 @@ public class CopilotAuthController : Controller
 {
     private readonly IGitHubOAuthService _oauthService;
     private readonly UserManager<USR.IUser> _userManager;
+    private readonly INotifier _notifier;
     private readonly ILogger<CopilotAuthController> _logger;
+
+    internal readonly IHtmlLocalizer H;
 
     public CopilotAuthController(
         IGitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,
+        INotifier notifier,
+        IHtmlLocalizer<CopilotAuthController> htmlLocalizer,
         ILogger<CopilotAuthController> logger)
     {
         _oauthService = oauthService;
         _userManager = userManager;
+        _notifier = notifier;
         _logger = logger;
+        H = htmlLocalizer;
     }
 
     /// <summary>
     /// Initiates the GitHub OAuth flow.
     /// </summary>
     [HttpGet]
-    public IActionResult AuthorizeGitHub(string returnUrl = null)
+    public async Task<IActionResult> AuthorizeGitHub(string returnUrl = null)
     {
         try
         {
@@ -45,7 +55,7 @@ public class CopilotAuthController : Controller
         catch (NotImplementedException)
         {
             _logger.LogWarning("GitHub OAuth is not configured. Redirecting back.");
-            TempData["Error"] = "GitHub OAuth is not yet configured. Please configure GitHub OAuth App credentials.";
+            await _notifier.ErrorAsync(H["GitHub OAuth is not yet configured. Please configure GitHub OAuth App credentials."]);
             return RedirectToLocal(returnUrl);
         }
     }
@@ -59,15 +69,15 @@ public class CopilotAuthController : Controller
         if (!string.IsNullOrEmpty(error))
         {
             _logger.LogWarning("GitHub OAuth error: {Error}", error);
-            TempData["Error"] = $"GitHub authentication failed: {error}";
-            return RedirectToAction("Index", "Admin", new { area = "OrchardCore.Admin" });
+            await _notifier.ErrorAsync(H["GitHub authentication failed: {0}", error]);
+            return LocalRedirect("~/Admin");
         }
 
         if (string.IsNullOrEmpty(code))
         {
             _logger.LogWarning("No authorization code received from GitHub");
-            TempData["Error"] = "No authorization code received from GitHub";
-            return RedirectToAction("Index", "Admin", new { area = "OrchardCore.Admin" });
+            await _notifier.ErrorAsync(H["No authorization code received from GitHub"]);
+            return LocalRedirect("~/Admin");
         }
 
         try
@@ -83,20 +93,20 @@ public class CopilotAuthController : Controller
             // Exchange code for tokens
             var credential = await _oauthService.ExchangeCodeForTokenAsync(code, await _userManager.GetUserIdAsync(user));
 
-            TempData["Success"] = $"Successfully connected to GitHub as {credential.GitHubUsername}";
-            return RedirectToAction("Index", "Admin", new { area = "OrchardCore.Admin" });
+            await _notifier.SuccessAsync(H["Successfully connected to GitHub as {0}", credential.GitHubUsername]);
+            return LocalRedirect("~/Admin");
         }
         catch (NotImplementedException)
         {
             _logger.LogWarning("GitHub OAuth token exchange is not implemented");
-            TempData["Error"] = "GitHub OAuth is not yet fully implemented.";
-            return RedirectToAction("Index", "Admin", new { area = "OrchardCore.Admin" });
+            await _notifier.ErrorAsync(H["GitHub OAuth is not yet fully implemented."]);
+            return LocalRedirect("~/Admin");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during GitHub OAuth callback");
-            TempData["Error"] = "An error occurred during GitHub authentication.";
-            return RedirectToAction("Index", "Admin", new { area = "OrchardCore.Admin" });
+            await _notifier.ErrorAsync(H["An error occurred during GitHub authentication."]);
+            return LocalRedirect("~/Admin");
         }
     }
 
@@ -117,13 +127,13 @@ public class CopilotAuthController : Controller
 
             await _oauthService.DisconnectAsync(await _userManager.GetUserIdAsync(user));
 
-            TempData["Success"] = "Successfully disconnected from GitHub";
+            await _notifier.SuccessAsync(H["Successfully disconnected from GitHub"]);
             return RedirectToLocal(returnUrl);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error disconnecting GitHub account");
-            TempData["Error"] = "An error occurred while disconnecting from GitHub.";
+            await _notifier.ErrorAsync(H["An error occurred while disconnecting from GitHub."]);
             return RedirectToLocal(returnUrl);
         }
     }
@@ -135,6 +145,6 @@ public class CopilotAuthController : Controller
             return Redirect(returnUrl);
         }
 
-        return RedirectToAction("Index", "Admin", new { area = "OrchardCore.Admin" });
+        return LocalRedirect("~/Admin");
     }
 }

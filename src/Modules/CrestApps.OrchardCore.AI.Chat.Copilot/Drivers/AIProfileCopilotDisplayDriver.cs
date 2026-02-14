@@ -17,7 +17,8 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
     private readonly IGitHubOAuthService _oauthService;
     private readonly UserManager<USR.IUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IStringLocalizer S;
+
+    internal readonly IStringLocalizer S;
 
     public AIProfileCopilotDisplayDriver(
         IGitHubOAuthService oauthService,
@@ -54,7 +55,9 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
             }
 
             // Available Copilot models
-            // Based on GitHub Copilot SDK documentation
+            // TODO: Query CopilotClient for available models if the SDK exposes this functionality
+            // For now, using known models from GitHub Copilot documentation
+            // See: https://docs.github.com/en/copilot
             model.AvailableModels =
             [
                 new SelectListItem(S["GPT-4o"], "gpt-4o"),
