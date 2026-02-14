@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
 using CrestApps.OrchardCore.AI.Models;
@@ -60,11 +61,23 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
             // See: https://docs.github.com/en/copilot
             model.AvailableModels =
             [
-                new SelectListItem(S["GPT-4o"], "gpt-4o"),
-                new SelectListItem(S["GPT-4o Mini"], "gpt-4o-mini"),
-                new SelectListItem(S["Claude 3.5 Sonnet"], "claude-3.5-sonnet"),
-                new SelectListItem(S["o1-preview"], "o1-preview"),
-                new SelectListItem(S["o1-mini"], "o1-mini"),
+                new SelectListItem(S["Claude Sonnet 4.5"], "claude-sonnet-4.5"),
+                new SelectListItem(S["Claude Haiku 4.5"], "claude-haiku-4.5"),
+                new SelectListItem(S["Claude Opus 4.6"], "claude-opus-4.6"),
+                new SelectListItem(S["Claude Opus 4.6 Fast"], "claude-opus-4.6-fast"),
+                new SelectListItem(S["Claude Opus 4.5"], "claude-opus-4.5"),
+                new SelectListItem(S["Claude Sonnet 4"], "claude-sonnet-4"),
+                new SelectListItem(S["Gemini 3 Pro Preview"], "gemini-3-pro-preview"),
+                new SelectListItem(S["GPT-5.3 Codex"], "gpt-5.3-codex"),
+                new SelectListItem(S["GPT-5.2 Codex"], "gpt-5.2-codex"),
+                new SelectListItem(S["GPT-5.2"], "gpt-5.2"),
+                new SelectListItem(S["GPT-5.1 Codex Max"], "gpt-5.1-codex-max"),
+                new SelectListItem(S["GPT-5.1 Codex"], "gpt-5.1-codex"),
+                new SelectListItem(S["GPT-5.1"], "gpt-5.1"),
+                new SelectListItem(S["GPT-5"], "gpt-5"),
+                new SelectListItem(S["GPT-5.1 Codex Mini"], "gpt-5.1-codex-mini"),
+                new SelectListItem(S["GPT-5 Mini"], "gpt-5-mini"),
+                new SelectListItem(S["GPT-4.1"], "gpt-4.1"),
             ];
         }).Location("Content:3.5");
     }
@@ -89,20 +102,4 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
 
         return Edit(profile, context);
     }
-}
-
-/// <summary>
-/// Settings specific to Copilot orchestrator configuration.
-/// </summary>
-public sealed class CopilotProfileSettings
-{
-    /// <summary>
-    /// The Copilot model to use (e.g., gpt-4o, claude-3.5-sonnet).
-    /// </summary>
-    public string CopilotModel { get; set; }
-
-    /// <summary>
-    /// Additional Copilot execution flags (e.g., --allow-all).
-    /// </summary>
-    public string CopilotFlags { get; set; }
 }

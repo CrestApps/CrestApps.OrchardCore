@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
+using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +19,7 @@ public sealed class CopilotAuthController : Controller
     private readonly IGitHubOAuthService _oauthService;
     private readonly UserManager<USR.IUser> _userManager;
     private readonly INotifier _notifier;
-    private readonly ILogger<CopilotAuthController> _logger;
+    private readonly ILogger _logger;
     private readonly AdminOptions _adminOptions;
 
     internal readonly IHtmlLocalizer H;
@@ -48,7 +49,7 @@ public sealed class CopilotAuthController : Controller
         // Validate returnUrl to prevent open redirect attacks
         var safeReturnUrl = returnUrl != null && Url.IsLocalUrl(returnUrl)
             ? returnUrl
-            : Url.Action(nameof(OAuthCallback), GetType().Name.Replace("Controller", ""));
+            : Url.Action(nameof(OAuthCallback), GetType().Name.GetControllerName());
 
         // Generate the GitHub authorization URL
         var authUrl = await _oauthService.GetAuthorizationUrlAsync(safeReturnUrl);

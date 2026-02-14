@@ -172,19 +172,24 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
             return null;
         }
 
-        var credentials = (user as IEntity)?.As<GitHubOAuthCredentials>();
-        if (credentials == null || string.IsNullOrEmpty(credentials.ProtectedAccessToken))
+        if (user is User usr)
         {
-            return null;
+            var credentials = usr.As<GitHubOAuthCredentials>();
+            if (credentials == null || string.IsNullOrEmpty(credentials.ProtectedAccessToken))
+            {
+                return null;
+            }
+
+            return new GitHubOAuthCredential
+            {
+                UserId = userId,
+                GitHubUsername = credentials.GitHubUsername,
+                ExpiresAt = credentials.ExpiresAt,
+                UpdatedUtc = credentials.UpdatedUtc
+            };
         }
 
-        return new GitHubOAuthCredential
-        {
-            UserId = userId,
-            GitHubUsername = credentials.GitHubUsername,
-            ExpiresAt = credentials.ExpiresAt,
-            UpdatedUtc = credentials.UpdatedUtc
-        };
+        return null;
     }
 
     public async Task<string> GetValidAccessTokenAsync(
@@ -197,24 +202,31 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
             return null;
         }
 
-        var credentials = (user as IEntity)?.As<GitHubOAuthCredentials>();
-        if (credentials == null || string.IsNullOrEmpty(credentials.ProtectedAccessToken))
+        if (user is User usr)
         {
-            return null;
+            var credentials = usr.As<GitHubOAuthCredentials>();
+            if (credentials == null || string.IsNullOrEmpty(credentials.ProtectedAccessToken))
+            {
+                return null;
+            }
+
+            var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
+        
+            try
+            {
+                var accessToken = protector.Unprotect(credentials.ProtectedAccessToken);
+
+                return accessToken;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to unprotect access token for user {UserId}", userId);
+
+                return null;
+            }
         }
 
-        var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
-        
-        try
-        {
-            var accessToken = protector.Unprotect(credentials.ProtectedAccessToken);
-            return accessToken;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to unprotect access token for user {UserId}", userId);
-            return null;
-        }
+        return null;
     }
 
     public async Task DisconnectAsync(
