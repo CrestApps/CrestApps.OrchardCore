@@ -16,7 +16,7 @@
                     <div class="alert alert-success">
                         <i class="fas fa-check-circle"></i>
                         @T["Connected as"] <strong>@Model.GitHubUsername</strong>
-                        <a href="#" class="btn btn-sm btn-outline-danger float-end" id="disconnect-github">
+                        <a href="#" class="btn btn-sm btn-outline-danger float-end" id="disconnect-github" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]">
                             @T["Disconnect"]
                         </a>
                     </div>
@@ -70,11 +70,27 @@
         }
         
         if (disconnectButton) {
+            const confirmMessage = disconnectButton.getAttribute('data-confirm-message');
             disconnectButton.addEventListener('click', function(e) {
                 e.preventDefault();
-                if (confirm('@T["Are you sure you want to disconnect your GitHub account?"]')) {
-                    // TODO: Revoke GitHub OAuth token
-                    window.location.href = '@Url.Action("DisconnectGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
+                if (confirm(confirmMessage)) {
+                    // Create and submit a form for POST with antiforgery token
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '@Url.Action("DisconnectGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
+                    
+                    // Add antiforgery token
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                    if (token) {
+                        const tokenInput = document.createElement('input');
+                        tokenInput.type = 'hidden';
+                        tokenInput.name = '__RequestVerificationToken';
+                        tokenInput.value = token.value;
+                        form.appendChild(tokenInput);
+                    }
+                    
+                    document.body.appendChild(form);
+                    form.submit();
                 }
             });
         }

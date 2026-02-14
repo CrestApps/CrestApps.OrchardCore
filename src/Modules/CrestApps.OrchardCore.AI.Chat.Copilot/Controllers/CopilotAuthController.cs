@@ -32,9 +32,13 @@ public class CopilotAuthController : Controller
     {
         try
         {
+            // Validate returnUrl to prevent open redirect attacks
+            var safeReturnUrl = returnUrl != null && Url.IsLocalUrl(returnUrl)
+                ? returnUrl
+                : Url.Action("OAuthCallback", "CopilotAuth");
+
             // Generate the GitHub authorization URL
-            var authUrl = _oauthService.GetAuthorizationUrl(
-                returnUrl ?? Url.Action("OAuthCallback", "CopilotAuth"));
+            var authUrl = _oauthService.GetAuthorizationUrl(safeReturnUrl);
 
             return Redirect(authUrl);
         }
