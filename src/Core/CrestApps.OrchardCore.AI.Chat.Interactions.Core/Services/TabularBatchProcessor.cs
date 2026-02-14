@@ -87,9 +87,12 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
             batchIndex++;
         }
 
-        _logger.LogDebug(
-            "Split document '{FileName}' into {BatchCount} batches of up to {BatchSize} rows each.",
-            fileName, batches.Count, batchSize);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Split document '{FileName}' into {BatchCount} batches of up to {BatchSize} rows each.",
+                fileName, batches.Count, batchSize);
+        }
 
         return batches;
     }
@@ -98,7 +101,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
     public async Task<IList<TabularBatchResult>> ProcessBatchesAsync(
         IList<TabularBatch> batches,
         string userPrompt,
-        IntentProcessingContext context,
+        TabularBatchContext context,
         CancellationToken cancellationToken = default)
     {
         if (batches is null || batches.Count == 0)
@@ -223,7 +226,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
     private async Task<TabularBatchResult> ProcessSingleBatchAsync(
         TabularBatch batch,
         string userPrompt,
-        IntentProcessingContext context,
+        TabularBatchContext context,
         CancellationToken cancellationToken)
     {
         try
@@ -278,9 +281,12 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                     "LLM returned empty response.");
             }
 
-            _logger.LogDebug(
-                "Successfully processed batch {BatchIndex} (rows {StartRow}-{EndRow}) from '{FileName}'.",
-                batch.BatchIndex, batch.RowStartIndex, batch.RowEndIndex, batch.FileName);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Successfully processed batch {BatchIndex} (rows {StartRow}-{EndRow}) from '{FileName}'.",
+                    batch.BatchIndex, batch.RowStartIndex, batch.RowEndIndex, batch.FileName);
+            }
 
             return TabularBatchResult.CreateSuccess(
                 batch.BatchIndex,

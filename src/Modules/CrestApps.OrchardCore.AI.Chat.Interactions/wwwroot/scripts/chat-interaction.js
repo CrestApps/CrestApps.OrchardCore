@@ -12,6 +12,10 @@ function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present,
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
@@ -25,7 +29,7 @@ window.chatInteractionManager = function () {
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
-    messageTemplate: "\n            <div class=\"list-group\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                    <div class=\"d-flex align-items-center\">\n                        <div class=\"p-2\">\n                            <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'\"></i>\n                        </div>\n                        <div class=\"p-2 lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent || message.content\"></div>\n                        </div>\n                    </div>\n                    <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"!isIndicator(message)\">\n                        <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                            <i class=\"fa-solid fa-copy fa-lg\"></i>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
+    messageTemplate: "\n            <div class=\"list-group\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                    <div class=\"d-flex align-items-center\">\n                        <div class=\"p-2\">\n                            <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                        </div>\n                        <div class=\"p-2 lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent || message.content\"></div>\n                        </div>\n                    </div>\n                    <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"!isIndicator(message)\">\n                        <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                            <i class=\"fa-solid fa-copy fa-lg\"></i>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
     indicatorTemplate: "<div class=\"spinner-grow spinner-grow-sm\" role=\"status\"><span class=\"visually-hidden\">Loading...</span></div>",
     // Localizable strings
     untitledText: 'Untitled',
@@ -41,20 +45,57 @@ window.chatInteractionManager = function () {
     return "<a href=\"".concat(data.href, "\" target=\"_blank\" rel=\"noopener noreferrer\">").concat(data.text, "</a>");
   };
 
-  // Custom image renderer for generated images with thumbnail styling and download button
+  // Custom image renderer for generated images with thumbnail styling and download button.
+  // Handles both URL and data-URI sources (data URIs are converted to blobs for download).
   renderer.image = function (data) {
     var src = data.href;
     var alt = data.text || defaultConfig.generatedImageAltText;
     var maxWidth = defaultConfig.generatedImageMaxWidth;
-    return "<div class=\"generated-image-container\">\n            <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n            <div class=\"mt-2\">\n                <a href=\"").concat(src, "\" target=\"_blank\" download title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary\">\n                    <i class=\"fa-solid fa-download\"></i>\n                </a>\n            </div>\n        </div>");
+    return "<div class=\"generated-image-container\">\n            <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n            <div class=\"mt-2\">\n                <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n                    <i class=\"fa-solid fa-download\"></i>\n                </a>\n            </div>\n        </div>");
   };
 
   // Chart counter for unique IDs
   var chartCounter = 0;
+
+  // Collector for charts discovered during marked parsing.
+  var _pendingCharts = [];
   function createChartHtml(chartId) {
     var chartMaxWidth = defaultConfig.generatedChartMaxWidth;
-    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: ".concat(chartMaxWidth, "px; margin: 0 auto; height: 480px;\">\n            <canvas id=\"").concat(chartId, "\" class=\"img-thumbnail\" width=\"").concat(chartMaxWidth, "\" height=\"480\" style=\"width: 100%; height: 480px;\"></canvas>\n        </div>\n        <div class=\"mt-2\">\n            <button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadChart('").concat(chartId, "')\" title=\"").concat(defaultConfig.downloadChartTitle, "\">\n                <i class=\"fa-solid fa-download\"></i> ").concat(defaultConfig.downloadChartButtonText, "\n            </button>\n        </div>");
+    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: ".concat(chartMaxWidth, "px; margin: 0 auto; height: 480px;\">") + "<canvas id=\"".concat(chartId, "\" class=\"img-thumbnail\" width=\"").concat(chartMaxWidth, "\" height=\"480\" style=\"width: 100%; height: 480px;\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadChart('".concat(chartId, "')\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<i class=\"fa-solid fa-download\"></i> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
   }
+
+  // Register [chart:{...json...}] as a native marked block extension so the
+  // markdown parser handles chart markers inline with surrounding text.
+  marked.use({
+    extensions: [{
+      name: 'chart',
+      level: 'block',
+      start: function start(src) {
+        var idx = src.indexOf('[chart:');
+        return idx >= 0 ? idx : undefined;
+      },
+      tokenizer: function tokenizer(src) {
+        var extracted = tryExtractChartMarker(src);
+        if (!extracted || extracted.startIndex !== 0) {
+          return undefined;
+        }
+        var chartId = "chat_chart_".concat(++chartCounter);
+        return {
+          type: 'chart',
+          raw: src.substring(0, extracted.endIndex),
+          chartId: chartId,
+          json: extracted.json
+        };
+      },
+      renderer: function renderer(token) {
+        _pendingCharts.push({
+          chartId: token.chartId,
+          config: token.json
+        });
+        return createChartHtml(token.chartId);
+      }
+    }]
+  });
 
   // Extract a [chart:{...json...}] marker. This avoids regex issues with nested brackets.
   function tryExtractChartMarker(text) {
@@ -160,30 +201,16 @@ window.chatInteractionManager = function () {
     message._pendingCharts = [];
   }
 
-  // Replace chart markers in content with chart placeholders and collect configs.
-  function processChartMarkers(content, message) {
-    var _message$_pendingChar;
-    if (!content) {
-      return content;
-    }
-    var result = content;
-    (_message$_pendingChar = message._pendingCharts) !== null && _message$_pendingChar !== void 0 ? _message$_pendingChar : message._pendingCharts = [];
-
-    // Only replace markers when we can fully extract them.
-    while (true) {
-      var extracted = tryExtractChartMarker(result);
-      if (!extracted) {
-        break;
-      }
-      var chartId = "chat_chart_".concat(++chartCounter);
-      message._pendingCharts.push({
-        chartId: chartId,
-        config: extracted.json
-      });
-      var html = createChartHtml(chartId);
-      result = result.substring(0, extracted.startIndex) + html + result.substring(extracted.endIndex);
-    }
-    return result;
+  // Parse markdown content via marked (which natively handles [chart:...] markers
+  // through the registered extension) and collect pending chart configs for later
+  // Chart.js rendering.
+  function parseMarkdownContent(content, message) {
+    _pendingCharts = [];
+    var html = marked.parse(content, {
+      renderer: renderer
+    });
+    message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
+    return html;
   }
   var initialize = function initialize(instanceConfig) {
     var config = Object.assign({}, defaultConfig, instanceConfig);
@@ -220,6 +247,7 @@ window.chatInteractionManager = function () {
           isPlaceholderVisible: true,
           isStreaming: false,
           isNavigatingAway: false,
+          autoScroll: true,
           stream: null,
           messages: [],
           prompt: '',
@@ -240,6 +268,11 @@ window.chatInteractionManager = function () {
               while (1) switch (_context.p = _context.n) {
                 case 0:
                   _this.connection = new signalR.HubConnectionBuilder().withUrl(config.signalRHubUrl).withAutomaticReconnect().build();
+
+                  // Allow long-running operations (e.g., multi-step MCP tool calls)
+                  // without the client disconnecting prematurely.
+                  _this.connection.serverTimeoutInMilliseconds = 600000;
+                  _this.connection.keepAliveIntervalInMilliseconds = 15000;
                   _this.connection.on("LoadInteraction", function (data) {
                     var _data$messages;
                     _this.initializeInteraction(data.itemId, true);
@@ -249,13 +282,6 @@ window.chatInteractionManager = function () {
                       titleInput.value = data.title;
                     }
                     ((_data$messages = data.messages) !== null && _data$messages !== void 0 ? _data$messages : []).forEach(function (msg) {
-                      // Ensure persisted chart markers are rendered too
-                      if (msg && msg.content) {
-                        msg.content = processChartMarkers(msg.content.trim(), msg);
-                        if (msg.content.includes('class="chart-container"')) {
-                          msg.htmlContent = msg.content;
-                        }
-                      }
                       _this.addMessage(msg);
                       _this.$nextTick(function () {
                         renderChartsInMessage(msg);
@@ -282,6 +308,20 @@ window.chatInteractionManager = function () {
                     var clearHistoryBtn = document.getElementById('clearHistoryBtn');
                     if (clearHistoryBtn) {
                       clearHistoryBtn.classList.add('d-none');
+                    }
+                  });
+                  _this.connection.onreconnecting(function () {
+                    console.warn("SignalR: reconnecting...");
+                  });
+                  _this.connection.onreconnected(function () {
+                    console.info("SignalR: reconnected.");
+                  });
+                  _this.connection.onclose(function (error) {
+                    if (_this.isNavigatingAway) {
+                      return;
+                    }
+                    if (error) {
+                      console.warn("SignalR connection closed with error:", error.message || error);
                     }
                   });
                   _context.p = 1;
@@ -320,9 +360,6 @@ window.chatInteractionManager = function () {
           var _this3 = this;
           if (message.content) {
             var processedContent = message.content.trim();
-
-            // Process chart markers first (before markdown parsing)
-            processedContent = processChartMarkers(processedContent, message);
             if (message.references && _typeof(message.references) === "object" && Object.keys(message.references).length) {
               for (var _i = 0, _Object$entries = Object.entries(message.references); _i < _Object$entries.length; _i++) {
                 var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
@@ -338,15 +375,7 @@ window.chatInteractionManager = function () {
               }
             }
             message.content = processedContent;
-
-            // If we inserted chart HTML, don't markdown-parse
-            if (processedContent.includes('class="chart-container"')) {
-              message.htmlContent = processedContent;
-            } else {
-              message.htmlContent = marked.parse(processedContent, {
-                renderer: renderer
-              });
-            }
+            message.htmlContent = parseMarkdownContent(processedContent, message);
           }
           this.addMessageInternal(message);
           this.hidePlaceholder();
@@ -401,6 +430,7 @@ window.chatInteractionManager = function () {
           }
           this.streamingStarted();
           this.showTypingIndicator();
+          this.autoScroll = true;
           var content = '';
           var references = {};
           var messageIndex = this.messages.length;
@@ -417,7 +447,8 @@ window.chatInteractionManager = function () {
                 var newMessage = {
                   role: "assistant",
                   content: "",
-                  htmlContent: ""
+                  htmlContent: "",
+                  isStreaming: true
                 };
                 _this4.messages.push(newMessage);
                 message = newMessage;
@@ -441,16 +472,7 @@ window.chatInteractionManager = function () {
                 content += processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
               }
               message.content = content;
-
-              // Process chart markers before markdown parsing
-              var htmlContent = processChartMarkers(content, message);
-              if (htmlContent.includes('class="chart-container"')) {
-                message.htmlContent = htmlContent;
-              } else {
-                message.htmlContent = marked.parse(htmlContent, {
-                  renderer: renderer
-                });
-              }
+              message.htmlContent = parseMarkdownContent(content, message);
               _this4.messages[messageIndex] = message;
               _this4.$nextTick(function () {
                 renderChartsInMessage(message);
@@ -461,10 +483,13 @@ window.chatInteractionManager = function () {
               var _this4$stream;
               _this4.processReferences(references, messageIndex);
               _this4.streamingFinished();
-              if (!_this4.messages[messageIndex].content) {
+              var msg = _this4.messages[messageIndex];
+              if (msg) {
+                msg.isStreaming = false;
+              }
+              if (!msg || !msg.content) {
+                // No content received at all.
                 _this4.hideTypingIndicator();
-                _this4.addMessage(_this4.getServiceDownMessage());
-                console.log('blank message');
               }
               (_this4$stream = _this4.stream) === null || _this4$stream === void 0 || _this4$stream.dispose();
               _this4.stream = null;
@@ -473,6 +498,10 @@ window.chatInteractionManager = function () {
               var _this4$stream2;
               _this4.processReferences(references, messageIndex);
               _this4.streamingFinished();
+              var msg = _this4.messages[messageIndex];
+              if (msg) {
+                msg.isStreaming = false;
+              }
               _this4.hideTypingIndicator();
               if (!_this4.isNavigatingAway) {
                 _this4.addMessage(_this4.getServiceDownMessage());
@@ -499,9 +528,7 @@ window.chatInteractionManager = function () {
               var value = _Object$values2[_i5];
               message.content += "**".concat(value.index, "**. [").concat(value.text, "](").concat(value.link, ")<br>");
             }
-            message.htmlContent = marked.parse(message.content, {
-              renderer: renderer
-            });
+            message.htmlContent = parseMarkdownContent(message.content, message);
             this.messages[messageIndex] = message;
             this.scrollToBottom();
           }
@@ -534,6 +561,9 @@ window.chatInteractionManager = function () {
         },
         scrollToBottom: function scrollToBottom() {
           var _this5 = this;
+          if (!this.autoScroll) {
+            return;
+          }
           setTimeout(function () {
             _this5.chatContainer.scrollTop = _this5.chatContainer.scrollHeight - _this5.chatContainer.clientHeight;
           }, 50);
@@ -559,6 +589,16 @@ window.chatInteractionManager = function () {
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
           this.placeholder = document.querySelector(config.placeholderElementSelector);
+
+          // Pause auto-scroll when the user manually scrolls up during streaming.
+          this.chatContainer.addEventListener('scroll', function () {
+            if (!_this6.stream) {
+              return;
+            }
+            var threshold = 30;
+            var atBottom = _this6.chatContainer.scrollHeight - _this6.chatContainer.clientHeight - _this6.chatContainer.scrollTop <= threshold;
+            _this6.autoScroll = atBottom;
+          });
           this.inputElement.addEventListener('keyup', function (event) {
             if (_this6.stream != null) {
               return;
@@ -591,6 +631,17 @@ window.chatInteractionManager = function () {
               _this6.stream.dispose();
               _this6.stream = null;
               _this6.streamingFinished();
+              _this6.hideTypingIndicator();
+
+              // Clean up: remove empty assistant message or stop streaming animation.
+              if (_this6.messages.length > 0) {
+                var lastMsg = _this6.messages[_this6.messages.length - 1];
+                if (lastMsg.role === 'assistant' && !lastMsg.content) {
+                  _this6.messages.pop();
+                } else if (lastMsg.isStreaming) {
+                  lastMsg.isStreaming = false;
+                }
+              }
               return;
             }
             _this6.sendMessage();
@@ -612,8 +663,8 @@ window.chatInteractionManager = function () {
           }
 
           // Add event listeners for all settings fields with "ChatInteraction." prefix
-          // Exclude tool-related inputs (they have special handling with debouncing)
-          var settingsInputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["])');
+          // Exclude tool and MCP connection inputs (they have special handling with debouncing)
+          var settingsInputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])');
           settingsInputs.forEach(function (input) {
             var isCheckbox = input.type === 'checkbox';
             var isSelect = input.tagName === 'SELECT';
@@ -660,6 +711,15 @@ window.chatInteractionManager = function () {
             });
           });
 
+          // Add event listeners for MCP connection checkboxes with debouncing (850ms)
+          var mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]');
+          mcpCheckboxes.forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () {
+              _this6.settingsDirty = true;
+              _this6.debouncedSaveSettings();
+            });
+          });
+
           // Add event listener for clear history button
           var clearHistoryBtn = document.getElementById('clearHistoryBtn');
           if (clearHistoryBtn) {
@@ -685,6 +745,13 @@ window.chatInteractionManager = function () {
             cancelText: config.clearHistoryCancelText,
             callback: function callback(confirmed) {
               if (confirmed) {
+                // Cancel any active stream before clearing history.
+                if (self.stream) {
+                  self.stream.dispose();
+                  self.stream = null;
+                  self.hideTypingIndicator();
+                  self.streamingFinished();
+                }
                 self.connection.invoke("ClearHistory", itemId)["catch"](function (err) {
                   return console.error('Error clearing history:', err);
                 });
@@ -723,6 +790,18 @@ window.chatInteractionManager = function () {
           });
           return toolNames;
         },
+        getSelectedMcpConnectionIds: function getSelectedMcpConnectionIds() {
+          var connectionIds = [];
+          var mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]:checked');
+          mcpCheckboxes.forEach(function (checkbox) {
+            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
+            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
+            if (hiddenInput && hiddenInput.value) {
+              connectionIds.push(hiddenInput.value);
+            }
+          });
+          return connectionIds;
+        },
         saveSettings: function saveSettings() {
           var _isInScopeInput$check;
           var itemId = this.getItemId();
@@ -758,11 +837,12 @@ window.chatInteractionManager = function () {
             dataSourceId: (dataSourceIdInput === null || dataSourceIdInput === void 0 ? void 0 : dataSourceIdInput.value) || null,
             strictness: strictnessInput !== null && strictnessInput !== void 0 && strictnessInput.value ? parseInt(strictnessInput.value) : null,
             topNDocuments: topNDocumentsInput !== null && topNDocumentsInput !== void 0 && topNDocumentsInput.value ? parseInt(topNDocumentsInput.value) : null,
-            filter: filterInput.value,
+            filter: (filterInput === null || filterInput === void 0 ? void 0 : filterInput.value) || null,
             isInScope: (_isInScopeInput$check = isInScopeInput === null || isInScopeInput === void 0 ? void 0 : isInScopeInput.checked) !== null && _isInScopeInput$check !== void 0 ? _isInScopeInput$check : true,
-            toolNames: this.getSelectedToolNames()
+            toolNames: this.getSelectedToolNames(),
+            mcpConnectionIds: this.getSelectedMcpConnectionIds()
           };
-          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId, settings.strictness, settings.topNDocuments, settings.filter, settings.isInScope, settings.toolNames)["catch"](function (err) {
+          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId, settings.strictness, settings.topNDocuments, settings.filter, settings.isInScope, settings.toolNames, settings.mcpConnectionIds)["catch"](function (err) {
             return console.error('Error saving settings:', err);
           });
         },
@@ -832,3 +912,37 @@ window.downloadChart = function (chartId) {
   link.href = canvas.toDataURL('image/png');
   link.click();
 };
+
+// Intercept download clicks for data-URI images and convert to blob downloads.
+document.addEventListener('click', function (e) {
+  var link = e.target.closest('.ai-download-image');
+  if (!link) {
+    return;
+  }
+  var container = link.closest('.generated-image-container');
+  var img = container === null || container === void 0 ? void 0 : container.querySelector('img');
+  if (!img) {
+    return;
+  }
+  var src = img.src;
+  if (!src || !src.startsWith('data:')) {
+    return; // Normal URL – let the default <a> behaviour handle it.
+  }
+  e.preventDefault();
+  fetch(src).then(function (res) {
+    return res.blob();
+  }).then(function (blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = link.getAttribute('download') || 'generated-image.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 100);
+  })["catch"](function (err) {
+    console.error('Failed to download image:', err);
+  });
+});

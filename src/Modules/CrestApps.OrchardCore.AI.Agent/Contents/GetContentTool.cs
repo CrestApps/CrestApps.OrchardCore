@@ -1,7 +1,5 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -47,11 +45,9 @@ public sealed class GetContentTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, CommonPermissions.ViewContent))
+        if (!await arguments.IsAuthorizedAsync(CommonPermissions.ViewContent))
         {
             return "You do not have permission to view content items.";
         }

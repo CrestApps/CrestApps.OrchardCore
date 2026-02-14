@@ -1,7 +1,5 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement.Metadata;
@@ -44,10 +42,8 @@ public sealed class GetContentPartDefinitionsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ViewContentTypes))
+        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ViewContentTypes))
         {
             return "You do not have permission to view content types.";
         }

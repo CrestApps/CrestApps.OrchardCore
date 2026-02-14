@@ -13,16 +13,53 @@ public sealed class DefaultMcpServerResourceService : IMcpServerResourceService
 {
     private readonly ISourceCatalogManager<McpResource> _catalogManager;
     private readonly IMcpResourceProvider _skillResourceProvider;
+    private readonly IEnumerable<McpServerResource> _sdkResources;
 
     public DefaultMcpServerResourceService(
         ISourceCatalogManager<McpResource> catalogManager,
-        IMcpResourceProvider skillResourceProvider)
+        IMcpResourceProvider skillResourceProvider,
+        IEnumerable<McpServerResource> sdkResources)
     {
         _catalogManager = catalogManager;
         _skillResourceProvider = skillResourceProvider;
+        _sdkResources = sdkResources;
     }
 
     public async Task<IList<Resource>> ListAsync()
+    {
+        var allResources = await GetAllResourcesAsync();
+
+        // Only return concrete resources (URIs without template parameters).
+        return allResources
+            .Where(r => r.Uri is null || !r.Uri.Contains('{'))
+            .ToList();
+    }
+
+    public async Task<IList<ResourceTemplate>> ListTemplatesAsync()
+    {
+        var allResources = await GetAllResourcesAsync();
+
+        // Return resources with template parameters as ResourceTemplate objects.
+        var templates = new List<ResourceTemplate>();
+
+        foreach (var resource in allResources)
+        {
+            if (resource.Uri is not null && resource.Uri.Contains('{'))
+            {
+                templates.Add(new ResourceTemplate
+                {
+                    Name = resource.Name,
+                    UriTemplate = resource.Uri,
+                    Description = resource.Description,
+                    MimeType = resource.MimeType,
+                });
+            }
+        }
+
+        return templates;
+    }
+
+    private async Task<IList<Resource>> GetAllResourcesAsync()
     {
         var entries = await _catalogManager.GetAllAsync();
 
@@ -41,6 +78,16 @@ public sealed class DefaultMcpServerResourceService : IMcpServerResourceService
             }
         }
 
+        // Include resources registered via the MCP C# SDK.
+        foreach (var sdkResource in _sdkResources)
+        {
+            if (sdkResource.ProtocolResource is not null &&
+                !resources.Any(r => r.Uri == sdkResource.ProtocolResource.Uri))
+            {
+                resources.Add(sdkResource.ProtocolResource);
+            }
+        }
+
         return resources;
     }
 
@@ -53,6 +100,14 @@ public sealed class DefaultMcpServerResourceService : IMcpServerResourceService
         if (matchedSkillResource is not null)
         {
             return await matchedSkillResource.ReadAsync(request, cancellationToken);
+        }
+
+        // Try resources registered via the MCP C# SDK.
+        var sdkResource = _sdkResources.FirstOrDefault(r => r.IsMatch(request.Params.Uri));
+
+        if (sdkResource is not null)
+        {
+            return await sdkResource.ReadAsync(request, cancellationToken);
         }
 
         // Parse the URI: {scheme}://{itemId}/{path}

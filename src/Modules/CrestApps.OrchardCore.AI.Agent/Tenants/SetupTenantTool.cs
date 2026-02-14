@@ -1,8 +1,6 @@
 using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -106,14 +104,12 @@ public sealed class SetupTenantTool : AIFunction
 
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
         var setupService = arguments.Services.GetRequiredService<ISetupService>();
         var identityOptions = arguments.Services.GetRequiredService<IOptions<IdentityOptions>>().Value;
         var emailAddressValidator = arguments.Services.GetRequiredService<IEmailAddressValidator>();
-        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
         var clock = arguments.Services.GetRequiredService<IClock>();
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageTenants))
+        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageTenants))
         {
             return "The current user does not have permission to manage tenants.";
         }

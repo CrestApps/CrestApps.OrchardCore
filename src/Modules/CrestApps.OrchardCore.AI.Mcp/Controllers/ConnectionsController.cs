@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.Core.Models;
@@ -274,7 +273,7 @@ public sealed class ConnectionsController : Controller
     [Admin("ai/mcp/connections", "AIMCPConnectionsIndex")]
     public async Task<ActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIToolInstances))
+        if (!await _authorizationService.AuthorizeAsync(User, McpPermissions.ManageMcpConnections))
         {
             return Forbid();
         }

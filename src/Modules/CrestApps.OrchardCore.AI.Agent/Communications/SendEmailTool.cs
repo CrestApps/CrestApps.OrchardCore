@@ -79,7 +79,7 @@ public sealed class SendEmailTool : AIFunction
             return "Unable to find a body argument in the function arguments.";
         }
 
-        if (!httpContextAccessor.HttpContext.User.Identity.IsAuthenticated)
+        if (!arguments.IsAuthenticatedOrMcpRequest())
         {
             return "You must login to be able to send email.";
         }

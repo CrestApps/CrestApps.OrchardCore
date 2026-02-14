@@ -1,7 +1,5 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -50,8 +48,6 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
 
         var recipeHarvesters = arguments.Services.GetRequiredService<IEnumerable<IRecipeHarvester>>();
         var recipeEnvironmentProviders = arguments.Services.GetRequiredService<IEnumerable<IRecipeEnvironmentProvider>>();
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
         var recipeExecutor = arguments.Services.GetRequiredService<IRecipeExecutor>();
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
@@ -63,7 +59,7 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
             return "Unable to find a recipeName argument in the function arguments.";
         }
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageRecipes))
+        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageRecipes))
         {
             return "You do not have permission to execute a recipe.";
         }

@@ -86,7 +86,10 @@ public sealed class TabularBatchResultCache : ITabularBatchResultCache
 
             if (cachedBytes is null || cachedBytes.Length == 0)
             {
-                _logger.LogDebug("Cache miss for tabular batch results. Key: {CacheKey}", cacheKey);
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("Cache miss for tabular batch results. Key: {CacheKey}", cacheKey);
+                }
                 return null;
             }
 
@@ -94,7 +97,10 @@ public sealed class TabularBatchResultCache : ITabularBatchResultCache
 
             if (entry is not null)
             {
-                _logger.LogDebug("Cache hit for tabular batch results. Key: {CacheKey}", cacheKey);
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("Cache hit for tabular batch results. Key: {CacheKey}", cacheKey);
+                }
             }
 
             return entry;
@@ -127,9 +133,12 @@ public sealed class TabularBatchResultCache : ITabularBatchResultCache
             var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(entry, _jsonOptions);
             _cache.Set(cacheKey, jsonBytes, options);
 
-            _logger.LogDebug(
-                "Cached tabular batch results. Key: {CacheKey}, Batches: {BatchCount}, Size: {Size} bytes, Expiration: {Expiration}",
-                cacheKey, entry.Results?.Count ?? 0, jsonBytes.Length, cacheExpiration);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Cached tabular batch results. Key: {CacheKey}, Batches: {BatchCount}, Size: {Size} bytes, Expiration: {Expiration}",
+                    cacheKey, entry.Results?.Count ?? 0, jsonBytes.Length, cacheExpiration);
+            }
         }
         catch (Exception ex)
         {
@@ -148,7 +157,10 @@ public sealed class TabularBatchResultCache : ITabularBatchResultCache
         try
         {
             _cache.Remove(cacheKey);
-            _logger.LogDebug("Removed cached tabular batch results. Key: {CacheKey}", cacheKey);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Removed cached tabular batch results. Key: {CacheKey}", cacheKey);
+            }
         }
         catch (Exception ex)
         {
@@ -162,11 +174,14 @@ public sealed class TabularBatchResultCache : ITabularBatchResultCache
         // Distributed cache doesn't support prefix-based removal directly.
         // This is a limitation - entries will expire naturally.
         // For production, consider using Redis with SCAN/DEL or a custom key tracking mechanism.
-        _logger.LogDebug(
-            "Invalidation requested for interaction {InteractionId}. " +
-            "Note: Distributed cache does not support prefix-based removal. " +
-            "Entries will expire naturally based on configured TTL.",
-            interactionId);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Invalidation requested for interaction {InteractionId}. " +
+                "Note: Distributed cache does not support prefix-based removal. " +
+                "Entries will expire naturally based on configured TTL.",
+                interactionId);
+        }
     }
 
     private TimeSpan GetCacheExpiration()

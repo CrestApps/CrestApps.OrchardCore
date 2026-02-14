@@ -29,7 +29,10 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
 
         if (!hasPath || !File.Exists(filePath) || !filePath.StartsWith("filesystem/", StringComparison.OrdinalIgnoreCase))
         {
-            _logger.LogDebug("File not found for resource URI: {ResourceUri}", resourceUri.Uri);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("File not found for resource URI: {ResourceUri}", resourceUri.Uri);
+            }
 
             if (!hasPath)
             {
@@ -39,7 +42,10 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
             return CreateErrorResult(resource.Resource.Uri, $"File not found: {filePath}");
         }
 
-        _logger.LogDebug("Reading file resource from: {FilePath}", filePath);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Reading file resource from: {FilePath}", filePath);
+        }
 
         // Determine MIME type
         var mimeType = resource.Resource?.MimeType;
@@ -51,18 +57,35 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
             }
         }
 
-        // Read file content
-        var content = await File.ReadAllTextAsync(filePath, cancellationToken);
+        if (IsTextMimeType(mimeType))
+        {
+            var content = await File.ReadAllTextAsync(filePath, cancellationToken);
+
+            return new ReadResourceResult
+            {
+                Contents =
+                [
+                    new TextResourceContents
+                    {
+                        Uri = resource.Resource.Uri,
+                        MimeType = mimeType,
+                        Text = content,
+                    }
+                ]
+            };
+        }
+
+        var bytes = await File.ReadAllBytesAsync(filePath, cancellationToken);
 
         return new ReadResourceResult
         {
             Contents =
             [
-                new TextResourceContents
+                new BlobResourceContents
                 {
                     Uri = resource.Resource.Uri,
                     MimeType = mimeType,
-                    Text = content,
+                    Blob = Convert.ToBase64String(bytes),
                 }
             ]
         };

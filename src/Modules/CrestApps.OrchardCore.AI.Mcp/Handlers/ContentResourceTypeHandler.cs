@@ -27,14 +27,20 @@ public sealed class ContentResourceTypeHandler : McpResourceTypeHandlerBase
 
     protected override async Task<ReadResourceResult> GetResultAsync(McpResource resource, McpResourceUri resourceUri, CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Reading content resource: {Uri}", resource.Resource.Uri);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Reading content resource: {Uri}", resource.Resource.Uri);
+        }
 
         // Find a strategy that can handle this URI's path
         foreach (var strategy in _strategyProviders)
         {
             if (strategy.CanHandle(resourceUri))
             {
-                _logger.LogDebug("Using strategy {Strategy} for URI {Uri}", strategy.GetType().Name, resource.Resource.Uri);
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("Using strategy {Strategy} for URI {Uri}", strategy.GetType().Name, resource.Resource.Uri);
+                }
                 return await strategy.ReadAsync(resource, resourceUri, cancellationToken);
             }
         }

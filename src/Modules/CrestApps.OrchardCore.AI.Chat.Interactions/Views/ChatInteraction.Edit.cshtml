@@ -3,13 +3,21 @@
         @if (Model.Parameters is not null)
         {
             <div class="chat-parameters-panel flex-shrink-0 bg-theme border rounded mb-3 mb-lg-0">
-                <div class="chat-parameters-content p-3">
+                <div class="d-none d-lg-flex justify-content-end p-2 pb-0">
+                    <button type="button" class="btn btn-sm btn-link text-muted chat-panel-toggle" title="@T["Collapse panel"]">
+                        <i class="fa-solid fa-angles-left"></i>
+                    </button>
+                </div>
+                <div class="chat-parameters-content p-3 pt-lg-0">
                     @await DisplayAsync(Model.Parameters)
                 </div>
             </div>
         }
 
         <div class="d-flex flex-column flex-grow-1 ps-lg-3 chat-content-area">
+            <button type="button" class="btn btn-sm btn-outline-secondary chat-panel-expand-btn mb-2" title="@T["Expand panel"]">
+                <i class="fa-solid fa-angles-right me-1"></i>@T["Configurations"]
+            </button>
             @if (Model.Header is not null)
             {
                 <div class="mb-3 chat-header-area flex-shrink-0">
@@ -22,6 +30,19 @@
         </div>
     </div>
 </div>
+
+<script at="Head">
+    (() => {
+        const storageKey = `chat-interaction-panel-collapsed:${window.location.pathname}`;
+
+        try {
+            if (localStorage.getItem(storageKey) === 'true') {
+                document.documentElement.classList.add('chat-panel-collapsed');
+            }
+        } catch {
+        }
+    })();
+</script>
 
 <style at="Head">
     /* Default for smaller screens - use auto height for scrollable layout */
@@ -57,6 +78,10 @@
         min-height: 0;
     }
 
+    .chat-panel-expand-btn {
+        display: none !important;
+    }
+
     /* Larger screens - fixed height layout */
     @@media (min-width: 992px) {
         .chat-interaction-container {
@@ -77,5 +102,65 @@
         .chat-main-area {
             min-height: 0;
         }
+
+        .chat-interaction-container.panel-collapsed .chat-parameters-panel {
+            display: none !important;
+        }
+
+        .chat-interaction-container.panel-collapsed .chat-panel-expand-btn {
+            display: inline-block !important;
+            align-self: flex-start;
+        }
+
+        .chat-interaction-container.panel-collapsed .chat-content-area {
+            padding-left: 0 !important;
+        }
+
+        html.chat-panel-collapsed .chat-interaction-container .chat-parameters-panel {
+            display: none !important;
+        }
+
+        html.chat-panel-collapsed .chat-interaction-container .chat-panel-expand-btn {
+            display: inline-block !important;
+            align-self: flex-start;
+        }
+
+        html.chat-panel-collapsed .chat-interaction-container .chat-content-area {
+            padding-left: 0 !important;
+        }
     }
 </style>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+        const container = document.querySelector('.chat-interaction-container');
+        if (!container) return;
+
+        const storageKey = `chat-interaction-panel-collapsed:${window.location.pathname}`;
+        const documentElement = document.documentElement;
+
+        const applyCollapsedState = (isCollapsed) => {
+            container.classList.toggle('panel-collapsed', isCollapsed);
+            documentElement.classList.toggle('chat-panel-collapsed', isCollapsed);
+        };
+
+        try {
+            const storedValue = localStorage.getItem(storageKey);
+            if (storedValue !== null) {
+                applyCollapsedState(storedValue === 'true');
+            }
+        } catch {
+        }
+
+        container.querySelectorAll('.chat-panel-toggle, .chat-panel-expand-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const isCollapsed = !container.classList.contains('panel-collapsed');
+                applyCollapsedState(isCollapsed);
+                try {
+                    localStorage.setItem(storageKey, isCollapsed.toString());
+                } catch {
+                }
+            });
+        });
+    });
+</script>

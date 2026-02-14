@@ -74,6 +74,26 @@
         border: none;
         box-shadow: none;
     }
+
+    .chat-parameters-content .nav-link {
+        padding: 0.5rem !important;
+    }
+
+    .ai-bot-icon {
+        color: #198754;
+    }
+
+    @@keyframes ai-streaming-pulse {
+        0%, 100% { color: #198754; }
+        25% { color: #0dcaf0; }
+        50% { color: #6f42c1; }
+        75% { color: #0dcaf0; }
+    }
+
+    .ai-streaming-icon,
+    .ai-streaming-icon::before {
+        animation: ai-streaming-pulse 2s ease-in-out infinite !important;
+    }
 </style>
 
 <script asp-name="ChatInteractionApp" at="Foot"></script>

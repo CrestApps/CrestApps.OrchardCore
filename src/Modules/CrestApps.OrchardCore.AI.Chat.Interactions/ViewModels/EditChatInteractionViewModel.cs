@@ -26,8 +26,6 @@ public class EditChatInteractionViewModel
 
     public string[] ToolNames { get; set; }
 
-    public string[] ToolInstanceIds { get; set; }
-
     public string[] McpConnectionIds { get; set; }
 
     public bool IsNew { get; set; }

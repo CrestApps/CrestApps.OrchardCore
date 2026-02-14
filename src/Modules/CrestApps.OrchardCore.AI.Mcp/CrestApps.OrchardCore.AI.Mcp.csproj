@@ -26,6 +26,7 @@
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Deployment.Abstractions" />
     <PackageReference Include="OrchardCore.Media.Abstractions" />
+    <PackageReference Include="Lucene.Net.Analysis.Common" />
     <PackageReference Include="ModelContextProtocol" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" />
     <PackageReference Include="CrestApps.OrchardCore.AgentSkills.Mcp" />
@@ -35,6 +36,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Mcp.Core\CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.OpenAI.Azure.Core\CrestApps.OrchardCore.OpenAI.Azure.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

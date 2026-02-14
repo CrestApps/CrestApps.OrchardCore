@@ -47,7 +47,10 @@ public sealed class ContentByIdResourceStrategy : IContentResourceStrategyProvid
             return McpResourceTypeHandlerBase.CreateErrorResult(uri.ToString(), "Content item ID is required in the URI path.");
         }
 
-        _logger.LogDebug("Reading content item by ID: {ContentItemId}", contentItemId);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Reading content item by ID: {ContentItemId}", contentItemId);
+        }
 
         var contentItem = await _contentManager.GetAsync(contentItemId);
 

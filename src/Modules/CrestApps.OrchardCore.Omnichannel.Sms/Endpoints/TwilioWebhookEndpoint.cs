@@ -82,7 +82,10 @@ internal static class TwilioWebhookEndpoint
         var messageSid = data["MessageSid"].ToString();
         var channel = "SMS";
 
-        logger.LogInformation("Twilio message received from {From} to {To}, SID: {Sid}", from, to, messageSid);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Twilio message received from {From} to {To}, SID: {Sid}", from, to, messageSid);
+        }
 
         var omnichannelMessage = new OmnichannelMessage
         {

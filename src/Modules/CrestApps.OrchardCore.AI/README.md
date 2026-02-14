@@ -54,7 +54,7 @@ Below is an example configuration:
         "FrequencyPenalty": 0,
         "PresencePenalty": 0,
         "PastMessagesCount": 10,
-        "MaximumIterationsPerRequest": 1,
+        "MaximumIterationsPerRequest": 10,
         "EnableOpenTelemetry": false,
         "EnableDistributedCaching": true
       },
@@ -79,6 +79,20 @@ Below is an example configuration:
   }
 }
 ```
+
+#### Default Parameters
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `Temperature` | Controls randomness. Lower values produce more deterministic results. | `0` |
+| `MaxOutputTokens` | Maximum number of tokens in the response. | `800` |
+| `TopP` | Controls diversity via nucleus sampling. | `1` |
+| `FrequencyPenalty` | Reduces repetition of token sequences. | `0` |
+| `PresencePenalty` | Encourages the model to explore new topics. | `0` |
+| `PastMessagesCount` | Number of previous messages included as conversation context. | `10` |
+| `MaximumIterationsPerRequest` | Maximum number of tool-call round-trips the model can make per request. Set to a higher value (e.g., `10`) to enable agentic behavior where the model can call tools, evaluate results, and call additional tools as needed. A value of `1` limits the model to a single tool call with no follow-up. | `10` |
+| `EnableOpenTelemetry` | Enables OpenTelemetry tracing for AI requests. | `false` |
+| `EnableDistributedCaching` | Enables distributed caching for AI responses. | `true` |
 
 #### Deployment Name Settings
 
@@ -238,9 +252,9 @@ You can add or update data-source using recipe. Here is an example or creating a
 }
 ```
 
-### Defining Chat Profiles Using Code
+### Defining AI Profiles Using Code
 
-To define chat profiles programmatically, create a migration class. Here's an example demonstrating how to create a new chat profile:
+To define AI profiles programmatically, create a migration class. Here's an example demonstrating how to create a new chat profile:
 
 ```csharp
 public sealed class SystemDefinedAIProfileMigrations : DataMigration
@@ -417,169 +431,58 @@ public sealed class GetWeatherFunction : AIFunction
 
 #### Registering the Custom Function
 
-To register the custom function, add it as a service in the `Startup` class. AI tools are registered as singletons with keyed service support:
+To register the custom function, add it as a service in the `Startup` class. AI tools use a fluent builder pattern for registration:
 
 ```csharp
-services.AddAITool<GetWeatherFunction>(GetWeatherFunction.TheName);
+services.AddAITool<GetWeatherFunction>(GetWeatherFunction.TheName)
+    .WithTitle("Weather Getter")
+    .WithDescription("Retrieves weather information for a specified location.")
+    .WithCategory("Service")
+    .Selectable();
 ```
 
-Alternatively, you can register it with configuration options:
+##### Builder Methods
+
+| Method | Description |
+| --- | --- |
+| `.WithTitle(string)` | Sets the display title for the tool. |
+| `.WithDescription(string)` | Sets the description shown in the UI and used by the orchestrator for planning. |
+| `.WithCategory(string)` | Sets the category for grouping in the UI. |
+| `.WithPurpose(string)` | Tags the tool with a purpose identifier (e.g., `AIToolPurposes.DocumentProcessing`). The orchestrator uses purpose tags to dynamically discover tools by function. |
+| `.Selectable()` | Makes the tool visible in the UI for user selection. **By default, tools are system tools** (hidden from the UI and managed by the orchestrator). Call `.Selectable()` to allow users to select the tool in Chat Interactions or AI Profiles. |
+
+##### System Tools vs. Selectable Tools
+
+- **System tools** (default): Automatically included by the orchestrator based on context. Not shown in the UI. Ideal for document processing, content generation, or other infrastructure tools.
+- **Selectable tools**: Visible in the UI for users to choose per Chat Interaction or AI Profile. Use `.Selectable()` when the tool represents a user-facing capability.
 
 ```csharp
-services.AddAITool<GetWeatherFunction>(GetWeatherFunction.TheName, options =>
-{
-    options.Title = "Weather Getter";
-    options.Description = "Retrieves weather information for a specified location.";
-    options.Category = "Service";
-});
+// System tool (hidden from UI, orchestrator-managed)
+services.AddAITool<ListDocumentsTool>(ListDocumentsTool.TheName)
+    .WithTitle("List Documents")
+    .WithDescription("Lists all documents attached to the current chat session.")
+    .WithPurpose(AIToolPurposes.DocumentProcessing);
+
+// Selectable tool (visible in UI for user selection)
+services.AddAITool<SearchForContentsTool>(SearchForContentsTool.TheName)
+    .WithTitle("Search Content Items")
+    .WithDescription("Provides a way to search for content items.")
+    .WithCategory("Content Management")
+    .Selectable();
 ```
+
+##### Well-Known Purpose Constants
+
+The `AIToolPurposes` class provides well-known purpose identifiers:
+
+| Constant | Value | Description |
+| --- | --- | --- |
+| `AIToolPurposes.DocumentProcessing` | `"document_processing"` | Tools that process, read, search, or manage documents attached to a chat session. |
+| `AIToolPurposes.ContentGeneration` | `"content_generation"` | Tools that generate content such as images or charts. |
+
+You can also define custom purpose strings for domain-specific tool grouping.
 
 Once registered, the function can be accessed via `IAIToolsService` in your module, which resolves tools by their name using keyed service resolution.
-
----
-
-### Using AI Tool Sources
-
-AI tool sources allow you to define additional parameters for AI tools through a user interface. For example, let's create a tool source that enables invoking different AI profiles.
-
-#### Creating a Custom AI Tool Source
-
-To create a custom tool source, implement the `IAIToolSource` interface. Below is an example:
-
-```csharp
-public sealed class ProfileAwareAIToolSource : IAIToolSource
-{
-    public const string ToolSource = "ProfileAware";
-
-    private readonly ILogger<ProfileAwareAIToolSource> _logger;
-    private readonly IAICompletionService _completionService;
-    private readonly IAIProfileStore _profileStore;
-
-    public ProfileAwareAIToolSource(
-        ILogger<ProfileAwareAIToolSource> logger,
-        IAICompletionService completionService,
-        IAIProfileStore profileStore,
-        IStringLocalizer<ProfileAwareAIToolSource> localizer)
-    {
-        _logger = logger;
-        _completionService = completionService;
-        _profileStore = profileStore;
-        DisplayName = localizer["Profile Invoker"];
-        Description = localizer["Provides a function that calls another profile."];
-    }
-
-    public string Name => ToolSource;
-    public AIToolSourceType Type => AIToolSourceType.Function;
-    public LocalizedString DisplayName { get; }
-    public LocalizedString Description { get; }
-
-    public async Task<AITool> CreateAsync(AIToolInstance instance)
-    {
-        if (!instance.TryGet<AIProfileFunctionMetadata>(out var metadata) || string.IsNullOrEmpty(metadata.ProfileId))
-        {
-            return new ProfileInvoker(_completionService, instance, null, _logger);
-        }
-
-        var profile = await _profileStore.FindByIdAsync(metadata.ProfileId);
-        return new ProfileInvoker(_completionService, instance, profile, _logger);
-    }
-
-    private sealed class ProfileInvoker : AIFunction
-    {
-        private const string PromptProperty = "Prompt";
-        private readonly IAICompletionService _completionService;
-        private readonly ILogger _logger;
-        private readonly AIProfile _profile;
-
-        public override AIFunctionMetadata Metadata { get; }
-
-        public ProfileInvoker(
-            IAICompletionService completionService,
-            AIToolInstance instance,
-            AIProfile profile,
-            ILogger logger)
-        {
-            _completionService = completionService;
-            _profile = profile;
-            _logger = logger;
-
-            var funcMetadata = instance.As<InvokableToolMetadata>();
-
-            Metadata = new AIFunctionMetadata(instance.Id)
-            {
-                Description = string.IsNullOrEmpty(funcMetadata.Description)
-                    ? "Provides a way to call another model."
-                    : funcMetadata.Description,
-                Parameters =
-                [
-                    new AIFunctionParameterMetadata(PromptProperty)
-                    {
-                        Description = "The user's prompt.",
-                        IsRequired = true,
-                        ParameterType = typeof(string),
-                    }
-                ],
-                ReturnParameter = new AIFunctionReturnParameterMetadata
-                {
-                    Description = "The model's response to the user's prompt.",
-                    ParameterType = typeof(string),
-                },
-            };
-        }
-
-        protected override async Task<object> InvokeCoreAsync(IEnumerable<KeyValuePair<string, object>> arguments, CancellationToken cancellationToken)
-        {
-            if (_profile is null)
-            {
-                return "The profile does not exist.";
-            }
-
-            try
-            {
-                var promptObject = arguments.First(x => x.Key == PromptProperty).Value;
-                var promptString = promptObject switch
-                {
-                    JsonElement jsonElement => jsonElement.GetString(),
-                    JsonNode jsonNode => jsonNode.ToJsonString(),
-                    string str => str,
-                    _ => null
-                };
-
-                var context = new AICompletionContext
-                {
-                    Profile = _profile,
-                    DisableTools = true,
-                };
-
-                return await _completionService.CompleteAsync(
-                    _profile.Source,
-                    [new ChatMessage(ChatRole.User, promptString)],
-                    context,
-                    cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error invoking profile '{ProfileId}' from source '{Source}'.", _profile.Id, _profile.Source);
-                return "Unable to get a response from the profile.";
-            }
-        }
-    }
-}
-```
-
-#### Registering the AI Tool Source
-
-To register the source, add the following line to your `Startup` class:
-
-```csharp
-services.AddAIToolSource<ProfileAwareAIToolSource>(ProfileAwareAIToolSource.ToolSource);
-```
-
-After registering, navigate to **Artificial Intelligence** in the admin menu. You will find a new menu item called **Tools**, where you can create multiple instances of the newly registered **Profile Invoker** tool source.
-
-### Configuring AI Profiles with Custom Functions
-
-Once the custom function is registered, you can add it to any AI profile. The custom function will be available in the list of functions when creating or editing a profile, and you can enable or disable it as needed.
 
 ---
 

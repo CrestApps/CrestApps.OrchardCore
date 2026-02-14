@@ -60,4 +60,26 @@ public abstract class McpResourceTypeHandlerBase : IMcpResourceTypeHandler
             ]
         };
     }
+
+    /// <summary>
+    /// Determines whether the given MIME type represents text-based content
+    /// that can be safely read as a string.
+    /// </summary>
+    /// <param name="mimeType">The MIME type to check.</param>
+    /// <returns><c>true</c> if the MIME type is text-based; otherwise, <c>false</c>.</returns>
+    protected static bool IsTextMimeType(string mimeType)
+    {
+        if (mimeType.StartsWith("text/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return mimeType.EndsWith("/json", StringComparison.OrdinalIgnoreCase)
+            || mimeType.EndsWith("+json", StringComparison.OrdinalIgnoreCase)
+            || mimeType.EndsWith("/xml", StringComparison.OrdinalIgnoreCase)
+            || mimeType.EndsWith("+xml", StringComparison.OrdinalIgnoreCase)
+            || mimeType.Equals("application/javascript", StringComparison.OrdinalIgnoreCase)
+            || mimeType.Equals("application/ecmascript", StringComparison.OrdinalIgnoreCase)
+            || mimeType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase);
+    }
 }

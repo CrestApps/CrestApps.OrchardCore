@@ -56,7 +56,10 @@ internal static class TwilioEventGridEndpoint
         var body = data["Body"].ToString();
         var messageSid = data["MessageSid"].ToString();
 
-        logger.LogInformation("Twilio message received from {From} to {To}, SID: {Sid}", from, to, messageSid);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Twilio message received from {From} to {To}, SID: {Sid}", from, to, messageSid);
+        }
 
         // Map to OmnichannelMessage
         var omnichannelMessage = new OmnichannelMessage

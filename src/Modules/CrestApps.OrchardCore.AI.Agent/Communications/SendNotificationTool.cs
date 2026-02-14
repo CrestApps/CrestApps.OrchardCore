@@ -1,6 +1,5 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,11 +60,10 @@ public sealed class SendNotificationTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
         var userManager = arguments.Services.GetRequiredService<UserManager<IUser>>();
         var notificationService = arguments.Services.GetRequiredService<INotificationService>();
 
-        if (!httpContextAccessor.HttpContext.User.Identity.IsAuthenticated)
+        if (!arguments.IsAuthenticatedOrMcpRequest())
         {
             return "You must login to be able to send notification.";
         }

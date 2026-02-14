@@ -1,31 +1,40 @@
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
 public sealed class FunctionInvocationAICompletionServiceHandler : IAICompletionServiceHandler
 {
-    private readonly IAIToolsService _toolsService;
+    /// <summary>
+    /// Key used to store scoped <see cref="ToolRegistryEntry"/> instances in
+    /// <see cref="AICompletionContext.AdditionalProperties"/> so the handler can
+    /// resolve tools from their factories without a second registry lookup.
+    /// </summary>
+    public const string ScopedEntriesKey = "_scopedToolEntries";
+
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILogger _logger;
 
     public FunctionInvocationAICompletionServiceHandler(
-        IAIToolsService toolsService,
         IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<FunctionInvocationAICompletionServiceHandler> logger)
     {
-        _toolsService = toolsService;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
+        _logger = logger;
     }
 
     public async Task ConfigureAsync(CompletionServiceConfigureContext context)
     {
         if (!context.IsFunctionInvocationSupported ||
             context.CompletionContext is null ||
-            context.CompletionContext.ToolNames is null ||
-            context.CompletionContext.ToolNames.Length == 0)
+            !context.CompletionContext.AdditionalProperties.TryGetValue(ScopedEntriesKey, out var entriesObj) ||
+            entriesObj is not IReadOnlyList<ToolRegistryEntry> scopedEntries ||
+            scopedEntries.Count == 0)
         {
             return;
         }
@@ -33,26 +42,59 @@ public sealed class FunctionInvocationAICompletionServiceHandler : IAICompletion
         context.ChatOptions.Tools ??= [];
 
         var user = _httpContextAccessor.HttpContext?.User;
+        var services = _httpContextAccessor.HttpContext?.RequestServices;
+        var addedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var toolName in context.CompletionContext.ToolNames)
+        // Process entries in priority order: Local/System first, then MCP.
+        // This ensures local tools win name collisions over MCP tools.
+        var orderedEntries = scopedEntries
+            .OrderBy(e => e.Source == ToolRegistryEntrySource.McpServer ? 1 : 0);
+
+        foreach (var entry in orderedEntries)
         {
-            // Verify user has permission to access this tool
-            if (user is not null)
-            {
-                if (!await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, toolName as object))
-                {
-                    continue;
-                }
-            }
-
-            var tool = await _toolsService.GetByNameAsync(toolName);
-
-            if (tool is null)
+            if (entry.Source == ToolRegistryEntrySource.Local &&
+                !await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, entry.Name as object))
             {
                 continue;
             }
 
-            context.ChatOptions.Tools.Add(tool);
+            if (entry.ToolFactory is null)
+            {
+                _logger.LogWarning("Tool entry '{ToolName}' ({Id}) has no ToolFactory. Skipping.", entry.Name, entry.Id);
+
+                continue;
+            }
+
+            // Skip duplicate function names.
+            if (!addedNames.Add(entry.Name))
+            {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "Skipping tool '{ToolName}' from {Source} ({Id}) — name already registered.",
+                        entry.Name, entry.Source, entry.Id);
+                }
+
+                continue;
+            }
+
+            try
+            {
+                var tool = await entry.ToolFactory(services);
+
+                if (tool is not null)
+                {
+                    context.ChatOptions.Tools.Add(tool);
+                }
+                else if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("ToolFactory returned null for '{ToolName}' ({Id}).", entry.Name, entry.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create tool '{ToolName}' ({Id}). Skipping.", entry.Name, entry.Id);
+            }
         }
     }
 }

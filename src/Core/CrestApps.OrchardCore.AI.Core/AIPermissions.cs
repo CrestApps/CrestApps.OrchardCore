@@ -4,8 +4,6 @@ namespace CrestApps.OrchardCore.AI.Core;
 
 public static class AIPermissions
 {
-    public static readonly Permission ManageAIToolInstances = new("ManageAIToolInstances", "Manage AI Tool Instances");
-
     public static readonly Permission ManageProviderConnections = new("ManageProviderConnections", "Manage AI Provider Connections");
 
     public static readonly Permission ManageAIProfiles = new("ManageAIProfiles", "Manage AI profiles");

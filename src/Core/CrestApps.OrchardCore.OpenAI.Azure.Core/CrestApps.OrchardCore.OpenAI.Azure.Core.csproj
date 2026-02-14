@@ -23,7 +23,6 @@
   <ItemGroup>
     <ProjectReference Include="..\CrestApps.Azure.Core\CrestApps.Azure.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.AI.Mcp.Core\CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.OpenAI.Core\CrestApps.OrchardCore.OpenAI.Core.csproj" />
   </ItemGroup>
 

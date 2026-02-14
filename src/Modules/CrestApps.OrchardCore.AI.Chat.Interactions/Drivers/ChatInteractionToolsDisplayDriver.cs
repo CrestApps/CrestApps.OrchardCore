@@ -44,6 +44,12 @@ internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInte
 
         foreach (var tool in _toolDefinitions.Tools)
         {
+            // Exclude system tools — they are auto-included by the orchestrator.
+            if (tool.Value.IsSystemTool)
+            {
+                continue;
+            }
+
             // Check if user has access to this tool
             if (await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
             {
@@ -68,7 +74,7 @@ internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInte
                     Description = entry.Value.Description,
                     IsSelected = interaction.ToolNames?.Contains(entry.Key) ?? false,
                 }).OrderBy(entry => entry.DisplayText).ToArray());
-        }).Location("Parameters:5#Tools:5");
+        }).Location("Parameters:5#Capabilities:5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

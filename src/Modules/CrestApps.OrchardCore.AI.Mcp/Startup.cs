@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.AI.Mcp.Drivers;
 using CrestApps.OrchardCore.AI.Mcp.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
+using CrestApps.OrchardCore.AI.Mcp.Tools;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -28,6 +29,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using McpServerTool = ModelContextProtocol.Server.McpServerTool;
 
 namespace CrestApps.OrchardCore.AI.Mcp;
 
@@ -42,9 +44,19 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Register McpInvokeFunction as a keyed singleton only (not via AddAITool)
+        // so it can be resolved by name at runtime but does not appear in the UI tool list.
+        services.AddCoreAITool<McpInvokeFunction>(McpInvokeFunction.FunctionName);
+
         services.AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>();
-        services.AddScoped<IAICompletionServiceHandler, McpConnectionsAICompletionServiceHandler>();
+        services.AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>();
         services.AddScoped<McpService>();
+        services.AddScoped<IMcpServerMetadataCacheProvider, DefaultMcpServerMetadataProvider>();
+        services.AddSingleton<IMcpMetadataPromptGenerator, DefaultMcpMetadataPromptGenerator>();
+        services.AddSingleton<IMcpCapabilityEmbeddingCacheProvider, InMemoryMcpCapabilityEmbeddingCacheProvider>();
+        services.AddScoped<IMcpCapabilityResolver, DefaultMcpCapabilityResolver>();
+        services.AddOptions<McpCapabilityResolverOptions>();
+        services.AddScoped<IToolRegistryProvider, McpToolRegistryProvider>();
         services.AddNavigationProvider<McpAdminMenu>();
         services.AddPermissionProvider<McpPermissionsProvider>();
         services.AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>();
@@ -52,6 +64,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<IAICompletionContextBuilderHandler, McpAICompletionContextBuilderHandler>();
 
         services.AddOrchardCoreAgentSkillServices();
+
+        services.AddOptions<McpMetadataCacheOptions>();
 
         // Register SSE transport type.
         services
@@ -160,7 +174,7 @@ public sealed class McpServerStartup : StartupBase
             entry.UriPatterns = ["filesystem/{path}"];
         });
 
-        services.AddMcpServer(options =>
+        _ = services.AddMcpServer(options =>
         {
             options.ServerInfo = new()
             {
@@ -197,42 +211,69 @@ public sealed class McpServerStartup : StartupBase
                 }
             }
 
+            // Include tools registered via the MCP C# SDK (e.g., via [McpServerToolType] attribute).
+            var sdkTools = request.Services.GetService<IEnumerable<McpServerTool>>();
+
+            if (sdkTools is not null)
+            {
+                foreach (var sdkTool in sdkTools)
+                {
+                    if (!tools.Any(t => t.Name == sdkTool.ProtocolTool.Name))
+                    {
+                        tools.Add(sdkTool.ProtocolTool);
+                    }
+                }
+            }
+
             return ValueTask.FromResult(new ListToolsResult { Tools = tools });
         })
         .WithCallToolHandler(async (request, cancellationToken) =>
         {
             var toolDefinitions = request.Services.GetRequiredService<IOptions<AIToolDefinitionOptions>>().Value;
 
-            if (!toolDefinitions.Tools.ContainsKey(request.Params.Name))
+            if (toolDefinitions.Tools.ContainsKey(request.Params.Name))
             {
-                throw new McpException($"Tool '{request.Params.Name}' not found.");
-            }
-
-            if (request.Services.GetKeyedService<AITool>(request.Params.Name) is not AIFunction aiFunction)
-            {
-                throw new McpException($"Failed to create tool '{request.Params.Name}'.");
-            }
-
-            // Convert IDictionary<string, JsonElement> to AIFunctionArguments
-            var arguments = new AIFunctionArguments()
-            {
-                Services = request.Services,
-            };
-
-            if (request.Params.Arguments is not null)
-            {
-                foreach (var kvp in request.Params.Arguments)
+                if (request.Services.GetKeyedService<AITool>(request.Params.Name) is not AIFunction aiFunction)
                 {
-                    arguments[kvp.Key] = kvp.Value;
+                    throw new McpException($"Failed to create tool '{request.Params.Name}'.");
                 }
+
+                // Convert IDictionary<string, JsonElement> to AIFunctionArguments
+                var arguments = new AIFunctionArguments()
+                {
+                    Services = request.Services,
+                    Context = new Dictionary<object, object>()
+                    {
+                        ["mcpRequest"] = request,
+                    },
+                };
+
+                if (request.Params.Arguments is not null)
+                {
+                    foreach (var kvp in request.Params.Arguments)
+                    {
+                        arguments[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                var result = await aiFunction.InvokeAsync(arguments, cancellationToken);
+
+                return new CallToolResult
+                {
+                    Content = [new TextContentBlock { Text = result?.ToString() ?? string.Empty }]
+                };
             }
 
-            var result = await aiFunction.InvokeAsync(arguments, cancellationToken);
+            // Try tools registered via the MCP C# SDK (e.g., via [McpServerToolType] attribute).
+            var sdkTools = request.Services.GetService<IEnumerable<McpServerTool>>();
+            var sdkTool = sdkTools?.FirstOrDefault(t => t.ProtocolTool.Name == request.Params.Name);
 
-            return new CallToolResult
+            if (sdkTool is not null)
             {
-                Content = [new TextContentBlock { Text = result?.ToString() ?? string.Empty }]
-            };
+                return await sdkTool.InvokeAsync(request, cancellationToken);
+            }
+
+            throw new McpException($"Tool '{request.Params.Name}' not found.");
         })
         .WithListPromptsHandler(async (request, cancellationToken) =>
         {
@@ -256,6 +297,15 @@ public sealed class McpServerStartup : StartupBase
             return new ListResourcesResult
             {
                 Resources = await resourceService.ListAsync(),
+            };
+        })
+        .WithListResourceTemplatesHandler(async (request, cancellationToken) =>
+        {
+            var resourceService = request.Services.GetRequiredService<IMcpServerResourceService>();
+
+            return new ListResourceTemplatesResult
+            {
+                ResourceTemplates = await resourceService.ListTemplatesAsync(),
             };
         })
         .WithReadResourceHandler(async (request, cancellationToken) =>

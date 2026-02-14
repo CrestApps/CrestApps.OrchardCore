@@ -1,7 +1,5 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Extensions;
@@ -48,11 +46,9 @@ internal sealed class DisableFeatureTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageFeatures))
+        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageFeatures))
         {
             return "The current user does not have permission to manage features.";
         }

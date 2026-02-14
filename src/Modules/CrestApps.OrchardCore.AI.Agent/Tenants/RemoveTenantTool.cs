@@ -1,7 +1,5 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
@@ -9,7 +7,7 @@ using OrchardCore.Environment.Shell.Removing;
 
 namespace CrestApps.OrchardCore.AI.Agent.Tenants;
 
-public sealed class RemoveTenantTool : AIFunction
+public sealed class RemoveTenantTool: AIFunction
 {
     public const string TheName = "removeTenant";
 
@@ -46,11 +44,9 @@ public sealed class RemoveTenantTool : AIFunction
 
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
         var shellRemovalManager = arguments.Services.GetRequiredService<IShellRemovalManager>();
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, OrchardCorePermissions.ManageTenants))
+        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageTenants))
         {
             return "The current user does not have permission to manage tenants.";
         }

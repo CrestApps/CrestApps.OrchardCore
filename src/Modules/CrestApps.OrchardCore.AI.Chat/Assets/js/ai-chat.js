@@ -14,7 +14,7 @@ var defaultConfig = {
             <div v-for="(message, index) in messages" :key="index" class="list-group-item">
                 <div class="d-flex align-items-center">
                     <div class="p-2">
-                        <i :class="message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'"></i>
+                        <i :class="message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')"></i>
                     </div>
                     <div class="p-2 lh-base">
                         <h4 v-if="message.title">{{ message.title }}</h4>
@@ -39,7 +39,8 @@ renderer.link = function (data) {
     return `<a href="${data.href}" target="_blank" rel="noopener noreferrer">${data.text}</a>`;
 };
 
-// Custom image renderer for generated images with thumbnail styling and download button
+// Custom image renderer for generated images with thumbnail styling and download button.
+// Handles both URL and data-URI sources (data URIs are converted to blobs for download).
 renderer.image = function (data) {
     const src = data.href;
     const alt = data.text || defaultConfig.generatedImageAltText;
@@ -47,7 +48,7 @@ renderer.image = function (data) {
     return `<div class="generated-image-container">
         <img src="${src}" alt="${alt}" class="img-thumbnail" style="max-width: ${maxWidth}px; height: auto;" />
         <div class="mt-2">
-            <a href="${src}" target="_blank" download title="${defaultConfig.downloadImageTitle}" class="btn btn-sm btn-outline-secondary">
+            <a href="${src}" target="_blank" download="${alt}" title="${defaultConfig.downloadImageTitle}" class="btn btn-sm btn-outline-secondary ai-download-image">
                 <i class="fa-solid fa-download"></i>
             </a>
         </div>
@@ -57,18 +58,53 @@ renderer.image = function (data) {
 // Chart counter for unique IDs
 let chartCounter = 0;
 
+// Collector for charts discovered during marked parsing.
+let _pendingCharts = [];
+
 function createChartHtml(chartId) {
     const chartMaxWidth = defaultConfig.generatedChartMaxWidth;
 
-    return `<div class="chart-container" style="position: relative; width: 100%; max-width: ${chartMaxWidth}px; margin: 0 auto; height: 480px;">
-        <canvas id="${chartId}" class="img-thumbnail" width="${chartMaxWidth}" height="480" style="width: 100%; height: 480px;"></canvas>
-    </div>
-    <div class="mt-2">
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadChart('${chartId}')" title="${defaultConfig.downloadChartTitle}">
-            <i class="fa-solid fa-download"></i> ${defaultConfig.downloadChartButtonText}
-        </button>
-    </div>`;
+    return `<div class="chart-container" style="position: relative; width: 100%; max-width: ${chartMaxWidth}px; margin: 0 auto; height: 480px;">`
+        + `<canvas id="${chartId}" class="img-thumbnail" width="${chartMaxWidth}" height="480" style="width: 100%; height: 480px;"></canvas>`
+        + `</div>`
+        + `<div class="mt-2">`
+        + `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadChart('${chartId}')" title="${defaultConfig.downloadChartTitle}">`
+        + `<i class="fa-solid fa-download"></i> ${defaultConfig.downloadChartButtonText}`
+        + `</button>`
+        + `</div>`;
 }
+
+// Register [chart:{...json...}] as a native marked block extension so the
+// markdown parser handles chart markers inline with surrounding text.
+marked.use({
+    extensions: [{
+        name: 'chart',
+        level: 'block',
+        start(src) {
+            const idx = src.indexOf('[chart:');
+            return idx >= 0 ? idx : undefined;
+        },
+        tokenizer(src) {
+            const extracted = tryExtractChartMarker(src);
+            if (!extracted || extracted.startIndex !== 0) {
+                return undefined;
+            }
+
+            const chartId = `chat_chart_${++chartCounter}`;
+
+            return {
+                type: 'chart',
+                raw: src.substring(0, extracted.endIndex),
+                chartId: chartId,
+                json: extracted.json,
+            };
+        },
+        renderer(token) {
+            _pendingCharts.push({ chartId: token.chartId, config: token.json });
+            return createChartHtml(token.chartId);
+        }
+    }]
+});
 
 // Extract a [chart:{...json...}] marker. This avoids regex issues with nested brackets.
 function tryExtractChartMarker(text) {
@@ -178,30 +214,14 @@ function renderChartsInMessage(message) {
     message._pendingCharts = [];
 }
 
-// Replace chart markers in content with chart placeholders and collect configs.
-function processChartMarkers(content, message) {
-    if (!content) {
-        return content;
-    }
-
-    let result = content;
-    message._pendingCharts ??= [];
-
-    // Only replace markers when we can fully extract them.
-    while (true) {
-        const extracted = tryExtractChartMarker(result);
-        if (!extracted) {
-            break;
-        }
-
-        const chartId = `chat_chart_${++chartCounter}`;
-        message._pendingCharts.push({ chartId: chartId, config: extracted.json });
-
-        const html = createChartHtml(chartId);
-        result = result.substring(0, extracted.startIndex) + html + result.substring(extracted.endIndex);
-    }
-
-    return result;
+// Parse markdown content via marked (which natively handles [chart:...] markers
+// through the registered extension) and collect pending chart configs for later
+// Chart.js rendering.
+function parseMarkdownContent(content, message) {
+    _pendingCharts = [];
+    const html = marked.parse(content, { renderer });
+    message._pendingCharts = _pendingCharts.length > 0 ? [..._pendingCharts] : [];
+    return html;
 }
 
     const initialize = (instanceConfig) => {
@@ -250,6 +270,7 @@ function processChartMarkers(content, message) {
                     widgetIsInitialized: false,
                     isSteaming: false,
                     isNavigatingAway: false,
+                    autoScroll: true,
                     stream: null,
                     messages: [],
                     prompt: ''
@@ -265,19 +286,16 @@ function processChartMarkers(content, message) {
                         .withAutomaticReconnect()
                         .build();
 
+                    // Allow long-running operations (e.g., multi-step MCP tool calls)
+                    // without the client disconnecting prematurely.
+                    this.connection.serverTimeoutInMilliseconds = 600000;
+                    this.connection.keepAliveIntervalInMilliseconds = 15000;
+
                     this.connection.on("LoadSession", (data) => {
                         this.initializeSession(data.sessionId, true);
                         this.messages = [];
 
                         (data.messages ?? []).forEach(msg => {
-                            // Ensure persisted chart markers are rendered too
-                            if (msg && msg.content) {
-                                msg.content = processChartMarkers(msg.content.trim(), msg);
-                                if (msg.content.includes('class="chart-container"')) {
-                                    msg.htmlContent = msg.content;
-                                }
-                            }
-
                             this.addMessage(msg);
 
                             this.$nextTick(() => {
@@ -289,6 +307,24 @@ function processChartMarkers(content, message) {
 
                     this.connection.on("ReceiveError", (error) => {
                         console.error("SignalR Error: ", error);
+                    });
+
+                    this.connection.onreconnecting(() => {
+                        console.warn("SignalR: reconnecting...");
+                    });
+
+                    this.connection.onreconnected(() => {
+                        console.info("SignalR: reconnected.");
+                    });
+
+                    this.connection.onclose((error) => {
+                        if (this.isNavigatingAway) {
+                            return;
+                        }
+
+                        if (error) {
+                            console.warn("SignalR connection closed with error:", error.message || error);
+                        }
                     });
 
                     try {
@@ -310,9 +346,6 @@ function processChartMarkers(content, message) {
                     if (message.content) {
                         let processedContent = message.content.trim();
 
-                        // Process chart markers first (before markdown parsing)
-                        processedContent = processChartMarkers(processedContent, message);
-
                         if (message.references && typeof message.references === "object" && Object.keys(message.references).length) {
 
                             for (const [key, value] of Object.entries(message.references)) {
@@ -329,13 +362,7 @@ function processChartMarkers(content, message) {
                         }
 
                         message.content = processedContent;
-
-                        // If we inserted chart HTML, don't markdown-parse
-                        if (processedContent.includes('class="chart-container"')) {
-                            message.htmlContent = processedContent;
-                        } else {
-                            message.htmlContent = marked.parse(processedContent, { renderer });
-                        }
+                        message.htmlContent = parseMarkdownContent(processedContent, message);
                     }
 
                     this.addMessageInternal(message);
@@ -401,6 +428,7 @@ function processChartMarkers(content, message) {
 
                     this.streamingStarted();
                     this.showTypingIndicator();
+                    this.autoScroll = true;
 
                     var content = '';
                     var references = {};
@@ -428,6 +456,7 @@ function processChartMarkers(content, message) {
                                         title: chunk.title,
                                         content: "",
                                         htmlContent: "",
+                                        isStreaming: true,
                                     };
 
                                     this.messages.push(newMessage);
@@ -462,14 +491,7 @@ function processChartMarkers(content, message) {
                                 // Update the existing message
                                 message.content = content;
 
-                                // Process chart markers before markdown parsing
-                                let htmlContent = processChartMarkers(content, message);
-
-                                if (htmlContent.includes('class="chart-container"')) {
-                                    message.htmlContent = htmlContent;
-                                } else {
-                                    message.htmlContent = marked.parse(htmlContent, { renderer });
-                                }
+                                message.htmlContent = parseMarkdownContent(content, message);
 
                                 this.messages[messageIndex] = message;
 
@@ -482,11 +504,14 @@ function processChartMarkers(content, message) {
                                 this.processReferences(references, messageIndex);
                                 this.streamingFinished();
 
-                                if (!this.messages[messageIndex].content) {
-                                    // Blank message received.
+                                let msg = this.messages[messageIndex];
+                                if (msg) {
+                                    msg.isStreaming = false;
+                                }
+
+                                if (!msg || !msg.content) {
+                                    // No content received at all.
                                     this.hideTypingIndicator();
-                                    this.addMessage(this.getServiceDownMessage());
-                                    console.log('blank message');
                                 }
 
                                 this.stream?.dispose();
@@ -495,6 +520,11 @@ function processChartMarkers(content, message) {
                             error: (err) => {
                                 this.processReferences(references, messageIndex);
                                 this.streamingFinished();
+
+                                let msg = this.messages[messageIndex];
+                                if (msg) {
+                                    msg.isStreaming = false;
+                                }
 
                                 this.hideTypingIndicator();
 
@@ -530,7 +560,7 @@ function processChartMarkers(content, message) {
                             message.content += `**${value.index}**. [${value.text}](${value.link})<br>`;
                         }
 
-                        message.htmlContent = marked.parse(message.content, { renderer });
+                        message.htmlContent = parseMarkdownContent(message.content, message);
 
                         this.messages[messageIndex] = message;
 
@@ -593,6 +623,9 @@ function processChartMarkers(content, message) {
                     return removedCount;
                 },
                 scrollToBottom() {
+                    if (!this.autoScroll) {
+                        return;
+                    }
                     setTimeout(() => {
                         this.chatContainer.scrollTop = this.chatContainer.scrollHeight - this.chatContainer.clientHeight;
                     }, 50);
@@ -620,6 +653,16 @@ function processChartMarkers(content, message) {
                     this.buttonElement = document.querySelector(config.sendButtonElementSelector);
                     this.chatContainer = document.querySelector(config.chatContainerElementSelector);
                     this.placeholder = document.querySelector(config.placeholderElementSelector);
+
+                    // Pause auto-scroll when the user manually scrolls up during streaming.
+                    this.chatContainer.addEventListener('scroll', () => {
+                        if (!this.stream) {
+                            return;
+                        }
+                        const threshold = 30;
+                        const atBottom = this.chatContainer.scrollHeight - this.chatContainer.clientHeight - this.chatContainer.scrollTop <= threshold;
+                        this.autoScroll = atBottom;
+                    });
 
                     this.inputElement.addEventListener('keyup', event => {
 
@@ -649,6 +692,17 @@ function processChartMarkers(content, message) {
                             this.stream = null;
 
                             this.streamingFinished();
+                            this.hideTypingIndicator();
+
+                            // Clean up: remove empty assistant message or stop streaming animation.
+                            if (this.messages.length > 0) {
+                                const lastMsg = this.messages[this.messages.length - 1];
+                                if (lastMsg.role === 'assistant' && !lastMsg.content) {
+                                    this.messages.pop();
+                                } else if (lastMsg.isStreaming) {
+                                    lastMsg.isStreaming = false;
+                                }
+                            }
 
                             return;
                         }
@@ -875,3 +929,38 @@ window.downloadChart = function (chartId) {
     link.href = canvas.toDataURL('image/png');
     link.click();
 };
+
+// Intercept download clicks for data-URI images and convert to blob downloads.
+document.addEventListener('click', function (e) {
+    const link = e.target.closest('.ai-download-image');
+    if (!link) {
+        return;
+    }
+
+    const container = link.closest('.generated-image-container');
+    const img = container?.querySelector('img');
+    if (!img) {
+        return;
+    }
+
+    const src = img.src;
+    if (!src || !src.startsWith('data:')) {
+        return; // Normal URL – let the default <a> behaviour handle it.
+    }
+
+    e.preventDefault();
+
+    fetch(src)
+        .then(function (res) { return res.blob(); })
+        .then(function (blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = link.getAttribute('download') || 'generated-image.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 100);
+        })
+        .catch(function (err) { console.error('Failed to download image:', err); });
+});

@@ -28,12 +28,11 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<ListTimeZoneTool>(ListTimeZoneTool.TheName, (o) =>
-        {
-            o.Title = S["List System Time Zones"];
-            o.Description = S["Retrieves a list of the available time zones in the system."];
-            o.Category = S["System"];
-        });
+        services.AddAITool<ListTimeZoneTool>(ListTimeZoneTool.TheName)
+            .WithTitle(S["List System Time Zones"])
+            .WithDescription(S["Retrieves a list of the available time zones in the system."])
+            .WithCategory(S["System"])
+            .Selectable();
     }
 }
 
@@ -49,47 +48,41 @@ public sealed class RecipesStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<ApplySystemSettingsTool>(ApplySystemSettingsTool.TheName, (o) =>
-        {
-            o.Title = S["Apply Site Configuration"];
-            o.Description = S["Applies predefined system configurations and settings using AI assistance."];
-            o.Category = S["Recipes"];
-        });
+        services.AddAITool<ApplySystemSettingsTool>(ApplySystemSettingsTool.TheName)
+            .WithTitle(S["Apply Site Configuration"])
+            .WithDescription(S["Applies predefined system configurations and settings using AI assistance."])
+            .WithCategory(S["Recipes"])
+            .Selectable();
 
-        services.AddAITool<GetRecipeJsonSchemaTool>(GetRecipeJsonSchemaTool.TheName, (o) =>
-        {
-            o.Title = S["Get Orchard Core Recipe JSON Schema"];
-            o.Description = S["Returns a JSON Schema definition for Orchard Core recipes or a specific recipe step."];
-            o.Category = S["Recipes"];
-        });
+        services.AddAITool<GetRecipeJsonSchemaTool>(GetRecipeJsonSchemaTool.TheName)
+            .WithTitle(S["Get Orchard Core Recipe JSON Schema"])
+            .WithDescription(S["Returns a JSON Schema definition for Orchard Core recipes or a specific recipe step."])
+            .WithCategory(S["Recipes"])
+            .Selectable();
 
-        services.AddAITool<ListRecipeStepsAndSchemasTool>(ListRecipeStepsAndSchemasTool.TheName, (o) =>
-        {
-            o.Title = S["List Orchard Core Recipe Steps and Schemas"];
-            o.Description = S["Lists all available Orchard Core recipe steps and returns their JSON schema definitions."];
-            o.Category = S["Recipes"];
-        });
+        services.AddAITool<ListRecipeStepsAndSchemasTool>(ListRecipeStepsAndSchemasTool.TheName)
+            .WithTitle(S["List Orchard Core Recipe Steps and Schemas"])
+            .WithDescription(S["Lists all available Orchard Core recipe steps and returns their JSON schema definitions."])
+            .WithCategory(S["Recipes"])
+            .Selectable();
 
-        services.AddAITool<ImportOrchardTool>(ImportOrchardTool.TheName, (o) =>
-        {
-            o.Title = S["Import Orchard Core Recipe"];
-            o.Description = S["Enables AI agents to import and run Orchard Core recipes within your site."];
-            o.Category = S["Recipes"];
-        });
+        services.AddAITool<ImportOrchardTool>(ImportOrchardTool.TheName)
+            .WithTitle(S["Import Orchard Core Recipe"])
+            .WithDescription(S["Enables AI agents to import and run Orchard Core recipes within your site."])
+            .WithCategory(S["Recipes"])
+            .Selectable();
 
-        services.AddAITool<ListNonStartupRecipesTool>(ListNonStartupRecipesTool.TheName, (o) =>
-        {
-            o.Title = S["List Non-Startup Recipes"];
-            o.Description = S["Retrieves all available Orchard Core recipes that are not executed during startup."];
-            o.Category = S["Recipes"];
-        });
+        services.AddAITool<ListNonStartupRecipesTool>(ListNonStartupRecipesTool.TheName)
+            .WithTitle(S["List Non-Startup Recipes"])
+            .WithDescription(S["Retrieves all available Orchard Core recipes that are not executed during startup."])
+            .WithCategory(S["Recipes"])
+            .Selectable();
 
-        services.AddAITool<ExecuteStartupRecipesTool>(ExecuteStartupRecipesTool.TheName, (o) =>
-        {
-            o.Title = S["Run Non-Startup Recipes"];
-            o.Description = S["Executes Orchard Core recipes that are not configured to run at application startup."];
-            o.Category = S["Recipes"];
-        });
+        services.AddAITool<ExecuteStartupRecipesTool>(ExecuteStartupRecipesTool.TheName)
+            .WithTitle(S["Run Non-Startup Recipes"])
+            .WithDescription(S["Executes Orchard Core recipes that are not configured to run at application startup."])
+            .WithCategory(S["Recipes"])
+            .Selectable();
     }
 }
 
@@ -105,68 +98,59 @@ public sealed class TenantsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<ListStartupRecipesTool>(ListStartupRecipesTool.TheName, (o) =>
-        {
-            o.Title = S["List Startup Recipes"];
-            o.Description = S["Retrieves a list of Orchard Core recipes configured to run at application startup."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddAITool<ListStartupRecipesTool>(ListStartupRecipesTool.TheName)
+            .WithTitle(S["List Startup Recipes"])
+            .WithDescription(S["Retrieves a list of Orchard Core recipes configured to run at application startup."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<CreateTenantTool>(CreateTenantTool.TheName, (o) =>
-        {
-            o.Title = S["Create Tenant"];
-            o.Description = S["Creates a new tenant in the Orchard Core application."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddAITool<CreateTenantTool>(CreateTenantTool.TheName)
+            .WithTitle(S["Create Tenant"])
+            .WithDescription(S["Creates a new tenant in the Orchard Core application."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<GetTenantTool>(GetTenantTool.TheName, (o) =>
-        {
-            o.Title = S["Get Tenant Information"];
-            o.Description = S["Retrieves detailed information about a specific tenant."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddAITool<GetTenantTool>(GetTenantTool.TheName)
+            .WithTitle(S["Get Tenant Information"])
+            .WithDescription(S["Retrieves detailed information about a specific tenant."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<ListTenantTool>(ListTenantTool.TheName, (o) =>
-        {
-            o.Title = S["List All Tenants"];
-            o.Description = S["Returns information about all tenants in the system."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddAITool<ListTenantTool>(ListTenantTool.TheName)
+            .WithTitle(S["List All Tenants"])
+            .WithDescription(S["Returns information about all tenants in the system."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<EnableTenantTool>(EnableTenantTool.TheName, (o) =>
-        {
-            o.Title = S["Enable Tenant"];
-            o.Description = S["Enables a tenant that is currently disabled."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddAITool<EnableTenantTool>(EnableTenantTool.TheName)
+            .WithTitle(S["Enable Tenant"])
+            .WithDescription(S["Enables a tenant that is currently disabled."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<DisableTenantTool>(DisableTenantTool.TheName, (o) =>
-        {
-            o.Title = S["Disable Tenant"];
-            o.Description = S["Disables a tenant that is currently active."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddAITool<DisableTenantTool>(DisableTenantTool.TheName)
+            .WithTitle(S["Disable Tenant"])
+            .WithDescription(S["Disables a tenant that is currently active."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<RemoveTenantTool>(RemoveTenantTool.TheName, (o) =>
-        {
-            o.Title = S["Remove Tenant"];
-            o.Description = S["Removes an existing tenant that can be safely deleted."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddAITool<RemoveTenantTool>(RemoveTenantTool.TheName)
+            .WithTitle(S["Remove Tenant"])
+            .WithDescription(S["Removes an existing tenant that can be safely deleted."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<ReloadTenantTool>(ReloadTenantTool.TheName, (o) =>
-        {
-            o.Title = S["Reload Tenant"];
-            o.Description = S["Reloads the configuration and state of an existing tenant."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddAITool<ReloadTenantTool>(ReloadTenantTool.TheName)
+            .WithTitle(S["Reload Tenant"])
+            .WithDescription(S["Reloads the configuration and state of an existing tenant."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
 
-        services.AddAITool<SetupTenantTool>(SetupTenantTool.TheName, (o) =>
-        {
-            o.Title = S["Setup Tenant"];
-            o.Description = S["Sets up new tenants."];
-            o.Category = S["Tenants Management"];
-        });
+        services.AddAITool<SetupTenantTool>(SetupTenantTool.TheName)
+            .WithTitle(S["Setup Tenant"])
+            .WithDescription(S["Sets up new tenants."])
+            .WithCategory(S["Tenants Management"])
+            .Selectable();
     }
 }
 
@@ -182,68 +166,59 @@ public sealed class ContentsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<SearchForContentsTool>(SearchForContentsTool.TheName, (o) =>
-        {
-            o.Title = S["Search Content Items"];
-            o.Description = S["Provides a way to search for content items."];
-            o.Category = S["Content Management"];
-        });
+        services.AddAITool<SearchForContentsTool>(SearchForContentsTool.TheName)
+            .WithTitle(S["Search Content Items"])
+            .WithDescription(S["Provides a way to search for content items."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<GetContentItemSchemaTool>(GetContentItemSchemaTool.TheName, (o) =>
-        {
-            o.Title = S["Generate Content Item Sample"];
-            o.Description = S["Generates a structured sample content item for a specified content type."];
-            o.Category = S["Content Management"];
-        });
+        services.AddAITool<GetContentItemSchemaTool>(GetContentItemSchemaTool.TheName)
+            .WithTitle(S["Generate Content Item Sample"])
+            .WithDescription(S["Generates a structured sample content item for a specified content type."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<PublishContentTool>(PublishContentTool.TheName, (o) =>
-        {
-            o.Title = S["Publish Content Item"];
-            o.Description = S["Publishes a draft or previously unpublished content item."];
-            o.Category = S["Content Management"];
-        });
+        services.AddAITool<PublishContentTool>(PublishContentTool.TheName)
+            .WithTitle(S["Publish Content Item"])
+            .WithDescription(S["Publishes a draft or previously unpublished content item."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<UnpublishContentTool>(UnpublishContentTool.TheName, (o) =>
-        {
-            o.Title = S["Unpublish Content Item"];
-            o.Description = S["Unpublishes a currently published content item."];
-            o.Category = S["Content Management"];
-        });
+        services.AddAITool<UnpublishContentTool>(UnpublishContentTool.TheName)
+            .WithTitle(S["Unpublish Content Item"])
+            .WithDescription(S["Unpublishes a currently published content item."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<GetContentTool>(GetContentTool.TheName, (o) =>
-        {
-            o.Title = S["Retrieve Content Item"];
-            o.Description = S["Retrieves a specific content item by its ID or type."];
-            o.Category = S["Content Management"];
-        });
+        services.AddAITool<GetContentTool>(GetContentTool.TheName)
+            .WithTitle(S["Retrieve Content Item"])
+            .WithDescription(S["Retrieves a specific content item by its ID or type."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<DeleteContentTool>(DeleteContentTool.TheName, (o) =>
-        {
-            o.Title = S["Delete Content Item"];
-            o.Description = S["Deletes a content item from the system."];
-            o.Category = S["Content Management"];
-        });
+        services.AddAITool<DeleteContentTool>(DeleteContentTool.TheName)
+            .WithTitle(S["Delete Content Item"])
+            .WithDescription(S["Deletes a content item from the system."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<CloneContentTool>(CloneContentTool.TheName, (o) =>
-        {
-            o.Title = S["Clone Content Item"];
-            o.Description = S["Creates a duplicate of an existing content item."];
-            o.Category = S["Content Management"];
-        });
+        services.AddAITool<CloneContentTool>(CloneContentTool.TheName)
+            .WithTitle(S["Clone Content Item"])
+            .WithDescription(S["Creates a duplicate of an existing content item."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<CreateOrUpdateContentTool>(CreateOrUpdateContentTool.TheName, (o) =>
-        {
-            o.Title = S["Create or Update Content Item"];
-            o.Description = S["Creates a new content item or updates an existing one."];
-            o.Category = S["Content Management"];
-        });
+        services.AddAITool<CreateOrUpdateContentTool>(CreateOrUpdateContentTool.TheName)
+            .WithTitle(S["Create or Update Content Item"])
+            .WithDescription(S["Creates a new content item or updates an existing one."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
 
-        services.AddAITool<GetContentItemLinkTool>(GetContentItemLinkTool.TheName, (o) =>
-        {
-            o.Title = S["Retrieve a Link for a Content Item"];
-            o.Description = S["Retrieves a link for a content item."];
-            o.Category = S["Content Management"];
-        });
+        services.AddAITool<GetContentItemLinkTool>(GetContentItemLinkTool.TheName)
+            .WithTitle(S["Retrieve a Link for a Content Item"])
+            .WithDescription(S["Retrieves a link for a content item."])
+            .WithCategory(S["Content Management"])
+            .Selectable();
     }
 }
 
@@ -261,40 +236,35 @@ public sealed class ContentDefinitionsStartup : StartupBase
     {
         services.AddScoped<ContentMetadataService>();
 
-        services.AddAITool<GetContentTypeDefinitionsTool>(GetContentTypeDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["Get Content Type Definitions"];
-            o.Description = S["Retrieves the definitions of all available content types."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddAITool<GetContentTypeDefinitionsTool>(GetContentTypeDefinitionsTool.TheName)
+            .WithTitle(S["Get Content Type Definitions"])
+            .WithDescription(S["Retrieves the definitions of all available content types."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
 
-        services.AddAITool<GetContentPartDefinitionsTool>(GetContentPartDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["Get Content Part Definitions"];
-            o.Description = S["Retrieves the definitions of all available content parts."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddAITool<GetContentPartDefinitionsTool>(GetContentPartDefinitionsTool.TheName)
+            .WithTitle(S["Get Content Part Definitions"])
+            .WithDescription(S["Retrieves the definitions of all available content parts."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
 
-        services.AddAITool<ListContentTypesDefinitionsTool>(ListContentTypesDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["List Available Content Types Definitions"];
-            o.Description = S["Provides a list of available content types definitions."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddAITool<ListContentTypesDefinitionsTool>(ListContentTypesDefinitionsTool.TheName)
+            .WithTitle(S["List Available Content Types Definitions"])
+            .WithDescription(S["Provides a list of available content types definitions."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
 
-        services.AddAITool<ListContentPartsDefinitionsTool>(ListContentPartsDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["List Available Content Parts Definitions"];
-            o.Description = S["Provides a list of available content parts definitions."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddAITool<ListContentPartsDefinitionsTool>(ListContentPartsDefinitionsTool.TheName)
+            .WithTitle(S["List Available Content Parts Definitions"])
+            .WithDescription(S["Provides a list of available content parts definitions."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
 
-        services.AddAITool<ListContentFieldsTool>(ListContentFieldsTool.TheName, (o) =>
-        {
-            o.Title = S["List Available Content Fields"];
-            o.Description = S["Provides a list of available content fields."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddAITool<ListContentFieldsTool>(ListContentFieldsTool.TheName)
+            .WithTitle(S["List Available Content Fields"])
+            .WithDescription(S["Provides a list of available content fields."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
     }
 }
 
@@ -310,26 +280,23 @@ public sealed class ContentDefinitionRecipesToolsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<RemoveContentTypeDefinitionsTool>(RemoveContentTypeDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["Remove Content Type Definitions"];
-            o.Description = S["Removes the content type definition."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddAITool<RemoveContentTypeDefinitionsTool>(RemoveContentTypeDefinitionsTool.TheName)
+            .WithTitle(S["Remove Content Type Definitions"])
+            .WithDescription(S["Removes the content type definition."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
 
-        services.AddAITool<RemoveContentPartDefinitionsTool>(RemoveContentPartDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["Remove Content Part Definitions"];
-            o.Description = S["Removes the content part definition."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddAITool<RemoveContentPartDefinitionsTool>(RemoveContentPartDefinitionsTool.TheName)
+            .WithTitle(S["Remove Content Part Definitions"])
+            .WithDescription(S["Removes the content part definition."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
 
-        services.AddAITool<CreateOrUpdateContentTypeDefinitionsTool>(CreateOrUpdateContentTypeDefinitionsTool.TheName, (o) =>
-        {
-            o.Title = S["Create or Update Content Type Definition"];
-            o.Description = S["Creates a new content type definition or updates an existing one."];
-            o.Category = S["Content Definitions"];
-        });
+        services.AddAITool<CreateOrUpdateContentTypeDefinitionsTool>(CreateOrUpdateContentTypeDefinitionsTool.TheName)
+            .WithTitle(S["Create or Update Content Type Definition"])
+            .WithDescription(S["Creates a new content type definition or updates an existing one."])
+            .WithCategory(S["Content Definitions"])
+            .Selectable();
     }
 }
 
@@ -345,40 +312,35 @@ public sealed class FeaturesStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<DisableFeatureTool>(DisableFeatureTool.TheName, (o) =>
-        {
-            o.Title = S["Disable Site Feature"];
-            o.Description = S["Disabled site features."];
-            o.Category = S["Features Management"];
-        });
+        services.AddAITool<DisableFeatureTool>(DisableFeatureTool.TheName)
+            .WithTitle(S["Disable Site Feature"])
+            .WithDescription(S["Disabled site features."])
+            .WithCategory(S["Features Management"])
+            .Selectable();
 
-        services.AddAITool<EnableFeatureTool>(EnableFeatureTool.TheName, (o) =>
-        {
-            o.Title = S["Enable Site Feature"];
-            o.Description = S["Enable site features."];
-            o.Category = S["Features Management"];
-        });
+        services.AddAITool<EnableFeatureTool>(EnableFeatureTool.TheName)
+            .WithTitle(S["Enable Site Feature"])
+            .WithDescription(S["Enable site features."])
+            .WithCategory(S["Features Management"])
+            .Selectable();
 
-        services.AddAITool<FeaturesSearchTool>(FeaturesSearchTool.TheName, (o) =>
-        {
-            o.Title = S["Search for Site Feature"];
-            o.Description = S["Search available features for a match."];
-            o.Category = S["Features Management"];
-        });
+        services.AddAITool<FeaturesSearchTool>(FeaturesSearchTool.TheName)
+            .WithTitle(S["Search for Site Feature"])
+            .WithDescription(S["Search available features for a match."])
+            .WithCategory(S["Features Management"])
+            .Selectable();
 
-        services.AddAITool<ListFeaturesTool>(ListFeaturesTool.TheName, (o) =>
-        {
-            o.Title = S["List Site Features"];
-            o.Description = S["Retrieves available site features."];
-            o.Category = S["Features Management"];
-        });
+        services.AddAITool<ListFeaturesTool>(ListFeaturesTool.TheName)
+            .WithTitle(S["List Site Features"])
+            .WithDescription(S["Retrieves available site features."])
+            .WithCategory(S["Features Management"])
+            .Selectable();
 
-        services.AddAITool<GetFeatureTool>(GetFeatureTool.TheName, (o) =>
-        {
-            o.Title = S["Get Site Features"];
-            o.Description = S["Retrieves info about a feature."];
-            o.Category = S["Features Management"];
-        });
+        services.AddAITool<GetFeatureTool>(GetFeatureTool.TheName)
+            .WithTitle(S["Get Site Features"])
+            .WithDescription(S["Retrieves info about a feature."])
+            .WithCategory(S["Features Management"])
+            .Selectable();
     }
 }
 
@@ -394,12 +356,11 @@ public sealed class NotificationsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<SendNotificationTool>(SendNotificationTool.TheName, (o) =>
-        {
-            o.Title = S["Send User Notification"];
-            o.Description = S["Sends a notification message to a user."];
-            o.Category = S["Communications"];
-        });
+        services.AddAITool<SendNotificationTool>(SendNotificationTool.TheName)
+            .WithTitle(S["Send User Notification"])
+            .WithDescription(S["Sends a notification message to a user."])
+            .WithCategory(S["Communications"])
+            .Selectable();
     }
 }
 
@@ -415,12 +376,11 @@ public sealed class EmailStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<SendEmailTool>(SendEmailTool.TheName, (o) =>
-        {
-            o.Title = S["Send Emails"];
-            o.Description = S["Sends a email message on the behalf of the logged user."];
-            o.Category = S["Communications"];
-        });
+        services.AddAITool<SendEmailTool>(SendEmailTool.TheName)
+            .WithTitle(S["Send Emails"])
+            .WithDescription(S["Sends a email message on the behalf of the logged user."])
+            .WithCategory(S["Communications"])
+            .Selectable();
     }
 }
 
@@ -436,12 +396,11 @@ public sealed class SmsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<SendSmsTool>(SendSmsTool.TheName, (o) =>
-        {
-            o.Title = S["Send SMS message"];
-            o.Description = S["Sends a SMS message to a user."];
-            o.Category = S["Communications"];
-        });
+        services.AddAITool<SendSmsTool>(SendSmsTool.TheName)
+            .WithTitle(S["Send SMS message"])
+            .WithDescription(S["Sends a SMS message to a user."])
+            .WithCategory(S["Communications"])
+            .Selectable();
     }
 }
 
@@ -457,19 +416,17 @@ public sealed class UsersStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<GetUserInfoTool>(GetUserInfoTool.TheName, (o) =>
-        {
-            o.Title = S["Get User Info"];
-            o.Description = S["Gets information about a user."];
-            o.Category = S["Users Management"];
-        });
+        services.AddAITool<GetUserInfoTool>(GetUserInfoTool.TheName)
+            .WithTitle(S["Get User Info"])
+            .WithDescription(S["Gets information about a user."])
+            .WithCategory(S["Users Management"])
+            .Selectable();
 
-        services.AddAITool<SearchForUsersTool>(SearchForUsersTool.TheName, (o) =>
-        {
-            o.Title = S["Search Users"];
-            o.Description = S["Search the system for users."];
-            o.Category = S["Users Management"];
-        });
+        services.AddAITool<SearchForUsersTool>(SearchForUsersTool.TheName)
+            .WithTitle(S["Search Users"])
+            .WithDescription(S["Search the system for users."])
+            .WithCategory(S["Users Management"])
+            .Selectable();
     }
 }
 
@@ -485,12 +442,11 @@ public sealed class RolesStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<GetRoleTool>(GetRoleTool.TheName, (o) =>
-        {
-            o.Title = S["Get Role Info"];
-            o.Description = S["Gets information about a role."];
-            o.Category = S["Roles Management"];
-        });
+        services.AddAITool<GetRoleTool>(GetRoleTool.TheName)
+            .WithTitle(S["Get Role Info"])
+            .WithDescription(S["Gets information about a role."])
+            .WithCategory(S["Roles Management"])
+            .Selectable();
     }
 }
 
@@ -506,19 +462,17 @@ public sealed class WorkflowsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<GetWorkflowTypesTool>(GetWorkflowTypesTool.TheName, (o) =>
-        {
-            o.Title = S["Get Workflow Type Info"];
-            o.Description = S["Gets information about a workflow type."];
-            o.Category = S["Workflow Management"];
-        });
+        services.AddAITool<GetWorkflowTypesTool>(GetWorkflowTypesTool.TheName)
+            .WithTitle(S["Get Workflow Type Info"])
+            .WithDescription(S["Gets information about a workflow type."])
+            .WithCategory(S["Workflow Management"])
+            .Selectable();
 
-        services.AddAITool<ListWorkflowTypesTool>(ListWorkflowTypesTool.TheName, (o) =>
-        {
-            o.Title = S["List Workflow Type"];
-            o.Description = S["List information about a workflow types."];
-            o.Category = S["Workflow Management"];
-        });
+        services.AddAITool<ListWorkflowTypesTool>(ListWorkflowTypesTool.TheName)
+            .WithTitle(S["List Workflow Type"])
+            .WithDescription(S["List information about a workflow types."])
+            .WithCategory(S["Workflow Management"])
+            .Selectable();
     }
 }
 
@@ -534,18 +488,16 @@ public sealed class WorkflowsRecipesStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<CreateOrUpdateWorkflowTool>(CreateOrUpdateWorkflowTool.TheName, (o) =>
-        {
-            o.Title = S["Create Workflows"];
-            o.Description = S["Create or update information a workflow."];
-            o.Category = S["Workflow Management"];
-        });
+        services.AddAITool<CreateOrUpdateWorkflowTool>(CreateOrUpdateWorkflowTool.TheName)
+            .WithTitle(S["Create Workflows"])
+            .WithDescription(S["Create or update information a workflow."])
+            .WithCategory(S["Workflow Management"])
+            .Selectable();
 
-        services.AddAITool<ListWorkflowActivitiesTool>(ListWorkflowActivitiesTool.TheName, (o) =>
-        {
-            o.Title = S["List Workflow Activities"];
-            o.Description = S["List all available tasks and activities a workflow."];
-            o.Category = S["Workflow Management"];
-        });
+        services.AddAITool<ListWorkflowActivitiesTool>(ListWorkflowActivitiesTool.TheName)
+            .WithTitle(S["List Workflow Activities"])
+            .WithDescription(S["List all available tasks and activities a workflow."])
+            .WithCategory(S["Workflow Management"])
+            .Selectable();
     }
 }

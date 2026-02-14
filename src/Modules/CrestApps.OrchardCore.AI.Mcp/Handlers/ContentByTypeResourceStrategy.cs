@@ -69,7 +69,10 @@ public sealed class ContentByTypeResourceStrategy : IContentResourceStrategyProv
             rest = uri.Path[(slashIndex + 1)..];
         }
 
-        _logger.LogDebug("Reading content by type: {ContentType}, path: {Path}", contentType, rest);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Reading content by type: {ContentType}, path: {Path}", contentType, rest);
+        }
 
         string json;
 
@@ -108,7 +111,10 @@ public sealed class ContentByTypeResourceStrategy : IContentResourceStrategyProv
 
         var contentItems = await query.ListAsync(cancellationToken);
 
-        _logger.LogDebug("Found {Count} content items of type {ContentType}", contentItems.Count(), contentType);
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Found {Count} content items of type {ContentType}", contentItems.Count(), contentType);
+        }
 
         return JsonSerializer.Serialize(contentItems, _jsonOptions.SerializerOptions);
     }

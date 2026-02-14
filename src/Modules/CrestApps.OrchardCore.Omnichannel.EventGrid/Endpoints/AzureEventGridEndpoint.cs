@@ -104,7 +104,10 @@ internal static class AzureEventGridEndpoint
             if (e.EventType == "Microsoft.EventGrid.SubscriptionValidationEvent")
             {
                 var data = e.Data.ToObjectFromJson<SubscriptionValidationEventData>();
-                logger.LogInformation("Subscription validation received. Code: {Code}", data.ValidationCode);
+                if (logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation("Subscription validation received. Code: {Code}", data.ValidationCode);
+                }
 
                 return TypedResults.Json(new
                 {
@@ -113,7 +116,10 @@ internal static class AzureEventGridEndpoint
             }
 
             // Handle normal events
-            logger.LogInformation("Event received: {EventType}, Subject: {Subject}, Id: {Id}", e.EventType, e.Subject, e.Id);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Event received: {EventType}, Subject: {Subject}, Id: {Id}", e.EventType, e.Subject, e.Id);
+            }
 
 
             var omnichannelMessage = new OmnichannelMessage

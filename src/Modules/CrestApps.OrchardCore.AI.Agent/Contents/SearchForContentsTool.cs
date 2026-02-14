@@ -1,7 +1,5 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -58,14 +56,12 @@ public sealed class SearchForContentsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
         var contentsAdminListQueryService = arguments.Services.GetRequiredService<IContentsAdminListQueryService>();
         var updateModelAccessor = arguments.Services.GetRequiredService<IUpdateModelAccessor>();
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
         var pagerOptions = arguments.Services.GetRequiredService<IOptions<PagerOptions>>().Value;
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, CommonPermissions.ListContent))
+        if (!await arguments.IsAuthorizedAsync(CommonPermissions.ListContent))
         {
             return "You do not have permission to list content items.";
         }
