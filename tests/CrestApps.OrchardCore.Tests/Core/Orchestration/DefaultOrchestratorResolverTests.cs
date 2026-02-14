@@ -47,7 +47,7 @@ public sealed class DefaultOrchestratorResolverTests
     public void Resolve_RegisteredName_ReturnsCorrectOrchestrator()
     {
         var options = new OrchestratorOptions();
-        options.Orchestrators["custom"] = typeof(TestOrchestrator);
+        options.Orchestrators["custom"] = new OrchestratorEntry { Type = typeof(TestOrchestrator) };
 
         var services = new ServiceCollection();
         services.AddScoped<TestOrchestrator>();
@@ -81,7 +81,7 @@ public sealed class DefaultOrchestratorResolverTests
     public void Resolve_CaseInsensitive()
     {
         var options = new OrchestratorOptions();
-        options.Orchestrators["Default"] = typeof(ProgressiveToolOrchestrator);
+        options.Orchestrators["Default"] = new OrchestratorEntry { Type = typeof(ProgressiveToolOrchestrator) };
 
         var services = new ServiceCollection();
         services.AddScoped<ProgressiveToolOrchestrator>();
@@ -101,7 +101,7 @@ public sealed class DefaultOrchestratorResolverTests
     private static DefaultOrchestratorResolver CreateResolver()
     {
         var options = new OrchestratorOptions();
-        options.Orchestrators[ProgressiveToolOrchestrator.OrchestratorName] = typeof(ProgressiveToolOrchestrator);
+        options.Orchestrators[ProgressiveToolOrchestrator.OrchestratorName] = new OrchestratorEntry { Type = typeof(ProgressiveToolOrchestrator) };
 
         var services = new ServiceCollection();
         services.AddScoped<ProgressiveToolOrchestrator>();

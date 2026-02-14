@@ -15,6 +15,8 @@ namespace CrestApps.OrchardCore.AI.Models;
 /// </remarks>
 public sealed class OrchestrationContext
 {
+    public string SessionId { get; set; }
+
     /// <summary>
     /// Gets or sets the current user message to process.
     /// </summary>
@@ -36,6 +38,12 @@ public sealed class OrchestrationContext
     /// (e.g., the AI client implementation name).
     /// </summary>
     public string SourceName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the scoped service provider for this orchestration session.
+    /// Allows orchestrators to resolve services without constructor injection.
+    /// </summary>
+    public IServiceProvider ServiceProvider { get; set; }
 
     /// <summary>
     /// Gets or sets the document references available for this session.

@@ -136,7 +136,12 @@ public sealed class DefaultOrchestrationContextBuilderTests
 
     private static DefaultOrchestrationContextBuilder CreateBuilder(IEnumerable<IOrchestrationContextHandler> handlers)
     {
-        return new DefaultOrchestrationContextBuilder(handlers, NullLogger<DefaultOrchestrationContextBuilder>.Instance);
+        return new DefaultOrchestrationContextBuilder(handlers, new EmptyServiceProvider(), NullLogger<DefaultOrchestrationContextBuilder>.Instance);
+    }
+
+    private sealed class EmptyServiceProvider : IServiceProvider
+    {
+        public object GetService(Type serviceType) => null;
     }
 
     private sealed class TestHandler : IOrchestrationContextHandler
