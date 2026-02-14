@@ -50,7 +50,7 @@ public sealed class CopilotAuthController : Controller
             // Validate returnUrl to prevent open redirect attacks
             var safeReturnUrl = returnUrl != null && Url.IsLocalUrl(returnUrl)
                 ? returnUrl
-                : Url.Action(nameof(OAuthCallback), nameof(CopilotAuthController).Replace("Controller", ""));
+                : Url.Action(nameof(OAuthCallback), GetType().Name.Replace("Controller", ""));
 
             // Generate the GitHub authorization URL
             var authUrl = _oauthService.GetAuthorizationUrl(safeReturnUrl);

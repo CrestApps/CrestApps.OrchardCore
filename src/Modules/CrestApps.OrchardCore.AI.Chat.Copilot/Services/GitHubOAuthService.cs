@@ -1,9 +1,16 @@
 using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
+using OrchardCore.Settings;
 using OrchardCore.Users;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Web;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 
@@ -13,33 +20,60 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 public sealed class GitHubOAuthService : IGitHubOAuthService
 {
     private const string ProtectorPurpose = "CrestApps.OrchardCore.AI.Chat.Copilot.GitHubTokens";
+    private const string SettingsProtectorPurpose = "CrestApps.OrchardCore.AI.Chat.Copilot.Settings";
 
     private readonly UserManager<IUser> _userManager;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly ISiteService _siteService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<GitHubOAuthService> _logger;
-
-    // TODO: Add HttpClient for GitHub API calls
-    // TODO: Add configuration for GitHub OAuth app credentials
 
     public GitHubOAuthService(
         UserManager<IUser> userManager,
         IDataProtectionProvider dataProtectionProvider,
+        ISiteService siteService,
+        IHttpContextAccessor httpContextAccessor,
+        IHttpClientFactory httpClientFactory,
         ILogger<GitHubOAuthService> logger)
     {
         _userManager = userManager;
         _dataProtectionProvider = dataProtectionProvider;
+        _siteService = siteService;
+        _httpContextAccessor = httpContextAccessor;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
     public string GetAuthorizationUrl(string returnUrl)
     {
-        // TODO: Implement GitHub OAuth authorization URL generation
-        // Format: https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri={redirect_uri}&scope={scope}&state={state}
-        // Required scopes for Copilot: user:email, read:org (at minimum)
-        
-        _logger.LogWarning("GitHubOAuthService.GetAuthorizationUrl is not yet implemented.");
-        throw new NotImplementedException("GitHub OAuth authentication is not yet implemented. " +
-            "This requires configuring a GitHub OAuth App with client ID and secret.");
+        var settings = _siteService.GetSettingsAsync<CopilotSettings>().GetAwaiter().GetResult();
+
+        if (string.IsNullOrWhiteSpace(settings.ClientId))
+        {
+            throw new InvalidOperationException("GitHub OAuth Client ID is not configured. Please configure Copilot settings.");
+        }
+
+        var callbackUrl = settings.CallbackUrl;
+        if (string.IsNullOrWhiteSpace(callbackUrl))
+        {
+            var request = _httpContextAccessor.HttpContext?.Request;
+            if (request != null)
+            {
+                callbackUrl = $"{request.Scheme}://{request.Host}/CopilotAuth/OAuthCallback";
+            }
+        }
+
+        var scopes = string.Join(" ", settings.Scopes ?? ["user:email", "read:org"]);
+        var state = returnUrl ?? string.Empty;
+
+        var queryParams = HttpUtility.ParseQueryString(string.Empty);
+        queryParams["client_id"] = settings.ClientId;
+        queryParams["redirect_uri"] = callbackUrl;
+        queryParams["scope"] = scopes;
+        queryParams["state"] = state;
+
+        return $"https://github.com/login/oauth/authorize?{queryParams}";
     }
 
     public async Task<GitHubOAuthCredential> ExchangeCodeForTokenAsync(
@@ -47,48 +81,81 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
         string userId,
         CancellationToken cancellationToken = default)
     {
-        // TODO: Implement token exchange
-        // 1. Exchange authorization code for access token via GitHub API
-        //    POST https://github.com/login/oauth/access_token
-        // 2. Get user info from GitHub to retrieve username
-        //    GET https://api.github.com/user
-        
+        var settings = await _siteService.GetSettingsAsync<CopilotSettings>();
+
+        if (string.IsNullOrWhiteSpace(settings.ClientId) || string.IsNullOrWhiteSpace(settings.ProtectedClientSecret))
+        {
+            throw new InvalidOperationException("GitHub OAuth credentials are not configured. Please configure Copilot settings.");
+        }
+
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null)
         {
             throw new InvalidOperationException($"User with ID '{userId}' not found.");
         }
 
-        // TODO: Make actual API call to GitHub
-        // For now, throwing NotImplementedException
-        _logger.LogWarning("GitHubOAuthService.ExchangeCodeForTokenAsync is not yet implemented.");
-        throw new NotImplementedException("GitHub OAuth token exchange is not yet implemented.");
+        // Unprotect the client secret
+        var settingsProtector = _dataProtectionProvider.CreateProtector(SettingsProtectorPurpose);
+        var clientSecret = settingsProtector.Unprotect(settings.ProtectedClientSecret);
 
-        // Example implementation structure:
-        // var accessToken = "obtained_from_github";
-        // var refreshToken = "obtained_from_github";
-        // var username = "obtained_from_github";
-        // var expiresAt = DateTime.UtcNow.AddHours(8);
-        //
-        // var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
-        //
-        // var credentials = new GitHubOAuthCredentials
-        // {
-        //     GitHubUsername = username,
-        //     ProtectedAccessToken = protector.Protect(accessToken),
-        //     ProtectedRefreshToken = !string.IsNullOrEmpty(refreshToken) ? protector.Protect(refreshToken) : null,
-        //     ExpiresAt = expiresAt,
-        //     UpdatedUtc = DateTime.UtcNow
-        // };
-        //
-        // user.Put(credentials);
-        // await _userManager.UpdateAsync(user);
-        //
-        // return new GitHubOAuthCredential
-        // {
-        //     GitHubUsername = username,
-        //     ExpiresAt = expiresAt
-        // };
+        // Exchange authorization code for access token
+        var httpClient = _httpClientFactory.CreateClient();
+        httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("CrestApps-OrchardCore-Copilot/1.0");
+
+        var tokenRequest = new Dictionary<string, string>
+        {
+            ["client_id"] = settings.ClientId,
+            ["client_secret"] = clientSecret,
+            ["code"] = code
+        };
+
+        var tokenResponse = await httpClient.PostAsJsonAsync(
+            "https://github.com/login/oauth/access_token",
+            tokenRequest,
+            cancellationToken);
+
+        tokenResponse.EnsureSuccessStatusCode();
+
+        var tokenData = await tokenResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+
+        var accessToken = tokenData.GetProperty("access_token").GetString();
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            throw new InvalidOperationException("Failed to retrieve access token from GitHub.");
+        }
+
+        // Get user information from GitHub
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var userResponse = await httpClient.GetAsync("https://api.github.com/user", cancellationToken);
+        userResponse.EnsureSuccessStatusCode();
+
+        var userData = await userResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+        var username = userData.GetProperty("login").GetString();
+
+        // Protect tokens
+        var tokenProtector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
+
+        var credentials = new GitHubOAuthCredentials
+        {
+            GitHubUsername = username,
+            ProtectedAccessToken = tokenProtector.Protect(accessToken),
+            ProtectedRefreshToken = null, // GitHub OAuth doesn't provide refresh tokens
+            ExpiresAt = null, // GitHub tokens don't have explicit expiration
+            UpdatedUtc = DateTime.UtcNow
+        };
+
+        (user as IEntity)?.Put(credentials);
+        await _userManager.UpdateAsync(user);
+
+        return new GitHubOAuthCredential
+        {
+            UserId = userId,
+            GitHubUsername = username,
+            ExpiresAt = null,
+            UpdatedUtc = credentials.UpdatedUtc
+        };
     }
 
     public async Task<GitHubOAuthCredential> GetCredentialAsync(
@@ -137,13 +204,6 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
         try
         {
             var accessToken = protector.Unprotect(credentials.ProtectedAccessToken);
-
-            // TODO: Check if token is expired and refresh if needed
-            // if (credentials.ExpiresAt.HasValue && credentials.ExpiresAt.Value < DateTime.UtcNow)
-            // {
-            //     // Refresh token logic here
-            // }
-
             return accessToken;
         }
         catch (Exception ex)
@@ -163,10 +223,7 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
             return;
         }
 
-        // TODO: Optionally revoke token with GitHub API
-        // DELETE https://api.github.com/applications/{client_id}/token
-
-        // Clear credentials
+        // Clear credentials by setting tokens to null
         (user as IEntity)?.Put(new GitHubOAuthCredentials
         {
             ProtectedAccessToken = null,
