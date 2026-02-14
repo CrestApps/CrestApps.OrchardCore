@@ -5,18 +5,21 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
 using USR = OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Controllers;
 
 [Authorize]
-public class CopilotAuthController : Controller
+public sealed class CopilotAuthController : Controller
 {
     private readonly IGitHubOAuthService _oauthService;
     private readonly UserManager<USR.IUser> _userManager;
     private readonly INotifier _notifier;
     private readonly ILogger<CopilotAuthController> _logger;
+    private readonly AdminOptions _adminOptions;
 
     internal readonly IHtmlLocalizer H;
 
@@ -25,12 +28,14 @@ public class CopilotAuthController : Controller
         UserManager<USR.IUser> userManager,
         INotifier notifier,
         IHtmlLocalizer<CopilotAuthController> htmlLocalizer,
-        ILogger<CopilotAuthController> logger)
+        ILogger<CopilotAuthController> logger,
+        IOptions<AdminOptions> adminOptions)
     {
         _oauthService = oauthService;
         _userManager = userManager;
         _notifier = notifier;
         _logger = logger;
+        _adminOptions = adminOptions.Value;
         H = htmlLocalizer;
     }
 
@@ -45,7 +50,7 @@ public class CopilotAuthController : Controller
             // Validate returnUrl to prevent open redirect attacks
             var safeReturnUrl = returnUrl != null && Url.IsLocalUrl(returnUrl)
                 ? returnUrl
-                : Url.Action("OAuthCallback", "CopilotAuth");
+                : Url.Action(nameof(OAuthCallback), nameof(CopilotAuthController).Replace("Controller", ""));
 
             // Generate the GitHub authorization URL
             var authUrl = _oauthService.GetAuthorizationUrl(safeReturnUrl);
@@ -70,14 +75,14 @@ public class CopilotAuthController : Controller
         {
             _logger.LogWarning("GitHub OAuth error: {Error}", error);
             await _notifier.ErrorAsync(H["GitHub authentication failed: {0}", error]);
-            return LocalRedirect("~/Admin");
+            return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
         }
 
         if (string.IsNullOrEmpty(code))
         {
             _logger.LogWarning("No authorization code received from GitHub");
             await _notifier.ErrorAsync(H["No authorization code received from GitHub"]);
-            return LocalRedirect("~/Admin");
+            return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
         }
 
         try
@@ -94,19 +99,19 @@ public class CopilotAuthController : Controller
             var credential = await _oauthService.ExchangeCodeForTokenAsync(code, await _userManager.GetUserIdAsync(user));
 
             await _notifier.SuccessAsync(H["Successfully connected to GitHub as {0}", credential.GitHubUsername]);
-            return LocalRedirect("~/Admin");
+            return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
         }
         catch (NotImplementedException)
         {
             _logger.LogWarning("GitHub OAuth token exchange is not implemented");
             await _notifier.ErrorAsync(H["GitHub OAuth is not yet fully implemented."]);
-            return LocalRedirect("~/Admin");
+            return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during GitHub OAuth callback");
             await _notifier.ErrorAsync(H["An error occurred during GitHub authentication."]);
-            return LocalRedirect("~/Admin");
+            return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
         }
     }
 
@@ -145,6 +150,6 @@ public class CopilotAuthController : Controller
             return Redirect(returnUrl);
         }
 
-        return LocalRedirect("~/Admin");
+        return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
     }
 }

@@ -1,25 +1,33 @@
 using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Entities;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 
 /// <summary>
 /// Implementation of GitHub OAuth service for Copilot.
-/// This is a stub implementation that needs to be completed.
 /// </summary>
 public sealed class GitHubOAuthService : IGitHubOAuthService
 {
+    private const string ProtectorPurpose = "CrestApps.OrchardCore.AI.Chat.Copilot.GitHubTokens";
+
+    private readonly UserManager<IUser> _userManager;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger<GitHubOAuthService> _logger;
 
-    // TODO: Add dependencies for:
-    // - OrchardCore.Data ISession for storing credentials
-    // - Data protection for encrypting tokens
-    // - HttpClient for GitHub API calls
-    // - Configuration for GitHub OAuth app credentials
+    // TODO: Add HttpClient for GitHub API calls
+    // TODO: Add configuration for GitHub OAuth app credentials
 
     public GitHubOAuthService(
+        UserManager<IUser> userManager,
+        IDataProtectionProvider dataProtectionProvider,
         ILogger<GitHubOAuthService> logger)
     {
+        _userManager = userManager;
+        _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
     }
 
@@ -34,7 +42,7 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
             "This requires configuring a GitHub OAuth App with client ID and secret.");
     }
 
-    public Task<GitHubOAuthCredential> ExchangeCodeForTokenAsync(
+    public async Task<GitHubOAuthCredential> ExchangeCodeForTokenAsync(
         string code,
         string userId,
         CancellationToken cancellationToken = default)
@@ -44,64 +52,150 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
         //    POST https://github.com/login/oauth/access_token
         // 2. Get user info from GitHub to retrieve username
         //    GET https://api.github.com/user
-        // 3. Encrypt tokens using data protection
-        // 4. Store encrypted credential in database (YesSql)
-        // 5. Return the stored credential
         
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            throw new InvalidOperationException($"User with ID '{userId}' not found.");
+        }
+
+        // TODO: Make actual API call to GitHub
+        // For now, throwing NotImplementedException
         _logger.LogWarning("GitHubOAuthService.ExchangeCodeForTokenAsync is not yet implemented.");
         throw new NotImplementedException("GitHub OAuth token exchange is not yet implemented.");
+
+        // Example implementation structure:
+        // var accessToken = "obtained_from_github";
+        // var refreshToken = "obtained_from_github";
+        // var username = "obtained_from_github";
+        // var expiresAt = DateTime.UtcNow.AddHours(8);
+        //
+        // var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
+        //
+        // var credentials = new GitHubOAuthCredentials
+        // {
+        //     GitHubUsername = username,
+        //     ProtectedAccessToken = protector.Protect(accessToken),
+        //     ProtectedRefreshToken = !string.IsNullOrEmpty(refreshToken) ? protector.Protect(refreshToken) : null,
+        //     ExpiresAt = expiresAt,
+        //     UpdatedUtc = DateTime.UtcNow
+        // };
+        //
+        // user.Put(credentials);
+        // await _userManager.UpdateAsync(user);
+        //
+        // return new GitHubOAuthCredential
+        // {
+        //     GitHubUsername = username,
+        //     ExpiresAt = expiresAt
+        // };
     }
 
-    public Task<GitHubOAuthCredential> GetCredentialAsync(
+    public async Task<GitHubOAuthCredential> GetCredentialAsync(
         string userId,
         CancellationToken cancellationToken = default)
     {
-        // TODO: Implement credential retrieval
-        // 1. Query YesSql database for credential by user ID
-        // 2. Return the credential if found, null otherwise
-        
-        _logger.LogWarning("GitHubOAuthService.GetCredentialAsync is not yet implemented.");
-        return Task.FromResult<GitHubOAuthCredential>(null);
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return null;
+        }
+
+        var credentials = (user as IEntity)?.As<GitHubOAuthCredentials>();
+        if (credentials == null || string.IsNullOrEmpty(credentials.ProtectedAccessToken))
+        {
+            return null;
+        }
+
+        return new GitHubOAuthCredential
+        {
+            UserId = userId,
+            GitHubUsername = credentials.GitHubUsername,
+            ExpiresAt = credentials.ExpiresAt,
+            UpdatedUtc = credentials.UpdatedUtc
+        };
     }
 
     public async Task<string> GetValidAccessTokenAsync(
         string userId,
         CancellationToken cancellationToken = default)
     {
-        // TODO: Implement token validation and refresh
-        // 1. Get credential from database
-        // 2. Decrypt access token
-        // 3. Check if token is expired
-        // 4. If expired and refresh token available, refresh the token
-        // 5. Return valid decrypted access token
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return null;
+        }
+
+        var credentials = (user as IEntity)?.As<GitHubOAuthCredentials>();
+        if (credentials == null || string.IsNullOrEmpty(credentials.ProtectedAccessToken))
+        {
+            return null;
+        }
+
+        var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
         
-        _logger.LogWarning("GitHubOAuthService.GetValidAccessTokenAsync is not yet implemented.");
-        return await Task.FromResult<string>(null);
+        try
+        {
+            var accessToken = protector.Unprotect(credentials.ProtectedAccessToken);
+
+            // TODO: Check if token is expired and refresh if needed
+            // if (credentials.ExpiresAt.HasValue && credentials.ExpiresAt.Value < DateTime.UtcNow)
+            // {
+            //     // Refresh token logic here
+            // }
+
+            return accessToken;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to unprotect access token for user {UserId}", userId);
+            return null;
+        }
     }
 
-    public Task DisconnectAsync(
+    public async Task DisconnectAsync(
         string userId,
         CancellationToken cancellationToken = default)
     {
-        // TODO: Implement credential deletion
-        // 1. Optionally revoke token with GitHub API
-        //    DELETE https://api.github.com/applications/{client_id}/token
-        // 2. Delete credential from database
-        
-        _logger.LogWarning("GitHubOAuthService.DisconnectAsync is not yet implemented.");
-        return Task.CompletedTask;
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return;
+        }
+
+        // TODO: Optionally revoke token with GitHub API
+        // DELETE https://api.github.com/applications/{client_id}/token
+
+        // Clear credentials
+        (user as IEntity)?.Put(new GitHubOAuthCredentials
+        {
+            ProtectedAccessToken = null,
+            ProtectedRefreshToken = null,
+            GitHubUsername = null,
+            ExpiresAt = null,
+            UpdatedUtc = DateTime.UtcNow
+        });
+
+        await _userManager.UpdateAsync(user);
     }
 
     public async Task<bool> IsAuthenticatedAsync(
         string userId,
         CancellationToken cancellationToken = default)
     {
-        // TODO: Implement authentication check
-        // 1. Get credential from database
-        // 2. Check if credential exists and is not expired
-        // 3. Return true if valid, false otherwise
-        
         var credential = await GetCredentialAsync(userId, cancellationToken);
-        return credential != null;
+        
+        if (credential == null)
+        {
+            return false;
+        }
+
+        // Check if token is not expired
+        if (credential.ExpiresAt.HasValue && credential.ExpiresAt.Value < DateTime.UtcNow)
+        {
+            return false;
+        }
+
+        return true;
     }
 }
