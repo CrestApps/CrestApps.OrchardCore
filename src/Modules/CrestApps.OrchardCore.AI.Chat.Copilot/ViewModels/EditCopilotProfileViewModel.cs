@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.OrchardCore.AI.ViewModels;
+namespace CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
 
 public class EditCopilotProfileViewModel
 {

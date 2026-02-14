@@ -1,8 +1,9 @@
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Users;
+using USR = OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Controllers;
 
@@ -10,16 +11,16 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.Controllers;
 public class CopilotAuthController : Controller
 {
     private readonly IGitHubOAuthService _oauthService;
-    private readonly IUserService _userService;
+    private readonly UserManager<USR.IUser> _userManager;
     private readonly ILogger<CopilotAuthController> _logger;
 
     public CopilotAuthController(
         IGitHubOAuthService oauthService,
-        IUserService userService,
+        UserManager<USR.IUser> userManager,
         ILogger<CopilotAuthController> logger)
     {
         _oauthService = oauthService;
-        _userService = userService;
+        _userManager = userManager;
         _logger = logger;
     }
 
@@ -68,7 +69,7 @@ public class CopilotAuthController : Controller
         try
         {
             // Get current user
-            var user = await _userService.GetAuthenticatedUserAsync(User);
+            var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
                 _logger.LogWarning("No authenticated user found during OAuth callback");
@@ -76,7 +77,7 @@ public class CopilotAuthController : Controller
             }
 
             // Exchange code for tokens
-            var credential = await _oauthService.ExchangeCodeForTokenAsync(code, user.UserId);
+            var credential = await _oauthService.ExchangeCodeForTokenAsync(code, await _userManager.GetUserIdAsync(user));
 
             TempData["Success"] = $"Successfully connected to GitHub as {credential.GitHubUsername}";
             return RedirectToAction("Index", "Admin", new { area = "OrchardCore.Admin" });
@@ -104,13 +105,13 @@ public class CopilotAuthController : Controller
     {
         try
         {
-            var user = await _userService.GetAuthenticatedUserAsync(User);
+            var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
                 return Unauthorized();
             }
 
-            await _oauthService.DisconnectAsync(user.UserId);
+            await _oauthService.DisconnectAsync(await _userManager.GetUserIdAsync(user));
 
             TempData["Success"] = "Successfully disconnected from GitHub";
             return RedirectToLocal(returnUrl);

@@ -260,16 +260,3 @@ public sealed class ConnectionManagementOCDeploymentsStartup : StartupBase
     }
 }
 #endregion
-
-#region Copilot Orchestrator Support
-
-[Feature(AIConstants.Feature.ChatCore)]
-[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Copilot")]
-public sealed class CopilotOrchestratorStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDisplayDriver<AIProfile, AIProfileCopilotDisplayDriver>();
-    }
-}
-#endregion

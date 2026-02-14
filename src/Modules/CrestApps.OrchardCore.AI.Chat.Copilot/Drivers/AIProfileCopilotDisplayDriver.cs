@@ -1,32 +1,32 @@
-using CrestApps.OrchardCore.AI.Chat.Copilot;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
+using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
-using OrchardCore.Users;
+using USR = OrchardCore.Users;
 
-namespace CrestApps.OrchardCore.AI.Drivers;
+namespace CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 
 internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IGitHubOAuthService _oauthService;
-    private readonly IUserService _userService;
+    private readonly UserManager<USR.IUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IStringLocalizer S;
 
     public AIProfileCopilotDisplayDriver(
         IGitHubOAuthService oauthService,
-        IUserService userService,
+        UserManager<USR.IUser> userManager,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<AIProfileCopilotDisplayDriver> stringLocalizer)
     {
         _oauthService = oauthService;
-        _userService = userService;
+        _userManager = userManager;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
@@ -41,13 +41,14 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
             model.CopilotFlags = copilotSettings?.CopilotFlags;
 
             // Check if current user has authenticated with GitHub
-            var user = await _userService.GetAuthenticatedUserAsync(_httpContextAccessor.HttpContext?.User);
+            var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
             if (user != null)
             {
-                model.IsAuthenticated = await _oauthService.IsAuthenticatedAsync(user.UserId);
+                var userId = await _userManager.GetUserIdAsync(user);
+                model.IsAuthenticated = await _oauthService.IsAuthenticatedAsync(userId);
                 if (model.IsAuthenticated)
                 {
-                    var credential = await _oauthService.GetCredentialAsync(user.UserId);
+                    var credential = await _oauthService.GetCredentialAsync(userId);
                     model.GitHubUsername = credential?.GitHubUsername;
                 }
             }
