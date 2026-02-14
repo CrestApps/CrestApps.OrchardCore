@@ -19,7 +19,14 @@
         <label asp-for="ClientSecret" class="form-label">@T["Client Secret"]</label>
         <input asp-for="ClientSecret" type="password" class="form-control" placeholder="@T["Enter new secret to update"]" />
         <span asp-validation-for="ClientSecret" class="text-danger"></span>
-        <span class="hint">@T["The Client Secret from your GitHub OAuth App. Leave empty to keep the existing secret."]</span>
+        @if (Model.HasSecret)
+        {
+            <span class="hint text-success">@T["✓ A client secret has been securely stored. Enter a new value to replace it, or leave empty to keep the existing secret."]</span>
+        }
+        else
+        {
+            <span class="hint">@T["The Client Secret from your GitHub OAuth App."]</span>
+        }
     </div>
 
     <div class="mb-3">

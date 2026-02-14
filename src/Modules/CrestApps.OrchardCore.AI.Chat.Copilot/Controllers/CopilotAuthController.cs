@@ -45,24 +45,15 @@ public sealed class CopilotAuthController : Controller
     [HttpGet]
     public async Task<IActionResult> AuthorizeGitHub(string returnUrl = null)
     {
-        try
-        {
-            // Validate returnUrl to prevent open redirect attacks
-            var safeReturnUrl = returnUrl != null && Url.IsLocalUrl(returnUrl)
-                ? returnUrl
-                : Url.Action(nameof(OAuthCallback), GetType().Name.Replace("Controller", ""));
+        // Validate returnUrl to prevent open redirect attacks
+        var safeReturnUrl = returnUrl != null && Url.IsLocalUrl(returnUrl)
+            ? returnUrl
+            : Url.Action(nameof(OAuthCallback), GetType().Name.Replace("Controller", ""));
 
-            // Generate the GitHub authorization URL
-            var authUrl = _oauthService.GetAuthorizationUrl(safeReturnUrl);
+        // Generate the GitHub authorization URL
+        var authUrl = await _oauthService.GetAuthorizationUrlAsync(safeReturnUrl);
 
-            return Redirect(authUrl);
-        }
-        catch (NotImplementedException)
-        {
-            _logger.LogWarning("GitHub OAuth is not configured. Redirecting back.");
-            await _notifier.ErrorAsync(H["GitHub OAuth is not yet configured. Please configure GitHub OAuth App credentials."]);
-            return RedirectToLocal(returnUrl);
-        }
+        return Redirect(authUrl);
     }
 
     /// <summary>
@@ -75,6 +66,7 @@ public sealed class CopilotAuthController : Controller
         {
             _logger.LogWarning("GitHub OAuth error: {Error}", error);
             await _notifier.ErrorAsync(H["GitHub authentication failed: {0}", error]);
+
             return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
         }
 
@@ -82,37 +74,25 @@ public sealed class CopilotAuthController : Controller
         {
             _logger.LogWarning("No authorization code received from GitHub");
             await _notifier.ErrorAsync(H["No authorization code received from GitHub"]);
+
             return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
         }
 
-        try
+        // Get current user
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
         {
-            // Get current user
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                _logger.LogWarning("No authenticated user found during OAuth callback");
-                return Unauthorized();
-            }
+            _logger.LogWarning("No authenticated user found during OAuth callback");
 
-            // Exchange code for tokens
-            var credential = await _oauthService.ExchangeCodeForTokenAsync(code, await _userManager.GetUserIdAsync(user));
+            return Unauthorized();
+        }
 
-            await _notifier.SuccessAsync(H["Successfully connected to GitHub as {0}", credential.GitHubUsername]);
-            return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
-        }
-        catch (NotImplementedException)
-        {
-            _logger.LogWarning("GitHub OAuth token exchange is not implemented");
-            await _notifier.ErrorAsync(H["GitHub OAuth is not yet fully implemented."]);
-            return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during GitHub OAuth callback");
-            await _notifier.ErrorAsync(H["An error occurred during GitHub authentication."]);
-            return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
-        }
+        // Exchange code for tokens
+        var credential = await _oauthService.ExchangeCodeForTokenAsync(code, await _userManager.GetUserIdAsync(user));
+
+        await _notifier.SuccessAsync(H["Successfully connected to GitHub as {0}", credential.GitHubUsername]);
+
+        return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
     }
 
     /// <summary>
@@ -122,25 +102,17 @@ public sealed class CopilotAuthController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DisconnectGitHub(string returnUrl = null)
     {
-        try
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return Unauthorized();
-            }
-
-            await _oauthService.DisconnectAsync(await _userManager.GetUserIdAsync(user));
-
-            await _notifier.SuccessAsync(H["Successfully disconnected from GitHub"]);
-            return RedirectToLocal(returnUrl);
+            return Unauthorized();
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error disconnecting GitHub account");
-            await _notifier.ErrorAsync(H["An error occurred while disconnecting from GitHub."]);
-            return RedirectToLocal(returnUrl);
-        }
+
+        await _oauthService.DisconnectAsync(await _userManager.GetUserIdAsync(user));
+
+        await _notifier.SuccessAsync(H["Successfully disconnected from GitHub"]);
+
+        return RedirectToLocal(returnUrl);
     }
 
     private IActionResult RedirectToLocal(string returnUrl)

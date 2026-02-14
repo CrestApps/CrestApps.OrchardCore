@@ -11,8 +11,9 @@ public interface IGitHubOAuthService
     /// Gets the authorization URL to initiate GitHub OAuth flow.
     /// </summary>
     /// <param name="returnUrl">The URL to return to after authentication.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The GitHub authorization URL.</returns>
-    string GetAuthorizationUrl(string returnUrl);
+    Task<string> GetAuthorizationUrlAsync(string returnUrl, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Exchanges an authorization code for access tokens.

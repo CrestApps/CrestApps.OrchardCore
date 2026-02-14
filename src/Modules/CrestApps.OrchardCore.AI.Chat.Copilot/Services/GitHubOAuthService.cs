@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
 using OrchardCore.Users;
+using OrchardCore.Users.Models;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -45,9 +46,9 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
         _logger = logger;
     }
 
-    public string GetAuthorizationUrl(string returnUrl)
+    public async Task<string> GetAuthorizationUrlAsync(string returnUrl, CancellationToken cancellationToken = default)
     {
-        var settings = _siteService.GetSettingsAsync<CopilotSettings>().GetAwaiter().GetResult();
+        var settings = await _siteService.GetSettingsAsync<CopilotSettings>();
 
         if (string.IsNullOrWhiteSpace(settings.ClientId))
         {
@@ -146,8 +147,11 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
             UpdatedUtc = DateTime.UtcNow
         };
 
-        (user as IEntity)?.Put(credentials);
-        await _userManager.UpdateAsync(user);
+        if (user is User usr)
+        {
+            usr.Put(credentials);
+            await _userManager.UpdateAsync(usr);
+        }
 
         return new GitHubOAuthCredential
         {
@@ -224,16 +228,19 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
         }
 
         // Clear credentials by setting tokens to null
-        (user as IEntity)?.Put(new GitHubOAuthCredentials
+        if (user is User usr)
         {
-            ProtectedAccessToken = null,
-            ProtectedRefreshToken = null,
-            GitHubUsername = null,
-            ExpiresAt = null,
-            UpdatedUtc = DateTime.UtcNow
-        });
+            usr.Put(new GitHubOAuthCredentials
+            {
+                ProtectedAccessToken = null,
+                ProtectedRefreshToken = null,
+                GitHubUsername = null,
+                ExpiresAt = null,
+                UpdatedUtc = DateTime.UtcNow
+            });
 
-        await _userManager.UpdateAsync(user);
+            await _userManager.UpdateAsync(usr);
+        }
     }
 
     public async Task<bool> IsAuthenticatedAsync(

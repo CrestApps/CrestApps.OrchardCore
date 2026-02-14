@@ -46,6 +46,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         {
             model.ClientId = settings.ClientId;
             model.CallbackUrl = settings.CallbackUrl;
+            model.HasSecret = !string.IsNullOrWhiteSpace(settings.ProtectedClientSecret);
 
             // Don't populate ClientSecret for security reasons
             // It will only be set when the user enters a new value
@@ -64,11 +65,22 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         settings.ClientId = model.ClientId;
         settings.CallbackUrl = model.CallbackUrl;
 
+        // Validate that client ID and secret are provided
+        if (string.IsNullOrWhiteSpace(settings.ClientId))
+        {
+            context.Updater.ModelState.AddModelError(nameof(model.ClientId), S["Client ID is required."]);
+        }
+
         // Only update the secret if a new one was provided
         if (!string.IsNullOrWhiteSpace(model.ClientSecret))
         {
             var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
             settings.ProtectedClientSecret = protector.Protect(model.ClientSecret);
+        }
+        else if (string.IsNullOrWhiteSpace(settings.ProtectedClientSecret))
+        {
+            // No existing secret and no new secret provided
+            context.Updater.ModelState.AddModelError(nameof(model.ClientSecret), S["Client Secret is required."]);
         }
 
         return await EditAsync(site, settings, context);

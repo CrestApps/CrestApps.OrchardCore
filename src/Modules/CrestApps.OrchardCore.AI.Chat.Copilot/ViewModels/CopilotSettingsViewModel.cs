@@ -7,4 +7,6 @@ public sealed class CopilotSettingsViewModel
     public string ClientSecret { get; set; }
 
     public string CallbackUrl { get; set; }
+
+    public bool HasSecret { get; set; }
 }
