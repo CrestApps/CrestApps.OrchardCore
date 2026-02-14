@@ -318,6 +318,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             ctx.UserMessage = prompt;
             ctx.ConversationHistory = transcript.ToList();
             ctx.CompletionContext.AdditionalProperties["Session"] = chatSession;
+            ctx.SessionId = sessionId;
         });
 
         var httpContext = Context.GetHttpContext();

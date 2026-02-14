@@ -44,6 +44,26 @@ else
     <span asp-validation-for="DeploymentId" class="text-danger"></span>
 </div>
 
+@if (Model.Orchestrators?.Count > 1)
+{
+    <div class="mb-3">
+        <label asp-for="OrchestratorName" class="form-label">
+            @T["Orchestrator"]
+            <span class="text-muted" data-bs-toggle="tooltip" title="@T["The orchestrator to use for this chat interaction. The orchestrator controls how tools are selected and how the AI execution loop is managed."]">
+                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+            </span>
+        </label>
+        <select asp-for="OrchestratorName" asp-items="Model.Orchestrators" class="form-select">
+            <option value="">@T["Default orchestrator"]</option>
+        </select>
+        <span asp-validation-for="OrchestratorName" class="text-danger"></span>
+    </div>
+}
+else
+{
+    <input type="hidden" asp-for="OrchestratorName" />
+}
+
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
 

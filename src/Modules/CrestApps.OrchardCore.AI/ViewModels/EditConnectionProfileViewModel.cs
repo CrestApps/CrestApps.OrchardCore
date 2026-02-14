@@ -7,6 +7,11 @@ public class EditConnectionProfileViewModel
 {
     public string ConnectionName { get; set; }
 
+    public string OrchestratorName { get; set; }
+
     [BindNever]
     public IList<SelectListItem> ConnectionNames { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> Orchestrators { get; set; }
 }

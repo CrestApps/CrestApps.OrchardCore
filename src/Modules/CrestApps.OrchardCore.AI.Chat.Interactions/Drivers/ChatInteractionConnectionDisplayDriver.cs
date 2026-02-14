@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Orchestration;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -14,6 +15,7 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly AIOptions _aiOptions;
     private readonly AIProviderOptions _providerOptions;
+    private readonly OrchestratorOptions _orchestratorOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -21,11 +23,13 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
         IAIDeploymentManager deploymentManager,
         IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> providerOptions,
+        IOptions<OrchestratorOptions> orchestratorOptions,
         IStringLocalizer<ChatInteractionConnectionDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
         _aiOptions = aiOptions.Value;
         _providerOptions = providerOptions.Value;
+        _orchestratorOptions = orchestratorOptions.Value;
         S = stringLocalizer;
     }
 
@@ -90,6 +94,16 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
                         .Select(x => new SelectListItem(x.Name, x.ItemId));
                 }
             }
+
+            // Populate orchestrator selection when multiple orchestrators are registered.
+            var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
+            if (orchestrators.Count > 1)
+            {
+                model.OrchestratorName = interaction.OrchestratorName;
+                model.Orchestrators = orchestrators
+                    .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
+                    .ToArray();
+            }
         }).Location("Parameters:1#Settings:2");
 
         return connectionResult;
@@ -108,6 +122,7 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
         interaction.ConnectionName = model.ConnectionName;
         interaction.DeploymentId = model.DeploymentId;
+        interaction.OrchestratorName = model.OrchestratorName;
 
         return Edit(interaction, context);
     }

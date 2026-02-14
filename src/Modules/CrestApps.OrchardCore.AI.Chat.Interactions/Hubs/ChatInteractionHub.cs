@@ -325,6 +325,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                     .Where(x => !x.IsGeneratedPrompt)
                     .Select(p => new ChatMessage(p.Role, p.Text))
                     .ToList();
+                ctx.SessionId = interaction.ItemId;
             });
 
             httpContext.Items[nameof(AIToolExecutionContext)] = new AIToolExecutionContext(interaction)
