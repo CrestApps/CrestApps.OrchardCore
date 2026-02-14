@@ -29,7 +29,7 @@ window.openAIChatManager = function () {
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
-    messageTemplate: "\n        <div class=\"list-group\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                <div class=\"d-flex align-items-center\">\n                    <div class=\"p-2\">\n                        <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'\"></i>\n                    </div>\n                    <div class=\"p-2 lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent || message.content\"></div>\n                    </div>\n                </div>\n                <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"!isIndicator(message)\">\n                    <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                        <i class=\"fa-solid fa-copy fa-lg\"></i>\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
+    messageTemplate: "\n        <div class=\"list-group\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                <div class=\"d-flex align-items-center\">\n                    <div class=\"p-2\">\n                        <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                    </div>\n                    <div class=\"p-2 lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent || message.content\"></div>\n                    </div>\n                </div>\n                <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"!isIndicator(message)\">\n                    <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                        <i class=\"fa-solid fa-copy fa-lg\"></i>\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
     indicatorTemplate: "<div class=\"spinner-grow spinner-grow-sm\" role=\"status\"><span class=\"visually-hidden\">Loading...</span></div>"
   };
   var renderer = new marked.Renderer();
@@ -39,12 +39,13 @@ window.openAIChatManager = function () {
     return "<a href=\"".concat(data.href, "\" target=\"_blank\" rel=\"noopener noreferrer\">").concat(data.text, "</a>");
   };
 
-  // Custom image renderer for generated images with thumbnail styling and download button
+  // Custom image renderer for generated images with thumbnail styling and download button.
+  // Handles both URL and data-URI sources (data URIs are converted to blobs for download).
   renderer.image = function (data) {
     var src = data.href;
     var alt = data.text || defaultConfig.generatedImageAltText;
     var maxWidth = defaultConfig.generatedImageMaxWidth;
-    return "<div class=\"generated-image-container\">\n        <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n        <div class=\"mt-2\">\n            <a href=\"").concat(src, "\" target=\"_blank\" download title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary\">\n                <i class=\"fa-solid fa-download\"></i>\n            </a>\n        </div>\n    </div>");
+    return "<div class=\"generated-image-container\">\n        <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n        <div class=\"mt-2\">\n            <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n                <i class=\"fa-solid fa-download\"></i>\n            </a>\n        </div>\n    </div>");
   };
 
   // Chart counter for unique IDs
@@ -244,6 +245,7 @@ window.openAIChatManager = function () {
           widgetIsInitialized: false,
           isSteaming: false,
           isNavigatingAway: false,
+          autoScroll: true,
           stream: null,
           messages: [],
           prompt: ''
@@ -408,6 +410,7 @@ window.openAIChatManager = function () {
           }
           this.streamingStarted();
           this.showTypingIndicator();
+          this.autoScroll = true;
           var content = '';
           var references = {};
 
@@ -428,7 +431,8 @@ window.openAIChatManager = function () {
                   role: "assistant",
                   title: chunk.title,
                   content: "",
-                  htmlContent: ""
+                  htmlContent: "",
+                  isStreaming: true
                 };
                 _this5.messages.push(newMessage);
                 message = newMessage;
@@ -471,11 +475,13 @@ window.openAIChatManager = function () {
               var _this5$stream;
               _this5.processReferences(references, messageIndex);
               _this5.streamingFinished();
-              if (!_this5.messages[messageIndex].content) {
-                // Blank message received.
+              var msg = _this5.messages[messageIndex];
+              if (msg) {
+                msg.isStreaming = false;
+              }
+              if (!msg || !msg.content) {
+                // No content received at all.
                 _this5.hideTypingIndicator();
-                _this5.addMessage(_this5.getServiceDownMessage());
-                console.log('blank message');
               }
               (_this5$stream = _this5.stream) === null || _this5$stream === void 0 || _this5$stream.dispose();
               _this5.stream = null;
@@ -484,6 +490,10 @@ window.openAIChatManager = function () {
               var _this5$stream2;
               _this5.processReferences(references, messageIndex);
               _this5.streamingFinished();
+              var msg = _this5.messages[messageIndex];
+              if (msg) {
+                msg.isStreaming = false;
+              }
               _this5.hideTypingIndicator();
               if (!_this5.isNavigatingAway) {
                 _this5.addMessage(_this5.getServiceDownMessage());
@@ -568,6 +578,9 @@ window.openAIChatManager = function () {
         },
         scrollToBottom: function scrollToBottom() {
           var _this6 = this;
+          if (!this.autoScroll) {
+            return;
+          }
           setTimeout(function () {
             _this6.chatContainer.scrollTop = _this6.chatContainer.scrollHeight - _this6.chatContainer.clientHeight;
           }, 50);
@@ -596,6 +609,16 @@ window.openAIChatManager = function () {
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
           this.placeholder = document.querySelector(config.placeholderElementSelector);
+
+          // Pause auto-scroll when the user manually scrolls up during streaming.
+          this.chatContainer.addEventListener('scroll', function () {
+            if (!_this7.stream) {
+              return;
+            }
+            var threshold = 30;
+            var atBottom = _this7.chatContainer.scrollHeight - _this7.chatContainer.clientHeight - _this7.chatContainer.scrollTop <= threshold;
+            _this7.autoScroll = atBottom;
+          });
           this.inputElement.addEventListener('keyup', function (event) {
             if (_this7.stream != null) {
               return;
@@ -617,6 +640,17 @@ window.openAIChatManager = function () {
               _this7.stream.dispose();
               _this7.stream = null;
               _this7.streamingFinished();
+              _this7.hideTypingIndicator();
+
+              // Clean up: remove empty assistant message or stop streaming animation.
+              if (_this7.messages.length > 0) {
+                var lastMsg = _this7.messages[_this7.messages.length - 1];
+                if (lastMsg.role === 'assistant' && !lastMsg.content) {
+                  _this7.messages.pop();
+                } else if (lastMsg.isStreaming) {
+                  lastMsg.isStreaming = false;
+                }
+              }
               return;
             }
             _this7.sendMessage();
@@ -818,3 +852,37 @@ window.downloadChart = function (chartId) {
   link.href = canvas.toDataURL('image/png');
   link.click();
 };
+
+// Intercept download clicks for data-URI images and convert to blob downloads.
+document.addEventListener('click', function (e) {
+  var link = e.target.closest('.ai-download-image');
+  if (!link) {
+    return;
+  }
+  var container = link.closest('.generated-image-container');
+  var img = container === null || container === void 0 ? void 0 : container.querySelector('img');
+  if (!img) {
+    return;
+  }
+  var src = img.src;
+  if (!src || !src.startsWith('data:')) {
+    return; // Normal URL – let the default <a> behaviour handle it.
+  }
+  e.preventDefault();
+  fetch(src).then(function (res) {
+    return res.blob();
+  }).then(function (blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = link.getAttribute('download') || 'generated-image.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 100);
+  })["catch"](function (err) {
+    console.error('Failed to download image:', err);
+  });
+});

@@ -14,7 +14,7 @@ var defaultConfig = {
             <div v-for="(message, index) in messages" :key="index" class="list-group-item">
                 <div class="d-flex align-items-center">
                     <div class="p-2">
-                        <i :class="message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'"></i>
+                        <i :class="message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')"></i>
                     </div>
                     <div class="p-2 lh-base">
                         <h4 v-if="message.title">{{ message.title }}</h4>
@@ -39,7 +39,8 @@ renderer.link = function (data) {
     return `<a href="${data.href}" target="_blank" rel="noopener noreferrer">${data.text}</a>`;
 };
 
-// Custom image renderer for generated images with thumbnail styling and download button
+// Custom image renderer for generated images with thumbnail styling and download button.
+// Handles both URL and data-URI sources (data URIs are converted to blobs for download).
 renderer.image = function (data) {
     const src = data.href;
     const alt = data.text || defaultConfig.generatedImageAltText;
@@ -47,7 +48,7 @@ renderer.image = function (data) {
     return `<div class="generated-image-container">
         <img src="${src}" alt="${alt}" class="img-thumbnail" style="max-width: ${maxWidth}px; height: auto;" />
         <div class="mt-2">
-            <a href="${src}" target="_blank" download title="${defaultConfig.downloadImageTitle}" class="btn btn-sm btn-outline-secondary">
+            <a href="${src}" target="_blank" download="${alt}" title="${defaultConfig.downloadImageTitle}" class="btn btn-sm btn-outline-secondary ai-download-image">
                 <i class="fa-solid fa-download"></i>
             </a>
         </div>
@@ -269,6 +270,7 @@ function parseMarkdownContent(content, message) {
                     widgetIsInitialized: false,
                     isSteaming: false,
                     isNavigatingAway: false,
+                    autoScroll: true,
                     stream: null,
                     messages: [],
                     prompt: ''
@@ -426,6 +428,7 @@ function parseMarkdownContent(content, message) {
 
                     this.streamingStarted();
                     this.showTypingIndicator();
+                    this.autoScroll = true;
 
                     var content = '';
                     var references = {};
@@ -453,6 +456,7 @@ function parseMarkdownContent(content, message) {
                                         title: chunk.title,
                                         content: "",
                                         htmlContent: "",
+                                        isStreaming: true,
                                     };
 
                                     this.messages.push(newMessage);
@@ -500,11 +504,14 @@ function parseMarkdownContent(content, message) {
                                 this.processReferences(references, messageIndex);
                                 this.streamingFinished();
 
-                                if (!this.messages[messageIndex].content) {
-                                    // Blank message received.
+                                let msg = this.messages[messageIndex];
+                                if (msg) {
+                                    msg.isStreaming = false;
+                                }
+
+                                if (!msg || !msg.content) {
+                                    // No content received at all.
                                     this.hideTypingIndicator();
-                                    this.addMessage(this.getServiceDownMessage());
-                                    console.log('blank message');
                                 }
 
                                 this.stream?.dispose();
@@ -513,6 +520,11 @@ function parseMarkdownContent(content, message) {
                             error: (err) => {
                                 this.processReferences(references, messageIndex);
                                 this.streamingFinished();
+
+                                let msg = this.messages[messageIndex];
+                                if (msg) {
+                                    msg.isStreaming = false;
+                                }
 
                                 this.hideTypingIndicator();
 
@@ -611,6 +623,9 @@ function parseMarkdownContent(content, message) {
                     return removedCount;
                 },
                 scrollToBottom() {
+                    if (!this.autoScroll) {
+                        return;
+                    }
                     setTimeout(() => {
                         this.chatContainer.scrollTop = this.chatContainer.scrollHeight - this.chatContainer.clientHeight;
                     }, 50);
@@ -638,6 +653,16 @@ function parseMarkdownContent(content, message) {
                     this.buttonElement = document.querySelector(config.sendButtonElementSelector);
                     this.chatContainer = document.querySelector(config.chatContainerElementSelector);
                     this.placeholder = document.querySelector(config.placeholderElementSelector);
+
+                    // Pause auto-scroll when the user manually scrolls up during streaming.
+                    this.chatContainer.addEventListener('scroll', () => {
+                        if (!this.stream) {
+                            return;
+                        }
+                        const threshold = 30;
+                        const atBottom = this.chatContainer.scrollHeight - this.chatContainer.clientHeight - this.chatContainer.scrollTop <= threshold;
+                        this.autoScroll = atBottom;
+                    });
 
                     this.inputElement.addEventListener('keyup', event => {
 
@@ -667,6 +692,17 @@ function parseMarkdownContent(content, message) {
                             this.stream = null;
 
                             this.streamingFinished();
+                            this.hideTypingIndicator();
+
+                            // Clean up: remove empty assistant message or stop streaming animation.
+                            if (this.messages.length > 0) {
+                                const lastMsg = this.messages[this.messages.length - 1];
+                                if (lastMsg.role === 'assistant' && !lastMsg.content) {
+                                    this.messages.pop();
+                                } else if (lastMsg.isStreaming) {
+                                    lastMsg.isStreaming = false;
+                                }
+                            }
 
                             return;
                         }
@@ -893,3 +929,38 @@ window.downloadChart = function (chartId) {
     link.href = canvas.toDataURL('image/png');
     link.click();
 };
+
+// Intercept download clicks for data-URI images and convert to blob downloads.
+document.addEventListener('click', function (e) {
+    const link = e.target.closest('.ai-download-image');
+    if (!link) {
+        return;
+    }
+
+    const container = link.closest('.generated-image-container');
+    const img = container?.querySelector('img');
+    if (!img) {
+        return;
+    }
+
+    const src = img.src;
+    if (!src || !src.startsWith('data:')) {
+        return; // Normal URL – let the default <a> behaviour handle it.
+    }
+
+    e.preventDefault();
+
+    fetch(src)
+        .then(function (res) { return res.blob(); })
+        .then(function (blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = link.getAttribute('download') || 'generated-image.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 100);
+        })
+        .catch(function (err) { console.error('Failed to download image:', err); });
+});

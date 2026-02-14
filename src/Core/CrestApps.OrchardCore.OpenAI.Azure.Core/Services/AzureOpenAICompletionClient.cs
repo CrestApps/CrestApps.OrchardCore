@@ -542,6 +542,9 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
     {
         var chatOptions = GetOptions(context, functions);
 
+        // Azure OpenAI does not support combining "On Your Data" data sources with tools/function calling.
+        // When tools are present, skip data source configuration and let the orchestrator handle
+        // document retrieval via tool calls instead.
         if (!string.IsNullOrEmpty(context.DataSourceId) && !string.IsNullOrEmpty(context.DataSourceType))
         {
             var dataSourceContext = new AzureOpenAIDataSourceContext(context.DataSourceId, context.DataSourceType)
