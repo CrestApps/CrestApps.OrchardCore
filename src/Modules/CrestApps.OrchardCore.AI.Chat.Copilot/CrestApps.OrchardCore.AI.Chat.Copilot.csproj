@@ -19,6 +19,9 @@
   <ItemGroup>
     <PackageReference Include="GitHub.Copilot.SDK" />
     <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Admin.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Users.Core" />
   </ItemGroup>
 
   <ItemGroup>
