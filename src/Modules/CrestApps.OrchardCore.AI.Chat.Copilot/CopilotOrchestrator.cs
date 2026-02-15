@@ -1,15 +1,18 @@
 using System.Runtime.CompilerServices;
 using System.Text;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using GitHub.Copilot.SDK;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot;
 
@@ -24,13 +27,19 @@ public sealed class CopilotOrchestrator : IOrchestrator
     public const string OrchestratorName = "copilot";
 
     private readonly IToolRegistry _toolRegistry;
+    private readonly IGitHubOAuthService _oauthService;
+    private readonly UserManager<IUser> _userManager;
     private readonly ILogger _logger;
 
     public CopilotOrchestrator(
         IToolRegistry toolRegistry,
+        IGitHubOAuthService oauthService,
+        UserManager<IUser> userManager,
         ILogger<CopilotOrchestrator> logger)
     {
         _toolRegistry = toolRegistry;
+        _oauthService = oauthService;
+        _userManager = userManager;
         _logger = logger;
     }
 
@@ -119,7 +128,49 @@ public sealed class CopilotOrchestrator : IOrchestrator
         // Configure MCP servers so Copilot can manage MCP tools natively.
         await ConfigureMcpServersAsync(context, sessionConfig, cancellationToken);
 
+        // Get the GitHub access token for the current user
         var clientOptions = new CopilotClientOptions();
+        
+        if (context.ServiceProvider is not null)
+        {
+            var httpContextAccessor = context.ServiceProvider.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
+            var user = httpContextAccessor?.HttpContext?.User;
+            
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                var orchardUser = await _userManager.GetUserAsync(user);
+                
+                if (orchardUser is not null)
+                {
+                    var userId = await _userManager.GetUserIdAsync(orchardUser);
+                    var accessToken = await _oauthService.GetValidAccessTokenAsync(userId, cancellationToken);
+                    
+                    if (!string.IsNullOrEmpty(accessToken))
+                    {
+                        // Pass the GitHub access token via environment variable
+                        // The Copilot CLI uses GITHUB_TOKEN for authentication
+                        clientOptions.Environment = new Dictionary<string, string>
+                        {
+                            ["GITHUB_TOKEN"] = accessToken
+                        };
+                        
+                        if (_logger.IsEnabled(LogLevel.Debug))
+                        {
+                            _logger.LogDebug(
+                                "CopilotOrchestrator: Configured GitHub access token for user {UserId}",
+                                userId);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "CopilotOrchestrator: No valid GitHub access token found for user {UserId}. " +
+                            "User must authenticate with GitHub via AI Profile settings.",
+                            userId);
+                    }
+                }
+            }
+        }
 
         await using var client = new CopilotClient(clientOptions);
         await using var session = await client.CreateSessionAsync(sessionConfig, cancellationToken);
