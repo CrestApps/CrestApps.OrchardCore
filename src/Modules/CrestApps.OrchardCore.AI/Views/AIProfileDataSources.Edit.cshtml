@@ -12,11 +12,11 @@
             {
                 @if (source.ItemId == Model.DataSourceId)
                 {
-                    <option value="@source.ItemId" data-source-type="@source.Type" selected="selected">@source.DisplayText</option>
+                    <option value="@source.ItemId" selected="selected">@source.DisplayText</option>
                     continue;
                 }
 
-                <option value="@source.ItemId" data-source-type="@source.Type">@source.DisplayText</option>
+                <option value="@source.ItemId">@source.DisplayText</option>
             }
         </select>
         <span asp-validation-for="DataSourceId" class="text-danger"></span>
@@ -34,24 +34,15 @@
 
             if (dataSourceSelect && dependentElements.length > 0) {
 
-                const option = dataSourceSelect.selectedOptions?.[0];
-                const type = option?.dataset.sourceType;
                 const hasDataSource = dataSourceSelect.value && dataSourceSelect.value.trim() !== '';
 
                 dependentElements.forEach(element => {
-                    console.log(element, element.classList, element.classList.contains('data-source-dependent-' + type), element.classList.contains('data-source-dependent-any') || (hasDataSource && element.classList.contains('data-source-dependent-' + type)));
-
                     if (!hasDataSource) {
                         element.classList.add('d-none');
-
                         return;
                     }
 
-                    if (element.classList.contains('data-source-dependent-any') || element.classList.contains('data-source-dependent-' + type)) {
-                        element.classList.remove('d-none');
-                    } else {
-                        element.classList.add('d-none');
-                    }
+                    element.classList.remove('d-none');
                 });
             }
         }

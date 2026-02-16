@@ -19,8 +19,11 @@ public sealed class ChatInteractionElasticsearchIndexProfileHandler : ChatIntera
     {
     }
 
-    public override Task InitializingAsync(InitializingContext<IndexProfile> context)
-        => SetMappingAsync(context.Model);
+    public override async Task InitializingAsync(InitializingContext<IndexProfile> context)
+    {
+        await SetMappingAsync(context.Model);
+        SetDefaultSearchFields(context.Model);
+    }
 
     public override Task UpdatingAsync(UpdatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
@@ -68,5 +71,25 @@ public sealed class ChatInteractionElasticsearchIndexProfileHandler : ChatIntera
         };
 
         indexProfile.Put(metadata);
+    }
+
+    private void SetDefaultSearchFields(IndexProfile indexProfile)
+    {
+        if (!CanHandle(indexProfile))
+        {
+            return;
+        }
+
+        var metadata = indexProfile.As<ElasticsearchDefaultQueryMetadata>();
+
+        if (metadata.DefaultSearchFields is null || metadata.DefaultSearchFields.Length == 0)
+        {
+            metadata.DefaultSearchFields =
+            [
+                ChatInteractionsConstants.ColumnNames.ChunksText,
+            ];
+
+            indexProfile.Put(metadata);
+        }
     }
 }

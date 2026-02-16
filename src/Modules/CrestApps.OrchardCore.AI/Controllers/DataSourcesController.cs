@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -26,8 +27,7 @@ public sealed class DataSourcesController : Controller
 
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly IAIDataSourceManager _dataSourceManager;
-    private readonly AIOptions _aiOptions;
+    private readonly ICatalogManager<AIDataSource> _dataSourceManager;
     private readonly IDisplayManager<AIDataSource> _displayManager;
     private readonly INotifier _notifier;
 
@@ -37,9 +37,8 @@ public sealed class DataSourcesController : Controller
     public DataSourcesController(
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
-        IAIDataSourceManager dataSourceManager,
+        ICatalogManager<AIDataSource> dataSourceManager,
         IDisplayManager<AIDataSource> displayManager,
-        IOptions<AIOptions> aiOptions,
         INotifier notifier,
         IHtmlLocalizer<DataSourcesController> htmlLocalizer,
         IStringLocalizer<DataSourcesController> stringLocalizer)
@@ -48,7 +47,6 @@ public sealed class DataSourcesController : Controller
         _updateModelAccessor = updateModelAccessor;
         _dataSourceManager = dataSourceManager;
         _displayManager = displayManager;
-        _aiOptions = aiOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -82,14 +80,11 @@ public sealed class DataSourcesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceModelEntryViewModel<AIDataSource, AIDataSourceKey>
+        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<AIDataSource>>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            Sources = _aiOptions.DataSources.Select(x => x.Key)
-            .OrderBy(x => x.ProfileSource)
-            .ThenBy(x => x.Type),
         };
 
         foreach (var record in result.Entries)
@@ -121,33 +116,19 @@ public sealed class DataSourcesController : Controller
         });
     }
 
-    [Admin("ai/data-source/create/{source}/{type}", "AIDataSourceCreate")]
-    public async Task<ActionResult> Create(string source, string type)
+    [Admin("ai/data-source/create", "AIDataSourceCreate")]
+    public async Task<ActionResult> Create()
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
         {
             return Forbid();
         }
 
-        if (!_aiOptions.DataSources.TryGetValue(new AIDataSourceKey(source, type), out var service))
-        {
-            await _notifier.ErrorAsync(H["Unable to find a profile-source named '{0}' with the type '{1}'.", source, type]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        var dataSource = await _dataSourceManager.NewAsync(source, type);
-
-        if (dataSource == null)
-        {
-            await _notifier.ErrorAsync(H["Invalid profile-source or type."]);
-
-            return RedirectToAction(nameof(Index));
-        }
+        var dataSource = await _dataSourceManager.NewAsync();
 
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = service.DisplayName,
+            DisplayName = S["New Data Source"],
             Editor = await _displayManager.BuildEditorAsync(dataSource, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -156,39 +137,25 @@ public sealed class DataSourcesController : Controller
 
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("ai/data-source/create/{source}/{type}", "AIDataSourceCreate")]
-    public async Task<ActionResult> CreatePost(string source, string type)
+    [Admin("ai/data-source/create", "AIDataSourceCreate")]
+    public async Task<ActionResult> CreatePost()
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
         {
             return Forbid();
         }
 
-        if (!_aiOptions.DataSources.TryGetValue(new AIDataSourceKey(source, type), out var service))
-        {
-            await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", source]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        var deployment = await _dataSourceManager.NewAsync(source, type);
-
-        if (deployment == null)
-        {
-            await _notifier.ErrorAsync(H["Invalid profile-source or type."]);
-
-            return RedirectToAction(nameof(Index));
-        }
+        var dataSource = await _dataSourceManager.NewAsync();
 
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = service.DisplayName,
-            Editor = await _displayManager.UpdateEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
+            DisplayName = S["New Data Source"],
+            Editor = await _displayManager.UpdateEditorAsync(dataSource, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
         if (ModelState.IsValid)
         {
-            await _dataSourceManager.CreateAsync(deployment);
+            await _dataSourceManager.CreateAsync(dataSource);
 
             await _notifier.SuccessAsync(H["Data source has been created successfully."]);
 

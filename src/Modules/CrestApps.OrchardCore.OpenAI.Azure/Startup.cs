@@ -2,9 +2,7 @@ using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Elasticsearch;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Handlers;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDb;
 using CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 using CrestApps.OrchardCore.OpenAI.Azure.Handlers;
@@ -31,6 +29,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDataMigration<AzureOpenAIOwnDataAIProfilesMigrations>();
+        services.AddDataMigration<AzureOpenAIFeatureMigrations>();
         services.AddSingleton<IODataFilterValidator, ODataFilterValidator>();
 
         services
@@ -70,10 +69,6 @@ public sealed class DataSourcesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDataMigration<AzureOpenAIOwnDataAIDataSourceMigrations>();
-        services.AddDisplayDriver<AIProfile, AzureRagChatProfileDisplayDriver>();
-        services.AddDisplayDriver<AIDataSource, AzureIndexAIDataSourceDisplayDriver>();
-        services.AddScoped<IAICompletionContextBuilderHandler, AzureOpenAICompletionContextBuilderHandler>();
-
         services.AddDataMigration<AzureOpenAIDataSourceMetadataMigrations>();
     }
 }
@@ -100,81 +95,3 @@ public sealed class ConnectionManagementStartup : StartupBase
         });
     }
 }
-
-#region Data Sources Features
-
-[Feature(AzureOpenAIConstants.Feature.AISearch)]
-public sealed class AISearchStartup : StartupBase
-{
-    internal readonly IStringLocalizer S;
-
-    public AISearchStartup(IStringLocalizer<AISearchStartup> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services
-            .AddScoped<AzureAISearchOpenAIChatOptionsConfiguration>()
-            .AddScoped<IOpenAIChatOptionsConfiguration>(sp => sp.GetRequiredService<AzureAISearchOpenAIChatOptionsConfiguration>())
-            .AddScoped<IAzureOpenAIDataSourceHandler>(sp => sp.GetRequiredService<AzureAISearchOpenAIChatOptionsConfiguration>())
-            .AddAIDataSource(AzureOpenAIConstants.ProviderName, AzureOpenAIConstants.DataSourceTypes.AzureAISearch, o =>
-            {
-                o.DisplayName = S["Azure OpenAI with Azure AI Search"];
-                o.Description = S["Enables AI models to use Azure AI Search as a data source for your data."];
-            });
-    }
-}
-
-[Feature(AzureOpenAIConstants.Feature.Elasticsearch)]
-public sealed class ElasticsearchStartup : StartupBase
-{
-    internal readonly IStringLocalizer S;
-
-    public ElasticsearchStartup(IStringLocalizer<ElasticsearchStartup> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services
-            .AddScoped<ElasticsearchOpenAIChatOptionsConfiguration>()
-            .AddScoped<IOpenAIChatOptionsConfiguration>(sp => sp.GetRequiredService<ElasticsearchOpenAIChatOptionsConfiguration>())
-            .AddScoped<IAzureOpenAIDataSourceHandler>(sp => sp.GetRequiredService<ElasticsearchOpenAIChatOptionsConfiguration>())
-            .AddAIDataSource(AzureOpenAIConstants.ProviderName, AzureOpenAIConstants.DataSourceTypes.Elasticsearch, o =>
-            {
-                o.DisplayName = S["Azure OpenAI with Elasticsearch"];
-                o.Description = S["Enables AI models to use Elasticsearch as a data source for your data."];
-            });
-    }
-}
-
-[Feature(AzureOpenAIConstants.Feature.MongoDB)]
-public sealed class MongoDBStartup : StartupBase
-{
-    internal readonly IStringLocalizer S;
-
-    public MongoDBStartup(IStringLocalizer<MongoDBStartup> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDisplayDriver<AIDataSource, AzureOpenAIMongoDBDataSourceDisplayDriver>();
-        services.AddScoped<ICatalogEntryHandler<AIDataSource>, MongoDBAIProfileHandler>();
-
-        services
-            .AddScoped<MongoDBOpenAIChatOptionsConfiguration>()
-            .AddScoped<IOpenAIChatOptionsConfiguration>(sp => sp.GetRequiredService<MongoDBOpenAIChatOptionsConfiguration>())
-            .AddScoped<IAzureOpenAIDataSourceHandler>(sp => sp.GetRequiredService<MongoDBOpenAIChatOptionsConfiguration>())
-            .AddAIDataSource(AzureOpenAIConstants.ProviderName, AzureOpenAIConstants.DataSourceTypes.MongoDB, o =>
-            {
-                o.DisplayName = S["Azure OpenAI with Mongo DB"];
-                o.Description = S["Enables AI models to use Mongo DB as a data source for your data."];
-            });
-    }
-}
-#endregion

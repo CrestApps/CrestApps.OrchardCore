@@ -22,11 +22,15 @@ using Fluid;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Indexing.Core;
+using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
@@ -127,9 +131,21 @@ public sealed class DataSourceStartup : StartupBase
         services.AddAIDataSourceServices();
         services.AddScoped<IAICompletionContextBuilderHandler, DataSourceAICompletionContextBuilderHandler>();
         services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
+        services.AddDisplayDriver<AIDataSource, AIDataSourceIndexDisplayDriver>();
         services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
         services.AddNavigationProvider<AIDataProviderAdminMenu>();
         services.AddDisplayDriver<AIProfile, AIProfileDataSourceDisplayDriver>();
+        services.AddDisplayDriver<AIProfile, AIDataSourceRagDisplayDriver>();
+        services.AddDisplayDriver<IndexProfile, DataSourceIndexProfileDisplayDriver>();
+
+        services.AddScoped<DataSourceIndexingService>();
+        services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();
+        services.AddSingleton<IBackgroundTask, BackgroundTasks.DataSourceSyncBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, BackgroundTasks.DataSourceCleanupBackgroundTask>();
+        services.AddTransient<ICatalogEntryHandler<AIDataSource>, DataSourceCleanupHandler>();
+
+        services.AddAITool<Tools.DataSourceSearchTool>(Tools.DataSourceSearchTool.TheName)
+            .WithPurpose(AIToolPurposes.DataSourceSearch);
     }
 }
 
@@ -151,6 +167,7 @@ public sealed class DataSourcesOCDeploymentStartup : StartupBase
         services.AddDeployment<AIDataSourceDeploymentSource, AIDataSourceDeploymentStep, AIDataSourceDeploymentStepDisplayDriver>();
     }
 }
+
 #endregion
 
 #region Deployments Feature
@@ -210,6 +227,7 @@ public sealed class ChatCoreStartup : StartupBase
 
         // Register orchestration services for AI Profile chat
         services.AddOrchestrationServices();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextHandler, AIToolExecutionContextOrchestrationHandler>());
     }
 }
 

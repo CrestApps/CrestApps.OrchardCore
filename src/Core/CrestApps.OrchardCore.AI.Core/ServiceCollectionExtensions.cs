@@ -55,8 +55,8 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAIDataSourceServices(this IServiceCollection services)
     {
         services
-            .AddScoped<IAIDataSourceStore, DefaultAIDataSourceStore>()
-            .AddScoped<IAIDataSourceManager, DefaultAIDataSourceManager>()
+            .AddScoped<ICatalog<AIDataSource>, DefaultAIDataSourceStore>()
+            .AddScoped<ICatalogManager<AIDataSource>, DefaultAIDataSourceManager>()
             .AddScoped<ICatalogEntryHandler<AIDataSource>, AIDataSourceHandler>();
 
         return services;
@@ -104,17 +104,6 @@ public static class ServiceCollectionExtensions
         {
             o.AddConnectionSource(providerName, configure);
         });
-
-        return services;
-    }
-
-    public static IServiceCollection AddAIDataSource(this IServiceCollection services, string profileSource, string type, Action<AIDataSourceOptionsEntry> configure = null)
-    {
-        services
-            .Configure<AIOptions>(o =>
-            {
-                o.AddDataSource(profileSource, type, configure);
-            });
 
         return services;
     }

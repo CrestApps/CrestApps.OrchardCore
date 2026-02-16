@@ -1,9 +1,8 @@
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
@@ -13,47 +12,30 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile>
 {
-    private readonly IAIDataSourceStore _dataSourceStore;
-    private readonly AIOptions _options;
+    private readonly ICatalog<AIDataSource> _dataSourceStore;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileDataSourceDisplayDriver(
-        IOptions<AIOptions> options,
-        IAIDataSourceStore dataSourceStore,
+        ICatalog<AIDataSource> dataSourceStore,
         IStringLocalizer<AIProfileDataSourceDisplayDriver> stringLocalizer)
     {
-        _options = options.Value;
         _dataSourceStore = dataSourceStore;
         S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
     {
-        var entries = _options.DataSources.Values.Where(x => string.Equals(x.ProfileSource, profile.Source, StringComparison.Ordinal));
-
-        if (!entries.Any())
-        {
-            return null;
-        }
-
         return Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSources_Edit", async model =>
         {
             var metadata = profile.As<AIProfileDataSourceMetadata>();
             model.DataSourceId = metadata.DataSourceId;
-            model.DataSources = await _dataSourceStore.GetAsync(profile.Source);
+            model.DataSources = await _dataSourceStore.GetAllAsync();
         }).Location("Content:2");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
-        var entries = _options.DataSources.Values.Where(x => string.Equals(x.ProfileSource, profile.Source, StringComparison.Ordinal));
-
-        if (!entries.Any())
-        {
-            return null;
-        }
-
         var model = new EditProfileDataSourcesViewModel();
 
         var metadata = profile.As<AIProfileDataSourceMetadata>();
@@ -70,12 +52,10 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
             }
 
             metadata.DataSourceId = model.DataSourceId;
-            metadata.DataSourceType = dataSource?.Type;
         }
         else
         {
             metadata.DataSourceId = null;
-            metadata.DataSourceType = null;
         }
 
         profile.Put(metadata);

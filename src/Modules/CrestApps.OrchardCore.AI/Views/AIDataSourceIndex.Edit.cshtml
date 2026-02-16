@@ -1,0 +1,97 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
+
+@model EditAIDataSourceIndexViewModel
+
+@if (Model.IsLocked)
+{
+    <div class="alert alert-info">
+        @T["The index configuration is locked. To change the index or field mappings, delete this data source and create a new one."]
+    </div>
+}
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="IndexName" class="@Orchard.GetLabelClasses()">@T["Source Index"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        @if (Model.IsLocked)
+        {
+            <input type="text" class="form-control" value="@Model.IndexName" readonly />
+            <input type="hidden" asp-for="IndexName" />
+        }
+        else
+        {
+            <select asp-for="IndexName" asp-items="Model.IndexNames" class="form-select">
+                <option value="">@T["Select an index"]</option>
+            </select>
+        }
+        <span class="hint">@T["The index to use as a data source for querying."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="MasterIndexName" class="@Orchard.GetLabelClasses()">@T["Knowledge Base Index"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        @if (Model.IsLocked)
+        {
+            <input type="text" class="form-control" value="@Model.MasterIndexName" readonly />
+            <input type="hidden" asp-for="MasterIndexName" />
+        }
+        else if (Model.MasterIndexNames?.Any() == true)
+        {
+            <select asp-for="MasterIndexName" asp-items="Model.MasterIndexNames" class="form-select">
+                <option value="">@T["Select a knowledge base index"]</option>
+            </select>
+            <span class="hint">@T["The knowledge base index used to store document embeddings for vector search."]</span>
+        }
+        else
+        {
+            <div class="alert alert-warning mb-0">
+                @T["No knowledge base indexes are available. Create an AI Knowledge Base Index using the Indexing feature before you can use data sources."]
+            </div>
+        }
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="TitleFieldName" class="@Orchard.GetLabelClasses()">@T["Title Field"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        @if (Model.IsLocked)
+        {
+            <input type="text" class="form-control" value="@Model.TitleFieldName" readonly />
+            <input type="hidden" asp-for="TitleFieldName" />
+        }
+        else if (Model.FieldNames?.Any() == true)
+        {
+            <select asp-for="TitleFieldName" asp-items="Model.FieldNames" class="form-select">
+                <option value="">@T["Select a title field (optional)"]</option>
+            </select>
+        }
+        else
+        {
+            <input asp-for="TitleFieldName" class="form-control" />
+        }
+        <span class="hint">@T["The source index field that maps to the document title."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="ContentFieldName" class="@Orchard.GetLabelClasses()">@T["Content Field"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        @if (Model.IsLocked)
+        {
+            <input type="text" class="form-control" value="@Model.ContentFieldName" readonly />
+            <input type="hidden" asp-for="ContentFieldName" />
+        }
+        else if (Model.FieldNames?.Any() == true)
+        {
+            <select asp-for="ContentFieldName" asp-items="Model.FieldNames" class="form-select">
+                <option value="">@T["Select a content field"]</option>
+            </select>
+        }
+        else
+        {
+            <input asp-for="ContentFieldName" class="form-control" />
+        }
+        <span class="hint">@T["The source index field that maps to the document content (text)."]</span>
+    </div>
+</div>

@@ -1,9 +1,7 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
-using Microsoft.Extensions.Options;
+using CrestApps.OrchardCore.Services;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
@@ -11,67 +9,36 @@ using OrchardCore.Entities;
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
 /// <summary>
-/// Display driver that shows data source selector when the chat interaction uses AzureOpenAIOwnData provider.
+/// Display driver that shows data source selector for chat interactions.
 /// </summary>
 public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatInteraction>
 {
-    private readonly IAIDataSourceStore _dataSourceStore;
-    private readonly AIOptions _aiOptions;
+    private readonly ICatalog<AIDataSource> _dataSourceStore;
 
-    public ChatInteractionDataSourceDisplayDriver(
-        IAIDataSourceStore dataSourceStore,
-        IOptions<AIOptions> aiOptions)
+    public ChatInteractionDataSourceDisplayDriver(ICatalog<AIDataSource> dataSourceStore)
     {
         _dataSourceStore = dataSourceStore;
-        _aiOptions = aiOptions.Value;
     }
 
     public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
     {
-        if (!string.Equals(interaction.Source, AzureOpenAIConstants.ProviderName, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        // Check if data sources are configured for this provider
-        var entries = _aiOptions.DataSources.Values
-            .Where(x => string.Equals(x.ProfileSource, interaction.Source, StringComparison.OrdinalIgnoreCase));
-
-        if (!entries.Any())
-        {
-            return null;
-        }
-
         return Initialize<EditChatInteractionDataSourceViewModel>("ChatInteractionDataSource_Edit", async model =>
         {
             var metadata = interaction.As<ChatInteractionDataSourceMetadata>();
             model.DataSourceId = metadata?.DataSourceId;
 
-            var ragMetadata = interaction.As<AzureRagChatMetadata>();
+            var ragMetadata = interaction.As<AIDataSourceRagMetadata>();
             model.Strictness = ragMetadata?.Strictness;
             model.TopNDocuments = ragMetadata?.TopNDocuments;
             model.IsInScope = ragMetadata?.IsInScope ?? true;
             model.Filter = ragMetadata?.Filter;
 
-            model.DataSources = await _dataSourceStore.GetAsync(interaction.Source);
+            model.DataSources = await _dataSourceStore.GetAllAsync();
         }).Location("Parameters:3#Settings:3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
     {
-        if (!string.Equals(interaction.Source, AzureOpenAIConstants.ProviderName, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        var entries = _aiOptions.DataSources.Values
-            .Where(x => string.Equals(x.ProfileSource, interaction.Source, StringComparison.OrdinalIgnoreCase));
-
-        if (!entries.Any())
-        {
-            return null;
-        }
-
         var model = new EditChatInteractionDataSourceViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
@@ -84,7 +51,6 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             {
                 interaction.Put(new ChatInteractionDataSourceMetadata
                 {
-                    DataSourceType = dataSource.Type,
                     DataSourceId = dataSource.ItemId,
                 });
             }
@@ -95,7 +61,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             interaction.Put(new ChatInteractionDataSourceMetadata());
         }
 
-        interaction.Put(new AzureRagChatMetadata
+        interaction.Put(new AIDataSourceRagMetadata
         {
             Strictness = model.Strictness,
             TopNDocuments = model.TopNDocuments,

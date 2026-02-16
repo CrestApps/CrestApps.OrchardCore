@@ -1,0 +1,27 @@
+@model CrestApps.OrchardCore.AI.ViewModels.EditDataSourceIndexProfileViewModel
+
+<div class="mb-3">
+    <label asp-for="EmbeddingConnection" class="form-label">@T["Embedding Connection"]</label>
+
+    @if (Model.IsLocked)
+    {
+        <input type="text" class="form-control" value="@Model.EmbeddingConnection" readonly />
+        <input type="hidden" asp-for="EmbeddingConnection" />
+        <span class="hint">@T["The embedding connection cannot be changed after the index is created."]</span>
+    }
+    else if (Model.EmbeddingConnections.Count == 0)
+    {
+        <div class="alert alert-warning">
+            <i class="fa-solid fa-exclamation-triangle" aria-hidden="true"></i>
+            @T["No embedding connections are available. Please configure at least one AI provider with an embedding deployment before creating this index."]
+        </div>
+    }
+    else
+    {
+        <select asp-for="EmbeddingConnection" asp-items="Model.EmbeddingConnections" class="form-select">
+            <option value="">@T["Select an embedding connection"]</option>
+        </select>
+
+        <span class="hint">@T["Select the embedding connection to use for generating document embeddings. This determines the vector dimensions for the index and cannot be changed after creation."]</span>
+    }
+</div>

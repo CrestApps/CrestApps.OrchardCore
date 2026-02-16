@@ -1,9 +1,8 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Services;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
@@ -13,19 +12,16 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
 {
     public const string StepKey = "AIDataSource";
 
-    private readonly IAIDataSourceManager _dataManager;
-    private readonly AIOptions _aiOptions;
+    private readonly ICatalogManager<AIDataSource> _dataManager;
 
     internal readonly IStringLocalizer S;
 
     public AIDataSourceStep(
-        IAIDataSourceManager dataManager,
-        IOptions<AIOptions> aiOptions,
+        ICatalogManager<AIDataSource> dataManager,
         IStringLocalizer<AIProfileStep> stringLocalizer)
         : base(StepKey)
     {
         _dataManager = dataManager;
-        _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
 
@@ -53,32 +49,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
             }
             else
             {
-                var profileSource = token[nameof(AIDataSource.ProfileSource)]?.GetValue<string>();
-
-                if (string.IsNullOrEmpty(profileSource))
-                {
-                    context.Errors.Add(S["Could not find profile-source value. The data-source will not be imported"]);
-
-                    continue;
-                }
-
-                var type = token[nameof(AIDataSource.Type)]?.GetValue<string>();
-
-                if (string.IsNullOrEmpty(type))
-                {
-                    context.Errors.Add(S["Could not find type value. The data-source will not be imported"]);
-
-                    continue;
-                }
-
-                if (!_aiOptions.DataSources.TryGetValue(new AIDataSourceKey(profileSource, type), out var _))
-                {
-                    context.Errors.Add(S["Unable to find a profile-source named '{0}' with the type '{1}'.", profileSource, type]);
-
-                    return;
-                }
-
-                dataSource = await _dataManager.NewAsync(profileSource, type, token);
+                dataSource = await _dataManager.NewAsync(token);
 
                 if (hasId && IdValidator.IsValid(id))
                 {

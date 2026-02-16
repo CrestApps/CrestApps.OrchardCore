@@ -12,8 +12,6 @@ public sealed class AIOptions
 
     private readonly Dictionary<string, AIProviderConnectionOptionsEntry> _connectionSources = new(StringComparer.OrdinalIgnoreCase);
 
-    private readonly Dictionary<AIDataSourceKey, AIDataSourceOptionsEntry> _dataSources = new(AIDataSourceKeyComparer.Instance);
-
     public IReadOnlyDictionary<string, Type> Clients
         => _clients;
 
@@ -25,9 +23,6 @@ public sealed class AIOptions
 
     public IReadOnlyDictionary<string, AIProviderConnectionOptionsEntry> ConnectionSources
         => _connectionSources;
-
-    public IReadOnlyDictionary<AIDataSourceKey, AIDataSourceOptionsEntry> DataSources
-        => _dataSources;
 
     internal void AddClient<TClient>(string name)
         where TClient : class, IAICompletionClient
@@ -101,30 +96,5 @@ public sealed class AIOptions
         }
 
         _connectionSources[providerName] = entry;
-    }
-
-    public void AddDataSource(string profileSource, string type, Action<AIDataSourceOptionsEntry> configure = null)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(profileSource);
-        ArgumentException.ThrowIfNullOrEmpty(type);
-
-        var key = new AIDataSourceKey(profileSource, type);
-
-        if (!_dataSources.TryGetValue(key, out var entry))
-        {
-            entry = new AIDataSourceOptionsEntry(key);
-        }
-
-        if (configure != null)
-        {
-            configure(entry);
-        }
-
-        if (string.IsNullOrEmpty(entry.DisplayName))
-        {
-            entry.DisplayName = new LocalizedString(profileSource, profileSource);
-        }
-
-        _dataSources[key] = entry;
     }
 }

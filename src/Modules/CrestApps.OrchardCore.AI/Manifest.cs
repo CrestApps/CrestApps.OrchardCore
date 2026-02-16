@@ -37,6 +37,7 @@ using OrchardCore.Modules.Manifest;
     Name = "AI Data Source Management",
     Description = "Provides a way to manage AI data sources.",
     Category = "Artificial Intelligence",
+    EnabledByDependencyOnly = true,
     Dependencies =
     [
         AIConstants.Feature.Area,

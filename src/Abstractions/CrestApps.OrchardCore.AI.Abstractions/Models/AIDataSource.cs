@@ -6,10 +6,6 @@ namespace CrestApps.OrchardCore.AI.Models;
 
 public sealed class AIDataSource : CatalogItem, IDisplayTextAwareModel, ICloneable<AIDataSource>
 {
-    public string ProfileSource { get; set; }
-
-    public string Type { get; set; }
-
     public string DisplayText { get; set; }
 
     public DateTime CreatedUtc { get; set; }
@@ -24,8 +20,6 @@ public sealed class AIDataSource : CatalogItem, IDisplayTextAwareModel, ICloneab
         {
             ItemId = ItemId,
             DisplayText = DisplayText,
-            ProfileSource = ProfileSource,
-            Type = Type,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,

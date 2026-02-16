@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore AI Data Sources - MongoDB</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      MongoDB Atlas support for AI data source document embeddings, vector search, and indexing.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS AI DataSources MongoDB</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="MongoDB.Driver" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 
+      Ensure this module directly depends on the required package so that when someone installs it, 
+      they won't need to manually include the AI package. 
+      This guarantees the module functions correctly and resolves the feature dependency.
+    -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>
