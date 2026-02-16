@@ -132,6 +132,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         int? topNDocuments,
         string filter,
         bool? isInScope,
+        bool? enableEarlyRag,
         string[] toolNames,
         string[] mcpConnectionIds)
     {
@@ -192,6 +193,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                         Strictness = strictness,
                         TopNDocuments = topNDocuments,
                         IsInScope = isInScope ?? true,
+                        EnableEarlyRag = enableEarlyRag ?? false,
                         Filter = filter,
                     });
                 }

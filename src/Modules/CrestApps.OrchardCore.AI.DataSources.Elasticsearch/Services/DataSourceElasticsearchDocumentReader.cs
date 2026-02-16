@@ -62,11 +62,13 @@ internal sealed class DataSourceElasticsearchDocumentReader : IDataSourceDocumen
 
                 var key = hit.Id;
 
-                if (!string.IsNullOrEmpty(keyFieldName) &&
-                    hit.Source.TryGetPropertyValue(keyFieldName, out var keyNode) &&
-                    keyNode != null)
+                if (!string.IsNullOrEmpty(keyFieldName))
                 {
-                    key = GetStringValue(keyNode) ?? key;
+                    var keyNode = ResolveFieldValue(hit.Source, keyFieldName);
+                    if (keyNode != null)
+                    {
+                        key = GetStringValue(keyNode) ?? key;
+                    }
                 }
 
                 yield return new KeyValuePair<string, SourceDocument>(
@@ -90,16 +92,19 @@ internal sealed class DataSourceElasticsearchDocumentReader : IDataSourceDocumen
         string title = null;
         string content = null;
 
-        if (!string.IsNullOrEmpty(titleFieldName) && source.TryGetPropertyValue(titleFieldName, out var titleNode))
+        if (!string.IsNullOrEmpty(titleFieldName))
         {
+            var titleNode = ResolveFieldValue(source, titleFieldName);
             title = GetStringValue(titleNode);
         }
 
-        if (!string.IsNullOrEmpty(contentFieldName) && source.TryGetPropertyValue(contentFieldName, out var contentNode))
+        if (!string.IsNullOrEmpty(contentFieldName))
         {
+            var contentNode = ResolveFieldValue(source, contentFieldName);
             content = GetStringValue(contentNode);
         }
-        else
+
+        if (string.IsNullOrEmpty(content))
         {
             // Fallback: use the full document JSON as content.
             content = source.ToJsonString();
@@ -140,6 +145,45 @@ internal sealed class DataSourceElasticsearchDocumentReader : IDataSourceDocumen
 
         // For arrays or objects, return the JSON representation.
         return node.ToJsonString();
+    }
+
+    /// <summary>
+    /// Resolves a field value from a JSON object using a dotted path (e.g., "Content.ContentItem.DisplayText").
+    /// Falls back to a direct property lookup if the path has no dots.
+    /// </summary>
+    private static JsonNode ResolveFieldValue(JsonObject source, string fieldPath)
+    {
+        if (source == null || string.IsNullOrEmpty(fieldPath))
+        {
+            return null;
+        }
+
+        // Try direct property lookup first (handles flat field names).
+        if (source.TryGetPropertyValue(fieldPath, out var directNode))
+        {
+            return directNode;
+        }
+
+        // Traverse dotted path for nested objects.
+        if (!fieldPath.Contains('.'))
+        {
+            return null;
+        }
+
+        var segments = fieldPath.Split('.');
+        JsonNode current = source;
+
+        foreach (var segment in segments)
+        {
+            if (current is not JsonObject obj || !obj.TryGetPropertyValue(segment, out var next))
+            {
+                return null;
+            }
+
+            current = next;
+        }
+
+        return current;
     }
 
     private static object GetRawValue(JsonNode node)

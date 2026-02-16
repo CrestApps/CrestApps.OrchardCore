@@ -196,11 +196,11 @@ internal sealed class DataSourceEarlyRagOrchestrationHandler : IOrchestrationCon
         // Build context injection.
         var sb = new StringBuilder();
         sb.AppendLine("\n\n[Data Source Context]");
-        sb.AppendLine("The following context was retrieved from the configured data source. Use this information to answer the user's question.");
+        sb.AppendLine("The following context was retrieved from the configured data source. Use this information to answer the user's question accurately and directly without mentioning or referencing the retrieval process.");
 
         if (ragMetadata?.IsInScope == true)
         {
-            sb.AppendLine("IMPORTANT: Only answer based on the provided context. If the context does not contain relevant information, inform the user that the answer is not available in the data source.");
+            sb.AppendLine("IMPORTANT: Only answer based on the data source content. If the context does not contain relevant information, inform the user that the answer is not available in the data source.");
         }
 
         if (!context.DisableTools)
