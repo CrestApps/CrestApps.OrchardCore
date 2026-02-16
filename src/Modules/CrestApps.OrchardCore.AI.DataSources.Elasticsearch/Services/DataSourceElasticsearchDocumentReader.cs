@@ -87,6 +87,65 @@ internal sealed class DataSourceElasticsearchDocumentReader : IDataSourceDocumen
         }
     }
 
+    public async IAsyncEnumerable<KeyValuePair<string, SourceDocument>> ReadByIdsAsync(
+        IndexProfile indexProfile,
+        IEnumerable<string> documentIds,
+        string keyFieldName,
+        string titleFieldName,
+        string contentFieldName,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (indexProfile == null || documentIds == null)
+        {
+            yield break;
+        }
+
+        var idList = documentIds.Where(id => !string.IsNullOrEmpty(id)).ToList();
+
+        if (idList.Count == 0)
+        {
+            yield break;
+        }
+
+        // Use a search query with IDs filter to fetch specific documents.
+        var response = await _elasticClient.SearchAsync<JsonObject>(s => s
+            .Indices(indexProfile.IndexFullName)
+            .Query(q => q
+                .Ids(ids => ids.Values(new Elastic.Clients.Elasticsearch.Ids(idList)))
+            )
+            .Size(idList.Count)
+        , cancellationToken);
+
+        if (!response.IsValidResponse || response.Hits == null)
+        {
+            yield break;
+        }
+
+        foreach (var hit in response.Hits)
+        {
+            if (hit.Source == null)
+            {
+                continue;
+            }
+
+            var nativeId = hit.Id;
+
+            var key = nativeId;
+
+            if (!string.IsNullOrEmpty(keyFieldName))
+            {
+                var keyNode = ResolveFieldValue(hit.Source, keyFieldName);
+                if (keyNode != null)
+                {
+                    key = GetStringValue(keyNode) ?? key;
+                }
+            }
+
+            yield return new KeyValuePair<string, SourceDocument>(
+                key, ExtractDocument(hit.Source, titleFieldName, contentFieldName));
+        }
+    }
+
     private static SourceDocument ExtractDocument(JsonObject source, string titleFieldName, string contentFieldName)
     {
         string title = null;

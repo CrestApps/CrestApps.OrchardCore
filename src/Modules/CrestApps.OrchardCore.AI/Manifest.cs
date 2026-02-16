@@ -33,18 +33,6 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = AIConstants.Feature.DataSources,
-    Name = "AI Data Source Management",
-    Description = "Provides a way to manage AI data sources.",
-    Category = "Artificial Intelligence",
-    EnabledByDependencyOnly = true,
-    Dependencies =
-    [
-        AIConstants.Feature.Area,
-    ]
-)]
-
-[assembly: Feature(
     Id = AIConstants.Feature.ChatCore,
     Name = "AI Chat Services",
     Description = "Provides all the necessary services to enable chatting with AI models using profiles.",

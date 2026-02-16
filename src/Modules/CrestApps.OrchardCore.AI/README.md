@@ -8,7 +8,6 @@
   - [AI Chat Services Feature](#ai-chat-services-feature)
   - [AI Chat WebAPI](#ai-chat-webapi)
   - [AI Connection Management](#ai-connection-management)
-  - [AI Data Source Management](#ai-data-source-management)
   - [Defining Chat Profiles Using Code](#defining-chat-profiles-using-code)
 - [AI Tool Management Feature](#ai-tool-management-feature)
   - [Extending AI Chat with Custom Functions](#extending-ai-chat-with-custom-functions)
@@ -221,53 +220,7 @@ This recipe ensures that a **DeepSeek** connection is added or updated within th
 
 If a connection with the same `Name` and `Source` already exists, the recipe updates its properties. Otherwise, it creates a new connection.
 
-### AI Data Source Management 
-
-The **AI Data Source Management** feature enhances **AI Services** by offering a user-friendly interface for managing data sources accessible to AI models. Data sources allow AI profiles to perform Retrieval-Augmented Generation (RAG) against your indexed data.
-
-#### Key Features
-
-- **Provider-Agnostic**: Data sources can pull from any search provider (Elasticsearch, Azure AI Search, MongoDB) and index into any supported AI Knowledge Base index.
-- **Early RAG**: Automatically injects relevant context from data sources into the system message before the LLM call, reducing latency and improving results. Configurable per-profile or globally via **Settings > Artificial Intelligence**.
-- **On-Demand RAG**: The `DataSourceSearchTool` system tool enables follow-up searches during conversations.
-- **OData Filtering**: All data source filters use OData syntax, automatically translated to provider-specific queries.
-- **Chunk-Based Storage**: Documents are chunked and stored with embeddings in the AI Knowledge Base index for optimal retrieval.
-
-#### Setup
-
-1. **Create an AI Knowledge Base Index** using the Indexing feature (**Search > Indexes**). Select the "AI Data Source Knowledge Base" type and configure an embedding connection.
-2. **Create a Data Source** under **Artificial Intelligence > Data Sources**. Select a source index (where your data lives) and a Knowledge Base index (where embeddings are stored).
-3. **Assign the Data Source** to an AI Profile or Chat Interaction.
-
-#### Global Settings
-
-Navigate to **Settings > Artificial Intelligence** to configure:
-- **Enable Early RAG** (default: enabled) — Inject data source context into the system message automatically
-- **Default Strictness** (1-5) — Threshold for document relevance
-- **Default Top Documents** (3-20) — Number of documents to retrieve
-
-Individual profiles can override these defaults.
-
-#### Creating Data Source via Recipe
-
-```json
-{
-  "steps": [
-    {
-      "name": "AIDataSource",
-      "DataSources": [
-        {
-          "DisplayText": "Articles",
-          "SourceIndexProfileName": "articles",
-          "AIKnowledgeBaseIndexProfileName": "AIRagKnowledgeBase",
-          "TitleFieldName": "Content.ContentItem.DisplayText.Analyzed",
-          "ContentFieldName": "Content.ContentItem.FullText"
-        }
-      ]
-    }
-  ]
-}
-```
+Data source (RAG/Knowledge Base) documentation is in the `CrestApps.OrchardCore.AI.DataSources` module: [README](../CrestApps.OrchardCore.AI.DataSources/README.md).
 
 ### Defining AI Profiles Using Code
 

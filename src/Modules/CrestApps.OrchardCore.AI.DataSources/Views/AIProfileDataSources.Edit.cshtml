@@ -1,0 +1,106 @@
+@using CrestApps.OrchardCore.AI.DataSources.ViewModels
+@using OrchardCore
+
+@model EditProfileDataSourcesViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DataSourceId" class="@Orchard.GetLabelClasses()">@T["Data source"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DataSourceId" class="form-select">
+            <option value="">@T["No data source"]</option>
+            @foreach (var source in Model.DataSources.OrderBy(x => x.DisplayText))
+            {
+                @if (source.ItemId == Model.DataSourceId)
+                {
+                    <option value="@source.ItemId" selected="selected">@source.DisplayText</option>
+                    continue;
+                }
+
+                <option value="@source.ItemId">@source.DisplayText</option>
+            }
+        </select>
+        <span asp-validation-for="DataSourceId" class="text-danger"></span>
+        <span class="hint">@T["The data-source where your data is stored."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("data-source-dependent")">
+    <label asp-for="Strictness" class="@Orchard.GetLabelClasses()">@T["Strictness"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="Strictness" step="1" min="1" max="5">
+        <span class="hint">@T["Strictness sets the threshold to categorize documents as relevant to your queries. Raising strictness means a higher threshold for relevance and filtering out more documents that are less relevant for responses. Very high strictness could cause failure to generate responses due to limited available documents. Leave it blank to use the default of 3."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("data-source-dependent")">
+    <label asp-for="TopNDocuments" class="@Orchard.GetLabelClasses()">@T["Total retrieved documents"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="TopNDocuments" step="1" min="3" max="20">
+        <span class="hint">@T["This specifies the number of top-scoring documents from your data index used to generate responses. You want to increase the value when you have short documents or want to provide more context. Leave it blank to use the default of 3."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("data-source-dependent")">
+    <label asp-for="Filter" class="@Orchard.GetLabelClasses()">@T["Filter"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" class="form-control" asp-for="Filter">
+        <span class="hint">@T["Optional OData filter expression to narrow search results. The filter is applied to the knowledge base index before retrieval. Example: status eq 'active' and category eq 'docs'"]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("data-source-dependent")">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" asp-for="IsInScope" />
+            <label class="form-check-label" asp-for="IsInScope">
+                @T["Limit responses to indexed data"]
+            </label>
+            <span class="hint dashed">@T["When enabled, the model will only generate responses using your data source index. If disabled, the model may use its general knowledge in addition to your data."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("data-source-dependent")">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" asp-for="EnableEarlyRag" value="true" />
+            <label class="form-check-label" asp-for="EnableEarlyRag">
+                @T["Enable Preemptive Retrieval-Augmented Generation (RAG)"]
+            </label>
+            <span class="hint dashed">@T["When enabled, it reduces AI latency and could improve results. Individual profiles can override this setting."]</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const dataSourceSelect = document.getElementById('@Html.IdFor(x => x.DataSourceId)');
+
+        function toggleDataSourceDependentElements() {
+            const dependentElements = document.querySelectorAll('.data-source-dependent');
+
+            if (dataSourceSelect && dependentElements.length > 0) {
+
+                const hasDataSource = dataSourceSelect.value && dataSourceSelect.value.trim() !== '';
+
+                dependentElements.forEach(element => {
+                    if (!hasDataSource) {
+                        element.classList.add('d-none');
+                        return;
+                    }
+
+                    element.classList.remove('d-none');
+                });
+            }
+        }
+
+        // Initial check on page load
+        toggleDataSourceDependentElements();
+
+        if (dataSourceSelect) {
+            // Listen for changes on the data source select
+            dataSourceSelect.addEventListener('change', toggleDataSourceDependentElements);
+        }
+    });
+</script>

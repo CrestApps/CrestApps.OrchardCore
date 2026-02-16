@@ -80,6 +80,106 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
         }
     }
 
+    public async IAsyncEnumerable<KeyValuePair<string, SourceDocument>> ReadByIdsAsync(
+        IndexProfile indexProfile,
+        IEnumerable<string> documentIds,
+        string keyFieldName,
+        string titleFieldName,
+        string contentFieldName,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (indexProfile == null || documentIds == null)
+        {
+            yield break;
+        }
+
+        var idList = documentIds.Where(id => !string.IsNullOrEmpty(id)).ToList();
+
+        if (idList.Count == 0)
+        {
+            yield break;
+        }
+
+        var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
+
+        // Build an OData filter to select documents by their keys.
+        // Azure AI Search key field is the first field by default.
+        var filterField = !string.IsNullOrEmpty(keyFieldName) ? keyFieldName : null;
+
+        if (filterField != null)
+        {
+            var filterValues = string.Join(" or ", idList.Select(id => $"{filterField} eq '{id}'"));
+
+            var searchOptions = new SearchOptions
+            {
+                Filter = filterValues,
+                Size = idList.Count,
+                Select = { "*" },
+            };
+
+            var response = await searchClient.SearchAsync<SearchDocument>(
+                searchText: null,
+                searchOptions,
+                cancellationToken);
+
+            await foreach (var searchResult in response.Value.GetResultsAsync())
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                var doc = searchResult.Document;
+                string documentKey = null;
+
+                if (doc.TryGetValue(filterField, out var keyValue))
+                {
+                    documentKey = keyValue?.ToString();
+                }
+
+                if (!string.IsNullOrEmpty(documentKey))
+                {
+                    yield return new KeyValuePair<string, SourceDocument>(
+                        documentKey, ExtractDocument(doc, titleFieldName, contentFieldName));
+                }
+            }
+        }
+        else
+        {
+            // Without a key field, we can try to get documents by their Azure AI Search key directly.
+            foreach (var id in idList)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                SearchDocument document = null;
+
+                try
+                {
+                    var doc = await searchClient.GetDocumentAsync<SearchDocument>(id, cancellationToken: cancellationToken);
+                    document = doc?.Value;
+                }
+                catch
+                {
+                    // Document not found, skip.
+                }
+
+                if (document != null)
+                {
+                    var firstKey = document.Keys.FirstOrDefault();
+                    var documentKey = firstKey != null && document.TryGetValue(firstKey, out var firstKeyValue)
+                        ? firstKeyValue?.ToString() ?? id
+                        : id;
+
+                    yield return new KeyValuePair<string, SourceDocument>(
+                        documentKey, ExtractDocument(document, titleFieldName, contentFieldName));
+                }
+            }
+        }
+    }
+
     private static SourceDocument ExtractDocument(SearchDocument doc, string titleFieldName, string contentFieldName)
     {
         string title = null;

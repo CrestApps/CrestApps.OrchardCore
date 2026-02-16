@@ -24,13 +24,10 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
-using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.Indexing.Core;
-using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
@@ -120,62 +117,6 @@ public sealed class OCDeploymentsStartup : StartupBase
         services.AddDeployment<DeleteAIDeploymentDeploymentSource, DeleteAIDeploymentDeploymentStep, DeleteAIDeploymentDeploymentStepDisplayDriver>();
     }
 }
-
-# region Data Sources Feature
-
-[Feature(AIConstants.Feature.DataSources)]
-public sealed class DataSourceStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddAIDataSourceServices();
-        services.AddScoped<IAICompletionContextBuilderHandler, DataSourceAICompletionContextBuilderHandler>();
-        services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
-        services.AddDisplayDriver<AIDataSource, AIDataSourceIndexDisplayDriver>();
-        services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
-        services.AddNavigationProvider<AIDataProviderAdminMenu>();
-        services.AddDisplayDriver<AIProfile, AIProfileDataSourceDisplayDriver>();
-        services.AddDisplayDriver<IndexProfile, DataSourceIndexProfileDisplayDriver>();
-        services.AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>();
-        services.AddNavigationProvider<AIDataSourceSettingsAdminMenu>();
-        services.AddScoped<IOrchestrationContextHandler, DataSourceEarlyRagOrchestrationHandler>();
-
-        services.AddScoped<DataSourceIndexingService>();
-        services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();
-        services.AddSingleton<IBackgroundTask, BackgroundTasks.DataSourceSyncBackgroundTask>();
-        services.AddSingleton<IBackgroundTask, BackgroundTasks.DataSourceAlignmentBackgroundTask>();
-        services.AddTransient<ICatalogEntryHandler<AIDataSource>, DataSourceIndexingHandler>();
-
-        services.AddAITool<Tools.DataSourceSearchTool>(Tools.DataSourceSearchTool.TheName)
-            .WithPurpose(AIToolPurposes.DataSourceSearch);
-    }
-
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes.AddGetDataSourceFieldsEndpoint();
-    }
-}
-
-[Feature(AIConstants.Feature.DataSources)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class DataSourcesRecipesStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddRecipeExecutionStep<AIDataSourceStep>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.DataSources, "OrchardCore.Deployment")]
-public sealed class DataSourcesOCDeploymentStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDeployment<AIDataSourceDeploymentSource, AIDataSourceDeploymentStep, AIDataSourceDeploymentStepDisplayDriver>();
-    }
-}
-
-#endregion
 
 #region Deployments Feature
 
