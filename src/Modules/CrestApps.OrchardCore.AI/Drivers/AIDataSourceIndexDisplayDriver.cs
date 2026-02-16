@@ -1,11 +1,9 @@
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 
@@ -24,21 +22,23 @@ public sealed class AIDataSourceIndexDisplayDriver : DisplayDriver<AIDataSource>
     {
         return Initialize<EditAIDataSourceIndexViewModel>("AIDataSourceIndex_Edit", async model =>
         {
-            var indexMetadata = dataSource.As<AIDataSourceIndexMetadata>();
-            model.IndexName = indexMetadata.IndexName;
-            model.MasterIndexName = indexMetadata.MasterIndexName;
-            model.TitleFieldName = indexMetadata.TitleFieldName;
-            model.ContentFieldName = indexMetadata.ContentFieldName;
+            model.SourceIndexProfileName = dataSource.SourceIndexProfileName;
+            model.AIKnowledgeBaseIndexProfileName = dataSource.AIKnowledgeBaseIndexProfileName;
+            model.KeyFieldName = dataSource.KeyFieldName;
+            model.TitleFieldName = dataSource.TitleFieldName;
+            model.ContentFieldName = dataSource.ContentFieldName;
 
-            // Lock configuration once both index and master index are set (already created).
-            model.IsLocked = !string.IsNullOrEmpty(indexMetadata.IndexName) &&
-                             !string.IsNullOrEmpty(indexMetadata.MasterIndexName) &&
-                             !string.IsNullOrEmpty(dataSource.ItemId);
+            // Lock configuration once both index and master index are set (already created),
+            // but allow editing if either is missing (e.g., migration failure).
+            model.IsLocked = !string.IsNullOrEmpty(dataSource.SourceIndexProfileName) &&
+                !string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName) &&
+                !string.IsNullOrEmpty(dataSource.ContentFieldName) &&
+                !string.IsNullOrEmpty(dataSource.ItemId);
 
             // Show ALL source indexes from all providers, excluding master indexes.
             var allIndexes = await _indexProfileStore.GetAllAsync();
 
-            model.IndexNames = allIndexes
+            model.SourceIndexProfileNames = allIndexes
                 .Where(i => !string.Equals(i.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
                 .GroupBy(i => i.ProviderName)
                 .OrderBy(g => g.Key)
@@ -49,7 +49,7 @@ public sealed class AIDataSourceIndexDisplayDriver : DisplayDriver<AIDataSource>
                 });
 
             // Show ALL master indexes from all providers, grouped by provider.
-            model.MasterIndexNames = allIndexes
+            model.AIKnowledgeBaseIndexProfileNames = allIndexes
                 .Where(i => string.Equals(i.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
                 .GroupBy(i => i.ProviderName)
                 .OrderBy(g => g.Key)
@@ -60,10 +60,10 @@ public sealed class AIDataSourceIndexDisplayDriver : DisplayDriver<AIDataSource>
                 });
 
             // Build field names from the selected source index profile.
-            if (!string.IsNullOrEmpty(indexMetadata.IndexName))
+            if (!string.IsNullOrEmpty(dataSource.SourceIndexProfileName))
             {
                 var sourceProfile = allIndexes.FirstOrDefault(i =>
-                    string.Equals(i.Name, indexMetadata.IndexName, StringComparison.OrdinalIgnoreCase));
+                    string.Equals(i.Name, dataSource.SourceIndexProfileName, StringComparison.OrdinalIgnoreCase));
 
                 if (sourceProfile != null)
                 {
@@ -77,7 +77,12 @@ public sealed class AIDataSourceIndexDisplayDriver : DisplayDriver<AIDataSource>
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
-        if (!context.IsNew)
+        // Allow updating if new OR if fields are missing (migration failure recovery).
+        var canUpdate = context.IsNew ||
+            string.IsNullOrEmpty(dataSource.SourceIndexProfileName) ||
+            string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName);
+
+        if (!canUpdate)
         {
             return Edit(dataSource, context);
         }
@@ -86,22 +91,17 @@ public sealed class AIDataSourceIndexDisplayDriver : DisplayDriver<AIDataSource>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        dataSource.Put(new AIDataSourceIndexMetadata
-        {
-            IndexName = model.IndexName,
-            MasterIndexName = model.MasterIndexName,
-            TitleFieldName = model.TitleFieldName,
-            ContentFieldName = model.ContentFieldName,
-        });
+        dataSource.SourceIndexProfileName = model.SourceIndexProfileName;
+        dataSource.AIKnowledgeBaseIndexProfileName = model.AIKnowledgeBaseIndexProfileName;
+        dataSource.KeyFieldName = model.KeyFieldName;
+        dataSource.TitleFieldName = model.TitleFieldName;
+        dataSource.ContentFieldName = model.ContentFieldName;
 
         return Edit(dataSource, context);
     }
 
     private static IEnumerable<SelectListItem> GetFieldNamesFromProfile(IndexProfile profile)
     {
-        // Extract field names from the index profile's metadata.
-        // The exact metadata type depends on the provider, but we can use
-        // common patterns to extract available fields.
         var fields = new List<SelectListItem>();
 
         if (profile.Properties != null)
@@ -125,7 +125,7 @@ public sealed class AIDataSourceIndexDisplayDriver : DisplayDriver<AIDataSource>
             if (azureMetadata != null)
             {
                 var indexMappings = azureMetadata["IndexMappings"];
-                if (indexMappings != null && indexMappings is System.Text.Json.Nodes.JsonArray array)
+                if (indexMappings is System.Text.Json.Nodes.JsonArray array)
                 {
                     foreach (var item in array)
                     {

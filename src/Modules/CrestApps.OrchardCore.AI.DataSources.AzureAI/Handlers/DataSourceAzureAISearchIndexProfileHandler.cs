@@ -10,7 +10,7 @@ using OrchardCore.Search.AzureAI.Models;
 
 namespace CrestApps.OrchardCore.AI.DataSources.AzureAI.Handlers;
 
-public sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceIndexProfileHandlerBase
+internal sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceIndexProfileHandlerBase
 {
     public DataSourceAzureAISearchIndexProfileHandler(IAIClientFactory aiClientFactory)
         : base(AzureAISearchConstants.ProviderName, aiClientFactory)
@@ -39,9 +39,16 @@ public sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceIndex
 
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
-            AzureFieldKey = DataSourceConstants.ColumnNames.ReferenceId,
+            AzureFieldKey = DataSourceConstants.ColumnNames.ChunkId,
             Type = DocumentIndex.Types.Text,
             IsKey = true,
+            IsFilterable = true,
+        });
+
+        metadata.IndexMappings.Add(new AzureAISearchIndexMap
+        {
+            AzureFieldKey = DataSourceConstants.ColumnNames.ReferenceId,
+            Type = DocumentIndex.Types.Text,
             IsFilterable = true,
         });
 
@@ -54,6 +61,12 @@ public sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceIndex
 
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
+            AzureFieldKey = DataSourceConstants.ColumnNames.ChunkIndex,
+            Type = DocumentIndex.Types.Integer,
+        });
+
+        metadata.IndexMappings.Add(new AzureAISearchIndexMap
+        {
             AzureFieldKey = DataSourceConstants.ColumnNames.Title,
             Type = DocumentIndex.Types.Text,
             IsSearchable = true,
@@ -61,7 +74,7 @@ public sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceIndex
 
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
-            AzureFieldKey = DataSourceConstants.ColumnNames.Text,
+            AzureFieldKey = DataSourceConstants.ColumnNames.Content,
             Type = DocumentIndex.Types.Text,
             IsSearchable = true,
         });
@@ -76,31 +89,12 @@ public sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceIndex
 
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
-            AzureFieldKey = DataSourceConstants.ColumnNames.Chunks,
-            Type = DocumentIndex.Types.Complex,
-            SubFields =
-            [
-                new AzureAISearchIndexMap
-                {
-                    AzureFieldKey = DataSourceConstants.ColumnNames.ChunksColumnNames.Text,
-                    Type = DocumentIndex.Types.Text,
-                    IsSearchable = true,
-                },
-                new AzureAISearchIndexMap
-                {
-                    AzureFieldKey = DataSourceConstants.ColumnNames.ChunksColumnNames.Embedding,
-                    Type = DocumentIndex.Types.Number,
-                    VectorInfo = new AzureAISearchIndexMapVectorInfo
-                    {
-                        Dimensions = embeddingDimensions,
-                    },
-                },
-                new AzureAISearchIndexMap
-                {
-                    AzureFieldKey = DataSourceConstants.ColumnNames.ChunksColumnNames.Index,
-                    Type = DocumentIndex.Types.Integer,
-                },
-            ]
+            AzureFieldKey = DataSourceConstants.ColumnNames.Embedding,
+            Type = DocumentIndex.Types.Number,
+            VectorInfo = new AzureAISearchIndexMapVectorInfo
+            {
+                Dimensions = embeddingDimensions,
+            },
         });
 
         indexProfile.Put(metadata);

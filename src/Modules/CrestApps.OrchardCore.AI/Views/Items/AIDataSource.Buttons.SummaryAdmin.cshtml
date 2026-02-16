@@ -1,4 +1,3 @@
-@using CrestApps.OrchardCore.AI.Core.Models
 @using CrestApps.OrchardCore.AI.Models
 @using OrchardCore.DisplayManagement.Views
 
@@ -7,8 +6,3 @@
 <a asp-action="Edit"
    asp-route-id="@Model.Value.ItemId"
    class="btn btn-primary btn-sm">@T["Edit"]</a>
-
-<a asp-action="Delete"
-   asp-route-id="@Model.Value.ItemId"
-   class="btn btn-danger btn-sm"
-   data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

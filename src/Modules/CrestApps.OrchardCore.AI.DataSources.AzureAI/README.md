@@ -11,7 +11,8 @@ When AI profiles are configured with data sources, the system needs to search an
 - **Index schema management**: Creates and manages Azure AI Search index fields for knowledge base indexes with vector search profiles and embedding fields.
 - **Document indexing**: Indexes source documents with their embeddings into Azure AI Search knowledge base indexes.
 - **Vector search**: Performs vector similarity searches using Azure AI Search's built-in vector search to find the most relevant documents.
-- **Filter execution**: Executes OData filter expressions for two-phase RAG search (filter first, then vector search within filtered results).
+- **Filter execution**: Applies OData filter expressions translated to Azure AI Search OData filters targeting root-level filter fields.
+- **OData filter translation**: Translates user OData filters into Azure AI Search-compatible OData with proper field prefixing.
 - **Document reading**: Reads source documents from Azure AI Search indexes in batches for efficient indexing.
 
 ## Features
@@ -32,6 +33,6 @@ When AI profiles are configured with data sources, the system needs to search an
 |---------|-----|-------------|
 | `IDataSourceVectorSearchService` | `AzureAISearch` | Performs vector searches against Azure AI Search knowledge base indexes |
 | `IDataSourceDocumentReader` | `AzureAISearch` | Reads source documents from Azure AI Search indexes in batches |
-| `IDataSourceFilterExecutor` | `AzureAISearch` | Executes OData filter expressions for two-phase search |
+| `IODataFilterTranslator` | `AzureAISearch` | Translates OData filter expressions for Azure AI Search |
 | `IIndexProfileHandler` | — | Manages Azure AI Search index fields for knowledge base indexes |
 | `IDocumentIndexHandler` | — | Handles document indexing into Azure AI Search knowledge base indexes |

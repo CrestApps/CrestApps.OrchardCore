@@ -7,19 +7,23 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile>
 {
+    private readonly ISiteService _siteService;
     private readonly ICatalog<AIDataSource> _dataSourceStore;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileDataSourceDisplayDriver(
+        ISiteService siteService,
         ICatalog<AIDataSource> dataSourceStore,
         IStringLocalizer<AIProfileDataSourceDisplayDriver> stringLocalizer)
     {
+        _siteService = siteService;
         _dataSourceStore = dataSourceStore;
         S = stringLocalizer;
     }
@@ -28,6 +32,16 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
     {
         return Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSources_Edit", async model =>
         {
+            var ragMetadata = profile.As<AIDataSourceRagMetadata>();
+
+            var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
+
+            model.Strictness = dataSourceSettings.GetStrictness(ragMetadata.Strictness);
+            model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
+            model.IsInScope = ragMetadata.IsInScope;
+            model.EnableEarlyRag = context.IsNew ? dataSourceSettings.EnableEarlyRag : ragMetadata.EnableEarlyRag;
+            model.Filter = ragMetadata.Filter;
+
             var metadata = profile.As<AIProfileDataSourceMetadata>();
             model.DataSourceId = metadata.DataSourceId;
             model.DataSources = await _dataSourceStore.GetAllAsync();

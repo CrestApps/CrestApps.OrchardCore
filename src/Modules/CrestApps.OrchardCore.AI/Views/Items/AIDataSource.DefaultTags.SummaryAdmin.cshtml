@@ -1,23 +1,17 @@
-@using CrestApps.OrchardCore.AI.Core.Models
 @using CrestApps.OrchardCore.AI.Models
 @using OrchardCore.DisplayManagement.Views
-@using OrchardCore.Entities
 
 @model ShapeViewModel<AIDataSource>
 
-@{
-    var indexMetadata = Model.Value.As<AIDataSourceIndexMetadata>();
-}
-
-@if (!string.IsNullOrEmpty(indexMetadata?.IndexName))
+@if (!string.IsNullOrEmpty(Model.Value.SourceIndexProfileName))
 {
     <span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Source Index"]">
-        <i class="text-secondary" aria-hidden="true"></i>@indexMetadata.IndexName
+        <i class="text-secondary" aria-hidden="true"></i>@Model.Value.SourceIndexProfileName
     </span>
 }
-@if (!string.IsNullOrEmpty(indexMetadata?.MasterIndexName))
+@if (!string.IsNullOrEmpty(Model.Value.AIKnowledgeBaseIndexProfileName))
 {
-    <span class="badge ta-badge bg-info-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Master Index"]">
-        <i class="text-secondary" aria-hidden="true"></i>@indexMetadata.MasterIndexName
+    <span class="badge ta-badge bg-info-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Knowledge Base Index"]">
+        <i class="text-secondary" aria-hidden="true"></i>@Model.Value.AIKnowledgeBaseIndexProfileName
     </span>
 }

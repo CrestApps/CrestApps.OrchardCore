@@ -32,6 +32,12 @@ public sealed class DefaultOrchestrationContextBuilder : IOrchestrationContextBu
         var built = new OrchestrationContextBuiltContext(resource, context);
         await _handlers.InvokeAsync((h, c) => h.BuiltAsync(c), built, _logger);
 
+        // Flush accumulated system message.
+        if (context.CompletionContext != null && context.SystemMessageBuilder.Length > 0)
+        {
+            context.CompletionContext.SystemMessage = context.SystemMessageBuilder.ToString();
+        }
+
         return context;
     }
 }

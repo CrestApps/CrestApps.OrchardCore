@@ -12,7 +12,7 @@ public sealed class Startup : StartupBase
             MongoDBDataSourceConstants.ProviderName);
         services.AddKeyedScoped<IDataSourceDocumentReader, DataSourceMongoDBDocumentReader>(
             MongoDBDataSourceConstants.ProviderName);
-        services.AddKeyedScoped<IDataSourceFilterExecutor, DataSourceMongoDBFilterExecutor>(
+        services.AddKeyedSingleton<IODataFilterTranslator, MongoDBODataFilterTranslator>(
             MongoDBDataSourceConstants.ProviderName);
     }
 }

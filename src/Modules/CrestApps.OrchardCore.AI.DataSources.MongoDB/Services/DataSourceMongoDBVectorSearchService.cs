@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.AI.DataSources.MongoDB.Services;
 /// MongoDB Atlas implementation of <see cref="IDataSourceVectorSearchService"/>
 /// for searching data source embedding indexes using MongoDB Atlas Vector Search ($vectorSearch).
 /// </summary>
-public sealed class DataSourceMongoDBVectorSearchService : IDataSourceVectorSearchService
+internal sealed class DataSourceMongoDBVectorSearchService : IDataSourceVectorSearchService
 {
     private readonly ILogger _logger;
 
@@ -26,7 +26,7 @@ public sealed class DataSourceMongoDBVectorSearchService : IDataSourceVectorSear
         float[] embedding,
         string dataSourceId,
         int topN,
-        IEnumerable<string> referenceIds = null,
+        string filter = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(indexProfile);
@@ -60,20 +60,22 @@ public sealed class DataSourceMongoDBVectorSearchService : IDataSourceVectorSear
             var vectorSearchStage = new BsonDocument("$vectorSearch", new BsonDocument
             {
                 { "index", vectorSearchIndexName },
-                { "path", DataSourceConstants.ColumnNames.ChunksEmbedding },
+                { "path", DataSourceConstants.ColumnNames.Embedding },
                 { "queryVector", new BsonArray(embedding.Select(v => (double)v)) },
                 { "numCandidates", topN * 10 },
                 { "limit", topN },
-                { "filter", BuildFilter(dataSourceId, referenceIds) },
+                { "filter", BuildFilter(dataSourceId, filter) },
             });
 
             // Project the fields we need and include the vector search score.
             var projectStage = new BsonDocument("$project", new BsonDocument
             {
+                { DataSourceConstants.ColumnNames.ChunkId, 1 },
                 { DataSourceConstants.ColumnNames.ReferenceId, 1 },
                 { DataSourceConstants.ColumnNames.DataSourceId, 1 },
                 { DataSourceConstants.ColumnNames.Title, 1 },
-                { DataSourceConstants.ColumnNames.Chunks, 1 },
+                { DataSourceConstants.ColumnNames.Content, 1 },
+                { DataSourceConstants.ColumnNames.ChunkIndex, 1 },
                 { "score", new BsonDocument("$meta", "vectorSearchScore") },
             });
 
@@ -88,8 +90,11 @@ public sealed class DataSourceMongoDBVectorSearchService : IDataSourceVectorSear
             {
                 foreach (var doc in cursor.Current)
                 {
-                    var docResults = ExtractResults(doc);
-                    results.AddRange(docResults);
+                    var result = ExtractResult(doc);
+                    if (result != null)
+                    {
+                        results.Add(result);
+                    }
                 }
             }
 
@@ -106,7 +111,7 @@ public sealed class DataSourceMongoDBVectorSearchService : IDataSourceVectorSear
         }
     }
 
-    private static BsonDocument BuildFilter(string dataSourceId, IEnumerable<string> referenceIds)
+    private static BsonDocument BuildFilter(string dataSourceId, string additionalFilter)
     {
         var filters = new BsonArray
         {
@@ -117,14 +122,19 @@ public sealed class DataSourceMongoDBVectorSearchService : IDataSourceVectorSear
             }),
         };
 
-        var referenceIdList = referenceIds?.ToList();
-        if (referenceIdList is { Count: > 0 })
+        // If additional filter is provided (already translated from OData to MongoDB BSON),
+        // parse and add it.
+        if (!string.IsNullOrWhiteSpace(additionalFilter))
         {
-            filters.Add(new BsonDocument("in", new BsonDocument
+            try
             {
-                { "path", DataSourceConstants.ColumnNames.ReferenceId },
-                { "value", new BsonArray(referenceIdList) },
-            }));
+                var parsedFilter = BsonDocument.Parse(additionalFilter);
+                filters.Add(parsedFilter);
+            }
+            catch
+            {
+                // Ignore invalid filter — don't break the search.
+            }
         }
 
         if (filters.Count == 1)
@@ -138,10 +148,8 @@ public sealed class DataSourceMongoDBVectorSearchService : IDataSourceVectorSear
         });
     }
 
-    private static List<DataSourceSearchResult> ExtractResults(BsonDocument doc)
+    private static DataSourceSearchResult ExtractResult(BsonDocument doc)
     {
-        var results = new List<DataSourceSearchResult>();
-
         var referenceId = doc.TryGetValue(DataSourceConstants.ColumnNames.ReferenceId, out var refValue) && !refValue.IsBsonNull
             ? refValue.AsString
             : null;
@@ -150,43 +158,30 @@ public sealed class DataSourceMongoDBVectorSearchService : IDataSourceVectorSear
             ? titleValue.AsString
             : null;
 
+        var content = doc.TryGetValue(DataSourceConstants.ColumnNames.Content, out var contentValue) && !contentValue.IsBsonNull
+            ? contentValue.AsString
+            : null;
+
+        var chunkIndex = doc.TryGetValue(DataSourceConstants.ColumnNames.ChunkIndex, out var chunkIndexValue) && !chunkIndexValue.IsBsonNull
+            ? chunkIndexValue.ToInt32()
+            : 0;
+
         var score = doc.TryGetValue("score", out var scoreValue) && !scoreValue.IsBsonNull
             ? (float)scoreValue.ToDouble()
             : 0f;
 
-        if (!doc.TryGetValue(DataSourceConstants.ColumnNames.Chunks, out var chunksValue) || !chunksValue.IsBsonArray)
+        if (string.IsNullOrEmpty(content))
         {
-            return results;
+            return null;
         }
 
-        foreach (var chunk in chunksValue.AsBsonArray)
+        return new DataSourceSearchResult
         {
-            if (chunk is not BsonDocument chunkDoc)
-            {
-                continue;
-            }
-
-            var chunkText = chunkDoc.TryGetValue(DataSourceConstants.ColumnNames.ChunksColumnNames.Text, out var textValue) && !textValue.IsBsonNull
-                ? textValue.AsString
-                : null;
-
-            var chunkIndex = chunkDoc.TryGetValue(DataSourceConstants.ColumnNames.ChunksColumnNames.Index, out var indexValue) && !indexValue.IsBsonNull
-                ? indexValue.ToInt32()
-                : 0;
-
-            if (!string.IsNullOrEmpty(chunkText))
-            {
-                results.Add(new DataSourceSearchResult
-                {
-                    ReferenceId = referenceId,
-                    Title = title,
-                    Text = chunkText,
-                    ChunkIndex = chunkIndex,
-                    Score = score,
-                });
-            }
-        }
-
-        return results;
+            ReferenceId = referenceId,
+            Title = title,
+            Content = content,
+            ChunkIndex = chunkIndex,
+            Score = score,
+        };
     }
 }

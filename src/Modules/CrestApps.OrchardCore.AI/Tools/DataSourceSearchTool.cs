@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Tools;
 
@@ -43,7 +44,10 @@ public sealed class DataSourceSearchTool : AIFunction
     public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } =
-        new Dictionary<string, object>() { ["Strict"] = false };
+        new Dictionary<string, object>()
+        {
+            ["Strict"] = false,
+        };
 
     protected override async ValueTask<object> InvokeCoreAsync(
         AIFunctionArguments arguments,
@@ -83,20 +87,18 @@ public sealed class DataSourceSearchTool : AIFunction
                 return $"Data source '{dataSourceId}' was not found.";
             }
 
-            var indexMetadata = dataSource.As<AIDataSourceIndexMetadata>();
-
-            if (string.IsNullOrEmpty(indexMetadata.MasterIndexName))
+            if (string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName))
             {
-                return "No master embedding index is configured for this data source. Please configure an embedding index in the data source settings.";
+                return "No knowledge base index is configured for this data source. Please configure a knowledge base index in the data source settings.";
             }
 
             // Resolve the master index profile.
             var indexProfileStore = arguments.Services.GetRequiredService<IIndexProfileStore>();
-            var masterIndexProfile = await indexProfileStore.FindByNameAsync(indexMetadata.MasterIndexName);
+            var masterIndexProfile = await indexProfileStore.FindByNameAsync(dataSource.AIKnowledgeBaseIndexProfileName);
 
             if (masterIndexProfile == null)
             {
-                return $"Master embedding index '{indexMetadata.MasterIndexName}' was not found. Please create the index using the Indexing feature.";
+                return $"Knowledge base index '{dataSource.AIKnowledgeBaseIndexProfileName}' was not found. Please create the index using the Indexing feature.";
             }
 
             // Get the vector search service for this provider.
@@ -116,7 +118,7 @@ public sealed class DataSourceSearchTool : AIFunction
                 string.IsNullOrEmpty(profileMetadata.EmbeddingConnectionName) ||
                 string.IsNullOrEmpty(profileMetadata.EmbeddingDeploymentName))
             {
-                return "Embedding configuration is missing for the master embedding index.";
+                return "Embedding configuration is missing for the knowledge base index.";
             }
 
             var embeddingGenerator = await aiClientFactory.CreateEmbeddingGeneratorAsync(
@@ -137,48 +139,37 @@ public sealed class DataSourceSearchTool : AIFunction
                 return "Failed to generate embedding for the search query.";
             }
 
-            // Get RAG settings from the profile if available.
+            // Get RAG settings from the profile if available, with global defaults.
             var ragMetadata = GetRagMetadata(executionContext);
-            var topN = ragMetadata?.TopNDocuments ?? 5;
 
-            if (topN <= 0)
+            var siteService = arguments.Services.GetRequiredService<ISiteService>();
+            var siteSettings = await siteService.GetSettingsAsync<AIDataSourceSettings>();
+
+            // Translate OData filter to provider-specific filter if provided.
+            string providerFilter = null;
+
+            if (!string.IsNullOrWhiteSpace(ragMetadata?.Filter))
             {
-                topN = 5;
-            }
+                var filterTranslator = arguments.Services.GetKeyedService<IODataFilterTranslator>(masterIndexProfile.ProviderName);
 
-            // Two-phase search: if filter is provided, first get matching reference IDs.
-            IEnumerable<string> referenceIds = null;
-
-            if (!string.IsNullOrWhiteSpace(ragMetadata?.Filter) && !string.IsNullOrEmpty(indexMetadata.IndexName))
-            {
-                // Resolve the source index profile to determine its provider.
-                var sourceProfile = (await indexProfileStore.GetAllAsync())
-                    .FirstOrDefault(i => string.Equals(i.Name, indexMetadata.IndexName, StringComparison.OrdinalIgnoreCase));
-
-                if (sourceProfile != null)
+                if (filterTranslator != null)
                 {
-                    referenceIds = await ExecuteFilterQueryAsync(
-                        arguments.Services,
-                        sourceProfile.ProviderName,
-                        indexMetadata.IndexName,
-                        ragMetadata.Filter,
-                        logger,
-                        cancellationToken);
+                    providerFilter = filterTranslator.Translate(ragMetadata.Filter);
                 }
-
-                if (referenceIds != null && !referenceIds.Any())
+                else
                 {
-                    return "No documents matched the configured filter criteria.";
+                    logger?.LogWarning("No OData filter translator available for provider '{ProviderName}'. Filter will be ignored.",
+                        masterIndexProfile.ProviderName);
                 }
             }
 
-            // Perform the vector search.
+            // Perform the vector search with filter applied directly on the KB index.
             var results = await searchService.SearchAsync(
                 masterIndexProfile,
                 embeddings[0].Vector.ToArray(),
                 dataSourceId,
-                topN,
-                referenceIds,
+                siteSettings.GetTopNDocuments(ragMetadata?.TopNDocuments),
+                providerFilter,
                 cancellationToken);
 
             if (results == null || !results.Any())
@@ -192,14 +183,16 @@ public sealed class DataSourceSearchTool : AIFunction
             }
 
             // Apply strictness threshold.
-            if (ragMetadata?.Strictness > 0)
+            var strictness = siteSettings.GetStrictness(ragMetadata?.Strictness);
+
+            if (strictness > 0)
             {
-                var threshold = ragMetadata.Strictness.Value / 5.0f;
+                var threshold = strictness / 5.0f;
                 results = results.Where(r => r.Score >= threshold);
 
                 if (!results.Any())
                 {
-                    if (ragMetadata.IsInScope)
+                    if (ragMetadata?.IsInScope == true)
                     {
                         return "No results met the strictness threshold. The answer is not available in the configured data source.";
                     }
@@ -217,7 +210,7 @@ public sealed class DataSourceSearchTool : AIFunction
 
             foreach (var result in results)
             {
-                if (string.IsNullOrWhiteSpace(result.Text))
+                if (string.IsNullOrWhiteSpace(result.Content))
                 {
                     continue;
                 }
@@ -239,7 +232,7 @@ public sealed class DataSourceSearchTool : AIFunction
                     builder.AppendLine($"{refLabel} Title: {result.Title}");
                 }
 
-                builder.AppendLine($"{refLabel} {result.Text}");
+                builder.AppendLine($"{refLabel} {result.Content}");
                 docIndex++;
             }
 
@@ -272,32 +265,5 @@ public sealed class DataSourceSearchTool : AIFunction
         }
 
         return null;
-    }
-
-    private static async Task<IEnumerable<string>> ExecuteFilterQueryAsync(
-        IServiceProvider services,
-        string providerName,
-        string indexName,
-        string filter,
-        ILogger logger,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var filterExecutor = services.GetKeyedService<IDataSourceFilterExecutor>(providerName);
-
-            if (filterExecutor == null)
-            {
-                logger?.LogWarning("No filter executor is available for provider '{ProviderName}'.", providerName);
-                return null;
-            }
-
-            return await filterExecutor.ExecuteAsync(indexName, filter, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            logger?.LogError(ex, "Error executing filter query against source index.");
-            return null;
-        }
     }
 }

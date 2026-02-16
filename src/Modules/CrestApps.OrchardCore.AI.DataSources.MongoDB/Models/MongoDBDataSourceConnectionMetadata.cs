@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.AI.DataSources.MongoDB.Models;
 /// MongoDB-specific connection metadata stored on the knowledge base IndexProfile.
 /// Contains the connection settings required to connect to a MongoDB Atlas instance.
 /// </summary>
-public sealed class MongoDBDataSourceConnectionMetadata
+internal sealed class MongoDBDataSourceConnectionMetadata
 {
     /// <summary>
     /// Gets or sets the MongoDB connection string.

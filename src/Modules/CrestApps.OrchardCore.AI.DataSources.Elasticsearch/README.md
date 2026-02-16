@@ -11,7 +11,8 @@ When AI profiles are configured with data sources, the system needs to search an
 - **Index schema management**: Creates and manages Elasticsearch mappings for knowledge base indexes with dense vector fields for embeddings.
 - **Document indexing**: Indexes source documents with their embeddings into Elasticsearch knowledge base indexes.
 - **Vector search**: Performs k-NN similarity searches to find the most relevant documents for a given query.
-- **Filter execution**: Executes Elasticsearch DSL filter queries for two-phase RAG search (filter first, then vector search within filtered results).
+- **Filter execution**: Executes Elasticsearch DSL filter queries translated from OData for filtered vector search.
+- **OData filter translation**: Translates OData filter expressions into Elasticsearch-compatible bool queries targeting root-level filter fields.
 - **Document reading**: Reads source documents from Elasticsearch indexes in batches for efficient indexing.
 
 ## Features
@@ -32,6 +33,6 @@ When AI profiles are configured with data sources, the system needs to search an
 |---------|-----|-------------|
 | `IDataSourceVectorSearchService` | `Elasticsearch` | Performs k-NN vector searches against Elasticsearch knowledge base indexes |
 | `IDataSourceDocumentReader` | `Elasticsearch` | Reads source documents from Elasticsearch indexes in batches |
-| `IDataSourceFilterExecutor` | `Elasticsearch` | Executes Elasticsearch DSL filter queries for two-phase search |
+| `IODataFilterTranslator` | `Elasticsearch` | Translates OData filter expressions into Elasticsearch bool queries |
 | `IIndexProfileHandler` | — | Manages Elasticsearch index mappings for knowledge base indexes |
 | `IDocumentIndexHandler` | — | Handles document indexing into Elasticsearch knowledge base indexes |

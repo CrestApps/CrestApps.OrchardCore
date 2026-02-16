@@ -5,6 +5,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
+using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.DataSources.MongoDB.Services;
 
@@ -27,16 +28,14 @@ internal sealed class DataSourceMongoDBDocumentReader : IDataSourceDocumentReade
     }
 
     public async IAsyncEnumerable<KeyValuePair<string, SourceDocument>> ReadAsync(
-        string indexName,
+        IndexProfile indexProfile,
+        string keyFieldName,
         string titleFieldName,
         string contentFieldName,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var indexProfile = await _indexProfileStore.FindByNameAsync(indexName);
-
         if (indexProfile == null)
         {
-            _logger.LogWarning("Index profile '{IndexName}' not found.", indexName);
             yield break;
         }
 
@@ -46,7 +45,7 @@ internal sealed class DataSourceMongoDBDocumentReader : IDataSourceDocumentReade
             string.IsNullOrEmpty(metadata.DatabaseName) ||
             string.IsNullOrEmpty(metadata.CollectionName))
         {
-            _logger.LogWarning("MongoDB connection metadata is incomplete for index '{IndexName}'.", indexName);
+            _logger.LogWarning("MongoDB connection metadata is incomplete for index '{IndexName}'.", indexProfile.IndexFullName);
             yield break;
         }
 
@@ -60,7 +59,7 @@ internal sealed class DataSourceMongoDBDocumentReader : IDataSourceDocumentReade
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to connect to MongoDB for index '{IndexName}'.", indexName);
+            _logger.LogError(ex, "Failed to connect to MongoDB for index '{IndexName}'.", indexProfile.IndexFullName);
             yield break;
         }
 
@@ -81,9 +80,11 @@ internal sealed class DataSourceMongoDBDocumentReader : IDataSourceDocumentReade
                     yield break;
                 }
 
-                var key = doc.TryGetValue("_id", out var idValue)
-                    ? idValue.ToString()
-                    : null;
+                var key = !string.IsNullOrEmpty(keyFieldName) && doc.TryGetValue(keyFieldName, out var keyValue) && !keyValue.IsBsonNull
+                    ? keyValue.ToString()
+                    : doc.TryGetValue("_id", out var idValue)
+                        ? idValue.ToString()
+                        : null;
 
                 if (string.IsNullOrEmpty(key))
                 {
@@ -120,10 +121,24 @@ internal sealed class DataSourceMongoDBDocumentReader : IDataSourceDocumentReade
             title = ExtractTitleFromContent(content);
         }
 
+        // Populate all source fields for filter field propagation.
+        var fields = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var element in doc)
+        {
+            if (element.Name == "_id")
+            {
+                continue;
+            }
+
+            fields[element.Name] = BsonValueToObject(element.Value);
+        }
+
         return new SourceDocument
         {
             Title = title,
             Content = content,
+            Fields = fields,
         };
     }
 
@@ -143,5 +158,25 @@ internal sealed class DataSourceMongoDBDocumentReader : IDataSourceDocumentReade
         }
 
         return firstLine.ToString().Trim();
+    }
+
+    private static object BsonValueToObject(BsonValue value)
+    {
+        if (value == null || value.IsBsonNull)
+        {
+            return null;
+        }
+
+        return value.BsonType switch
+        {
+            BsonType.String => value.AsString,
+            BsonType.Int32 => value.AsInt32,
+            BsonType.Int64 => value.AsInt64,
+            BsonType.Double => value.AsDouble,
+            BsonType.Boolean => value.AsBoolean,
+            BsonType.DateTime => value.ToUniversalTime(),
+            BsonType.Decimal128 => value.AsDecimal,
+            _ => value.ToString(),
+        };
     }
 }

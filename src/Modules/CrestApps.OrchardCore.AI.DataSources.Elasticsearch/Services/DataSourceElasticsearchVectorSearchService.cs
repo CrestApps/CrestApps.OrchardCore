@@ -1,8 +1,6 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core;
 using Elastic.Clients.Elasticsearch;
-using Elastic.Clients.Elasticsearch.Core.Search;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing.Models;
@@ -31,7 +29,7 @@ internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVe
         float[] embedding,
         string dataSourceId,
         int topN,
-        IEnumerable<string> referenceIds = null,
+        string filter = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(indexProfile);
@@ -53,15 +51,13 @@ internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVe
                 ),
             };
 
-            // If reference IDs are provided (from two-phase filter search),
-            // constrain the vector search to only those documents.
-            var referenceIdList = referenceIds?.ToList();
-            if (referenceIdList is { Count: > 0 })
+            // If a provider-specific filter is provided (already translated from OData),
+            // add it as a raw query wrapper.
+            if (!string.IsNullOrWhiteSpace(filter))
             {
-                mustQueries.Add(m => m.Terms(t => t
-                    .Field(DataSourceConstants.ColumnNames.ReferenceId)
-                    .Terms(new TermsQueryField(referenceIdList.Select(id => FieldValue.String(id)).ToArray()))
-                ));
+                var filterBytes = System.Text.Encoding.UTF8.GetBytes(filter);
+                var filterBase64 = Convert.ToBase64String(filterBytes);
+                mustQueries.Add(m => m.Wrapper(w => w.Query(filterBase64)));
             }
 
             var response = await _elasticClient.SearchAsync<JsonObject>(s => s
@@ -72,14 +68,10 @@ internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVe
                     )
                 )
                 .Knn(k => k
-                    .Field(DataSourceConstants.ColumnNames.ChunksEmbedding)
+                    .Field(DataSourceConstants.ColumnNames.Embedding)
                     .QueryVector(embedding)
                     .K(topN)
                     .NumCandidates(topN * 10)
-                    .InnerHits(ih => ih
-                        .Size(topN)
-                        .Source(true)
-                    )
                 )
                 .Size(topN)
             , cancellationToken);
@@ -114,21 +106,26 @@ internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVe
                     ? titleNode?.GetValue<string>()
                     : null;
 
-                if (hit.InnerHits != null && hit.InnerHits.TryGetValue(DataSourceConstants.ColumnNames.Chunks, out var innerHits))
+                var content = document.TryGetPropertyValue(DataSourceConstants.ColumnNames.Content, out var contentNode)
+                    ? contentNode?.GetValue<string>()
+                    : null;
+
+                var chunkIndex = 0;
+                if (document.TryGetPropertyValue(DataSourceConstants.ColumnNames.ChunkIndex, out var chunkIndexNode) && chunkIndexNode != null)
                 {
-                    foreach (var innerHit in innerHits.Hits.Hits)
-                    {
-                        var chunkResult = ExtractChunkFromInnerHit(innerHit, referenceId, title, hit.Score);
-                        if (chunkResult != null)
-                        {
-                            results.Add(chunkResult);
-                        }
-                    }
+                    chunkIndex = chunkIndexNode.GetValue<int>();
                 }
-                else
+
+                if (!string.IsNullOrEmpty(content))
                 {
-                    var chunkResults = ExtractChunksFromSource(document, referenceId, title, hit.Score);
-                    results.AddRange(chunkResults);
+                    results.Add(new DataSourceSearchResult
+                    {
+                        ReferenceId = referenceId,
+                        Title = title,
+                        Content = content,
+                        ChunkIndex = chunkIndex,
+                        Score = (float)(hit.Score ?? 0.0),
+                    });
                 }
             }
 
@@ -143,99 +140,5 @@ internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVe
 
             return [];
         }
-    }
-
-    private static DataSourceSearchResult ExtractChunkFromInnerHit(Hit<object> innerHit, string referenceId, string title, double? parentScore)
-    {
-        try
-        {
-            if (innerHit.Source == null)
-            {
-                return null;
-            }
-
-            var sourceJson = JsonSerializer.Serialize(innerHit.Source);
-            var chunkSource = JsonSerializer.Deserialize<JsonObject>(sourceJson);
-
-            if (chunkSource == null)
-            {
-                return null;
-            }
-
-            var chunkText = chunkSource.TryGetPropertyValue(DataSourceConstants.ColumnNames.ChunksColumnNames.Text, out var textNode)
-                ? textNode?.GetValue<string>()
-                : null;
-
-            var chunkIndex = 0;
-            if (chunkSource.TryGetPropertyValue(DataSourceConstants.ColumnNames.ChunksColumnNames.Index, out var indexNode) && indexNode != null)
-            {
-                chunkIndex = indexNode.GetValue<int>();
-            }
-
-            if (string.IsNullOrEmpty(chunkText))
-            {
-                return null;
-            }
-
-            return new DataSourceSearchResult
-            {
-                ReferenceId = referenceId,
-                Title = title,
-                Text = chunkText,
-                ChunkIndex = chunkIndex,
-                Score = (float)(innerHit.Score ?? parentScore ?? 0.0),
-            };
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
-
-    private static List<DataSourceSearchResult> ExtractChunksFromSource(
-        JsonObject source,
-        string referenceId,
-        string title,
-        double? score)
-    {
-        var results = new List<DataSourceSearchResult>();
-
-        if (!source.TryGetPropertyValue(DataSourceConstants.ColumnNames.Chunks, out var chunksNode) || chunksNode is not JsonArray chunks)
-        {
-            return results;
-        }
-
-        foreach (var chunk in chunks)
-        {
-            if (chunk is not JsonObject chunkDict)
-            {
-                continue;
-            }
-
-            var chunkText = chunkDict.TryGetPropertyValue(DataSourceConstants.ColumnNames.ChunksColumnNames.Text, out var textNode)
-                ? textNode?.GetValue<string>()
-                : null;
-
-            var chunkIndex = 0;
-
-            if (chunkDict.TryGetPropertyValue(DataSourceConstants.ColumnNames.ChunksColumnNames.Index, out var indexNode) && indexNode != null)
-            {
-                chunkIndex = indexNode.GetValue<int>();
-            }
-
-            if (!string.IsNullOrEmpty(chunkText))
-            {
-                results.Add(new DataSourceSearchResult
-                {
-                    ReferenceId = referenceId,
-                    Title = title,
-                    Text = chunkText,
-                    ChunkIndex = chunkIndex,
-                    Score = (float)(score ?? 0.0),
-                });
-            }
-        }
-
-        return results;
     }
 }

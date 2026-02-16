@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Services;
@@ -8,9 +9,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
+using OrchardCore.BackgroundJobs;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
@@ -243,6 +246,34 @@ public sealed class DataSourcesController : Controller
         await _dataSourceManager.DeleteAsync(deployment);
 
         await _notifier.SuccessAsync(H["Data source has been deleted successfully."]);
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [Admin("ai/data-source/sync-index/{id}", "AIDataSourceSyncIndex")]
+    public async Task<IActionResult> SyncIndex(string id)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIDataSources))
+        {
+            return Forbid();
+        }
+
+        var dataSource = await _dataSourceManager.FindByIdAsync(id);
+
+        if (dataSource == null)
+        {
+            return NotFound();
+        }
+
+        await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("process-datasource-sync", dataSource, async (scope, ds) =>
+        {
+            var indexingService = scope.ServiceProvider.GetRequiredService<DataSourceIndexingService>();
+
+            await indexingService.SyncDataSourceAsync(ds);
+        });
+
+        await _notifier.SuccessAsync(H["The data source index synchronization has been triggered in the background."]);
 
         return RedirectToAction(nameof(Index));
     }

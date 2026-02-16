@@ -22,7 +22,8 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
             View("AIDataSource_Fields_SummaryAdmin", dataSource).Location("Content:1"),
             View("AIDataSource_Buttons_SummaryAdmin", dataSource).Location("Actions:5"),
             View("AIDataSource_DefaultTags_SummaryAdmin", dataSource).Location("Tags:5"),
-            View("AIDataSource_DefaultMeta_SummaryAdmin", dataSource).Location("Meta:5")
+            View("AIDataSource_DefaultMeta_SummaryAdmin", dataSource).Location("Meta:5"),
+            View("AIDataSource_ActionsMenu_SummaryAdmin", dataSource).Location("ActionsMenu:10")
         );
     }
 

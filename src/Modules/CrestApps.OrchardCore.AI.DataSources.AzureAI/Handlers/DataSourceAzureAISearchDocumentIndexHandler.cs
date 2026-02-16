@@ -6,7 +6,7 @@ using OrchardCore.Search.AzureAI;
 
 namespace CrestApps.OrchardCore.AI.DataSources.AzureAI.Handlers;
 
-public sealed class DataSourceAzureAISearchDocumentIndexHandler : IDocumentIndexHandler
+internal sealed class DataSourceAzureAISearchDocumentIndexHandler : IDocumentIndexHandler
 {
     public Task BuildIndexAsync(BuildDocumentIndexContext context)
     {
@@ -22,17 +22,27 @@ public sealed class DataSourceAzureAISearchDocumentIndexHandler : IDocumentIndex
             return Task.CompletedTask;
         }
 
+        context.DocumentIndex.Set(DataSourceConstants.ColumnNames.ChunkId, embeddingDocument.ChunkId, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(DataSourceConstants.ColumnNames.ReferenceId, embeddingDocument.ReferenceId, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(DataSourceConstants.ColumnNames.DataSourceId, embeddingDocument.DataSourceId, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(DataSourceConstants.ColumnNames.ChunkIndex, embeddingDocument.ChunkIndex, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(DataSourceConstants.ColumnNames.Title, embeddingDocument.Title, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set(DataSourceConstants.ColumnNames.Text, embeddingDocument.Text, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(DataSourceConstants.ColumnNames.Content, embeddingDocument.Content, DocumentIndexOptions.Store);
 
         if (embeddingDocument.Timestamp.HasValue)
         {
             context.DocumentIndex.Set(DataSourceConstants.ColumnNames.Timestamp, embeddingDocument.Timestamp.Value, DocumentIndexOptions.Store);
         }
 
-        context.DocumentIndex.Set(DataSourceConstants.ColumnNames.Chunks, embeddingDocument.Chunks, DocumentIndexOptions.Store);
+        if (embeddingDocument.Embedding != null)
+        {
+            context.DocumentIndex.Set(DataSourceConstants.ColumnNames.Embedding, embeddingDocument.Embedding, DocumentIndexOptions.Store);
+        }
+
+        if (embeddingDocument.Filters != null)
+        {
+            context.DocumentIndex.Set(DataSourceConstants.ColumnNames.Filters, embeddingDocument.Filters, DocumentIndexOptions.Store);
+        }
 
         return Task.CompletedTask;
     }

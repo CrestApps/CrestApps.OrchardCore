@@ -25,7 +25,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IDocumentIndexHandler, DataSourceElasticsearchDocumentIndexHandler>();
         services.AddKeyedScoped<IDataSourceVectorSearchService, DataSourceElasticsearchVectorSearchService>(ElasticsearchConstants.ProviderName);
         services.AddKeyedScoped<IDataSourceDocumentReader, DataSourceElasticsearchDocumentReader>(ElasticsearchConstants.ProviderName);
-        services.AddKeyedScoped<IDataSourceFilterExecutor, DataSourceElasticsearchFilterExecutor>(ElasticsearchConstants.ProviderName);
+        services.AddKeyedSingleton<IODataFilterTranslator, ElasticsearchODataFilterTranslator>(ElasticsearchConstants.ProviderName);
 
         services.AddElasticsearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
         {

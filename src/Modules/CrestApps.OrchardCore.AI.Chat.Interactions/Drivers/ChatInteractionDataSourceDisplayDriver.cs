@@ -2,9 +2,11 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
@@ -13,25 +15,37 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 /// </summary>
 public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatInteraction>
 {
+    private readonly ISiteService _siteService;
     private readonly ICatalog<AIDataSource> _dataSourceStore;
 
-    public ChatInteractionDataSourceDisplayDriver(ICatalog<AIDataSource> dataSourceStore)
+    internal readonly IStringLocalizer<ChatInteractionDataSourceDisplayDriver> S;
+
+    public ChatInteractionDataSourceDisplayDriver(
+        ISiteService siteService,
+        ICatalog<AIDataSource> dataSourceStore,
+        IStringLocalizer<ChatInteractionDataSourceDisplayDriver> stringLocalizer)
     {
+        _siteService = siteService;
         _dataSourceStore = dataSourceStore;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
     {
         return Initialize<EditChatInteractionDataSourceViewModel>("ChatInteractionDataSource_Edit", async model =>
         {
+            var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
+
             var metadata = interaction.As<ChatInteractionDataSourceMetadata>();
             model.DataSourceId = metadata?.DataSourceId;
 
             var ragMetadata = interaction.As<AIDataSourceRagMetadata>();
-            model.Strictness = ragMetadata?.Strictness;
-            model.TopNDocuments = ragMetadata?.TopNDocuments;
-            model.IsInScope = ragMetadata?.IsInScope ?? true;
-            model.Filter = ragMetadata?.Filter;
+
+            model.Strictness = dataSourceSettings.GetStrictness(ragMetadata.Strictness);
+            model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
+            model.IsInScope = ragMetadata.IsInScope;
+            model.EnableEarlyRag = context.IsNew ? dataSourceSettings.EnableEarlyRag : ragMetadata.EnableEarlyRag;
+            model.Filter = ragMetadata.Filter;
 
             model.DataSources = await _dataSourceStore.GetAllAsync();
         }).Location("Parameters:3#Settings:3");
@@ -61,11 +75,29 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             interaction.Put(new ChatInteractionDataSourceMetadata());
         }
 
+        var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
+
+        var strictness = dataSourceSettings.GetStrictness(model.Strictness);
+        var topN = dataSourceSettings.GetTopNDocuments(model.TopNDocuments);
+
+        if (strictness != model.Strictness)
+        {
+            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.Strictness),
+                S["Invalid strictness value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinStrictness, AIDataSourceSettings.MaxStrictness]);
+        }
+
+        if (topN != model.TopNDocuments)
+        {
+            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.TopNDocuments),
+                S["Invalid total retrieved documents value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinTopNDocuments, AIDataSourceSettings.MaxTopNDocuments]);
+        }
+
         interaction.Put(new AIDataSourceRagMetadata
         {
-            Strictness = model.Strictness,
-            TopNDocuments = model.TopNDocuments,
+            Strictness = strictness,
+            TopNDocuments = topN,
             IsInScope = model.IsInScope,
+            EnableEarlyRag = model.EnableEarlyRag,
             Filter = model.Filter,
         });
 

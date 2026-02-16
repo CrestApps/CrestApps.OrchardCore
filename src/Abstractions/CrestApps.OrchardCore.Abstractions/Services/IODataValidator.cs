@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Services;
 /// <summary>
 /// Provides basic OData filter syntax validation.
 /// </summary>
-public interface IODataFilterValidator
+public interface IODataValidator
 {
     /// <summary>
     /// Validates whether the provided filter string conforms to basic OData syntax.
@@ -14,5 +14,5 @@ public interface IODataFilterValidator
     /// This is a basic syntax validator that catches common errors.
     /// Full validation is performed by the underlying service at runtime.
     /// </remarks>
-    bool IsValid(string filter);
+    bool IsValidFilter(string filter);
 }

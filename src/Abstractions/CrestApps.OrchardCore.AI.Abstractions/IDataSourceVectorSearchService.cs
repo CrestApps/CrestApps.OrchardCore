@@ -15,7 +15,7 @@ public interface IDataSourceVectorSearchService
     /// <param name="embedding">The embedding vector to search for similar documents.</param>
     /// <param name="dataSourceId">The data source ID to filter results by.</param>
     /// <param name="topN">The maximum number of results to return.</param>
-    /// <param name="referenceIds">Optional reference IDs to constrain the search (from two-phase filter search).</param>
+    /// <param name="filter">Optional provider-specific filter expression to apply before vector search.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A collection of matching document chunks with their similarity scores.</returns>
     Task<IEnumerable<DataSourceSearchResult>> SearchAsync(
@@ -23,6 +23,6 @@ public interface IDataSourceVectorSearchService
         float[] embedding,
         string dataSourceId,
         int topN,
-        IEnumerable<string> referenceIds = null,
+        string filter = null,
         CancellationToken cancellationToken = default);
 }

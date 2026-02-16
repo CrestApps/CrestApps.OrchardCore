@@ -46,25 +46,22 @@ internal sealed class DataSourceElasticsearchIndexProfileHandler : DataSourceInd
         var profileMetadata = indexProfile.As<DataSourceIndexProfileMetadata>();
         var embeddingDimensions = await GetEmbeddingDimensionsAsync(profileMetadata);
 
-        metadata.IndexMappings.KeyFieldName = DataSourceConstants.ColumnNames.ReferenceId;
+        metadata.IndexMappings.KeyFieldName = DataSourceConstants.ColumnNames.ChunkId;
+        metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.ChunkId] = new KeywordProperty();
         metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.ReferenceId] = new KeywordProperty();
         metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.DataSourceId] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.ChunkIndex] = new IntegerNumberProperty();
         metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.Title] = new TextProperty();
-        metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.Text] = new TextProperty();
+        metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.Content] = new TextProperty();
         metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.Timestamp] = new DateProperty();
-        metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.Chunks] = new NestedProperty()
+        metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.Embedding] = new DenseVectorProperty
         {
-            Properties = new Properties()
-            {
-                { DataSourceConstants.ColumnNames.ChunksColumnNames.Text, new TextProperty() },
-                { DataSourceConstants.ColumnNames.ChunksColumnNames.Embedding, new DenseVectorProperty
-                    {
-                        Dims = embeddingDimensions,
-                        Index = true,
-                    }
-                },
-                { DataSourceConstants.ColumnNames.ChunksColumnNames.Index, new IntegerNumberProperty() },
-            },
+            Dims = embeddingDimensions,
+            Index = true,
+        };
+        metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.Filters] = new ObjectProperty
+        {
+            Dynamic = DynamicMapping.True,
         };
 
         indexProfile.Put(metadata);
@@ -83,7 +80,7 @@ internal sealed class DataSourceElasticsearchIndexProfileHandler : DataSourceInd
         {
             queryMetadata.DefaultSearchFields =
             [
-                DataSourceConstants.ColumnNames.Text,
+                DataSourceConstants.ColumnNames.Content,
             ];
 
             indexProfile.Put(queryMetadata);

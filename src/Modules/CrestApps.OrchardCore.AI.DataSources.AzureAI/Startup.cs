@@ -28,7 +28,7 @@ public sealed class Startup : StartupBase
             AzureAISearchConstants.ProviderName);
         services.AddKeyedScoped<IDataSourceDocumentReader, DataSourceAzureAISearchDocumentReader>(
             AzureAISearchConstants.ProviderName);
-        services.AddKeyedScoped<IDataSourceFilterExecutor, DataSourceAzureAISearchFilterExecutor>(
+        services.AddKeyedSingleton<IODataFilterTranslator, AzureAIODataFilterTranslator>(
             AzureAISearchConstants.ProviderName);
 
         services.AddAzureAISearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>

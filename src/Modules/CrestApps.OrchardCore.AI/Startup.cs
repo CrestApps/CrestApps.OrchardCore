@@ -135,17 +135,24 @@ public sealed class DataSourceStartup : StartupBase
         services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
         services.AddNavigationProvider<AIDataProviderAdminMenu>();
         services.AddDisplayDriver<AIProfile, AIProfileDataSourceDisplayDriver>();
-        services.AddDisplayDriver<AIProfile, AIDataSourceRagDisplayDriver>();
         services.AddDisplayDriver<IndexProfile, DataSourceIndexProfileDisplayDriver>();
+        services.AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>();
+        services.AddNavigationProvider<AIDataSourceSettingsAdminMenu>();
+        services.AddScoped<IOrchestrationContextHandler, DataSourceEarlyRagOrchestrationHandler>();
 
         services.AddScoped<DataSourceIndexingService>();
         services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();
         services.AddSingleton<IBackgroundTask, BackgroundTasks.DataSourceSyncBackgroundTask>();
-        services.AddSingleton<IBackgroundTask, BackgroundTasks.DataSourceCleanupBackgroundTask>();
-        services.AddTransient<ICatalogEntryHandler<AIDataSource>, DataSourceCleanupHandler>();
+        services.AddSingleton<IBackgroundTask, BackgroundTasks.DataSourceAlignmentBackgroundTask>();
+        services.AddTransient<ICatalogEntryHandler<AIDataSource>, DataSourceIndexingHandler>();
 
         services.AddAITool<Tools.DataSourceSearchTool>(Tools.DataSourceSearchTool.TheName)
             .WithPurpose(AIToolPurposes.DataSourceSearch);
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddGetDataSourceFieldsEndpoint();
     }
 }
 

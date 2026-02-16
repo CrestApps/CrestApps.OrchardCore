@@ -9,7 +9,8 @@ This module provides MongoDB Atlas support for AI data source knowledge base ind
 When AI profiles are configured with data sources, the system needs to search and retrieve relevant documents to provide context to AI models. This module handles:
 
 - **Vector search**: Performs vector similarity searches using MongoDB Atlas Vector Search to find the most relevant documents.
-- **Filter execution**: Executes MongoDB query filters for two-phase RAG search (filter first, then vector search within filtered results).
+- **Filter execution**: Applies OData filter expressions translated to MongoDB Atlas Vector Search filter syntax.
+- **OData filter translation**: Translates user OData filters into MongoDB-compatible BSON filter documents.
 - **Document reading**: Reads source documents from MongoDB collections in batches for efficient indexing.
 
 ## Features
@@ -30,8 +31,8 @@ When AI profiles are configured with data sources, the system needs to search an
 |---------|-----|-------------|
 | `IDataSourceVectorSearchService` | `MongoDB` | Performs vector searches using MongoDB Atlas Vector Search |
 | `IDataSourceDocumentReader` | `MongoDB` | Reads source documents from MongoDB collections in batches |
-| `IDataSourceFilterExecutor` | `MongoDB` | Executes MongoDB query filters for two-phase search |
+| `IODataFilterTranslator` | `MongoDB` | Translates OData filter expressions into MongoDB BSON filter documents |
 
 ## Note
 
-This module provides stub implementations that will be completed with full MongoDB Atlas Vector Search integration. MongoDB Atlas must be configured with vector search indexes to use this module.
+MongoDB Atlas must be configured with vector search indexes to use this module. The module requires the `MongoDB.Driver` package for database connectivity.

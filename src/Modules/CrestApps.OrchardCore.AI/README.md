@@ -223,28 +223,45 @@ If a connection with the same `Name` and `Source` already exists, the recipe upd
 
 ### AI Data Source Management 
 
-The **AI Data Source Management** feature enhances **AI Services** by offering a user-friendly interface for managing data sources accessible to AI models. To add data sources, you must first enable at least one feature that supplies a data source. For instance, the **Azure AI Search-Powered Data Source** feature provides access to data stored in Azure AI Search, enabling AI-powered conversational capabilities with that data.
+The **AI Data Source Management** feature enhances **AI Services** by offering a user-friendly interface for managing data sources accessible to AI models. Data sources allow AI profiles to perform Retrieval-Augmented Generation (RAG) against your indexed data.
+
+#### Key Features
+
+- **Provider-Agnostic**: Data sources can pull from any search provider (Elasticsearch, Azure AI Search, MongoDB) and index into any supported AI Knowledge Base index.
+- **Early RAG**: Automatically injects relevant context from data sources into the system message before the LLM call, reducing latency and improving results. Configurable per-profile or globally via **Settings > Artificial Intelligence**.
+- **On-Demand RAG**: The `DataSourceSearchTool` system tool enables follow-up searches during conversations.
+- **OData Filtering**: All data source filters use OData syntax, automatically translated to provider-specific queries.
+- **Chunk-Based Storage**: Documents are chunked and stored with embeddings in the AI Knowledge Base index for optimal retrieval.
+
+#### Setup
+
+1. **Create an AI Knowledge Base Index** using the Indexing feature (**Search > Indexes**). Select the "AI Data Source Knowledge Base" type and configure an embedding connection.
+2. **Create a Data Source** under **Artificial Intelligence > Data Sources**. Select a source index (where your data lives) and a Knowledge Base index (where embeddings are stored).
+3. **Assign the Data Source** to an AI Profile or Chat Interaction.
+
+#### Global Settings
+
+Navigate to **Settings > Artificial Intelligence** to configure:
+- **Enable Early RAG** (default: enabled) — Inject data source context into the system message automatically
+- **Default Strictness** (1-5) — Threshold for document relevance
+- **Default Top Documents** (3-20) — Number of documents to retrieve
+
+Individual profiles can override these defaults.
 
 #### Creating Data Source via Recipe
 
-You can add or update data-source using recipe. Here is an example or creating a data-source
-
-
-```
+```json
 {
   "steps": [
     {
       "name": "AIDataSource",
       "DataSources": [
         {
-          "ProfileSource": "AzureAISearch",
-          "Type": "azure_search",
-          "DisplayText": "Articles (Azure AI Search)",
-          "Properties": {
-            "AzureAIProfileAISearchMetadata": {
-              "IndexName": "articles"
-            }
-          }
+          "DisplayText": "Articles",
+          "SourceIndexProfileName": "articles",
+          "AIKnowledgeBaseIndexProfileName": "AIRagKnowledgeBase",
+          "TitleFieldName": "Content.ContentItem.DisplayText.Analyzed",
+          "ContentFieldName": "Content.ContentItem.FullText"
         }
       ]
     }

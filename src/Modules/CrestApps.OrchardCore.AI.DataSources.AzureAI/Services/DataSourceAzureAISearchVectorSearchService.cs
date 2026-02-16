@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
 /// Azure AI Search implementation of <see cref="IDataSourceVectorSearchService"/>
 /// for searching data source embedding indexes using vector similarity.
 /// </summary>
-public sealed class DataSourceAzureAISearchVectorSearchService : IDataSourceVectorSearchService
+internal sealed class DataSourceAzureAISearchVectorSearchService : IDataSourceVectorSearchService
 {
     private readonly SearchIndexClient _searchIndexClient;
     private readonly ILogger _logger;
@@ -30,7 +30,7 @@ public sealed class DataSourceAzureAISearchVectorSearchService : IDataSourceVect
         float[] embedding,
         string dataSourceId,
         int topN,
-        IEnumerable<string> referenceIds = null,
+        string filter = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(indexProfile);
@@ -51,31 +51,31 @@ public sealed class DataSourceAzureAISearchVectorSearchService : IDataSourceVect
                 KNearestNeighborsCount = topN,
                 Fields =
                 {
-                    DataSourceConstants.ColumnNames.ChunksEmbedding,
+                    DataSourceConstants.ColumnNames.Embedding,
                 }
             };
 
-            // Build filter expression.
-            var filter = $"{DataSourceConstants.ColumnNames.DataSourceId} eq '{dataSourceId}'";
+            // Build filter expression — always filter by dataSourceId.
+            var odataFilter = $"{DataSourceConstants.ColumnNames.DataSourceId} eq '{dataSourceId}'";
 
-            var referenceIdList = referenceIds?.ToList();
-            if (referenceIdList is { Count: > 0 })
+            // Merge with user-provided filter (already translated to OData for Azure).
+            if (!string.IsNullOrWhiteSpace(filter))
             {
-                var refFilter = string.Join(" or ", referenceIdList.Select(id =>
-                    $"{DataSourceConstants.ColumnNames.ReferenceId} eq '{id}'"));
-                filter = $"({filter}) and ({refFilter})";
+                odataFilter = $"({odataFilter}) and ({filter})";
             }
 
             var searchOptions = new SearchOptions
             {
-                Filter = filter,
+                Filter = odataFilter,
                 Size = topN,
                 Select =
                 {
+                    DataSourceConstants.ColumnNames.ChunkId,
                     DataSourceConstants.ColumnNames.ReferenceId,
                     DataSourceConstants.ColumnNames.DataSourceId,
                     DataSourceConstants.ColumnNames.Title,
-                    DataSourceConstants.ColumnNames.Chunks,
+                    DataSourceConstants.ColumnNames.Content,
+                    DataSourceConstants.ColumnNames.ChunkIndex,
                 },
                 VectorSearch = new VectorSearchOptions
                 {
@@ -102,45 +102,33 @@ public sealed class DataSourceAzureAISearchVectorSearchService : IDataSourceVect
                     ? titleObj?.ToString()
                     : null;
 
-                if (document.TryGetValue(DataSourceConstants.ColumnNames.Chunks, out var chunksObj) &&
-                    chunksObj is IEnumerable<object> chunks)
+                var content = document.TryGetValue(DataSourceConstants.ColumnNames.Content, out var contentObj)
+                    ? contentObj?.ToString()
+                    : null;
+
+                var chunkIndex = 0;
+                if (document.TryGetValue(DataSourceConstants.ColumnNames.ChunkIndex, out var chunkIndexObj))
                 {
-                    foreach (var chunkObj in chunks)
+                    if (chunkIndexObj is int intValue)
                     {
-                        if (chunkObj is not IDictionary<string, object> chunk)
-                        {
-                            continue;
-                        }
-
-                        var chunkText = chunk.TryGetValue(DataSourceConstants.ColumnNames.ChunksColumnNames.Text, out var textObj)
-                            ? textObj?.ToString()
-                            : null;
-
-                        var chunkIndex = 0;
-                        if (chunk.TryGetValue(DataSourceConstants.ColumnNames.ChunksColumnNames.Index, out var indexObj))
-                        {
-                            if (indexObj is int intValue)
-                            {
-                                chunkIndex = intValue;
-                            }
-                            else if (int.TryParse(indexObj?.ToString(), out var parsedIndex))
-                            {
-                                chunkIndex = parsedIndex;
-                            }
-                        }
-
-                        if (!string.IsNullOrEmpty(chunkText))
-                        {
-                            results.Add(new DataSourceSearchResult
-                            {
-                                ReferenceId = referenceId,
-                                Title = title,
-                                Text = chunkText,
-                                ChunkIndex = chunkIndex,
-                                Score = (float)(result.Score ?? 0.0)
-                            });
-                        }
+                        chunkIndex = intValue;
                     }
+                    else if (int.TryParse(chunkIndexObj?.ToString(), out var parsedIndex))
+                    {
+                        chunkIndex = parsedIndex;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(content))
+                {
+                    results.Add(new DataSourceSearchResult
+                    {
+                        ReferenceId = referenceId,
+                        Title = title,
+                        Content = content,
+                        ChunkIndex = chunkIndex,
+                        Score = (float)(result.Score ?? 0.0)
+                    });
                 }
             }
 

@@ -1,7 +1,7 @@
 namespace CrestApps.OrchardCore.AI;
 
 /// <summary>
-/// Represents a search result from a data source embedding index.
+/// Represents a search result from a data source knowledge base index.
 /// </summary>
 public sealed class DataSourceSearchResult
 {
@@ -18,7 +18,7 @@ public sealed class DataSourceSearchResult
     /// <summary>
     /// Gets or sets the text content of the matching chunk.
     /// </summary>
-    public string Text { get; set; }
+    public string Content { get; set; }
 
     /// <summary>
     /// Gets or sets the chunk index within the document.

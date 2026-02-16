@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Indexes;
 using Azure.Search.Documents.Models;
+using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
 
@@ -20,12 +21,18 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
     }
 
     public async IAsyncEnumerable<KeyValuePair<string, SourceDocument>> ReadAsync(
-        string indexName,
+        IndexProfile indexProfile,
+        string keyFieldName,
         string titleFieldName,
         string contentFieldName,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var searchClient = _searchIndexClient.GetSearchClient(indexName);
+        if (indexProfile == null)
+        {
+            yield break;
+        }
+
+        var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
 
         var searchOptions = new SearchOptions
         {
@@ -47,12 +54,26 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
 
             var doc = searchResult.Document;
 
-            // The first key in the document is typically the document key.
-            var key = doc.Keys.FirstOrDefault();
+            // Use the configured key field, or fall back to the first field (typically the document key).
+            string documentKey = null;
 
-            if (key != null && doc.TryGetValue(key, out var keyValue))
+            if (!string.IsNullOrEmpty(keyFieldName) && doc.TryGetValue(keyFieldName, out var keyValue))
             {
-                var documentKey = keyValue?.ToString() ?? string.Empty;
+                documentKey = keyValue?.ToString();
+            }
+
+            if (string.IsNullOrEmpty(documentKey))
+            {
+                var firstKey = doc.Keys.FirstOrDefault();
+
+                if (firstKey != null && doc.TryGetValue(firstKey, out var firstKeyValue))
+                {
+                    documentKey = firstKeyValue?.ToString() ?? string.Empty;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(documentKey))
+            {
                 yield return new KeyValuePair<string, SourceDocument>(
                     documentKey, ExtractDocument(doc, titleFieldName, contentFieldName));
             }
@@ -84,10 +105,19 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
             title = ExtractTitleFromContent(content);
         }
 
+        // Populate all source fields for filter field propagation.
+        var fields = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var kvp in doc)
+        {
+            fields[kvp.Key] = kvp.Value;
+        }
+
         return new SourceDocument
         {
             Title = title,
             Content = content,
+            Fields = fields,
         };
     }
 

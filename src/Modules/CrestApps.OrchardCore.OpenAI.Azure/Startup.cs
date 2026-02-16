@@ -30,7 +30,7 @@ public sealed class Startup : StartupBase
     {
         services.AddDataMigration<AzureOpenAIOwnDataAIProfilesMigrations>();
         services.AddDataMigration<AzureOpenAIFeatureMigrations>();
-        services.AddSingleton<IODataFilterValidator, ODataFilterValidator>();
+        services.AddSingleton<IODataValidator, ODataFilterValidator>();
 
         services
             .AddScoped<IAIClientProvider, AzureOpenAIClientProvider>()

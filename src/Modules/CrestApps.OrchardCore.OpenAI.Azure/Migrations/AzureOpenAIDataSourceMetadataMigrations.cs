@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 /// <summary>
 /// Migrates existing Azure AI data source metadata from the legacy format to the new format.
 /// This migration:
-/// 1. Extracts IndexName from legacy metadata and stores it in AIDataSourceIndexMetadata on the data source
+/// 1. Extracts IndexName from legacy metadata and stores it as a first-class property on AIDataSource
 /// 2. Extracts query-time parameters (Filter, Strictness, TopNDocuments) and stores them in AIDataSourceRagMetadata on AI profiles
 /// </summary>
 internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
@@ -43,7 +43,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
             var dataSourceStore = scope.ServiceProvider.GetRequiredService<ICatalog<AIDataSource>>();
             var profileStore = scope.ServiceProvider.GetRequiredService<INamedCatalog<AIProfile>>();
 
-            // Migrate data sources to use the new index metadata
+            // Migrate data sources to use first-class index properties
             foreach (var dataSource in await dataSourceStore.GetAllAsync())
             {
                 // Use legacy ProfileSource or ProviderName from Properties (JsonExtensionData)
@@ -60,11 +60,9 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
                 var needsUpdate = false;
 
-                // Check if new metadata already exists
-                var newIndexMetadata = dataSource.As<AIDataSourceIndexMetadata>();
-                if (!string.IsNullOrWhiteSpace(newIndexMetadata?.IndexName))
+                // Skip if IndexName is already set as a first-class property.
+                if (!string.IsNullOrWhiteSpace(dataSource.SourceIndexProfileName))
                 {
-                    // Already migrated
                     continue;
                 }
 
@@ -78,10 +76,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                             var indexName = GetPropertyValue<string>(dataSource.Properties, LegacyAISearchMetadataName, "IndexName");
                             if (!string.IsNullOrWhiteSpace(indexName))
                             {
-                                dataSource.Put(new AIDataSourceIndexMetadata
-                                {
-                                    IndexName = indexName,
-                                });
+                                dataSource.SourceIndexProfileName = indexName;
                                 needsUpdate = true;
                             }
                         }
@@ -92,10 +87,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                             var indexName = GetPropertyValue<string>(dataSource.Properties, LegacyElasticsearchMetadataName, "IndexName");
                             if (!string.IsNullOrWhiteSpace(indexName))
                             {
-                                dataSource.Put(new AIDataSourceIndexMetadata
-                                {
-                                    IndexName = indexName,
-                                });
+                                dataSource.SourceIndexProfileName = indexName;
                                 needsUpdate = true;
                             }
                         }
@@ -215,11 +207,9 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
             foreach (var dataSource in await dataSourceStore.GetAllAsync())
             {
-                var indexMetadata = dataSource.As<AIDataSourceIndexMetadata>();
-
                 // Skip field mappings if already configured.
-                if (!string.IsNullOrEmpty(indexMetadata.TitleFieldName) &&
-                    !string.IsNullOrEmpty(indexMetadata.ContentFieldName))
+                if (!string.IsNullOrEmpty(dataSource.TitleFieldName) &&
+                    !string.IsNullOrEmpty(dataSource.ContentFieldName))
                 {
                     continue;
                 }
@@ -251,16 +241,15 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 // Set default field mappings based on the provider.
                 if (string.Equals(providerName, "Elasticsearch", StringComparison.OrdinalIgnoreCase))
                 {
-                    indexMetadata.TitleFieldName ??= "Content.ContentItem.DisplayText.Analyzed";
-                    indexMetadata.ContentFieldName ??= "Content.ContentItem.FullText";
+                    dataSource.TitleFieldName ??= "Content.ContentItem.DisplayText.Analyzed";
+                    dataSource.ContentFieldName ??= "Content.ContentItem.FullText";
                 }
                 else if (string.Equals(providerName, "AzureAISearch", StringComparison.OrdinalIgnoreCase))
                 {
-                    indexMetadata.TitleFieldName ??= "Content__ContentItem__DisplayText__Analyzed";
-                    indexMetadata.ContentFieldName ??= "Content__ContentItem__FullText";
+                    dataSource.TitleFieldName ??= "Content__ContentItem__DisplayText__Analyzed";
+                    dataSource.ContentFieldName ??= "Content__ContentItem__FullText";
                 }
 
-                dataSource.Put(indexMetadata);
                 await dataSourceStore.UpdateAsync(dataSource);
             }
         });
@@ -318,12 +307,10 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
             }
             catch (InvalidOperationException)
             {
-                // Value cannot be converted to int - return null
                 return null;
             }
             catch (FormatException)
             {
-                // Value is not in the expected format - return null
                 return null;
             }
         }

@@ -11,7 +11,7 @@
         </span>
     </label>
     <select asp-for="DataSourceId" class="form-select">
-        <option value="">@T["Select a data source"]</option>
+        <option value="">@T["No data source"]</option>
         @foreach (var source in Model.DataSources.OrderBy(x => x.DisplayText))
         {
             @if (source.ItemId == Model.DataSourceId)
@@ -52,6 +52,19 @@
         <label class="form-check-label" asp-for="IsInScope">
             @T["Limit responses to indexed data"]
             <span class="text-muted" data-bs-toggle="tooltip" title="@T["When enabled, the model will only generate responses using your data source index. If disabled, the model may use its general knowledge in addition to your data."]">
+                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+            </span>
+        </label>
+    </div>
+</div>
+
+<div class="mb-3 d-none data-source-dependent">
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" asp-for="EnableEarlyRag" value="true" />
+
+        <label class="form-check-label" asp-for="EnableEarlyRag">
+            @T["Enable Preemptive Retrieval-Augmented Generation (RAG)"]
+            <span class="text-muted" data-bs-toggle="tooltip" title="@T["When enabled, it reduces AI latency and could improve results. Individual profiles can override this setting."]">
                 <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
             </span>
         </label>

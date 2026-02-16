@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using Elastic.Clients.Elasticsearch;
+using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 
@@ -19,23 +20,29 @@ internal sealed class DataSourceElasticsearchDocumentReader : IDataSourceDocumen
     }
 
     public async IAsyncEnumerable<KeyValuePair<string, SourceDocument>> ReadAsync(
-        string indexName,
+        IndexProfile indexProfile,
+        string keyFieldName,
         string titleFieldName,
         string contentFieldName,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        if (indexProfile == null)
+        {
+            yield break;
+        }
+
         string searchAfterValue = null;
 
         while (!cancellationToken.IsCancellationRequested)
         {
             var response = searchAfterValue == null
                 ? await _elasticClient.SearchAsync<JsonObject>(s => s
-                    .Indices(indexName)
+                    .Indices(indexProfile.IndexFullName)
                     .Size(BatchSize)
                     .Sort(sort => sort.Field("_doc"))
                 , cancellationToken)
                 : await _elasticClient.SearchAsync<JsonObject>(s => s
-                    .Indices(indexName)
+                    .Indices(indexProfile.IndexFullName)
                     .Size(BatchSize)
                     .Sort(sort => sort.Field("_doc"))
                     .SearchAfter([searchAfterValue])
@@ -53,8 +60,17 @@ internal sealed class DataSourceElasticsearchDocumentReader : IDataSourceDocumen
                     continue;
                 }
 
+                var key = hit.Id;
+
+                if (!string.IsNullOrEmpty(keyFieldName) &&
+                    hit.Source.TryGetPropertyValue(keyFieldName, out var keyNode) &&
+                    keyNode != null)
+                {
+                    key = GetStringValue(keyNode) ?? key;
+                }
+
                 yield return new KeyValuePair<string, SourceDocument>(
-                    hit.Id, ExtractDocument(hit.Source, titleFieldName, contentFieldName));
+                    key, ExtractDocument(hit.Source, titleFieldName, contentFieldName));
             }
 
             var lastSort = response.Hits.Last().Sort;
@@ -76,12 +92,12 @@ internal sealed class DataSourceElasticsearchDocumentReader : IDataSourceDocumen
 
         if (!string.IsNullOrEmpty(titleFieldName) && source.TryGetPropertyValue(titleFieldName, out var titleNode))
         {
-            title = titleNode?.ToString();
+            title = GetStringValue(titleNode);
         }
 
         if (!string.IsNullOrEmpty(contentFieldName) && source.TryGetPropertyValue(contentFieldName, out var contentNode))
         {
-            content = contentNode?.ToString();
+            content = GetStringValue(contentNode);
         }
         else
         {
@@ -94,11 +110,77 @@ internal sealed class DataSourceElasticsearchDocumentReader : IDataSourceDocumen
             title = ExtractTitleFromContent(content);
         }
 
+        // Populate all source fields for filter field propagation.
+        var fields = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var prop in source)
+        {
+            fields[prop.Key] = GetRawValue(prop.Value);
+        }
+
         return new SourceDocument
         {
             Title = title,
             Content = content,
+            Fields = fields,
         };
+    }
+
+    private static string GetStringValue(JsonNode node)
+    {
+        if (node == null)
+        {
+            return null;
+        }
+
+        if (node is JsonValue jsonValue)
+        {
+            return jsonValue.ToString();
+        }
+
+        // For arrays or objects, return the JSON representation.
+        return node.ToJsonString();
+    }
+
+    private static object GetRawValue(JsonNode node)
+    {
+        if (node == null)
+        {
+            return null;
+        }
+
+        if (node is JsonValue jsonValue)
+        {
+            if (jsonValue.TryGetValue<string>(out var stringVal))
+            {
+                return stringVal;
+            }
+
+            if (jsonValue.TryGetValue<long>(out var longVal))
+            {
+                return longVal;
+            }
+
+            if (jsonValue.TryGetValue<double>(out var doubleVal))
+            {
+                return doubleVal;
+            }
+
+            if (jsonValue.TryGetValue<bool>(out var boolVal))
+            {
+                return boolVal;
+            }
+
+            if (jsonValue.TryGetValue<DateTime>(out var dateVal))
+            {
+                return dateVal;
+            }
+
+            return jsonValue.ToString();
+        }
+
+        // For arrays or objects, return as string.
+        return node.ToJsonString();
     }
 
     private static string ExtractTitleFromContent(string content)

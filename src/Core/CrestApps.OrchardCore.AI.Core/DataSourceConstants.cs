@@ -10,25 +10,18 @@ public static class DataSourceConstants
 
         public const string DataSourceId = "dataSourceId";
 
+        public const string ChunkId = "chunkId";
+
+        public const string ChunkIndex = "chunkIndex";
+
         public const string Title = "title";
 
-        public const string Text = "text";
+        public const string Content = "content";
+
+        public const string Embedding = "embedding";
 
         public const string Timestamp = "timestamp";
 
-        public const string Chunks = "chunks";
-
-        public const string ChunksEmbedding = "chunks.embedding";
-
-        public const string ChunksText = "chunks.text";
-
-        public static class ChunksColumnNames
-        {
-            public const string Text = "text";
-
-            public const string Embedding = "embedding";
-
-            public const string Index = "index";
-        }
+        public const string Filters = "filters";
     }
 }

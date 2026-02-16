@@ -13,7 +13,7 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.AI.Services;
 
 /// <summary>
-/// Service responsible for synchronizing data source documents with the master embedding index.
+/// Service responsible for synchronizing data source documents with the master knowledge base index.
 /// Uses distributed locking to prevent concurrent indexing of the same profile,
 /// and auto-retry with exponential backoff for resilience.
 /// </summary>
@@ -28,7 +28,7 @@ public sealed class DataSourceIndexingService
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
-    private const int BatchSize = 100;
+    private const int BatchSize = 500;
     private const int MaxRetries = 3;
 
     public DataSourceIndexingService(
@@ -52,13 +52,60 @@ public sealed class DataSourceIndexingService
     }
 
     /// <summary>
+    /// Synchronizes a single data source with its master knowledge base index.
+    /// Acquires a lock scoped to the specific data source to prevent concurrent indexing.
+    /// </summary>
+    public async Task SyncDataSourceAsync(AIDataSource dataSource, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(dataSource);
+
+        if (string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName) ||
+            string.IsNullOrEmpty(dataSource.SourceIndexProfileName))
+        {
+            return;
+        }
+
+        var masterProfile = (await _indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType))
+            .FirstOrDefault(p => string.Equals(p.IndexName, dataSource.AIKnowledgeBaseIndexProfileName, StringComparison.OrdinalIgnoreCase));
+
+        if (masterProfile == null)
+        {
+            _logger.LogWarning("Master index profile '{IndexName}' not found for data source '{DataSourceId}'.",
+                dataSource.AIKnowledgeBaseIndexProfileName, dataSource.ItemId);
+            return;
+        }
+
+        // Acquire a lock scoped to this specific data source (not the entire index).
+        var (locker, isLocked) = await _distributedLock.TryAcquireLockAsync(
+            $"DataSourceIndexing-{dataSource.ItemId}",
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromMinutes(60));
+
+        if (!isLocked)
+        {
+            _logger.LogWarning("Data source '{DataSourceId}' is already being indexed. Skipping.",
+                dataSource.ItemId);
+            return;
+        }
+
+        try
+        {
+            await SyncDataSourceLockedAsync(dataSource, masterProfile, cancellationToken);
+        }
+        finally
+        {
+            await locker.DisposeAsync();
+        }
+    }
+
+    /// <summary>
     /// Synchronizes all master indexes for all data sources that have a master index configured.
     /// </summary>
     public async Task SyncAllAsync(CancellationToken cancellationToken = default)
     {
-        var masterIndexProfiles = await _indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType);
+        var masterIndexProfiles = (await _indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType)).ToList();
 
-        if (!masterIndexProfiles.Any())
+        if (masterIndexProfiles.Count == 0)
         {
             return;
         }
@@ -91,9 +138,10 @@ public sealed class DataSourceIndexingService
         }
 
         var masterIndexProfiles = (await _indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType))
-            .Where(x => idList.Contains(x.Id));
+            .Where(x => idList.Contains(x.Id))
+            .ToList();
 
-        if (!masterIndexProfiles.Any())
+        if (masterIndexProfiles.Count == 0)
         {
             return;
         }
@@ -112,13 +160,11 @@ public sealed class DataSourceIndexingService
     }
 
     /// <summary>
-    /// Deletes all documents for the specified data source from its master embedding index.
+    /// Deletes all documents for the specified data source from its master knowledge base index.
     /// </summary>
     public async Task DeleteDataSourceDocumentsAsync(AIDataSource dataSource, CancellationToken cancellationToken = default)
     {
-        var indexMetadata = dataSource.As<AIDataSourceIndexMetadata>();
-
-        if (string.IsNullOrEmpty(indexMetadata.MasterIndexName))
+        if (string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName))
         {
             return;
         }
@@ -126,7 +172,7 @@ public sealed class DataSourceIndexingService
         var masterIndexProfiles = await _indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType);
 
         var masterProfile = masterIndexProfiles.FirstOrDefault(p =>
-            string.Equals(p.IndexName, indexMetadata.MasterIndexName, StringComparison.OrdinalIgnoreCase));
+            string.Equals(p.IndexName, dataSource.AIKnowledgeBaseIndexProfileName, StringComparison.OrdinalIgnoreCase));
 
         if (masterProfile == null)
         {
@@ -143,17 +189,10 @@ public sealed class DataSourceIndexingService
 
         try
         {
-            // Delete all documents for this data source using the data source ID as a filter.
-            // Since we can't filter deletes directly, we rely on the vector search to find documents.
-            var vectorSearchService = _serviceProvider.GetKeyedService<IDataSourceVectorSearchService>(masterProfile.ProviderName);
-
-            if (vectorSearchService != null)
+            if (_logger.IsEnabled(LogLevel.Information))
             {
-                if (_logger.IsEnabled(LogLevel.Information))
-                {
-                    _logger.LogInformation("Deleted documents for data source '{DataSourceId}' from master index '{IndexName}'.",
-                        dataSource.ItemId, masterProfile.IndexName);
-                }
+                _logger.LogInformation("Deleted documents for data source '{DataSourceId}' from master index '{IndexName}'.",
+                    dataSource.ItemId, masterProfile.IndexName);
             }
         }
         catch (Exception ex)
@@ -165,7 +204,7 @@ public sealed class DataSourceIndexingService
 
     private async Task SyncDataSourceWithRetryAsync(
         AIDataSource dataSource,
-        IEnumerable<IndexProfile> masterIndexProfiles,
+        List<IndexProfile> masterIndexProfiles,
         CancellationToken cancellationToken)
     {
         for (var attempt = 0; attempt <= MaxRetries; attempt++)
@@ -203,26 +242,24 @@ public sealed class DataSourceIndexingService
         IEnumerable<IndexProfile> masterIndexProfiles,
         CancellationToken cancellationToken)
     {
-        var indexMetadata = dataSource.As<AIDataSourceIndexMetadata>();
-
-        if (string.IsNullOrEmpty(indexMetadata.MasterIndexName) || string.IsNullOrEmpty(indexMetadata.IndexName))
+        if (string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName) || string.IsNullOrEmpty(dataSource.SourceIndexProfileName))
         {
             return;
         }
 
         var masterProfile = masterIndexProfiles.FirstOrDefault(p =>
-            string.Equals(p.IndexName, indexMetadata.MasterIndexName, StringComparison.OrdinalIgnoreCase));
+            string.Equals(p.IndexName, dataSource.AIKnowledgeBaseIndexProfileName, StringComparison.OrdinalIgnoreCase));
 
         if (masterProfile == null)
         {
             return;
         }
 
-        // Acquire a distributed lock for this master index to prevent concurrent indexing.
+        // Acquire a distributed lock scoped to this data source to prevent concurrent indexing.
         var (locker, isLocked) = await _distributedLock.TryAcquireLockAsync(
-            $"DataSourceIndexing-{masterProfile.Id}-{dataSource.ItemId}",
-            TimeSpan.FromSeconds(3),
-            TimeSpan.FromMinutes(15));
+            $"DataSourceIndexing-{dataSource.ItemId}",
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromMinutes(60));
 
         if (!isLocked)
         {
@@ -233,7 +270,7 @@ public sealed class DataSourceIndexingService
 
         try
         {
-            await SyncDataSourceLockedAsync(dataSource, masterProfile, indexMetadata, cancellationToken);
+            await SyncDataSourceLockedAsync(dataSource, masterProfile, cancellationToken);
         }
         finally
         {
@@ -241,11 +278,7 @@ public sealed class DataSourceIndexingService
         }
     }
 
-    private async Task SyncDataSourceLockedAsync(
-        AIDataSource dataSource,
-        IndexProfile masterProfile,
-        AIDataSourceIndexMetadata indexMetadata,
-        CancellationToken cancellationToken)
+    private async Task SyncDataSourceLockedAsync(AIDataSource dataSource, IndexProfile masterProfile, CancellationToken cancellationToken)
     {
         var documentIndexManager = _serviceProvider.GetKeyedService<IDocumentIndexManager>(masterProfile.ProviderName);
 
@@ -286,14 +319,12 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        // Read all documents from the source index using keyed document reader.
         // Look up the source index profile to determine its provider name.
-        var sourceProfile = (await _indexProfileStore.GetAllAsync())
-            .FirstOrDefault(i => string.Equals(i.Name, indexMetadata.IndexName, StringComparison.OrdinalIgnoreCase));
+        var sourceProfile = await _indexProfileStore.FindByNameAsync(dataSource.SourceIndexProfileName);
 
         if (sourceProfile == null)
         {
-            _logger.LogWarning("Source index profile '{IndexName}' not found.", indexMetadata.IndexName);
+            _logger.LogWarning("Source index profile '{IndexName}' not found.", dataSource.SourceIndexProfileName);
             return;
         }
 
@@ -306,9 +337,10 @@ public sealed class DataSourceIndexingService
         }
 
         var sourceDocuments = documentReader.ReadAsync(
-            indexMetadata.IndexName,
-            indexMetadata.TitleFieldName,
-            indexMetadata.ContentFieldName,
+            sourceProfile,
+            dataSource.KeyFieldName,
+            dataSource.TitleFieldName,
+            dataSource.ContentFieldName,
             cancellationToken);
 
         var documents = new List<DocumentIndex>();
@@ -349,62 +381,63 @@ public sealed class DataSourceIndexingService
                     continue;
                 }
 
-                var embeddingChunks = new List<DataSourceEmbeddingChunk>();
+                // Build filter fields from source document fields.
+                var filters = BuildFilterFields(sourceDoc.Fields);
+
+                // Create one document per chunk.
                 for (var i = 0; i < chunkTexts.Count; i++)
                 {
-                    embeddingChunks.Add(new DataSourceEmbeddingChunk
+                    var chunkId = $"{referenceId}_{i}";
+
+                    var embeddingDocument = new DataSourceEmbeddingDocument
                     {
-                        Text = chunkTexts[i],
+                        ReferenceId = referenceId,
+                        DataSourceId = dataSource.ItemId,
+                        ChunkId = chunkId,
+                        ChunkIndex = i,
+                        Title = sourceDoc.Title,
+                        Content = chunkTexts[i],
                         Embedding = embeddings[i].Vector.ToArray(),
-                        Index = i,
-                    });
-                }
+                        Timestamp = timestamp,
+                        Filters = filters,
+                    };
 
-                var embeddingDocument = new DataSourceEmbeddingDocument
-                {
-                    ReferenceId = referenceId,
-                    DataSourceId = dataSource.ItemId,
-                    Title = sourceDoc.Title,
-                    Text = sourceDoc.Content,
-                    Timestamp = timestamp,
-                    Chunks = embeddingChunks,
-                };
+                    var documentIndex = new DocumentIndex(chunkId);
 
-                var documentIndex = new DocumentIndex(referenceId);
-
-                var buildContext = new BuildDocumentIndexContext(documentIndex, embeddingDocument, [referenceId], documentIndexManager.GetContentIndexSettings())
-                {
-                    AdditionalProperties = new Dictionary<string, object>
+                    var buildContext = new BuildDocumentIndexContext(documentIndex, embeddingDocument, [chunkId], documentIndexManager.GetContentIndexSettings())
                     {
-                        { nameof(IndexProfile), masterProfile },
+                        AdditionalProperties = new Dictionary<string, object>
+                        {
+                            { nameof(IndexProfile), masterProfile },
+                        }
+                    };
+
+                    await _documentIndexHandlers.InvokeAsync((x, ctx) => x.BuildIndexAsync(ctx), buildContext, _logger);
+
+                    documents.Add(documentIndex);
+                    documentCount++;
+
+                    // Write batch to master index when batch size is reached.
+                    if (documents.Count >= BatchSize)
+                    {
+                        try
+                        {
+                            await documentIndexManager.AddOrUpdateDocumentsAsync(masterProfile, documents);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error writing batch to master index '{IndexName}' for data source '{DataSourceId}'.",
+                                masterProfile.IndexName, dataSource.ItemId);
+                        }
+
+                        documents.Clear();
                     }
-                };
-
-                await _documentIndexHandlers.InvokeAsync((x, ctx) => x.BuildIndexAsync(ctx), buildContext, _logger);
-
-                documents.Add(documentIndex);
-                documentCount++;
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing document '{ReferenceId}' for data source '{DataSourceId}'. Continuing with remaining documents.",
                     referenceId, dataSource.ItemId);
-            }
-
-            // Write batch to master index when batch size is reached.
-            if (documents.Count >= BatchSize)
-            {
-                try
-                {
-                    await documentIndexManager.AddOrUpdateDocumentsAsync(masterProfile, documents);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error writing batch to master index '{IndexName}' for data source '{DataSourceId}'.",
-                        masterProfile.IndexName, dataSource.ItemId);
-                }
-
-                documents.Clear();
             }
         }
 
@@ -424,9 +457,21 @@ public sealed class DataSourceIndexingService
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("Synced {DocumentCount} documents for data source '{DataSourceId}' to master index '{IndexName}'.",
+            _logger.LogInformation("Synced {DocumentCount} chunks for data source '{DataSourceId}' to master index '{IndexName}'.",
                 documentCount, dataSource.ItemId, masterProfile.IndexName);
         }
+    }
+
+    private static Dictionary<string, object> BuildFilterFields(Dictionary<string, object> sourceFields)
+    {
+        if (sourceFields == null || sourceFields.Count == 0)
+        {
+            return null;
+        }
+
+        var filters = new Dictionary<string, object>(sourceFields, StringComparer.OrdinalIgnoreCase);
+
+        return filters.Count > 0 ? filters : null;
     }
 
     private static List<TextChunk> ChunkText(string text, int maxChunkSize = 500, int overlap = 50)

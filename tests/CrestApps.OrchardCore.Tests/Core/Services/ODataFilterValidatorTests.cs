@@ -15,7 +15,7 @@ public sealed class ODataFilterValidatorTests
     public void IsValid_WhenFilterIsNull_ShouldReturnTrue()
     {
         // Act
-        var result = _validator.IsValid(null);
+        var result = _validator.IsValidFilter(null);
 
         // Assert
         Assert.True(result);
@@ -25,7 +25,7 @@ public sealed class ODataFilterValidatorTests
     public void IsValid_WhenFilterIsEmpty_ShouldReturnTrue()
     {
         // Act
-        var result = _validator.IsValid("");
+        var result = _validator.IsValidFilter("");
 
         // Assert
         Assert.True(result);
@@ -35,7 +35,7 @@ public sealed class ODataFilterValidatorTests
     public void IsValid_WhenFilterIsWhitespace_ShouldReturnTrue()
     {
         // Act
-        var result = _validator.IsValid("   ");
+        var result = _validator.IsValidFilter("   ");
 
         // Assert
         Assert.True(result);
@@ -51,7 +51,7 @@ public sealed class ODataFilterValidatorTests
     public void IsValid_WhenFilterHasSingleOperator_ShouldReturnTrue(string filter)
     {
         // Act
-        var result = _validator.IsValid(filter);
+        var result = _validator.IsValidFilter(filter);
 
         // Assert
         Assert.True(result, $"Filter '{filter}' should be valid");
@@ -65,7 +65,7 @@ public sealed class ODataFilterValidatorTests
     public void IsValid_WhenFilterHasMultipleOperators_ShouldReturnTrue(string filter)
     {
         // Act
-        var result = _validator.IsValid(filter);
+        var result = _validator.IsValidFilter(filter);
 
         // Assert
         Assert.True(result, $"Filter '{filter}' should be valid");
@@ -78,7 +78,7 @@ public sealed class ODataFilterValidatorTests
     public void IsValid_WhenFilterHasFunctionCalls_ShouldReturnTrue(string filter)
     {
         // Act
-        var result = _validator.IsValid(filter);
+        var result = _validator.IsValidFilter(filter);
 
         // Assert
         Assert.True(result, $"Filter '{filter}' should be valid");
@@ -91,7 +91,7 @@ public sealed class ODataFilterValidatorTests
     public void IsValid_WhenFilterHasNoValidOperatorOrFunction_ShouldReturnFalse(string filter)
     {
         // Act
-        var result = _validator.IsValid(filter);
+        var result = _validator.IsValidFilter(filter);
 
         // Assert
         Assert.False(result, $"Filter '{filter}' should be invalid");
@@ -104,7 +104,7 @@ public sealed class ODataFilterValidatorTests
     public void IsValid_WhenFilterHasUnbalancedQuotes_ShouldReturnFalse(string filter)
     {
         // Act
-        var result = _validator.IsValid(filter);
+        var result = _validator.IsValidFilter(filter);
 
         // Assert
         Assert.False(result, $"Filter '{filter}' should be invalid due to unbalanced quotes");
@@ -119,7 +119,7 @@ public sealed class ODataFilterValidatorTests
     public void IsValid_WhenFilterHasUnbalancedParentheses_ShouldReturnFalse(string filter)
     {
         // Act
-        var result = _validator.IsValid(filter);
+        var result = _validator.IsValidFilter(filter);
 
         // Assert
         Assert.False(result, $"Filter '{filter}' should be invalid due to unbalanced parentheses");
@@ -132,7 +132,7 @@ public sealed class ODataFilterValidatorTests
     public void IsValid_WhenFilterHasBalancedParentheses_ShouldReturnTrue(string filter)
     {
         // Act
-        var result = _validator.IsValid(filter);
+        var result = _validator.IsValidFilter(filter);
 
         // Assert
         Assert.True(result, $"Filter '{filter}' should be valid");
@@ -145,7 +145,7 @@ public sealed class ODataFilterValidatorTests
     public void IsValid_WhenFilterHasCaseVariations_ShouldReturnTrue(string filter)
     {
         // Act
-        var result = _validator.IsValid(filter);
+        var result = _validator.IsValidFilter(filter);
 
         // Assert
         Assert.True(result, $"Filter '{filter}' should be valid (case insensitive)");
@@ -158,7 +158,7 @@ public sealed class ODataFilterValidatorTests
         var filter = "(category eq 'docs' or category eq 'guides') and status ne 'archived' and priority gt 3";
 
         // Act
-        var result = _validator.IsValid(filter);
+        var result = _validator.IsValidFilter(filter);
 
         // Assert
         Assert.True(result, "Complex filter should be valid");
@@ -171,7 +171,7 @@ public sealed class ODataFilterValidatorTests
         var filter = "()";
 
         // Act
-        var result = _validator.IsValid(filter);
+        var result = _validator.IsValidFilter(filter);
 
         // Assert
         Assert.False(result, "Filter with only parentheses should be invalid");
@@ -184,7 +184,7 @@ public sealed class ODataFilterValidatorTests
     public void IsValid_WhenFilterIsOnlyOperator_ShouldReturnFalse(string filter)
     {
         // Act
-        var result = _validator.IsValid(filter);
+        var result = _validator.IsValidFilter(filter);
 
         // Assert
         Assert.False(result, $"Filter with only operator '{filter}' should be invalid");

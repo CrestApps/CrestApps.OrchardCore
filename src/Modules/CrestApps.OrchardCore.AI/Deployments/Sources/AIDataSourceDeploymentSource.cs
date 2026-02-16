@@ -36,6 +36,11 @@ internal sealed class AIDataSourceDeploymentSource : DeploymentSourceBase<AIData
             {
                 { "ItemId", dataSource.ItemId },
                 { "DisplayText", dataSource.DisplayText },
+                { "SourceIndexProfileName", dataSource.SourceIndexProfileName },
+                { "AIKnowledgeBaseIndexProfileName", dataSource.AIKnowledgeBaseIndexProfileName },
+                { "KeyFieldName", dataSource.KeyFieldName },
+                { "TitleFieldName", dataSource.TitleFieldName },
+                { "ContentFieldName", dataSource.ContentFieldName },
                 { "CreatedUtc", dataSource.CreatedUtc },
                 { "OwnerId", dataSource.OwnerId },
                 { "Author", dataSource.Author },
