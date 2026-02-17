@@ -44,6 +44,8 @@ public static class AIConstants
         public const string DataSourceMongoDB = "CrestApps.OrchardCore.AI.DataSources.MongoDB";
 
         public const string ChatApi = "CrestApps.OrchardCore.AI.Chat.Api";
+
+        public const string ProfileDocuments = "CrestApps.OrchardCore.AI.Profile.Documents";
     }
 
     public static class RouteNames
@@ -61,5 +63,9 @@ public static class AIConstants
         public const string ChatInteractionUploadDocument = "ChatInteractionUploadDocument";
 
         public const string ChatInteractionRemoveDocument = "ChatInteractionRemoveDocument";
+
+        public const string AIProfileUploadDocument = "AIProfileUploadDocument";
+
+        public const string AIProfileRemoveDocument = "AIProfileRemoveDocument";
     }
 }

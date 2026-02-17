@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -41,35 +42,62 @@ public sealed class ListDocumentsTool : AIFunction
         var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
         var executionContext = httpContextAccessor?.HttpContext?.Items[nameof(AIToolExecutionContext)] as AIToolExecutionContext;
 
-        if (executionContext?.Resource is not ChatInteraction interaction)
+        if (executionContext?.Resource is ChatInteraction interaction)
         {
-            return "Document access requires an active chat interaction session.";
+            var chatInteractionId = interaction.ItemId;
+            var documentStore = arguments.Services.GetService<IChatInteractionDocumentStore>();
+
+            if (documentStore is null)
+            {
+                return "Document store is not available.";
+            }
+
+            var documents = await documentStore.GetDocuments(chatInteractionId);
+
+            if (documents is null || documents.Count == 0)
+            {
+                return "No documents are attached to this session.";
+            }
+
+            var result = documents.Select(d => new
+            {
+                d.ItemId,
+                d.FileName,
+                d.ContentType,
+                FileSize = FormatFileSize(d.FileSize),
+            });
+
+            return JsonSerializer.Serialize(result);
         }
 
-        var chatInteractionId = interaction.ItemId;
-        var documentStore = arguments.Services.GetService<IChatInteractionDocumentStore>();
-
-        if (documentStore is null)
+        if (executionContext?.Resource is AIProfile profile)
         {
-            return "Document store is not available.";
+            var profileDocumentStore = arguments.Services.GetService<IAIProfileDocumentStore>();
+
+            if (profileDocumentStore is null)
+            {
+                return "Document store is not available.";
+            }
+
+            var documents = await profileDocumentStore.GetDocuments(profile.ItemId);
+
+            if (documents is null || documents.Count == 0)
+            {
+                return "No documents are attached to this profile.";
+            }
+
+            var result = documents.Select(d => new
+            {
+                d.ItemId,
+                d.FileName,
+                d.ContentType,
+                FileSize = FormatFileSize(d.FileSize),
+            });
+
+            return JsonSerializer.Serialize(result);
         }
 
-        var documents = await documentStore.GetDocuments(chatInteractionId);
-
-        if (documents is null || documents.Count == 0)
-        {
-            return "No documents are attached to this session.";
-        }
-
-        var result = documents.Select(d => new
-        {
-            d.ItemId,
-            d.FileName,
-            d.ContentType,
-            FileSize = FormatFileSize(d.FileSize),
-        });
-
-        return JsonSerializer.Serialize(result);
+        return "Document access requires an active chat interaction session or AI profile.";
     }
 
     private static string FormatFileSize(long bytes)
