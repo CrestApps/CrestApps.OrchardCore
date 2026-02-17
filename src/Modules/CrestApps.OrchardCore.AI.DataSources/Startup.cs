@@ -32,7 +32,6 @@ public sealed class Startup : StartupBase
         services.AddAIDataSourceServices();
         services.AddScoped<IAICompletionContextBuilderHandler, DataSourceAICompletionContextBuilderHandler>();
         services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
-        services.AddDisplayDriver<AIDataSource, AIDataSourceIndexDisplayDriver>();
         services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
         services.AddNavigationProvider<AIDataProviderAdminMenu>();
         services.AddDisplayDriver<AIProfile, AIProfileDataSourceDisplayDriver>();
