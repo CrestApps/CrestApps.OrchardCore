@@ -1,5 +1,5 @@
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
@@ -35,10 +35,9 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
         if (interaction.TryGet<ChatInteractionDataSourceMetadata>(out var dataSourceMetadata))
         {
             context.Context.DataSourceId = dataSourceMetadata.DataSourceId;
-            context.Context.DataSourceType = dataSourceMetadata.DataSourceType;
         }
 
-        if (interaction.TryGet<AzureRagChatMetadata>(out var ragMetadata))
+        if (interaction.TryGet<AIDataSourceRagMetadata>(out var ragMetadata))
         {
             context.Context.AdditionalProperties["Strictness"] = ragMetadata.Strictness;
             context.Context.AdditionalProperties["TopNDocuments"] = ragMetadata.TopNDocuments;

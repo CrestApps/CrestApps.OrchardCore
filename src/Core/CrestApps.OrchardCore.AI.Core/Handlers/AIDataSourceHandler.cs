@@ -6,7 +6,6 @@ using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
@@ -14,19 +13,16 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 public sealed class AIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly AIOptions _aiOptions;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
     public AIDataSourceHandler(
         IHttpContextAccessor httpContextAccessor,
-        IOptions<AIOptions> aiOptions,
         IClock clock,
         IStringLocalizer<AIDataSourceHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
-        _aiOptions = aiOptions.Value;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -42,24 +38,6 @@ public sealed class AIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
         {
             context.Result.Fail(new ValidationResult(S["Data source display-text is required."], [nameof(AIDataSource.DisplayText)]));
-        }
-
-        var hasProfileSource = !string.IsNullOrWhiteSpace(context.Model.ProfileSource);
-        var hasType = !string.IsNullOrWhiteSpace(context.Model.Type);
-
-        if (!hasProfileSource)
-        {
-            context.Result.Fail(new ValidationResult(S["Data source profile-source is required."], [nameof(AIDataSource.ProfileSource)]));
-        }
-
-        if (!hasType)
-        {
-            context.Result.Fail(new ValidationResult(S["Data source type is required."], [nameof(AIDataSource.Type)]));
-        }
-
-        if (hasProfileSource && hasType && !_aiOptions.DataSources.TryGetValue(new AIDataSourceKey(context.Model.ProfileSource, context.Model.Type), out _))
-        {
-            context.Result.Fail(new ValidationResult(S["Unable to find a profile-source named '{0}' with the type '{1}'.", context.Model.ProfileSource, context.Model.Type], [nameof(AIDataSource.Type)]));
         }
 
         return Task.CompletedTask;
@@ -87,20 +65,6 @@ public sealed class AIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
         if (!string.IsNullOrEmpty(displayText))
         {
             dataSource.DisplayText = displayText;
-        }
-
-        var profileSource = data[nameof(AIDataSource.ProfileSource)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(profileSource))
-        {
-            dataSource.ProfileSource = profileSource;
-        }
-
-        var type = data[nameof(AIDataSource.Type)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(type))
-        {
-            dataSource.Type = type;
         }
 
         var properties = data[nameof(AIDataSource.Properties)]?.AsObject();

@@ -8,7 +8,6 @@
   - [AI Chat Services Feature](#ai-chat-services-feature)
   - [AI Chat WebAPI](#ai-chat-webapi)
   - [AI Connection Management](#ai-connection-management)
-  - [AI Data Source Management](#ai-data-source-management)
   - [Defining Chat Profiles Using Code](#defining-chat-profiles-using-code)
 - [AI Tool Management Feature](#ai-tool-management-feature)
   - [Extending AI Chat with Custom Functions](#extending-ai-chat-with-custom-functions)
@@ -221,36 +220,7 @@ This recipe ensures that a **DeepSeek** connection is added or updated within th
 
 If a connection with the same `Name` and `Source` already exists, the recipe updates its properties. Otherwise, it creates a new connection.
 
-### AI Data Source Management 
-
-The **AI Data Source Management** feature enhances **AI Services** by offering a user-friendly interface for managing data sources accessible to AI models. To add data sources, you must first enable at least one feature that supplies a data source. For instance, the **Azure AI Search-Powered Data Source** feature provides access to data stored in Azure AI Search, enabling AI-powered conversational capabilities with that data.
-
-#### Creating Data Source via Recipe
-
-You can add or update data-source using recipe. Here is an example or creating a data-source
-
-
-```
-{
-  "steps": [
-    {
-      "name": "AIDataSource",
-      "DataSources": [
-        {
-          "ProfileSource": "AzureAISearch",
-          "Type": "azure_search",
-          "DisplayText": "Articles (Azure AI Search)",
-          "Properties": {
-            "AzureAIProfileAISearchMetadata": {
-              "IndexName": "articles"
-            }
-          }
-        }
-      ]
-    }
-  ]
-}
-```
+Data source (RAG/Knowledge Base) documentation is in the `CrestApps.OrchardCore.AI.DataSources` module: [README](../CrestApps.OrchardCore.AI.DataSources/README.md).
 
 ### Defining AI Profiles Using Code
 

@@ -136,10 +136,11 @@ public sealed class DocumentOrchestrationHandlerTests
 
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(new ChatInteraction(), context));
 
-        Assert.Contains("report.pdf", context.CompletionContext.SystemMessage);
-        Assert.Contains("read_document", context.CompletionContext.SystemMessage);
+        var systemMessage = context.SystemMessageBuilder.ToString();
+        Assert.Contains("report.pdf", systemMessage);
+        Assert.Contains("read_document", systemMessage);
         // chat_interaction_id is NOT in the system message — it is resolved server-side.
-        Assert.DoesNotContain("chat_interaction_id", context.CompletionContext.SystemMessage);
+        Assert.DoesNotContain("chat_interaction_id", systemMessage);
     }
 
     [Fact]

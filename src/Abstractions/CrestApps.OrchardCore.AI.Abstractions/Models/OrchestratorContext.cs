@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.AI.Models;
@@ -42,6 +43,19 @@ public sealed class OrchestrationContext
     /// System tools use these to load document content on demand.
     /// </summary>
     public IList<ChatInteractionDocumentInfo> Documents { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether tools should be disabled for this orchestration.
+    /// When true, the orchestrator should not inject any tools into the completion context.
+    /// </summary>
+    public bool DisableTools { get; set; }
+
+    /// <summary>
+    /// Gets a shared <see cref="StringBuilder"/> that orchestration handlers can append to
+    /// in order to build the final system message. The accumulated content is flushed to
+    /// <see cref="AICompletionContext.SystemMessage"/> after all handlers have run.
+    /// </summary>
+    public StringBuilder SystemMessageBuilder { get; } = new();
 
     /// <summary>
     /// Gets the extensible property bag for additional context contributed by

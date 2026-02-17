@@ -16,6 +16,7 @@
     <PackageReference Include="OrchardCore.Liquid.Abstractions" />
     <PackageReference Include="Lucene.Net.Analysis.Common" />
     <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="OrchardCore.Indexing.Core" />
   </ItemGroup>
 
   <ItemGroup>

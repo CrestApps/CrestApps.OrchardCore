@@ -16,4 +16,9 @@ public static class AIToolPurposes
     /// Tools that generate content such as images or charts.
     /// </summary>
     public const string ContentGeneration = "content_generation";
+
+    /// <summary>
+    /// Tools that search data source embeddings for RAG (Retrieval-Augmented Generation).
+    /// </summary>
+    public const string DataSourceSearch = "data_source_search";
 }

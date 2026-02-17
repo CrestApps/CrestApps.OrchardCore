@@ -273,7 +273,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             // Avoid using tools or any data sources when generating title to reduce the used tokens.
             c.DataSourceId = null;
-            c.DataSourceType = null;
             c.DisableTools = true;
         });
 
@@ -319,14 +318,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
             ctx.ConversationHistory = transcript.ToList();
             ctx.CompletionContext.AdditionalProperties["Session"] = chatSession;
         });
-
-        var httpContext = Context.GetHttpContext();
-
-        httpContext.Items[nameof(AIToolExecutionContext)] = new AIToolExecutionContext(profile)
-        {
-            ProviderName = orchestratorContext.SourceName,
-            ConnectionName = orchestratorContext.CompletionContext.ConnectionName,
-        };
 
         // Resolve the orchestrator for this profile and execute the completion.
         var orchestrator = _orchestratorResolver.Resolve(profile.OrchestratorName);
