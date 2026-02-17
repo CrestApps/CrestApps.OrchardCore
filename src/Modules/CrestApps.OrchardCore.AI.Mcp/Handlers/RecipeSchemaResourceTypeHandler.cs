@@ -95,7 +95,7 @@ public sealed class RecipeSchemaResourceTypeHandler : McpResourceTypeHandlerBase
                 {
                     Uri = resource.Resource.Uri,
                     MimeType = "application/schema+json",
-                    Text = recipeSchema.ToString(),
+                    Text = JsonSerializer.Serialize(recipeSchema),
                 }
             ]
         };
@@ -128,7 +128,7 @@ public sealed class RecipeSchemaResourceTypeHandler : McpResourceTypeHandlerBase
                 {
                     Uri = resource.Resource.Uri,
                     MimeType = "application/schema+json",
-                    Text = stepSchema.ToString(),
+                    Text = JsonSerializer.Serialize(stepSchema),
                 }
             ]
         };

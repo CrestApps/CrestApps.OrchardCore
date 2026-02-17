@@ -1,3 +1,5 @@
+using Json.Schema;
+
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
 /// <summary>All built-in part settings schema definitions, grouped in a single compilation unit.</summary>

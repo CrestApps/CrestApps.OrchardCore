@@ -7,6 +7,7 @@
   <ItemGroup>
     <!-- Miscellaneous Packages -->
     <PackageVersion Include="FluentFTP" Version="52.1.0" />
+    <PackageVersion Include="JsonSchema.Net" Version="7.4.0" />
     <PackageVersion Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00017" />
     <PackageVersion Include="MongoDB.Driver" Version="3.4.0" />
     <PackageVersion Include="NuGet.Versioning" Version="7.0.1" />

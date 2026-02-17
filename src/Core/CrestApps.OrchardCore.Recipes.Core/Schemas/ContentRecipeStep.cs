@@ -1,3 +1,4 @@
+using Json.Schema;
 using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
