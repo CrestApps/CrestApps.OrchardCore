@@ -1,13 +1,17 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.DataSources.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.BackgroundJobs;
 using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Indexing;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 
@@ -25,17 +29,27 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
     private const string LegacyMongoDBMetadataName = "AzureAIProfileMongoDBMetadata";
 
     private readonly ShellSettings _shellSettings;
+    private readonly ICatalog<AIDataSource> _sataSourceStore;
+    private readonly IIndexProfileManager _indexProfileManager;
+    private readonly IIndexProfileStore _indexProfileStore;
 
-    public AzureOpenAIDataSourceMetadataMigrations(ShellSettings shellSettings)
+    public AzureOpenAIDataSourceMetadataMigrations(
+        ShellSettings shellSettings,
+        ICatalog<AIDataSource> sataSourceStore,
+        IIndexProfileManager indexProfileManager,
+        IIndexProfileStore indexProfileStore)
     {
         _shellSettings = shellSettings;
+        _sataSourceStore = sataSourceStore;
+        _indexProfileManager = indexProfileManager;
+        _indexProfileStore = indexProfileStore;
     }
 
     public int Create()
     {
         if (_shellSettings.IsInitializing())
         {
-            return 2;
+            return 3;
         }
 
         ShellScope.AddDeferredTask(async scope =>
@@ -191,54 +205,87 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
             }
         });
 
-        return 2;
+        return 3;
     }
 
     public async Task<int> UpdateFrom1Async()
     {
         if (_shellSettings.IsInitializing())
         {
-            return 2;
+            return 3;
         }
 
-        ShellScope.AddDeferredTask(async scope =>
+
+        await MigrateKnowledgeBaseIndexesAsync();
+
+        return 3;
+    }
+
+    public async Task<int> UpdateFrom2Async()
+    {
+        if (_shellSettings.IsInitializing())
         {
-            var dataSourceStore = scope.ServiceProvider.GetRequiredService<ICatalog<AIDataSource>>();
+            return 3;
+        }
 
-            foreach (var dataSource in await dataSourceStore.GetAllAsync())
+        await MigrateKnowledgeBaseIndexesAsync();
+
+        return 3;
+    }
+
+    internal async Task MigrateKnowledgeBaseIndexesAsync()
+    {
+        var dataSources = await _sataSourceStore.GetAllAsync();
+
+        // Create one AI KB index per provider (if needed) before updating data sources.
+        var masterIndexByProvider = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var dataSource in dataSources)
+        {
+            var providerName = GetLegacyProviderName(dataSource);
+
+            if (string.IsNullOrEmpty(providerName) || !IsSupportedProvider(providerName))
             {
-                // Skip field mappings if already configured.
-                if (!string.IsNullOrEmpty(dataSource.TitleFieldName) &&
-                    !string.IsNullOrEmpty(dataSource.ContentFieldName))
-                {
-                    continue;
-                }
+                continue;
+            }
 
-                // Determine the provider from legacy properties.
-                var providerName = dataSource.Properties?["ProviderName"]?.GetValue<string>();
+            if (masterIndexByProvider.ContainsKey(providerName))
+            {
+                continue;
+            }
 
-                if (string.IsNullOrEmpty(providerName))
-                {
-                    var profileSource = dataSource.Properties?["ProfileSource"]?.GetValue<string>();
-                    var type = dataSource.Properties?["Type"]?.GetValue<string>();
+            var masterIndexName = await EnsureKnowledgeBaseIndexAsync(providerName);
 
-                    if (!string.IsNullOrEmpty(profileSource))
-                    {
-                        providerName = type switch
-                        {
-                            "elasticsearch" => "Elasticsearch",
-                            "azure_search" => "AzureAISearch",
-                            _ => type,
-                        };
-                    }
-                }
+            if (!string.IsNullOrEmpty(masterIndexName))
+            {
+                masterIndexByProvider[providerName] = masterIndexName;
+            }
+        }
 
-                if (string.IsNullOrEmpty(providerName))
-                {
-                    continue;
-                }
+        // Migrate field mappings + master index linkage, then trigger indexing.
+        foreach (var dataSource in dataSources)
+        {
+            var providerName = GetLegacyProviderName(dataSource);
 
-                // Set default field mappings based on the provider.
+            if (string.IsNullOrEmpty(providerName) || !IsSupportedProvider(providerName))
+            {
+                continue;
+            }
+
+            var needsUpdate = false;
+
+            if (string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName) &&
+                masterIndexByProvider.TryGetValue(providerName, out var masterIndexName))
+            {
+                dataSource.AIKnowledgeBaseIndexProfileName = masterIndexName;
+                needsUpdate = true;
+            }
+
+            // Set default field mappings based on the provider.
+            if (string.IsNullOrEmpty(dataSource.ContentFieldName))
+            {
+                dataSource.KeyFieldName ??= "ContentItemId";
+
                 if (string.Equals(providerName, "Elasticsearch", StringComparison.OrdinalIgnoreCase))
                 {
                     dataSource.TitleFieldName ??= "Content.ContentItem.DisplayText.Analyzed";
@@ -250,11 +297,116 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                     dataSource.ContentFieldName ??= "Content__ContentItem__FullText";
                 }
 
-                await dataSourceStore.UpdateAsync(dataSource);
+                needsUpdate = true;
             }
-        });
 
-        return 2;
+            if (!needsUpdate)
+            {
+                continue;
+            }
+
+            await _sataSourceStore.UpdateAsync(dataSource);
+
+            // Trigger indexing in the background (best-effort).
+            await TrySyncDataSourceAsync(dataSource);
+        }
+    }
+
+    private static bool IsSupportedProvider(string providerName)
+        => string.Equals(providerName, "Elasticsearch", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(providerName, "AzureAISearch", StringComparison.OrdinalIgnoreCase);
+
+    private static string GetLegacyProviderName(AIDataSource dataSource)
+    {
+        var providerName = dataSource.Properties?["ProviderName"]?.GetValue<string>();
+
+        if (!string.IsNullOrEmpty(providerName))
+        {
+            return providerName;
+        }
+
+        var profileSource = dataSource.Properties?["ProfileSource"]?.GetValue<string>();
+        var type = dataSource.Properties?["Type"]?.GetValue<string>();
+
+        if (!string.IsNullOrEmpty(profileSource))
+        {
+            return type switch
+            {
+                "elasticsearch" => "Elasticsearch",
+                "azure_search" => "AzureAISearch",
+                _ => type,
+            };
+        }
+
+        return null;
+    }
+
+    private async Task<string> EnsureKnowledgeBaseIndexAsync(string providerName)
+    {
+        // Prefer an existing DataSource master index for this provider.
+        var existing = await _indexProfileStore.GetAsync(providerName, DataSourceConstants.IndexingTaskType);
+
+        if (!existing.Any())
+        {
+            var preferred = existing.FirstOrDefault(x => x.Name.StartsWith("AIKnowledgeBaseWarehouse", StringComparison.OrdinalIgnoreCase));
+
+            return (preferred ?? existing.First()).Name;
+        }
+
+        var name = GetKnowledgeBaseWarehouseName(providerName);
+
+        // Avoid duplicates if already present by name.
+        if (await _indexProfileManager.FindByNameAsync(name) is { } byName)
+        {
+            return byName.Name;
+        }
+
+        var indexProfile = await _indexProfileManager.NewAsync(providerName, DataSourceConstants.IndexingTaskType);
+        indexProfile.Name = name;
+
+        var validationResult = await _indexProfileManager.ValidateAsync(indexProfile);
+
+        if (!validationResult.Succeeded)
+        {
+            // log error.
+            return null;
+        }
+
+        await _indexProfileManager.CreateAsync(indexProfile);
+
+        return indexProfile.Name;
+    }
+
+    private static string GetKnowledgeBaseWarehouseName(string providerName)
+        => string.Equals(providerName, "Elasticsearch", StringComparison.OrdinalIgnoreCase)
+            ? "AIKnowledgeBaseWarehouse"
+            : "AIKnowledgeBaseWarehouseAZ";
+
+    private async Task TrySyncDataSourceAsync(AIDataSource dataSource)
+    {
+        // Do not take a compile-time dependency on CrestApps.OrchardCore.AI.DataSources.
+        // If the module is enabled, call DataSourceIndexingService.SyncDataSourceAsync via reflection.
+        if (string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName) ||
+            string.IsNullOrEmpty(dataSource.SourceIndexProfileName))
+        {
+            return;
+        }
+
+        // Ensure the referenced master profile exists to avoid breaking sites.
+        if (await _indexProfileManager.FindByNameAsync(dataSource.AIKnowledgeBaseIndexProfileName) == null)
+        {
+            return;
+        }
+
+        ShellScope.AddDeferredTask(s =>
+        {
+            return HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("migrate-datasource", dataSource, (scope, ds) =>
+            {
+                var indexingService = scope.ServiceProvider.GetRequiredService<DataSourceIndexingService>();
+
+                return indexingService.SyncDataSourceAsync(ds);
+            });
+        });
     }
 
     /// <summary>

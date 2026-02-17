@@ -24,7 +24,7 @@ internal sealed class AzureOpenAIOwnDataAIDataSourceMigrations : DataMigration
     {
         if (_shellSettings.IsInitializing())
         {
-            return 4;
+            return 5;
         }
 
         ShellScope.AddDeferredTask(async scope =>
@@ -57,14 +57,14 @@ internal sealed class AzureOpenAIOwnDataAIDataSourceMigrations : DataMigration
             }
         });
 
-        return 4;
+        return 5;
     }
 
     public async Task<int> UpdateFrom2Async()
     {
         if (_shellSettings.IsInitializing())
         {
-            return 4;
+            return 5;
         }
 
         ShellScope.AddDeferredTask(async scope =>
@@ -127,7 +127,7 @@ internal sealed class AzureOpenAIOwnDataAIDataSourceMigrations : DataMigration
     {
         if (_shellSettings.IsInitializing())
         {
-            return 4;
+            return 5;
         }
 
         ShellScope.AddDeferredTask(async scope =>
@@ -156,5 +156,28 @@ internal sealed class AzureOpenAIOwnDataAIDataSourceMigrations : DataMigration
         });
 
         return 4;
+    }
+
+    public async Task<int> UpdateFrom4Async()
+    {
+        if (_shellSettings.IsInitializing())
+        {
+            return 5;
+        }
+
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var dataSourceStore = scope.ServiceProvider.GetRequiredService<ICatalog<AIDataSource>>();
+            var indexProfileStore = scope.ServiceProvider.GetRequiredService<IIndexProfileStore>();
+            var indexProfileManager = scope.ServiceProvider.GetRequiredService<IIndexProfileManager>();
+
+            await AzureOpenAIDataSourceMetadataMigrations.MigrateKnowledgeBaseIndexesAsync(
+                dataSourceStore,
+                indexProfileStore,
+                indexProfileManager,
+                scope.ServiceProvider);
+        });
+
+        return 5;
     }
 }
