@@ -1,3 +1,5 @@
+using Json.Schema;
+
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
 /// <summary>
@@ -62,13 +64,13 @@ public abstract class PartSettingsSchemaBase : IContentDefinitionSchemaDefinitio
             .Type(SchemaValueType.Array)
             .Items(new JsonSchemaBuilder().Type(SchemaValueType.String));
 
-    protected static (string, JsonSchemaBuilder) Prop(string name, JsonSchemaBuilder schema)
+    protected static (string, JsonSchema) Prop(string name, JsonSchemaBuilder schema)
         => (name, schema);
 
     /// <summary>
     /// Builds a settings-object with <c>additionalProperties: false</c>.
     /// </summary>
-    protected static JsonSchemaBuilder Obj(params (string, JsonSchemaBuilder)[] props)
+    protected static JsonSchemaBuilder Obj(params (string, JsonSchema)[] props)
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(props)

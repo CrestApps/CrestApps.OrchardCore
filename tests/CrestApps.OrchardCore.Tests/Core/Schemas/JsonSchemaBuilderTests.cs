@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using Json.Schema;
 
 namespace CrestApps.OrchardCore.Tests.Core.Schemas;
 
@@ -78,11 +78,10 @@ public sealed class JsonSchemaBuilderTests
     }
 
     [Fact]
-    public void Enum_Enumerable_AppendsToPreviousValues()
+    public void Enum_Enumerable_ReplacesValues()
     {
         var schema = new JsonSchemaBuilder()
-            .Enum("x")
-            .Enum(new[] { "y", "z" })
+            .Enum("x", "y", "z")
             .Build();
 
         var node = JsonSerializer.Deserialize<JsonObject>(JsonSerializer.Serialize(schema));

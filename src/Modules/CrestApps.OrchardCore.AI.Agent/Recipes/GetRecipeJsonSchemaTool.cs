@@ -1,8 +1,8 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.Recipes.Core;
-using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Services;
+using Json.Schema;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
