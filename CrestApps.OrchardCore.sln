@@ -105,17 +105,17 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Recip
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions", "src\Modules\CrestApps.OrchardCore.AI.Chat.Interactions\CrestApps.OrchardCore.AI.Chat.Interactions.csproj", "{A7EE7F53-ECD1-4752-9191-C52B7D73E0C0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions.Pdf", "src\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Pdf\CrestApps.OrchardCore.AI.Chat.Interactions.Pdf.csproj", "{BAE70115-40DC-4452-9F88-89DF44A8AB45}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Documents.Pdf", "src\Modules\CrestApps.OrchardCore.AI.Documents.Pdf\CrestApps.OrchardCore.AI.Documents.Pdf.csproj", "{BAE70115-40DC-4452-9F88-89DF44A8AB45}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml", "src\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml\CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml.csproj", "{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Documents.OpenXml", "src\Modules\CrestApps.OrchardCore.AI.Documents.OpenXml\CrestApps.OrchardCore.AI.Documents.OpenXml.csproj", "{9CA0A08F-4CEF-F4D3-0B0F-3A4F8C11E3AE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions.Documents", "src\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Documents\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.csproj", "{9654712F-CF5F-E42E-F709-6B74D6D3ED4C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Documents", "src\Modules\CrestApps.OrchardCore.AI.Documents\CrestApps.OrchardCore.AI.Documents.csproj", "{9654712F-CF5F-E42E-F709-6B74D6D3ED4C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI", "src\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI.csproj", "{1DF22DE5-589B-91D7-D04A-AD3C2E128003}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Documents.AzureAI", "src\Modules\CrestApps.OrchardCore.AI.Documents.AzureAI\CrestApps.OrchardCore.AI.Documents.AzureAI.csproj", "{1DF22DE5-589B-91D7-D04A-AD3C2E128003}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions.Core", "src\Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj", "{7C269FA8-9271-4B17-B57D-13CF78C39492}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch", "src\Modules\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch\CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch.csproj", "{0A065220-6718-4E8E-98FA-45D885BFD20C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.AI.Documents.Elasticsearch", "src\Modules\CrestApps.OrchardCore.AI.Documents.Elasticsearch\CrestApps.OrchardCore.AI.Documents.Elasticsearch.csproj", "{0A065220-6718-4E8E-98FA-45D885BFD20C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrestApps.OrchardCore.Samples.McpClient", "src\Startup\CrestApps.OrchardCore.Samples.McpClient\CrestApps.OrchardCore.Samples.McpClient.csproj", "{BCBB9115-AB44-685E-CE04-2DF9D3611DE3}"
 EndProject

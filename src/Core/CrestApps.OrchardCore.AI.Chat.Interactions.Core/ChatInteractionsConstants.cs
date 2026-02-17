@@ -34,6 +34,6 @@ public static class ChatInteractionsConstants
     {
         public const string ChatInteractions = "CrestApps.OrchardCore.AI.Chat.Interactions";
 
-        public const string ChatDocuments = "CrestApps.OrchardCore.AI.Chat.Interactions.Documents";
+        public const string ChatDocuments = "CrestApps.OrchardCore.AI.Documents";
     }
 }

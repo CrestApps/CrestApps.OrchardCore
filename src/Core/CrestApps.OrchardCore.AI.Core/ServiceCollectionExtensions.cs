@@ -111,7 +111,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddDocumentTextExtractor<T>(this IServiceCollection services, params ExtractorExtension[] supportedExtensions)
         where T : class, IDocumentTextExtractor
     {
-        services.Configure<ChatInteractionsOptions>(options =>
+        services.Configure<ChatDocumentsOptions>(options =>
         {
             foreach (var extension in supportedExtensions)
             {

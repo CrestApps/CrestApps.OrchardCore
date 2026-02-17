@@ -1,83 +1,88 @@
+@using CrestApps.OrchardCore.AI.Documents.ViewModels
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
 @using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.Core.Models
-@using CrestApps.OrchardCore.AI.ViewModels
 @using Microsoft.Extensions.Options
 @using OrchardCore
 
-@model EditAIProfileDocumentsViewModel
+@model EditChatInteractionDocumentsViewModel
 
 @inject IOptions<ChatDocumentsOptions> ChatInteractionOptions
 @{
-    var allowedExtensions = string.Join(", ", ChatInteractionOptions.Value.EmbeddableFileExtensions);
+    var allowedExtensions = string.Join(", ", ChatInteractionOptions.Value.AllowedFileExtensions);
+}
+
+@if (!Model.HasIndexProfile)
+{
+    <div class="alert alert-warning" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+        <strong>@T["Index Not Configured"]</strong>
+        <p class="mb-0">
+            @T["No document index is configured. Please navigate to Settings > Chat Interactions and select an index profile to enable document embedding."]
+        </p>
+    </div>
+}
+else if (!Model.HasVectorSearchService)
+{
+    <div class="alert alert-warning" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+        <strong>@T["Vector Search Service Not Available"]</strong>
+        <p class="mb-0">
+            @T["The configured index profile \"{0}\" does not have a registered embedding search service.", Model.IndexProfileName]
+        </p>
+    </div>
 }
 
 <div class="mb-3">
-    <h5>@T["Documents"]</h5>
-    <p class="text-muted small">@T["Upload text-based documents for RAG (Retrieval Augmented Generation). These documents will be available across all chat sessions using this profile."]</p>
-
-    @if (!Model.HasIndexProfile)
-    {
-        <div class="alert alert-warning" role="alert">
-            <i class="fa-solid fa-triangle-exclamation me-2"></i>
-            <strong>@T["Index Not Configured"]</strong>
-            <p class="mb-0">
-                @T["No document index is configured. Please navigate to Settings > Chat Interactions and select an index profile to enable document embedding."]
-            </p>
-        </div>
-    }
-    else if (!Model.HasVectorSearchService)
-    {
-        <div class="alert alert-warning" role="alert">
-            <i class="fa-solid fa-triangle-exclamation me-2"></i>
-            <strong>@T["Vector Search Service Not Available"]</strong>
-            <p class="mb-0">
-                @T["The configured index profile \"{0}\" does not have a registered embedding search service.", Model.IndexProfileName]
-            </p>
-        </div>
-    }
+    <label class="form-label">
+        @T["Attached Documents"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Upload documents to chat against your own data. The content will be extracted and used as context for AI responses."]" aria-label="@T["Help: Attached Documents explanation"]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
 
     <div class="border rounded p-3 bg-light">
         <!-- Drag and drop zone -->
-        <div id="profileDropZone-@Model.ProfileId" class="drop-zone border rounded p-4 mb-3 text-center bg-white" style="border: 2px dashed #dee2e6 !important; cursor: pointer; transition: all 0.2s ease;">
-            <div class="drop-zone-content d-flex flex-column align-items-center" id="profileDropZoneContent-@Model.ProfileId">
+        <div id="dropZone-@Model.ItemId" class="drop-zone border rounded p-4 mb-3 text-center bg-white" style="border: 2px dashed #dee2e6 !important; cursor: pointer; transition: all 0.2s ease;">
+            <div class="drop-zone-content d-flex flex-column align-items-center" id="dropZoneContent-@Model.ItemId">
                 <i class="fa-solid fa-cloud-arrow-up fa-3x text-muted mb-3"></i>
                 <div class="text-muted mb-2">@T["Drag and drop files here"]</div>
                 <div class="text-muted mb-2">@T["or"]</div>
-                <button type="button" class="btn btn-primary" id="profileBrowseBtn-@Model.ProfileId">
+                <button type="button" class="btn btn-primary" id="browseBtn-@Model.ItemId">
                     <i class="fa-solid fa-folder-open me-1"></i>
                     @T["Browse Files"]
                 </button>
             </div>
-            <div class="drop-zone-active d-none d-flex flex-column align-items-center" id="profileDropZoneActive-@Model.ProfileId">
+            <div class="drop-zone-active d-none d-flex flex-column align-items-center" id="dropZoneActive-@Model.ItemId">
                 <i class="fa-solid fa-file-arrow-down fa-3x text-primary mb-2"></i>
                 <div class="text-primary fw-bold">@T["Drop files to upload"]</div>
             </div>
         </div>
 
-        <div id="profileUploadAlert-@Model.ProfileId" class="alert alert-danger d-none" role="alert">
+        <div id="uploadAlert-@Model.ItemId" class="alert alert-danger d-none" role="alert">
             <div class="d-flex justify-content-between align-items-start">
-                <div class="me-3" id="profileUploadAlertMessage-@Model.ProfileId"></div>
-                <button type="button" class="btn-close" aria-label="@T["Close"]" id="profileUploadAlertClose-@Model.ProfileId"></button>
+                <div class="me-3" id="uploadAlertMessage-@Model.ItemId"></div>
+                <button type="button" class="btn-close" aria-label="@T["Close"]" id="uploadAlertClose-@Model.ItemId"></button>
             </div>
         </div>
 
         <input type="file"
                class="d-none"
-               id="profileDocumentUpload-@Model.ProfileId"
+               id="documentUpload-@Model.ItemId"
                accept="@allowedExtensions"
                multiple />
         <div class="form-text mb-3">
-            @T["Supported formats: {0}. Only text-based documents for RAG.", allowedExtensions]
+            @T["Supported formats: {0}", allowedExtensions]
         </div>
 
-        <div id="profileDocumentsList-@Model.ProfileId" class="document-list">
+        <div id="documentsList-@Model.ItemId" class="document-list">
             @if (Model.Documents != null && Model.Documents.Any())
             {
                 foreach (var doc in Model.Documents)
                 {
                     <div class="document-item d-flex align-items-center border-bottom py-2" data-document-id="@doc.DocumentId">
                         <button type="button"
-                                class="btn btn-sm btn-outline-danger remove-profile-document me-2 flex-shrink-0"
+                                class="btn btn-sm btn-outline-danger remove-document me-2 flex-shrink-0"
                                 data-document-id="@doc.DocumentId"
                                 title="@T["Remove document"]">
                             <i class="fa-solid fa-trash-can"></i>
@@ -95,12 +100,12 @@
             {
                 <div class="text-center text-muted py-3 no-documents">
                     <i class="fa-solid fa-file-circle-plus fa-2x mb-2"></i>
-                    <div>@T["No documents attached. Upload text-based documents to enable RAG across all chat sessions."]</div>
+                    <div>@T["No documents attached. Upload documents to chat against your own data."]</div>
                 </div>
             }
         </div>
 
-        <div id="profileUploadProgress-@Model.ProfileId" class="mt-3" style="display: none;">
+        <div id="uploadProgress-@Model.ItemId" class="mt-3" style="display: none;">
             <div class="progress">
                 <div class="progress-bar progress-bar-striped progress-bar-animated"
                      role="progressbar"
@@ -144,19 +149,19 @@
 
 <script at="Foot">
     (function() {
-        const profileId = '@Model.ProfileId';
-        const fileInput = document.getElementById('profileDocumentUpload-' + profileId);
-        const documentsList = document.getElementById('profileDocumentsList-' + profileId);
-        const uploadProgress = document.getElementById('profileUploadProgress-' + profileId);
-        const uploadAlert = document.getElementById('profileUploadAlert-' + profileId);
-        const uploadAlertMessage = document.getElementById('profileUploadAlertMessage-' + profileId);
-        const uploadAlertClose = document.getElementById('profileUploadAlertClose-' + profileId);
-        const dropZone = document.getElementById('profileDropZone-' + profileId);
-        const dropZoneContent = document.getElementById('profileDropZoneContent-' + profileId);
-        const dropZoneActive = document.getElementById('profileDropZoneActive-' + profileId);
-        const browseBtn = document.getElementById('profileBrowseBtn-' + profileId);
-        const uploadUrl = '@Url.RouteUrl(AIConstants.RouteNames.AIProfileUploadDocument)';
-        const removeUrl = '@Url.RouteUrl(AIConstants.RouteNames.AIProfileRemoveDocument)';
+        const itemId = '@Model.ItemId';
+        const fileInput = document.getElementById('documentUpload-' + itemId);
+        const documentsList = document.getElementById('documentsList-' + itemId);
+        const uploadProgress = document.getElementById('uploadProgress-' + itemId);
+        const uploadAlert = document.getElementById('uploadAlert-' + itemId);
+        const uploadAlertMessage = document.getElementById('uploadAlertMessage-' + itemId);
+        const uploadAlertClose = document.getElementById('uploadAlertClose-' + itemId);
+        const dropZone = document.getElementById('dropZone-' + itemId);
+        const dropZoneContent = document.getElementById('dropZoneContent-' + itemId);
+        const dropZoneActive = document.getElementById('dropZoneActive-' + itemId);
+        const browseBtn = document.getElementById('browseBtn-' + itemId);
+        const uploadUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionUploadDocument)';
+        const removeUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionRemoveDocument)';
 
         function showUploadAlert(html) {
             if (!uploadAlert || !uploadAlertMessage) return;
@@ -176,6 +181,7 @@
             });
         }
 
+        // Browse button click handler
         if (browseBtn && fileInput) {
             browseBtn.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -184,16 +190,19 @@
             });
         }
 
+        // Make the whole drop zone clickable
         if (dropZone && fileInput) {
             dropZone.addEventListener('click', function(e) {
-                if (e.target === browseBtn || e.target.closest('#profileBrowseBtn-' + profileId)) {
-                    return;
+                if (e.target === browseBtn || e.target.closest('#browseBtn-' + itemId)) {
+                    return; // Let the button handler deal with it
                 }
                 fileInput.click();
             });
         }
 
+        // Drag and drop handlers - simplified and more reliable approach
         if (dropZone) {
+            // Prevent default browser behavior globally
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 document.body.addEventListener(eventName, preventDefaults, false);
             });
@@ -203,6 +212,7 @@
                 e.stopPropagation();
             }
 
+            // Handle drag enter/over on the drop zone
             ['dragenter', 'dragover'].forEach(eventName => {
                 dropZone.addEventListener(eventName, function(e) {
                     preventDefaults(e);
@@ -210,6 +220,7 @@
                 }, false);
             });
 
+            // Handle drag leave
             ['dragleave', 'drop'].forEach(eventName => {
                 dropZone.addEventListener(eventName, function(e) {
                     preventDefaults(e);
@@ -217,6 +228,7 @@
                 }, false);
             });
 
+            // Handle drop
             dropZone.addEventListener('drop', function(e) {
                 preventDefaults(e);
                 unhighlight();
@@ -255,6 +267,7 @@
         }
 
         async function uploadFiles(files) {
+            // Auto-dismiss any prior error when a new upload starts
             hideUploadAlert();
 
             uploadProgress.style.display = 'block';
@@ -266,7 +279,7 @@
 
             try {
                 const formData = new FormData();
-                formData.append('profileId', profileId);
+                formData.append('chatInteractionId', itemId);
 
                 for (let i = 0; i < files.length; i++) {
                     formData.append('files', files[i]);
@@ -285,6 +298,7 @@
                 const result = await response.json();
                 progressBar.style.width = '100%';
 
+                // Handle successful uploads
                 if (result.uploaded && result.uploaded.length > 0) {
                     for (const doc of result.uploaded) {
                         addDocumentToList(doc);
@@ -294,6 +308,7 @@
                 const successCount = result.uploaded ? result.uploaded.length : 0;
                 const failCount = result.failed ? result.failed.length : 0;
 
+                // Show per-file errors (persistent, dismissible)
                 if (failCount > 0) {
                     const lines = [];
                     for (const f of result.failed) {
@@ -313,6 +328,7 @@
                     statusText.classList.remove('text-success', 'text-danger');
                     statusText.classList.add('text-warning');
                 } else if (failCount > 0) {
+                    // Keep status short; user-facing details are in the alert above
                     statusText.textContent = '@T["Upload failed"]';
                     statusText.classList.remove('text-success', 'text-warning');
                     statusText.classList.add('text-danger');
@@ -336,6 +352,7 @@
         }
 
         function addDocumentToList(doc) {
+            // Remove "no documents" message if present
             const noDocsMessage = documentsList.querySelector('.no-documents');
             if (noDocsMessage) {
                 noDocsMessage.remove();
@@ -346,7 +363,7 @@
             docItem.setAttribute('data-document-id', doc.documentId);
             docItem.innerHTML = `
                 <button type="button"
-                        class="btn btn-sm btn-outline-danger remove-profile-document me-2 flex-shrink-0"
+                        class="btn btn-sm btn-outline-danger remove-document me-2 flex-shrink-0"
                         data-document-id="${doc.documentId}"
                         title="@T["Remove document"]">
                     <i class="fa-solid fa-trash-can"></i>
@@ -374,6 +391,7 @@
         }
 
         function stripHtml(html) {
+            // If the text looks like HTML (contains tags), extract text content only
             if (html && typeof html === 'string' && /<[^>]+>/.test(html)) {
                 const div = document.createElement('div');
                 div.innerHTML = html;
@@ -382,8 +400,9 @@
             return html;
         }
 
+        // Handle document removal
         documentsList.addEventListener('click', async function(e) {
-            const removeBtn = e.target.closest('.remove-profile-document');
+            const removeBtn = e.target.closest('.remove-document');
             if (!removeBtn) return;
 
             const documentId = removeBtn.getAttribute('data-document-id');
@@ -395,18 +414,19 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ profileId: profileId, documentId: documentId })
+                    body: JSON.stringify({ itemId: itemId, documentId: documentId })
                 });
 
                 if (response.ok) {
                     const docItem = documentsList.querySelector(`[data-document-id="${documentId}"]`);
                     if (docItem) docItem.remove();
 
+                    // Show "no documents" message if list is empty
                     if (documentsList.querySelectorAll('.document-item').length === 0) {
                         documentsList.innerHTML = `
                             <div class="text-center text-muted py-3 no-documents">
                                 <i class="fa-solid fa-file-circle-plus fa-2x mb-2"></i>
-                                <div>@T["No documents attached. Upload text-based documents to enable RAG across all chat sessions."]</div>
+                                <div>@T["No documents attached. Upload documents to chat against your own data."]</div>
                             </div>
                         `;
                     }
@@ -429,3 +449,4 @@
         return $"{bytes / (1024.0 * 1024):F1} MB";
     }
 }
+

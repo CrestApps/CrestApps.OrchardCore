@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore AI Documents OpenXml Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Provides OpenXml text extraction for AI document processing (Word, Excel, PowerPoint).
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS AI Documents OpenXml</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DocumentFormat.OpenXml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 
+      Ensure this module directly depends on the required packages so that when someone installs it, 
+      they won't need to manually include the AI Documents package. 
+      This guarantees the module functions correctly and resolves the feature dependency.
+    -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.AI.Documents\CrestApps.OrchardCore.AI.Documents.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>
