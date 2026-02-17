@@ -6,6 +6,12 @@ namespace CrestApps.OrchardCore.AI.Models;
 
 public sealed class AIDataSource : CatalogItem, IDisplayTextAwareModel, ICloneable<AIDataSource>
 {
+    [Obsolete("Do no use any more.")]
+    public string ProfileSource { get; set; }
+
+    [Obsolete("Do no use any more.")]
+    public string Type { get; set; }
+
     public string DisplayText { get; set; }
 
     public DateTime CreatedUtc { get; set; }
@@ -47,6 +53,10 @@ public sealed class AIDataSource : CatalogItem, IDisplayTextAwareModel, ICloneab
             ItemId = ItemId,
             DisplayText = DisplayText,
             CreatedUtc = CreatedUtc,
+#pragma warning disable CS0618 // Type or member is obsolete
+            ProfileSource = ProfileSource,
+            Type = Type,
+#pragma warning restore CS0618 // Type or member is obsolete
             Author = Author,
             OwnerId = OwnerId,
             SourceIndexProfileName = SourceIndexProfileName,

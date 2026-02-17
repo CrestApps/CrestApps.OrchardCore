@@ -5,7 +5,6 @@ using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
-using OrchardCore.Indexing;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 
@@ -55,29 +54,6 @@ internal sealed class AzureOpenAIOwnDataAIDataSourceMigrations : DataMigration
             }
         });
 
-        return 5;
-    }
-
-    public Task<int> UpdateFrom2Async()
-    {
-        if (_shellSettings.IsInitializing())
-        {
-            return Task.FromResult(5);
-        }
-
-        ShellScope.AddDeferredTask(async scope =>
-        {
-            var dataSourceStore = scope.ServiceProvider.GetRequiredService<ICatalog<AIDataSource>>();
-            var indexProfileStore = scope.ServiceProvider.GetRequiredService<IIndexProfileStore>();
-            var indexProfileManager = scope.ServiceProvider.GetRequiredService<IIndexProfileManager>();
-
-            await AzureOpenAIDataSourceMetadataMigrations.MigrateKnowledgeBaseIndexesAsync(
-                dataSourceStore,
-                indexProfileStore,
-                indexProfileManager,
-                scope.ServiceProvider);
-        });
-
-        return Task.FromResult(4);
+        return 4;
     }
 }
