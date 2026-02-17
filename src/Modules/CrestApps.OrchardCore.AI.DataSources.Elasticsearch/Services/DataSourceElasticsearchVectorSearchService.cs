@@ -16,6 +16,23 @@ internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVe
     private readonly ElasticsearchClient _elasticClient;
     private readonly ILogger<DataSourceElasticsearchVectorSearchService> _logger;
 
+    internal static List<(string Kind, string Value)> BuildMustQueryDebug(string dataSourceId, string filter)
+    {
+        var list = new List<(string Kind, string Value)>
+        {
+            ("term", dataSourceId),
+        };
+
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            var filterBytes = System.Text.Encoding.UTF8.GetBytes(filter);
+            var filterBase64 = Convert.ToBase64String(filterBytes);
+            list.Add(("wrapper", filterBase64));
+        }
+
+        return list;
+    }
+
     public DataSourceElasticsearchVectorSearchService(
         ElasticsearchClient elasticClient,
         ILogger<DataSourceElasticsearchVectorSearchService> logger)
@@ -43,21 +60,21 @@ internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVe
 
         try
         {
-            var mustQueries = new List<Action<QueryDescriptor<JsonObject>>>
-            {
-                m => m.Term(t => t
-                    .Field(DataSourceConstants.ColumnNames.DataSourceId)
-                    .Value(dataSourceId)
-                ),
-            };
+            var mustQueries = new List<Action<QueryDescriptor<JsonObject>>>();
 
-            // If a provider-specific filter is provided (already translated from OData),
-            // add it as a raw query wrapper.
-            if (!string.IsNullOrWhiteSpace(filter))
+            foreach (var item in BuildMustQueryDebug(dataSourceId, filter))
             {
-                var filterBytes = System.Text.Encoding.UTF8.GetBytes(filter);
-                var filterBase64 = Convert.ToBase64String(filterBytes);
-                mustQueries.Add(m => m.Wrapper(w => w.Query(filterBase64)));
+                if (item.Kind == "term")
+                {
+                    mustQueries.Add(m => m.Term(t => t
+                        .Field(DataSourceConstants.ColumnNames.DataSourceId)
+                        .Value(item.Value)
+                    ));
+                }
+                else if (item.Kind == "wrapper")
+                {
+                    mustQueries.Add(m => m.Wrapper(w => w.Query(item.Value)));
+                }
             }
 
             var response = await _elasticClient.SearchAsync<JsonObject>(s => s

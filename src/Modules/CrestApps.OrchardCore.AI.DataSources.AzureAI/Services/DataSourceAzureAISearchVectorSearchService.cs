@@ -17,6 +17,20 @@ internal sealed class DataSourceAzureAISearchVectorSearchService : IDataSourceVe
     private readonly SearchIndexClient _searchIndexClient;
     private readonly ILogger _logger;
 
+    internal static string BuildODataFilter(string dataSourceId, string filter)
+    {
+        // Always filter by dataSourceId.
+        var odataFilter = $"{DataSourceConstants.ColumnNames.DataSourceId} eq '{dataSourceId}'";
+
+        // Merge with user-provided filter (already translated to OData for Azure).
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            odataFilter = $"({odataFilter}) and ({filter})";
+        }
+
+        return odataFilter;
+    }
+
     public DataSourceAzureAISearchVectorSearchService(
         SearchIndexClient searchIndexClient,
         ILogger<DataSourceAzureAISearchVectorSearchService> logger)
@@ -55,14 +69,7 @@ internal sealed class DataSourceAzureAISearchVectorSearchService : IDataSourceVe
                 }
             };
 
-            // Build filter expression — always filter by dataSourceId.
-            var odataFilter = $"{DataSourceConstants.ColumnNames.DataSourceId} eq '{dataSourceId}'";
-
-            // Merge with user-provided filter (already translated to OData for Azure).
-            if (!string.IsNullOrWhiteSpace(filter))
-            {
-                odataFilter = $"({odataFilter}) and ({filter})";
-            }
+            var odataFilter = BuildODataFilter(dataSourceId, filter);
 
             var searchOptions = new SearchOptions
             {

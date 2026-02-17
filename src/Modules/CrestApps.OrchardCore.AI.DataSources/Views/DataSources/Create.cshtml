@@ -8,6 +8,11 @@
 
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">
     @Html.ValidationSummary()
+
+    <div class="alert alert-warning" role="alert">
+        @T["After creating a data source, the Source Index, Knowledge Base Index, and field mappings can't be changed."]
+    </div>
+
     @await DisplayAsync(Model.Editor)
 
     <button class="btn btn-primary" type="submit">@T["Save"]</button>

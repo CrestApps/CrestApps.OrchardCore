@@ -160,7 +160,7 @@ public sealed class DataSourcesController : Controller
         {
             await _dataSourceManager.CreateAsync(dataSource);
 
-            await _notifier.SuccessAsync(H["Data source has been created successfully."]);
+            await _notifier.SuccessAsync(H["Data source has been created successfully. Index synchronization is running in the background to populate the AI Knowledge Base index."]);
 
             return RedirectToAction(nameof(Index));
         }
