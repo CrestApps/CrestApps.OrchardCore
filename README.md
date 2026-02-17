@@ -12,6 +12,7 @@ CrestApps provides a collection of open-source modules designed to enhance **Orc
     - [AI Module](#ai-module)
     - [AI Chat Module](#ai-chat-module)
     - [AI Chat Interactions Module](#ai-chat-interactions-module)
+    - [AI Data Sources Module](#ai-data-sources-module)
     - [Orchard Core AI Agent Module](#orchard-core-ai-agent-module)
     - [Model Context Protocol (MCP) Module](#model-context-protocol-mcp-module)
     - [Azure OpenAI Module](#azure-openai-module)
@@ -86,11 +87,19 @@ Provides interface for interacting with AI chat models like **ChatGPT** and othe
 Enables ad-hoc AI chat experiences with configurable parameters, document upload, and RAG (Retrieval Augmented Generation) support. Users can chat with AI models without predefined profiles and upload documents to chat against their own data. See the [AI Chat Interactions README](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/README.md) for more details.
 
 **Extension modules:**
+- [AI Chat Interactions - Core](src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/README.md) - Core abstractions and services
 - [AI Chat Interactions - Documents](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions.Documents/README.md) - Document upload and RAG support
 - [AI Chat Interactions - PDF](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions.Pdf/README.md) - PDF document support
 - [AI Chat Interactions - OpenXml](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml/README.md) - Word, Excel, PowerPoint support
 - [AI Chat Interactions - Documents (Azure AI Search)](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI/README.md) - Azure AI Search provider for documents
 - [AI Chat Interactions - Documents (Elasticsearch)](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch/README.md) - Elasticsearch provider for documents
+
+#### AI Data Sources Module
+Provides provider-agnostic Data Sources (RAG) management, knowledge base indexing, early RAG, and the DataSourceSearch tool. See the [AI Data Sources README](src/Modules/CrestApps.OrchardCore.AI.DataSources/README.md).
+
+**Provider modules:**
+- [AI Data Sources - Elasticsearch](src/Modules/CrestApps.OrchardCore.AI.DataSources.Elasticsearch/README.md)
+- [AI Data Sources - Azure AI Search](src/Modules/CrestApps.OrchardCore.AI.DataSources.AzureAI/README.md)
 
 #### Orchard Core AI Agent Module
 Enhances the **AI Module** by providing AI Agents to perform tasks on your Orchard Core site. For more details, see the [Orchard Core AI Agent Module README](src/Modules/CrestApps.OrchardCore.AI.Agent/README.md).

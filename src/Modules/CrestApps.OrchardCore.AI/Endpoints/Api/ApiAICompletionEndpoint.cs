@@ -243,7 +243,6 @@ internal static class ApiAICompletionEndpoint
 
             // Avoid using tools or any data sources when generating title to reduce the used tokens.
             c.DataSourceId = null;
-            c.DataSourceType = null;
             c.DisableTools = true;
         });
 
