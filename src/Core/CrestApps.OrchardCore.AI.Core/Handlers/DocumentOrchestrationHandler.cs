@@ -91,8 +91,7 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextHandler
             sb.AppendLine(")");
         }
 
-        context.Context.CompletionContext.SystemMessage =
-            (context.Context.CompletionContext.SystemMessage ?? string.Empty) + sb.ToString();
+        context.Context.SystemMessageBuilder.Append(sb);
 
         return Task.CompletedTask;
     }

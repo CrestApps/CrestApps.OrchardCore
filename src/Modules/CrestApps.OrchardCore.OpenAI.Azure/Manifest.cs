@@ -33,38 +33,3 @@ using OrchardCore.Modules.Manifest;
         AzureOpenAIConstants.Feature.Area,
     ]
 )]
-
-[assembly: Feature(
-    Id = AzureOpenAIConstants.Feature.AISearch,
-    Name = "Azure AI Search-Powered Data Source",
-    Description = "Enables integration with OpenAI and Azure AI Search data via the Azure service provider.",
-    Category = "Artificial Intelligence",
-    Dependencies =
-    [
-        AIConstants.Feature.DataSources,
-        "OrchardCore.Search.AzureAI",
-    ]
-)]
-
-[assembly: Feature(
-    Id = AzureOpenAIConstants.Feature.Elasticsearch,
-    Name = "Elasticsearch-Powered Data Source",
-    Description = "Enables integration with OpenAI and Elasticsearch data via the Azure service provider.",
-    Category = "Artificial Intelligence",
-    Dependencies =
-    [
-        AIConstants.Feature.DataSources,
-        "OrchardCore.Search.Elasticsearch",
-    ]
-)]
-
-[assembly: Feature(
-    Id = AzureOpenAIConstants.Feature.MongoDB,
-    Name = "MongoDB-Powered Data Source",
-    Description = "Enables integration with OpenAI and MongoDB data via the Azure service provider.",
-    Category = "Artificial Intelligence",
-    Dependencies =
-    [
-        AIConstants.Feature.DataSources,
-    ]
-)]

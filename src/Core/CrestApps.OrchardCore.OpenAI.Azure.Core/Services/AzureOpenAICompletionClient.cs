@@ -26,7 +26,6 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
     private readonly IServiceProvider _serviceProvider;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IAILinkGenerator _linkGenerator;
-    private readonly IEnumerable<IAzureOpenAIDataSourceHandler> _azureOpenAIDataSourceHandlers;
     private readonly IEnumerable<IAICompletionServiceHandler> _completionServiceHandlers;
     private readonly DefaultAIOptions _defaultOptions;
     private readonly ILogger _logger;
@@ -39,7 +38,6 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory,
         IAILinkGenerator linkGenerator,
-        IEnumerable<IAzureOpenAIDataSourceHandler> azureOpenAIDataSourceHandlers,
         IEnumerable<IAICompletionServiceHandler> completionServiceHandlers,
         IOptions<DefaultAIOptions> defaultOptions,
         ILogger<AzureOpenAICompletionClient> logger)
@@ -49,7 +47,6 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         _serviceProvider = serviceProvider;
         _loggerFactory = loggerFactory;
         _linkGenerator = linkGenerator;
-        _azureOpenAIDataSourceHandlers = azureOpenAIDataSourceHandlers;
         _completionServiceHandlers = completionServiceHandlers;
         _defaultOptions = defaultOptions.Value;
         _logger = logger;
@@ -123,7 +120,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
         var functions = await ResolveToolsAsync(context, deploymentName);
 
-        var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
+        var chatOptions = GetOptions(context, functions);
         var systemFunctions = await ConfigureOptionsAsync(chatOptions, context, prompts);
         var allFunctions = systemFunctions.Count > 0 ? functions.Concat(systemFunctions) : functions;
         try
@@ -268,7 +265,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
         var functions = await ResolveToolsAsync(context, deploymentName);
 
-        var chatOptions = await GetOptionsWithDataSourceAsync(context, functions);
+        var chatOptions = GetOptions(context, functions);
 
         Dictionary<string, object> linkContext = null;
 
@@ -538,40 +535,11 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         return azureClient;
     }
 
-    private async Task<ChatCompletionOptions> GetOptionsWithDataSourceAsync(AICompletionContext context, IEnumerable<Microsoft.Extensions.AI.AIFunction> functions)
-    {
-        var chatOptions = GetOptions(context, functions);
 
-        // Azure OpenAI does not support combining "On Your Data" data sources with tools/function calling.
-        // When tools are present, skip data source configuration and let the orchestrator handle
-        // document retrieval via tool calls instead.
-        if (!string.IsNullOrEmpty(context.DataSourceId) && !string.IsNullOrEmpty(context.DataSourceType))
-        {
-            var dataSourceContext = new AzureOpenAIDataSourceContext(context.DataSourceId, context.DataSourceType)
-            {
-                Strictness = context.AdditionalProperties.TryGetValue("Strictness", out var strictnessObj) && strictnessObj is int strictness ? strictness : null,
-                TopNDocuments = context.AdditionalProperties.TryGetValue("TopNDocuments", out var topNDocumentsObj) && topNDocumentsObj is int topNDocuments ? topNDocuments : null,
-                Filter = context.AdditionalProperties.TryGetValue("Filter", out var filterObj) && filterObj is string filter ? filter : null,
-                IsInScope = context.AdditionalProperties.TryGetValue("IsInScope", out var isInScopeObj) && isInScopeObj is bool isInScope ? isInScope : (bool?)null,
-            };
 
-            foreach (var handler in _azureOpenAIDataSourceHandlers)
-            {
-                await handler.ConfigureSourceAsync(chatOptions, dataSourceContext);
-            }
-        }
-
-        return chatOptions;
-    }
-
-    private async ValueTask<IReadOnlyList<Microsoft.Extensions.AI.AIFunction>> ConfigureOptionsAsync(ChatCompletionOptions chatOptions, AICompletionContext context, List<ChatMessage> prompts)
+    private static async ValueTask<IReadOnlyList<Microsoft.Extensions.AI.AIFunction>> ConfigureOptionsAsync(ChatCompletionOptions chatOptions, AICompletionContext context, List<ChatMessage> prompts)
     {
         var optionsContext = new AzureOpenAIChatOptionsContext(chatOptions, context, prompts);
-
-        foreach (var handler in _azureOpenAIDataSourceHandlers)
-        {
-            await handler.ConfigureOptionsAsync(optionsContext);
-        }
 
         if (optionsContext.SystemFunctions.Count > 0)
         {

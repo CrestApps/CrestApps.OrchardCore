@@ -803,7 +803,7 @@ window.chatInteractionManager = function () {
           return connectionIds;
         },
         saveSettings: function saveSettings() {
-          var _isInScopeInput$check;
+          var _isInScopeInput$check, _enableEarlyRagInput$;
           var itemId = this.getItemId();
           if (!itemId) {
             return;
@@ -823,6 +823,7 @@ window.chatInteractionManager = function () {
           var topNDocumentsInput = document.querySelector('input[name="ChatInteraction.TopNDocuments"]');
           var isInScopeInput = document.querySelector('input[name="ChatInteraction.IsInScope"]');
           var filterInput = document.querySelector('input[name="ChatInteraction.Filter"]');
+          var enableEarlyRagInput = document.querySelector('input[name="ChatInteraction.EnableEarlyRag"]');
           var settings = {
             title: (titleInput === null || titleInput === void 0 ? void 0 : titleInput.value) || config.untitledText,
             connectionName: (connectionNameInput === null || connectionNameInput === void 0 ? void 0 : connectionNameInput.value) || null,
@@ -839,10 +840,11 @@ window.chatInteractionManager = function () {
             topNDocuments: topNDocumentsInput !== null && topNDocumentsInput !== void 0 && topNDocumentsInput.value ? parseInt(topNDocumentsInput.value) : null,
             filter: (filterInput === null || filterInput === void 0 ? void 0 : filterInput.value) || null,
             isInScope: (_isInScopeInput$check = isInScopeInput === null || isInScopeInput === void 0 ? void 0 : isInScopeInput.checked) !== null && _isInScopeInput$check !== void 0 ? _isInScopeInput$check : true,
+            enableEarlyRag: (_enableEarlyRagInput$ = enableEarlyRagInput === null || enableEarlyRagInput === void 0 ? void 0 : enableEarlyRagInput.checked) !== null && _enableEarlyRagInput$ !== void 0 ? _enableEarlyRagInput$ : false,
             toolNames: this.getSelectedToolNames(),
             mcpConnectionIds: this.getSelectedMcpConnectionIds()
           };
-          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId, settings.strictness, settings.topNDocuments, settings.filter, settings.isInScope, settings.toolNames, settings.mcpConnectionIds)["catch"](function (err) {
+          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId, settings.strictness, settings.topNDocuments, settings.filter, settings.isInScope, settings.enableEarlyRag, settings.toolNames, settings.mcpConnectionIds)["catch"](function (err) {
             return console.error('Error saving settings:', err);
           });
         },

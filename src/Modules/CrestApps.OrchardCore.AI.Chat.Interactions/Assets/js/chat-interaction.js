@@ -884,6 +884,7 @@ window.chatInteractionManager = function () {
                     const topNDocumentsInput = document.querySelector('input[name="ChatInteraction.TopNDocuments"]');
                     const isInScopeInput = document.querySelector('input[name="ChatInteraction.IsInScope"]');
                     const filterInput = document.querySelector('input[name="ChatInteraction.Filter"]');
+                    const enableEarlyRagInput = document.querySelector('input[name="ChatInteraction.EnableEarlyRag"]');
 
                     const settings = {
                         title: titleInput?.value || config.untitledText,
@@ -901,6 +902,7 @@ window.chatInteractionManager = function () {
                         topNDocuments: topNDocumentsInput?.value ? parseInt(topNDocumentsInput.value) : null,
                         filter: filterInput?.value || null,
                         isInScope: isInScopeInput?.checked ?? true,
+                        enableEarlyRag: enableEarlyRagInput?.checked ?? false,
                         toolNames: this.getSelectedToolNames(),
                         mcpConnectionIds: this.getSelectedMcpConnectionIds()
                     };
@@ -923,6 +925,7 @@ window.chatInteractionManager = function () {
                         settings.topNDocuments,
                         settings.filter,
                         settings.isInScope,
+                        settings.enableEarlyRag,
                         settings.toolNames,
                         settings.mcpConnectionIds
                     ).catch(err => console.error('Error saving settings:', err));

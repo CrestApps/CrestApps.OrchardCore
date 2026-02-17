@@ -30,8 +30,6 @@ public class AICompletionContext
 
     public string DataSourceId { get; set; }
 
-    public string DataSourceType { get; set; }
-
     public string DeploymentId { get; set; }
 
     public Dictionary<string, object> AdditionalProperties { get; } = new(StringComparer.OrdinalIgnoreCase);

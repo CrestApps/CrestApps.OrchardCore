@@ -1,0 +1,17 @@
+@using CrestApps.OrchardCore.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIDataSource>
+
+@if (!string.IsNullOrEmpty(Model.Value.SourceIndexProfileName))
+{
+    <span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Source Index"]">
+        <i class="text-secondary" aria-hidden="true"></i>@Model.Value.SourceIndexProfileName
+    </span>
+}
+@if (!string.IsNullOrEmpty(Model.Value.AIKnowledgeBaseIndexProfileName))
+{
+    <span class="badge ta-badge bg-info-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Knowledge Base Index"]">
+        <i class="text-secondary" aria-hidden="true"></i>@Model.Value.AIKnowledgeBaseIndexProfileName
+    </span>
+}
