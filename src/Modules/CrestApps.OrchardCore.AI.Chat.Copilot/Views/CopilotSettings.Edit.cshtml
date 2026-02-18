@@ -3,16 +3,50 @@
 <fieldset class="form-group">
     <div class="row">
         <div class="col-12">
-            <h3>@T["GitHub OAuth Configuration"]</h3>
-            <p class="hint">@T["Configure the GitHub OAuth App credentials for Copilot authentication. Create an OAuth App at GitHub Settings → Developer settings → OAuth Apps."]</p>
+            <h3>@T["GitHub App Configuration"]</h3>
+            <p class="hint">@T["Configure the GitHub App credentials for Copilot authentication."]</p>
         </div>
+    </div>
+
+    <div class="mb-4">
+        <details>
+            <summary class="fw-semibold cursor-pointer">@T["How to create a GitHub App"]</summary>
+            <div class="mt-2 ps-3">
+                <ol>
+                    <li>
+                        @T["Go to {0} and sign in to your GitHub account.",
+                            Html.Raw("<a href=\"https://github.com/settings/apps/new\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub App Registration</a>")]
+                    </li>
+                    <li>@T["Enter an <strong>App name</strong> (e.g., \"My Orchard Copilot\") and your site's <strong>Homepage URL</strong>."]</li>
+                    <li>
+                        @T["Under <strong>Callback URL</strong>, enter the following value:"]
+                        <div class="input-group mt-1 mb-2" style="max-width: 600px;">
+                            <input type="text" class="form-control" readonly value="@Model.ComputedCallbackUrl" id="computed-callback-url" />
+                            <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('computed-callback-url').value)">
+                                <i class="fa-regular fa-copy" aria-hidden="true"></i> @T["Copy"]
+                            </button>
+                        </div>
+                    </li>
+                    <li>@T["Under <strong>Webhook</strong>, uncheck the <strong>Active</strong> checkbox. Webhooks are not needed for this integration."]</li>
+                    <li>@T["Under <strong>Permissions</strong>, grant <strong>Copilot &rarr; Read-only</strong> access under \"Account permissions\" to allow model listing."]</li>
+                    <li>@T["Under <strong>Where can this GitHub App be installed?</strong>, select <strong>Only on this account</strong> (for private use) or <strong>Any account</strong> (for shared use)."]</li>
+                    <li>@T["Click <strong>Create GitHub App</strong>."]</li>
+                    <li>@T["On the app's settings page, copy the <strong>Client ID</strong> and paste it below."]</li>
+                    <li>@T["Click <strong>Generate a new client secret</strong>, copy the generated secret, and paste it below."]</li>
+                </ol>
+                <p class="hint">
+                    @T["For more details, see the {0}.",
+                        Html.Raw("<a href=\"https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub documentation</a>")]
+                </p>
+            </div>
+        </details>
     </div>
 
     <div class="mb-3">
         <label asp-for="ClientId" class="form-label">@T["Client ID"]</label>
         <input asp-for="ClientId" class="form-control" />
         <span asp-validation-for="ClientId" class="text-danger"></span>
-        <span class="hint">@T["The Client ID from your GitHub OAuth App."]</span>
+        <span class="hint">@T["The Client ID from your GitHub App."]</span>
     </div>
 
     <div class="mb-3">
@@ -21,18 +55,11 @@
         <span asp-validation-for="ClientSecret" class="text-danger"></span>
         @if (Model.HasSecret)
         {
-            <span class="hint text-success">@T["✓ A client secret has been securely stored. Enter a new value to replace it, or leave empty to keep the existing secret."]</span>
+            <span class="hint text-success">@T["A client secret has been securely stored. Enter a new value to replace it, or leave empty to keep the existing secret."]</span>
         }
         else
         {
-            <span class="hint">@T["The Client Secret from your GitHub OAuth App."]</span>
+            <span class="hint">@T["The Client Secret from your GitHub App."]</span>
         }
-    </div>
-
-    <div class="mb-3">
-        <label asp-for="CallbackUrl" class="form-label">@T["Callback URL"]</label>
-        <input asp-for="CallbackUrl" class="form-control" placeholder="https://your-domain.com/CopilotAuth/OAuthCallback" />
-        <span asp-validation-for="CallbackUrl" class="text-danger"></span>
-        <span class="hint">@T["The OAuth callback URL configured in your GitHub OAuth App. Should match: {0}", Url.Action("OAuthCallback", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })]</span>
     </div>
 </fieldset>

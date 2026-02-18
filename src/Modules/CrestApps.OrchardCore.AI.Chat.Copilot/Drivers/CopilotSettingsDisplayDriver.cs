@@ -46,11 +46,13 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         return Initialize<CopilotSettingsViewModel>("CopilotSettings_Edit", model =>
         {
             model.ClientId = settings.ClientId;
-            model.CallbackUrl = settings.CallbackUrl;
             model.HasSecret = !string.IsNullOrWhiteSpace(settings.ProtectedClientSecret);
 
-            // Don't populate ClientSecret for security reasons
-            // It will only be set when the user enters a new value
+            var request = _httpContextAccessor.HttpContext?.Request;
+            if (request != null)
+            {
+                model.ComputedCallbackUrl = $"{request.Scheme}://{request.Host}/CopilotAuth/OAuthCallback";
+            }
         })
         .Location("Content:5")
         .OnGroup(SettingsGroupId)
@@ -64,7 +66,6 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         settings.ClientId = model.ClientId;
-        settings.CallbackUrl = model.CallbackUrl;
 
         // Validate that client ID and secret are provided
         if (string.IsNullOrWhiteSpace(settings.ClientId))

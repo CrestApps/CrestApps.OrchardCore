@@ -55,15 +55,11 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
             throw new InvalidOperationException("GitHub OAuth Client ID is not configured. Please configure Copilot settings.");
         }
 
-        var callbackUrl = settings.CallbackUrl;
-        if (string.IsNullOrWhiteSpace(callbackUrl))
-        {
-            var request = _httpContextAccessor.HttpContext?.Request;
-            if (request != null)
-            {
-                callbackUrl = $"{request.Scheme}://{request.Host}/CopilotAuth/OAuthCallback";
-            }
-        }
+        // Always compute the callback URL from the current request.
+        var request = _httpContextAccessor.HttpContext?.Request
+            ?? throw new InvalidOperationException("No HTTP request context available.");
+
+        var callbackUrl = $"{request.Scheme}://{request.Host}/CopilotAuth/OAuthCallback";
 
         var scopes = string.Join(" ", settings.Scopes ?? ["user:email", "read:org"]);
         var state = returnUrl ?? string.Empty;
