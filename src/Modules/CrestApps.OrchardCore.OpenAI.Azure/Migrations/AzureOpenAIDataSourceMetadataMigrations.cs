@@ -346,26 +346,34 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 {
                     var sourceProfile = await indexProfileStore.FindByNameAsync(dataSource.SourceIndexProfileName);
 
-                    if (sourceProfile != null &&
-                        string.Equals(sourceProfile.Type, IndexingConstants.ContentsIndexSource, StringComparison.OrdinalIgnoreCase))
+                    if (sourceProfile != null)
                     {
-                        dataSource.KeyFieldName = "ContentItemId";
-
-                        // Set default field mappings based on the provider.
-                        if (string.IsNullOrEmpty(dataSource.ContentFieldName))
+                        if (string.Equals(sourceProfile.Type, IndexingConstants.ContentsIndexSource, StringComparison.OrdinalIgnoreCase))
                         {
-                            dataSource.KeyFieldName ??= "ContentItemId";
+                            dataSource.KeyFieldName = "ContentItemId";
 
-                            if (string.Equals(providerName, "Elasticsearch", StringComparison.OrdinalIgnoreCase))
+                            // Set default field mappings based on the provider.
+                            if (string.IsNullOrEmpty(dataSource.ContentFieldName))
                             {
-                                dataSource.TitleFieldName ??= "Content.ContentItem.DisplayText.Analyzed";
-                                dataSource.ContentFieldName ??= "Content.ContentItem.FullText";
+                                dataSource.KeyFieldName ??= "ContentItemId";
+
+                                if (string.Equals(providerName, "Elasticsearch", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    dataSource.TitleFieldName ??= "Content.ContentItem.DisplayText.Analyzed";
+                                    dataSource.ContentFieldName ??= "Content.ContentItem.FullText";
+                                }
+                                else if (string.Equals(providerName, "AzureAISearch", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    dataSource.TitleFieldName ??= "Content__ContentItem__DisplayText__Analyzed";
+                                    dataSource.ContentFieldName ??= "Content__ContentItem__FullText";
+                                }
                             }
-                            else if (string.Equals(providerName, "AzureAISearch", StringComparison.OrdinalIgnoreCase))
-                            {
-                                dataSource.TitleFieldName ??= "Content__ContentItem__DisplayText__Analyzed";
-                                dataSource.ContentFieldName ??= "Content__ContentItem__FullText";
-                            }
+                        }
+                        else if (string.Equals(sourceProfile.Type, "ChatInteractionDocuments", StringComparison.OrdinalIgnoreCase))
+                        {
+                            dataSource.KeyFieldName ??= "documentId";
+                            dataSource.ContentFieldName ??= "text";
+                            dataSource.TitleFieldName ??= "fileName";
                         }
                     }
                 }
