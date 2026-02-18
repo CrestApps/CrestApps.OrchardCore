@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
@@ -77,26 +77,16 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
 
         var indexStore = services.GetRequiredService<IIndexProfileStore>();
 
-        var indexProfiles = await indexStore.GetByTypeAsync(ChatInteractionsConstants.IndexingTaskType);
+        var indexProfiles = await indexStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
 
         if (!indexProfiles.Any())
         {
             return;
         }
 
-        var documentIndexHandlers = services.GetServices<IDocumentIndexHandler>();
-
+        var documentStore = services.GetRequiredService<IAIDocumentStore>();
+        var documentIndexHandlers = services.GetRequiredService<IEnumerable<IDocumentIndexHandler>>();
         var logger = services.GetRequiredService<ILogger<ChatInteractionHandler>>();
-
-        var interactionIds = new List<string>();
-
-        foreach (var interaction in interactions)
-        {
-            for (var i = 0; i <= interaction.DocumentIndex; i++)
-            {
-                interactionIds.Add($"{interaction.ItemId}_{i}");
-            }
-        }
 
         foreach (var indexProfile in indexProfiles)
         {
@@ -109,50 +99,111 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
                 continue;
             }
 
+            // Collect old chunk IDs for deletion before re-indexing.
+            var oldChunkIds = new List<string>();
+
+            foreach (var interaction in interactions)
+            {
+                var existingDocs = await documentStore.GetDocumentsAsync(
+                    interaction.ItemId,
+                    AIConstants.DocumentReferenceTypes.ChatInteraction);
+
+                foreach (var doc in existingDocs)
+                {
+                    if (doc.Chunks != null)
+                    {
+                        for (var i = 0; i < doc.Chunks.Count; i++)
+                        {
+                            oldChunkIds.Add($"{doc.ItemId}_{i}");
+                        }
+                    }
+                }
+            }
+
+            // Delete old chunk documents.
+            if (oldChunkIds.Count > 0)
+            {
+                await documentIndexManager.DeleteDocumentsAsync(indexProfile, oldChunkIds);
+            }
+
+            // Build new flat chunk documents via handler pipeline.
             var documents = new List<DocumentIndex>();
 
             foreach (var interaction in interactions)
             {
-                foreach (var doc in interaction.Documents)
+                var aiDocuments = await documentStore.GetDocumentsAsync(
+                    interaction.ItemId,
+                    AIConstants.DocumentReferenceTypes.ChatInteraction);
+
+                foreach (var aiDocument in aiDocuments)
                 {
-                    var document = new DocumentIndex(doc.DocumentId);
-
-                    var buildIndexContext = new BuildDocumentIndexContext(document, doc, [doc.DocumentId], documentIndexManager.GetContentIndexSettings())
+                    if (aiDocument.Chunks == null || aiDocument.Chunks.Count == 0)
                     {
-                        AdditionalProperties = new Dictionary<string, object>
+                        continue;
+                    }
+
+                    foreach (var chunk in aiDocument.Chunks)
+                    {
+                        var chunkId = $"{aiDocument.ItemId}_{chunk.Index}";
+                        var documentIndex = new DocumentIndex(chunkId);
+
+                        var aiDocumentChunk = new AIDocumentChunk
                         {
-                            { nameof(IndexProfile), indexProfile },
-                            { "Interaction", interaction },
-                        }
-                    };
+                            ChunkId = chunkId,
+                            DocumentId = aiDocument.ItemId,
+                            Content = chunk.Text,
+                            FileName = aiDocument.FileName,
+                            ReferenceId = aiDocument.ReferenceId,
+                            ReferenceType = aiDocument.ReferenceType,
+                            ChunkIndex = chunk.Index,
+                            Embedding = chunk.Embedding,
+                        };
 
-                    await documentIndexHandlers.InvokeAsync((x, ctx) => x.BuildIndexAsync(ctx), buildIndexContext, logger);
+                        var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunkId], documentIndexManager.GetContentIndexSettings())
+                        {
+                            AdditionalProperties = new Dictionary<string, object>
+                            {
+                                { nameof(IndexProfile), indexProfile },
+                            }
+                        };
 
-                    documents.Add(document);
+                        await documentIndexHandlers.InvokeAsync((handler, ctx) => handler.BuildIndexAsync(ctx), buildContext, logger);
+
+                        documents.Add(documentIndex);
+                    }
                 }
             }
 
-            // Delete all of the documents that we'll be updating in this scope.
-            await documentIndexManager.DeleteDocumentsAsync(indexProfile, interactionIds);
-
             if (documents.Count > 0)
             {
-                // Update all of the documents that were updated in this scope.
                 await documentIndexManager.AddOrUpdateDocumentsAsync(indexProfile, documents);
             }
 
+            // Handle removed interactions.
             var removedIds = new List<string>();
 
             foreach (var interaction in removedInteractions)
             {
-                for (var i = 0; i < interaction.DocumentIndex; i++)
+                var removedDocs = await documentStore.GetDocumentsAsync(
+                    interaction.ItemId,
+                    AIConstants.DocumentReferenceTypes.ChatInteraction);
+
+                foreach (var doc in removedDocs)
                 {
-                    removedIds.Add($"{interaction.ItemId}_{i}");
+                    if (doc.Chunks != null)
+                    {
+                        for (var i = 0; i < doc.Chunks.Count; i++)
+                        {
+                            removedIds.Add($"{doc.ItemId}_{i}");
+                        }
+                    }
                 }
             }
 
-            // At the end of the indexing, we remove the documents that were removed in the same scope.
-            await documentIndexManager.DeleteDocumentsAsync(indexProfile, removedIds);
+            if (removedIds.Count > 0)
+            {
+                await documentIndexManager.DeleteDocumentsAsync(indexProfile, removedIds);
+            }
         }
     }
 }

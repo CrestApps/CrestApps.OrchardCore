@@ -65,6 +65,12 @@ internal static class GetDataSourceFieldsEndpoint
                 suggestedContentField = "Content__ContentItem__FullText";
             }
         }
+        else if (string.Equals(profile.Type, AIConstants.AIDocumentsIndexingTaskType, StringComparison.OrdinalIgnoreCase))
+        {
+            suggestedKeyField = AIConstants.ColumnNames.ChunkId;
+            suggestedTitleField = AIConstants.ColumnNames.FileName;
+            suggestedContentField = AIConstants.ColumnNames.Content;
+        }
 
         return TypedResults.Ok(new
         {

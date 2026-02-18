@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
@@ -123,6 +122,6 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
 
     private static bool CanHandle(IndexProfile indexProfile)
     {
-        return string.Equals(ChatInteractionsConstants.IndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(AIConstants.AIDocumentsIndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase);
     }
 }

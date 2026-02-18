@@ -66,22 +66,25 @@ public sealed class SearchDocumentsTool : AIFunction
 
         try
         {
-            // Resolve the resource ID from the execution context.
+            // Resolve the resource ID and type from the execution context.
             var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
             var executionContext = httpContextAccessor?.HttpContext?.Items[nameof(AIToolExecutionContext)] as AIToolExecutionContext;
 
             string resourceId = null;
+            string referenceType = null;
 
             if (executionContext?.Resource is ChatInteraction interaction)
             {
                 resourceId = interaction.ItemId;
+                referenceType = AIConstants.DocumentReferenceTypes.ChatInteraction;
             }
             else if (executionContext?.Resource is AIProfile profile)
             {
                 resourceId = profile.ItemId;
+                referenceType = AIConstants.DocumentReferenceTypes.Profile;
             }
 
-            if (string.IsNullOrEmpty(resourceId))
+            if (string.IsNullOrEmpty(resourceId) || string.IsNullOrEmpty(referenceType))
             {
                 return "Document search requires an active chat interaction session or AI profile.";
             }
@@ -162,6 +165,7 @@ public sealed class SearchDocumentsTool : AIFunction
                 indexProfile,
                 embeddings[0].Vector.ToArray(),
                 resourceId,
+                referenceType,
                 topN,
                 cancellationToken);
 

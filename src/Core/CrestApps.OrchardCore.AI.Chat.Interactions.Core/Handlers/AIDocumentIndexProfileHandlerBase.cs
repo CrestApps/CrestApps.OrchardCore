@@ -1,16 +1,17 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
 
-public abstract class ChatInteractionsIndexProfileHandlerBase : IndexProfileHandlerBase
+public abstract class AIDocumentIndexProfileHandlerBase : IndexProfileHandlerBase
 {
     protected string ProviderName { get; }
 
     private readonly IAIClientFactory _aiClientFactory;
 
-    public ChatInteractionsIndexProfileHandlerBase(string providerName, IAIClientFactory aiClientFactory)
+    public AIDocumentIndexProfileHandlerBase(string providerName, IAIClientFactory aiClientFactory)
     {
         ProviderName = providerName;
         _aiClientFactory = aiClientFactory;
@@ -60,7 +61,7 @@ public abstract class ChatInteractionsIndexProfileHandlerBase : IndexProfileHand
 
     protected bool CanHandle(IndexProfile indexProfile)
     {
-        return string.Equals(ChatInteractionsConstants.IndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase) &&
+        return string.Equals(AIConstants.AIDocumentsIndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(ProviderName, indexProfile.ProviderName, StringComparison.OrdinalIgnoreCase);
     }
 }

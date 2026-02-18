@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.AI.Documents.Migrations;
 using CrestApps.OrchardCore.AI.Documents.Services;
 using CrestApps.OrchardCore.AI.Documents.Tools;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -30,9 +31,11 @@ public sealed class Startup : StartupBase
     {
         services
             .AddDocumentTextExtractor<DefaultDocumentTextExtractor>(".txt", new ExtractorExtension(".csv", false),
-                ".md", ".json", ".xml", ".html", ".htm", ".log", ".yaml", ".yml")
+                ".md", ".json", ".xml", ".html", ".htm", ".log", ".yaml", ".yml");
+
+        services
             .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
-            .AddNavigationProvider<ChatInteractionDocumentsAdminMenu>();
+             .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
         // Register unified document store, index provider, and migration.
         services.AddScoped<IAIDocumentStore, DefaultAIDocumentStore>();
@@ -61,7 +64,7 @@ public sealed class ChatInteractionDocumentsStartup : StartupBase
 
         // Add Indexing Services.
         services.AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionIndexingHandler>()
-            .AddScoped<ChatInteractionIndexingService>()
+            .AddScoped<AIDocumentsIndexingService>()
             .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionHandler>()
             .AddIndexProfileHandler<ChatInteractionIndexProfileHandler>()
             .AddDisplayDriver<IndexProfile, ChatInteractionIndexProfileDisplayDriver>();

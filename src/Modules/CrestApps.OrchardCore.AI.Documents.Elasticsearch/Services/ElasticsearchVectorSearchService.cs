@@ -1,9 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Elastic.Clients.Elasticsearch;
-using Elastic.Clients.Elasticsearch.Core.Search;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing.Models;
 
@@ -11,7 +10,7 @@ namespace CrestApps.OrchardCore.AI.Documents.Elasticsearch.Services;
 
 /// <summary>
 /// Elasticsearch implementation of <see cref="IVectorSearchService"/> for searching document embeddings.
-/// Uses k-NN (k-Nearest Neighbors) search on nested document chunks with vector similarity.
+/// Uses k-NN (k-Nearest Neighbors) search on flat document chunks with vector similarity.
 /// </summary>
 public sealed class ElasticsearchVectorSearchService : IVectorSearchService
 {
@@ -30,13 +29,15 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
     public async Task<IEnumerable<DocumentChunkSearchResult>> SearchAsync(
         IndexProfile indexProfile,
         float[] embedding,
-        string interactionId,
+        string referenceId,
+        string referenceType,
         int topN,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(indexProfile);
         ArgumentNullException.ThrowIfNull(embedding);
-        ArgumentException.ThrowIfNullOrWhiteSpace(interactionId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(referenceId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(referenceType);
 
         if (embedding.Length == 0)
         {
@@ -45,30 +46,27 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
 
         try
         {
-            // Build a nested k-NN query to search for similar document chunks
-            // The documents are stored with nested "chunks" that contain the embedding vectors
             var response = await _elasticClient.SearchAsync<JsonObject>(s => s
                 .Indices(indexProfile.IndexFullName)
                 .Query(q => q
                     .Bool(b => b
                         .Must(
-                            // Filter by interaction/session ID
                             m => m.Term(t => t
-                                .Field(ChatInteractionsConstants.ColumnNames.InteractionId)
-                                .Value(interactionId)
+                                .Field(AIConstants.ColumnNames.ReferenceId)
+                                .Value(referenceId)
+                            ),
+                            m => m.Term(t => t
+                                .Field(AIConstants.ColumnNames.ReferenceType)
+                                .Value(referenceType)
                             )
                         )
                     )
                 )
                 .Knn(k => k
-                    .Field(ChatInteractionsConstants.ColumnNames.ChunksEmbedding)
+                    .Field(AIConstants.ColumnNames.Embedding)
                     .QueryVector(embedding)
                     .K(topN)
-                    .NumCandidates(topN * 10) // Search more candidates for better accuracy
-                    .InnerHits(ih => ih
-                        .Size(topN)
-                        .Source(true) // Include source so we can access chunk content
-                    )
+                    .NumCandidates(topN * 10)
                 )
                 .Size(topN)
             , cancellationToken);
@@ -82,7 +80,6 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
 
             var results = new List<DocumentChunkSearchResult>();
 
-            // Iterate over documents and hits together as per OrchardCore pattern
             var documents = response.Documents.GetEnumerator();
             var hits = response.Hits.GetEnumerator();
 
@@ -96,27 +93,30 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
                     continue;
                 }
 
-                // Process inner hits from the nested chunks
-                if (hit.InnerHits != null && hit.InnerHits.TryGetValue(ChatInteractionsConstants.ColumnNames.Chunks, out var innerHits))
+                var chunkText = document.TryGetPropertyValue(AIConstants.ColumnNames.Content, out var textNode)
+                    ? textNode?.GetValue<string>()
+                    : null;
+
+                var chunkIndex = 0;
+                if (document.TryGetPropertyValue(AIConstants.ColumnNames.ChunkIndex, out var indexNode) && indexNode != null)
                 {
-                    foreach (var innerHit in innerHits.Hits.Hits)
-                    {
-                        var chunkResult = ExtractChunkFromInnerHit(innerHit, hit.Score);
-                        if (chunkResult != null)
-                        {
-                            results.Add(chunkResult);
-                        }
-                    }
+                    chunkIndex = indexNode.GetValue<int>();
                 }
-                else
+
+                if (!string.IsNullOrEmpty(chunkText))
                 {
-                    // Fallback: try to extract chunks directly from the source
-                    var chunkResults = ExtractChunksFromSource(document, hit.Score);
-                    results.AddRange(chunkResults);
+                    results.Add(new DocumentChunkSearchResult
+                    {
+                        Chunk = new ChatInteractionDocumentChunk
+                        {
+                            Text = chunkText,
+                            Index = chunkIndex,
+                        },
+                        Score = (float)(hit.Score ?? 0.0),
+                    });
                 }
             }
 
-            // Return top N results sorted by score
             return results
                 .OrderByDescending(r => r.Score)
                 .Take(topN)
@@ -128,101 +128,5 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
 
             return [];
         }
-    }
-
-    private static DocumentChunkSearchResult ExtractChunkFromInnerHit(Hit<object> innerHit, double? parentScore)
-    {
-        try
-        {
-            if (innerHit.Source == null)
-            {
-                return null;
-            }
-
-            // The Source is an object, we need to serialize and deserialize it to access properties
-            var sourceJson = JsonSerializer.Serialize(innerHit.Source);
-            var chunkSource = JsonSerializer.Deserialize<JsonObject>(sourceJson);
-
-            if (chunkSource == null)
-            {
-                return null;
-            }
-
-            // Get the chunk text from the nested hit
-            var chunkText = chunkSource.TryGetPropertyValue(ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Text, out var textNode)
-                ? textNode?.GetValue<string>()
-                : null;
-
-            var chunkIndex = 0;
-            if (chunkSource.TryGetPropertyValue(ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Index, out var indexNode) && indexNode != null)
-            {
-                chunkIndex = indexNode.GetValue<int>();
-            }
-
-            if (string.IsNullOrEmpty(chunkText))
-            {
-                return null;
-            }
-
-            return new DocumentChunkSearchResult
-            {
-                Chunk = new ChatInteractionDocumentChunk
-                {
-                    Text = chunkText,
-                    Index = chunkIndex
-                },
-                Score = (float)(innerHit.Score ?? parentScore ?? 0.0)
-            };
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
-
-    private static List<DocumentChunkSearchResult> ExtractChunksFromSource(
-        JsonObject source,
-        double? score)
-    {
-        var results = new List<DocumentChunkSearchResult>();
-
-        if (!source.TryGetPropertyValue(ChatInteractionsConstants.ColumnNames.Chunks, out var chunksNode) || chunksNode is not JsonArray chunks)
-        {
-            return results;
-        }
-
-        foreach (var chunk in chunks)
-        {
-            if (chunk is not JsonObject chunkDict)
-            {
-                continue;
-            }
-
-            var chunkText = chunkDict.TryGetPropertyValue(ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Text, out var textNode)
-                ? textNode?.GetValue<string>()
-                : null;
-
-            var chunkIndex = 0;
-
-            if (chunkDict.TryGetPropertyValue(ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Index, out var indexNode) && indexNode != null)
-            {
-                chunkIndex = indexNode.GetValue<int>();
-            }
-
-            if (!string.IsNullOrEmpty(chunkText))
-            {
-                results.Add(new DocumentChunkSearchResult
-                {
-                    Chunk = new ChatInteractionDocumentChunk
-                    {
-                        Text = chunkText,
-                        Index = chunkIndex
-                    },
-                    Score = (float)(score ?? 0.0)
-                });
-            }
-        }
-
-        return results;
     }
 }

@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -17,15 +16,13 @@ namespace CrestApps.OrchardCore.AI.Documents.Drivers;
 
 public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver<InteractionDocumentSettings>
 {
-    public const string GroupId = "interaction-documents";
-
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
     internal readonly IStringLocalizer S;
 
-    protected override string SettingsGroupId => GroupId;
+    protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
     public InteractionDocumentSettingsDisplayDriver(
         IIndexProfileStore indexProfileStore,
@@ -45,13 +42,13 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
         {
             viewModel.IndexProfileName = section.IndexProfileName;
 
-            var items = await _indexProfileStore.GetByTypeAsync(ChatInteractionsConstants.IndexingTaskType);
+            var items = await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
 
             // Here you would typically populate the IndexProfiles from your data source.
             viewModel.IndexProfiles = items.Select(x => new SelectListItem(x.Name, x.Name));
 
         }).Location("Content:5")
-        .OnGroup(GroupId)
+        .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageChatInteractionSettings));
     }
 
@@ -74,7 +71,7 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
         {
             var indexProfile = await _indexProfileStore.FindByNameAsync(model.IndexProfileName);
 
-            if (indexProfile == null || indexProfile.Type != ChatInteractionsConstants.IndexingTaskType)
+            if (indexProfile == null || indexProfile.Type != AIConstants.AIDocumentsIndexingTaskType)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["Invalid index profile."]);
             }

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
@@ -26,7 +26,7 @@ internal sealed class ChatInteractionIndexingHandler : CatalogEntryHandlerBase<C
             return Task.CompletedTask;
         }
 
-        return _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, ChatInteractionsConstants.IndexingTaskType, RecordIndexingTaskTypes.Update));
+        return _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, AIConstants.AIDocumentsIndexingTaskType, RecordIndexingTaskTypes.Update));
     }
 
     public override async Task UpdatedAsync(UpdatedContext<ChatInteraction> context)
@@ -36,7 +36,7 @@ internal sealed class ChatInteractionIndexingHandler : CatalogEntryHandlerBase<C
             return;
         }
 
-        await _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, ChatInteractionsConstants.IndexingTaskType, RecordIndexingTaskTypes.Update));
+        await _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, AIConstants.AIDocumentsIndexingTaskType, RecordIndexingTaskTypes.Update));
     }
 
     public override Task DeletedAsync(DeletedContext<ChatInteraction> context)
@@ -46,6 +46,6 @@ internal sealed class ChatInteractionIndexingHandler : CatalogEntryHandlerBase<C
             return Task.CompletedTask;
         }
 
-        return _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, ChatInteractionsConstants.IndexingTaskType, RecordIndexingTaskTypes.Delete));
+        return _indexingTaskManager.CreateTaskAsync(new CreateIndexingTaskContext(context.Model.ItemId, AIConstants.AIDocumentsIndexingTaskType, RecordIndexingTaskTypes.Delete));
     }
 }

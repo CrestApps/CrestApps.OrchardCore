@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Documents.Elasticsearch.Handlers;
 using CrestApps.OrchardCore.AI.Documents.Elasticsearch.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,18 +21,18 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddIndexProfileHandler<ChatInteractionElasticsearchIndexProfileHandler>();
+        services.AddIndexProfileHandler<AIDocumentElasticsearchIndexProfileHandler>();
 
-        // Register Elasticsearch document index handler for chat interaction document embeddings
-        services.AddScoped<IDocumentIndexHandler, ChatInteractionElasticsearchDocumentIndexHandler>();
+        // Register Elasticsearch document index handler for AI document embeddings.
+        services.AddScoped<IDocumentIndexHandler, AIDocumentElasticsearchDocumentIndexHandler>();
 
-        // Register Elasticsearch vector search service as a keyed service
+        // Register Elasticsearch vector search service as a keyed service.
         services.AddKeyedScoped<IVectorSearchService, ElasticsearchVectorSearchService>(ElasticsearchConstants.ProviderName);
 
-        services.AddElasticsearchIndexingSource(ChatInteractionsConstants.IndexingTaskType, o =>
+        services.AddElasticsearchIndexingSource(AIConstants.AIDocumentsIndexingTaskType, o =>
         {
-            o.DisplayName = S["Chat Interaction Documents (Elasticsearch)"];
-            o.Description = S["Create an Elasticsearch index for chat interaction documents."];
+            o.DisplayName = S["AI Documents (Elasticsearch)"];
+            o.Description = S["Create an Elasticsearch index for AI documents."];
         });
     }
 }

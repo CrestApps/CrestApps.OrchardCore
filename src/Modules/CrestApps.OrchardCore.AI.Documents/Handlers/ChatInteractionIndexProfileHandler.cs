@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Documents.Services;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
@@ -7,9 +7,9 @@ namespace CrestApps.OrchardCore.AI.Documents.Handlers;
 
 public sealed class ChatInteractionIndexProfileHandler : IndexProfileHandlerBase
 {
-    private readonly ChatInteractionIndexingService _indexingService;
+    private readonly AIDocumentsIndexingService _indexingService;
 
-    public ChatInteractionIndexProfileHandler(ChatInteractionIndexingService indexingService)
+    public ChatInteractionIndexProfileHandler(AIDocumentsIndexingService indexingService)
     {
         _indexingService = indexingService;
     }
@@ -26,6 +26,6 @@ public sealed class ChatInteractionIndexProfileHandler : IndexProfileHandlerBase
 
     private static bool CanHandle(IndexProfile indexProfile)
     {
-        return string.Equals(ChatInteractionsConstants.IndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(AIConstants.AIDocumentsIndexingTaskType, indexProfile.Type, StringComparison.OrdinalIgnoreCase);
     }
 }

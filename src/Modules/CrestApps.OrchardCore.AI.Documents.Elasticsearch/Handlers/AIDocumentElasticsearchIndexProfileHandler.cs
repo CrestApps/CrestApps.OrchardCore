@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using Elastic.Clients.Elasticsearch.Mapping;
@@ -12,9 +12,9 @@ using OrchardCore.Search.Elasticsearch.Models;
 namespace CrestApps.OrchardCore.AI.Documents.Elasticsearch.Handlers;
 
 
-public sealed class ChatInteractionElasticsearchIndexProfileHandler : ChatInteractionsIndexProfileHandlerBase
+public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndexProfileHandlerBase
 {
-    public ChatInteractionElasticsearchIndexProfileHandler(IAIClientFactory aiClientFactory)
+    public AIDocumentElasticsearchIndexProfileHandler(IAIClientFactory aiClientFactory)
         : base(ElasticsearchConstants.ProviderName, aiClientFactory)
     {
     }
@@ -44,30 +44,21 @@ public sealed class ChatInteractionElasticsearchIndexProfileHandler : ChatIntera
         metadata.IndexMappings.Mapping ??= new TypeMapping();
         metadata.IndexMappings.Mapping.Properties ??= [];
 
-        // Get embedding connection from index profile metadata
         var interactionMetadata = indexProfile.As<ChatInteractionIndexProfileMetadata>();
-
-        // Dynamically determine embedding dimensions by generating a sample embedding using the configured connection
         var embeddingDimensions = await GetEmbeddingDimensionsAsync(interactionMetadata);
 
-        metadata.IndexMappings.KeyFieldName = ChatInteractionsConstants.ColumnNames.DocumentId;
-        metadata.IndexMappings.Mapping.Properties[ChatInteractionsConstants.ColumnNames.DocumentId] = new KeywordProperty();
-        metadata.IndexMappings.Mapping.Properties[ChatInteractionsConstants.ColumnNames.Text] = new TextProperty();
-        metadata.IndexMappings.Mapping.Properties[ChatInteractionsConstants.ColumnNames.InteractionId] = new KeywordProperty();
-        metadata.IndexMappings.Mapping.Properties[ChatInteractionsConstants.ColumnNames.FileName] = new KeywordProperty();
-        metadata.IndexMappings.Mapping.Properties[ChatInteractionsConstants.ColumnNames.Chunks] = new NestedProperty()
+        metadata.IndexMappings.KeyFieldName = AIConstants.ColumnNames.ChunkId;
+        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.ChunkId] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.DocumentId] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.Content] = new TextProperty();
+        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.FileName] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.ReferenceId] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.ReferenceType] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.ChunkIndex] = new IntegerNumberProperty();
+        metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.Embedding] = new DenseVectorProperty
         {
-            Properties = new Properties()
-            {
-                { ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Text, new TextProperty() },
-                { ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Embedding, new DenseVectorProperty
-                    {
-                        Dims = embeddingDimensions,
-                        Index = true,
-                    }
-                },
-                { ChatInteractionsConstants.ColumnNames.ChunksColumnNames.Index, new IntegerNumberProperty() },
-            },
+            Dims = embeddingDimensions,
+            Index = true,
         };
 
         indexProfile.Put(metadata);
@@ -86,7 +77,7 @@ public sealed class ChatInteractionElasticsearchIndexProfileHandler : ChatIntera
         {
             metadata.DefaultSearchFields =
             [
-                ChatInteractionsConstants.ColumnNames.ChunksText,
+                AIConstants.ColumnNames.Content,
             ];
 
             indexProfile.Put(metadata);

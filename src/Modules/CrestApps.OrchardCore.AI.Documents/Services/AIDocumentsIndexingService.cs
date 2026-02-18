@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +10,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Documents.Services;
 
-public sealed class ChatInteractionIndexingService
+public sealed class AIDocumentsIndexingService
 {
     private readonly ILogger _logger;
 
@@ -18,6 +18,7 @@ public sealed class ChatInteractionIndexingService
 
     private readonly IIndexingTaskManager _indexingTaskManager;
     private readonly ISourceCatalog<ChatInteraction> _sourceCatalog;
+    private readonly IAIDocumentStore _documentStore;
     private readonly IEnumerable<IDocumentIndexHandler> _documentIndexHandlers;
 
     private readonly IServiceProvider _serviceProvider;
@@ -25,17 +26,19 @@ public sealed class ChatInteractionIndexingService
 
     private const int _batchSize = 100;
 
-    public ChatInteractionIndexingService(
+    public AIDocumentsIndexingService(
         IIndexProfileStore indexProfileStore,
         IIndexingTaskManager indexingTaskManager,
         ISourceCatalog<ChatInteraction> sourceCatalog,
+        IAIDocumentStore documentStore,
         IEnumerable<IDocumentIndexHandler> documentIndexHandlers,
         IServiceProvider serviceProvider,
-        ILogger<ChatInteractionIndexingService> logger)
+        ILogger<AIDocumentsIndexingService> logger)
     {
         _indexProfileStore = indexProfileStore;
         _indexingTaskManager = indexingTaskManager;
         _sourceCatalog = sourceCatalog;
+        _documentStore = documentStore;
         _documentIndexHandlers = documentIndexHandlers;
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -43,7 +46,7 @@ public sealed class ChatInteractionIndexingService
 
     public async Task ProcessRecordsForAllIndexesAsync()
     {
-        await ProcessRecordsAsync(await _indexProfileStore.GetByTypeAsync(ChatInteractionsConstants.IndexingTaskType));
+        await ProcessRecordsAsync(await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType));
     }
 
     public async Task ProcessRecordsAsync(IEnumerable<string> indexIds)
@@ -52,7 +55,7 @@ public sealed class ChatInteractionIndexingService
 
         if (indexIds.Any())
         {
-            await ProcessRecordsAsync((await _indexProfileStore.GetByTypeAsync(ChatInteractionsConstants.IndexingTaskType)).Where((IndexProfile x) => indexIds.Contains(x.Id)));
+            await ProcessRecordsAsync((await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType)).Where((IndexProfile x) => indexIds.Contains(x.Id)));
         }
     }
 
@@ -70,7 +73,7 @@ public sealed class ChatInteractionIndexingService
 
         foreach (var indexProfile in indexProfiles)
         {
-            if (indexProfile.Type != ChatInteractionsConstants.IndexingTaskType)
+            if (indexProfile.Type != AIConstants.AIDocumentsIndexingTaskType)
             {
                 continue;
             }
@@ -125,7 +128,7 @@ public sealed class ChatInteractionIndexingService
 
         while (true)
         {
-            tasks = (await _indexingTaskManager.GetIndexingTasksAsync(lastTaskId, _batchSize, ChatInteractionsConstants.IndexingTaskType)).ToList();
+            tasks = (await _indexingTaskManager.GetIndexingTasksAsync(lastTaskId, _batchSize, AIConstants.AIDocumentsIndexingTaskType)).ToList();
             if (tasks.Count == 0)
             {
                 break;
@@ -148,28 +151,21 @@ public sealed class ChatInteractionIndexingService
 
                     if (!_interactions.TryGetValue(task.RecordId, out var interaction))
                     {
-                        // If the transcript is not found, we can skip indexing this entry.
                         continue;
                     }
 
-                    foreach (var doc in interaction.Documents)
+                    // Load full AIDocument objects for this interaction's documents.
+                    var aiDocuments = await _documentStore.GetDocumentsAsync(
+                        interaction.ItemId,
+                        AIConstants.DocumentReferenceTypes.ChatInteraction);
+
+                    foreach (var aiDocument in aiDocuments)
                     {
-                        var document = new DocumentIndex(doc.DocumentId);
-
-                        var buildIndexContext = new BuildDocumentIndexContext(document, doc, [doc.DocumentId], entry.DocumentIndexManager.GetContentIndexSettings())
-                        {
-                            AdditionalProperties = new Dictionary<string, object>
-                            {
-                                { nameof(IndexProfile), entry.IndexProfile },
-                                { "Interaction", interaction },
-                            }
-                        };
-
-                        await _documentIndexHandlers.InvokeAsync((x, ctx) => x.BuildIndexAsync(ctx), buildIndexContext, _logger);
-
-                        updatedDocumentsByIndex[entry.IndexProfile.Id].Add(buildIndexContext.DocumentIndex);
+                        var chunkDocuments = await BuildChunkDocumentsAsync(aiDocument, entry);
+                        updatedDocumentsByIndex[entry.IndexProfile.Id].AddRange(chunkDocuments);
                     }
 
+                    // Collect old chunk IDs for removal.
                     for (var i = 0; i < interaction.DocumentIndex; i++)
                     {
                         removedDocumentsByIndex[entry.IndexProfile.Id].Add($"{interaction.ItemId}_{i}");
@@ -197,6 +193,48 @@ public sealed class ChatInteractionIndexingService
                 }
             }
         }
+    }
+
+    private async Task<List<DocumentIndex>> BuildChunkDocumentsAsync(AIDocument aiDocument, IndexProfileEntryContext entry)
+    {
+        var documents = new List<DocumentIndex>();
+
+        if (aiDocument.Chunks == null || aiDocument.Chunks.Count == 0)
+        {
+            return documents;
+        }
+
+        foreach (var chunk in aiDocument.Chunks)
+        {
+            var chunkId = $"{aiDocument.ItemId}_{chunk.Index}";
+            var documentIndex = new DocumentIndex(chunkId);
+
+            var aiDocumentChunk = new AIDocumentChunk
+            {
+                ChunkId = chunkId,
+                DocumentId = aiDocument.ItemId,
+                Content = chunk.Text,
+                FileName = aiDocument.FileName,
+                ReferenceId = aiDocument.ReferenceId,
+                ReferenceType = aiDocument.ReferenceType,
+                ChunkIndex = chunk.Index,
+                Embedding = chunk.Embedding,
+            };
+
+            var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunkId], entry.DocumentIndexManager.GetContentIndexSettings())
+            {
+                AdditionalProperties = new Dictionary<string, object>
+                {
+                    { nameof(IndexProfile), entry.IndexProfile },
+                }
+            };
+
+            await _documentIndexHandlers.InvokeAsync((handler, ctx) => handler.BuildIndexAsync(ctx), buildContext, _logger);
+
+            documents.Add(documentIndex);
+        }
+
+        return documents;
     }
 
     private async Task BeforeProcessingTasksAsync(IEnumerable<RecordIndexingTask> tasks)

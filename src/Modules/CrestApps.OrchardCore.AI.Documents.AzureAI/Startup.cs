@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Documents.AzureAI.Handlers;
 using CrestApps.OrchardCore.AI.Documents.AzureAI.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,22 +14,21 @@ namespace CrestApps.OrchardCore.AI.Documents.AzureAI;
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
-    public Startup(IStringLocalizer<Startup> stringLocalizer)
+
+    public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
     }
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddIndexProfileHandler<ChatInteractionAzureAISearchIndexProfileHandler>();
-        // Register Azure AI Search document index handler for chat interaction document embeddings
-        services.AddScoped<IDocumentIndexHandler, ChatInteractionAzureAISearchDocumentIndexHandler>();
-        // Register Azure AI Search vector search service as a keyed service
+        services.AddIndexProfileHandler<AIDocumentAzureAISearchIndexProfileHandler>();
+        services.AddScoped<IDocumentIndexHandler, AIDocumentAzureAISearchDocumentIndexHandler>();
         services.AddKeyedScoped<IVectorSearchService, AzureAISearchVectorSearchService>(AzureAISearchConstants.ProviderName);
-        services.AddAzureAISearchIndexingSource(ChatInteractionsConstants.IndexingTaskType, o =>
+        services.AddAzureAISearchIndexingSource(AIConstants.AIDocumentsIndexingTaskType, o =>
         {
-            o.DisplayName = S["Chat Interaction Documents (Azure AI Search)"];
-            o.Description = S["Create an Azure AI Search index for chat interaction documents."];
+            o.DisplayName = S["AI Documents (Azure AI Search)"];
+            o.Description = S["Create an Azure AI Search index for AI documents."];
         });
     }
 }

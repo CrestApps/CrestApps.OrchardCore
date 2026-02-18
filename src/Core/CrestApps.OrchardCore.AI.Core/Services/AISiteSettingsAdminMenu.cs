@@ -1,23 +1,21 @@
-using CrestApps.OrchardCore.AI.Documents.Drivers;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
-namespace CrestApps.OrchardCore.AI.Documents.Services;
+namespace CrestApps.OrchardCore.AI.Services;
 
-public sealed class ChatInteractionDocumentsAdminMenu : AdminNavigationProvider
+public sealed class AISiteSettingsAdminMenu : AdminNavigationProvider
 {
     private static readonly RouteValueDictionary _routeValues = new()
     {
         { "area", "OrchardCore.Settings" },
-        { "groupId", InteractionDocumentSettingsDisplayDriver.GroupId },
+        { "groupId", AIConstants.AISettingsGroupId },
     };
-
 
     internal readonly IStringLocalizer S;
 
-    public ChatInteractionDocumentsAdminMenu(IStringLocalizer<ChatInteractionDocumentsAdminMenu> stringLocalizer)
+    public AISiteSettingsAdminMenu(IStringLocalizer<AISiteSettingsAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -28,9 +26,9 @@ public sealed class ChatInteractionDocumentsAdminMenu : AdminNavigationProvider
            .Add(S["Settings"], settings =>
            {
                settings
-                   .Add(S["Chat Interactions"], S["Chat Interactions"].PrefixPosition(), chatInteractions => chatInteractions
+                   .Add(S["Artificial Intelligence"], S["Artificial Intelligence"].PrefixPosition(), ai => ai
                        .Action("Index", "Admin", _routeValues)
-                       .Permission(AIPermissions.ManageChatInteractionSettings)
+                       .Permission(AIPermissions.ManageAIProfiles)
                        .LocalNav()
                    );
            });
@@ -38,4 +36,3 @@ public sealed class ChatInteractionDocumentsAdminMenu : AdminNavigationProvider
         return ValueTask.CompletedTask;
     }
 }
-
