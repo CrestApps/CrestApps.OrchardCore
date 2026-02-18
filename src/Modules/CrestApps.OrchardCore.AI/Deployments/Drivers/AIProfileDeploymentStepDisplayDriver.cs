@@ -39,7 +39,7 @@ internal sealed class AIProfileDeploymentStepDisplayDriver : DisplayDriver<Deplo
         {
             model.IncludeAll = step.IncludeAll;
             model.ProfileNames = step.ProfileNames;
-            model.AllProfileNames = (await _profilesCatalog.GetAllAsync()).Select(x => x.DisplayText ?? x.Name).Order().ToArray();
+            model.AllProfileNames = (await _profilesCatalog.GetAllAsync()).Select(x => x.Name).Order().ToArray();
         }).Location("Content");
     }
 
