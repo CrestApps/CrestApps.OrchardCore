@@ -29,25 +29,9 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<DefaultChatInteractionDocumentStore>()
-            .AddScoped<IChatInteractionDocumentStore>(sp => sp.GetRequiredService<DefaultChatInteractionDocumentStore>())
-            .AddScoped<ICatalog<ChatInteractionDocument>>(sp => sp.GetRequiredService<DefaultChatInteractionDocumentStore>());
-
         services
             .AddDocumentTextExtractor<DefaultDocumentTextExtractor>(".txt", new ExtractorExtension(".csv", false),
-                ".md", ".json", ".xml", ".html", ".htm", ".log", ".yaml", ".yml")
-            .AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>()
-            .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
-            .AddNavigationProvider<ChatInteractionDocumentsAdminMenu>()
-            .AddIndexProvider<ChatInteractionDocumentIndexProvider>()
-            .AddDataMigration<ChatInteractionDocumentIndexMigrations>();
-
-        // Add Indexing Services.
-        services.AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionIndexingHandler>()
-            .AddScoped<ChatInteractionIndexingService>()
-            .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionHandler>()
-            .AddIndexProfileHandler<ChatInteractionIndexProfileHandler>()
-            .AddDisplayDriver<IndexProfile, ChatInteractionIndexProfileDisplayDriver>();
+                ".md", ".json", ".xml", ".html", ".htm", ".log", ".yaml", ".yml");
 
         // Add document processing system tools and supporting services.
         services.AddDefaultDocumentProcessingServices();
@@ -57,6 +41,33 @@ public sealed class Startup : StartupBase
             .WithTitle("Search Documents")
             .WithDescription("Searches uploaded or attached documents using semantic vector search.")
             .WithPurpose(AIToolPurposes.DocumentProcessing);
+    }
+}
+
+[Feature(ChatInteractionsConstants.Feature.ChatInteractionDocuments)]
+public sealed class ChatInteractionDocumentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
+            .AddNavigationProvider<ChatInteractionDocumentsAdminMenu>();
+
+        services.AddScoped<DefaultChatInteractionDocumentStore>()
+            .AddScoped<IChatInteractionDocumentStore>(sp => sp.GetRequiredService<DefaultChatInteractionDocumentStore>())
+            .AddScoped<ICatalog<ChatInteractionDocument>>(sp => sp.GetRequiredService<DefaultChatInteractionDocumentStore>());
+
+        services
+            .AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>()
+            .AddIndexProvider<ChatInteractionDocumentIndexProvider>()
+            .AddDataMigration<ChatInteractionDocumentIndexMigrations>();
+
+        // Add Indexing Services.
+        services.AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionIndexingHandler>()
+            .AddScoped<ChatInteractionIndexingService>()
+            .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionHandler>()
+            .AddIndexProfileHandler<ChatInteractionIndexProfileHandler>()
+            .AddDisplayDriver<IndexProfile, ChatInteractionIndexProfileDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

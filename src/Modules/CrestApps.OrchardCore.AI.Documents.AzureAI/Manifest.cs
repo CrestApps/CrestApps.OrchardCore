@@ -3,8 +3,8 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
-    Name = "AI Documents (Azure AI)",
-    Description = "Adds Azure AI Search support for document embeddings and indexing.",
+    Name = "AI Documents indexing using Azure AI Search",
+    Description = "Provides services to index AI Documents in Azure AI Search indexes.",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,

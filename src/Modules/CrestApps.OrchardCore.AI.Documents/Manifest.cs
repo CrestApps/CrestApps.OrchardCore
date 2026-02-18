@@ -13,7 +13,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ChatInteractionsConstants.Feature.ChatDocuments,
     Name = "AI Documents",
-    Description = "Provides the foundation for document processing and AI searching.",
+    Description = "Provides the foundation for document processing, text extraction, and Retrieval-Augmented Generation (RAG) capabilities.",
     Category = "Artificial Intelligence",
     EnabledByDependencyOnly = true,
     Dependencies =
@@ -24,8 +24,19 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ChatInteractionsConstants.Feature.ChatInteractionDocuments,
+    Name = "AI Documents for Chat Interactions",
+    Description = "Provides document upload and Retrieval-Augmented Generation (RAG) support for AI Chat Interactions.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        ChatInteractionsConstants.Feature.ChatDocuments,
+    ]
+)]
+
+[assembly: Feature(
     Id = AIConstants.Feature.ProfileDocuments,
-    Name = "AI Profile Documents",
+    Name = "AI Documents for Profiles",
     Description = "Provides document upload and Retrieval-Augmented Generation (RAG) support for AI Profiles.",
     Category = "Artificial Intelligence",
     Dependencies =
