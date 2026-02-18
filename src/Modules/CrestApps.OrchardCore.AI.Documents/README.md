@@ -23,7 +23,6 @@ The base feature (`CrestApps.OrchardCore.AI.Documents`) provides the shared infr
 - **Settings UI**: Admin settings page for configuring the default document index (**Settings > Chat Interaction**)
 - **Document Processing Tools**: AI tools for listing, reading, and searching documents
 - **RAG Search Tool**: Semantic vector search across uploaded documents
-- **Document Intent Registration**: Registers document intents for the shared intent detection pipeline
 - **Strategy-Based Processing**: Adds document-focused prompt-processing strategies
 - **Index & Migrations**: Shared `AIDocumentIndex` with `ReferenceId` and `ReferenceType` columns for multi-purpose document storage
 
@@ -167,37 +166,6 @@ There are no separate API endpoints for profile document management — everythi
 > Note: Legacy Office formats (.doc, .xls, .ppt) are not supported. Please convert them to the newer formats (.docx, .xlsx, .pptx).
 
 ## Configuration
-
-### Intent Detection Model
-
-Intent detection is provided by the base `CrestApps.OrchardCore.AI.Chat.Interactions` module and is shared across all registered intents (including those added by this Documents feature).
-
-To configure the intent detection model, set the `DefaultIntentDeploymentName` in your provider connection settings.
-
-```json
-{
-  "OrchardCore": {
-    "CrestApps_AI": {
-      "Providers": {
-        "OpenAI": {
-          "Connections": {
-            "default": {
-              "DefaultDeploymentName": "gpt-4o",
-              "DefaultEmbeddingDeploymentName": "text-embedding-3-small",
-              "DefaultIntentDeploymentName": "gpt-4o-mini",
-              "DefaultImagesDeploymentName": "dall-e-3"
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-If `DefaultIntentDeploymentName` is not configured, the system falls back to:
-1. The `DefaultDeploymentName` (chat model) for the connection
-2. Keyword-based intent detection (if no AI model is available)
 
 ### Documents Tab Settings
 

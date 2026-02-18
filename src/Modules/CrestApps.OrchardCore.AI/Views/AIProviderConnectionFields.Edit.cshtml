@@ -47,16 +47,7 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultIntentDeploymentName" class="@Orchard.GetLabelClasses()">@T["Intent deployment name"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <input type="text" asp-for="DefaultIntentDeploymentName" class="form-control" />
-        <span asp-validation-for="DefaultIntentDeploymentName" class="text-danger"></span>
-        <span class="hint">@T["The default intent detection deployment or model name. If empty, falls back to the chat deployment."]</span>
-    </div>
-</div>
-
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultImagesDeploymentName" class="@Orchard.GetLabelClasses()">@T["Images deployment name"]</label>
+    <label asp-for="DefaultImagesDeploymentName"class="@Orchard.GetLabelClasses()">@T["Images deployment name"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="text" asp-for="DefaultImagesDeploymentName" class="form-control" />
         <span asp-validation-for="DefaultImagesDeploymentName" class="text-danger"></span>

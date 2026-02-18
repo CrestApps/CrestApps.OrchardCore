@@ -62,12 +62,10 @@ Below is an example configuration:
           "DefaultConnectionName": "<!-- The default connection name to use from the Connections list -->",
           "DefaultDeploymentName": "<!-- The default deployment name -->",
           "DefaultEmbeddingDeploymentName": "<!-- The default embedding deployment name (optional, for embedding services) -->",
-          "DefaultIntentDeploymentName": "<!-- The default deployment name for intent detection (optional) -->",
           "DefaultImagesDeploymentName": "<!-- The default deployment name for image generation (optional, e.g., 'dall-e-3') -->",
           "Connections": {
             "<!-- Connection name goes here -->": {
               "DefaultDeploymentName": "<!-- The default deployment name for this connection -->",
-              "DefaultIntentDeploymentName": "<!-- The intent detection deployment name (optional, lightweight model recommended) -->",
               "DefaultImagesDeploymentName": "<!-- The image generation deployment name (optional, e.g., 'dall-e-3') -->"
               // Provider-specific settings go here
             }
@@ -99,7 +97,6 @@ Below is an example configuration:
 |---------|-------------|----------|
 | `DefaultDeploymentName` | The default model for chat completions | Yes |
 | `DefaultEmbeddingDeploymentName` | The model for generating embeddings (for RAG/vector search) | No |
-| `DefaultIntentDeploymentName` | A lightweight model for intent classification (e.g., `gpt-4o-mini`). If not set, falls back to `DefaultDeploymentName`. | No |
 | `DefaultImagesDeploymentName` | The model for image generation (e.g., `dall-e-3`). Required for image generation features. | No |
 
 ---
@@ -117,19 +114,6 @@ The following providers are supported **out of the box**:
 > For these providers, use the **`OpenAI`** provider type when configuring their connections and endpoints.
 
 Each provider can define multiple connections, and the `DefaultConnectionName` determines which one is used when multiple connections are available.
-
----
-
-### Provider Configuration
-
-The following providers are supported **out of the box**:
-
-* **OpenId** — [View configuration guide](../CrestApps.OrchardCore.OpenAI/README.md)
-* **Azure** — [View configuration guide](../CrestApps.OrchardCore.OpenAI.Azure/README.md)
-* **AzureAIInference** — [View configuration guide](../CrestApps.OrchardCore.AzureAIInference/README.md)
-* **Ollama** — [View configuration guide](../CrestApps.OrchardCore.Ollama/README.md)
-
-Each provider requires its own connection and deployment settings. The `DefaultConnectionName` determines which connection is used when multiple connections are configured.
 
 ---
 

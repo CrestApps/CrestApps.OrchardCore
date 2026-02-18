@@ -77,28 +77,4 @@ Navigate to **Artificial Intelligence > Provider Connections**, edit your connec
 }
 ```
 
-#### Intent Detection Model
 
-By default, intent detection uses the same model configured for chat (`DefaultDeploymentName`). For cost optimization, you can configure a separate lightweight model for intent classification:
-
-```json
-{
-  "OrchardCore": {
-    "CrestApps_AI": {
-      "Providers": {
-        "OpenAI": {
-          "Connections": {
-            "default": {
-              "DefaultDeploymentName": "gpt-4o",
-              "DefaultIntentDeploymentName": "gpt-4o-mini",
-              "DefaultImagesDeploymentName": "dall-e-3"
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-> Recommendation: Use a lightweight model like `gpt-4o-mini` for intent detection. Intent classification is a simple task that doesn't require the full capabilities of larger models.
