@@ -126,12 +126,15 @@ Only embeddable file extensions are supported for AI Profile documents. The set 
 
 > **Note:** Tabular file types (`.csv`, `.tsv`, `.xlsx`, `.xls`) are registered as non-embeddable and are not available for AI Profile document upload, since they are intended for tabular data analysis rather than text-based RAG.
 
-### API Endpoints
+### How It Works
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/ai/profiles/upload-document` | POST | Upload one or more documents to an AI Profile |
-| `/ai/profiles/remove-document` | POST | Remove a document from an AI Profile |
+Documents are managed directly through the AI Profile editor form. When you save a profile:
+
+1. **New files** selected in the Documents tab are uploaded, text-extracted, chunked, embedded, and stored
+2. **Removed documents** marked for deletion are removed from the store
+3. All changes are applied atomically when the profile is saved
+
+There are no separate API endpoints for profile document management — everything is handled through the standard profile editor workflow.
 
 ### Dependencies
 

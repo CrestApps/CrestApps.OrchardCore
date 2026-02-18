@@ -70,9 +70,5 @@ public static class AIConstants
         public const string ChatInteractionUploadDocument = "ChatInteractionUploadDocument";
 
         public const string ChatInteractionRemoveDocument = "ChatInteractionRemoveDocument";
-
-        public const string AIProfileUploadDocument = "AIProfileUploadDocument";
-
-        public const string AIProfileRemoveDocument = "AIProfileRemoveDocument";
     }
 }

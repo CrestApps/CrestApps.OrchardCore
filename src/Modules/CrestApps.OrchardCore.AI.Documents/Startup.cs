@@ -36,6 +36,7 @@ public sealed class Startup : StartupBase
 
         // Register unified document store, index provider, and migration.
         services.AddScoped<IAIDocumentStore, DefaultAIDocumentStore>();
+        services.AddScoped<IAIDocumentProcessingService, DefaultAIDocumentProcessingService>();
         services.AddIndexProvider<AIDocumentIndexProvider>();
         services.AddDataMigration<AIDocumentIndexMigrations>();
 
@@ -80,12 +81,5 @@ public sealed class ProfileDocumentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<AIProfile, AIProfileDocumentsDisplayDriver>();
-    }
-
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes
-            .AddUploadProfileDocumentEndpoint()
-            .AddRemoveProfileDocumentEndpoint();
     }
 }
