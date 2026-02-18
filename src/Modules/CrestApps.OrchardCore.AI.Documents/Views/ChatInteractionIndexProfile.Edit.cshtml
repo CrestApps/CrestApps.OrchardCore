@@ -1,0 +1,21 @@
+@model CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels.ChatInteractionIndexProfileViewModel
+
+<div class="mb-3">
+    <label asp-for="EmbeddingConnection" class="form-label">@T["Embedding connection"]</label>
+
+    @if (Model.EmbeddingConnections.Count == 0)
+    {
+        <div class="alert alert-warning">
+            <i class="fa-solid fa-exclamation-triangle" aria-hidden="true"></i>
+            @T["No embedding connections are available. Please configure at least one AI provider with an embedding deployment before creating this index."]
+        </div>
+    }
+    else
+    {
+        <select asp-for="EmbeddingConnection" asp-items="Model.EmbeddingConnections" class="form-select">
+            <option value="">@T["Select an embedding connection"]</option>
+        </select>
+
+        <span class="hint">@T["Select the embedding connection to use for generating document embeddings. This determines the vector dimensions for the index."]</span>
+    }
+</div>

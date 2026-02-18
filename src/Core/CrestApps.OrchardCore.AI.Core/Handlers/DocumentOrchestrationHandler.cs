@@ -1,19 +1,21 @@
 using System.Text;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Options;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
 /// <summary>
 /// Orchestration context handler that populates document references
-/// from a <see cref="ChatInteraction"/> resource and enriches the system message
-/// with document metadata so the model knows which documents are available
-/// and which tools to use to access them.
+/// from a <see cref="ChatInteraction"/> or <see cref="AIProfile"/> resource
+/// and enriches the system message with document metadata so the model knows
+/// which documents are available and which tools to use to access them.
 /// </summary>
 /// <remarks>
 /// Document processing tools are registered as system tools and are always included
 /// by the orchestrator. This handler provides the model with document metadata
-/// and tool descriptions. The chat interaction ID is resolved server-side from
+/// and tool descriptions. The resource ID is resolved server-side from
 /// <see cref="AIToolExecutionContext.Resource"/> — it is never exposed to the model.
 /// </remarks>
 public sealed class DocumentOrchestrationHandler : IOrchestrationContextHandler
@@ -31,6 +33,15 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextHandler
             interaction.Documents is { Count: > 0 })
         {
             context.Context.Documents = interaction.Documents;
+        }
+        else if (context.Resource is AIProfile profile)
+        {
+            var documentsMetadata = profile.As<AIProfileDocumentsMetadata>();
+
+            if (documentsMetadata.Documents is { Count: > 0 })
+            {
+                context.Context.Documents = documentsMetadata.Documents;
+            }
         }
 
         return Task.CompletedTask;

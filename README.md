@@ -88,11 +88,11 @@ Enables ad-hoc AI chat experiences with configurable parameters, document upload
 
 **Extension modules:**
 - [AI Chat Interactions - Core](src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/README.md) - Core abstractions and services
-- [AI Chat Interactions - Documents](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions.Documents/README.md) - Document upload and RAG support
-- [AI Chat Interactions - PDF](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions.Pdf/README.md) - PDF document support
-- [AI Chat Interactions - OpenXml](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml/README.md) - Word, Excel, PowerPoint support
-- [AI Chat Interactions - Documents (Azure AI Search)](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI/README.md) - Azure AI Search provider for documents
-- [AI Chat Interactions - Documents (Elasticsearch)](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch/README.md) - Elasticsearch provider for documents
+- [AI Documents](src/Modules/CrestApps.OrchardCore.AI.Documents/README.md) - Document processing foundation with features for Chat Interaction documents and AI Profile documents
+- [AI Documents (PDF)](src/Modules/CrestApps.OrchardCore.AI.Documents.Pdf/README.md) - PDF document support
+- [AI Documents (OpenXml)](src/Modules/CrestApps.OrchardCore.AI.Documents.OpenXml/README.md) - Word, Excel, PowerPoint support
+- [AI Documents (Azure AI Search)](src/Modules/CrestApps.OrchardCore.AI.Documents.AzureAI/README.md) - Azure AI Search provider for documents
+- [AI Documents (Elasticsearch)](src/Modules/CrestApps.OrchardCore.AI.Documents.Elasticsearch/README.md) - Elasticsearch provider for documents
 
 #### AI Data Sources Module
 Provides provider-agnostic Data Sources (RAG) management, knowledge base indexing, early RAG, and the DataSourceSearch tool. See the [AI Data Sources README](src/Modules/CrestApps.OrchardCore.AI.DataSources/README.md).

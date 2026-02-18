@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Http;
@@ -51,40 +52,62 @@ public sealed class ReadDocumentTool : AIFunction
         var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
         var executionContext = httpContextAccessor?.HttpContext?.Items[nameof(AIToolExecutionContext)] as AIToolExecutionContext;
 
-        if (executionContext?.Resource is not ChatInteraction interaction)
+        if (executionContext?.Resource is ChatInteraction interaction)
         {
-            return "Document access requires an active chat interaction session.";
+            var chatInteractionId = interaction.ItemId;
+            var documentStore = arguments.Services.GetService<IAIDocumentStore>();
+
+            if (documentStore is null)
+            {
+                return "Document store is not available.";
+            }
+
+            var document = await documentStore.FindByIdAsync(documentId);
+
+            if (document is null || document.ReferenceId != chatInteractionId)
+            {
+                return $"Document with ID '{documentId}' was not found in this session.";
+            }
+
+            return FormatDocumentText(document.FileName, document.Text);
         }
 
-        var chatInteractionId = interaction.ItemId;
-        var documentStore = arguments.Services.GetService<IChatInteractionDocumentStore>();
-
-        if (documentStore is null)
+        if (executionContext?.Resource is AIProfile profile)
         {
-            return "Document store is not available.";
+            var documentStore = arguments.Services.GetService<IAIDocumentStore>();
+
+            if (documentStore is null)
+            {
+                return "Document store is not available.";
+            }
+
+            var document = await documentStore.FindByIdAsync(documentId);
+
+            if (document is null || document.ReferenceId != profile.ItemId)
+            {
+                return $"Document with ID '{documentId}' was not found in this profile.";
+            }
+
+            return FormatDocumentText(document.FileName, document.Text);
         }
 
-        var document = await documentStore.FindByIdAsync(documentId);
+        return "Document access requires an active chat interaction session or AI profile.";
+    }
 
-        if (document is null || document.ChatInteractionId != chatInteractionId)
+    private static string FormatDocumentText(string fileName, string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
         {
-            return $"Document with ID '{documentId}' was not found in this session.";
+            return $"Document '{fileName}' has no extractable text content.";
         }
 
-        if (string.IsNullOrWhiteSpace(document.Text))
-        {
-            return $"Document '{document.FileName}' has no extractable text content.";
-        }
-
-        // Limit to ~50KB to avoid excessive token usage.
         const int maxLength = 50_000;
-        var text = document.Text;
 
         if (text.Length > maxLength)
         {
             text = string.Concat(text.AsSpan(0, maxLength), "\n\n... [content truncated at 50KB]");
         }
 
-        return $"[Document: {document.FileName}]\n\n{text}";
+        return $"[Document: {fileName}]\n\n{text}";
     }
 }

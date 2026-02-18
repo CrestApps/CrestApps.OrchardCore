@@ -1,0 +1,346 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.Models
+@using CrestApps.OrchardCore.AI.Documents.ViewModels
+@using Microsoft.Extensions.Options
+@using OrchardCore
+
+@model EditAIProfileDocumentsViewModel
+
+@inject IOptions<ChatDocumentsOptions> ChatInteractionOptions
+@{
+    var allowedExtensions = string.Join(", ", ChatInteractionOptions.Value.EmbeddableFileExtensions);
+    var uniqueId = Guid.NewGuid().ToString("N")[..8];
+}
+
+<div class="mb-3">
+    <h5>@T["Documents"]</h5>
+    <p class="text-muted small">@T["Upload text-based documents for RAG (Retrieval Augmented Generation). These documents will be available across all chat sessions using this profile."]</p>
+
+    @if (!Model.HasIndexProfile)
+    {
+        <div class="alert alert-warning" role="alert">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i>
+            <strong>@T["Index Not Configured"]</strong>
+            <p class="mb-0">
+                @T["No document index is configured. Please navigate to Settings > Chat Interactions and select an index profile to enable document embedding."]
+            </p>
+        </div>
+    }
+    else if (!Model.HasVectorSearchService)
+    {
+        <div class="alert alert-warning" role="alert">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i>
+            <strong>@T["Vector Search Service Not Available"]</strong>
+            <p class="mb-0">
+                @T["The configured index profile \"{0}\" does not have a registered embedding search service.", Model.IndexProfileName]
+            </p>
+        </div>
+    }
+
+    <div class="border rounded p-3 bg-light">
+        <!-- Drag and drop zone -->
+        <div id="profileDropZone-@uniqueId" class="drop-zone border rounded p-4 mb-3 text-center bg-white" style="border: 2px dashed #dee2e6 !important; cursor: pointer; transition: all 0.2s ease;">
+            <div class="drop-zone-content d-flex flex-column align-items-center" id="profileDropZoneContent-@uniqueId">
+                <i class="fa-solid fa-cloud-arrow-up fa-3x text-muted mb-3"></i>
+                <div class="text-muted mb-2">@T["Drag and drop files here"]</div>
+                <div class="text-muted mb-2">@T["or"]</div>
+                <button type="button" class="btn btn-primary" id="profileBrowseBtn-@uniqueId">
+                    <i class="fa-solid fa-folder-open me-1"></i>
+                    @T["Browse Files"]
+                </button>
+            </div>
+            <div class="drop-zone-active d-none d-flex flex-column align-items-center" id="profileDropZoneActive-@uniqueId">
+                <i class="fa-solid fa-file-arrow-down fa-3x text-primary mb-2"></i>
+                <div class="text-primary fw-bold">@T["Drop files to upload"]</div>
+            </div>
+        </div>
+
+        <input type="file"
+               class="d-none"
+               id="profileDocumentUpload-@uniqueId"
+               name="@Html.NameFor(m => m.Files)"
+               accept="@allowedExtensions"
+               multiple />
+        <div class="form-text mb-3">
+            @T["Supported formats: {0}. Only text-based documents for RAG.", allowedExtensions]
+        </div>
+
+        <div id="profilePendingFiles-@uniqueId" class="pending-file-list"></div>
+
+        <div id="removedDocumentsContainer-@uniqueId"></div>
+
+        <div id="profileDocumentsList-@uniqueId" class="document-list">
+            @if (Model.Documents != null && Model.Documents.Any())
+            {
+                foreach (var doc in Model.Documents)
+                {
+                    <div class="document-item d-flex align-items-center border-bottom py-2" data-document-id="@doc.DocumentId">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger remove-profile-document me-2 flex-shrink-0"
+                                data-document-id="@doc.DocumentId"
+                                title="@T["Remove document"]">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                        <div class="text-truncate">
+                            <div class="fw-medium small text-truncate">@doc.FileName</div>
+                            <small class="text-muted" style="font-size: 0.75rem;">
+                                @FormatFileSize(doc.FileSize)
+                            </small>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center text-muted py-3 no-documents">
+                    <i class="fa-solid fa-file-circle-plus fa-2x mb-2"></i>
+                    <div>@T["No documents attached. Upload text-based documents to enable RAG across all chat sessions."]</div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label class="form-label">
+        @T["Top N Results"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["The number of top matching document chunks to include as context for the AI model. Higher values provide more context but may increase costs and response time."]" aria-label="@T["Help: Top N Results explanation"]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <input type="number" class="form-control" name="@Html.NameFor(m => m.TopN)" value="@Model.TopN" min="1" max="20" />
+    <div class="form-text">@T["Default: 3. Recommended range: 1-10."]</div>
+</div>
+
+<style at="Head">
+    .drop-zone {
+        border: 2px dashed #dee2e6 !important;
+        transition: all 0.3s ease;
+    }
+
+        .drop-zone.drag-over {
+            border-color: #0d6efd !important;
+            background-color: #f0f7ff !important;
+        }
+
+            .drop-zone.drag-over .drop-zone-content {
+                display: none;
+            }
+
+            .drop-zone.drag-over .drop-zone-active {
+                display: block !important;
+            }
+</style>
+
+<script at="Foot">
+    (function() {
+        const uniqueId = '@uniqueId';
+        const fileInput = document.getElementById('profileDocumentUpload-' + uniqueId);
+        const documentsList = document.getElementById('profileDocumentsList-' + uniqueId);
+        const pendingFilesList = document.getElementById('profilePendingFiles-' + uniqueId);
+        const removedContainer = document.getElementById('removedDocumentsContainer-' + uniqueId);
+        const dropZone = document.getElementById('profileDropZone-' + uniqueId);
+        const dropZoneContent = document.getElementById('profileDropZoneContent-' + uniqueId);
+        const dropZoneActive = document.getElementById('profileDropZoneActive-' + uniqueId);
+        const browseBtn = document.getElementById('profileBrowseBtn-' + uniqueId);
+
+        const pendingFiles = new DataTransfer();
+
+        function syncFileInput() {
+            fileInput.files = pendingFiles.files;
+        }
+
+        function addPendingFile(file) {
+            pendingFiles.items.add(file);
+            syncFileInput();
+
+            const noDocsMessage = documentsList.querySelector('.no-documents');
+            if (noDocsMessage) {
+                noDocsMessage.remove();
+            }
+
+            const fileId = 'pending-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+            const item = document.createElement('div');
+            item.className = 'document-item d-flex align-items-center border-bottom py-2';
+            item.setAttribute('data-pending-name', file.name);
+            item.setAttribute('data-pending-id', fileId);
+            item.innerHTML = `
+                <button type="button"
+                        class="btn btn-sm btn-outline-warning remove-pending-file me-2 flex-shrink-0"
+                        data-pending-id="${fileId}"
+                        title="@T["Cancel upload"]">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="text-truncate">
+                    <div class="fw-medium small text-truncate">${escapeHtml(file.name)}</div>
+                    <small class="text-muted" style="font-size: 0.75rem;">
+                        ${formatFileSize(file.size)} <span class="badge bg-info text-dark ms-1">@T["Pending"]</span>
+                    </small>
+                </div>
+            `;
+            pendingFilesList.appendChild(item);
+        }
+
+        if (browseBtn && fileInput) {
+            browseBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const tempInput = document.createElement('input');
+                tempInput.type = 'file';
+                tempInput.multiple = true;
+                tempInput.accept = fileInput.accept;
+                tempInput.addEventListener('change', function() {
+                    if (tempInput.files) {
+                        for (let i = 0; i < tempInput.files.length; i++) {
+                            addPendingFile(tempInput.files[i]);
+                        }
+                    }
+                });
+                tempInput.click();
+            });
+        }
+
+        if (dropZone) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, function(e) {
+                    preventDefaults(e);
+                    highlight();
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, function(e) {
+                    preventDefaults(e);
+                    unhighlight();
+                }, false);
+            });
+
+            dropZone.addEventListener('drop', function(e) {
+                preventDefaults(e);
+                unhighlight();
+
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files.length > 0) {
+                    for (let i = 0; i < dt.files.length; i++) {
+                        addPendingFile(dt.files[i]);
+                    }
+                }
+            }, false);
+        }
+
+        function highlight() {
+            dropZone.classList.add('drag-over');
+            dropZone.style.borderColor = '#0d6efd';
+            dropZone.style.backgroundColor = '#f0f7ff';
+            if (dropZoneContent) dropZoneContent.classList.add('d-none');
+            if (dropZoneActive) dropZoneActive.classList.remove('d-none');
+        }
+
+        function unhighlight() {
+            dropZone.classList.remove('drag-over');
+            dropZone.style.borderColor = '#dee2e6';
+            dropZone.style.backgroundColor = '#fff';
+            if (dropZoneContent) dropZoneContent.classList.remove('d-none');
+            if (dropZoneActive) dropZoneActive.classList.add('d-none');
+        }
+
+        // Handle removing pending files (not yet saved).
+        pendingFilesList.addEventListener('click', function(e) {
+            const removeBtn = e.target.closest('.remove-pending-file');
+            if (!removeBtn) return;
+
+            const pendingId = removeBtn.getAttribute('data-pending-id');
+            const item = pendingFilesList.querySelector(`[data-pending-id="${pendingId}"]`);
+            if (!item) return;
+
+            const fileName = item.getAttribute('data-pending-name');
+
+            const newTransfer = new DataTransfer();
+            let removed = false;
+            for (let i = 0; i < pendingFiles.files.length; i++) {
+                if (!removed && pendingFiles.files[i].name === fileName) {
+                    removed = true;
+                    continue;
+                }
+                newTransfer.items.add(pendingFiles.files[i]);
+            }
+
+            pendingFiles.items.clear();
+            for (let i = 0; i < newTransfer.files.length; i++) {
+                pendingFiles.items.add(newTransfer.files[i]);
+            }
+            syncFileInput();
+
+            item.remove();
+
+            if (documentsList.querySelectorAll('.document-item').length === 0 &&
+                pendingFilesList.querySelectorAll('.document-item').length === 0) {
+                documentsList.innerHTML = `
+                    <div class="text-center text-muted py-3 no-documents">
+                        <i class="fa-solid fa-file-circle-plus fa-2x mb-2"></i>
+                        <div>@T["No documents attached. Upload text-based documents to enable RAG across all chat sessions."]</div>
+                    </div>
+                `;
+            }
+        });
+
+        // Handle removing existing documents (already saved).
+        documentsList.addEventListener('click', function(e) {
+            const removeBtn = e.target.closest('.remove-profile-document');
+            if (!removeBtn) return;
+
+            const documentId = removeBtn.getAttribute('data-document-id');
+            if (!confirm('@T["Are you sure you want to remove this document? The removal will take effect when you save."]')) return;
+
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = '@Html.NameFor(m => m.RemovedDocumentIds)';
+            hiddenInput.value = documentId;
+            removedContainer.appendChild(hiddenInput);
+
+            const docItem = documentsList.querySelector(`[data-document-id="${documentId}"]`);
+            if (docItem) docItem.remove();
+
+            if (documentsList.querySelectorAll('.document-item').length === 0 &&
+                pendingFilesList.querySelectorAll('.document-item').length === 0) {
+                documentsList.innerHTML = `
+                    <div class="text-center text-muted py-3 no-documents">
+                        <i class="fa-solid fa-file-circle-plus fa-2x mb-2"></i>
+                        <div>@T["No documents attached. Upload text-based documents to enable RAG across all chat sessions."]</div>
+                    </div>
+                `;
+            }
+        });
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    })();
+</script>
+
+@functions {
+    string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024):F1} MB";
+    }
+}

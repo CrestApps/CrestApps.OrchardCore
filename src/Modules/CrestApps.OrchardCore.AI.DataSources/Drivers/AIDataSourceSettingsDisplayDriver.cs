@@ -12,12 +12,10 @@ namespace CrestApps.OrchardCore.AI.DataSources.Drivers;
 
 public sealed class AIDataSourceSettingsDisplayDriver : SiteDisplayDriver<AIDataSourceSettings>
 {
-    public const string GroupId = "ai-data-source-settings";
-
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
-    protected override string SettingsGroupId => GroupId;
+    protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
     public AIDataSourceSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
@@ -35,7 +33,7 @@ public sealed class AIDataSourceSettingsDisplayDriver : SiteDisplayDriver<AIData
             model.DefaultStrictness = settings.DefaultStrictness;
             model.DefaultTopNDocuments = settings.DefaultTopNDocuments;
         }).Location("Content:5")
-        .OnGroup(GroupId)
+        .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
     }
 

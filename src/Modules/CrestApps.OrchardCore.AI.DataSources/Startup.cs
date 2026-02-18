@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.AI.DataSources.Recipes;
 using CrestApps.OrchardCore.AI.DataSources.Services;
 using CrestApps.OrchardCore.AI.DataSources.Tools;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -36,8 +37,10 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<AIDataProviderAdminMenu>();
         services.AddDisplayDriver<AIProfile, AIProfileDataSourceDisplayDriver>();
         services.AddDisplayDriver<IndexProfile, DataSourceIndexProfileDisplayDriver>();
-        services.AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>();
-        services.AddNavigationProvider<AIDataSourceSettingsAdminMenu>();
+        services
+            .AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>();
+
         services.AddScoped<IOrchestrationContextHandler, DataSourceEarlyRagOrchestrationHandler>();
 
         services.AddScoped<DataSourceIndexingService>();

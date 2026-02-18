@@ -14,8 +14,6 @@ public class AIProviderConnectionFieldsViewModel
 
     public string DefaultEmbeddingDeploymentName { get; set; }
 
-    public string DefaultIntentDeploymentName { get; set; }
-
     public string DefaultImagesDeploymentName { get; set; }
 
     [BindNever]

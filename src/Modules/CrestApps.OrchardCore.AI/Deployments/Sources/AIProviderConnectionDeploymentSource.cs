@@ -48,7 +48,6 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
                 { "Name", connection.Name },
                 { "DefaultDeploymentName", connection.DefaultDeploymentName },
                 { "DefaultEmbeddingDeploymentName", connection.DefaultEmbeddingDeploymentName },
-                { "DefaultIntentDeploymentName", connection.DefaultIntentDeploymentName },
                 { "IsDefault", connection.IsDefault },
                 { "DisplayText", connection.DisplayText },
                 { "CreatedUtc", connection.CreatedUtc },
