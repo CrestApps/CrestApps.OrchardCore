@@ -8,7 +8,6 @@
   - [AI Chat Services Feature](#ai-chat-services-feature)
   - [AI Chat WebAPI](#ai-chat-webapi)
   - [AI Connection Management](#ai-connection-management)
-  - [AI Profile Documents](#ai-profile-documents)
   - [Defining Chat Profiles Using Code](#defining-chat-profiles-using-code)
 - [AI Tool Management Feature](#ai-tool-management-feature)
   - [Extending AI Chat with Custom Functions](#extending-ai-chat-with-custom-functions)
@@ -156,53 +155,9 @@ The **AI Chat WebAPI** feature extends the **AI Chat Services** feature by enabl
 
 The **AI Connection Management** feature enhances **AI Services** by providing a user interface to manage provider connections.  
 
-### AI Profile Documents
-
-The **AI Profile Documents** feature (`CrestApps.OrchardCore.AI.Profile.Documents`) adds document upload and RAG (Retrieval-Augmented Generation) support to AI Profiles. When enabled, a **Documents** tab appears on the AI Profile editor, allowing administrators to attach text-based documents that will be chunked, embedded, and used as context across all chat sessions using that profile.
-
-#### Key Capabilities
-
-- **Document Upload**: Upload text-based documents (PDF, Word, Markdown, etc.) directly to an AI Profile
-- **Automatic Text Extraction**: Content is extracted from uploaded documents using registered text extractors
-- **Chunking & Embedding**: Extracted text is split into chunks and embedded for semantic vector search
-- **RAG Integration**: Relevant document chunks are automatically retrieved and used as context for AI responses
-- **Top N Configuration**: Control how many matching chunks are included as context (default: 3)
-
-#### Supported File Types
-
-Only embeddable file extensions are supported for AI Profile documents. The set of embeddable extensions is determined by the registered document text extractors. Typically, this includes:
-
-| Format | Extension | Module Required |
-|--------|-----------|-----------------|
-| Text | .txt | Built-in |
-| Markdown | .md | Built-in |
-| JSON | .json | Built-in |
-| XML | .xml | Built-in |
-| HTML | .html, .htm | Built-in |
-| YAML | .yml, .yaml | Built-in |
-| Log | .log | Built-in |
-| PDF | .pdf | `CrestApps.OrchardCore.AI.Documents.Pdf` |
-| Word | .docx | `CrestApps.OrchardCore.AI.Documents.OpenXml` |
-| PowerPoint | .pptx | `CrestApps.OrchardCore.AI.Documents.OpenXml` |
-
-> **Note:** Tabular file types (`.csv`, `.tsv`, `.xlsx`, `.xls`) are registered as non-embeddable and are not available for AI Profile document upload, since they are intended for tabular data analysis rather than text-based RAG.
-
-#### Prerequisites
-
-- The **AI Chat Services** feature (`CrestApps.OrchardCore.AI.Chat.Core`) must be enabled.
-- An embedding deployment must be configured on the provider connection (`DefaultEmbeddingDeploymentName`).
-- For vector search to work, enable a document indexing provider such as `CrestApps.OrchardCore.AI.Documents.Elasticsearch` or `CrestApps.OrchardCore.AI.Documents.AzureAI`.
-
-#### Getting Started
-
-1. Enable the `AI Profile Documents` feature in the Orchard Core admin dashboard.
-2. Navigate to **Artificial Intelligence > AI Profiles** and edit a profile.
-3. Use the **Documents** tab to upload text-based documents.
-4. Configure the **Top N Results** setting to control how many matching chunks are included as context.
-
 ---
 
-#### Setting Up a Connection  
+#### Setting Up a Connection
 
 1. **Navigate to AI Settings**  
    - Go to **"Artificial Intelligence"** in the admin menu.  

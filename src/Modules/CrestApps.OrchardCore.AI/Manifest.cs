@@ -68,14 +68,3 @@ using OrchardCore.Modules.Manifest;
         AIConstants.Feature.Deployments,
     ]
 )]
-
-[assembly: Feature(
-    Id = AIConstants.Feature.ProfileDocuments,
-    Name = "AI Profile Documents",
-    Description = "Provides document upload and RAG support for AI Profiles.",
-    Category = "Artificial Intelligence",
-    Dependencies =
-    [
-        AIConstants.Feature.ChatCore,
-    ]
-)]

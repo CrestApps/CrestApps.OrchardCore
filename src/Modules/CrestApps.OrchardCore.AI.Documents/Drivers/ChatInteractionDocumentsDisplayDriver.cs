@@ -38,7 +38,7 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
     public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
     {
         // Show documents tab for all providers - documents are embedded and used for RAG
-        return Initialize<EditChatInteractionDocumentsViewModel>("ChatInteractionDocuments_Edit", async model =>
+        return Initialize<ChatInteractionDocumentsViewModel>("ChatInteractionDocuments_Edit", async model =>
         {
             model.ItemId = interaction.ItemId;
             model.Documents = interaction.Documents ?? [];
@@ -65,7 +65,7 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
     {
-        var model = new EditChatInteractionDocumentsViewModel();
+        var model = new ChatInteractionDocumentsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         interaction.DocumentTopN = model.TopN > 0 ? model.TopN : 3;

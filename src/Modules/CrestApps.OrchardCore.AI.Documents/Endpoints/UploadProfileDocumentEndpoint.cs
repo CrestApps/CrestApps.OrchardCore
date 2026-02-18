@@ -16,7 +16,7 @@ using OrchardCore;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.AI.Endpoints;
+namespace CrestApps.OrchardCore.AI.Documents.Endpoints;
 
 internal static class UploadProfileDocumentEndpoint
 {

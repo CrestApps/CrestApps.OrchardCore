@@ -1,7 +1,6 @@
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Documents.ViewModels;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -10,7 +9,7 @@ using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Settings;
 
-namespace CrestApps.OrchardCore.AI.Drivers;
+namespace CrestApps.OrchardCore.AI.Documents.Drivers;
 
 internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
 {
@@ -55,7 +54,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Content:8");
+        }).Location("Content:5#Documents:5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

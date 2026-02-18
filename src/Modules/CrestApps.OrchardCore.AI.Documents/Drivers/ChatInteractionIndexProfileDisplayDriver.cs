@@ -37,7 +37,7 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
             return null;
         }
 
-        return Initialize<EditChatInteractionIndexProfileViewModel>("ChatInteractionIndexProfile_Edit", model =>
+        return Initialize<ChatInteractionIndexProfileViewModel>("ChatInteractionIndexProfile_Edit", model =>
         {
             var metadata = indexProfile.As<ChatInteractionIndexProfileMetadata>();
 
@@ -88,7 +88,7 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
             return null;
         }
 
-        var model = new EditChatInteractionIndexProfileViewModel();
+        var model = new ChatInteractionIndexProfileViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 

@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 /// <summary>
 /// View model for editing Chat Interaction index profile embedding settings.
 /// </summary>
-public class EditChatInteractionIndexProfileViewModel
+public class ChatInteractionIndexProfileViewModel
 {
     /// <summary>
     /// Gets or sets the connection name for the embedding service.

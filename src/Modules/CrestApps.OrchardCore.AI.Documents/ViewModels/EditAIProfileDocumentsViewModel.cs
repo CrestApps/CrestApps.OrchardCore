@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.AI.Models;
 
-namespace CrestApps.OrchardCore.AI.ViewModels;
+namespace CrestApps.OrchardCore.AI.Documents.ViewModels;
 
 public class EditAIProfileDocumentsViewModel
 {

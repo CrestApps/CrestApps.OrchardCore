@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Models;
 using YesSql.Indexes;
 
-namespace CrestApps.OrchardCore.AI.Indexes;
+namespace CrestApps.OrchardCore.AI.Documents.Indexes;
 
 internal sealed class AIProfileDocumentIndexProvider : IndexProvider<AIProfileDocument>
 {

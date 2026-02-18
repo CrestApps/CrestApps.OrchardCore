@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.AI.Core.Indexes;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.AI.Migrations;
+namespace CrestApps.OrchardCore.AI.Documents.Migrations;
 
 internal sealed class AIProfileDocumentIndexMigrations : DataMigration
 {

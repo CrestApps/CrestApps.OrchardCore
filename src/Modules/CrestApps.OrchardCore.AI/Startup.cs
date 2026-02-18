@@ -227,21 +227,4 @@ public sealed class ConnectionManagementOCDeploymentsStartup : StartupBase
 }
 #endregion
 
-[Feature(AIConstants.Feature.ProfileDocuments)]
-public sealed class ProfileDocumentsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IAIProfileDocumentStore, DefaultAIProfileDocumentStore>();
-        services.AddDisplayDriver<AIProfile, AIProfileDocumentsDisplayDriver>();
-        services.AddIndexProvider<AIProfileDocumentIndexProvider>();
-        services.AddDataMigration<AIProfileDocumentIndexMigrations>();
-    }
 
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes
-            .AddUploadProfileDocumentEndpoint()
-            .AddRemoveProfileDocumentEndpoint();
-    }
-}

@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.AI.Documents.ViewModels;
 
-public class EditChatInteractionDocumentsViewModel
+public class ChatInteractionDocumentsViewModel
 {
     public string ItemId { get; set; }
 

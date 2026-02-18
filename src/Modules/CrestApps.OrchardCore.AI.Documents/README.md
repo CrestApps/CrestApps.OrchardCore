@@ -1,6 +1,6 @@
 # AI Documents
 
-This feature extends `CrestApps.OrchardCore.AI.Chat.Interactions` with document upload and additional prompt-processing strategies for document-aware conversations.
+This module is the foundation for all document-related functionality in the CrestApps AI suite. It provides document upload, text extraction, embedding, and RAG (Retrieval-Augmented Generation) capabilities shared by both **AI Chat Interactions** and **AI Profiles**.
 
 Key point: **prompt routing + intent detection are provided by the base `CrestApps.OrchardCore.AI.Chat.Interactions` module**. The Documents feature *adds more prompt processing strategies* (and registers additional intents) focused on documents (RAG and non-RAG).
 
@@ -168,10 +168,66 @@ public override void ConfigureServices(IServiceCollection services)
 
 ## API Endpoints
 
+### Chat Interaction Endpoints
+
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/ai/chat-interactions/upload-document` | POST | Upload one or more documents |
-| `/ai/chat-interactions/remove-document` | POST | Remove a document |
+| `/ai/chat-interactions/upload-document` | POST | Upload one or more documents to a chat interaction |
+| `/ai/chat-interactions/remove-document` | POST | Remove a document from a chat interaction |
+
+### Profile Document Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/ai/profiles/upload-document` | POST | Upload one or more documents to an AI Profile |
+| `/ai/profiles/remove-document` | POST | Remove a document from an AI Profile |
+
+## AI Profile Documents Feature
+
+The **AI Profile Documents** feature (`CrestApps.OrchardCore.AI.Profile.Documents`) adds document upload and RAG (Retrieval-Augmented Generation) support to AI Profiles. When enabled, a **Documents** tab appears on the AI Profile editor, allowing administrators to attach text-based documents that will be chunked, embedded, and used as context across all chat sessions using that profile.
+
+Unlike chat interaction documents (which are scoped to a single session), profile documents persist across all sessions using the profile.
+
+### Key Capabilities
+
+- **Document Upload**: Upload text-based documents (PDF, Word, Markdown, etc.) directly to an AI Profile
+- **Automatic Text Extraction**: Content is extracted from uploaded documents using registered text extractors
+- **Chunking & Embedding**: Extracted text is split into chunks and embedded for semantic vector search
+- **RAG Integration**: Relevant document chunks are automatically retrieved and used as context for AI responses
+- **Top N Configuration**: Control how many matching chunks are included as context (default: 3)
+
+### Supported File Types
+
+Only embeddable file extensions are supported for AI Profile documents. The set of embeddable extensions is determined by the registered document text extractors. Typically, this includes:
+
+| Format | Extension | Module Required |
+|--------|-----------|-----------------|
+| Text | .txt | Built-in |
+| Markdown | .md | Built-in |
+| JSON | .json | Built-in |
+| XML | .xml | Built-in |
+| HTML | .html, .htm | Built-in |
+| YAML | .yml, .yaml | Built-in |
+| Log | .log | Built-in |
+| PDF | .pdf | `CrestApps.OrchardCore.AI.Documents.Pdf` |
+| Word | .docx | `CrestApps.OrchardCore.AI.Documents.OpenXml` |
+| PowerPoint | .pptx | `CrestApps.OrchardCore.AI.Documents.OpenXml` |
+
+> **Note:** Tabular file types (`.csv`, `.tsv`, `.xlsx`, `.xls`) are registered as non-embeddable and are not available for AI Profile document upload, since they are intended for tabular data analysis rather than text-based RAG.
+
+### Prerequisites
+
+- The **AI Documents** feature (`CrestApps.OrchardCore.AI.Documents`) must be enabled.
+- The **AI Chat Services** feature (`CrestApps.OrchardCore.AI.Chat.Core`) must be enabled.
+- An embedding deployment must be configured on the provider connection (`DefaultEmbeddingDeploymentName`).
+- For vector search to work, enable a document indexing provider such as `CrestApps.OrchardCore.AI.Documents.Elasticsearch` or `CrestApps.OrchardCore.AI.Documents.AzureAI`.
+
+### Getting Started
+
+1. Enable the `AI Profile Documents` feature in the Orchard Core admin dashboard.
+2. Navigate to **Artificial Intelligence > AI Profiles** and edit a profile.
+3. Use the **Documents** tab to upload text-based documents.
+4. Configure the **Top N Results** setting to control how many matching chunks are included as context.
 
 ## Troubleshooting
 

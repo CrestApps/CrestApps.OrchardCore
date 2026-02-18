@@ -88,7 +88,7 @@ Enables ad-hoc AI chat experiences with configurable parameters, document upload
 
 **Extension modules:**
 - [AI Chat Interactions - Core](src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/README.md) - Core abstractions and services
-- [AI Documents](src/Modules/CrestApps.OrchardCore.AI.Documents/README.md) - Document upload and RAG support
+- [AI Documents](src/Modules/CrestApps.OrchardCore.AI.Documents/README.md) - Document upload, RAG support, and AI Profile document management
 - [AI Documents (PDF)](src/Modules/CrestApps.OrchardCore.AI.Documents.Pdf/README.md) - PDF document support
 - [AI Documents (OpenXml)](src/Modules/CrestApps.OrchardCore.AI.Documents.OpenXml/README.md) - Word, Excel, PowerPoint support
 - [AI Documents (Azure AI Search)](src/Modules/CrestApps.OrchardCore.AI.Documents.AzureAI/README.md) - Azure AI Search provider for documents

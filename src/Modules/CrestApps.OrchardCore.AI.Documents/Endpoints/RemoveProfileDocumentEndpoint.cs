@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using OrchardCore.Entities;
 
-namespace CrestApps.OrchardCore.AI.Endpoints;
+namespace CrestApps.OrchardCore.AI.Documents.Endpoints;
 
 internal static class RemoveProfileDocumentEndpoint
 {

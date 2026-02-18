@@ -17,6 +17,6 @@ public sealed class DefaultAIProfileDocumentStore : DocumentCatalog<AIProfileDoc
     {
         ArgumentException.ThrowIfNullOrEmpty(profileId);
 
-        return (await Session.Query<AIProfileDocument, AIProfileDocumentIndex>(x => x.ProfileId == profileId).ListAsync()).ToArray();
+        return (await Session.Query<AIProfileDocument, AIProfileDocumentIndex>(x => x.ProfileId == profileId, CollectionName).ListAsync()).ToArray();
     }
 }
