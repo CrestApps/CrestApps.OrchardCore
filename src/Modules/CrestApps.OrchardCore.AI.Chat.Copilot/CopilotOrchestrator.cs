@@ -106,7 +106,6 @@ public sealed class CopilotOrchestrator : IOrchestrator
         {
             Model = model,
             Streaming = true,
-            SessionId = context.SessionId,
         };
 
         if (tools.Count > 0)
@@ -131,21 +130,21 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
         // Get the GitHub access token for the current user
         var clientOptions = new CopilotClientOptions();
-        
+
         if (context.ServiceProvider is not null)
         {
             var httpContextAccessor = context.ServiceProvider.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
             var user = httpContextAccessor?.HttpContext?.User;
-            
+
             if (user?.Identity?.IsAuthenticated == true)
             {
                 var orchardUser = await _userManager.GetUserAsync(user);
-                
+
                 if (orchardUser is not null)
                 {
                     var userId = await _userManager.GetUserIdAsync(orchardUser);
                     var accessToken = await _oauthService.GetValidAccessTokenAsync(userId, cancellationToken);
-                    
+
                     if (!string.IsNullOrEmpty(accessToken))
                     {
                         // Pass the GitHub access token via environment variable
@@ -154,7 +153,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
                         {
                             ["GITHUB_TOKEN"] = accessToken
                         };
-                        
+
                         if (_logger.IsEnabled(LogLevel.Debug))
                         {
                             _logger.LogDebug(

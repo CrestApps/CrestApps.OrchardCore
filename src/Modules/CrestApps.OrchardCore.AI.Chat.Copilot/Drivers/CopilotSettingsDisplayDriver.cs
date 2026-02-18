@@ -15,6 +15,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSettings>
 {
     public const string GroupId = "copilot";
+
     private const string ProtectorPurpose = "CrestApps.OrchardCore.AI.Chat.Copilot.Settings";
 
     private readonly IHttpContextAccessor _httpContextAccessor;

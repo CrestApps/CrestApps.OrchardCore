@@ -16,8 +16,6 @@ namespace CrestApps.OrchardCore.AI.Models;
 /// </remarks>
 public sealed class OrchestrationContext
 {
-    public string SessionId { get; set; }
-
     /// <summary>
     /// Gets or sets the current user message to process.
     /// </summary>
