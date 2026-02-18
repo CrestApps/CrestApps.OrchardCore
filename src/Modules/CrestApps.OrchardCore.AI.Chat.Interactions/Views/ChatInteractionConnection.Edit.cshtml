@@ -4,9 +4,28 @@
 
 @model EditChatInteractionConnectionViewModel
 
-@if (Model.ConnectionNames?.Count > 1)
+@if (Model.Orchestrators?.Count > 1)
 {
     <div class="mb-3">
+        <label asp-for="OrchestratorName" class="form-label">
+            @T["Orchestrator"]
+            <span class="text-muted" data-bs-toggle="tooltip" title="@T["The orchestrator to use for this chat interaction. The orchestrator controls how tools are selected and how the AI execution loop is managed."]">
+                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+            </span>
+        </label>
+        <select asp-for="OrchestratorName" asp-items="Model.Orchestrators" class="form-select" id="ci-orchestrator-selector">
+        </select>
+        <span asp-validation-for="OrchestratorName" class="text-danger"></span>
+    </div>
+}
+else
+{
+    <input type="hidden" asp-for="OrchestratorName" />
+}
+
+@if (Model.ConnectionNames?.Count > 1)
+{
+    <div class="mb-3" data-orchestrator-field="connection">
         <label asp-for="ConnectionName" class="form-label">
             @T["Connection"]
             <span class="text-muted" data-bs-toggle="tooltip" title="@T["The connection to use for this chat interaction. If not selected, the default connection will be used."]">
@@ -24,7 +43,7 @@ else
     <input type="hidden" asp-for="ConnectionName" />
 }
 
-<div class="mb-3">
+<div class="mb-3" data-orchestrator-field="deployment">
     <label asp-for="DeploymentId" class="form-label">
         @T["Deployment"]
         <span class="text-muted" data-bs-toggle="tooltip" title="@T["The AI model deployment to use for this chat interaction. If not selected, the default deployment will be used."]">
@@ -44,32 +63,13 @@ else
     <span asp-validation-for="DeploymentId" class="text-danger"></span>
 </div>
 
-@if (Model.Orchestrators?.Count > 1)
-{
-    <div class="mb-3">
-        <label asp-for="OrchestratorName" class="form-label">
-            @T["Orchestrator"]
-            <span class="text-muted" data-bs-toggle="tooltip" title="@T["The orchestrator to use for this chat interaction. The orchestrator controls how tools are selected and how the AI execution loop is managed."]">
-                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-            </span>
-        </label>
-        <select asp-for="OrchestratorName" asp-items="Model.Orchestrators" class="form-select">
-            <option value="">@T["Default orchestrator"]</option>
-        </select>
-        <span asp-validation-for="OrchestratorName" class="text-danger"></span>
-    </div>
-}
-else
-{
-    <input type="hidden" asp-for="OrchestratorName" />
-}
-
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
 
         const connectionNameElement = document.getElementById('@Html.IdFor(x => x.ConnectionName)');
         const deploymentsElement = document.getElementById('@Html.IdFor(x => x.DeploymentId)');
         const providerName = '@(Model.ProviderName)';
+        const orchestratorSelector = document.getElementById('ci-orchestrator-selector');
 
         if (connectionNameElement) {
             connectionNameElement.addEventListener('change', async (e) => {
@@ -108,6 +108,27 @@ else
                     console.error('Error fetching deployments:', error);
                 }
             });
+        }
+
+        if (orchestratorSelector) {
+            function updateFieldVisibility() {
+                const selectedOrchestrator = orchestratorSelector.value || 'default';
+                const isDefault = selectedOrchestrator.toLowerCase() === 'default' || selectedOrchestrator === '';
+
+                // Hide/show connection and deployment fields for non-default orchestrators
+                document.querySelectorAll('[data-orchestrator-field="connection"], [data-orchestrator-field="deployment"]').forEach(el => {
+                    el.style.display = isDefault ? '' : 'none';
+                });
+
+                // Show/hide Copilot-specific fields
+                const isCopilot = selectedOrchestrator.toLowerCase() === 'copilot';
+                document.querySelectorAll('[data-orchestrator-field="copilot"]').forEach(el => {
+                    el.style.display = isCopilot ? '' : 'none';
+                });
+            }
+
+            updateFieldVisibility();
+            orchestratorSelector.addEventListener('change', updateFieldVisibility);
         }
     });
 </script>

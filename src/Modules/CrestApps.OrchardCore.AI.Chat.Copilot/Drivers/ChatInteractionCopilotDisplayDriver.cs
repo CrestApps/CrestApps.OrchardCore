@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
@@ -14,39 +13,35 @@ using USR = OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 
-internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
+internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatInteraction>
 {
     private readonly IGitHubOAuthService _oauthService;
     private readonly UserManager<USR.IUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
-    public AIProfileCopilotDisplayDriver(
+    public ChatInteractionCopilotDisplayDriver(
         IGitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,
         IHttpContextAccessor httpContextAccessor,
-        IStringLocalizer<AIProfileCopilotDisplayDriver> stringLocalizer,
-        ILogger<AIProfileCopilotDisplayDriver> logger)
+        IStringLocalizer<ChatInteractionCopilotDisplayDriver> stringLocalizer)
     {
         _oauthService = oauthService;
         _userManager = userManager;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
-        _logger = logger;
     }
 
-    public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
+    public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
     {
-        return Initialize<EditCopilotProfileViewModel>("AIProfileCopilotConfig_Edit", async model =>
+        return Initialize<EditCopilotProfileViewModel>("ChatInteractionCopilotConfig_Edit", async model =>
         {
-            var copilotSettings = profile.As<CopilotProfileSettings>();
+            var copilotSettings = interaction.As<CopilotProfileSettings>();
 
             model.CopilotModel = copilotSettings?.CopilotModel;
             model.CopilotFlags = copilotSettings?.CopilotFlags;
 
-            // Check if current user has authenticated with GitHub
             var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
             if (user != null)
             {
@@ -57,7 +52,6 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
                     var credential = await _oauthService.GetCredentialAsync(userId);
                     model.GitHubUsername = credential?.GitHubUsername;
 
-                    // Load available models dynamically from GitHub API.
                     var models = await _oauthService.ListModelsAsync(userId);
                     if (models.Count > 0)
                     {
@@ -69,17 +63,16 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
             }
 
             model.AvailableModels ??= [];
-        }).Location("Content:3.5");
+        }).Location("Parameters:1#Settings:2.5");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
     {
         var model = new EditCopilotProfileViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        // Only save Copilot settings if Copilot orchestrator is selected
-        if (string.Equals(profile.OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(interaction.OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))
         {
             var copilotSettings = new CopilotProfileSettings
             {
@@ -87,9 +80,9 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
                 CopilotFlags = model.CopilotFlags,
             };
 
-            profile.Put(copilotSettings);
+            interaction.Put(copilotSettings);
         }
 
-        return Edit(profile, context);
+        return Edit(interaction, context);
     }
 }

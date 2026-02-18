@@ -65,4 +65,15 @@ public interface IGitHubOAuthService
     Task<bool> IsAuthenticatedAsync(
         string userId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the Copilot models available to the authenticated user
+    /// by calling the GitHub REST API.
+    /// </summary>
+    /// <param name="userId">The OrchardCore user ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A list of available models, or an empty list if unavailable.</returns>
+    Task<IList<CopilotModelInfo>> ListModelsAsync(
+        string userId,
+        CancellationToken cancellationToken = default);
 }

@@ -1,8 +1,10 @@
 using CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -30,8 +32,14 @@ public sealed class Startup : StartupBase
         // Register GitHub OAuth service
         services.AddScoped<IGitHubOAuthService, GitHubOAuthService>();
 
+        // Register handler to wire CopilotProfileSettings.CopilotModel into CompletionContext.Model.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAICompletionContextBuilderHandler, CopilotCompletionContextBuilderHandler>());
+
         // Register display driver for Copilot-specific profile configuration
         services.AddDisplayDriver<AIProfile, AIProfileCopilotDisplayDriver>();
+
+        // Register display driver for Copilot-specific chat interaction configuration
+        services.AddDisplayDriver<ChatInteraction, ChatInteractionCopilotDisplayDriver>();
 
         // Register settings display driver
         services.AddSiteDisplayDriver<CopilotSettingsDisplayDriver>();

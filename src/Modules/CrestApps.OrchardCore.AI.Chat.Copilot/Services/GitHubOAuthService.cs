@@ -1,3 +1,7 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Web;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using Microsoft.AspNetCore.DataProtection;
@@ -8,10 +12,6 @@ using OrchardCore.Entities;
 using OrchardCore.Settings;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text.Json;
-using System.Web;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 
@@ -90,7 +90,7 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
         }
 
         var user = await _userManager.FindByIdAsync(userId);
-        if (user == null)
+        if (user is not User usr)
         {
             throw new InvalidOperationException($"User with ID '{userId}' not found.");
         }
@@ -147,11 +147,10 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
             UpdatedUtc = DateTime.UtcNow
         };
 
-        if (user is User usr)
-        {
-            usr.Put(credentials);
-            await _userManager.UpdateAsync(usr);
-        }
+
+        usr.Put(credentials);
+        await _userManager.UpdateAsync(usr);
+
 
         return new GitHubOAuthCredential
         {
@@ -211,7 +210,7 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
             }
 
             var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
-        
+
             try
             {
                 var accessToken = protector.Unprotect(credentials.ProtectedAccessToken);
@@ -260,7 +259,7 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
         CancellationToken cancellationToken = default)
     {
         var credential = await GetCredentialAsync(userId, cancellationToken);
-        
+
         if (credential == null)
         {
             return false;
@@ -273,5 +272,62 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
         }
 
         return true;
+    }
+
+    public async Task<IList<CopilotModelInfo>> ListModelsAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var accessToken = await GetValidAccessTokenAsync(userId, cancellationToken);
+
+        if (string.IsNullOrEmpty(accessToken))
+        {
+            return [];
+        }
+
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient();
+            httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("CrestApps-OrchardCore-Copilot/1.0");
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+            var response = await httpClient.GetAsync("https://api.github.com/copilot/models", cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Failed to list Copilot models from GitHub API. Status: {StatusCode}",
+                    response.StatusCode);
+
+                return [];
+            }
+
+            var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+
+            var models = new List<CopilotModelInfo>();
+
+            if (json.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in json.EnumerateArray())
+                {
+                    var id = item.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+                    var name = item.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : id;
+
+                    if (!string.IsNullOrEmpty(id))
+                    {
+                        models.Add(new CopilotModelInfo { Id = id, Name = name ?? id });
+                    }
+                }
+            }
+
+            return models;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error listing Copilot models for user {UserId}", userId);
+
+            return [];
+        }
     }
 }

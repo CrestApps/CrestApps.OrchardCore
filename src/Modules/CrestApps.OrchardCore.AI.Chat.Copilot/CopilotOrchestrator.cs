@@ -95,9 +95,11 @@ public sealed class CopilotOrchestrator : IOrchestrator
                 tools.Count, string.Join(", ", tools.Select(t => t.Name)));
         }
 
-        // The model/deployment is configured per-profile or per-interaction and
-        // populated into the completion context by the orchestration builder pipeline.
-        var model = context.CompletionContext.DeploymentId;
+        // The model is configured per-profile or per-interaction. Prefer the explicit
+        // Model property (set by CopilotCompletionContextBuilderHandler) over DeploymentId.
+        var model = !string.IsNullOrEmpty(context.CompletionContext.Model)
+            ? context.CompletionContext.Model
+            : context.CompletionContext.DeploymentId;
 
         // Build the session configuration.
         var sessionConfig = new SessionConfig
@@ -113,9 +115,8 @@ public sealed class CopilotOrchestrator : IOrchestrator
         }
 
         // The system message is fully built by the orchestration context handler pipeline
-        // (including any RAG/document context). Include conversation history so
-        // Copilot has multi-turn awareness, since each request creates a new session.
-        var systemMessage = BuildSystemMessageWithHistory(context);
+        // (including any RAG/document context). Keep it clean (system instructions only).
+        var systemMessage = context.CompletionContext.SystemMessage;
 
         if (!string.IsNullOrWhiteSpace(systemMessage))
         {
@@ -200,10 +201,13 @@ public sealed class CopilotOrchestrator : IOrchestrator
         });
 
         // The Copilot SDK accepts a single prompt string per SendAsync call.
-        // Conversation history is included in the system message above.
+        // Since each request creates a new stateless session, include conversation
+        // history in the prompt so Copilot has multi-turn awareness.
+        var prompt = BuildPromptWithHistory(context);
+
         await session.SendAsync(new MessageOptions
         {
-            Prompt = context.UserMessage,
+            Prompt = prompt,
         }, cancellationToken);
 
         await completionSource.Task.WaitAsync(cancellationToken);
@@ -223,47 +227,45 @@ public sealed class CopilotOrchestrator : IOrchestrator
     }
 
     /// <summary>
-    /// Combines the pre-built system message with conversation history so Copilot
-    /// has full multi-turn context within a single session lifecycle.
+    /// Combines conversation history with the current user message so Copilot
+    /// has full multi-turn context within a single stateless session.
     /// </summary>
-    private static string BuildSystemMessageWithHistory(OrchestrationContext context)
+    private static string BuildPromptWithHistory(OrchestrationContext context)
     {
+        if (context.ConversationHistory is not { Count: > 0 })
+        {
+            return context.UserMessage;
+        }
+
         var sb = new StringBuilder();
+        sb.AppendLine("[Conversation History]");
 
-        if (!string.IsNullOrWhiteSpace(context.CompletionContext.SystemMessage))
+        foreach (var message in context.ConversationHistory)
         {
-            sb.Append(context.CompletionContext.SystemMessage);
-        }
-
-        if (context.ConversationHistory is { Count: > 0 })
-        {
-            sb.AppendLine();
-            sb.AppendLine();
-            sb.AppendLine("[Conversation History]");
-
-            foreach (var message in context.ConversationHistory)
+            if (string.IsNullOrEmpty(message.Text))
             {
-                if (string.IsNullOrEmpty(message.Text))
-                {
-                    continue;
-                }
-
-                if (message.Role == ChatRole.User)
-                {
-                    sb.Append("User: ");
-                }
-                else if (message.Role == ChatRole.Assistant)
-                {
-                    sb.Append("Assistant: ");
-                }
-                else
-                {
-                    continue;
-                }
-
-                sb.AppendLine(message.Text);
+                continue;
             }
+
+            if (message.Role == ChatRole.User)
+            {
+                sb.Append("User: ");
+            }
+            else if (message.Role == ChatRole.Assistant)
+            {
+                sb.Append("Assistant: ");
+            }
+            else
+            {
+                continue;
+            }
+
+            sb.AppendLine(message.Text);
         }
+
+        sb.AppendLine();
+        sb.AppendLine("[Current Message]");
+        sb.Append(context.UserMessage);
 
         return sb.ToString();
     }

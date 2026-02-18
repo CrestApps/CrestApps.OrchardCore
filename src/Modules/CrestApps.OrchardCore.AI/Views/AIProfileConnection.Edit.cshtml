@@ -27,7 +27,6 @@ else
         <label asp-for="OrchestratorName" class="@Orchard.GetLabelClasses()">@T["Orchestrator"]</label>
         <div class="@Orchard.GetEndClasses()">
             <select asp-for="OrchestratorName" asp-items="Model.Orchestrators" class="form-select" id="orchestrator-selector">
-                <option value="">@T["Default orchestrator"]</option>
             </select>
             <span asp-validation-for="OrchestratorName" class="text-danger"></span>
             <span class="hint">@T["The orchestrator to use for this profile. The orchestrator controls how tools are selected and how the AI execution loop is managed."]</span>
@@ -45,22 +44,23 @@ else
         
         if (orchestratorSelector) {
             function updateFieldVisibility() {
-                const selectedOrchestrator = orchestratorSelector.value || '';
-                const isCopilot = selectedOrchestrator.toLowerCase() === 'copilot';
+                const selectedOrchestrator = orchestratorSelector.value || 'default';
+                const isDefault = selectedOrchestrator.toLowerCase() === 'default' || selectedOrchestrator === '';
                 
                 // Hide/show connection field
                 const connectionField = document.querySelector('[data-orchestrator-field="connection"]');
                 if (connectionField) {
-                    connectionField.style.display = isCopilot ? 'none' : '';
+                    connectionField.style.display = isDefault ? '' : 'none';
                 }
                 
                 // Hide/show deployment field
                 const deploymentField = document.querySelector('[data-orchestrator-field="deployment"]');
                 if (deploymentField) {
-                    deploymentField.style.display = isCopilot ? 'none' : '';
+                    deploymentField.style.display = isDefault ? '' : 'none';
                 }
                 
                 // Show/hide Copilot-specific fields
+                const isCopilot = selectedOrchestrator.toLowerCase() === 'copilot';
                 const copilotFields = document.querySelector('[data-orchestrator-field="copilot"]');
                 if (copilotFields) {
                     copilotFields.style.display = isCopilot ? '' : 'none';

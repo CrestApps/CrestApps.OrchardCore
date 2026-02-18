@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -68,7 +67,7 @@ public sealed class CopilotAuthController : Controller
             _logger.LogWarning("GitHub OAuth error: {Error}", error);
             await _notifier.ErrorAsync(H["GitHub authentication failed: {0}", error]);
 
-            return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
+            return RedirectToLocal(state);
         }
 
         if (string.IsNullOrEmpty(code))
@@ -76,7 +75,7 @@ public sealed class CopilotAuthController : Controller
             _logger.LogWarning("No authorization code received from GitHub");
             await _notifier.ErrorAsync(H["No authorization code received from GitHub"]);
 
-            return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
+            return RedirectToLocal(state);
         }
 
         // Get current user
@@ -88,12 +87,20 @@ public sealed class CopilotAuthController : Controller
             return Unauthorized();
         }
 
-        // Exchange code for tokens
-        var credential = await _oauthService.ExchangeCodeForTokenAsync(code, await _userManager.GetUserIdAsync(user));
+        try
+        {
+            // Exchange code for tokens and store on user
+            var credential = await _oauthService.ExchangeCodeForTokenAsync(code, await _userManager.GetUserIdAsync(user));
 
-        await _notifier.SuccessAsync(H["Successfully connected to GitHub as {0}", credential.GitHubUsername]);
+            await _notifier.SuccessAsync(H["Successfully connected to GitHub as {0}", credential.GitHubUsername]);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to exchange GitHub authorization code for tokens");
+            await _notifier.ErrorAsync(H["Failed to connect to GitHub. Please try again."]);
+        }
 
-        return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
+        return RedirectToLocal(state);
     }
 
     /// <summary>

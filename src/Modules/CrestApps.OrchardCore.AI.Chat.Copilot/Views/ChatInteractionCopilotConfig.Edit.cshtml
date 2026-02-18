@@ -1,0 +1,88 @@
+@using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels
+@using OrchardCore
+
+@model EditCopilotProfileViewModel
+
+<div data-orchestrator-field="copilot" style="display: none;">
+    @* GitHub Authentication Section *@
+    <div class="mb-3">
+        <label class="form-label">@T["GitHub Authentication"]</label>
+        @if (Model.IsAuthenticated)
+        {
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i>
+                @T["Connected as"] <strong>@Model.GitHubUsername</strong>
+                <a href="#" class="btn btn-sm btn-outline-danger float-end" id="ci-disconnect-github" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]">
+                    @T["Disconnect"]
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                @T["Copilot requires GitHub authentication. Sign in with your GitHub account to continue."]
+            </div>
+            <a href="#" class="btn btn-primary" id="ci-connect-github">
+                <i class="fab fa-github"></i> @T["Sign in with GitHub"]
+            </a>
+        }
+        <span class="hint">@T["GitHub OAuth is required for Copilot. Your access token will be securely stored and reused across sessions."]</span>
+    </div>
+
+    @* Copilot Model Selection *@
+    <div class="mb-3">
+        <label asp-for="CopilotModel" class="form-label">@T["Copilot Model"]</label>
+        <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select">
+            <option value="">@T["Default model"]</option>
+        </select>
+        <span asp-validation-for="CopilotModel" class="text-danger"></span>
+        <span class="hint">@T["Select the Copilot model to use for this interaction."]</span>
+    </div>
+
+    @* Copilot Flags *@
+    <div class="mb-3">
+        <label asp-for="CopilotFlags" class="form-label">@T["Copilot Flags"]</label>
+        <input asp-for="CopilotFlags" class="form-control" placeholder="--allow-all" />
+        <span asp-validation-for="CopilotFlags" class="text-danger"></span>
+        <span class="hint">@T["Optional Copilot execution flags (e.g., --allow-all). Separate multiple flags with spaces."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        const connectButton = document.getElementById('ci-connect-github');
+        const disconnectButton = document.getElementById('ci-disconnect-github');
+
+        if (connectButton) {
+            connectButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = '@Url.Action("AuthorizeGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
+            });
+        }
+
+        if (disconnectButton) {
+            const confirmMessage = disconnectButton.getAttribute('data-confirm-message');
+            disconnectButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (confirm(confirmMessage)) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '@Url.Action("DisconnectGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
+
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                    if (token) {
+                        const tokenInput = document.createElement('input');
+                        tokenInput.type = 'hidden';
+                        tokenInput.name = '__RequestVerificationToken';
+                        tokenInput.value = token.value;
+                        form.appendChild(tokenInput);
+                    }
+
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        }
+    });
+</script>
