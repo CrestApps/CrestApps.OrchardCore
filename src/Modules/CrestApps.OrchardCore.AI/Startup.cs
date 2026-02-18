@@ -22,6 +22,7 @@ using Fluid;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -117,42 +118,6 @@ public sealed class OCDeploymentsStartup : StartupBase
     }
 }
 
-# region Data Sources Feature
-
-[Feature(AIConstants.Feature.DataSources)]
-public sealed class DataSourceStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddAIDataSourceServices();
-        services.AddScoped<IAICompletionContextBuilderHandler, DataSourceAICompletionContextBuilderHandler>();
-        services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
-        services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
-        services.AddNavigationProvider<AIDataProviderAdminMenu>();
-        services.AddDisplayDriver<AIProfile, AIProfileDataSourceDisplayDriver>();
-    }
-}
-
-[Feature(AIConstants.Feature.DataSources)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class DataSourcesRecipesStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddRecipeExecutionStep<AIDataSourceStep>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.DataSources, "OrchardCore.Deployment")]
-public sealed class DataSourcesOCDeploymentStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDeployment<AIDataSourceDeploymentSource, AIDataSourceDeploymentStep, AIDataSourceDeploymentStepDisplayDriver>();
-    }
-}
-#endregion
-
 #region Deployments Feature
 
 [Feature(AIConstants.Feature.Deployments)]
@@ -210,6 +175,7 @@ public sealed class ChatCoreStartup : StartupBase
 
         // Register orchestration services for AI Profile chat
         services.AddOrchestrationServices();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextHandler, AIToolExecutionContextOrchestrationHandler>());
     }
 }
 
@@ -260,3 +226,5 @@ public sealed class ConnectionManagementOCDeploymentsStartup : StartupBase
     }
 }
 #endregion
+
+

@@ -7,11 +7,13 @@ public class EditChatInteractionDataSourceViewModel
 {
     public string DataSourceId { get; set; }
 
-    public int? Strictness { get; set; }
+    public int Strictness { get; set; }
 
-    public int? TopNDocuments { get; set; }
+    public int TopNDocuments { get; set; }
 
     public bool IsInScope { get; set; }
+
+    public bool EnableEarlyRag { get; set; }
 
     public string Filter { get; set; }
 

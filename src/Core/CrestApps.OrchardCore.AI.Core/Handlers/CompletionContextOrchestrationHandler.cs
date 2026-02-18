@@ -24,6 +24,15 @@ internal sealed class CompletionContextOrchestrationHandler : IOrchestrationCont
         context.Context.CompletionContext = completionContext;
         context.Context.CompletionContext.UserMarkdownInResponse = true;
 
+        // Propagate DisableTools from the completion context.
+        context.Context.DisableTools = context.Context.CompletionContext.DisableTools;
+
+        // Seed the SystemMessageBuilder with the initial system message.
+        if (!string.IsNullOrEmpty(context.Context.CompletionContext.SystemMessage))
+        {
+            context.Context.SystemMessageBuilder.Append(context.Context.CompletionContext.SystemMessage);
+        }
+
         // Resolve SourceName from the resource (AIProfile or ChatInteraction).
         context.Context.SourceName = ResolveSourceName(context.Resource);
     }

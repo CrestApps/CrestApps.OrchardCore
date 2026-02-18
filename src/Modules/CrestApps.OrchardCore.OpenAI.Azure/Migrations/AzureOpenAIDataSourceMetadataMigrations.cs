@@ -1,31 +1,34 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.DataSources.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.MongoDB;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OrchardCore.BackgroundJobs;
 using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Indexing;
+using OrchardCore.Indexing.Core;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 
 /// <summary>
 /// Migrates existing Azure AI data source metadata from the legacy format to the new format.
 /// This migration:
-/// 1. Extracts IndexName from legacy metadata and stores it in AzureAIDataSourceIndexMetadata on the data source
-/// 2. Extracts query-time parameters (Filter, Strictness, TopNDocuments) and stores them in AzureRagChatMetadata on AI profiles
+/// 1. Extracts IndexName from legacy metadata and stores it as a first-class property on AIDataSource
+/// 2. Extracts query-time parameters (Filter, Strictness, TopNDocuments) and stores them in AIDataSourceRagMetadata on AI profiles
 /// </summary>
 internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 {
     // Legacy metadata class names (used for Properties dictionary access)
     private const string LegacyAISearchMetadataName = "AzureAIProfileAISearchMetadata";
     private const string LegacyElasticsearchMetadataName = "AzureAIProfileElasticsearchMetadata";
-    private const string LegacyMongoDBMetadataName = "AzureAIProfileMongoDBMetadata";
 
     private readonly ShellSettings _shellSettings;
 
@@ -38,101 +41,60 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
     {
         if (_shellSettings.IsInitializing())
         {
-            return 1;
+            return 3;
         }
 
         ShellScope.AddDeferredTask(async scope =>
         {
-            var dataSourceStore = scope.ServiceProvider.GetRequiredService<IAIDataSourceStore>();
+            var dataSourceStore = scope.ServiceProvider.GetRequiredService<ICatalog<AIDataSource>>();
             var profileStore = scope.ServiceProvider.GetRequiredService<INamedCatalog<AIProfile>>();
 
-            // Migrate data sources to use the new index metadata
+            // Migrate data sources to use first-class index properties
             foreach (var dataSource in await dataSourceStore.GetAllAsync())
             {
-                if (dataSource.ProfileSource != AzureOpenAIConstants.ProviderName)
+                // Use legacy ProfileSource or ProviderName from Properties (JsonExtensionData)
+                var profileSource = dataSource.Properties?["ProfileSource"]?.GetValue<string>();
+                var providerName = dataSource.Properties?["ProviderName"]?.GetValue<string>();
+
+                if (!string.Equals(profileSource, AzureOpenAIConstants.ProviderName, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(profileSource, "AzureOpenAIOwnData", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(providerName, "Elasticsearch", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(providerName, "AzureAISearch", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
 
                 var needsUpdate = false;
 
-                // Check if new metadata already exists
-                var newIndexMetadata = dataSource.As<AzureAIDataSourceIndexMetadata>();
-                if (!string.IsNullOrWhiteSpace(newIndexMetadata?.IndexName))
+                // Skip if IndexName is already set as a first-class property.
+                if (!string.IsNullOrWhiteSpace(dataSource.SourceIndexProfileName))
                 {
-                    // Already migrated
                     continue;
                 }
 
-                // Extract IndexName based on data source type using Properties dictionary
-                switch (dataSource.Type)
+                var legacyType = dataSource.Properties?["Type"]?.GetValue<string>();
+
+                // Extract IndexName based on legacy data source type using Properties dictionary
+                switch (legacyType)
                 {
-                    case AzureOpenAIConstants.DataSourceTypes.AzureAISearch:
+                    case "azure_search":
                         {
                             var indexName = GetPropertyValue<string>(dataSource.Properties, LegacyAISearchMetadataName, "IndexName");
                             if (!string.IsNullOrWhiteSpace(indexName))
                             {
-                                dataSource.Put(new AzureAIDataSourceIndexMetadata
-                                {
-                                    IndexName = indexName,
-                                });
+                                dataSource.SourceIndexProfileName = indexName;
                                 needsUpdate = true;
                             }
                         }
                         break;
 
-                    case AzureOpenAIConstants.DataSourceTypes.Elasticsearch:
+                    case "elasticsearch":
                         {
                             var indexName = GetPropertyValue<string>(dataSource.Properties, LegacyElasticsearchMetadataName, "IndexName");
                             if (!string.IsNullOrWhiteSpace(indexName))
                             {
-                                dataSource.Put(new AzureAIDataSourceIndexMetadata
-                                {
-                                    IndexName = indexName,
-                                });
+                                dataSource.SourceIndexProfileName = indexName;
                                 needsUpdate = true;
-                            }
-                        }
-                        break;
-
-                    case AzureOpenAIConstants.DataSourceTypes.MongoDB:
-                        {
-                            var legacyProps = GetPropertyObject(dataSource.Properties, LegacyMongoDBMetadataName);
-
-                            if (legacyProps != null)
-                            {
-                                var indexName = legacyProps["IndexName"]?.GetValue<string>();
-
-                                if (!string.IsNullOrWhiteSpace(indexName))
-                                {
-                                    // For MongoDB, migrate to the new metadata class
-                                    var authProps = legacyProps["Authentication"]?.AsObject();
-
-                                    AzureAIProfileMongoDBAuthenticationType auth = null;
-
-                                    if (authProps != null)
-                                    {
-                                        auth = new AzureAIProfileMongoDBAuthenticationType
-                                        {
-                                            Type = authProps["Type"]?.GetValue<string>(),
-                                            Username = authProps["Username"]?.GetValue<string>(),
-                                            Password = authProps["Password"]?.GetValue<string>(),
-                                        };
-                                    }
-
-                                    var newMongoMetadata = new AzureMongoDBDataSourceMetadata
-                                    {
-                                        IndexName = indexName,
-                                        EndpointName = legacyProps["EndpointName"]?.GetValue<string>(),
-                                        AppName = legacyProps["AppName"]?.GetValue<string>(),
-                                        CollectionName = legacyProps["CollectionName"]?.GetValue<string>(),
-                                        DatabaseName = legacyProps["DatabaseName"]?.GetValue<string>(),
-                                        Authentication = auth,
-                                    };
-
-                                    dataSource.Put(newMongoMetadata);
-                                    needsUpdate = true;
-                                }
                             }
                         }
                         break;
@@ -147,9 +109,14 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
             // Migrate AI profiles to use the new RAG metadata
             foreach (var profile in await profileStore.GetAllAsync())
             {
-                if (profile.Source != AzureOpenAIConstants.ProviderName && profile.Source != "AzureOpenAIOwnData")
+                if (profile.Source != AzureOpenAIConstants.ProviderName)
                 {
                     continue;
+                }
+
+                if (profile.Source == "AzureOpenAIOwnData")
+                {
+                    profile.Source = "Azure";
                 }
 
                 var dataSourceMetadata = profile.As<AIProfileDataSourceMetadata>();
@@ -159,7 +126,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 }
 
                 // Check if new RAG metadata already exists
-                if (profile.TryGet<AzureRagChatMetadata>(out var existingRagMetadata) &&
+                if (profile.TryGet<AIDataSourceRagMetadata>(out var existingRagMetadata) &&
                     (existingRagMetadata.Strictness.HasValue ||
                      existingRagMetadata.TopNDocuments.HasValue ||
                      !string.IsNullOrWhiteSpace(existingRagMetadata.Filter)))
@@ -179,10 +146,12 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 int? topNDocuments = null;
                 string filter = null;
 
-                // Extract query parameters based on data source type using Properties dictionary
-                switch (dataSource.Type)
+                var legacyType = dataSource.Properties?["Type"]?.GetValue<string>();
+
+                // Extract query parameters based on legacy data source type using Properties dictionary
+                switch (legacyType)
                 {
-                    case AzureOpenAIConstants.DataSourceTypes.AzureAISearch:
+                    case "azure_search":
                         {
                             var legacyProps = GetPropertyObject(dataSource.Properties, LegacyAISearchMetadataName);
                             if (legacyProps != null)
@@ -194,20 +163,9 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                         }
                         break;
 
-                    case AzureOpenAIConstants.DataSourceTypes.Elasticsearch:
+                    case "elasticsearch":
                         {
                             var legacyProps = GetPropertyObject(dataSource.Properties, LegacyElasticsearchMetadataName);
-                            if (legacyProps != null)
-                            {
-                                strictness = GetNullableInt(legacyProps, "Strictness");
-                                topNDocuments = GetNullableInt(legacyProps, "TopNDocuments");
-                            }
-                        }
-                        break;
-
-                    case AzureOpenAIConstants.DataSourceTypes.MongoDB:
-                        {
-                            var legacyProps = GetPropertyObject(dataSource.Properties, LegacyMongoDBMetadataName);
                             if (legacyProps != null)
                             {
                                 strictness = GetNullableInt(legacyProps, "Strictness");
@@ -220,7 +178,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 // Store query parameters on the profile
                 if (strictness.HasValue || topNDocuments.HasValue || !string.IsNullOrWhiteSpace(filter))
                 {
-                    profile.Put(new AzureRagChatMetadata
+                    profile.Put(new AIDataSourceRagMetadata
                     {
                         Strictness = strictness,
                         TopNDocuments = topNDocuments,
@@ -233,7 +191,208 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
             }
         });
 
-        return 1;
+        return 3;
+    }
+
+    public async Task<int> UpdateFrom1Async()
+    {
+        if (_shellSettings.IsInitializing())
+        {
+            return 2;
+        }
+
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var dataSourceStore = scope.ServiceProvider.GetRequiredService<ICatalog<AIDataSource>>();
+            var indexProfileStore = scope.ServiceProvider.GetRequiredService<IIndexProfileStore>();
+            var indexProfileManager = scope.ServiceProvider.GetRequiredService<IIndexProfileManager>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<AzureOpenAIDataSourceMetadataMigrations>>();
+
+            var dataSources = await dataSourceStore.GetAllAsync();
+
+            if (dataSources.Count == 0)
+            {
+                return;
+            }
+
+#pragma warning disable CS0618 // Type or member is obsolete
+            var first = dataSources
+                .Where(x => x.ProfileSource.StartsWith("Azure", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(x => x.Type == "elasticsearch" ? 0 : 1)
+                .FirstOrDefault();
+#pragma warning restore CS0618 // Type or member is obsolete
+
+            if (first == null)
+            {
+                logger.LogWarning("No Elasticsearch or Azure data sources available. Can't migrate data sources.");
+
+                return;
+            }
+
+#pragma warning disable CS0618 // Type or member is obsolete
+            var firstProviderName = first.ProfileSource;
+
+            if (firstProviderName == "Azure" || firstProviderName == "AzureOpenAIOwnData")
+            {
+                firstProviderName = "AzureAISearch";
+            }
+
+            if (first.Type == "elasticsearch")
+            {
+                firstProviderName = "Elasticsearch";
+            }
+
+#pragma warning restore CS0618 // Type or member is obsolete
+
+            var masterIndexUniqueName = "AI Knowledge Base Warehouse";
+
+            var knowledgeBaseIndex = await indexProfileManager.FindByNameAsync(masterIndexUniqueName);
+
+            if (knowledgeBaseIndex is null)
+            {
+                knowledgeBaseIndex = await indexProfileManager.NewAsync(firstProviderName, DataSourceConstants.IndexingTaskType, new JsonObject
+                {
+                    { "Name", masterIndexUniqueName },
+                    { "IndexName", "AIKnowledgeBaseWarehouse" },
+                });
+
+                knowledgeBaseIndex.Put(FindFirstEmbeddingMetadata(scope.ServiceProvider, logger));
+
+                var indexManager = scope.ServiceProvider.GetKeyedService<IIndexManager>(firstProviderName);
+
+                if (indexManager is null)
+                {
+                    logger.LogWarning("Unable to create knowledge base index due to a missing index-manager");
+                    return;
+                }
+
+                await indexProfileManager.CreateAsync(knowledgeBaseIndex);
+
+                if (!await indexManager.ExistsAsync(knowledgeBaseIndex.IndexFullName) && !await indexManager.CreateAsync(knowledgeBaseIndex))
+                {
+                    logger.LogWarning("Unable to create a knowledge base index in the provider.");
+
+                    await indexProfileManager.DeleteAsync(knowledgeBaseIndex);
+
+                    return;
+                }
+            }
+
+            foreach (var dataSource in dataSources)
+            {
+                if (!string.IsNullOrEmpty(dataSource.SourceIndexProfileName) && !string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName))
+                {
+                    // No need to migrate this data source.
+                    continue;
+                }
+
+#pragma warning disable CS0618 // Type or member is obsolete
+                var providerName = dataSource.ProfileSource;
+#pragma warning restore CS0618 // Type or member is obsolete
+
+                if (string.IsNullOrEmpty(providerName))
+                {
+                    continue;
+                }
+
+#pragma warning disable CS0618 // Type or member is obsolete
+                if (providerName == "Azure" || providerName == "AzureOpenAIOwnData")
+                {
+                    dataSource.ProfileSource = "AzureAISearch";
+                }
+
+                if (dataSource.Type == "elasticsearch")
+                {
+                    providerName = "Elasticsearch";
+                }
+
+#pragma warning restore CS0618 // Type or member is obsolete
+
+                var azureIndexName = dataSource.Properties[LegacyAISearchMetadataName]?["IndexName"]?.ToString();
+
+                if (!string.IsNullOrEmpty(azureIndexName))
+                {
+                    dataSource.SourceIndexProfileName = azureIndexName;
+                }
+
+                var elasticsearchIndexName = dataSource.Properties[LegacyElasticsearchMetadataName]?["IndexName"]?.ToString();
+
+                if (!string.IsNullOrEmpty(elasticsearchIndexName))
+                {
+                    dataSource.SourceIndexProfileName = elasticsearchIndexName;
+                }
+
+                if (string.IsNullOrEmpty(dataSource.SourceIndexProfileName))
+                {
+                    var newMetadata = dataSource.Properties["AzureAIDataSourceIndexMetadata"]?["IndexName"]?.ToString();
+
+                    if (!string.IsNullOrEmpty(newMetadata))
+                    {
+                        dataSource.SourceIndexProfileName = newMetadata;
+                    }
+                }
+
+                if (string.IsNullOrEmpty(dataSource.SourceIndexProfileName))
+                {
+                    logger.LogWarning("Unable to determine the Source Index profile name for data source {Name}. Ignoring it's migration", dataSource.DisplayText);
+
+                    continue;
+                }
+
+                dataSource.AIKnowledgeBaseIndexProfileName = knowledgeBaseIndex.Name;
+
+                // Ensure a KeyFieldName for content-sourced indexes.
+                if (!string.IsNullOrEmpty(dataSource.SourceIndexProfileName))
+                {
+                    var sourceProfile = await indexProfileStore.FindByNameAsync(dataSource.SourceIndexProfileName);
+
+                    if (sourceProfile != null)
+                    {
+                        if (string.Equals(sourceProfile.Type, IndexingConstants.ContentsIndexSource, StringComparison.OrdinalIgnoreCase))
+                        {
+                            dataSource.KeyFieldName = "ContentItemId";
+
+                            // Set default field mappings based on the provider.
+                            if (string.IsNullOrEmpty(dataSource.ContentFieldName))
+                            {
+                                dataSource.KeyFieldName ??= "ContentItemId";
+
+                                if (string.Equals(providerName, "Elasticsearch", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    dataSource.TitleFieldName ??= "Content.ContentItem.DisplayText.Analyzed";
+                                    dataSource.ContentFieldName ??= "Content.ContentItem.FullText";
+                                }
+                                else if (string.Equals(providerName, "AzureAISearch", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    dataSource.TitleFieldName ??= "Content__ContentItem__DisplayText__Analyzed";
+                                    dataSource.ContentFieldName ??= "Content__ContentItem__FullText";
+                                }
+                            }
+                        }
+                        else if (string.Equals(sourceProfile.Type, "ChatInteractionDocuments", StringComparison.OrdinalIgnoreCase))
+                        {
+                            dataSource.KeyFieldName ??= "documentId";
+                            dataSource.ContentFieldName ??= "text";
+                            dataSource.TitleFieldName ??= "fileName";
+                        }
+                    }
+                }
+
+                await dataSourceStore.UpdateAsync(dataSource);
+
+                ShellScope.AddDeferredTask(s =>
+                {
+                    return HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("sync-datasource", async scope =>
+                    {
+                        var indexingService = scope.ServiceProvider.GetRequiredService<DataSourceIndexingService>();
+
+                        await indexingService.SyncDataSourceAsync(dataSource);
+                    });
+                });
+            }
+        });
+
+        return 2;
     }
 
     /// <summary>
@@ -286,16 +445,54 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
             }
             catch (InvalidOperationException)
             {
-                // Value cannot be converted to int - return null
                 return null;
             }
             catch (FormatException)
             {
-                // Value is not in the expected format - return null
                 return null;
             }
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Finds the first available embedding connection from configured AI providers.
+    /// If no embedding connection is found, logs a warning and returns empty metadata.
+    /// </summary>
+    private static DataSourceIndexProfileMetadata FindFirstEmbeddingMetadata(IServiceProvider serviceProvider, ILogger logger)
+    {
+        var providerOptions = serviceProvider.GetRequiredService<IOptions<AIProviderOptions>>().Value;
+
+        foreach (var (providerName, provider) in providerOptions.Providers)
+        {
+            if (provider.Connections is null)
+            {
+                continue;
+            }
+
+            foreach (var (connectionName, connection) in provider.Connections)
+            {
+                var embeddingDeploymentName = connection.GetDefaultEmbeddingDeploymentName(false);
+
+                if (!string.IsNullOrEmpty(embeddingDeploymentName))
+                {
+                    return new DataSourceIndexProfileMetadata
+                    {
+                        EmbeddingProviderName = providerName,
+                        EmbeddingConnectionName = connectionName,
+                        EmbeddingDeploymentName = embeddingDeploymentName,
+                    };
+                }
+            }
+        }
+
+        logger.LogWarning(
+            "No AI provider connection with an embedding deployment was found. " +
+            "The 'AI Knowledge Base Warehouse' index was created without an embedding connection. " +
+            "To enable knowledge base indexing, configure an AI provider connection with an embedding deployment, " +
+            "then update the 'AI Knowledge Base Warehouse' index in Search > Indexing to set an embedding connection.");
+
+        return new DataSourceIndexProfileMetadata();
     }
 }

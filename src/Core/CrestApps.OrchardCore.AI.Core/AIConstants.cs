@@ -16,6 +16,8 @@ public static class AIConstants
 
     public const string ConnectionProtectorName = "AIProviderConnection";
 
+    public const string AISettingsGroupId = "ai-settings";
+
     public static class SystemMessages
     {
         public const string UseMarkdownSyntax = "- Provide a response using Markdown syntax.";
@@ -37,7 +39,43 @@ public static class AIConstants
 
         public const string DataSources = "CrestApps.OrchardCore.AI.DataSources";
 
+        public const string DataSourceElasticsearch = "CrestApps.OrchardCore.AI.DataSources.Elasticsearch";
+
+        public const string DataSourceAzureAI = "CrestApps.OrchardCore.AI.DataSources.AzureAI";
+
+        public const string DataSourceMongoDB = "CrestApps.OrchardCore.AI.DataSources.MongoDB";
+
         public const string ChatApi = "CrestApps.OrchardCore.AI.Chat.Api";
+
+        public const string ProfileDocuments = "CrestApps.OrchardCore.AI.Documents.Profiles";
+    }
+
+    public static readonly string AIDocumentsIndexingTaskType = "AIDocuments";
+
+    public static class DocumentReferenceTypes
+    {
+        public const string Profile = "profile";
+
+        public const string ChatInteraction = "chat-interaction";
+    }
+
+    public static class ColumnNames
+    {
+        public const string ChunkId = "chunkId";
+
+        public const string Content = "content";
+
+        public const string DocumentId = "documentId";
+
+        public const string FileName = "fileName";
+
+        public const string ReferenceId = "referenceId";
+
+        public const string ReferenceType = "referenceType";
+
+        public const string Embedding = "embedding";
+
+        public const string ChunkIndex = "chunkIndex";
     }
 
     public static class RouteNames

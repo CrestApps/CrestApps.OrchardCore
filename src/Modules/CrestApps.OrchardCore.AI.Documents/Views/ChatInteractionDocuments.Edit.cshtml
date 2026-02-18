@@ -1,0 +1,452 @@
+@using CrestApps.OrchardCore.AI.Documents.ViewModels
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.Models
+@using Microsoft.Extensions.Options
+@using OrchardCore
+
+@model ChatInteractionDocumentsViewModel
+
+@inject IOptions<ChatDocumentsOptions> ChatInteractionOptions
+@{
+    var allowedExtensions = string.Join(", ", ChatInteractionOptions.Value.AllowedFileExtensions);
+}
+
+@if (!Model.HasIndexProfile)
+{
+    <div class="alert alert-warning" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+        <strong>@T["Index Not Configured"]</strong>
+        <p class="mb-0">
+            @T["No document index is configured. Please navigate to Settings > Chat Interactions and select an index profile to enable document embedding."]
+        </p>
+    </div>
+}
+else if (!Model.HasVectorSearchService)
+{
+    <div class="alert alert-warning" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+        <strong>@T["Vector Search Service Not Available"]</strong>
+        <p class="mb-0">
+            @T["The configured index profile \"{0}\" does not have a registered embedding search service.", Model.IndexProfileName]
+        </p>
+    </div>
+}
+
+<div class="mb-3">
+    <label class="form-label">
+        @T["Attached Documents"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Upload documents to chat against your own data. The content will be extracted and used as context for AI responses."]" aria-label="@T["Help: Attached Documents explanation"]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+
+    <div class="border rounded p-3 bg-light">
+        <!-- Drag and drop zone -->
+        <div id="dropZone-@Model.ItemId" class="drop-zone border rounded p-4 mb-3 text-center bg-white" style="border: 2px dashed #dee2e6 !important; cursor: pointer; transition: all 0.2s ease;">
+            <div class="drop-zone-content d-flex flex-column align-items-center" id="dropZoneContent-@Model.ItemId">
+                <i class="fa-solid fa-cloud-arrow-up fa-3x text-muted mb-3"></i>
+                <div class="text-muted mb-2">@T["Drag and drop files here"]</div>
+                <div class="text-muted mb-2">@T["or"]</div>
+                <button type="button" class="btn btn-primary" id="browseBtn-@Model.ItemId">
+                    <i class="fa-solid fa-folder-open me-1"></i>
+                    @T["Browse Files"]
+                </button>
+            </div>
+            <div class="drop-zone-active d-none d-flex flex-column align-items-center" id="dropZoneActive-@Model.ItemId">
+                <i class="fa-solid fa-file-arrow-down fa-3x text-primary mb-2"></i>
+                <div class="text-primary fw-bold">@T["Drop files to upload"]</div>
+            </div>
+        </div>
+
+        <div id="uploadAlert-@Model.ItemId" class="alert alert-danger d-none" role="alert">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="me-3" id="uploadAlertMessage-@Model.ItemId"></div>
+                <button type="button" class="btn-close" aria-label="@T["Close"]" id="uploadAlertClose-@Model.ItemId"></button>
+            </div>
+        </div>
+
+        <input type="file"
+               class="d-none"
+               id="documentUpload-@Model.ItemId"
+               accept="@allowedExtensions"
+               multiple />
+        <div class="form-text mb-3">
+            @T["Supported formats: {0}", allowedExtensions]
+        </div>
+
+        <div id="documentsList-@Model.ItemId" class="document-list">
+            @if (Model.Documents != null && Model.Documents.Any())
+            {
+                foreach (var doc in Model.Documents)
+                {
+                    <div class="document-item d-flex align-items-center border-bottom py-2" data-document-id="@doc.DocumentId">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger remove-document me-2 flex-shrink-0"
+                                data-document-id="@doc.DocumentId"
+                                title="@T["Remove document"]">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                        <div class="text-truncate">
+                            <div class="fw-medium small text-truncate">@doc.FileName</div>
+                            <small class="text-muted" style="font-size: 0.75rem;">
+                                @FormatFileSize(doc.FileSize)
+                            </small>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center text-muted py-3 no-documents">
+                    <i class="fa-solid fa-file-circle-plus fa-2x mb-2"></i>
+                    <div>@T["No documents attached. Upload documents to chat against your own data."]</div>
+                </div>
+            }
+        </div>
+
+        <div id="uploadProgress-@Model.ItemId" class="mt-3" style="display: none;">
+            <div class="progress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                     role="progressbar"
+                     style="width: 0%"></div>
+            </div>
+            <small class="text-muted upload-status">@T["Uploading..."]</small>
+        </div>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label class="form-label">
+        @T["Top N Results"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["The number of top matching document chunks to include as context for the AI model. Higher values provide more context but may increase costs and response time."]" aria-label="@T["Help: Top N Results explanation"]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <input type="number" class="form-control" name="@Html.NameFor(m => m.TopN)" value="@Model.TopN" min="1" max="20" />
+    <div class="form-text">@T["Default: 3. Recommended range: 1-10."]</div>
+</div>
+
+<style at="Head">
+    .drop-zone {
+        border: 2px dashed #dee2e6 !important;
+        transition: all 0.3s ease;
+    }
+
+        .drop-zone.drag-over {
+            border-color: #0d6efd !important;
+            background-color: #f0f7ff !important;
+        }
+
+            .drop-zone.drag-over .drop-zone-content {
+                display: none;
+            }
+
+            .drop-zone.drag-over .drop-zone-active {
+                display: block !important;
+            }
+</style>
+
+<script at="Foot">
+    (function() {
+        const itemId = '@Model.ItemId';
+        const fileInput = document.getElementById('documentUpload-' + itemId);
+        const documentsList = document.getElementById('documentsList-' + itemId);
+        const uploadProgress = document.getElementById('uploadProgress-' + itemId);
+        const uploadAlert = document.getElementById('uploadAlert-' + itemId);
+        const uploadAlertMessage = document.getElementById('uploadAlertMessage-' + itemId);
+        const uploadAlertClose = document.getElementById('uploadAlertClose-' + itemId);
+        const dropZone = document.getElementById('dropZone-' + itemId);
+        const dropZoneContent = document.getElementById('dropZoneContent-' + itemId);
+        const dropZoneActive = document.getElementById('dropZoneActive-' + itemId);
+        const browseBtn = document.getElementById('browseBtn-' + itemId);
+        const uploadUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionUploadDocument)';
+        const removeUrl = '@Url.RouteUrl(AIConstants.RouteNames.ChatInteractionRemoveDocument)';
+
+        function showUploadAlert(html) {
+            if (!uploadAlert || !uploadAlertMessage) return;
+            uploadAlertMessage.innerHTML = html;
+            uploadAlert.classList.remove('d-none');
+        }
+
+        function hideUploadAlert() {
+            if (!uploadAlert) return;
+            uploadAlert.classList.add('d-none');
+            if (uploadAlertMessage) uploadAlertMessage.innerHTML = '';
+        }
+
+        if (uploadAlertClose) {
+            uploadAlertClose.addEventListener('click', function() {
+                hideUploadAlert();
+            });
+        }
+
+        // Browse button click handler
+        if (browseBtn && fileInput) {
+            browseBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                fileInput.click();
+            });
+        }
+
+        // Make the whole drop zone clickable
+        if (dropZone && fileInput) {
+            dropZone.addEventListener('click', function(e) {
+                if (e.target === browseBtn || e.target.closest('#browseBtn-' + itemId)) {
+                    return; // Let the button handler deal with it
+                }
+                fileInput.click();
+            });
+        }
+
+        // Drag and drop handlers - simplified and more reliable approach
+        if (dropZone) {
+            // Prevent default browser behavior globally
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // Handle drag enter/over on the drop zone
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, function(e) {
+                    preventDefaults(e);
+                    highlight();
+                }, false);
+            });
+
+            // Handle drag leave
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, function(e) {
+                    preventDefaults(e);
+                    unhighlight();
+                }, false);
+            });
+
+            // Handle drop
+            dropZone.addEventListener('drop', function(e) {
+                preventDefaults(e);
+                unhighlight();
+
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files.length > 0) {
+                    uploadFiles(dt.files);
+                }
+            }, false);
+        }
+
+        function highlight() {
+            dropZone.classList.add('drag-over');
+            dropZone.style.borderColor = '#0d6efd';
+            dropZone.style.backgroundColor = '#f0f7ff';
+            if (dropZoneContent) dropZoneContent.classList.add('d-none');
+            if (dropZoneActive) dropZoneActive.classList.remove('d-none');
+        }
+
+        function unhighlight() {
+            dropZone.classList.remove('drag-over');
+            dropZone.style.borderColor = '#dee2e6';
+            dropZone.style.backgroundColor = '#fff';
+            if (dropZoneContent) dropZoneContent.classList.remove('d-none');
+            if (dropZoneActive) dropZoneActive.classList.add('d-none');
+        }
+
+        if (fileInput) {
+            fileInput.addEventListener('change', async function(e) {
+                const files = e.target.files;
+                if (!files || files.length === 0) return;
+
+                await uploadFiles(files);
+                fileInput.value = '';
+            });
+        }
+
+        async function uploadFiles(files) {
+            // Auto-dismiss any prior error when a new upload starts
+            hideUploadAlert();
+
+            uploadProgress.style.display = 'block';
+            const progressBar = uploadProgress.querySelector('.progress-bar');
+            const statusText = uploadProgress.querySelector('.upload-status');
+
+            statusText.textContent = '@T["Uploading"]' + ' ' + files.length + ' @T["files"]...';
+            progressBar.style.width = '50%';
+
+            try {
+                const formData = new FormData();
+                formData.append('chatInteractionId', itemId);
+
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                }
+
+                const response = await fetch(uploadUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(stripHtml(error) || '@T["Upload failed"]');
+                }
+
+                const result = await response.json();
+                progressBar.style.width = '100%';
+
+                // Handle successful uploads
+                if (result.uploaded && result.uploaded.length > 0) {
+                    for (const doc of result.uploaded) {
+                        addDocumentToList(doc);
+                    }
+                }
+
+                const successCount = result.uploaded ? result.uploaded.length : 0;
+                const failCount = result.failed ? result.failed.length : 0;
+
+                // Show per-file errors (persistent, dismissible)
+                if (failCount > 0) {
+                    const lines = [];
+                    for (const f of result.failed) {
+                        const name = f.fileName || '@T["Unknown file"]';
+                        lines.push(`@T["The file"] \"${escapeHtml(name)}\" @T["failed to upload"].`);
+                    }
+
+                    showUploadAlert(lines.join('<br>'));
+                }
+
+                if (failCount === 0 && successCount > 0) {
+                    statusText.textContent = '@T["Upload complete"]' + ': ' + successCount + ' @T["file(s)"]';
+                    statusText.classList.remove('text-danger', 'text-warning');
+                    statusText.classList.add('text-success');
+                } else if (successCount > 0 && failCount > 0) {
+                    statusText.textContent = '@T["Partial success"]' + ': ' + successCount + ' @T["succeeded"]' + ', ' + failCount + ' @T["failed"]';
+                    statusText.classList.remove('text-success', 'text-danger');
+                    statusText.classList.add('text-warning');
+                } else if (failCount > 0) {
+                    // Keep status short; user-facing details are in the alert above
+                    statusText.textContent = '@T["Upload failed"]';
+                    statusText.classList.remove('text-success', 'text-warning');
+                    statusText.classList.add('text-danger');
+                }
+
+            } catch (error) {
+                console.error('Upload failed:', error);
+                progressBar.style.width = '100%';
+                statusText.textContent = '@T["Upload failed"]';
+                statusText.classList.remove('text-success', 'text-warning');
+                statusText.classList.add('text-danger');
+
+                showUploadAlert(escapeHtml(error.message));
+            }
+
+            setTimeout(function() {
+                uploadProgress.style.display = 'none';
+                progressBar.style.width = '0%';
+                statusText.classList.remove('text-success', 'text-danger', 'text-warning');
+            }, 3000);
+        }
+
+        function addDocumentToList(doc) {
+            // Remove "no documents" message if present
+            const noDocsMessage = documentsList.querySelector('.no-documents');
+            if (noDocsMessage) {
+                noDocsMessage.remove();
+            }
+
+            const docItem = document.createElement('div');
+            docItem.className = 'document-item d-flex align-items-center border-bottom py-2';
+            docItem.setAttribute('data-document-id', doc.documentId);
+            docItem.innerHTML = `
+                <button type="button"
+                        class="btn btn-sm btn-outline-danger remove-document me-2 flex-shrink-0"
+                        data-document-id="${doc.documentId}"
+                        title="@T["Remove document"]">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+                <div class="text-truncate">
+                    <div class="fw-medium small text-truncate">${escapeHtml(doc.fileName)}</div>
+                    <small class="text-muted" style="font-size: 0.75rem;">
+                        ${formatFileSize(doc.fileSize)}
+                    </small>
+                </div>
+            `;
+            documentsList.appendChild(docItem);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function stripHtml(html) {
+            // If the text looks like HTML (contains tags), extract text content only
+            if (html && typeof html === 'string' && /<[^>]+>/.test(html)) {
+                const div = document.createElement('div');
+                div.innerHTML = html;
+                return div.textContent || div.innerText || '@T["An error occurred"]';
+            }
+            return html;
+        }
+
+        // Handle document removal
+        documentsList.addEventListener('click', async function(e) {
+            const removeBtn = e.target.closest('.remove-document');
+            if (!removeBtn) return;
+
+            const documentId = removeBtn.getAttribute('data-document-id');
+            if (!confirm('@T["Are you sure you want to remove this document?"]')) return;
+
+            try {
+                const response = await fetch(removeUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ itemId: itemId, documentId: documentId })
+                });
+
+                if (response.ok) {
+                    const docItem = documentsList.querySelector(`[data-document-id="${documentId}"]`);
+                    if (docItem) docItem.remove();
+
+                    // Show "no documents" message if list is empty
+                    if (documentsList.querySelectorAll('.document-item').length === 0) {
+                        documentsList.innerHTML = `
+                            <div class="text-center text-muted py-3 no-documents">
+                                <i class="fa-solid fa-file-circle-plus fa-2x mb-2"></i>
+                                <div>@T["No documents attached. Upload documents to chat against your own data."]</div>
+                            </div>
+                        `;
+                    }
+                } else {
+                    alert('@T["Failed to remove document"]');
+                }
+            } catch (error) {
+                console.error('Remove failed:', error);
+                alert('@T["Failed to remove document"]');
+            }
+        });
+    })();
+</script>
+
+@functions {
+    string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024):F1} MB";
+    }
+}
+

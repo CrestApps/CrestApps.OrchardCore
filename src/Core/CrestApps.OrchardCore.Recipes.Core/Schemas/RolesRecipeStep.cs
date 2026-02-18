@@ -1,3 +1,4 @@
+using Json.Schema;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;

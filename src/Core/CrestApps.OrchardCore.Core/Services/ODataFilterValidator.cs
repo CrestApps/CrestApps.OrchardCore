@@ -3,16 +3,16 @@ namespace CrestApps.OrchardCore.Services;
 /// <summary>
 /// Provides basic OData filter syntax validation.
 /// </summary>
-public sealed class ODataFilterValidator : IODataFilterValidator
+public sealed class ODataFilterValidator : IODataValidator
 {
-    private static readonly string[] ODataOperators =
+    private static readonly string[] _oDataOperators =
     [
         " eq ", " ne ", " gt ", " ge ", " lt ", " le ",
         " and ", " or ", " not ",
     ];
 
     /// <inheritdoc/>
-    public bool IsValid(string filter)
+    public bool IsValidFilter(string filter)
     {
         if (string.IsNullOrWhiteSpace(filter))
         {
@@ -23,7 +23,7 @@ public sealed class ODataFilterValidator : IODataFilterValidator
         // Note: This is not a complete OData parser. The underlying service will perform full validation.
 
         // Check for common OData operators.
-        var hasOperator = ODataOperators.Any(op => filter.Contains(op, StringComparison.OrdinalIgnoreCase));
+        var hasOperator = _oDataOperators.Any(op => filter.Contains(op, StringComparison.OrdinalIgnoreCase));
 
         if (!hasOperator)
         {

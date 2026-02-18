@@ -1,3 +1,4 @@
+using Json.Schema;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Recipes.Models;

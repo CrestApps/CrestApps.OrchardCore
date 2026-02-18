@@ -8,7 +8,6 @@
   - [AI Chat Services Feature](#ai-chat-services-feature)
   - [AI Chat WebAPI](#ai-chat-webapi)
   - [AI Connection Management](#ai-connection-management)
-  - [AI Data Source Management](#ai-data-source-management)
   - [Defining Chat Profiles Using Code](#defining-chat-profiles-using-code)
 - [AI Tool Management Feature](#ai-tool-management-feature)
   - [Extending AI Chat with Custom Functions](#extending-ai-chat-with-custom-functions)
@@ -63,12 +62,10 @@ Below is an example configuration:
           "DefaultConnectionName": "<!-- The default connection name to use from the Connections list -->",
           "DefaultDeploymentName": "<!-- The default deployment name -->",
           "DefaultEmbeddingDeploymentName": "<!-- The default embedding deployment name (optional, for embedding services) -->",
-          "DefaultIntentDeploymentName": "<!-- The default deployment name for intent detection (optional) -->",
           "DefaultImagesDeploymentName": "<!-- The default deployment name for image generation (optional, e.g., 'dall-e-3') -->",
           "Connections": {
             "<!-- Connection name goes here -->": {
               "DefaultDeploymentName": "<!-- The default deployment name for this connection -->",
-              "DefaultIntentDeploymentName": "<!-- The intent detection deployment name (optional, lightweight model recommended) -->",
               "DefaultImagesDeploymentName": "<!-- The image generation deployment name (optional, e.g., 'dall-e-3') -->"
               // Provider-specific settings go here
             }
@@ -100,7 +97,6 @@ Below is an example configuration:
 |---------|-------------|----------|
 | `DefaultDeploymentName` | The default model for chat completions | Yes |
 | `DefaultEmbeddingDeploymentName` | The model for generating embeddings (for RAG/vector search) | No |
-| `DefaultIntentDeploymentName` | A lightweight model for intent classification (e.g., `gpt-4o-mini`). If not set, falls back to `DefaultDeploymentName`. | No |
 | `DefaultImagesDeploymentName` | The model for image generation (e.g., `dall-e-3`). Required for image generation features. | No |
 
 ---
@@ -118,19 +114,6 @@ The following providers are supported **out of the box**:
 > For these providers, use the **`OpenAI`** provider type when configuring their connections and endpoints.
 
 Each provider can define multiple connections, and the `DefaultConnectionName` determines which one is used when multiple connections are available.
-
----
-
-### Provider Configuration
-
-The following providers are supported **out of the box**:
-
-* **OpenId** — [View configuration guide](../CrestApps.OrchardCore.OpenAI/README.md)
-* **Azure** — [View configuration guide](../CrestApps.OrchardCore.OpenAI.Azure/README.md)
-* **AzureAIInference** — [View configuration guide](../CrestApps.OrchardCore.AzureAIInference/README.md)
-* **Ollama** — [View configuration guide](../CrestApps.OrchardCore.Ollama/README.md)
-
-Each provider requires its own connection and deployment settings. The `DefaultConnectionName` determines which connection is used when multiple connections are configured.
 
 ---
 
@@ -156,7 +139,9 @@ The **AI Chat WebAPI** feature extends the **AI Chat Services** feature by enabl
 
 The **AI Connection Management** feature enhances **AI Services** by providing a user interface to manage provider connections.  
 
-#### Setting Up a Connection  
+---
+
+#### Setting Up a Connection
 
 1. **Navigate to AI Settings**  
    - Go to **"Artificial Intelligence"** in the admin menu.  
@@ -221,36 +206,7 @@ This recipe ensures that a **DeepSeek** connection is added or updated within th
 
 If a connection with the same `Name` and `Source` already exists, the recipe updates its properties. Otherwise, it creates a new connection.
 
-### AI Data Source Management 
-
-The **AI Data Source Management** feature enhances **AI Services** by offering a user-friendly interface for managing data sources accessible to AI models. To add data sources, you must first enable at least one feature that supplies a data source. For instance, the **Azure AI Search-Powered Data Source** feature provides access to data stored in Azure AI Search, enabling AI-powered conversational capabilities with that data.
-
-#### Creating Data Source via Recipe
-
-You can add or update data-source using recipe. Here is an example or creating a data-source
-
-
-```
-{
-  "steps": [
-    {
-      "name": "AIDataSource",
-      "DataSources": [
-        {
-          "ProfileSource": "AzureAISearch",
-          "Type": "azure_search",
-          "DisplayText": "Articles (Azure AI Search)",
-          "Properties": {
-            "AzureAIProfileAISearchMetadata": {
-              "IndexName": "articles"
-            }
-          }
-        }
-      ]
-    }
-  ]
-}
-```
+Data source (RAG/Knowledge Base) documentation is in the `CrestApps.OrchardCore.AI.DataSources` module: [README](../CrestApps.OrchardCore.AI.DataSources/README.md).
 
 ### Defining AI Profiles Using Code
 

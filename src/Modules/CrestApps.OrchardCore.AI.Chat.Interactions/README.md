@@ -22,11 +22,11 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 
 ## Related Features
 
-### AI Chat Interactions - Documents
+### AI Documents
 
-For document upload and document-aware prompt processing (RAG and non-RAG strategies), see the [Documents feature documentation](../CrestApps.OrchardCore.AI.Chat.Interactions.Documents/README.md).
+For document upload and document-aware prompt processing (RAG and non-RAG strategies), see the [Documents feature documentation](../CrestApps.OrchardCore.AI.Documents/README.md).
 
-> Note: The `AI Chat Interactions - Documents` feature is provided on demand and is only enabled when another feature that requires it is enabled (for example one of the document indexing provider features). To configure document indexing you must enable either the `AI Chat Interactions - Documents - Azure AI Search` feature or the `AI Chat Interactions - Documents - Elasticsearch` feature in Orchard Core admin.
+> Note: The `AI Documents` feature is provided on demand and is only enabled when another feature that requires it is enabled (for example one of the document indexing provider features). To configure document indexing you must enable either the `AI Documents (Azure AI Search)` feature or the `AI Documents (Elasticsearch)` feature in Orchard Core admin.
 
 The Documents feature supports Elasticsearch and Azure AI Search as embedding and search providers, ensure you enable the corresponding feature for your chosen provider in Orchard Core admin.
 
@@ -77,28 +77,4 @@ Navigate to **Artificial Intelligence > Provider Connections**, edit your connec
 }
 ```
 
-#### Intent Detection Model
 
-By default, intent detection uses the same model configured for chat (`DefaultDeploymentName`). For cost optimization, you can configure a separate lightweight model for intent classification:
-
-```json
-{
-  "OrchardCore": {
-    "CrestApps_AI": {
-      "Providers": {
-        "OpenAI": {
-          "Connections": {
-            "default": {
-              "DefaultDeploymentName": "gpt-4o",
-              "DefaultIntentDeploymentName": "gpt-4o-mini",
-              "DefaultImagesDeploymentName": "dall-e-3"
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-> Recommendation: Use a lightweight model like `gpt-4o-mini` for intent detection. Intent classification is a simple task that doesn't require the full capabilities of larger models.

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Recipes.Core.Schemas;
+using Json.Schema;
 
 namespace CrestApps.OrchardCore.Recipes.Core;
 

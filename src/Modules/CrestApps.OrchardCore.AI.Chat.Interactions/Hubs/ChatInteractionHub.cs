@@ -5,7 +5,6 @@ using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using CrestApps.OrchardCore.Services;
 using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
@@ -133,6 +132,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         int? topNDocuments,
         string filter,
         bool? isInScope,
+        bool? enableEarlyRag,
         string[] toolNames,
         string[] mcpConnectionIds)
     {
@@ -176,7 +176,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
         if (!string.IsNullOrWhiteSpace(dataSourceId))
         {
-            var dataSourceStore = _serviceProvider.GetService<IAIDataSourceStore>();
+            var dataSourceStore = _serviceProvider.GetService<ICatalog<AIDataSource>>();
             if (dataSourceStore is not null)
             {
                 var dataSource = await dataSourceStore.FindByIdAsync(dataSourceId);
@@ -185,15 +185,15 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 {
                     interaction.Put(new ChatInteractionDataSourceMetadata()
                     {
-                        DataSourceType = dataSource.Type,
                         DataSourceId = dataSource.ItemId,
                     });
 
-                    interaction.Put(new AzureRagChatMetadata()
+                    interaction.Put(new AIDataSourceRagMetadata()
                     {
                         Strictness = strictness,
                         TopNDocuments = topNDocuments,
                         IsInScope = isInScope ?? true,
+                        EnableEarlyRag = enableEarlyRag ?? false,
                         Filter = filter,
                     });
                 }
@@ -202,7 +202,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         else
         {
             interaction.Put(new ChatInteractionDataSourceMetadata());
-            interaction.Put(new AzureRagChatMetadata());
+            interaction.Put(new AIDataSourceRagMetadata());
         }
 
         await _interactionManager.UpdateAsync(interaction);
@@ -327,12 +327,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                     .ToList();
                 ctx.SessionId = interaction.ItemId;
             });
-
-            httpContext.Items[nameof(AIToolExecutionContext)] = new AIToolExecutionContext(interaction)
-            {
-                ProviderName = orchestratorContext.SourceName,
-                ConnectionName = orchestratorContext.CompletionContext.ConnectionName,
-            };
 
             // Resolve the orchestrator for this interaction and execute the completion.
             var orchestrator = _orchestratorResolver.Resolve(interaction.OrchestratorName);
