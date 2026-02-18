@@ -65,13 +65,20 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var masterProfile = (await _indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType))
-            .FirstOrDefault(p => string.Equals(p.IndexName, dataSource.AIKnowledgeBaseIndexProfileName, StringComparison.OrdinalIgnoreCase));
+        var masterProfile = await _indexProfileStore.FindByNameAsync(dataSource.AIKnowledgeBaseIndexProfileName);
 
         if (masterProfile == null)
         {
             _logger.LogWarning("Master index profile '{IndexName}' not found for data source '{DataSourceId}'.",
                 dataSource.AIKnowledgeBaseIndexProfileName, dataSource.ItemId);
+            return;
+        }
+
+        if (masterProfile.Type != DataSourceConstants.IndexingTaskType)
+        {
+            _logger.LogWarning("Master index profile '{IndexName}' has invalid index type for data source '{DataSourceId}'.",
+    dataSource.AIKnowledgeBaseIndexProfileName, dataSource.ItemId);
+
             return;
         }
 
@@ -172,7 +179,7 @@ public sealed class DataSourceIndexingService
         var masterIndexProfiles = await _indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType);
 
         var masterProfile = masterIndexProfiles.FirstOrDefault(p =>
-            string.Equals(p.IndexName, dataSource.AIKnowledgeBaseIndexProfileName, StringComparison.OrdinalIgnoreCase));
+            string.Equals(p.Name, dataSource.AIKnowledgeBaseIndexProfileName, StringComparison.OrdinalIgnoreCase));
 
         if (masterProfile == null)
         {
@@ -304,7 +311,7 @@ public sealed class DataSourceIndexingService
             }
 
             var masterProfile = masterIndexProfiles.FirstOrDefault(p =>
-                string.Equals(p.IndexName, dataSource.AIKnowledgeBaseIndexProfileName, StringComparison.OrdinalIgnoreCase));
+                string.Equals(p.Name, dataSource.AIKnowledgeBaseIndexProfileName, StringComparison.OrdinalIgnoreCase));
 
             if (masterProfile == null)
             {
