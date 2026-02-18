@@ -18,6 +18,6 @@ public sealed class DefaultChatInteractionDocumentStore : DocumentCatalog<ChatIn
     {
         ArgumentException.ThrowIfNullOrEmpty(chatInteractionId);
 
-        return (await Session.Query<ChatInteractionDocument, ChatInteractionDocumentIndex>(x => x.ChatInteractionId == chatInteractionId).ListAsync()).ToArray();
+        return (await Session.Query<ChatInteractionDocument, ChatInteractionDocumentIndex>(x => x.ChatInteractionId == chatInteractionId, CollectionName).ListAsync()).ToArray();
     }
 }
