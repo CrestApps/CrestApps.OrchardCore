@@ -26,7 +26,7 @@ internal static class RemoveProfileDocumentEndpoint
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         IAIProfileManager profileManager,
-        IAIProfileDocumentStore profileDocumentStore)
+        IAIDocumentStore documentStore)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles))
         {
@@ -35,19 +35,19 @@ internal static class RemoveProfileDocumentEndpoint
 
         if (request == null)
         {
-            return TypedResults.BadRequest("Request body is required.");
+            return TypedResults.Json(new { error = "Request body is required." }, statusCode: StatusCodes.Status400BadRequest);
         }
 
         if (string.IsNullOrEmpty(request.ProfileId) || string.IsNullOrEmpty(request.DocumentId))
         {
-            return TypedResults.BadRequest("Profile ID and Document ID are required.");
+            return TypedResults.Json(new { error = "Profile ID and Document ID are required." }, statusCode: StatusCodes.Status400BadRequest);
         }
 
         var profile = await profileManager.FindByIdAsync(request.ProfileId);
 
         if (profile == null)
         {
-            return TypedResults.NotFound();
+            return TypedResults.Json(new { error = "Profile not found." }, statusCode: StatusCodes.Status404NotFound);
         }
 
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles, profile))
@@ -61,15 +61,15 @@ internal static class RemoveProfileDocumentEndpoint
 
         if (documentInfo == null)
         {
-            return TypedResults.NotFound("Document not found.");
+            return TypedResults.Json(new { error = "Document not found." }, statusCode: StatusCodes.Status404NotFound);
         }
 
         documentsMetadata.Documents.Remove(documentInfo);
 
-        var document = await profileDocumentStore.FindByIdAsync(request.DocumentId);
+        var document = await documentStore.FindByIdAsync(request.DocumentId);
         if (document != null)
         {
-            await profileDocumentStore.DeleteAsync(document);
+            await documentStore.DeleteAsync(document);
         }
 
         profile.Put(documentsMetadata);

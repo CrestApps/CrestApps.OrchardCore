@@ -39,7 +39,7 @@ internal static class UploadProfileDocumentEndpoint
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         IAIProfileManager profileManager,
-        IAIProfileDocumentStore profileDocumentStore,
+        IAIDocumentStore documentStore,
         IEnumerable<IDocumentTextExtractor> textExtractors,
         IOptions<ChatDocumentsOptions> extractorOptions,
         IAIClientFactory aIClientFactory,
@@ -69,60 +69,67 @@ internal static class UploadProfileDocumentEndpoint
 
         if (string.IsNullOrEmpty(profileId))
         {
-            return TypedResults.BadRequest("Profile ID is required.");
+            return TypedResults.Json(new { error = "Profile ID is required." }, statusCode: StatusCodes.Status400BadRequest);
         }
 
         if (files.Count == 0)
         {
-            return TypedResults.BadRequest("No files uploaded.");
+            return TypedResults.Json(new { error = "No files uploaded." }, statusCode: StatusCodes.Status400BadRequest);
         }
 
+        // The profile may not exist yet when creating a new profile.
+        // In that case, we store documents without embeddings.
         var profile = await profileManager.FindByIdAsync(profileId);
-        if (profile == null)
-        {
-            return TypedResults.NotFound();
-        }
 
-        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles, profile))
+        if (profile != null &&
+            !await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles, profile))
         {
             return TypedResults.Forbid();
         }
 
-        var providerName = profile.Source;
-        var connectionName = profile.ConnectionName;
-        string deploymentName = null;
-
-        if (providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
-        {
-            if (string.IsNullOrEmpty(connectionName))
-            {
-                connectionName = provider.DefaultConnectionName;
-            }
-
-            if (!string.IsNullOrEmpty(connectionName) && provider.Connections.TryGetValue(connectionName, out var connection))
-            {
-                deploymentName = connection.GetDefaultEmbeddingDeploymentName(false);
-            }
-        }
-
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator = null;
-        if (!string.IsNullOrEmpty(deploymentName))
-        {
-            embeddingGenerator = await aIClientFactory.CreateEmbeddingGeneratorAsync(providerName, connectionName, deploymentName);
 
-            if (embeddingGenerator == null)
+        if (profile != null)
+        {
+            var providerName = profile.Source;
+            var connectionName = profile.ConnectionName;
+            string deploymentName = null;
+
+            if (providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
             {
-                logger.LogWarning("Failed to create embedding generator for provider {Provider}, connection {Connection}, deployment {Deployment}. Documents will be stored without embeddings.",
-                    profile.Source, connectionName, deploymentName);
+                if (string.IsNullOrEmpty(connectionName))
+                {
+                    connectionName = provider.DefaultConnectionName;
+                }
+
+                if (!string.IsNullOrEmpty(connectionName) && provider.Connections.TryGetValue(connectionName, out var connection))
+                {
+                    deploymentName = connection.GetDefaultEmbeddingDeploymentName(false);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(deploymentName))
+            {
+                embeddingGenerator = await aIClientFactory.CreateEmbeddingGeneratorAsync(providerName, connectionName, deploymentName);
+
+                if (embeddingGenerator == null)
+                {
+                    logger.LogWarning("Failed to create embedding generator for provider {Provider}, connection {Connection}, deployment {Deployment}. Documents will be stored without embeddings.",
+                        profile.Source, connectionName, deploymentName);
+                }
+            }
+            else
+            {
+                logger.LogInformation("No embedding deployment configured. Documents will be stored without embeddings for vector search.");
             }
         }
-        else
+        else if (logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("No embedding deployment configured. Documents will be stored without embeddings for vector search.");
+            logger.LogInformation("Profile '{ProfileId}' does not exist yet. Documents will be stored without embeddings.", profileId);
         }
 
         var now = clock.UtcNow;
-        var documentsMetadata = profile.As<AIProfileDocumentsMetadata>();
+        var documentsMetadata = profile?.As<AIProfileDocumentsMetadata>() ?? new AIProfileDocumentsMetadata();
         documentsMetadata.Documents ??= [];
 
         var uploadedDocuments = new List<object>();
@@ -183,10 +190,11 @@ internal static class UploadProfileDocumentEndpoint
 
                 var text = content.ToString();
 
-                var document = new AIProfileDocument
+                var document = new AIDocument
                 {
                     ItemId = IdGenerator.GenerateId(),
-                    ProfileId = profileId,
+                    ReferenceId = profileId,
+                    ReferenceType = AIConstants.DocumentReferenceTypes.Profile,
                     FileName = file.FileName,
                     ContentType = file.ContentType,
                     FileSize = file.Length,
@@ -236,7 +244,7 @@ internal static class UploadProfileDocumentEndpoint
                 uploadedDocuments.Add(docInfo);
                 documentsMetadata.Documents.Add(docInfo);
 
-                await profileDocumentStore.CreateAsync(document);
+                await documentStore.CreateAsync(document);
             }
             catch (Exception ex)
             {
@@ -249,8 +257,11 @@ internal static class UploadProfileDocumentEndpoint
             }
         }
 
-        profile.Put(documentsMetadata);
-        await profileManager.UpdateAsync(profile);
+        if (profile != null)
+        {
+            profile.Put(documentsMetadata);
+            await profileManager.UpdateAsync(profile);
+        }
 
         return TypedResults.Ok(new
         {

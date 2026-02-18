@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -31,7 +30,14 @@ public sealed class Startup : StartupBase
     {
         services
             .AddDocumentTextExtractor<DefaultDocumentTextExtractor>(".txt", new ExtractorExtension(".csv", false),
-                ".md", ".json", ".xml", ".html", ".htm", ".log", ".yaml", ".yml");
+                ".md", ".json", ".xml", ".html", ".htm", ".log", ".yaml", ".yml")
+            .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
+            .AddNavigationProvider<ChatInteractionDocumentsAdminMenu>();
+
+        // Register unified document store, index provider, and migration.
+        services.AddScoped<IAIDocumentStore, DefaultAIDocumentStore>();
+        services.AddIndexProvider<AIDocumentIndexProvider>();
+        services.AddDataMigration<AIDocumentIndexMigrations>();
 
         // Add document processing system tools and supporting services.
         services.AddDefaultDocumentProcessingServices();
@@ -50,17 +56,7 @@ public sealed class ChatInteractionDocumentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
-            .AddNavigationProvider<ChatInteractionDocumentsAdminMenu>();
-
-        services.AddScoped<DefaultChatInteractionDocumentStore>()
-            .AddScoped<IChatInteractionDocumentStore>(sp => sp.GetRequiredService<DefaultChatInteractionDocumentStore>())
-            .AddScoped<ICatalog<ChatInteractionDocument>>(sp => sp.GetRequiredService<DefaultChatInteractionDocumentStore>());
-
-        services
-            .AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>()
-            .AddIndexProvider<ChatInteractionDocumentIndexProvider>()
-            .AddDataMigration<ChatInteractionDocumentIndexMigrations>();
+            .AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>();
 
         // Add Indexing Services.
         services.AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionIndexingHandler>()
@@ -83,10 +79,7 @@ public sealed class ProfileDocumentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IAIProfileDocumentStore, DefaultAIProfileDocumentStore>();
         services.AddDisplayDriver<AIProfile, AIProfileDocumentsDisplayDriver>();
-        services.AddIndexProvider<AIProfileDocumentIndexProvider>();
-        services.AddDataMigration<AIProfileDocumentIndexMigrations>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

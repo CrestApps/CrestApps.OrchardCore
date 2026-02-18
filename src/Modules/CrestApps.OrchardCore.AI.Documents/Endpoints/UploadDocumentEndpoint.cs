@@ -43,7 +43,7 @@ internal static class UploadDocumentEndpoint
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         ISourceCatalogManager<ChatInteraction> interactionManager,
-        IChatInteractionDocumentStore chatInteractionDocumentStore,
+        IAIDocumentStore documentStore,
         IEnumerable<IDocumentTextExtractor> textExtractors,
         IOptions<ChatDocumentsOptions> extractorOptions,
         IAIClientFactory aIClientFactory,
@@ -191,10 +191,11 @@ internal static class UploadDocumentEndpoint
 
                 var text = content.ToString();
 
-                var document = new ChatInteractionDocument
+                var document = new AIDocument
                 {
                     ItemId = IdGenerator.GenerateId(),
-                    ChatInteractionId = chatInteractionId,
+                    ReferenceId = chatInteractionId,
+                    ReferenceType = AIConstants.DocumentReferenceTypes.ChatInteraction,
                     FileName = file.FileName,
                     ContentType = file.ContentType,
                     FileSize = file.Length,
@@ -255,7 +256,7 @@ internal static class UploadDocumentEndpoint
                 uploadedDocuments.Add(docInfo);
                 interaction.Documents.Add(docInfo);
 
-                await chatInteractionDocumentStore.CreateAsync(document);
+                await documentStore.CreateAsync(document);
             }
             catch (Exception ex)
             {

@@ -12,7 +12,7 @@ public sealed class ChatInteractionElasticsearchDocumentIndexHandler : IDocument
 {
     public Task BuildIndexAsync(BuildDocumentIndexContext context)
     {
-        if (context.Record is not ChatInteractionDocument chatInteractionDocument)
+        if (context.Record is not AIDocument document)
         {
             return Task.CompletedTask;
         }
@@ -34,13 +34,13 @@ public sealed class ChatInteractionElasticsearchDocumentIndexHandler : IDocument
 
         if (metadata.StoreSourceData)
         {
-            context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.Text, chatInteractionDocument.Text, DocumentIndexOptions.Store);
+            context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.Text, document.Text, DocumentIndexOptions.Store);
         }
 
-        context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.DocumentId, chatInteractionDocument.ItemId, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.DocumentId, document.ItemId, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.InteractionId, interaction.ItemId, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.FileName, chatInteractionDocument.FileName, DocumentIndexOptions.Store);
-        context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.Chunks, chatInteractionDocument.Chunks, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.FileName, document.FileName, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(ChatInteractionsConstants.ColumnNames.Chunks, document.Chunks, DocumentIndexOptions.Store);
 
         return Task.CompletedTask;
     }

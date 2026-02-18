@@ -48,6 +48,13 @@ public static class AIConstants
         public const string ProfileDocuments = "CrestApps.OrchardCore.AI.Documents.Profiles";
     }
 
+    public static class DocumentReferenceTypes
+    {
+        public const string Profile = "profile";
+
+        public const string ChatInteraction = "chatinteraction";
+    }
+
     public static class RouteNames
     {
         public const string AICompletionRoute = "AIChatCompletion";

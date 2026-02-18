@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Http;
@@ -75,7 +76,7 @@ public sealed class ReadTabularDataTool : AIFunction
         }
 
         var chatInteractionId = interaction.ItemId;
-        var documentStore = arguments.Services.GetService<IChatInteractionDocumentStore>();
+        var documentStore = arguments.Services.GetService<IAIDocumentStore>();
 
         if (documentStore is null)
         {
@@ -85,7 +86,7 @@ public sealed class ReadTabularDataTool : AIFunction
         // Query only documents belonging to this interaction to prevent cross-session access.
         var document = await documentStore.FindByIdAsync(documentId);
 
-        if (document is null || document.ChatInteractionId != chatInteractionId)
+        if (document is null || document.ReferenceId != chatInteractionId)
         {
             return $"Document with ID '{documentId}' was not found in this session.";
         }

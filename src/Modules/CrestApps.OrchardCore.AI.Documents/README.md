@@ -18,12 +18,14 @@ The base feature is **enabled by dependency only** — it activates automaticall
 
 The base feature (`CrestApps.OrchardCore.AI.Documents`) provides the shared infrastructure used by both chat interaction and profile document features:
 
+- **Unified Document Store**: A single `IAIDocumentStore` for storing and querying documents across all reference types (chat interactions, profiles)
 - **Text Extraction**: Automatic text extraction from uploaded documents via registered extractors
 - **Settings UI**: Admin settings page for configuring the default document index (**Settings > Chat Interaction**)
 - **Document Processing Tools**: AI tools for listing, reading, and searching documents
 - **RAG Search Tool**: Semantic vector search across uploaded documents
 - **Document Intent Registration**: Registers document intents for the shared intent detection pipeline
 - **Strategy-Based Processing**: Adds document-focused prompt-processing strategies
+- **Index & Migrations**: Shared `AIDocumentIndex` with `ReferenceId` and `ReferenceType` columns for multi-purpose document storage
 
 ### Dependencies
 

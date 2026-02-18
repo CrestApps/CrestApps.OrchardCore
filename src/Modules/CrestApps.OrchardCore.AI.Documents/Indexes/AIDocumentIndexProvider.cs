@@ -1,30 +1,32 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Models;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.AI.Documents.Indexes;
 
-internal sealed class AIProfileDocumentIndexProvider : IndexProvider<AIProfileDocument>
+internal sealed class AIDocumentIndexProvider : IndexProvider<AIDocument>
 {
-    public AIProfileDocumentIndexProvider()
+    public AIDocumentIndexProvider()
     {
-        CollectionName = Core.AIConstants.CollectionName;
+        CollectionName = AIConstants.CollectionName;
     }
 
-    public override void Describe(DescribeContext<AIProfileDocument> context)
+    public override void Describe(DescribeContext<AIDocument> context)
     {
         context
-            .For<AIProfileDocumentIndex>()
+            .For<AIDocumentIndex>()
             .Map(document =>
             {
                 var extension = !string.IsNullOrEmpty(document.FileName)
                     ? Path.GetExtension(document.FileName)
                     : null;
 
-                return new AIProfileDocumentIndex
+                return new AIDocumentIndex
                 {
                     ItemId = document.ItemId,
-                    ProfileId = document.ProfileId,
+                    ReferenceId = document.ReferenceId,
+                    ReferenceType = document.ReferenceType,
                     Extension = extension,
                 };
             });

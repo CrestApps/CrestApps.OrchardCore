@@ -45,14 +45,14 @@ public sealed class ListDocumentsTool : AIFunction
         if (executionContext?.Resource is ChatInteraction interaction)
         {
             var chatInteractionId = interaction.ItemId;
-            var documentStore = arguments.Services.GetService<IChatInteractionDocumentStore>();
+            var documentStore = arguments.Services.GetService<IAIDocumentStore>();
 
             if (documentStore is null)
             {
                 return "Document store is not available.";
             }
 
-            var documents = await documentStore.GetDocuments(chatInteractionId);
+            var documents = await documentStore.GetDocumentsAsync(chatInteractionId, AIConstants.DocumentReferenceTypes.ChatInteraction);
 
             if (documents is null || documents.Count == 0)
             {
@@ -72,14 +72,14 @@ public sealed class ListDocumentsTool : AIFunction
 
         if (executionContext?.Resource is AIProfile profile)
         {
-            var profileDocumentStore = arguments.Services.GetService<IAIProfileDocumentStore>();
+            var documentStore = arguments.Services.GetService<IAIDocumentStore>();
 
-            if (profileDocumentStore is null)
+            if (documentStore is null)
             {
                 return "Document store is not available.";
             }
 
-            var documents = await profileDocumentStore.GetDocuments(profile.ItemId);
+            var documents = await documentStore.GetDocumentsAsync(profile.ItemId, AIConstants.DocumentReferenceTypes.Profile);
 
             if (documents is null || documents.Count == 0)
             {

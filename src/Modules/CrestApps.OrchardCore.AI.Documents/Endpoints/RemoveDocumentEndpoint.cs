@@ -27,7 +27,7 @@ internal static class RemoveDocumentEndpoint
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         ISourceCatalogManager<ChatInteraction> interactionManager,
-        IChatInteractionDocumentStore chatInteractionDocumentStore)
+        IAIDocumentStore documentStore)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.EditChatInteractions))
         {
@@ -67,10 +67,10 @@ internal static class RemoveDocumentEndpoint
         interaction.Documents.Remove(documentInfo);
 
         // Remove the document from the document store
-        var document = await chatInteractionDocumentStore.FindByIdAsync(request.DocumentId);
+        var document = await documentStore.FindByIdAsync(request.DocumentId);
         if (document != null)
         {
-            await chatInteractionDocumentStore.DeleteAsync(document);
+            await documentStore.DeleteAsync(document);
         }
 
         // Save the interaction

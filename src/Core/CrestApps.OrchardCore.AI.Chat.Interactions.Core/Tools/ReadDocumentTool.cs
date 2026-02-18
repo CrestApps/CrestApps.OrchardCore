@@ -55,7 +55,7 @@ public sealed class ReadDocumentTool : AIFunction
         if (executionContext?.Resource is ChatInteraction interaction)
         {
             var chatInteractionId = interaction.ItemId;
-            var documentStore = arguments.Services.GetService<IChatInteractionDocumentStore>();
+            var documentStore = arguments.Services.GetService<IAIDocumentStore>();
 
             if (documentStore is null)
             {
@@ -64,7 +64,7 @@ public sealed class ReadDocumentTool : AIFunction
 
             var document = await documentStore.FindByIdAsync(documentId);
 
-            if (document is null || document.ChatInteractionId != chatInteractionId)
+            if (document is null || document.ReferenceId != chatInteractionId)
             {
                 return $"Document with ID '{documentId}' was not found in this session.";
             }
@@ -74,16 +74,16 @@ public sealed class ReadDocumentTool : AIFunction
 
         if (executionContext?.Resource is AIProfile profile)
         {
-            var profileDocumentStore = arguments.Services.GetService<IAIProfileDocumentStore>();
+            var documentStore = arguments.Services.GetService<IAIDocumentStore>();
 
-            if (profileDocumentStore is null)
+            if (documentStore is null)
             {
                 return "Document store is not available.";
             }
 
-            var document = await profileDocumentStore.FindByIdAsync(documentId);
+            var document = await documentStore.FindByIdAsync(documentId);
 
-            if (document is null || document.ProfileId != profile.ItemId)
+            if (document is null || document.ReferenceId != profile.ItemId)
             {
                 return $"Document with ID '{documentId}' was not found in this profile.";
             }
