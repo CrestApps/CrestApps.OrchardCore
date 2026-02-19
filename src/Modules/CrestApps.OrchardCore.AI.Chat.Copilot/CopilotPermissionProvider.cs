@@ -3,7 +3,7 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot;
 
-public sealed class Permissions : IPermissionProvider
+public sealed class CopilotPermissionProvider : IPermissionProvider
 {
     public static readonly Permission ManageCopilotSettings = new("ManageCopilotSettings", "Manage Copilot Settings");
 

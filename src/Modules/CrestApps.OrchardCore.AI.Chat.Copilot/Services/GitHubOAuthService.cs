@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 /// <summary>
 /// Implementation of GitHub OAuth service for Copilot.
 /// </summary>
-public sealed class GitHubOAuthService : IGitHubOAuthService
+public sealed class GitHubOAuthService
 {
     private const string ProtectorPurpose = "CrestApps.OrchardCore.AI.Chat.Copilot.GitHubTokens";
     private const string SettingsProtectorPurpose = "CrestApps.OrchardCore.AI.Chat.Copilot.Settings";
@@ -272,7 +272,7 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
         return true;
     }
 
-    public async Task<IList<CopilotModelInfo>> ListModelsAsync(
+    public async Task<IReadOnlyCollection<CopilotModelInfo>> ListModelsAsync(
         string userId,
         CancellationToken cancellationToken = default)
     {

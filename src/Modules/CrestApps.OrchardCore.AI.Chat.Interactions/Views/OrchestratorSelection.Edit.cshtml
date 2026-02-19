@@ -26,35 +26,34 @@ else
     document.addEventListener('DOMContentLoaded', function () {
 
         const orchestratorSelector = document.getElementById('@Html.IdFor(m => m.OrchestratorName)');
-        const defaultOrcestrator = '@(DefaultOrchestrator.OrchestratorName)';
+        const defaultOrchestrator = '@(DefaultOrchestrator.OrchestratorName)';
 
-        if (orchestratorSelector) {
+        if (!orchestratorSelector) return;
 
-            function updateFieldVisibility() {
+        function updateFieldVisibility() {
 
-                const selectedOrchestrator = orchestratorSelector.value || defaultOrcestrator;
+            const selectedOrchestrator =
+                orchestratorSelector.value || defaultOrchestrator;
 
-                const elements = document.getElementsByClassName('orchestrator-dependent');
-                const targetClass = 'orchestrator-dependent-' + selectedOrchestrator;
+            const elements = document.getElementsByClassName('orchestrator-dependent');
+            const targetClass = 'orchestrator-dependent-' + selectedOrchestrator;
 
-                for (const el of elements) {
-                    el.classList.toggle(
-                        'd-none',
-                        !el.classList.contains(targetClass)
-                    );
-                }
-            }
-
-            orchestratorSelector.addEventListener('change', updateFieldVisibility);
-
-            if (!orchestratorSelector.value) {
-                orchestratorSelector.value = defaultOrcestrator;
-                orchestratorSelector.dispatchEvent(
-                    new Event('change', { bubbles: true })
+            for (const el of elements) {
+                el.classList.toggle(
+                    'd-none',
+                    !el.classList.contains(targetClass)
                 );
-            } else {
-                updateFieldVisibility();
             }
         }
+
+        if (!orchestratorSelector.value) {
+            orchestratorSelector.value = defaultOrchestrator;
+        }
+
+        // Initial render
+        updateFieldVisibility();
+
+        // React to user changes
+        orchestratorSelector.addEventListener('change', updateFieldVisibility);
     });
 </script>

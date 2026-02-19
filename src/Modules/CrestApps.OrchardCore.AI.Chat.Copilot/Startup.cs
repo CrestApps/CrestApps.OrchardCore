@@ -23,28 +23,22 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddOrchestrator<CopilotOrchestrator>(CopilotOrchestrator.OrchestratorName)
+        services
+            .AddOrchestrator<CopilotOrchestrator>(CopilotOrchestrator.OrchestratorName)
             .WithTitle(S["GitHub Copilot Orchestrator"]);
 
         // Register HTTP client for GitHub API calls
-        services.AddHttpClient();
+        services.AddHttpClient()
+            .AddScoped<GitHubOAuthService>();
 
-        // Register GitHub OAuth service
-        services.AddScoped<IGitHubOAuthService, GitHubOAuthService>();
-
-        // Register handler to wire CopilotProfileSettings.CopilotModel into CompletionContext.Model.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAICompletionContextBuilderHandler, CopilotCompletionContextBuilderHandler>());
 
-        // Register display driver for Copilot-specific profile configuration
         services.AddDisplayDriver<AIProfile, AIProfileCopilotDisplayDriver>();
 
-        // Register display driver for Copilot-specific chat interaction configuration
         services.AddDisplayDriver<ChatInteraction, ChatInteractionCopilotDisplayDriver>();
 
-        // Register settings display driver
         services.AddSiteDisplayDriver<CopilotSettingsDisplayDriver>();
 
-        // Register permissions
-        services.AddPermissionProvider<Permissions>();
+        services.AddPermissionProvider<CopilotPermissionProvider>();
     }
 }

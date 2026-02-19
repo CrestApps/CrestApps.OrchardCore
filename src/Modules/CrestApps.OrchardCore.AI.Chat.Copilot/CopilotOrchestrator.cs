@@ -27,13 +27,13 @@ public sealed class CopilotOrchestrator : IOrchestrator
     public const string OrchestratorName = "copilot";
 
     private readonly IToolRegistry _toolRegistry;
-    private readonly IGitHubOAuthService _oauthService;
+    private readonly GitHubOAuthService _oauthService;
     private readonly UserManager<IUser> _userManager;
     private readonly ILogger _logger;
 
     public CopilotOrchestrator(
         IToolRegistry toolRegistry,
-        IGitHubOAuthService oauthService,
+        GitHubOAuthService oauthService,
         UserManager<IUser> userManager,
         ILogger<CopilotOrchestrator> logger)
     {

@@ -15,14 +15,14 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 
 internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatInteraction>
 {
-    private readonly IGitHubOAuthService _oauthService;
+    private readonly GitHubOAuthService _oauthService;
     private readonly UserManager<IUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
     public ChatInteractionCopilotDisplayDriver(
-        IGitHubOAuthService oauthService,
+        GitHubOAuthService oauthService,
         UserManager<IUser> userManager,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<ChatInteractionCopilotDisplayDriver> stringLocalizer)

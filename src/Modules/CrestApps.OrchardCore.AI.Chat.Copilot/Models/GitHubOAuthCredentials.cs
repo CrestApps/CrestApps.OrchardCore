@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.Models;
 /// <summary>
 /// GitHub OAuth credentials stored on the user object using OrchardCore.Entities.
 /// </summary>
-public sealed class GitHubOAuthCredentials
+internal sealed class GitHubOAuthCredentials
 {
     /// <summary>
     /// The GitHub username.

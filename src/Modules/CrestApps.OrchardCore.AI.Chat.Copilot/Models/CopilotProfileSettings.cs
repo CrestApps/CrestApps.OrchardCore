@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.Models;
 /// <summary>
 /// Settings specific to Copilot orchestrator configuration.
 /// </summary>
-public sealed class CopilotProfileSettings
+internal sealed class CopilotProfileSettings
 {
     /// <summary>
     /// The Copilot model to use (e.g., gpt-4o, claude-3.5-sonnet).

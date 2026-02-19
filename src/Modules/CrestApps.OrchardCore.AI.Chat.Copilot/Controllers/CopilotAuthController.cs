@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.Controllers;
 [Authorize]
 public sealed class CopilotAuthController : Controller
 {
-    private readonly IGitHubOAuthService _oauthService;
+    private readonly GitHubOAuthService _oauthService;
     private readonly UserManager<USR.IUser> _userManager;
     private readonly INotifier _notifier;
     private readonly ILogger _logger;
@@ -23,7 +23,7 @@ public sealed class CopilotAuthController : Controller
     internal readonly IHtmlLocalizer H;
 
     public CopilotAuthController(
-        IGitHubOAuthService oauthService,
+        GitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,
         INotifier notifier,
         IHtmlLocalizer<CopilotAuthController> htmlLocalizer,
