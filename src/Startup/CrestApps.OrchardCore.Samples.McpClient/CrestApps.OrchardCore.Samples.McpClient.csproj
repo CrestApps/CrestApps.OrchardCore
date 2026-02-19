@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
