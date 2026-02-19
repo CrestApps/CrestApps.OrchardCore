@@ -118,6 +118,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     public async Task SaveSettings(
         string itemId,
         string title,
+        string orchestratorName,
         string connectionName,
         string deploymentId,
         string systemMessage,
@@ -162,6 +163,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         }
 
         interaction.Title = title ?? "Untitled";
+        interaction.OrchestratorName = orchestratorName;
         interaction.ConnectionName = connectionName;
         interaction.DeploymentId = deploymentId;
         interaction.SystemMessage = systemMessage;

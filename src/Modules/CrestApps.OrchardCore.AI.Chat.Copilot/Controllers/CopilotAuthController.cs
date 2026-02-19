@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
-using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -45,10 +44,11 @@ public sealed class CopilotAuthController : Controller
     [HttpGet("copilot/Authorize")]
     public async Task<IActionResult> AuthorizeGitHub(string returnUrl = null)
     {
-        // Validate returnUrl to prevent open redirect attacks
+        // Validate returnUrl to prevent open redirect attacks.
+        // Fallback to admin home — never to OAuthCallback itself (which would trigger a loop).
         var safeReturnUrl = returnUrl != null && Url.IsLocalUrl(returnUrl)
             ? returnUrl
-            : Url.Action(nameof(OAuthCallback), GetType().Name.GetControllerName());
+            : "~/" + _adminOptions.AdminUrlPrefix;
 
         // Generate the GitHub authorization URL
         var authUrl = await _oauthService.GetAuthorizationUrlAsync(safeReturnUrl);

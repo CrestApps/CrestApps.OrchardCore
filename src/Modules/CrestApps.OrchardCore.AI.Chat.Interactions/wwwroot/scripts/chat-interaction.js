@@ -809,6 +809,7 @@ window.chatInteractionManager = function () {
             return;
           }
           var titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
+          var orchestratorNameInput = document.querySelector('select[name="ChatInteraction.OrchestratorName"]') || document.querySelector('input[name="ChatInteraction.OrchestratorName"]');
           var connectionNameInput = document.querySelector('select[name="ChatInteraction.ConnectionName"]');
           var deploymentIdInput = document.querySelector('select[name="ChatInteraction.DeploymentId"]');
           var systemMessageInput = document.querySelector('textarea[name="ChatInteraction.SystemMessage"]');
@@ -826,6 +827,7 @@ window.chatInteractionManager = function () {
           var enableEarlyRagInput = document.querySelector('input[name="ChatInteraction.EnableEarlyRag"]');
           var settings = {
             title: (titleInput === null || titleInput === void 0 ? void 0 : titleInput.value) || config.untitledText,
+            orchestratorName: (orchestratorNameInput === null || orchestratorNameInput === void 0 ? void 0 : orchestratorNameInput.value) || null,
             connectionName: (connectionNameInput === null || connectionNameInput === void 0 ? void 0 : connectionNameInput.value) || null,
             deploymentId: (deploymentIdInput === null || deploymentIdInput === void 0 ? void 0 : deploymentIdInput.value) || null,
             systemMessage: (systemMessageInput === null || systemMessageInput === void 0 ? void 0 : systemMessageInput.value) || null,
@@ -844,7 +846,7 @@ window.chatInteractionManager = function () {
             toolNames: this.getSelectedToolNames(),
             mcpConnectionIds: this.getSelectedMcpConnectionIds()
           };
-          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId, settings.strictness, settings.topNDocuments, settings.filter, settings.isInScope, settings.enableEarlyRag, settings.toolNames, settings.mcpConnectionIds)["catch"](function (err) {
+          this.connection.invoke("SaveSettings", itemId, settings.title, settings.orchestratorName, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId, settings.strictness, settings.topNDocuments, settings.filter, settings.isInScope, settings.enableEarlyRag, settings.toolNames, settings.mcpConnectionIds)["catch"](function (err) {
             return console.error('Error saving settings:', err);
           });
         },

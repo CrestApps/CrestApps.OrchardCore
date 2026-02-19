@@ -57,7 +57,8 @@
         if (connectButton) {
             connectButton.addEventListener('click', function(e) {
                 e.preventDefault();
-                window.location.href = '@Url.Action("AuthorizeGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
+                var returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+                window.location.href = '@Url.Action("AuthorizeGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })' + '?returnUrl=' + returnUrl;
             });
         }
 

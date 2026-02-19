@@ -291,7 +291,7 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("CrestApps-OrchardCore-Copilot/1.0");
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-            var response = await httpClient.GetAsync("https://api.github.com/copilot/models", cancellationToken);
+            var response = await httpClient.GetAsync("https://api.github.com/models", cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -306,17 +306,22 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
 
             var models = new List<CopilotModelInfo>();
 
-            if (json.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var item in json.EnumerateArray())
-                {
-                    var id = item.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
-                    var name = item.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : id;
+            // The response could be a direct array or an object wrapping the array (e.g., { "data": [...] }).
+            var items = json.ValueKind == JsonValueKind.Array
+                ? json.EnumerateArray()
+                : json.TryGetProperty("data", out var dataProp) && dataProp.ValueKind == JsonValueKind.Array
+                    ? dataProp.EnumerateArray()
+                    : default;
 
-                    if (!string.IsNullOrEmpty(id))
-                    {
-                        models.Add(new CopilotModelInfo { Id = id, Name = name ?? id });
-                    }
+            foreach (var item in items)
+            {
+                var id = item.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+                var name = item.TryGetProperty("friendly_name", out var fnProp) ? fnProp.GetString() : null;
+                name ??= item.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : id;
+
+                if (!string.IsNullOrEmpty(id))
+                {
+                    models.Add(new CopilotModelInfo { Id = id, Name = name ?? id });
                 }
             }
 

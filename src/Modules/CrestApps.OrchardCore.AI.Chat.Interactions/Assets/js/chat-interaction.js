@@ -870,6 +870,7 @@ window.chatInteractionManager = function () {
                     }
 
                     const titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
+                    const orchestratorNameInput = document.querySelector('select[name="ChatInteraction.OrchestratorName"]') || document.querySelector('input[name="ChatInteraction.OrchestratorName"]');
                     const connectionNameInput = document.querySelector('select[name="ChatInteraction.ConnectionName"]');
                     const deploymentIdInput = document.querySelector('select[name="ChatInteraction.DeploymentId"]');
                     const systemMessageInput = document.querySelector('textarea[name="ChatInteraction.SystemMessage"]');
@@ -888,6 +889,7 @@ window.chatInteractionManager = function () {
 
                     const settings = {
                         title: titleInput?.value || config.untitledText,
+                        orchestratorName: orchestratorNameInput?.value || null,
                         connectionName: connectionNameInput?.value || null,
                         deploymentId: deploymentIdInput?.value || null,
                         systemMessage: systemMessageInput?.value || null,
@@ -911,6 +913,7 @@ window.chatInteractionManager = function () {
                         "SaveSettings",
                         itemId,
                         settings.title,
+                        settings.orchestratorName,
                         settings.connectionName,
                         settings.deploymentId,
                         settings.systemMessage,
