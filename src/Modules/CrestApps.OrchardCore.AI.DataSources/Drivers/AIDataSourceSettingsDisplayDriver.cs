@@ -32,7 +32,7 @@ public sealed class AIDataSourceSettingsDisplayDriver : SiteDisplayDriver<AIData
             model.EnableEarlyRag = settings.EnableEarlyRag;
             model.DefaultStrictness = settings.DefaultStrictness;
             model.DefaultTopNDocuments = settings.DefaultTopNDocuments;
-        }).Location("Content:5")
+        }).Location("Content:5%Data Sources;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
     }

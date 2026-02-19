@@ -317,7 +317,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
             ctx.UserMessage = prompt;
             ctx.ConversationHistory = transcript.ToList();
             ctx.CompletionContext.AdditionalProperties["Session"] = chatSession;
-            ctx.SessionId = sessionId;
         });
 
         // Resolve the orchestrator for this profile and execute the completion.

@@ -42,7 +42,7 @@ public sealed class CopilotAuthController : Controller
     /// <summary>
     /// Initiates the GitHub OAuth flow.
     /// </summary>
-    [HttpGet]
+    [HttpGet("copilot/Authorize")]
     public async Task<IActionResult> AuthorizeGitHub(string returnUrl = null)
     {
         // Validate returnUrl to prevent open redirect attacks
@@ -59,7 +59,7 @@ public sealed class CopilotAuthController : Controller
     /// <summary>
     /// Handles the OAuth callback from GitHub.
     /// </summary>
-    [HttpGet]
+    [HttpGet("copilot/OAuthCallback")]
     public async Task<IActionResult> OAuthCallback(string code, string state, string error)
     {
         if (!string.IsNullOrEmpty(error))

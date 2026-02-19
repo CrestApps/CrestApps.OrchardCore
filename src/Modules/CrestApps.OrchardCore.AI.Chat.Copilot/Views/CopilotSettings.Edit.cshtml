@@ -9,37 +9,34 @@
     </div>
 
     <div class="mb-4">
-        <details>
-            <summary class="fw-semibold cursor-pointer">@T["How to create a GitHub App"]</summary>
-            <div class="mt-2 ps-3">
-                <ol>
-                    <li>
-                        @T["Go to {0} and sign in to your GitHub account.",
-                            Html.Raw("<a href=\"https://github.com/settings/apps/new\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub App Registration</a>")]
-                    </li>
-                    <li>@T["Enter an <strong>App name</strong> (e.g., \"My Orchard Copilot\") and your site's <strong>Homepage URL</strong>."]</li>
-                    <li>
-                        @T["Under <strong>Callback URL</strong>, enter the following value:"]
-                        <div class="input-group mt-1 mb-2" style="max-width: 600px;">
-                            <input type="text" class="form-control" readonly value="@Model.ComputedCallbackUrl" id="computed-callback-url" />
-                            <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('computed-callback-url').value)">
-                                <i class="fa-regular fa-copy" aria-hidden="true"></i> @T["Copy"]
-                            </button>
-                        </div>
-                    </li>
-                    <li>@T["Under <strong>Webhook</strong>, uncheck the <strong>Active</strong> checkbox. Webhooks are not needed for this integration."]</li>
-                    <li>@T["Under <strong>Permissions</strong>, grant <strong>Copilot &rarr; Read-only</strong> access under \"Account permissions\" to allow model listing."]</li>
-                    <li>@T["Under <strong>Where can this GitHub App be installed?</strong>, select <strong>Only on this account</strong> (for private use) or <strong>Any account</strong> (for shared use)."]</li>
-                    <li>@T["Click <strong>Create GitHub App</strong>."]</li>
-                    <li>@T["On the app's settings page, copy the <strong>Client ID</strong> and paste it below."]</li>
-                    <li>@T["Click <strong>Generate a new client secret</strong>, copy the generated secret, and paste it below."]</li>
-                </ol>
-                <p class="hint">
-                    @T["For more details, see the {0}.",
-                        Html.Raw("<a href=\"https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub documentation</a>")]
-                </p>
-            </div>
-        </details>
+        <h4 class="mb-2">@T["How to create a GitHub App"]</h4>
+        <div class="ps-3">
+            <ol>
+                <li>
+                    @T["In GitHub, go to <strong>Settings</strong> &rarr; <strong>Developer settings</strong> &rarr; <strong>GitHub Apps</strong> and click <strong>New GitHub App</strong>. You can also open {0}.",
+                    Html.Raw("<a href=\"https://github.com/settings/apps/new\" target=\"_blank\" rel=\"noopener noreferrer\">this link</a>")]
+                </li>
+                <li>@T["Enter an <strong>App name</strong> (e.g., \"Orchard Copilot Integration\") and your site's <strong>Homepage URL</strong>."]</li>
+                <li>
+                    @T["Under <strong>Callback URL</strong>, enter the following value:"]
+                    <div class="input-group mt-1 mb-2" style="max-width: 600px;">
+                        <input type="text" class="form-control" readonly value="@Model.ComputedCallbackUrl" id="computed-callback-url" />
+                        <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('computed-callback-url').value)">
+                            <i class="fa-regular fa-copy" aria-hidden="true"></i> @T["Copy"]
+                        </button>
+                    </div>
+                </li>
+                <li>@T["Webhooks are <strong>not required</strong> for this integration. Under <strong>Webhook</strong>, uncheck <strong>Active</strong> (it is enabled by default in GitHub)."]</li>
+                <li>@T["Under <strong>Permissions</strong>, grant <strong>Copilot Chat &rarr; Read-only</strong> access under \"Account permissions\" to allow model listing."]</li>
+                <li>@T["Choose where the app can be installed (only your account, or any account) and click <strong>Create GitHub App</strong>."]</li>
+                <li>@T["On the app's settings page, copy the <strong>Client ID</strong> and paste it below."]</li>
+                <li>@T["Click <strong>Generate a new client secret</strong>, copy the generated secret, and paste it below."]</li>
+            </ol>
+            <p class="hint">
+                @T["Docs: {0}",
+                                Html.Raw("<a href=\"https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps\" target=\"_blank\" rel=\"noopener noreferrer\">About creating GitHub Apps</a>")]
+            </p>
+        </div>
     </div>
 
     <div class="mb-3">

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
 
-public sealed class CopilotSettingsViewModel
+public class CopilotSettingsViewModel
 {
     public string ClientId { get; set; }
 

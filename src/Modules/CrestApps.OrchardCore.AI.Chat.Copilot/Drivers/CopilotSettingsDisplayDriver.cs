@@ -1,9 +1,11 @@
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
@@ -14,14 +16,12 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 
 public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSettings>
 {
-    public const string GroupId = "copilot";
-
     private const string ProtectorPurpose = "CrestApps.OrchardCore.AI.Chat.Copilot.Settings";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
-
+    private readonly LinkGenerator _linkGenerator;
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
@@ -29,17 +29,19 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
+        LinkGenerator linkGenerator,
         IHtmlLocalizer<CopilotSettingsDisplayDriver> htmlLocalizer,
         IStringLocalizer<CopilotSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
+        _linkGenerator = linkGenerator;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
 
-    protected override string SettingsGroupId => GroupId;
+    protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
     public override IDisplayResult Edit(ISite site, CopilotSettings settings, BuildEditorContext context)
     {
@@ -47,14 +49,12 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         {
             model.ClientId = settings.ClientId;
             model.HasSecret = !string.IsNullOrWhiteSpace(settings.ProtectedClientSecret);
-
-            var request = _httpContextAccessor.HttpContext?.Request;
-            if (request != null)
+            model.ComputedCallbackUrl = _linkGenerator.GetUriByAction(_httpContextAccessor.HttpContext, "OAuthCallback", "CopilotAuth", new
             {
-                model.ComputedCallbackUrl = $"{request.Scheme}://{request.Host}/CopilotAuth/OAuthCallback";
-            }
+                area = "CrestApps.OrchardCore.AI.Chat.Copilot",
+            });
         })
-        .Location("Content:5")
+        .Location("Content:8%Copilot;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, Permissions.ManageCopilotSettings));
     }

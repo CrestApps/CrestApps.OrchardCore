@@ -325,7 +325,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                     .Where(x => !x.IsGeneratedPrompt)
                     .Select(p => new ChatMessage(p.Role, p.Text))
                     .ToList();
-                ctx.SessionId = interaction.ItemId;
             });
 
             // Resolve the orchestrator for this interaction and execute the completion.

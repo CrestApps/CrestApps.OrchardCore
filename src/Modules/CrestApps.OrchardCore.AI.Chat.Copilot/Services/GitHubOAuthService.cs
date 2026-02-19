@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
@@ -27,6 +28,7 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ISiteService _siteService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly LinkGenerator _linkGenerator;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<GitHubOAuthService> _logger;
 
@@ -35,6 +37,7 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
         IDataProtectionProvider dataProtectionProvider,
         ISiteService siteService,
         IHttpContextAccessor httpContextAccessor,
+        LinkGenerator linkGenerator,
         IHttpClientFactory httpClientFactory,
         ILogger<GitHubOAuthService> logger)
     {
@@ -42,6 +45,7 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
         _dataProtectionProvider = dataProtectionProvider;
         _siteService = siteService;
         _httpContextAccessor = httpContextAccessor;
+        _linkGenerator = linkGenerator;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
@@ -55,11 +59,10 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
             throw new InvalidOperationException("GitHub OAuth Client ID is not configured. Please configure Copilot settings.");
         }
 
-        // Always compute the callback URL from the current request.
-        var request = _httpContextAccessor.HttpContext?.Request
-            ?? throw new InvalidOperationException("No HTTP request context available.");
-
-        var callbackUrl = $"{request.Scheme}://{request.Host}/CopilotAuth/OAuthCallback";
+        var callbackUrl = _linkGenerator.GetUriByAction(_httpContextAccessor.HttpContext, "OAuthCallback", "CopilotAuth", new
+        {
+            area = "CrestApps.OrchardCore.AI.Chat.Copilot",
+        });
 
         var scopes = string.Join(" ", settings.Scopes ?? ["user:email", "read:org"]);
         var state = returnUrl ?? string.Empty;

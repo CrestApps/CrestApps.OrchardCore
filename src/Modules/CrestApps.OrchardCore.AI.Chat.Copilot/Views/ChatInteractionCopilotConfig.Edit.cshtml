@@ -5,11 +5,11 @@
 
 <div data-orchestrator-field="copilot" style="display: none;">
     @* GitHub Authentication Section *@
-    <div class="mb-3">
+    <div class="mb-3 text-center">
         <label class="form-label">@T["GitHub Authentication"]</label>
         @if (Model.IsAuthenticated)
         {
-            <div class="alert alert-success">
+            <div class="alert alert-success ">
                 <i class="fas fa-check-circle"></i>
                 @T["Connected as"] <strong>@Model.GitHubUsername</strong>
                 <a href="#" class="btn btn-sm btn-outline-danger float-end" id="ci-disconnect-github" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]">
@@ -23,11 +23,11 @@
                 <i class="fas fa-info-circle"></i>
                 @T["Copilot requires GitHub authentication. Sign in with your GitHub account to continue."]
             </div>
-            <a href="#" class="btn btn-primary" id="ci-connect-github">
+            <a href="#" class="btn btn-primary mb-1" id="ci-connect-github">
                 <i class="fab fa-github"></i> @T["Sign in with GitHub"]
             </a>
         }
-        <span class="hint">@T["GitHub OAuth is required for Copilot. Your access token will be securely stored and reused across sessions."]</span>
+        <div class="hint">@T["GitHub OAuth is required for Copilot. Your access token will be securely stored and reused across sessions."]</div>
     </div>
 
     @* Copilot Model Selection *@
