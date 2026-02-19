@@ -29,7 +29,7 @@
     <PackageReference Include="Lucene.Net.Analysis.Common" />
     <PackageReference Include="ModelContextProtocol" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" />
-    <PackageReference Include="CrestApps.OrchardCore.AgentSkills.Mcp" />
+    <PackageReference Include="CrestApps.AgentSkills.Mcp.OrchardCore" />
   </ItemGroup>
 
   <ItemGroup>

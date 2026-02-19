@@ -24,7 +24,7 @@
     <PackageReference Include="TheAgencyTheme" />
     <PackageReference Include="TheComingSoonTheme" />
     <PackageReference Include="TheBlogTheme" />
-    <PackageReference Include="CrestApps.OrchardCore.AgentSkills" />
+    <PackageReference Include="CrestApps.AgentSkills.OrchardCore" />
   </ItemGroup>
 
   <ItemGroup>
