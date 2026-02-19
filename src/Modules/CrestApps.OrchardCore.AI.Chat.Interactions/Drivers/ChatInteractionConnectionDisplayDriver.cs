@@ -91,7 +91,7 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
                 }
             }
 
-        }).Location("Parameters:1#Settings;2");
+        }).Location("Parameters:3#Settings;1");
 
         return connectionResult;
     }

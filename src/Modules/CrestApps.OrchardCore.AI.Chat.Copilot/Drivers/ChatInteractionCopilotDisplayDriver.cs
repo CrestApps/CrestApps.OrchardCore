@@ -69,6 +69,6 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
             }
 
             model.AvailableModels ??= [];
-        }).Location("Parameters:1#Settings;2");
+        }).Location("Parameters:4#Settings;1");
     }
 }

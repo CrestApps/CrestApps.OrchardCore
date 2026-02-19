@@ -62,7 +62,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.IsNew = context.IsNew;
         }).Location("Content");
 
-        // Title is placed first in Settings tab (position 1)
+        // Title is placed first in Settings tab.
         var titleResult = Initialize<EditChatInteractionTitleViewModel>("ChatInteractionTitle_Edit", model =>
         {
             model.ItemId = interaction.ItemId;
@@ -70,7 +70,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.IsNew = context.IsNew;
         }).Location("Parameters:1#Settings;1");
 
-        // Title is placed first in Settings tab (position 1)
+        // Orchestrator selection comes after title.
         var orchestratorResult = Initialize<OrchestratorViewModel>("OrchestratorSelection_Edit", model =>
         {
             // Populate orchestrator selection when multiple orchestrators are registered.
@@ -82,11 +82,13 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
                     .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
                     .ToArray();
             }
-        }).Location("Parameters:1#Settings;1.1");
+        }).Location("Parameters:2#Settings;1");
 
-        // Connection/Deployment comes after title (position 2) - handled by ChatInteractionConnectionDisplayDriver
+        // Connection/Deployment at position 3 - handled by ChatInteractionConnectionDisplayDriver.
+        // Copilot config at position 4 - handled by ChatInteractionCopilotDisplayDriver.
+        // Data source at position 5 - handled by ChatInteractionDataSourceDisplayDriver.
 
-        // Parameters come after connection (position 3)
+        // General parameters come last in the Settings tab.
         var parametersResult = Initialize<EditChatInteractionViewModel>("ChatInteractionParameters_Edit", model =>
         {
             model.ItemId = interaction.ItemId;
@@ -103,7 +105,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.ToolNames = interaction.ToolNames?.ToArray();
             model.McpConnectionIds = interaction.McpConnectionIds?.ToArray();
             model.IsNew = context.IsNew;
-        }).Location("Parameters:1#Settings;5");
+        }).Location("Parameters:8#Settings;1");
 
         return Combine(headerResult, contentResult, titleResult, orchestratorResult, parametersResult);
     }
