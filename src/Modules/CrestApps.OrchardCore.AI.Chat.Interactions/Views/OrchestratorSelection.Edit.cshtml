@@ -54,6 +54,15 @@ else
         updateFieldVisibility();
 
         // React to user changes
-        orchestratorSelector.addEventListener('change', updateFieldVisibility);
+        orchestratorSelector.addEventListener('change', function () {
+            updateFieldVisibility();
+
+            // Dispatch custom event so dependent views (e.g., Copilot) can react.
+            document.dispatchEvent(new CustomEvent('orchestrator-changed', {
+                detail: { 
+                    orchestrator: orchestratorSelector.value || defaultOrchestrator 
+                }
+            }));
+        });
     });
 </script>

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.Entities;
 

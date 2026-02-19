@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Text;
-using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
@@ -14,7 +13,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 using OrchardCore.Users;
 
-namespace CrestApps.OrchardCore.AI.Chat.Copilot;
+namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 
 /// <summary>
 /// An orchestrator that delegates planning, tool selection, and execution to the

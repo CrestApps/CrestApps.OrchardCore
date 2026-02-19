@@ -1,43 +1,27 @@
+@using CrestApps.OrchardCore.AI.Chat.Copilot
+@using CrestApps.OrchardCore.AI.Chat.Copilot.Services
 @using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels
 @using OrchardCore
-@using CrestApps.OrchardCore.AI.Chat.Copilot
 
 @model EditCopilotProfileViewModel
 
 <div class="d-none orchestrator-dependent orchestrator-dependent-@(CopilotOrchestrator.OrchestratorName)">
-    @if (Model.IsAuthenticated)
-    {
-        @* Authenticated: compact green alert with disconnect *@
+
+    @* Connected state *@
+    <div id="ci-github-connected" class="@(Model.IsAuthenticated ? "" : "d-none")">
         <div class="alert alert-success d-flex align-items-center justify-content-between mb-3 py-2">
             <span>
                 <i class="fas fa-check-circle"></i>
-                @T["Connected as"] <strong>@Model.GitHubUsername</strong>
+                @T["Connected as"] <strong id="ci-github-username">@Model.GitHubUsername</strong>
             </span>
             <a href="#" class="btn btn-sm btn-outline-danger ms-2" id="ci-disconnect-github" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]" title="@T["Disconnect from GitHub"]">
                 <i class="fa-solid fa-power-off"></i>
             </a>
         </div>
+    </div>
 
-        @* Copilot Model Selection — only visible when authenticated *@
-        <div class="mb-3">
-            <label asp-for="CopilotModel" class="form-label">@T["Copilot Model"]</label>
-            <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select">
-            </select>
-            <span asp-validation-for="CopilotModel" class="text-danger"></span>
-            <span class="hint">@T["Select the Copilot model to use for this interaction."]</span>
-        </div>
-
-        @* Copilot Flags *@
-        <div class="mb-3">
-            <label asp-for="CopilotFlags" class="form-label">@T["Copilot Flags"]</label>
-            <input asp-for="CopilotFlags" class="form-control" placeholder="--allow-all" />
-            <span asp-validation-for="CopilotFlags" class="text-danger"></span>
-            <span class="hint">@T["Optional Copilot execution flags (e.g., --allow-all). Separate multiple flags with spaces."]</span>
-        </div>
-    }
-    else
-    {
-        @* Not authenticated: card prompting GitHub login *@
+    @* Disconnected state *@
+    <div id="ci-github-disconnected" class="@(Model.IsAuthenticated ? "d-none" : "")">
         <div class="card mb-3">
             <div class="card-body text-center">
                 <h5 class="card-title">
@@ -51,62 +35,171 @@
                 </a>
             </div>
         </div>
+    </div>
 
-        @* Keep hidden fields so form binding doesn't lose values *@
-        <input type="hidden" asp-for="CopilotModel" />
-        <input type="hidden" asp-for="CopilotFlags" />
-    }
+    @* Loading state *@
+    <div id="ci-github-loading" class="d-none">
+        <div class="d-flex align-items-center justify-content-center text-muted py-4">
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+            @T["Checking GitHub connection..."]
+        </div>
+    </div>
+
+    @* Copilot Model Selection — always in DOM for form binding, toggled by JS *@
+    <div class="mb-3 @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-model-group">
+        <label asp-for="CopilotModel" class="form-label">@T["Copilot Model"]</label>
+        <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select">
+        </select>
+        <span asp-validation-for="CopilotModel" class="text-danger"></span>
+        <span class="hint">@T["Select the Copilot model to use for this interaction."]</span>
+    </div>
+
+    @* Copilot Flags — always in DOM for form binding, toggled by JS *@
+    <div class="mb-3 @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-flags-group">
+        <label asp-for="CopilotFlags" class="form-label">@T["Copilot Flags"]</label>
+        <input asp-for="CopilotFlags" class="form-control" placeholder="--allow-all" />
+        <span asp-validation-for="CopilotFlags" class="text-danger"></span>
+        <span class="hint">@T["Optional Copilot execution flags (e.g., --allow-all). Separate multiple flags with spaces."]</span>
+    </div>
 </div>
 
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
         const connectButton = document.getElementById('ci-connect-github');
         const disconnectButton = document.getElementById('ci-disconnect-github');
+        const connectedEl = document.getElementById('ci-github-connected');
+        const disconnectedEl = document.getElementById('ci-github-disconnected');
+        const loadingEl = document.getElementById('ci-github-loading');
+        const usernameEl = document.getElementById('ci-github-username');
+        const modelSelect = document.getElementById('@Html.IdFor(m => m.CopilotModel)');
+        const modelGroup = document.getElementById('ci-copilot-model-group');
+        const flagsGroup = document.getElementById('ci-copilot-flags-group');
 
-        // Auto-select the first available model if none is selected.
-        const copilotModelSelect = document.getElementById('@Html.IdFor(m => m.CopilotModel)');
-        if (copilotModelSelect && !copilotModelSelect.value) {
-            const firstOption = copilotModelSelect.querySelector('option[value]:not([value=""])');
-            if (firstOption) {
-                copilotModelSelect.value = firstOption.value;
-                copilotModelSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        const statusUrl = '@Url.Action("GetAuthStatus", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
+        const modelsUrl = '@Url.Action("GetModels", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
+        const disconnectUrl = '@Url.Action("DisconnectGitHubAjax", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
+        const authUrl = '@Url.Action("AuthorizeGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })' + '?returnUrl=__popup__';
+
+        let statusChecked = @(Model.IsAuthenticated ? "true" : "false");
+
+        function getAntiForgeryToken() {
+            const tokenEl = document.querySelector('input[name="__RequestVerificationToken"]');
+            return tokenEl ? tokenEl.value : '';
+        }
+
+        function showState(state) {
+            connectedEl.classList.toggle('d-none', state !== 'connected');
+            disconnectedEl.classList.toggle('d-none', state !== 'disconnected');
+            loadingEl.classList.toggle('d-none', state !== 'loading');
+
+            // Show model/flags fields only when connected.
+            const showFields = state === 'connected';
+            if (modelGroup) modelGroup.classList.toggle('d-none', !showFields);
+            if (flagsGroup) flagsGroup.classList.toggle('d-none', !showFields);
+        }
+
+        async function loadModels() {
+            try {
+                const currentValue = modelSelect ? modelSelect.value : '';
+                const resp = await fetch(modelsUrl);
+                const models = await resp.json();
+
+                if (!modelSelect) return;
+
+                modelSelect.innerHTML = '';
+                models.forEach(function (m) {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = m.name;
+                    modelSelect.appendChild(opt);
+                });
+
+                if (currentValue && modelSelect.querySelector('option[value="' + CSS.escape(currentValue) + '"]')) {
+                    modelSelect.value = currentValue;
+                } else if (modelSelect.options.length > 0) {
+                    modelSelect.selectedIndex = 0;
+                }
+            } catch (e) {
+                console.error('Failed to load Copilot models', e);
             }
         }
 
+        async function checkAuthStatus() {
+            showState('loading');
+            try {
+                const resp = await fetch(statusUrl);
+                const data = await resp.json();
+
+                if (data.isAuthenticated) {
+                    usernameEl.textContent = data.gitHubUsername;
+                    showState('connected');
+                    await loadModels();
+                } else {
+                    showState('disconnected');
+                }
+                statusChecked = true;
+            } catch {
+                showState('disconnected');
+            }
+        }
+
+        // Auto-select the first available model if none is selected.
+        if (modelSelect && !modelSelect.value) {
+            const firstOption = modelSelect.querySelector('option[value]:not([value=""])');
+            if (firstOption) {
+                modelSelect.value = firstOption.value;
+            }
+        }
+
+        // When orchestrator changes to copilot, check auth status via AJAX.
+        document.addEventListener('orchestrator-changed', function (e) {
+            if (e.detail.orchestrator === '@(CopilotOrchestrator.OrchestratorName)' && !statusChecked) {
+                checkAuthStatus();
+            }
+        });
+
         if (connectButton) {
-            connectButton.addEventListener('click', function(e) {
+            connectButton.addEventListener('click', function (e) {
                 e.preventDefault();
-                var returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-                window.location.href = '@Url.Action("AuthorizeGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })' + '?returnUrl=' + returnUrl;
+
+                var popup = window.open(authUrl, 'github-oauth', 'width=600,height=700,scrollbars=yes,resizable=yes');
+
+                window.addEventListener('message', function handler(event) {
+                    if (event.origin !== window.location.origin) return;
+                    if (event.data && event.data.type === 'github-auth-complete') {
+                        window.removeEventListener('message', handler);
+
+                        if (event.data.success) {
+                            usernameEl.textContent = event.data.username;
+                            showState('connected');
+                            loadModels();
+                        }
+                    }
+                });
             });
         }
 
         if (disconnectButton) {
             const confirmMessage = disconnectButton.getAttribute('data-confirm-message');
-            disconnectButton.addEventListener('click', function(e) {
+            disconnectButton.addEventListener('click', async function (e) {
                 e.preventDefault();
-                if (confirm(confirmMessage)) {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = '@Url.Action("DisconnectGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
+                if (!confirm(confirmMessage)) return;
 
-                    const token = document.querySelector('input[name="__RequestVerificationToken"]');
-                    if (token) {
-                        const tokenInput = document.createElement('input');
-                        tokenInput.type = 'hidden';
-                        tokenInput.name = '__RequestVerificationToken';
-                        tokenInput.value = token.value;
-                        form.appendChild(tokenInput);
+                showState('loading');
+                try {
+                    const resp = await fetch(disconnectUrl, {
+                        method: 'POST',
+                        headers: {
+                            'RequestVerificationToken': getAntiForgeryToken(),
+                        },
+                    });
+                    if (resp.ok) {
+                        showState('disconnected');
+                    } else {
+                        showState('connected');
                     }
-
-                    const returnUrlInput = document.createElement('input');
-                    returnUrlInput.type = 'hidden';
-                    returnUrlInput.name = 'returnUrl';
-                    returnUrlInput.value = window.location.pathname + window.location.search;
-                    form.appendChild(returnUrlInput);
-
-                    document.body.appendChild(form);
-                    form.submit();
+                } catch {
+                    showState('connected');
                 }
             });
         }

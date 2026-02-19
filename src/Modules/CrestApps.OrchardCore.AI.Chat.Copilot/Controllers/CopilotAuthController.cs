@@ -151,6 +151,67 @@ public sealed class CopilotAuthController : Controller
         return RedirectToLocal(returnUrl);
     }
 
+    /// <summary>
+    /// Returns the current user's GitHub authentication status.
+    /// </summary>
+    [HttpGet("copilot/api/status")]
+    public async Task<IActionResult> GetAuthStatus()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+        {
+            return Unauthorized();
+        }
+
+        var userId = await _userManager.GetUserIdAsync(user);
+        var isAuthenticated = await _oauthService.IsAuthenticatedAsync(userId);
+        string gitHubUsername = null;
+
+        if (isAuthenticated)
+        {
+            var credential = await _oauthService.GetCredentialAsync(userId);
+            gitHubUsername = credential?.GitHubUsername;
+        }
+
+        return Json(new { isAuthenticated, gitHubUsername });
+    }
+
+    /// <summary>
+    /// Returns the list of available Copilot models for the authenticated user.
+    /// </summary>
+    [HttpGet("copilot/api/models")]
+    public async Task<IActionResult> GetModels()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+        {
+            return Unauthorized();
+        }
+
+        var userId = await _userManager.GetUserIdAsync(user);
+        var models = await _oauthService.ListModelsAsync(userId);
+
+        return Json(models.Select(m => new { m.Id, m.Name }));
+    }
+
+    /// <summary>
+    /// Disconnects the user's GitHub account via AJAX.
+    /// </summary>
+    [HttpPost("copilot/api/disconnect")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DisconnectGitHubAjax()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+        {
+            return Unauthorized();
+        }
+
+        await _oauthService.DisconnectAsync(await _userManager.GetUserIdAsync(user));
+
+        return Json(new { success = true });
+    }
+
     private IActionResult RedirectToLocal(string returnUrl)
     {
         if (Url.IsLocalUrl(returnUrl))
