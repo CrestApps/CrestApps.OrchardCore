@@ -22,7 +22,6 @@
         <div class="mb-3">
             <label asp-for="CopilotModel" class="form-label">@T["Copilot Model"]</label>
             <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select">
-                <option value="">@T["Default model"]</option>
             </select>
             <span asp-validation-for="CopilotModel" class="text-danger"></span>
             <span class="hint">@T["Select the Copilot model to use for this interaction."]</span>
@@ -63,6 +62,16 @@
     document.addEventListener('DOMContentLoaded', function () {
         const connectButton = document.getElementById('ci-connect-github');
         const disconnectButton = document.getElementById('ci-disconnect-github');
+
+        // Auto-select the first available model if none is selected.
+        const copilotModelSelect = document.getElementById('@Html.IdFor(m => m.CopilotModel)');
+        if (copilotModelSelect && !copilotModelSelect.value) {
+            const firstOption = copilotModelSelect.querySelector('option[value]:not([value=""])');
+            if (firstOption) {
+                copilotModelSelect.value = firstOption.value;
+                copilotModelSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
 
         if (connectButton) {
             connectButton.addEventListener('click', function(e) {

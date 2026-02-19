@@ -37,7 +37,7 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
     {
         return Initialize<EditCopilotProfileViewModel>("AIProfileCopilotConfig_Edit", async model =>
         {
-            var copilotSettings = profile.As<CopilotProfileSettings>();
+            var copilotSettings = profile.As<CopilotSessionMetadata>();
 
             model.CopilotModel = copilotSettings?.CopilotModel;
             model.CopilotFlags = copilotSettings?.CopilotFlags;
@@ -77,11 +77,28 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
         // Only save Copilot settings if Copilot orchestrator is selected
         if (string.Equals(profile.OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))
         {
-            var copilotSettings = new CopilotProfileSettings
+            var copilotSettings = new CopilotSessionMetadata
             {
                 CopilotModel = model.CopilotModel,
                 CopilotFlags = model.CopilotFlags,
             };
+
+            // Copy the current user's GitHub credential to the profile so
+            // any chat session using this profile can reuse the token.
+            var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
+            if (user is not null)
+            {
+                var userId = await _userManager.GetUserIdAsync(user);
+                var credentials = await _oauthService.GetProtectedCredentialsAsync(userId);
+
+                if (credentials is not null)
+                {
+                    copilotSettings.GitHubUsername = credentials.GitHubUsername;
+                    copilotSettings.ProtectedAccessToken = credentials.ProtectedAccessToken;
+                    copilotSettings.ProtectedRefreshToken = credentials.ProtectedRefreshToken;
+                    copilotSettings.ExpiresAt = credentials.ExpiresAt;
+                }
+            }
 
             profile.Put(copilotSettings);
         }

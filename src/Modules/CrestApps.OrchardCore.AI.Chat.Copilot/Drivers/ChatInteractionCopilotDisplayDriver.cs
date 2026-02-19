@@ -37,7 +37,7 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
     {
         return Initialize<EditCopilotProfileViewModel>("ChatInteractionCopilotConfig_Edit", async model =>
         {
-            var copilotSettings = interaction.As<CopilotProfileSettings>();
+            var copilotSettings = interaction.As<CopilotSessionMetadata>();
 
             model.CopilotModel = copilotSettings.CopilotModel;
             model.CopilotFlags = copilotSettings.CopilotFlags;

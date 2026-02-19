@@ -32,12 +32,5 @@ public class AICompletionContext
 
     public string DeploymentId { get; set; }
 
-    /// <summary>
-    /// Gets or sets the AI model identifier to use for the completion.
-    /// This is distinct from <see cref="DeploymentId"/> which refers to a provider-specific deployment.
-    /// Used by orchestrators (e.g., Copilot) that select models by name rather than deployment.
-    /// </summary>
-    public string Model { get; set; }
-
     public Dictionary<string, object> AdditionalProperties { get; } = new(StringComparer.OrdinalIgnoreCase);
 }

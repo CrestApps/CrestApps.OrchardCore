@@ -1,5 +1,6 @@
 @using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels
 @using OrchardCore
+@using CrestApps.OrchardCore.AI.Chat.Copilot
 
 @model EditCopilotProfileViewModel
 
@@ -13,12 +14,18 @@
                 <label class="form-label">@T["GitHub Authentication"]</label>
                 @if (Model.IsAuthenticated)
                 {
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle"></i>
-                        @T["Connected as"] <strong>@Model.GitHubUsername</strong>
-                        <a href="#" class="btn btn-sm btn-outline-danger float-end" id="disconnect-github" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]">
-                            @T["Disconnect"]
+                    <div class="alert alert-success d-flex align-items-center justify-content-between py-2">
+                        <span>
+                            <i class="fas fa-check-circle"></i>
+                            @T["Connected as"] <strong>@Model.GitHubUsername</strong>
+                        </span>
+                        <a href="#" class="btn btn-sm btn-outline-danger ms-2" id="ap-disconnect-github" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]">
+                            <i class="fa-solid fa-power-off"></i>
                         </a>
+                    </div>
+                    <div class="alert alert-warning py-2">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        @T["Using the Copilot orchestrator will allow any user chatting with this AI Profile to utilize your GitHub credentials, not their own."]
                     </div>
                 }
                 else
@@ -27,7 +34,7 @@
                         <i class="fas fa-info-circle"></i>
                         @T["Copilot requires GitHub authentication. Sign in with your GitHub account to continue."]
                     </div>
-                    <a href="#" class="btn btn-primary" id="connect-github">
+                    <a href="#" class="btn btn-primary" id="ap-connect-github">
                         <i class="fab fa-github"></i> @T["Sign in with GitHub"]
                     </a>
                 }
@@ -38,7 +45,6 @@
             <div class="mb-3">
                 <label asp-for="CopilotModel" class="form-label">@T["Copilot Model"]</label>
                 <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select">
-                    <option value="">@T["Default model"]</option>
                 </select>
                 <span asp-validation-for="CopilotModel" class="text-danger"></span>
                 <span class="hint">@T["Select the Copilot model to use for this profile."]</span>
@@ -57,15 +63,36 @@
 
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
-        const connectButton = document.getElementById('connect-github');
-        const disconnectButton = document.getElementById('disconnect-github');
+        const connectButton = document.getElementById('ap-connect-github');
+        const disconnectButton = document.getElementById('ap-disconnect-github');
+
+        // Auto-select the first available model if none is selected.
+        const copilotModelSelect = document.getElementById('@Html.IdFor(m => m.CopilotModel)');
+        if (copilotModelSelect && !copilotModelSelect.value) {
+            const firstOption = copilotModelSelect.querySelector('option[value]:not([value=""])');
+            if (firstOption) {
+                copilotModelSelect.value = firstOption.value;
+            }
+        }
 
         if (connectButton) {
             connectButton.addEventListener('click', function(e) {
                 e.preventDefault();
-                // TODO: Initiate GitHub OAuth flow
-                // This will be implemented as part of the GitHub OAuth service
-                window.location.href = '@Url.Action("AuthorizeGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
+
+                // Open GitHub OAuth in a popup to avoid navigating away from the form.
+                var authUrl = '@Url.Action("AuthorizeGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })' + '?returnUrl=__popup__';
+                var popup = window.open(authUrl, 'github-oauth', 'width=600,height=700,scrollbars=yes,resizable=yes');
+
+                // Listen for the popup to complete authentication.
+                window.addEventListener('message', function handler(event) {
+                    if (event.origin !== window.location.origin) return;
+                    if (event.data && event.data.type === 'github-auth-complete') {
+                        window.removeEventListener('message', handler);
+
+                        // Refresh the page to reload auth state and available models.
+                        window.location.reload();
+                    }
+                });
             });
         }
 
@@ -88,6 +115,13 @@
                         tokenInput.value = token.value;
                         form.appendChild(tokenInput);
                     }
+
+                    // Return to same page after disconnect
+                    const returnUrlInput = document.createElement('input');
+                    returnUrlInput.type = 'hidden';
+                    returnUrlInput.name = 'returnUrl';
+                    returnUrlInput.value = window.location.pathname + window.location.search;
+                    form.appendChild(returnUrlInput);
 
                     document.body.appendChild(form);
                     form.submit();

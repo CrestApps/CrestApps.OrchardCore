@@ -3,24 +3,6 @@
 
 @model EditConnectionProfileViewModel
 
-@if (Model.ConnectionNames?.Count > 1)
-{
-    <div class="@Orchard.GetWrapperClasses()" data-orchestrator-field="connection">
-        <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection name"]</label>
-        <div class="@Orchard.GetEndClasses()">
-            <select asp-for="ConnectionName" asp-items="Model.ConnectionNames" class="form-select">
-                <option value="">@T["Default connection"]</option>
-            </select>
-            <span asp-validation-for="ConnectionName" class="text-danger"></span>
-            <span class="hint">@T["The connection to use for this profile."]</span>
-        </div>
-    </div>
-}
-else
-{
-    <input type="hidden" asp-for="ConnectionName" />
-}
-
 @if (Model.Orchestrators?.Count > 1)
 {
     <div class="@Orchard.GetWrapperClasses()">
@@ -38,40 +20,49 @@ else
     <input type="hidden" asp-for="OrchestratorName" />
 }
 
+@if (Model.ConnectionNames?.Count > 1)
+{
+    <div class="@Orchard.GetWrapperClasses("orchestrator-dependent orchestrator-dependent-default")">
+        <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection name"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <select asp-for="ConnectionName" asp-items="Model.ConnectionNames" class="form-select">
+                <option value="">@T["Default connection"]</option>
+            </select>
+            <span asp-validation-for="ConnectionName" class="text-danger"></span>
+            <span class="hint">@T["The connection to use for this profile."]</span>
+        </div>
+    </div>
+}
+else
+{
+    <input type="hidden" asp-for="ConnectionName" />
+}
+
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
         const orchestratorSelector = document.getElementById('orchestrator-selector');
-        
-        if (orchestratorSelector) {
-            function updateFieldVisibility() {
-                const selectedOrchestrator = orchestratorSelector.value || 'default';
-                const isDefault = selectedOrchestrator.toLowerCase() === 'default' || selectedOrchestrator === '';
-                
-                // Hide/show connection field
-                const connectionField = document.querySelector('[data-orchestrator-field="connection"]');
-                if (connectionField) {
-                    connectionField.style.display = isDefault ? '' : 'none';
-                }
-                
-                // Hide/show deployment field
-                const deploymentField = document.querySelector('[data-orchestrator-field="deployment"]');
-                if (deploymentField) {
-                    deploymentField.style.display = isDefault ? '' : 'none';
-                }
-                
-                // Show/hide Copilot-specific fields
-                const isCopilot = selectedOrchestrator.toLowerCase() === 'copilot';
-                const copilotFields = document.querySelector('[data-orchestrator-field="copilot"]');
-                if (copilotFields) {
-                    copilotFields.style.display = isCopilot ? '' : 'none';
-                }
+        const defaultOrchestrator = 'default';
+
+        if (!orchestratorSelector) return;
+
+        function updateFieldVisibility() {
+            const selectedOrchestrator = orchestratorSelector.value || defaultOrchestrator;
+
+            const elements = document.getElementsByClassName('orchestrator-dependent');
+            const targetClass = 'orchestrator-dependent-' + selectedOrchestrator;
+
+            for (const el of elements) {
+                el.classList.toggle(
+                    'd-none',
+                    !el.classList.contains(targetClass)
+                );
             }
-            
-            // Initial update
-            updateFieldVisibility();
-            
-            // Update on change
-            orchestratorSelector.addEventListener('change', updateFieldVisibility);
         }
+
+        // Initial render
+        updateFieldVisibility();
+
+        // React to user changes
+        orchestratorSelector.addEventListener('change', updateFieldVisibility);
     });
 </script>

@@ -189,6 +189,29 @@ public sealed class GitHubOAuthService
         return null;
     }
 
+    /// <summary>
+    /// Gets the raw protected (encrypted) credentials for the specified user.
+    /// These can be stored on an AIProfile entity for reuse across sessions.
+    /// </summary>
+    internal async Task<GitHubOAuthCredentials> GetProtectedCredentialsAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+
+        if (user is User usr)
+        {
+            var credentials = usr.As<GitHubOAuthCredentials>();
+
+            if (credentials is not null && !string.IsNullOrEmpty(credentials.ProtectedAccessToken))
+            {
+                return credentials;
+            }
+        }
+
+        return null;
+    }
+
     public async Task<string> GetValidAccessTokenAsync(
         string userId,
         CancellationToken cancellationToken = default)
@@ -224,6 +247,32 @@ public sealed class GitHubOAuthService
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Unprotects a stored access token from a <see cref="CopilotSessionMetadata"/>,
+    /// typically stored on an <see cref="AI.Models.AIProfile"/> entity.
+    /// Returns <c>null</c> if the token is missing, expired, or cannot be unprotected.
+    /// </summary>
+    internal string UnprotectAccessToken(CopilotSessionMetadata metadata)
+    {
+        if (metadata is null || string.IsNullOrEmpty(metadata.ProtectedAccessToken))
+        {
+            return null;
+        }
+
+        var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
+
+        try
+        {
+            return protector.Unprotect(metadata.ProtectedAccessToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to unprotect access token from profile metadata for user {Username}", metadata.GitHubUsername);
+
+            return null;
+        }
     }
 
     public async Task DisconnectAsync(

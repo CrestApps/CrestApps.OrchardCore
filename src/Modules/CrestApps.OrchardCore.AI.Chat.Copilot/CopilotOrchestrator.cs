@@ -98,9 +98,15 @@ public sealed class CopilotOrchestrator : IOrchestrator
         // Build the session configuration.
         var sessionConfig = new SessionConfig
         {
-            Model = context.CompletionContext.Model,
             Streaming = true,
         };
+
+        // Read Copilot-specific metadata from the orchestration context.
+        if (context.Properties.TryGetValue(nameof(Models.CopilotSessionMetadata), out var metadataObj)
+            && metadataObj is Models.CopilotSessionMetadata metadata)
+        {
+            sessionConfig.Model = metadata.CopilotModel;
+        }
 
         if (tools.Count > 0)
         {
@@ -122,10 +128,28 @@ public sealed class CopilotOrchestrator : IOrchestrator
         // Configure MCP servers so Copilot can manage MCP tools natively.
         await ConfigureMcpServersAsync(context, sessionConfig, cancellationToken);
 
-        // Get the GitHub access token for the current user
+        // Get the GitHub access token. Prefer profile-level credentials when available,
+        // falling back to the current user's credentials.
         var clientOptions = new CopilotClientOptions();
+        string accessToken = null;
 
-        if (context.ServiceProvider is not null)
+        // First, try profile-level credentials from the metadata.
+        if (context.Properties.TryGetValue(nameof(Models.CopilotSessionMetadata), out var metaObj2)
+            && metaObj2 is Models.CopilotSessionMetadata profileMeta
+            && !string.IsNullOrEmpty(profileMeta.ProtectedAccessToken))
+        {
+            accessToken = _oauthService.UnprotectAccessToken(profileMeta);
+
+            if (!string.IsNullOrEmpty(accessToken) && _logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "CopilotOrchestrator: Using profile-level credential from {Username}",
+                    profileMeta.GitHubUsername);
+            }
+        }
+
+        // Fall back to the current user's credentials.
+        if (string.IsNullOrEmpty(accessToken) && context.ServiceProvider is not null)
         {
             var httpContextAccessor = context.ServiceProvider.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
             var user = httpContextAccessor?.HttpContext?.User;
@@ -137,33 +161,30 @@ public sealed class CopilotOrchestrator : IOrchestrator
                 if (orchardUser is not null)
                 {
                     var userId = await _userManager.GetUserIdAsync(orchardUser);
-                    var accessToken = await _oauthService.GetValidAccessTokenAsync(userId, cancellationToken);
+                    accessToken = await _oauthService.GetValidAccessTokenAsync(userId, cancellationToken);
 
-                    if (!string.IsNullOrEmpty(accessToken))
+                    if (!string.IsNullOrEmpty(accessToken) && _logger.IsEnabled(LogLevel.Debug))
                     {
-                        // Pass the GitHub access token via environment variable
-                        // The Copilot CLI uses GITHUB_TOKEN for authentication
-                        clientOptions.Environment = new Dictionary<string, string>
-                        {
-                            ["GITHUB_TOKEN"] = accessToken
-                        };
-
-                        if (_logger.IsEnabled(LogLevel.Debug))
-                        {
-                            _logger.LogDebug(
-                                "CopilotOrchestrator: Configured GitHub access token for user {UserId}",
-                                userId);
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogWarning(
-                            "CopilotOrchestrator: No valid GitHub access token found for user {UserId}. " +
-                            "User must authenticate with GitHub via AI Profile settings.",
+                        _logger.LogDebug(
+                            "CopilotOrchestrator: Using user-level credential for user {UserId}",
                             userId);
                     }
                 }
             }
+        }
+
+        if (!string.IsNullOrEmpty(accessToken))
+        {
+            clientOptions.Environment = new Dictionary<string, string>
+            {
+                ["GITHUB_TOKEN"] = accessToken
+            };
+        }
+        else
+        {
+            _logger.LogWarning(
+                "CopilotOrchestrator: No valid GitHub access token found. " +
+                "The session may fail without authentication.");
         }
 
         await using var client = new CopilotClient(clientOptions);

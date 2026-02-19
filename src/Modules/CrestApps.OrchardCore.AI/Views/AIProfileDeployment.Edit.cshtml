@@ -4,7 +4,7 @@
 
 @model EditProfileDeploymentViewModel
 
-<div class="@Orchard.GetWrapperClasses()" data-orchestrator-field="deployment">
+<div class="@Orchard.GetWrapperClasses("orchestrator-dependent orchestrator-dependent-default")">
     <label asp-for="DeploymentId" class="@Orchard.GetLabelClasses()">@T["Deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="DeploymentId" class="form-select">

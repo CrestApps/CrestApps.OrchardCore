@@ -46,9 +46,12 @@ public sealed class CopilotAuthController : Controller
     {
         // Validate returnUrl to prevent open redirect attacks.
         // Fallback to admin home — never to OAuthCallback itself (which would trigger a loop).
-        var safeReturnUrl = returnUrl != null && Url.IsLocalUrl(returnUrl)
-            ? returnUrl
-            : "~/" + _adminOptions.AdminUrlPrefix;
+        // Special case: "__popup__" is a sentinel value for popup-based auth flows.
+        var safeReturnUrl = string.Equals(returnUrl, "__popup__", StringComparison.Ordinal)
+            ? "__popup__"
+            : returnUrl != null && Url.IsLocalUrl(returnUrl)
+                ? returnUrl
+                : "~/" + _adminOptions.AdminUrlPrefix;
 
         // Generate the GitHub authorization URL
         var authUrl = await _oauthService.GetAuthorizationUrlAsync(safeReturnUrl);
@@ -67,7 +70,7 @@ public sealed class CopilotAuthController : Controller
             _logger.LogWarning("GitHub OAuth error: {Error}", error);
             await _notifier.ErrorAsync(H["GitHub authentication failed: {0}", error]);
 
-            return RedirectToLocal(state);
+            return HandleOAuthReturn(state, success: false, username: null);
         }
 
         if (string.IsNullOrEmpty(code))
@@ -75,7 +78,7 @@ public sealed class CopilotAuthController : Controller
             _logger.LogWarning("No authorization code received from GitHub");
             await _notifier.ErrorAsync(H["No authorization code received from GitHub"]);
 
-            return RedirectToLocal(state);
+            return HandleOAuthReturn(state, success: false, username: null);
         }
 
         // Get current user
@@ -93,11 +96,36 @@ public sealed class CopilotAuthController : Controller
             var credential = await _oauthService.ExchangeCodeForTokenAsync(code, await _userManager.GetUserIdAsync(user));
 
             await _notifier.SuccessAsync(H["Successfully connected to GitHub as {0}", credential.GitHubUsername]);
+
+            return HandleOAuthReturn(state, success: true, username: credential.GitHubUsername);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to exchange GitHub authorization code for tokens");
             await _notifier.ErrorAsync(H["Failed to connect to GitHub. Please try again."]);
+        }
+
+        return HandleOAuthReturn(state, success: false, username: null);
+    }
+
+    /// <summary>
+    /// Routes the OAuth callback to a popup close page or a standard redirect.
+    /// When the returnUrl/state is "__popup__", the callback was initiated from a popup window
+    /// (e.g., the AI Profile edit form), so we render a small page that sends the result back
+    /// to the opener via <c>postMessage</c> and closes itself.
+    /// </summary>
+    private IActionResult HandleOAuthReturn(string state, bool success, string username)
+    {
+        if (string.Equals(state, "__popup__", StringComparison.Ordinal))
+        {
+            var safeUsername = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(username ?? string.Empty);
+
+            return Content(
+                "<!DOCTYPE html><html><body><script>" +
+                $"window.opener.postMessage({{ type: 'github-auth-complete', success: {(success ? "true" : "false")}, username: '{safeUsername}' }}, window.location.origin);" +
+                "window.close();" +
+                "</script></body></html>",
+                "text/html");
         }
 
         return RedirectToLocal(state);
