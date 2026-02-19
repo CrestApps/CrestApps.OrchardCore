@@ -146,7 +146,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IToolRegistry, DefaultToolRegistry>();
 
         // Register the default orchestrator.
-        services.AddOrchestrator<ProgressiveToolOrchestrator>(ProgressiveToolOrchestrator.OrchestratorName)
+        services.AddOrchestrator<DefaultOrchestrator>(DefaultOrchestrator.OrchestratorName)
             .WithTitle("Default Orchestrator");
 
         // Register the resolver.

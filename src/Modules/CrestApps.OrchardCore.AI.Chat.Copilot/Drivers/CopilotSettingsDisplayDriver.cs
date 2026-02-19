@@ -22,6 +22,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly LinkGenerator _linkGenerator;
+
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 

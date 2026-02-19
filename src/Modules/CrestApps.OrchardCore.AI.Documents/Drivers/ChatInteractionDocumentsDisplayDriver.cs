@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.AI.Documents.ViewModels;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Documents.ViewModels;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -60,7 +60,7 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Parameters:3#Documents:3");
+        }).Location("Parameters:3#Documents;3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

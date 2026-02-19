@@ -9,8 +9,6 @@ public class EditChatInteractionConnectionViewModel
 
     public string DeploymentId { get; set; }
 
-    public string OrchestratorName { get; set; }
-
     [BindNever]
     public string ProviderName { get; set; }
 
@@ -19,7 +17,4 @@ public class EditChatInteractionConnectionViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> Deployments { get; set; }
-
-    [BindNever]
-    public IList<SelectListItem> Orchestrators { get; set; }
 }

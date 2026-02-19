@@ -74,7 +74,7 @@ internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInte
                     Description = entry.Value.Description,
                     IsSelected = interaction.ToolNames?.Contains(entry.Key) ?? false,
                 }).OrderBy(entry => entry.DisplayText).ToArray());
-        }).Location("Parameters:5#Capabilities:5");
+        }).Location("Parameters:5#Capabilities;5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

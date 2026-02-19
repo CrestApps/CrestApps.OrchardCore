@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
@@ -19,7 +18,6 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
     private readonly IGitHubOAuthService _oauthService;
     private readonly UserManager<USR.IUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
@@ -27,14 +25,12 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
         IGitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,
         IHttpContextAccessor httpContextAccessor,
-        IStringLocalizer<AIProfileCopilotDisplayDriver> stringLocalizer,
-        ILogger<AIProfileCopilotDisplayDriver> logger)
+        IStringLocalizer<AIProfileCopilotDisplayDriver> stringLocalizer)
     {
         _oauthService = oauthService;
         _userManager = userManager;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
-        _logger = logger;
     }
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)

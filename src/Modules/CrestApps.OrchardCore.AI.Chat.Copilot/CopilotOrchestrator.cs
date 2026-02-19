@@ -95,16 +95,10 @@ public sealed class CopilotOrchestrator : IOrchestrator
                 tools.Count, string.Join(", ", tools.Select(t => t.Name)));
         }
 
-        // The model is configured per-profile or per-interaction. Prefer the explicit
-        // Model property (set by CopilotCompletionContextBuilderHandler) over DeploymentId.
-        var model = !string.IsNullOrEmpty(context.CompletionContext.Model)
-            ? context.CompletionContext.Model
-            : context.CompletionContext.DeploymentId;
-
         // Build the session configuration.
         var sessionConfig = new SessionConfig
         {
-            Model = model,
+            Model = context.CompletionContext.Model,
             Streaming = true,
         };
 

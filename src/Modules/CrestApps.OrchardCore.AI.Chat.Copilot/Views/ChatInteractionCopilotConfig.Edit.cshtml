@@ -1,52 +1,62 @@
 @using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels
 @using OrchardCore
+@using CrestApps.OrchardCore.AI.Chat.Copilot
 
 @model EditCopilotProfileViewModel
 
-<div data-orchestrator-field="copilot" style="display: none;">
-    @* GitHub Authentication Section *@
-    <div class="mb-3 text-center">
-        <label class="form-label">@T["GitHub Authentication"]</label>
-        @if (Model.IsAuthenticated)
-        {
-            <div class="alert alert-success ">
+<div class="d-none orchestrator-dependent orchestrator-dependent-@(CopilotOrchestrator.OrchestratorName)">
+    @if (Model.IsAuthenticated)
+    {
+        @* Authenticated: compact green alert with disconnect *@
+        <div class="alert alert-success d-flex align-items-center justify-content-between mb-3 py-2">
+            <span>
                 <i class="fas fa-check-circle"></i>
                 @T["Connected as"] <strong>@Model.GitHubUsername</strong>
-                <a href="#" class="btn btn-sm btn-outline-danger float-end" id="ci-disconnect-github" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]">
-                    @T["Disconnect"]
+            </span>
+            <a href="#" class="btn btn-sm btn-outline-danger ms-2" id="ci-disconnect-github" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]" title="@T["Disconnect from GitHub"]">
+                <i class="fa-solid fa-power-off"></i>
+            </a>
+        </div>
+
+        @* Copilot Model Selection — only visible when authenticated *@
+        <div class="mb-3">
+            <label asp-for="CopilotModel" class="form-label">@T["Copilot Model"]</label>
+            <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select">
+                <option value="">@T["Default model"]</option>
+            </select>
+            <span asp-validation-for="CopilotModel" class="text-danger"></span>
+            <span class="hint">@T["Select the Copilot model to use for this interaction."]</span>
+        </div>
+
+        @* Copilot Flags *@
+        <div class="mb-3">
+            <label asp-for="CopilotFlags" class="form-label">@T["Copilot Flags"]</label>
+            <input asp-for="CopilotFlags" class="form-control" placeholder="--allow-all" />
+            <span asp-validation-for="CopilotFlags" class="text-danger"></span>
+            <span class="hint">@T["Optional Copilot execution flags (e.g., --allow-all). Separate multiple flags with spaces."]</span>
+        </div>
+    }
+    else
+    {
+        @* Not authenticated: card prompting GitHub login *@
+        <div class="card mb-3">
+            <div class="card-body text-center">
+                <h5 class="card-title">
+                    <i class="fab fa-github"></i> @T["GitHub Authentication"]
+                </h5>
+                <p class="card-text text-muted">
+                    @T["Copilot requires a GitHub connection. Sign in with your GitHub account to configure and use Copilot models."]
+                </p>
+                <a href="#" class="btn btn-primary" id="ci-connect-github">
+                    <i class="fab fa-github"></i> @T["Sign in with GitHub"]
                 </a>
             </div>
-        }
-        else
-        {
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i>
-                @T["Copilot requires GitHub authentication. Sign in with your GitHub account to continue."]
-            </div>
-            <a href="#" class="btn btn-primary mb-1" id="ci-connect-github">
-                <i class="fab fa-github"></i> @T["Sign in with GitHub"]
-            </a>
-        }
-        <div class="hint">@T["GitHub OAuth is required for Copilot. Your access token will be securely stored and reused across sessions."]</div>
-    </div>
+        </div>
 
-    @* Copilot Model Selection *@
-    <div class="mb-3">
-        <label asp-for="CopilotModel" class="form-label">@T["Copilot Model"]</label>
-        <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select">
-            <option value="">@T["Default model"]</option>
-        </select>
-        <span asp-validation-for="CopilotModel" class="text-danger"></span>
-        <span class="hint">@T["Select the Copilot model to use for this interaction."]</span>
-    </div>
-
-    @* Copilot Flags *@
-    <div class="mb-3">
-        <label asp-for="CopilotFlags" class="form-label">@T["Copilot Flags"]</label>
-        <input asp-for="CopilotFlags" class="form-control" placeholder="--allow-all" />
-        <span asp-validation-for="CopilotFlags" class="text-danger"></span>
-        <span class="hint">@T["Optional Copilot execution flags (e.g., --allow-all). Separate multiple flags with spaces."]</span>
-    </div>
+        @* Keep hidden fields so form binding doesn't lose values *@
+        <input type="hidden" asp-for="CopilotModel" />
+        <input type="hidden" asp-for="CopilotFlags" />
+    }
 </div>
 
 <script at="Foot">
@@ -79,6 +89,12 @@
                         tokenInput.value = token.value;
                         form.appendChild(tokenInput);
                     }
+
+                    const returnUrlInput = document.createElement('input');
+                    returnUrlInput.type = 'hidden';
+                    returnUrlInput.name = 'returnUrl';
+                    returnUrlInput.value = window.location.pathname + window.location.search;
+                    form.appendChild(returnUrlInput);
 
                     document.body.appendChild(form);
                     form.submit();

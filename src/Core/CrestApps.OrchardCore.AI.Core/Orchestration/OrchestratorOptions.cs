@@ -9,7 +9,7 @@ public sealed class OrchestratorOptions
     /// Gets or sets the default orchestrator name.
     /// When a profile or interaction does not specify an orchestrator, this name is used.
     /// </summary>
-    public string DefaultOrchestratorName { get; set; } = ProgressiveToolOrchestrator.OrchestratorName;
+    public string DefaultOrchestratorName { get; set; } = DefaultOrchestrator.OrchestratorName;
 
     internal Dictionary<string, OrchestratorEntry> Orchestrators { get; } = new(StringComparer.OrdinalIgnoreCase);
 

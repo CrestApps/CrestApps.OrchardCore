@@ -3,11 +3,11 @@
 
 @model EditCopilotProfileViewModel
 
-<div data-orchestrator-field="copilot" style="display: none;">
+<div class="d-none orchestrator-dependent orchestrator-dependent-copilot">
     <fieldset class="@Orchard.GetWrapperClasses()">
         <legend class="@Orchard.GetLabelClasses()">@T["Copilot Configuration"]</legend>
         <div class="@Orchard.GetEndClasses()">
-            
+
             @* GitHub Authentication Section *@
             <div class="mb-3">
                 <label class="form-label">@T["GitHub Authentication"]</label>
@@ -59,7 +59,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         const connectButton = document.getElementById('connect-github');
         const disconnectButton = document.getElementById('disconnect-github');
-        
+
         if (connectButton) {
             connectButton.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -68,7 +68,7 @@
                 window.location.href = '@Url.Action("AuthorizeGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
             });
         }
-        
+
         if (disconnectButton) {
             const confirmMessage = disconnectButton.getAttribute('data-confirm-message');
             disconnectButton.addEventListener('click', function(e) {
@@ -78,7 +78,7 @@
                     const form = document.createElement('form');
                     form.method = 'POST';
                     form.action = '@Url.Action("DisconnectGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
-                    
+
                     // Add antiforgery token
                     const token = document.querySelector('input[name="__RequestVerificationToken"]');
                     if (token) {
@@ -88,7 +88,7 @@
                         tokenInput.value = token.value;
                         form.appendChild(tokenInput);
                     }
-                    
+
                     document.body.appendChild(form);
                     form.submit();
                 }

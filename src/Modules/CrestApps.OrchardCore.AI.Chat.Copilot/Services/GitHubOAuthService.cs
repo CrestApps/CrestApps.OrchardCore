@@ -146,7 +146,6 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
             UpdatedUtc = DateTime.UtcNow
         };
 
-
         usr.Put(credentials);
         await _userManager.UpdateAsync(usr);
 
@@ -287,11 +286,12 @@ public sealed class GitHubOAuthService : IGitHubOAuthService
         try
         {
             var httpClient = _httpClientFactory.CreateClient();
-            httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("CrestApps-OrchardCore-Copilot/1.0");
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            httpClient.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
 
-            var response = await httpClient.GetAsync("https://api.github.com/models", cancellationToken);
+            var response = await httpClient.GetAsync("https://models.github.ai/catalog/models", cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {

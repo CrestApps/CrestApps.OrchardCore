@@ -43,7 +43,7 @@ internal sealed class ChatInteractionMcpConnectionsDisplayDriver : DisplayDriver
             }).OrderBy(entry => entry.DisplayText)
             .ToArray();
 
-        }).Location("Parameters:4#Capabilities:3");
+        }).Location("Parameters:5#Capabilities;3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
