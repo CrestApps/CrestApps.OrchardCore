@@ -8,9 +8,9 @@
 
 # Features
 
-## Azure OpenAI Services Integration
+## Azure OpenAI Integration
 
-The Azure OpenAI Services feature (`CrestApps.OrchardCore.OpenAI.Azure`) integrates seamlessly with Azure OpenAI. This module is dependency-driven, meaning it automatically enables or disables itself based on usage requirements.
+The Azure OpenAI Chat feature (`CrestApps.OrchardCore.OpenAI.Azure`) integrates seamlessly with Azure OpenAI. Enable this feature to use Azure OpenAI models for AI chat profiles, deployments, and connections.
 
 ### Configuration
 

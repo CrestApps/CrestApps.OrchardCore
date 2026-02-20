@@ -29,24 +29,25 @@
     var promptGeneratedProfiles = await ProfilesCatalog.GetAsync(AIProfileType.TemplatePrompt);
 }
 
-<div class="mb-3 mx-3 p-3 overflow-y-auto h-100 rounded-2 border bg-theme" id="@chatContainerHtmlId">
-    <div class="list-group list-group-flush w-100">
-        @if (Model.Session.Prompts.Count == 0)
-        {
-            <div id="@placeholderHtmlId" class="text-center p-3">
-                <h1 class="mb-3">
-                    @(string.IsNullOrEmpty(Model.Profile?.WelcomeMessage) ? T["What do you want to know?"] : Model.Profile?.WelcomeMessage)
-                </h1>
-            </div>
-        }
+<div class="container-fluid d-flex flex-column h-100">
+    <div class="flex-grow-1 overflow-y-auto p-3 mb-3 rounded-2 border bg-theme" id="@chatContainerHtmlId">
+        <div class="w-100 ai-chat-messages">
+            @if (Model.Session.Prompts.Count == 0)
+            {
+                <div id="@placeholderHtmlId" class="text-center p-3">
+                    <h1 class="mb-3">
+                        @(string.IsNullOrEmpty(Model.Profile?.WelcomeMessage) ? T["What do you want to know?"] : Model.Profile?.WelcomeMessage)
+                    </h1>
+                </div>
+            }
 
-        <div id="@chatAppHtmlId"></div>
+            <div id="@chatAppHtmlId"></div>
+        </div>
     </div>
-</div>
 
-<div class="container-fluid mb-3">
+    <div class="flex-shrink-0 mb-3">
 
-    <div class="text-bg-light rounded border w-100">
+        <div class="text-bg-light rounded border w-100">
         <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
 
         <div class="d-flex justify-content-between px-3 my-2">
@@ -77,6 +78,7 @@
                 </button>
             </div>
         </div>
+        </div>
     </div>
 </div>
 @{
@@ -99,6 +101,8 @@
     }
 }
 
+<style asp-name="AIChatApp" at="Head"></style>
+<style asp-name="highlightjs" at="Head"></style>
 <script asp-name="OpenAIChatApp" at="Foot"></script>
 <script at="Foot" depends-on="OpenAIChatApp">
     openAIChatManager.initialize({
@@ -116,21 +120,5 @@
     .chat-user-prompt-input:focus {
         border: none;
         box-shadow: none;
-    }
-
-    .ai-bot-icon {
-        color: #198754;
-    }
-
-    @@keyframes ai-streaming-pulse {
-        0%, 100% { color: #198754; }
-        25% { color: #0dcaf0; }
-        50% { color: #6f42c1; }
-        75% { color: #0dcaf0; }
-    }
-
-    .ai-streaming-icon,
-    .ai-streaming-icon::before {
-        animation: ai-streaming-pulse 2s ease-in-out infinite !important;
     }
 </style>

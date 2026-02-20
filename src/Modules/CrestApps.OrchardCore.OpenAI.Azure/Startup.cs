@@ -40,21 +40,7 @@ public sealed class Startup : StartupBase
                 o.DisplayName = S["Azure OpenAI"];
                 o.Description = S["Azure OpenAI model deployments."];
             });
-    }
-}
 
-[Feature(AzureOpenAIConstants.Feature.Standard)]
-public sealed class StandardStartup : StartupBase
-{
-    internal readonly IStringLocalizer S;
-
-    public StandardStartup(IStringLocalizer<StandardStartup> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
-    public override void ConfigureServices(IServiceCollection services)
-    {
         services.AddAIProfile<AzureOpenAICompletionClient>(AzureOpenAIConstants.ProviderName, AzureOpenAIConstants.ProviderName, o =>
         {
             o.DisplayName = S["Azure OpenAI"];

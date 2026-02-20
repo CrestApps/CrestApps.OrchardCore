@@ -9,7 +9,5 @@ public static class AzureOpenAIConstants
     public static class Feature
     {
         public const string Area = "CrestApps.OrchardCore.OpenAI.Azure";
-
-        public const string Standard = "CrestApps.OrchardCore.OpenAI.Azure.Standard";
     }
 }

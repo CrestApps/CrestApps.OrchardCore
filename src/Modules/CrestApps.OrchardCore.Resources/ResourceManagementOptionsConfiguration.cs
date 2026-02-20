@@ -93,6 +93,29 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/scripts/flatpickr-culture.min.js",
                 "~/CrestApps.OrchardCore.Resources/scripts/flatpickr-culture.js")
             .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript("highlightjs")
+            .SetCdn(
+                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js",
+                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js")
+            .SetCdnIntegrity(
+                "sha384-ckHiE7G6MBk/VbsEcbfcaFLRwMRNnHMOP4LQwuAfJJTMKHGEcsFXkTjl1HBO7UBR",
+                "sha384-ckHiE7G6MBk/VbsEcbfcaFLRwMRNnHMOP4LQwuAfJJTMKHGEcsFXkTjl1HBO7UBR")
+            .SetVersion("11.11.1");
+
+        _manifest
+            .DefineStyle("highlightjs")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/highlightjs/css/highlightjs.min.css",
+                "~/CrestApps.OrchardCore.Resources/vendors/highlightjs/css/highlightjs.css")
+            .SetCdn(
+                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css",
+                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.css")
+            .SetCdnIntegrity(
+                "sha384-WtUWkflhGUQ3MK2tFYXjWfMm/V8wQ5zBSAJDQ97BKUV1FG/lSUIMKFa7lEexSSqe",
+                "sha384-E4p1vLSqqOpseRx1IxsBhi/AzNnHMEBMGsNhillDLNmBTfAPGIHR/Rh7S/netUJM")
+            .SetVersion("11.11.1");
     }
 
     public void Configure(ResourceManagementOptions options)

@@ -14,17 +14,22 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
         _manifest
             .DefineScript("OpenAIChatApp")
             .SetUrl("~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat.min.js", "~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat.js")
-            .SetDependencies("vuejs:3", "signalr", "marked", "chart.js")
+            .SetDependencies("vuejs:3", "signalr", "marked", "chart.js", "highlightjs")
             .SetVersion("1.0.0");
 
         _manifest
-            .DefineScript("AIChatAdminWidget")
-            .SetUrl("~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat-admin-widget.min.js", "~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat-admin-widget.js")
+            .DefineStyle("AIChatApp")
+            .SetUrl("~/CrestApps.OrchardCore.AI.Chat/css/ai-chat.min.css", "~/CrestApps.OrchardCore.AI.Chat/css/ai-chat.css")
             .SetVersion("1.0.0");
 
         _manifest
-            .DefineStyle("AIChatAdminWidget")
-            .SetUrl("~/CrestApps.OrchardCore.AI.Chat/css/ai-chat-admin-widget.min.css", "~/CrestApps.OrchardCore.AI.Chat/css/ai-chat-admin-widget.css")
+            .DefineScript("AIChatWidget")
+            .SetUrl("~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat-widget.min.js", "~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat-widget.js")
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineStyle("AIChatWidget")
+            .SetUrl("~/CrestApps.OrchardCore.AI.Chat/css/ai-chat-widget.min.css", "~/CrestApps.OrchardCore.AI.Chat/css/ai-chat-widget.css")
             .SetVersion("1.0.0");
     }
 

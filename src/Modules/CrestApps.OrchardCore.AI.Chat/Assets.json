@@ -7,14 +7,20 @@
   },
   {
     "inputs": [
-      "Assets/js/ai-chat-admin-widget.js"
+      "Assets/js/ai-chat-widget.js"
     ],
-    "output": "wwwroot/scripts/ai-chat-admin-widget.js"
+    "output": "wwwroot/scripts/ai-chat-widget.js"
   },
   {
     "inputs": [
-      "Assets/css/ai-chat-admin-widget.css"
+      "Assets/css/ai-chat.css"
     ],
-    "output": "wwwroot/css/ai-chat-admin-widget.css"
+    "output": "wwwroot/css/ai-chat.css"
+  },
+  {
+    "inputs": [
+      "Assets/css/ai-chat-widget.css"
+    ],
+    "output": "wwwroot/css/ai-chat-widget.css"
   }
 ]

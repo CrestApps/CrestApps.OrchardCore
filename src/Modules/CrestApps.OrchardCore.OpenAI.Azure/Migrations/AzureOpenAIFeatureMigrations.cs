@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Extensions;
@@ -16,6 +17,7 @@ internal sealed class AzureOpenAIFeatureMigrations : DataMigration
     private const string OldAISearchFeature = "CrestApps.OrchardCore.OpenAI.Azure.AISearch";
     private const string OldElasticsearchFeature = "CrestApps.OrchardCore.OpenAI.Azure.Elasticsearch";
     private const string OldMongoDBFeature = "CrestApps.OrchardCore.OpenAI.Azure.MongoDB";
+    private const string OldStandardFeature = "CrestApps.OrchardCore.OpenAI.Azure.Standard";
 
     private readonly ShellSettings _shellSettings;
 
@@ -59,6 +61,17 @@ internal sealed class AzureOpenAIFeatureMigrations : DataMigration
                     {
                         featuresToEnable.Add(newFeature);
                     }
+                }
+            }
+
+            // If the old Standard feature was enabled, ensure the main Area feature is enabled.
+            if (enabledFeatureIds.Contains(OldStandardFeature) && !enabledFeatureIds.Contains(AzureOpenAIConstants.Feature.Area))
+            {
+                var areaFeature = extensionManager.GetFeatures((IEnumerable<string>)[AzureOpenAIConstants.Feature.Area]).FirstOrDefault();
+
+                if (areaFeature != null)
+                {
+                    featuresToEnable.Add(areaFeature);
                 }
             }
 

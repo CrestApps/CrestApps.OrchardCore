@@ -118,10 +118,11 @@
     }
 </div>
 
-<style asp-name="AIChatAdminWidget" at="Head"></style>
-<script asp-name="AIChatAdminWidget" at="Foot"></script>
+<style asp-name="AIChatWidget" at="Head"></style>
+<style asp-name="highlightjs" at="Head"></style>
+<script asp-name="AIChatWidget" at="Foot"></script>
 <script asp-name="OpenAIChatApp" at="Foot"></script>
-<script at="Foot" depends-on="AIChatAdminWidget, OpenAIChatApp">
+<script at="Foot" depends-on="AIChatWidget, OpenAIChatApp">
     aiChatAdminWidget.initialize({
         containerSelector: '#@widgetContainerId',
         toggleSelector: '#@toggleBtnId',
@@ -142,8 +143,8 @@
             placeholderElementSelector: '#@placeholderHtmlId',
             messages: [],
             messageTemplate: `
-                <div class="list-group">
-                    <div v-for="(message, index) in messages" :key="index" class="list-group-item p-1 border-0">
+                <div>
+                    <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">
                         <div>
                             <div v-if="message.role === 'user'" class="ai-admin-widget-msg-role ai-admin-widget-msg-role-user">@T["You"]</div>
                             <div v-else-if="message.role !== 'indicator'" class="ai-admin-widget-msg-role ai-admin-widget-msg-role-assistant">

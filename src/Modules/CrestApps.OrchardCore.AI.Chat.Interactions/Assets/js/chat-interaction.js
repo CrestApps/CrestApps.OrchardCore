@@ -11,17 +11,19 @@ window.chatInteractionManager = function () {
         downloadChartButtonText: 'Download',
 
         messageTemplate: `
-            <div class="list-group">
-                <div v-for="(message, index) in messages" :key="index" class="list-group-item">
-                    <div class="d-flex align-items-center">
-                        <div class="p-2">
-                            <i :class="message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')"></i>
+            <div class="ai-chat-messages">
+                <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">
+                    <div>
+                        <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">You</div>
+                        <div v-else-if="message.role !== 'indicator'" class="ai-chat-msg-role ai-chat-msg-role-assistant">
+                            <i :class="'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')"></i>
+                            Assistant
                         </div>
-                        <div class="p-2 lh-base">
+                        <div class="lh-base">
                             <h4 v-if="message.title">{{ message.title }}</h4>
                             <div v-html="message.htmlContent || message.content"></div>
                             <span class="message-buttons-container" v-if="!isIndicator(message)">
-                                <button class="btn btn-sm btn-outline-secondary button-message-toolbox" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
+                                <button class="btn btn-sm btn-link text-secondary p-0 button-message-toolbox" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
                                     <i class="fa-solid fa-copy"></i>
                                 </button>
                             </span>
@@ -30,7 +32,12 @@ window.chatInteractionManager = function () {
                 </div>
             </div>
         `,
-        indicatorTemplate: `<div class="spinner-grow spinner-grow-sm" role="status"><span class="visually-hidden">Loading...</span></div>`,
+        indicatorTemplate: `
+            <div class="ai-chat-msg-role ai-chat-msg-role-assistant">
+                <i class="fa fa-robot ai-streaming-icon" style="display: inline-block;"></i>
+                Assistant
+            </div>
+        `,
         // Localizable strings
         untitledText: 'Untitled',
         clearHistoryTitle: 'Clear History',
@@ -44,6 +51,30 @@ window.chatInteractionManager = function () {
     // Modify the link rendering to open in a new tab
     renderer.link = function (data) {
         return `<a href="${data.href}" target="_blank" rel="noopener noreferrer">${data.text}</a>`;
+    };
+
+    // Custom code block renderer with highlight.js integration and copy button.
+    renderer.code = function (data) {
+        var code = data.text || '';
+        var lang = (data.lang || '').trim();
+        var highlighted = code;
+
+        if (typeof hljs !== 'undefined') {
+            if (lang && hljs.getLanguage(lang)) {
+                try {
+                    highlighted = hljs.highlight(code, { language: lang }).value;
+                } catch (_) { }
+            } else {
+                try {
+                    highlighted = hljs.highlightAuto(code).value;
+                } catch (_) { }
+            }
+        } else {
+            highlighted = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        var langLabel = lang ? ` data-lang="${lang}"` : '';
+        return `<pre${langLabel}><button type="button" class="ai-code-copy-btn" title="Copy code"><i class="fa-solid fa-copy"></i></button><code class="hljs${lang ? ' language-' + lang : ''}">${highlighted}</code></pre>`;
     };
 
     // Custom image renderer for generated images with thumbnail styling and download button.
@@ -582,6 +613,22 @@ window.chatInteractionManager = function () {
                     if (startIcon) {
                         this.buttonElement.innerHTML = startIcon;
                     }
+
+                    // Directly manipulate the DOM to stop all streaming animations.
+                    if (this.chatContainer) {
+                        var icons = this.chatContainer.querySelectorAll('.ai-streaming-icon');
+                        for (var i = 0; i < icons.length; i++) {
+                            icons[i].classList.remove('ai-streaming-icon');
+                            icons[i].classList.add('ai-bot-icon');
+                        }
+                    }
+
+                    // Also update Vue data for consistency.
+                    for (var i = 0; i < this.messages.length; i++) {
+                        if (this.messages[i].isStreaming) {
+                            this.messages[i].isStreaming = false;
+                        }
+                    }
                 },
                 showTypingIndicator() {
                     this.addMessage({
@@ -709,6 +756,26 @@ window.chatInteractionManager = function () {
 
                     for (let i = 0; i < config.messages.length; i++) {
                         this.addMessage(config.messages[i]);
+                    }
+
+                    // Delegate click for code block copy buttons.
+                    if (this.chatContainer) {
+                        this.chatContainer.addEventListener('click', (e) => {
+                            var btn = e.target.closest('.ai-code-copy-btn');
+                            if (!btn) {
+                                return;
+                            }
+
+                            var pre = btn.closest('pre');
+                            if (!pre) {
+                                return;
+                            }
+
+                            var codeEl = pre.querySelector('code');
+                            if (codeEl) {
+                                navigator.clipboard.writeText(codeEl.textContent);
+                            }
+                        });
                     }
 
                     // Add event listeners for all settings fields with "ChatInteraction." prefix

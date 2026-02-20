@@ -29,14 +29,38 @@ window.openAIChatManager = function () {
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
-    messageTemplate: "\n        <div class=\"list-group\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                <div class=\"d-flex align-items-center\">\n                    <div class=\"p-2\">\n                        <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                    </div>\n                    <div class=\"p-2 lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent || message.content\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <button class=\"btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
-    indicatorTemplate: "<div class=\"spinner-grow spinner-grow-sm\" role=\"status\"><span class=\"visually-hidden\">Loading...</span></div>"
+    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                        Assistant\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent || message.content\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
+    indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <i class=\"fa fa-robot ai-streaming-icon\" style=\"display: inline-block;\"></i>\n            Assistant\n        </div>\n    "
   };
   var renderer = new marked.Renderer();
 
   // Modify the link rendering to open in a new tab
   renderer.link = function (data) {
     return "<a href=\"".concat(data.href, "\" target=\"_blank\" rel=\"noopener noreferrer\">").concat(data.text, "</a>");
+  };
+
+  // Custom code block renderer with highlight.js integration and copy button.
+  renderer.code = function (data) {
+    var code = data.text || '';
+    var lang = (data.lang || '').trim();
+    var highlighted = code;
+    if (typeof hljs !== 'undefined') {
+      if (lang && hljs.getLanguage(lang)) {
+        try {
+          highlighted = hljs.highlight(code, {
+            language: lang
+          }).value;
+        } catch (_) {}
+      } else {
+        try {
+          highlighted = hljs.highlightAuto(code).value;
+        } catch (_) {}
+      }
+    } else {
+      highlighted = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    var langLabel = lang ? " data-lang=\"".concat(lang, "\"") : '';
+    return "<pre".concat(langLabel, "><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-solid fa-copy\"></i></button><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre>");
   };
 
   // Custom image renderer for generated images with thumbnail styling and download button.
@@ -701,6 +725,24 @@ window.openAIChatManager = function () {
           }
           for (var _i6 = 0; _i6 < config.messages.length; _i6++) {
             this.addMessage(config.messages[_i6]);
+          }
+
+          // Delegate click for code block copy buttons.
+          if (this.chatContainer) {
+            this.chatContainer.addEventListener('click', function (e) {
+              var btn = e.target.closest('.ai-code-copy-btn');
+              if (!btn) {
+                return;
+              }
+              var pre = btn.closest('pre');
+              if (!pre) {
+                return;
+              }
+              var codeEl = pre.querySelector('code');
+              if (codeEl) {
+                navigator.clipboard.writeText(codeEl.textContent);
+              }
+            });
           }
         },
         loadSession: function loadSession(sessionId) {
