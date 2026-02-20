@@ -188,6 +188,37 @@
     font-size: 1rem;
 }
 
+.ai-admin-widget-history-panel .list-group {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    border: none;
+}
+
+.ai-admin-widget-history-panel .list-group .list-group-item {
+    border: none;
+    border-radius: 0;
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    transition: background 0.15s;
+    background: transparent;
+}
+
+.ai-admin-widget-history-panel .list-group .list-group-item:last-child {
+    border-bottom: none;
+}
+
+.ai-admin-widget-history-panel .list-group .list-group-item:hover {
+    background: var(--bs-tertiary-bg, #f8f9fa);
+}
+
 .ai-admin-widget-history-list {
     list-style: none;
     padding: 0;
@@ -197,13 +228,13 @@
 }
 
 .ai-admin-widget-history-list li {
-    margin-bottom: 0.25rem;
+    margin-bottom: 0;
 }
 
 .ai-admin-widget-history-list .chat-session-history-item {
     display: block;
     padding: 0.5rem 0.75rem;
-    border-radius: 0.375rem;
+    border-radius: 0;
     text-decoration: none;
     color: var(--bs-body-color, #212529);
     font-size: 0.85rem;
@@ -212,6 +243,11 @@
     text-overflow: ellipsis;
     transition: background 0.15s;
     cursor: pointer;
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.ai-admin-widget-history-list li:last-child .chat-session-history-item {
+    border-bottom: none;
 }
 
 .ai-admin-widget-history-list .chat-session-history-item:hover {
@@ -268,11 +304,11 @@
     position: relative;
 }
 
-.ai-admin-widget .list-group-item + .list-group-item::before {
+.ai-admin-widget-body .list-group-item + .list-group-item::before {
     content: '';
     display: block;
     width: 100%;
-    margin: 0.25rem auto 0.5rem;
+    margin: 0.5rem auto 0.75rem;
     border-top: 1px solid var(--bs-border-color, #dee2e6);
 }
 
@@ -312,7 +348,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    margin-bottom: 0.15rem;
+    margin-bottom: 0.35rem;
 }
 
 .ai-admin-widget-msg-role-user {

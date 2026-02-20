@@ -44,106 +44,111 @@
     var buttonHtmlId = $"{baseId}_SendButton";
     var userPromptHtmlId = $"{baseId}_UserPrompt";
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
-    var messagesContainerHtmlId = $"{baseId}_MessagesContainer";
     var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
+    var widgetContainerId = $"{baseId}_Container";
+    var toggleBtnId = $"{baseId}_Toggle";
+    var closeBtnId = $"{baseId}_Close";
+    var newChatBtnId = $"{baseId}_NewChat";
+    var historyBtnId = $"{baseId}_ShowHistory";
+    var historyPanelId = $"{baseId}_HistoryPanel";
+    var closeHistoryBtnId = $"{baseId}_CloseHistory";
+    var restoreSizeBtnId = $"{baseId}_RestoreSize";
 
-    var chatWidgetContainer = $"{baseId}_ChatWidget";
-    var chatWidgetStateName = $"{ShellSettings.Name}-{baseId}WidgetState";
-    var chatWidgetStateSession = $"{ShellSettings.Name}-{baseId}WidgetSession";
-    var chatWidgetButton = $"{baseId}_ChatButton";
-    var closeChatButton = $"{baseId}_CloseChatButton";
-
-    var chatWidgetHistoryList = $"{baseId}_ChatHistoryList";
-    var closeChatHistoryButton = $"{baseId}_CloseChatHistory";
-    var newChatButton = $"{baseId}_NewChatButton";
-    var showHistoryButton = $"{baseId}_ShowHistoryButton";
+    var storagePrefix = $"{ShellSettings.Name}-{baseId}";
 }
 
-<!-- Chat Button -->
-<button id="@chatWidgetButton" class="btn btn-primary rounded-circle shadow widget-fixed-bottom-right widget-launch-button">
+<!-- Toggle Button -->
+<button id="@toggleBtnId" class="ai-admin-widget-toggle-btn" title="@T["Open AI Chat"]" style="--ai-widget-primary: var(--bs-primary, #0d6efd);">
     <i class="fas fa-comments"></i>
 </button>
 
-<!-- Chat Widget -->
-<div id="@chatWidgetContainer" class="position-fixed bottom-1 end-1 d-none bg-white shadow-lg rounded-3 d-flex flex-column widget-fixed-bottom-right" style="width: 25rem; height: 35rem;">
-    <div class="navbar navbar-expand-lg navbar-light bg-primary text-white py-0" style="height:2.5rem;">
-        <span class="navbar-brand mb-0 h1">
+<!-- Widget Container -->
+<div id="@widgetContainerId" class="ai-admin-widget" style="--ai-widget-primary: var(--bs-primary, #0d6efd);">
+    <!-- Header (drag handle) -->
+    <div class="ai-admin-widget-header">
+        <span class="ai-admin-widget-title">
             @if (Model.Header != null)
             {
                 @await DisplayAsync(Model.Header)
             }
+            else
+            {
+                @T["AI Chat"]
+            }
         </span>
-        <div class="button-group d-flex">
-            <!-- New Chat and History Buttons -->
-            <button class="btn btn-link text-white" id="@newChatButton">
+        <div class="ai-admin-widget-header-actions">
+            <button class="btn btn-link ai-admin-widget-restore-btn" id="@restoreSizeBtnId" title="@T["Restore size"]">
+                <i class="fas fa-compress"></i>
+            </button>
+            <button class="btn btn-link" id="@newChatBtnId" title="@T["New chat"]">
                 <i class="fas fa-plus"></i>
             </button>
             @if (showHistory)
             {
-                <button class="btn btn-link text-white" id="@showHistoryButton">
-                    <i class="fas fa-bars"></i>
+                <button class="btn btn-link" id="@historyBtnId" title="@T["Chat history"]">
+                    <i class="fas fa-clock-rotate-left"></i>
                 </button>
             }
-            <button class="close-btn btn btn-link text-white" id="@closeChatButton">
+            <button class="btn btn-link" id="@closeBtnId" title="@T["Close"]">
                 <i class="fas fa-times"></i>
             </button>
         </div>
     </div>
-    <div class="chat-body flex-grow-1 overflow-auto p-2" id="@chatContainerHtmlId">
 
-        <div id="@placeholderHtmlId" class="text-center p-3">
-            <h4 class="my-3 h2">
-                @(string.IsNullOrEmpty(profile.WelcomeMessage) ? T["What do you want to know?"] : profile.WelcomeMessage)
-            </h4>
+    <!-- Resize Handle (top-left, below header) -->
+    <div class="ai-admin-widget-resize-handle"></div>
+
+    <!-- Chat Body -->
+    <div class="ai-admin-widget-body" id="@chatContainerHtmlId">
+        <div id="@placeholderHtmlId" class="ai-admin-widget-placeholder">
+            <h4>@(string.IsNullOrEmpty(profile.WelcomeMessage) ? T["What do you want to know?"] : profile.WelcomeMessage)</h4>
         </div>
-
         <div id="@chatAppHtmlId"></div>
     </div>
-    <div class="chat-input p-2 ">
 
-        <div class="text-bg-light rounded-5 w-100 border">
-            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input p-3" id="@userPromptHtmlId" data-session-id="" data-profile-id="@(profile.ItemId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
-
-            <div class="d-flex justify-content-between px-3 my-2">
-                <div>
-                    @if (promptGeneratedProfiles.Any())
-                    {
-                        <div class="d-flex justify-content-center">
-                            <div class="dropdown">
-                                <button class="btn btn-outline-secondary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fa-solid fa-screwdriver-wrench"></i>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
-                                    {
-                                        <li>
-                                            <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.ItemId">@promptGeneratedProfile.Name</button>
-                                        </li>
-                                    }
-                                </ul>
-                            </div>
-                        </div>
-                    }
-                </div>
-
-                <div>
-                    <button class="btn btn-dark rounded-circle" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
-                        <i class="fa-solid fa-arrow-up"></i>
+    <!-- Input Area -->
+    <div class="ai-admin-widget-input">
+        <div class="ai-admin-widget-input-wrapper">
+            @if (promptGeneratedProfiles.Any())
+            {
+                <div class="dropdown me-1">
+                    <button class="btn btn-sm btn-link text-secondary p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="@T["Prompt templates"]">
+                        <i class="fa-solid fa-screwdriver-wrench"></i>
                     </button>
+                    <ul class="dropdown-menu">
+                        @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
+                        {
+                            <li>
+                                <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.ItemId">@promptGeneratedProfile.Name</button>
+                            </li>
+                        }
+                    </ul>
                 </div>
-
-            </div>
-
+            }
+            <textarea class="ai-admin-widget-prompt"
+                      id="@userPromptHtmlId"
+                      data-session-id=""
+                      data-profile-id="@(profile.ItemId)"
+                      placeholder="@T["Message..."]"
+                      rows="1"
+                      aria-label="@T["Message"]"></textarea>
+            <button class="ai-admin-widget-send-btn"
+                    id="@buttonHtmlId"
+                    disabled
+                    data-start-icon="<i class='fa-solid fa-arrow-up'></i>"
+                    data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                <i class="fa-solid fa-arrow-up"></i>
+            </button>
         </div>
     </div>
 
     @if (showHistory)
     {
-        <!-- Custom Chat History Section inside the widget -->
-        <div id="@chatWidgetHistoryList" class="chat-history-section">
-            <div class="d-flex justify-content-between mb-3">
+        <!-- History Panel -->
+        <div class="ai-admin-widget-history-panel" id="@historyPanelId">
+            <div class="history-header">
                 <h5>@T["Chat History"]</h5>
-                <button id="@closeChatHistoryButton" class="btn btn-sm btn-link text-secondary">
+                <button class="btn btn-sm btn-link text-secondary" id="@closeHistoryBtnId">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -152,133 +157,57 @@
     }
 </div>
 
+<style asp-name="AIChatAdminWidget" at="Head"></style>
+<script asp-name="AIChatAdminWidget" at="Foot"></script>
 <script asp-name="OpenAIChatApp" at="Foot"></script>
-<script at="Foot" depends-on="OpenAIChatApp">
-    openAIChatManager.initialize({
-        signalRHubUrl: '@hubLink',
-        appElementSelector: '#@chatAppHtmlId',
-        chatContainerElementSelector: '#@chatContainerHtmlId',
-        inputElementSelector: '#@userPromptHtmlId',
-        sendButtonElementSelector: '#@buttonHtmlId',
-        placeholderElementSelector: '#@placeholderHtmlId',
-        messages: [],
-        messageTemplate: `
-            <div class="list-group">
-                <div v-for="(message, index) in messages" :key="index" class="list-group-item p-1">
-                    <div class="d-flex justify-content-between">
-                        <div></div>
+<script at="Foot" depends-on="AIChatAdminWidget, OpenAIChatApp">
+    aiChatAdminWidget.initialize({
+        containerSelector: '#@widgetContainerId',
+        toggleSelector: '#@toggleBtnId',
+        closeButtonSelector: '#@closeBtnId',
+        newChatButtonSelector: '#@newChatBtnId',
+        showHistorySelector: '#@historyBtnId',
+        historyPanelSelector: '#@historyPanelId',
+        closeHistorySelector: '#@closeHistoryBtnId',
+        restoreSizeSelector: '#@restoreSizeBtnId',
+        promptSelector: '#@userPromptHtmlId',
+        storagePrefix: '@storagePrefix',
+        chatConfig: {
+            signalRHubUrl: '@hubLink',
+            appElementSelector: '#@chatAppHtmlId',
+            chatContainerElementSelector: '#@chatContainerHtmlId',
+            inputElementSelector: '#@userPromptHtmlId',
+            sendButtonElementSelector: '#@buttonHtmlId',
+            placeholderElementSelector: '#@placeholderHtmlId',
+            messages: [],
+            messageTemplate: `
+                <div class="list-group">
+                    <div v-for="(message, index) in messages" :key="index" class="list-group-item p-1 border-0">
                         <div>
-                            <i :class="message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl text-success'"></i>
+                            <div v-if="message.role === 'user'" class="ai-admin-widget-msg-role ai-admin-widget-msg-role-user">@T["You"]</div>
+                            <div v-else-if="message.role !== 'indicator'" class="ai-admin-widget-msg-role ai-admin-widget-msg-role-assistant">
+                                <i :class="'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')" style="font-size: 0.7rem;"></i>
+                                @T["Assistant"]
+                            </div>
+                            <div class="min-w-0">
+                                <h6 v-if="message.title" class="mb-1" style="font-size: 0.8rem;">{{ message.title }}</h6>
+                                <div v-html="message.htmlContent || message.content" style="font-size: 0.85rem; line-height: 1.5;"></div>
+                                <span class="message-buttons-container" v-if="!isIndicator(message)">
+                                    <button class="btn btn-sm btn-link text-secondary p-0" @@click="copyResponse(message.content)" title="@T["Copy"]">
+                                        <i class="fa-solid fa-copy" style="font-size: 0.75rem;"></i>
+                                    </button>
+                                </span>
+                            </div>
                         </div>
-                    <div class="py-2 px-1 lh-base">
-                        <h4 v-if="message.title">{{ message.title }}</h4>
-                        <div v-html="message.htmlContent || message.content"></div>
-                        <span class="message-buttons-container" v-if="!isIndicator(message)">
-                            <span class="ms-2 button-message-toolbox" @@click="copyResponse(message.content)" title="@T["Click here to copy response to clipboard."]">
-                                <i class="fa-solid fa-copy text-secondary"></i>
-                            </span>
-                        </span>
                     </div>
                 </div>
-
-            </div>
-        `,
-        indicatorTemplate: `
-            <div class="spinner-grow spinner-grow-sm text-center text-dark" role="status">
-                <span class="visually-hidden">@T["Loading..."]</span>
-            </div>
-            <div class="spinner-grow spinner-grow-sm text-center text-secondary" role="status">
-                <span class="visually-hidden">@T["Loading..."]</span>
-            </div>
-            <div class="spinner-grow spinner-grow-sm text-center text-light" role="status">
-                <span class="visually-hidden">@T["Loading..."]</span>
-            </div>
-        `,
-        widget: {
-            showChatButton: '#@chatWidgetButton',
-            newChatButton: '#@newChatButton',
-            chatWidgetContainer: '#@chatWidgetContainer',
-            chatHistorySection: '#@chatWidgetHistoryList',
-            closeHistoryButton: '#@closeChatHistoryButton',
-            closeChatButton: '#@closeChatButton',
-            showHistoryButton: '#@showHistoryButton',
-            chatWidgetStateName: '@chatWidgetStateName'
+            `,
+            indicatorTemplate: `
+                <div class="ai-admin-widget-msg-role ai-admin-widget-msg-role-assistant">
+                    <i class="fa fa-robot ai-streaming-icon" style="font-size: 0.7rem; display: inline-block;"></i>
+                    @T["Assistant"]
+                </div>
+            `
         }
     });
 </script>
-
-<style at="Head">
-
-    .chat-user-prompt-input:focus {
-        border: none;
-        box-shadow: none;
-    }
-
-    .widget-launch-button {
-        font-size: 1.5rem;
-    }
-
-    .widget-fixed-bottom-right {
-        position: fixed;
-        bottom: 1rem;
-        right: 1rem;
-    }
-
-    .button-message-toolbox {
-        cursor: pointer;
-    }
-
-    .chat-body {
-        max-height: calc(100% - 4rem - 3rem); /* Adjust to fit navbar + input box */
-        overflow-y: auto;
-    }
-
-    .chat-history-section {
-        position: absolute;
-        top: 2.5rem; /* Align below the navbar */
-        left: 0;
-        right: 0;
-        bottom: 0; /* Cover the input section */
-        background-color: white; /* Solid white background */
-        padding: 1rem;
-        z-index: 10; /* Overlay on top of chat content */
-        display: none; /* Initially hidden */
-        overflow-y: auto;
-    }
-
-        .chat-history-section.show {
-            display: block;
-        }
-
-    .navbar {
-        padding: 0.5rem 1rem; /* Thinner navbar */
-    }
-
-        .navbar .close-btn {
-            margin-left: auto; /* Align close button to the right */
-        }
-
-        .navbar .button-group {
-            margin-left: auto; /* Justify buttons to the right */
-        }
-
-            .navbar .button-group button {
-                margin-left: 0.5rem; /* Add space between buttons */
-            }
-
-    .ai-bot-icon {
-        color: #198754;
-    }
-
-    @@keyframes ai-streaming-pulse {
-        0%, 100% { color: #198754; }
-        25% { color: #0dcaf0; }
-        50% { color: #6f42c1; }
-        75% { color: #0dcaf0; }
-    }
-
-    .ai-streaming-icon,
-    .ai-streaming-icon::before {
-        animation: ai-streaming-pulse 2s ease-in-out infinite !important;
-    }
-</style>
