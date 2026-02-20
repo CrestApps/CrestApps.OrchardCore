@@ -21,7 +21,6 @@
     <PackageVersion Include="ModelContextProtocol" Version="0.8.0-preview.1" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.8.0-preview.1" />
     <PackageVersion Include="ModelContextProtocol.Core" Version="0.8.0-preview.1" />
-    <PackageVersion Include="DocumentFormat.OpenXml" Version="3.4.1" />
     <PackageVersion Include="PdfPig" Version="0.1.13" />
     <PackageVersion Include="GitHub.Copilot.SDK" Version="0.1.25" />
   </ItemGroup>
