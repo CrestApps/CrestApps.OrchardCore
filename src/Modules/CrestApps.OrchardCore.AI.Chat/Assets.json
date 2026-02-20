@@ -4,5 +4,17 @@
       "Assets/js/ai-chat.js"
     ],
     "output": "wwwroot/scripts/ai-chat.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/ai-chat-admin-widget.js"
+    ],
+    "output": "wwwroot/scripts/ai-chat-admin-widget.js"
+  },
+  {
+    "inputs": [
+      "Assets/css/ai-chat-admin-widget.css"
+    ],
+    "output": "wwwroot/css/ai-chat-admin-widget.css"
   }
 ]

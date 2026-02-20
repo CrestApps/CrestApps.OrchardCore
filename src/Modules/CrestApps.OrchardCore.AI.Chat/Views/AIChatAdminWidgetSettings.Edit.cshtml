@@ -1,0 +1,42 @@
+@using CrestApps.OrchardCore.AI.Chat.Settings
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using OrchardCore
+
+@model AIChatAdminWidgetSettingsViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="ProfileId" class="@Orchard.GetLabelClasses()">@T["AI Profile"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select">
+            <option value="">@T["-- Select a profile --"]</option>
+        </select>
+        <span asp-validation-for="ProfileId" class="text-danger"></span>
+        <span class="hint">@T["Select the AI profile to use for the admin widget. Users with the appropriate permission can chat with this profile from any admin page."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="MaxSessions" class="@Orchard.GetLabelClasses()">@T["Max History Sessions"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="number" class="form-control" asp-for="MaxSessions"
+               min="@AIChatAdminWidgetSettings.MinMaxSessions"
+               max="@AIChatAdminWidgetSettings.MaxMaxSessions"
+               step="1" />
+        <span asp-validation-for="MaxSessions" class="text-danger"></span>
+        <span class="hint">@T["The maximum number of previous chat sessions to display in the widget history panel ({0}-{1}).", AIChatAdminWidgetSettings.MinMaxSessions, AIChatAdminWidgetSettings.MaxMaxSessions]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="PrimaryColor" class="@Orchard.GetLabelClasses()">@T["Primary Color"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <div class="input-group">
+            <input type="color" class="form-control form-control-color" asp-for="PrimaryColor" />
+            <input type="text" class="form-control" value="@Model.PrimaryColor"
+                   oninput="document.getElementById('@Html.IdFor(m => m.PrimaryColor)').value = this.value"
+                   placeholder="@AIChatAdminWidgetSettings.DefaultPrimaryColor" />
+        </div>
+        <span asp-validation-for="PrimaryColor" class="text-danger"></span>
+        <span class="hint">@T["The primary color for the admin chat widget (header, toggle button). Defaults to {0}.", AIChatAdminWidgetSettings.DefaultPrimaryColor]</span>
+    </div>
+</div>

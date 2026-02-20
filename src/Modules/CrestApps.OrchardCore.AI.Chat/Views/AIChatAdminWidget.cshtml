@@ -1,50 +1,25 @@
-@using CrestApps.OrchardCore.AI
-@using CrestApps.OrchardCore.AI.Core
-@using CrestApps.OrchardCore.AI.Core.Models
+@using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.OrchardCore.AI.Models
 @using CrestApps.OrchardCore.SignalR.Core.Services
-@using Microsoft.AspNetCore.Authorization
-@using OrchardCore.ContentManagement
 @using OrchardCore.Environment.Shell
-@using CrestApps.OrchardCore.AI.Chat.Hubs
-@using CrestApps.OrchardCore.Services
 
-@inject INamedCatalog<AIProfile> ProfileCatalog
-@inject IAuthorizationService AuthorizationService
-@inject ShellSettings ShellSettings
 @inject HubRouteManager HubRouteManager
+@inject ShellSettings ShellSettings
 @{
-    ContentItem contentItem = Model.ContentItem;
-
-    var part = contentItem.As<AIProfilePart>();
-
-    if (string.IsNullOrEmpty(part?.ProfileId))
-    {
-        return;
-    }
-
-    var profile = await ProfileCatalog.FindByIdAsync(part.ProfileId);
-
-    if (profile == null)
-    {
-        return;
-    }
-
-    if (!await AuthorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
-    {
-        return;
-    }
+    var profile = (AIProfile)Model.Profile;
+    var sessions = (IEnumerable<AIChatSession>)Model.Sessions;
+    var maxSessions = (int)Model.MaxSessions;
+    var primaryColor = (string)Model.PrimaryColor;
 
     var hubLink = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
-    var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
-    var promptGeneratedProfiles = await ProfileCatalog.GetAsync(AIProfileType.TemplatePrompt);
+    var showHistory = maxSessions > 0;
 
-    var baseId = $"Widget_{contentItem.ContentItemId}";
-    var chatAppHtmlId = $"{baseId}_ChatApp";
-    var buttonHtmlId = $"{baseId}_SendButton";
-    var userPromptHtmlId = $"{baseId}_UserPrompt";
-    var chatContainerHtmlId = $"{baseId}_ChatContainer";
-    var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
+    var baseId = "AiAdminWidget";
+    var chatAppHtmlId = $"{baseId}_App";
+    var buttonHtmlId = $"{baseId}_Send";
+    var userPromptHtmlId = $"{baseId}_Prompt";
+    var chatContainerHtmlId = $"{baseId}_Body";
+    var placeholderHtmlId = $"{baseId}_Placeholder";
     var widgetContainerId = $"{baseId}_Container";
     var toggleBtnId = $"{baseId}_Toggle";
     var closeBtnId = $"{baseId}_Close";
@@ -57,25 +32,16 @@
     var storagePrefix = $"{ShellSettings.Name}-{baseId}";
 }
 
-<!-- Toggle Button -->
-<button id="@toggleBtnId" class="ai-admin-widget-toggle-btn" title="@T["Open AI Chat"]" style="--ai-widget-primary: var(--bs-primary, #0d6efd);">
-    <i class="fas fa-comments"></i>
+<!-- Toggle Button (green circle ring with robot icon) -->
+<button id="@toggleBtnId" class="ai-admin-widget-toggle-btn" title="@T["Open AI Assistant"]" style="--ai-widget-primary: @primaryColor;">
+    <i class="fa fa-robot"></i>
 </button>
 
 <!-- Widget Container -->
-<div id="@widgetContainerId" class="ai-admin-widget" style="--ai-widget-primary: var(--bs-primary, #0d6efd);">
+<div id="@widgetContainerId" class="ai-admin-widget" style="--ai-widget-primary: @primaryColor;">
     <!-- Header (drag handle) -->
     <div class="ai-admin-widget-header">
-        <span class="ai-admin-widget-title">
-            @if (Model.Header != null)
-            {
-                @await DisplayAsync(Model.Header)
-            }
-            else
-            {
-                @T["AI Chat"]
-            }
-        </span>
+        <span class="ai-admin-widget-title">@(string.IsNullOrEmpty(profile.DisplayText) ? T["AI Assistant"] : profile.DisplayText)</span>
         <div class="ai-admin-widget-header-actions">
             <button class="btn btn-link ai-admin-widget-restore-btn" id="@restoreSizeBtnId" title="@T["Restore size"]">
                 <i class="fas fa-compress"></i>
@@ -109,26 +75,10 @@
     <!-- Input Area -->
     <div class="ai-admin-widget-input">
         <div class="ai-admin-widget-input-wrapper">
-            @if (promptGeneratedProfiles.Any())
-            {
-                <div class="dropdown me-1">
-                    <button class="btn btn-sm btn-link text-secondary p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="@T["Prompt templates"]">
-                        <i class="fa-solid fa-screwdriver-wrench"></i>
-                    </button>
-                    <ul class="dropdown-menu">
-                        @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
-                        {
-                            <li>
-                                <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.ItemId">@promptGeneratedProfile.Name</button>
-                            </li>
-                        }
-                    </ul>
-                </div>
-            }
             <textarea class="ai-admin-widget-prompt"
                       id="@userPromptHtmlId"
                       data-session-id=""
-                      data-profile-id="@(profile.ItemId)"
+                      data-profile-id="@profile.ItemId"
                       placeholder="@T["Message..."]"
                       rows="1"
                       aria-label="@T["Message"]"></textarea>
@@ -152,7 +102,18 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            @await DisplayAsync(Model.History)
+            <ul class="ai-admin-widget-history-list">
+                @foreach (var session in sessions)
+                {
+                    <li>
+                        <a href="#" class="chat-session-history-item"
+                           data-session-id="@session.SessionId"
+                           title="@session.Title">
+                            @(string.IsNullOrEmpty(session.Title) ? T["Untitled Chat"] : session.Title)
+                        </a>
+                    </li>
+                }
+            </ul>
         </div>
     }
 </div>

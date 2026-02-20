@@ -20,12 +20,12 @@ window.chatInteractionManager = function () {
                         <div class="p-2 lh-base">
                             <h4 v-if="message.title">{{ message.title }}</h4>
                             <div v-html="message.htmlContent || message.content"></div>
+                            <span class="message-buttons-container" v-if="!isIndicator(message)">
+                                <button class="btn btn-sm btn-outline-secondary button-message-toolbox" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
+                                    <i class="fa-solid fa-copy"></i>
+                                </button>
+                            </span>
                         </div>
-                    </div>
-                    <div class="d-flex justify-content-center message-buttons-container" v-if="!isIndicator(message)">
-                        <button class="ms-2 btn btn-sm btn-outline-secondary button-message-toolbox" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
-                            <i class="fa-solid fa-copy fa-lg"></i>
-                        </button>
                     </div>
                 </div>
             </div>

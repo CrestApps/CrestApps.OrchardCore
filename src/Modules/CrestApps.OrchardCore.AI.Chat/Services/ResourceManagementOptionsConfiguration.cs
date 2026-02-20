@@ -16,6 +16,16 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetUrl("~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat.min.js", "~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat.js")
             .SetDependencies("vuejs:3", "signalr", "marked", "chart.js")
             .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript("AIChatAdminWidget")
+            .SetUrl("~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat-admin-widget.min.js", "~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat-admin-widget.js")
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineStyle("AIChatAdminWidget")
+            .SetUrl("~/CrestApps.OrchardCore.AI.Chat/css/ai-chat-admin-widget.min.css", "~/CrestApps.OrchardCore.AI.Chat/css/ai-chat-admin-widget.css")
+            .SetVersion("1.0.0");
     }
 
     public void Configure(ResourceManagementOptions options)

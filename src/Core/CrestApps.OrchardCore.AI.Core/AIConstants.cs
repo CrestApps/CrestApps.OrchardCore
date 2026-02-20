@@ -48,6 +48,8 @@ public static class AIConstants
         public const string ChatApi = "CrestApps.OrchardCore.AI.Chat.Api";
 
         public const string ProfileDocuments = "CrestApps.OrchardCore.AI.Documents.Profiles";
+
+        public const string ChatAdminWidget = "CrestApps.OrchardCore.AI.Chat.AdminWidget";
     }
 
     public static readonly string AIDocumentsIndexingTaskType = "AIDocuments";

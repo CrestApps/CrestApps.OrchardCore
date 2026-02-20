@@ -1,12 +1,15 @@
 using CrestApps.OrchardCore.AI.Chat.Drivers;
+using CrestApps.OrchardCore.AI.Chat.Filters;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.SignalR.Core.Services;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,5 +63,19 @@ public sealed class WidgetsStartup : StartupBase
             .UseDisplayDriver<AIChatProfilePartDisplayDriver>();
 
         services.AddDataMigration<AIChatMigrations>();
+    }
+}
+
+[Feature(AIConstants.Feature.ChatAdminWidget)]
+public sealed class AdminWidgetStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddSiteDisplayDriver<AIChatAdminWidgetSettingsDisplayDriver>();
+
+        services.Configure<MvcOptions>(options =>
+        {
+            options.Filters.Add<AIChatAdminWidgetFilter>();
+        });
     }
 }
