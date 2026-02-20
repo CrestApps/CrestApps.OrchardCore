@@ -1,9 +1,12 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Orchestration;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -14,15 +17,18 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IChatInteractionPromptStore _promptStore;
+    private readonly OrchestratorOptions _orchestratorOptions;
 
     public ChatInteractionDisplayDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
-        IChatInteractionPromptStore promptStore)
+        IChatInteractionPromptStore promptStore,
+        IOptions<OrchestratorOptions> orchestratorOptions)
     {
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
         _promptStore = promptStore;
+        _orchestratorOptions = orchestratorOptions.Value;
     }
 
     public override IDisplayResult Display(ChatInteraction interaction, BuildDisplayContext context)
@@ -56,17 +62,33 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.IsNew = context.IsNew;
         }).Location("Content");
 
-        // Title is placed first in Settings tab (position 1)
+        // Title is placed first in Settings tab.
         var titleResult = Initialize<EditChatInteractionTitleViewModel>("ChatInteractionTitle_Edit", model =>
         {
             model.ItemId = interaction.ItemId;
             model.Title = interaction.Title;
             model.IsNew = context.IsNew;
-        }).Location("Parameters:1#Settings:1");
+        }).Location("Parameters:1#Settings;1");
 
-        // Connection/Deployment comes after title (position 2) - handled by ChatInteractionConnectionDisplayDriver
+        // Orchestrator selection comes after title.
+        var orchestratorResult = Initialize<OrchestratorViewModel>("OrchestratorSelection_Edit", model =>
+        {
+            // Populate orchestrator selection when multiple orchestrators are registered.
+            var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
+            if (orchestrators.Count > 1)
+            {
+                model.OrchestratorName = interaction.OrchestratorName;
+                model.Orchestrators = orchestrators
+                    .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
+                    .ToArray();
+            }
+        }).Location("Parameters:2#Settings;1");
 
-        // Parameters come after connection (position 3)
+        // Connection/Deployment at position 3 - handled by ChatInteractionConnectionDisplayDriver.
+        // Copilot config at position 4 - handled by ChatInteractionCopilotDisplayDriver.
+        // Data source at position 5 - handled by ChatInteractionDataSourceDisplayDriver.
+
+        // General parameters come last in the Settings tab.
         var parametersResult = Initialize<EditChatInteractionViewModel>("ChatInteractionParameters_Edit", model =>
         {
             model.ItemId = interaction.ItemId;
@@ -83,8 +105,8 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.ToolNames = interaction.ToolNames?.ToArray();
             model.McpConnectionIds = interaction.McpConnectionIds?.ToArray();
             model.IsNew = context.IsNew;
-        }).Location("Parameters:4#Settings:5");
+        }).Location("Parameters:8#Settings;1");
 
-        return Combine(headerResult, contentResult, titleResult, parametersResult);
+        return Combine(headerResult, contentResult, titleResult, orchestratorResult, parametersResult);
     }
 }

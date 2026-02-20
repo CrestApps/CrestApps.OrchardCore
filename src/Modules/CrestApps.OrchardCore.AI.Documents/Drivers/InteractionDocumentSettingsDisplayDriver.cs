@@ -47,7 +47,7 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
             // Here you would typically populate the IndexProfiles from your data source.
             viewModel.IndexProfiles = items.Select(x => new SelectListItem(x.Name, x.Name));
 
-        }).Location("Content:5")
+        }).Location("Content:5%Documents;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageChatInteractionSettings));
     }

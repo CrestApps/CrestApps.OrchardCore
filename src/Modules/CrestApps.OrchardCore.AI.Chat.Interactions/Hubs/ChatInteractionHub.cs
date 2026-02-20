@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Models;
@@ -28,6 +29,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private readonly IServiceProvider _serviceProvider;
     private readonly IOrchestrationContextBuilder _orchestrationContextBuilder;
     private readonly IOrchestratorResolver _orchestratorResolver;
+    private readonly IEnumerable<IChatInteractionSettingsHandler> _settingsHandlers;
     private readonly IClock _clock;
     private readonly ILogger<ChatInteractionHub> _logger;
     private readonly IDocumentStore _documentStore;
@@ -41,6 +43,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         IServiceProvider serviceProvider,
         IOrchestrationContextBuilder orchestrationContextBuilder,
         IOrchestratorResolver orchestratorResolver,
+        IEnumerable<IChatInteractionSettingsHandler> settingsHandlers,
         IClock clock,
         ILogger<ChatInteractionHub> logger,
         Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor,
@@ -53,6 +56,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         _serviceProvider = serviceProvider;
         _orchestrationContextBuilder = orchestrationContextBuilder;
         _orchestratorResolver = orchestratorResolver;
+        _settingsHandlers = settingsHandlers;
         _clock = clock;
         _logger = logger;
         _documentStore = documentStore;
@@ -115,26 +119,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         });
     }
 
-    public async Task SaveSettings(
-        string itemId,
-        string title,
-        string connectionName,
-        string deploymentId,
-        string systemMessage,
-        float? temperature,
-        float? topP,
-        float? frequencyPenalty,
-        float? presencePenalty,
-        int? maxTokens,
-        int? pastMessagesCount,
-        string dataSourceId,
-        int? strictness,
-        int? topNDocuments,
-        string filter,
-        bool? isInScope,
-        bool? enableEarlyRag,
-        string[] toolNames,
-        string[] mcpConnectionIds)
+    public async Task SaveSettings(string itemId, JsonElement settings)
     {
         if (string.IsNullOrWhiteSpace(itemId))
         {
@@ -161,18 +146,28 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             return;
         }
 
-        interaction.Title = title ?? "Untitled";
-        interaction.ConnectionName = connectionName;
-        interaction.DeploymentId = deploymentId;
-        interaction.SystemMessage = systemMessage;
-        interaction.Temperature = temperature;
-        interaction.TopP = topP;
-        interaction.FrequencyPenalty = frequencyPenalty;
-        interaction.PresencePenalty = presencePenalty;
-        interaction.MaxTokens = maxTokens;
-        interaction.PastMessagesCount = pastMessagesCount;
-        interaction.ToolNames = toolNames?.ToList() ?? [];
-        interaction.McpConnectionIds = mcpConnectionIds?.ToList() ?? [];
+        // Let module-specific handlers bind their own properties first.
+        foreach (var handler in _settingsHandlers)
+        {
+            await handler.UpdatingAsync(interaction, settings);
+        }
+
+        // Apply core properties from the settings payload.
+        interaction.Title = GetString(settings, "title") ?? "Untitled";
+        interaction.OrchestratorName = GetString(settings, "orchestratorName");
+        interaction.ConnectionName = GetString(settings, "connectionName");
+        interaction.DeploymentId = GetString(settings, "deploymentId");
+        interaction.SystemMessage = GetString(settings, "systemMessage");
+        interaction.Temperature = GetFloat(settings, "temperature");
+        interaction.TopP = GetFloat(settings, "topP");
+        interaction.FrequencyPenalty = GetFloat(settings, "frequencyPenalty");
+        interaction.PresencePenalty = GetFloat(settings, "presencePenalty");
+        interaction.MaxTokens = GetInt(settings, "maxTokens");
+        interaction.PastMessagesCount = GetInt(settings, "pastMessagesCount");
+        interaction.ToolNames = GetStringArray(settings, "toolNames");
+        interaction.McpConnectionIds = GetStringArray(settings, "mcpConnectionIds");
+
+        var dataSourceId = GetString(settings, "dataSourceId");
 
         if (!string.IsNullOrWhiteSpace(dataSourceId))
         {
@@ -190,11 +185,11 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
                     interaction.Put(new AIDataSourceRagMetadata()
                     {
-                        Strictness = strictness,
-                        TopNDocuments = topNDocuments,
-                        IsInScope = isInScope ?? true,
-                        EnableEarlyRag = enableEarlyRag ?? false,
-                        Filter = filter,
+                        Strictness = GetInt(settings, "strictness"),
+                        TopNDocuments = GetInt(settings, "topNDocuments"),
+                        IsInScope = GetBool(settings, "isInScope") ?? true,
+                        EnableEarlyRag = GetBool(settings, "enableEarlyRag") ?? false,
+                        Filter = GetString(settings, "filter"),
                     });
                 }
             }
@@ -208,7 +203,102 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         await _interactionManager.UpdateAsync(interaction);
         await _documentStore.CommitAsync();
 
+        // Let handlers react after the interaction has been persisted.
+        foreach (var handler in _settingsHandlers)
+        {
+            await handler.UpdatedAsync(interaction, settings);
+        }
+
         await Clients.Caller.SettingsSaved(interaction.ItemId, interaction.Title);
+    }
+
+    private static string GetString(JsonElement el, string name)
+    {
+        if (el.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.String)
+        {
+            return prop.GetString();
+        }
+
+        return null;
+    }
+
+    private static float? GetFloat(JsonElement el, string name)
+    {
+        if (el.TryGetProperty(name, out var prop))
+        {
+            if (prop.ValueKind == JsonValueKind.Number)
+            {
+                return prop.GetSingle();
+            }
+
+            if (prop.ValueKind == JsonValueKind.String && float.TryParse(prop.GetString(), out var f))
+            {
+                return f;
+            }
+        }
+
+        return null;
+    }
+
+    private static int? GetInt(JsonElement el, string name)
+    {
+        if (el.TryGetProperty(name, out var prop))
+        {
+            if (prop.ValueKind == JsonValueKind.Number)
+            {
+                return prop.GetInt32();
+            }
+
+            if (prop.ValueKind == JsonValueKind.String && int.TryParse(prop.GetString(), out var i))
+            {
+                return i;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool? GetBool(JsonElement el, string name)
+    {
+        if (el.TryGetProperty(name, out var prop))
+        {
+            if (prop.ValueKind == JsonValueKind.True)
+            {
+                return true;
+            }
+
+            if (prop.ValueKind == JsonValueKind.False)
+            {
+                return false;
+            }
+        }
+
+        return null;
+    }
+
+    private static List<string> GetStringArray(JsonElement el, string name)
+    {
+        if (el.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.Array)
+        {
+            var list = new List<string>();
+
+            foreach (var item in prop.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String)
+                {
+                    var value = item.GetString();
+
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        list.Add(value);
+                    }
+                }
+            }
+
+            return list;
+        }
+
+        return [];
     }
 
     /// <summary>

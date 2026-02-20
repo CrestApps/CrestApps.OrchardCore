@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Orchestration;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Services;
@@ -25,6 +26,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     private readonly AIOptions _aiOptions;
     private readonly DefaultAIOptions _defaultAIOptions;
     private readonly AIProviderOptions _connectionOptions;
+    private readonly OrchestratorOptions _orchestratorOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -34,6 +36,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> connectionOptions,
         IOptions<DefaultAIOptions> defaultAIOptions,
+        IOptions<OrchestratorOptions> orchestratorOptions,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
@@ -45,6 +48,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         _aiOptions = aiOptions.Value;
         _defaultAIOptions = defaultAIOptions.Value;
         _connectionOptions = connectionOptions.Value;
+        _orchestratorOptions = orchestratorOptions.Value;
         S = stringLocalizer;
     }
 
@@ -96,6 +100,16 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             else
             {
                 model.ConnectionNames = [];
+            }
+
+            // Populate orchestrator selection when multiple orchestrators are registered.
+            var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
+            if (orchestrators.Count > 1)
+            {
+                model.OrchestratorName = profile.OrchestratorName;
+                model.Orchestrators = orchestrators
+                    .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
+                    .ToArray();
             }
         }).Location("Content:2");
 
@@ -203,6 +217,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         profile.TitleType = model.TitleType;
         profile.Type = model.ProfileType;
         profile.ConnectionName = connectionModel.ConnectionName;
+        profile.OrchestratorName = connectionModel.OrchestratorName;
 
         var parametersModel = new ProfileMetadataViewModel();
 

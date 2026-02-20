@@ -318,16 +318,16 @@ public sealed class ProgressiveToolOrchestratorTests
         Assert.Null(plan);
     }
 
-    private static ProgressiveToolOrchestrator CreateOrchestrator(
+    private static DefaultOrchestrator CreateOrchestrator(
         FakeCompletionService completionService = null,
         FakeToolRegistry toolRegistry = null)
     {
-        return new ProgressiveToolOrchestrator(
+        return new DefaultOrchestrator(
             completionService ?? new FakeCompletionService("default response"),
             toolRegistry ?? new FakeToolRegistry([]),
             new LuceneTextTokenizer(),
             Options.Create(new ProgressiveToolOrchestratorOptions()),
-            NullLogger<ProgressiveToolOrchestrator>.Instance);
+            NullLogger<DefaultOrchestrator>.Instance);
     }
 
     private static List<ToolRegistryEntry> CreateToolEntries(int count)
@@ -362,7 +362,7 @@ public sealed class ProgressiveToolOrchestratorTests
     }
 
     private static async Task<string> CollectStreamAsync(
-        ProgressiveToolOrchestrator orchestrator,
+        DefaultOrchestrator orchestrator,
         OrchestrationContext context)
     {
         var sb = new System.Text.StringBuilder();

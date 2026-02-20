@@ -31,16 +31,16 @@ internal sealed class DefaultOrchestratorResolver : IOrchestratorResolver
             ? _options.DefaultOrchestratorName
             : orchestratorName;
 
-        if (_options.Orchestrators.TryGetValue(name, out var orchestratorType))
+        if (_options.Orchestrators.TryGetValue(name, out var entry))
         {
-            if (_serviceProvider.GetService(orchestratorType) is IOrchestrator orchestrator)
+            if (_serviceProvider.GetService(entry.Type) is IOrchestrator orchestrator)
             {
                 return orchestrator;
             }
 
             _logger.LogWarning(
                 "Orchestrator '{OrchestratorName}' (type {Type}) is registered but could not be resolved. Falling back to default.",
-                name, orchestratorType.Name);
+                name, entry.Type.Name);
         }
         else if (!string.IsNullOrWhiteSpace(orchestratorName))
         {
@@ -51,15 +51,15 @@ internal sealed class DefaultOrchestratorResolver : IOrchestratorResolver
 
         // Fall back to the default.
         if (!string.Equals(name, _options.DefaultOrchestratorName, StringComparison.OrdinalIgnoreCase) &&
-            _options.Orchestrators.TryGetValue(_options.DefaultOrchestratorName, out var defaultType))
+            _options.Orchestrators.TryGetValue(_options.DefaultOrchestratorName, out var defaultEntry))
         {
-            if (_serviceProvider.GetService(defaultType) is IOrchestrator defaultOrchestrator)
+            if (_serviceProvider.GetService(defaultEntry.Type) is IOrchestrator defaultOrchestrator)
             {
                 return defaultOrchestrator;
             }
         }
 
         // Last resort: resolve ProgressiveToolOrchestrator directly.
-        return _serviceProvider.GetRequiredService<ProgressiveToolOrchestrator>();
+        return _serviceProvider.GetRequiredService<DefaultOrchestrator>();
     }
 }

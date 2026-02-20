@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Agent\CrestApps.OrchardCore.AI.Agent.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat\CrestApps.OrchardCore.AI.Chat.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Copilot\CrestApps.OrchardCore.AI.Chat.Copilot.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Chat.Interactions\CrestApps.OrchardCore.AI.Chat.Interactions.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.DataSources\CrestApps.OrchardCore.AI.DataSources.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.DataSources.AzureAI\CrestApps.OrchardCore.AI.DataSources.AzureAI.csproj" PrivateAssets="none" />

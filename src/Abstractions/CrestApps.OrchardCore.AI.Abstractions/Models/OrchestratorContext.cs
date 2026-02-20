@@ -39,6 +39,12 @@ public sealed class OrchestrationContext
     public string SourceName { get; set; }
 
     /// <summary>
+    /// Gets or sets the scoped service provider for this orchestration session.
+    /// Allows orchestrators to resolve services without constructor injection.
+    /// </summary>
+    public IServiceProvider ServiceProvider { get; set; }
+
+    /// <summary>
     /// Gets or sets the document references available for this session.
     /// System tools use these to load document content on demand.
     /// </summary>

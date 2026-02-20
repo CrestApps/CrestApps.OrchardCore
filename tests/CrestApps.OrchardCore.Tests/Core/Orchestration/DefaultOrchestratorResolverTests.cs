@@ -18,7 +18,7 @@ public sealed class DefaultOrchestratorResolverTests
         var orchestrator = resolver.Resolve(null);
 
         Assert.NotNull(orchestrator);
-        Assert.IsType<ProgressiveToolOrchestrator>(orchestrator);
+        Assert.IsType<DefaultOrchestrator>(orchestrator);
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public sealed class DefaultOrchestratorResolverTests
         var orchestrator = resolver.Resolve("");
 
         Assert.NotNull(orchestrator);
-        Assert.IsType<ProgressiveToolOrchestrator>(orchestrator);
+        Assert.IsType<DefaultOrchestrator>(orchestrator);
     }
 
     [Fact]
@@ -37,21 +37,21 @@ public sealed class DefaultOrchestratorResolverTests
     {
         var resolver = CreateResolver();
 
-        var orchestrator = resolver.Resolve(ProgressiveToolOrchestrator.OrchestratorName);
+        var orchestrator = resolver.Resolve(DefaultOrchestrator.OrchestratorName);
 
         Assert.NotNull(orchestrator);
-        Assert.IsType<ProgressiveToolOrchestrator>(orchestrator);
+        Assert.IsType<DefaultOrchestrator>(orchestrator);
     }
 
     [Fact]
     public void Resolve_RegisteredName_ReturnsCorrectOrchestrator()
     {
         var options = new OrchestratorOptions();
-        options.Orchestrators["custom"] = typeof(TestOrchestrator);
+        options.Orchestrators["custom"] = new OrchestratorEntry { Type = typeof(TestOrchestrator) };
 
         var services = new ServiceCollection();
         services.AddScoped<TestOrchestrator>();
-        services.AddScoped<ProgressiveToolOrchestrator>();
+        services.AddScoped<DefaultOrchestrator>();
         RegisterDependencies(services);
         var sp = services.BuildServiceProvider().CreateScope().ServiceProvider;
 
@@ -74,17 +74,17 @@ public sealed class DefaultOrchestratorResolverTests
         var orchestrator = resolver.Resolve("nonexistent");
 
         Assert.NotNull(orchestrator);
-        Assert.IsType<ProgressiveToolOrchestrator>(orchestrator);
+        Assert.IsType<DefaultOrchestrator>(orchestrator);
     }
 
     [Fact]
     public void Resolve_CaseInsensitive()
     {
         var options = new OrchestratorOptions();
-        options.Orchestrators["Default"] = typeof(ProgressiveToolOrchestrator);
+        options.Orchestrators["Default"] = new OrchestratorEntry { Type = typeof(DefaultOrchestrator) };
 
         var services = new ServiceCollection();
-        services.AddScoped<ProgressiveToolOrchestrator>();
+        services.AddScoped<DefaultOrchestrator>();
         RegisterDependencies(services);
         var sp = services.BuildServiceProvider().CreateScope().ServiceProvider;
 
@@ -101,10 +101,10 @@ public sealed class DefaultOrchestratorResolverTests
     private static DefaultOrchestratorResolver CreateResolver()
     {
         var options = new OrchestratorOptions();
-        options.Orchestrators[ProgressiveToolOrchestrator.OrchestratorName] = typeof(ProgressiveToolOrchestrator);
+        options.Orchestrators[DefaultOrchestrator.OrchestratorName] = new OrchestratorEntry { Type = typeof(DefaultOrchestrator) };
 
         var services = new ServiceCollection();
-        services.AddScoped<ProgressiveToolOrchestrator>();
+        services.AddScoped<DefaultOrchestrator>();
         RegisterDependencies(services);
         var sp = services.BuildServiceProvider().CreateScope().ServiceProvider;
 

@@ -1,12 +1,13 @@
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
 @using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.Orchestration
 @using OrchardCore
 
 @model EditChatInteractionConnectionViewModel
 
 @if (Model.ConnectionNames?.Count > 1)
 {
-    <div class="mb-3">
+    <div class="mb-3 orchestrator-dependent orchestrator-dependent-@(DefaultOrchestrator.OrchestratorName)">
         <label asp-for="ConnectionName" class="form-label">
             @T["Connection"]
             <span class="text-muted" data-bs-toggle="tooltip" title="@T["The connection to use for this chat interaction. If not selected, the default connection will be used."]">
@@ -24,7 +25,7 @@ else
     <input type="hidden" asp-for="ConnectionName" />
 }
 
-<div class="mb-3">
+<div class="mb-3 orchestrator-dependent orchestrator-dependent-@(DefaultOrchestrator.OrchestratorName)">
     <label asp-for="DeploymentId" class="form-label">
         @T["Deployment"]
         <span class="text-muted" data-bs-toggle="tooltip" title="@T["The AI model deployment to use for this chat interaction. If not selected, the default deployment will be used."]">

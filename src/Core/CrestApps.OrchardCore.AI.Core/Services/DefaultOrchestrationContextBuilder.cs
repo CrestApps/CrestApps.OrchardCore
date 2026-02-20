@@ -7,13 +7,16 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultOrchestrationContextBuilder : IOrchestrationContextBuilder
 {
     private readonly IEnumerable<IOrchestrationContextHandler> _handlers;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
 
     public DefaultOrchestrationContextBuilder(
         IEnumerable<IOrchestrationContextHandler> handlers,
+        IServiceProvider serviceProvider,
         ILogger<DefaultOrchestrationContextBuilder> logger)
     {
         _handlers = handlers?.Reverse() ?? [];
+        _serviceProvider = serviceProvider;
         _logger = logger;
     }
 
@@ -21,7 +24,10 @@ public sealed class DefaultOrchestrationContextBuilder : IOrchestrationContextBu
     {
         ArgumentNullException.ThrowIfNull(resource);
 
-        var context = new OrchestrationContext();
+        var context = new OrchestrationContext
+        {
+            ServiceProvider = _serviceProvider,
+        };
 
         var building = new OrchestrationContextBuildingContext(resource, context);
         await _handlers.InvokeAsync((h, c) => h.BuildingAsync(c), building, _logger);

@@ -3,9 +3,26 @@
 
 @model EditConnectionProfileViewModel
 
-@if (Model.ConnectionNames?.Count > 1)
+@if (Model.Orchestrators?.Count > 1)
 {
     <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OrchestratorName" class="@Orchard.GetLabelClasses()">@T["Orchestrator"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <select asp-for="OrchestratorName" asp-items="Model.Orchestrators" class="form-select" id="orchestrator-selector">
+            </select>
+            <span asp-validation-for="OrchestratorName" class="text-danger"></span>
+            <span class="hint">@T["The orchestrator to use for this profile. The orchestrator controls how tools are selected and how the AI execution loop is managed."]</span>
+        </div>
+    </div>
+}
+else
+{
+    <input type="hidden" asp-for="OrchestratorName" />
+}
+
+@if (Model.ConnectionNames?.Count > 1)
+{
+    <div class="@Orchard.GetWrapperClasses("orchestrator-dependent orchestrator-dependent-default")">
         <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection name"]</label>
         <div class="@Orchard.GetEndClasses()">
             <select asp-for="ConnectionName" asp-items="Model.ConnectionNames" class="form-select">
@@ -20,3 +37,32 @@ else
 {
     <input type="hidden" asp-for="ConnectionName" />
 }
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        const orchestratorSelector = document.getElementById('orchestrator-selector');
+        const defaultOrchestrator = 'default';
+
+        if (!orchestratorSelector) return;
+
+        function updateFieldVisibility() {
+            const selectedOrchestrator = orchestratorSelector.value || defaultOrchestrator;
+
+            const elements = document.getElementsByClassName('orchestrator-dependent');
+            const targetClass = 'orchestrator-dependent-' + selectedOrchestrator;
+
+            for (const el of elements) {
+                el.classList.toggle(
+                    'd-none',
+                    !el.classList.contains(targetClass)
+                );
+            }
+        }
+
+        // Initial render
+        updateFieldVisibility();
+
+        // React to user changes
+        orchestratorSelector.addEventListener('change', updateFieldVisibility);
+    });
+</script>
