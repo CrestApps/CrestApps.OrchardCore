@@ -29,7 +29,7 @@ window.openAIChatManager = function () {
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
-    messageTemplate: "\n        <div class=\"list-group\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                <div class=\"d-flex align-items-center\">\n                    <div class=\"p-2\">\n                        <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                    </div>\n                    <div class=\"p-2 lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent || message.content\"></div>\n                    </div>\n                </div>\n                <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"!isIndicator(message)\">\n                    <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                        <i class=\"fa-solid fa-copy fa-lg\"></i>\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
+    messageTemplate: "\n        <div class=\"list-group\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                <div class=\"d-flex align-items-center\">\n                    <div class=\"p-2\">\n                        <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                    </div>\n                    <div class=\"p-2 lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent || message.content\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <button class=\"btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
     indicatorTemplate: "<div class=\"spinner-grow spinner-grow-sm\" role=\"status\"><span class=\"visually-hidden\">Loading...</span></div>"
   };
   var renderer = new marked.Renderer();
@@ -422,7 +422,7 @@ window.openAIChatManager = function () {
               var message = _this5.messages[messageIndex];
               if (!message) {
                 if (chunk.sessionId && !currentSessionId) {
-                  _this5.setSessionId(chunk.sessionId);
+                  _this5.initializeSession(chunk.sessionId);
                 }
                 _this5.hideTypingIndicator();
                 // Re-assign the index after hiding the typing indicator.
@@ -533,11 +533,34 @@ window.openAIChatManager = function () {
           if (stopIcon) {
             this.buttonElement.innerHTML = stopIcon;
           }
+          if (this.inputElement) {
+            this.inputElement.setAttribute('disabled', 'disabled');
+          }
         },
         streamingFinished: function streamingFinished() {
           var startIcon = this.buttonElement.getAttribute('data-start-icon');
           if (startIcon) {
             this.buttonElement.innerHTML = startIcon;
+          }
+          if (this.inputElement) {
+            this.inputElement.removeAttribute('disabled');
+            this.inputElement.focus();
+          }
+
+          // Directly manipulate the DOM to stop all streaming animations.
+          if (this.chatContainer) {
+            var icons = this.chatContainer.querySelectorAll('.ai-streaming-icon');
+            for (var i = 0; i < icons.length; i++) {
+              icons[i].classList.remove('ai-streaming-icon');
+              icons[i].classList.add('ai-bot-icon');
+            }
+          }
+
+          // Also update Vue data for consistency.
+          for (var i = 0; i < this.messages.length; i++) {
+            if (this.messages[i].isStreaming) {
+              this.messages[i].isStreaming = false;
+            }
           }
         },
         generatePrompt: function generatePrompt(element) {
@@ -619,11 +642,12 @@ window.openAIChatManager = function () {
             var atBottom = _this7.chatContainer.scrollHeight - _this7.chatContainer.clientHeight - _this7.chatContainer.scrollTop <= threshold;
             _this7.autoScroll = atBottom;
           });
-          this.inputElement.addEventListener('keyup', function (event) {
+          this.inputElement.addEventListener('keydown', function (event) {
             if (_this7.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
               _this7.buttonElement.click();
             }
           });
@@ -707,20 +731,12 @@ window.openAIChatManager = function () {
         },
         initializeWidget: function initializeWidget() {
           var _this8 = this;
-          if (!config.widget.showChatButton) {
-            console.error('The widget showChatButton is required.');
-            return;
-          }
           if (!config.widget.chatWidgetContainer) {
             console.error('The widget chatWidgetContainer is required.');
             return;
           }
           if (!config.widget.chatWidgetStateName) {
             console.error('The widget chatWidgetStateName is required.');
-            return;
-          }
-          var showChatButton = document.querySelector(config.widget.showChatButton);
-          if (!showChatButton) {
             return;
           }
           var chatWidgetContainer = document.querySelector(config.widget.chatWidgetContainer);
@@ -733,31 +749,9 @@ window.openAIChatManager = function () {
           this.chatWidgetStateName = config.widget.chatWidgetStateName;
           this.chatWidgetStateSession = config.widget.chatWidgetStateName + 'Session';
           this.widgetIsInitialized = true;
-          var isOpen = localStorage.getItem(this.chatWidgetStateName) === 'open';
-          if (isOpen) {
-            this.reloadCurrentSession();
-            chatWidgetContainer.classList.remove('d-none');
-          }
-          showChatButton.addEventListener('click', function () {
-            var isHidden = chatWidgetContainer.classList.contains('d-none');
-            if (isHidden) {
-              chatWidgetContainer.classList.remove('d-none');
-              localStorage.setItem(_this8.chatWidgetStateName, 'open');
-              _this8.reloadCurrentSession();
-            } else {
-              chatWidgetContainer.classList.add('d-none');
-              localStorage.setItem(_this8.chatWidgetStateName, 'closed');
-            }
-          });
-          if (config.widget.closeChatButton) {
-            var closeChatButton = document.querySelector(config.widget.closeChatButton);
-            if (closeChatButton) {
-              closeChatButton.addEventListener('click', function () {
-                chatWidgetContainer.classList.add('d-none');
-                localStorage.setItem(_this8.chatWidgetStateName, 'closed');
-              });
-            }
-          }
+
+          // Auto-load the last session so the user always sees previous chat history.
+          this.reloadCurrentSession();
           if (config.widget.showHistoryButton && this.chatHistorySection) {
             var showHistoryButton = document.querySelector(config.widget.showHistoryButton);
             if (showHistoryButton) {

@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.AI.Core.Orchestration;
 /// <para>For small tool sets (below the threshold), all configured tools are injected directly
 /// without planning overhead, matching legacy behavior.</para>
 /// </remarks>
-public sealed class ProgressiveToolOrchestrator : IOrchestrator
+public sealed class DefaultOrchestrator : IOrchestrator
 {
     public const string OrchestratorName = "default";
 
@@ -29,12 +29,12 @@ public sealed class ProgressiveToolOrchestrator : IOrchestrator
     private readonly ProgressiveToolOrchestratorOptions _options;
     private readonly ILogger _logger;
 
-    public ProgressiveToolOrchestrator(
+    public DefaultOrchestrator(
         IAICompletionService completionService,
         IToolRegistry toolRegistry,
         ITextTokenizer tokenizer,
         IOptions<ProgressiveToolOrchestratorOptions> options,
-        ILogger<ProgressiveToolOrchestrator> logger)
+        ILogger<DefaultOrchestrator> logger)
     {
         _completionService = completionService;
         _toolRegistry = toolRegistry;

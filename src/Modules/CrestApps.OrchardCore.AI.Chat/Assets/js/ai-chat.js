@@ -19,12 +19,12 @@ var defaultConfig = {
                     <div class="p-2 lh-base">
                         <h4 v-if="message.title">{{ message.title }}</h4>
                         <div v-html="message.htmlContent || message.content"></div>
+                        <span class="message-buttons-container" v-if="!isIndicator(message)">
+                            <button class="btn btn-sm btn-outline-secondary button-message-toolbox" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
+                                <i class="fa-solid fa-copy"></i>
+                            </button>
+                        </span>
                     </div>
-                </div>
-                <div class="d-flex justify-content-center message-buttons-container" v-if="!isIndicator(message)">
-                    <button class="ms-2 btn btn-sm btn-outline-secondary button-message-toolbox" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
-                        <i class="fa-solid fa-copy fa-lg"></i>
-                    </button>
                 </div>
             </div>
         </div>
@@ -445,7 +445,7 @@ function parseMarkdownContent(content, message) {
                                 if (!message) {
 
                                     if (chunk.sessionId && !currentSessionId) {
-                                        this.setSessionId(chunk.sessionId);
+                                        this.initializeSession(chunk.sessionId);
                                     }
 
                                     this.hideTypingIndicator();
@@ -573,12 +573,37 @@ function parseMarkdownContent(content, message) {
                     if (stopIcon) {
                         this.buttonElement.innerHTML = stopIcon;
                     }
+
+                    if (this.inputElement) {
+                        this.inputElement.setAttribute('disabled', 'disabled');
+                    }
                 },
                 streamingFinished() {
                     var startIcon = this.buttonElement.getAttribute('data-start-icon');
 
                     if (startIcon) {
                         this.buttonElement.innerHTML = startIcon;
+                    }
+
+                    if (this.inputElement) {
+                        this.inputElement.removeAttribute('disabled');
+                        this.inputElement.focus();
+                    }
+
+                    // Directly manipulate the DOM to stop all streaming animations.
+                    if (this.chatContainer) {
+                        var icons = this.chatContainer.querySelectorAll('.ai-streaming-icon');
+                        for (var i = 0; i < icons.length; i++) {
+                            icons[i].classList.remove('ai-streaming-icon');
+                            icons[i].classList.add('ai-bot-icon');
+                        }
+                    }
+
+                    // Also update Vue data for consistency.
+                    for (var i = 0; i < this.messages.length; i++) {
+                        if (this.messages[i].isStreaming) {
+                            this.messages[i].isStreaming = false;
+                        }
                     }
                 },
                 generatePrompt(element) {
@@ -664,13 +689,14 @@ function parseMarkdownContent(content, message) {
                         this.autoScroll = atBottom;
                     });
 
-                    this.inputElement.addEventListener('keyup', event => {
+                    this.inputElement.addEventListener('keydown', event => {
 
                         if (this.stream != null) {
                             return;
                         }
 
                         if (event.key === "Enter" && !event.shiftKey) {
+                            event.preventDefault();
                             this.buttonElement.click();
                         }
                     });
@@ -766,11 +792,6 @@ function parseMarkdownContent(content, message) {
                 },
                 initializeWidget() {
 
-                    if (!config.widget.showChatButton) {
-                        console.error('The widget showChatButton is required.');
-                        return;
-                    }
-
                     if (!config.widget.chatWidgetContainer) {
                         console.error('The widget chatWidgetContainer is required.');
                         return;
@@ -778,12 +799,6 @@ function parseMarkdownContent(content, message) {
 
                     if (!config.widget.chatWidgetStateName) {
                         console.error('The widget chatWidgetStateName is required.');
-                        return;
-                    }
-
-                    const showChatButton = document.querySelector(config.widget.showChatButton);
-
-                    if (!showChatButton) {
                         return;
                     }
 
@@ -801,35 +816,8 @@ function parseMarkdownContent(content, message) {
                     this.chatWidgetStateSession = config.widget.chatWidgetStateName + 'Session';
                     this.widgetIsInitialized = true;
 
-                    const isOpen = localStorage.getItem(this.chatWidgetStateName) === 'open';
-
-                    if (isOpen) {
-                        this.reloadCurrentSession();
-                        chatWidgetContainer.classList.remove('d-none');
-                    }
-
-                    showChatButton.addEventListener('click', () => {
-                        var isHidden = chatWidgetContainer.classList.contains('d-none');
-                        if (isHidden) {
-                            chatWidgetContainer.classList.remove('d-none');
-                            localStorage.setItem(this.chatWidgetStateName, 'open');
-                            this.reloadCurrentSession();
-                        } else {
-                            chatWidgetContainer.classList.add('d-none');
-                            localStorage.setItem(this.chatWidgetStateName, 'closed');
-                        }
-                    });
-
-                    if (config.widget.closeChatButton) {
-                        const closeChatButton = document.querySelector(config.widget.closeChatButton);
-
-                        if (closeChatButton) {
-                            closeChatButton.addEventListener('click', () => {
-                                chatWidgetContainer.classList.add('d-none');
-                                localStorage.setItem(this.chatWidgetStateName, 'closed');
-                            });
-                        }
-                    }
+                    // Auto-load the last session so the user always sees previous chat history.
+                    this.reloadCurrentSession();
 
                     if (config.widget.showHistoryButton && this.chatHistorySection) {
 

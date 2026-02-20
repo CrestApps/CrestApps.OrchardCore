@@ -146,7 +146,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IToolRegistry, DefaultToolRegistry>();
 
         // Register the default orchestrator.
-        services.AddOrchestrator<ProgressiveToolOrchestrator>(ProgressiveToolOrchestrator.OrchestratorName);
+        services.AddOrchestrator<DefaultOrchestrator>(DefaultOrchestrator.OrchestratorName)
+            .WithTitle("Default Orchestrator");
 
         // Register the resolver.
         services.AddScoped<IOrchestratorResolver, DefaultOrchestratorResolver>();
@@ -167,29 +168,37 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Registers an orchestrator implementation with the given name.
+    /// Returns a builder for fluent configuration (e.g., setting a display title).
     /// </summary>
     /// <typeparam name="TOrchestrator">The orchestrator type implementing <see cref="IOrchestrator"/>.</typeparam>
     /// <param name="services">The service collection.</param>
     /// <param name="name">The unique name for this orchestrator.</param>
-    /// <returns>The service collection for chaining.</returns>
+    /// <returns>A builder for further configuration of this orchestrator.</returns>
     /// <example>
     /// <code>
-    /// services.AddOrchestrator&lt;ProgressiveToolOrchestrator&gt;("default");
-    /// services.AddOrchestrator&lt;CopilotOrchestrator&gt;("copilot");
+    /// services.AddOrchestrator&lt;ProgressiveToolOrchestrator&gt;("default")
+    ///     .WithTitle("Progressive Tool Orchestrator");
+    /// services.AddOrchestrator&lt;CopilotOrchestrator&gt;("copilot")
+    ///     .WithTitle("GitHub Copilot Orchestrator");
     /// </code>
     /// </example>
-    public static IServiceCollection AddOrchestrator<TOrchestrator>(this IServiceCollection services, string name)
+    public static OrchestratorBuilder<TOrchestrator> AddOrchestrator<TOrchestrator>(this IServiceCollection services, string name)
         where TOrchestrator : class, IOrchestrator
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
         services.TryAddScoped<TOrchestrator>();
 
+        var entry = new OrchestratorEntry
+        {
+            Type = typeof(TOrchestrator),
+        };
+
         services.Configure<OrchestratorOptions>(options =>
         {
-            options.Orchestrators[name] = typeof(TOrchestrator);
+            options.Orchestrators[name] = entry;
         });
 
-        return services;
+        return new OrchestratorBuilder<TOrchestrator>(entry);
     }
 }

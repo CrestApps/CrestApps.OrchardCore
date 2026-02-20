@@ -24,3 +24,15 @@ using OrchardCore.Modules.Manifest;
         AIConstants.Feature.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.ChatAdminWidget,
+    Name = "AI Chat Admin Widget",
+    Description = "Provides a floating AI chat widget on every admin page, allowing users to interact with a predefined AI profile.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Chat,
+        AIConstants.Feature.OrchardCoreAIAgent,
+    ]
+)]

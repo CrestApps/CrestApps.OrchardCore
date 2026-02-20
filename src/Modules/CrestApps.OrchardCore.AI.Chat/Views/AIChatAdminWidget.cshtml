@@ -1,0 +1,174 @@
+@using CrestApps.OrchardCore.AI.Chat.Hubs
+@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.OrchardCore.SignalR.Core.Services
+@using OrchardCore.Environment.Shell
+
+@inject HubRouteManager HubRouteManager
+@inject ShellSettings ShellSettings
+@{
+    var profile = (AIProfile)Model.Profile;
+    var sessions = (IEnumerable<AIChatSession>)Model.Sessions;
+    var maxSessions = (int)Model.MaxSessions;
+    var primaryColor = (string)Model.PrimaryColor;
+
+    var hubLink = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
+    var showHistory = maxSessions > 0;
+
+    var baseId = "AiAdminWidget";
+    var chatAppHtmlId = $"{baseId}_App";
+    var buttonHtmlId = $"{baseId}_Send";
+    var userPromptHtmlId = $"{baseId}_Prompt";
+    var chatContainerHtmlId = $"{baseId}_Body";
+    var placeholderHtmlId = $"{baseId}_Placeholder";
+    var widgetContainerId = $"{baseId}_Container";
+    var toggleBtnId = $"{baseId}_Toggle";
+    var closeBtnId = $"{baseId}_Close";
+    var newChatBtnId = $"{baseId}_NewChat";
+    var historyBtnId = $"{baseId}_ShowHistory";
+    var historyPanelId = $"{baseId}_HistoryPanel";
+    var closeHistoryBtnId = $"{baseId}_CloseHistory";
+    var restoreSizeBtnId = $"{baseId}_RestoreSize";
+
+    var storagePrefix = $"{ShellSettings.Name}-{baseId}";
+}
+
+<!-- Toggle Button (green circle ring with robot icon) -->
+<button id="@toggleBtnId" class="ai-admin-widget-toggle-btn" title="@T["Open AI Assistant"]" style="--ai-widget-primary: @primaryColor;">
+    <i class="fa fa-robot"></i>
+</button>
+
+<!-- Widget Container -->
+<div id="@widgetContainerId" class="ai-admin-widget" style="--ai-widget-primary: @primaryColor;">
+    <!-- Header (drag handle) -->
+    <div class="ai-admin-widget-header">
+        <span class="ai-admin-widget-title">@(string.IsNullOrEmpty(profile.DisplayText) ? T["AI Assistant"] : profile.DisplayText)</span>
+        <div class="ai-admin-widget-header-actions">
+            <button class="btn btn-link ai-admin-widget-restore-btn" id="@restoreSizeBtnId" title="@T["Restore size"]">
+                <i class="fas fa-compress"></i>
+            </button>
+            <button class="btn btn-link" id="@newChatBtnId" title="@T["New chat"]">
+                <i class="fas fa-plus"></i>
+            </button>
+            @if (showHistory)
+            {
+                <button class="btn btn-link" id="@historyBtnId" title="@T["Chat history"]">
+                    <i class="fas fa-clock-rotate-left"></i>
+                </button>
+            }
+            <button class="btn btn-link" id="@closeBtnId" title="@T["Close"]">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Resize Handle (top-left, below header) -->
+    <div class="ai-admin-widget-resize-handle"></div>
+
+    <!-- Chat Body -->
+    <div class="ai-admin-widget-body" id="@chatContainerHtmlId">
+        <div id="@placeholderHtmlId" class="ai-admin-widget-placeholder">
+            <h4>@(string.IsNullOrEmpty(profile.WelcomeMessage) ? T["What do you want to know?"] : profile.WelcomeMessage)</h4>
+        </div>
+        <div id="@chatAppHtmlId"></div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="ai-admin-widget-input">
+        <div class="ai-admin-widget-input-wrapper">
+            <textarea class="ai-admin-widget-prompt"
+                      id="@userPromptHtmlId"
+                      data-session-id=""
+                      data-profile-id="@profile.ItemId"
+                      placeholder="@T["Message..."]"
+                      rows="1"
+                      aria-label="@T["Message"]"></textarea>
+            <button class="ai-admin-widget-send-btn"
+                    id="@buttonHtmlId"
+                    disabled
+                    data-start-icon="<i class='fa-solid fa-arrow-up'></i>"
+                    data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                <i class="fa-solid fa-arrow-up"></i>
+            </button>
+        </div>
+    </div>
+
+    @if (showHistory)
+    {
+        <!-- History Panel -->
+        <div class="ai-admin-widget-history-panel" id="@historyPanelId">
+            <div class="history-header">
+                <h5>@T["Chat History"]</h5>
+                <button class="btn btn-sm btn-link text-secondary" id="@closeHistoryBtnId">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <ul class="ai-admin-widget-history-list">
+                @foreach (var session in sessions)
+                {
+                    <li>
+                        <a href="#" class="chat-session-history-item"
+                           data-session-id="@session.SessionId"
+                           title="@session.Title">
+                            @(string.IsNullOrEmpty(session.Title) ? T["Untitled Chat"] : session.Title)
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+</div>
+
+<style asp-name="AIChatAdminWidget" at="Head"></style>
+<script asp-name="AIChatAdminWidget" at="Foot"></script>
+<script asp-name="OpenAIChatApp" at="Foot"></script>
+<script at="Foot" depends-on="AIChatAdminWidget, OpenAIChatApp">
+    aiChatAdminWidget.initialize({
+        containerSelector: '#@widgetContainerId',
+        toggleSelector: '#@toggleBtnId',
+        closeButtonSelector: '#@closeBtnId',
+        newChatButtonSelector: '#@newChatBtnId',
+        showHistorySelector: '#@historyBtnId',
+        historyPanelSelector: '#@historyPanelId',
+        closeHistorySelector: '#@closeHistoryBtnId',
+        restoreSizeSelector: '#@restoreSizeBtnId',
+        promptSelector: '#@userPromptHtmlId',
+        storagePrefix: '@storagePrefix',
+        chatConfig: {
+            signalRHubUrl: '@hubLink',
+            appElementSelector: '#@chatAppHtmlId',
+            chatContainerElementSelector: '#@chatContainerHtmlId',
+            inputElementSelector: '#@userPromptHtmlId',
+            sendButtonElementSelector: '#@buttonHtmlId',
+            placeholderElementSelector: '#@placeholderHtmlId',
+            messages: [],
+            messageTemplate: `
+                <div class="list-group">
+                    <div v-for="(message, index) in messages" :key="index" class="list-group-item p-1 border-0">
+                        <div>
+                            <div v-if="message.role === 'user'" class="ai-admin-widget-msg-role ai-admin-widget-msg-role-user">@T["You"]</div>
+                            <div v-else-if="message.role !== 'indicator'" class="ai-admin-widget-msg-role ai-admin-widget-msg-role-assistant">
+                                <i :class="'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')" style="font-size: 0.7rem;"></i>
+                                @T["Assistant"]
+                            </div>
+                            <div class="min-w-0">
+                                <h6 v-if="message.title" class="mb-1" style="font-size: 0.8rem;">{{ message.title }}</h6>
+                                <div v-html="message.htmlContent || message.content" style="font-size: 0.85rem; line-height: 1.5;"></div>
+                                <span class="message-buttons-container" v-if="!isIndicator(message)">
+                                    <button class="btn btn-sm btn-link text-secondary p-0" @@click="copyResponse(message.content)" title="@T["Copy"]">
+                                        <i class="fa-solid fa-copy" style="font-size: 0.75rem;"></i>
+                                    </button>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            indicatorTemplate: `
+                <div class="ai-admin-widget-msg-role ai-admin-widget-msg-role-assistant">
+                    <i class="fa fa-robot ai-streaming-icon" style="font-size: 0.7rem; display: inline-block;"></i>
+                    @T["Assistant"]
+                </div>
+            `
+        }
+    });
+</script>

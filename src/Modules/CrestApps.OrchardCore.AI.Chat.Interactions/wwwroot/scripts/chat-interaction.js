@@ -29,7 +29,7 @@ window.chatInteractionManager = function () {
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
-    messageTemplate: "\n            <div class=\"list-group\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                    <div class=\"d-flex align-items-center\">\n                        <div class=\"p-2\">\n                            <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                        </div>\n                        <div class=\"p-2 lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent || message.content\"></div>\n                        </div>\n                    </div>\n                    <div class=\"d-flex justify-content-center message-buttons-container\" v-if=\"!isIndicator(message)\">\n                        <button class=\"ms-2 btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                            <i class=\"fa-solid fa-copy fa-lg\"></i>\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
+    messageTemplate: "\n            <div class=\"list-group\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"list-group-item\">\n                    <div class=\"d-flex align-items-center\">\n                        <div class=\"p-2\">\n                            <i :class=\"message.role === 'user' ? 'fa-solid fa-user fa-2xl text-primary' : 'fa fa-robot fa-2xl' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                        </div>\n                        <div class=\"p-2 lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent || message.content\"></div>\n                            <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                                <button class=\"btn btn-sm btn-outline-secondary button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                    <i class=\"fa-solid fa-copy\"></i>\n                                </button>\n                            </span>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        ",
     indicatorTemplate: "<div class=\"spinner-grow spinner-grow-sm\" role=\"status\"><span class=\"visually-hidden\">Loading...</span></div>",
     // Localizable strings
     untitledText: 'Untitled',
@@ -803,48 +803,33 @@ window.chatInteractionManager = function () {
           return connectionIds;
         },
         saveSettings: function saveSettings() {
-          var _isInScopeInput$check, _enableEarlyRagInput$;
           var itemId = this.getItemId();
           if (!itemId) {
             return;
           }
-          var titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
-          var connectionNameInput = document.querySelector('select[name="ChatInteraction.ConnectionName"]');
-          var deploymentIdInput = document.querySelector('select[name="ChatInteraction.DeploymentId"]');
-          var systemMessageInput = document.querySelector('textarea[name="ChatInteraction.SystemMessage"]');
-          var temperatureInput = document.querySelector('input[name="ChatInteraction.Temperature"]');
-          var topPInput = document.querySelector('input[name="ChatInteraction.TopP"]');
-          var frequencyPenaltyInput = document.querySelector('input[name="ChatInteraction.FrequencyPenalty"]');
-          var presencePenaltyInput = document.querySelector('input[name="ChatInteraction.PresencePenalty"]');
-          var maxTokensInput = document.querySelector('input[name="ChatInteraction.MaxTokens"]');
-          var pastMessagesCountInput = document.querySelector('input[name="ChatInteraction.PastMessagesCount"]');
-          var dataSourceIdInput = document.querySelector('select[name="ChatInteraction.DataSourceId"]');
-          var strictnessInput = document.querySelector('input[name="ChatInteraction.Strictness"]');
-          var topNDocumentsInput = document.querySelector('input[name="ChatInteraction.TopNDocuments"]');
-          var isInScopeInput = document.querySelector('input[name="ChatInteraction.IsInScope"]');
-          var filterInput = document.querySelector('input[name="ChatInteraction.Filter"]');
-          var enableEarlyRagInput = document.querySelector('input[name="ChatInteraction.EnableEarlyRag"]');
-          var settings = {
-            title: (titleInput === null || titleInput === void 0 ? void 0 : titleInput.value) || config.untitledText,
-            connectionName: (connectionNameInput === null || connectionNameInput === void 0 ? void 0 : connectionNameInput.value) || null,
-            deploymentId: (deploymentIdInput === null || deploymentIdInput === void 0 ? void 0 : deploymentIdInput.value) || null,
-            systemMessage: (systemMessageInput === null || systemMessageInput === void 0 ? void 0 : systemMessageInput.value) || null,
-            temperature: temperatureInput !== null && temperatureInput !== void 0 && temperatureInput.value ? parseFloat(temperatureInput.value) : null,
-            topP: topPInput !== null && topPInput !== void 0 && topPInput.value ? parseFloat(topPInput.value) : null,
-            frequencyPenalty: frequencyPenaltyInput !== null && frequencyPenaltyInput !== void 0 && frequencyPenaltyInput.value ? parseFloat(frequencyPenaltyInput.value) : null,
-            presencePenalty: presencePenaltyInput !== null && presencePenaltyInput !== void 0 && presencePenaltyInput.value ? parseFloat(presencePenaltyInput.value) : null,
-            maxTokens: maxTokensInput !== null && maxTokensInput !== void 0 && maxTokensInput.value ? parseInt(maxTokensInput.value) : null,
-            pastMessagesCount: pastMessagesCountInput !== null && pastMessagesCountInput !== void 0 && pastMessagesCountInput.value ? parseInt(pastMessagesCountInput.value) : null,
-            dataSourceId: (dataSourceIdInput === null || dataSourceIdInput === void 0 ? void 0 : dataSourceIdInput.value) || null,
-            strictness: strictnessInput !== null && strictnessInput !== void 0 && strictnessInput.value ? parseInt(strictnessInput.value) : null,
-            topNDocuments: topNDocumentsInput !== null && topNDocumentsInput !== void 0 && topNDocumentsInput.value ? parseInt(topNDocumentsInput.value) : null,
-            filter: (filterInput === null || filterInput === void 0 ? void 0 : filterInput.value) || null,
-            isInScope: (_isInScopeInput$check = isInScopeInput === null || isInScopeInput === void 0 ? void 0 : isInScopeInput.checked) !== null && _isInScopeInput$check !== void 0 ? _isInScopeInput$check : true,
-            enableEarlyRag: (_enableEarlyRagInput$ = enableEarlyRagInput === null || enableEarlyRagInput === void 0 ? void 0 : enableEarlyRagInput.checked) !== null && _enableEarlyRagInput$ !== void 0 ? _enableEarlyRagInput$ : false,
-            toolNames: this.getSelectedToolNames(),
-            mcpConnectionIds: this.getSelectedMcpConnectionIds()
-          };
-          this.connection.invoke("SaveSettings", itemId, settings.title, settings.connectionName, settings.deploymentId, settings.systemMessage, settings.temperature, settings.topP, settings.frequencyPenalty, settings.presencePenalty, settings.maxTokens, settings.pastMessagesCount, settings.dataSourceId, settings.strictness, settings.topNDocuments, settings.filter, settings.isInScope, settings.enableEarlyRag, settings.toolNames, settings.mcpConnectionIds)["catch"](function (err) {
+          var settings = {};
+
+          // Collect all form inputs with the "ChatInteraction." prefix generically.
+          // This avoids coupling the JS to specific field names — new fields added by
+          // any module are automatically included.
+          var inputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])');
+          inputs.forEach(function (input) {
+            // Extract field name: "ChatInteraction.Title" → "title"
+            var fieldName = input.name.replace('ChatInteraction.', '');
+            var key = fieldName.charAt(0).toLowerCase() + fieldName.slice(1);
+            if (input.type === 'checkbox') {
+              settings[key] = input.checked;
+            } else if (input.type === 'number') {
+              settings[key] = input.value ? parseFloat(input.value) : null;
+            } else {
+              settings[key] = input.value || null;
+            }
+          });
+
+          // Add tool and MCP connection collections (special handling).
+          settings.toolNames = this.getSelectedToolNames();
+          settings.mcpConnectionIds = this.getSelectedMcpConnectionIds();
+          this.connection.invoke("SaveSettings", itemId, settings)["catch"](function (err) {
             return console.error('Error saving settings:', err);
           });
         },

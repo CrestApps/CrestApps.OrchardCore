@@ -20,12 +20,12 @@ window.chatInteractionManager = function () {
                         <div class="p-2 lh-base">
                             <h4 v-if="message.title">{{ message.title }}</h4>
                             <div v-html="message.htmlContent || message.content"></div>
+                            <span class="message-buttons-container" v-if="!isIndicator(message)">
+                                <button class="btn btn-sm btn-outline-secondary button-message-toolbox" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
+                                    <i class="fa-solid fa-copy"></i>
+                                </button>
+                            </span>
                         </div>
-                    </div>
-                    <div class="d-flex justify-content-center message-buttons-container" v-if="!isIndicator(message)">
-                        <button class="ms-2 btn btn-sm btn-outline-secondary button-message-toolbox" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
-                            <i class="fa-solid fa-copy fa-lg"></i>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -869,66 +869,37 @@ window.chatInteractionManager = function () {
                         return;
                     }
 
-                    const titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
-                    const connectionNameInput = document.querySelector('select[name="ChatInteraction.ConnectionName"]');
-                    const deploymentIdInput = document.querySelector('select[name="ChatInteraction.DeploymentId"]');
-                    const systemMessageInput = document.querySelector('textarea[name="ChatInteraction.SystemMessage"]');
-                    const temperatureInput = document.querySelector('input[name="ChatInteraction.Temperature"]');
-                    const topPInput = document.querySelector('input[name="ChatInteraction.TopP"]');
-                    const frequencyPenaltyInput = document.querySelector('input[name="ChatInteraction.FrequencyPenalty"]');
-                    const presencePenaltyInput = document.querySelector('input[name="ChatInteraction.PresencePenalty"]');
-                    const maxTokensInput = document.querySelector('input[name="ChatInteraction.MaxTokens"]');
-                    const pastMessagesCountInput = document.querySelector('input[name="ChatInteraction.PastMessagesCount"]');
-                    const dataSourceIdInput = document.querySelector('select[name="ChatInteraction.DataSourceId"]');
-                    const strictnessInput = document.querySelector('input[name="ChatInteraction.Strictness"]');
-                    const topNDocumentsInput = document.querySelector('input[name="ChatInteraction.TopNDocuments"]');
-                    const isInScopeInput = document.querySelector('input[name="ChatInteraction.IsInScope"]');
-                    const filterInput = document.querySelector('input[name="ChatInteraction.Filter"]');
-                    const enableEarlyRagInput = document.querySelector('input[name="ChatInteraction.EnableEarlyRag"]');
+                    const settings = {};
 
-                    const settings = {
-                        title: titleInput?.value || config.untitledText,
-                        connectionName: connectionNameInput?.value || null,
-                        deploymentId: deploymentIdInput?.value || null,
-                        systemMessage: systemMessageInput?.value || null,
-                        temperature: temperatureInput?.value ? parseFloat(temperatureInput.value) : null,
-                        topP: topPInput?.value ? parseFloat(topPInput.value) : null,
-                        frequencyPenalty: frequencyPenaltyInput?.value ? parseFloat(frequencyPenaltyInput.value) : null,
-                        presencePenalty: presencePenaltyInput?.value ? parseFloat(presencePenaltyInput.value) : null,
-                        maxTokens: maxTokensInput?.value ? parseInt(maxTokensInput.value) : null,
-                        pastMessagesCount: pastMessagesCountInput?.value ? parseInt(pastMessagesCountInput.value) : null,
-                        dataSourceId: dataSourceIdInput?.value || null,
-                        strictness: strictnessInput?.value ? parseInt(strictnessInput.value) : null,
-                        topNDocuments: topNDocumentsInput?.value ? parseInt(topNDocumentsInput.value) : null,
-                        filter: filterInput?.value || null,
-                        isInScope: isInScopeInput?.checked ?? true,
-                        enableEarlyRag: enableEarlyRagInput?.checked ?? false,
-                        toolNames: this.getSelectedToolNames(),
-                        mcpConnectionIds: this.getSelectedMcpConnectionIds()
-                    };
+                    // Collect all form inputs with the "ChatInteraction." prefix generically.
+                    // This avoids coupling the JS to specific field names — new fields added by
+                    // any module are automatically included.
+                    const inputs = document.querySelectorAll(
+                        'input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' +
+                        'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' +
+                        'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])'
+                    );
 
-                    this.connection.invoke(
-                        "SaveSettings",
-                        itemId,
-                        settings.title,
-                        settings.connectionName,
-                        settings.deploymentId,
-                        settings.systemMessage,
-                        settings.temperature,
-                        settings.topP,
-                        settings.frequencyPenalty,
-                        settings.presencePenalty,
-                        settings.maxTokens,
-                        settings.pastMessagesCount,
-                        settings.dataSourceId,
-                        settings.strictness,
-                        settings.topNDocuments,
-                        settings.filter,
-                        settings.isInScope,
-                        settings.enableEarlyRag,
-                        settings.toolNames,
-                        settings.mcpConnectionIds
-                    ).catch(err => console.error('Error saving settings:', err));
+                    inputs.forEach(input => {
+                        // Extract field name: "ChatInteraction.Title" → "title"
+                        const fieldName = input.name.replace('ChatInteraction.', '');
+                        const key = fieldName.charAt(0).toLowerCase() + fieldName.slice(1);
+
+                        if (input.type === 'checkbox') {
+                            settings[key] = input.checked;
+                        } else if (input.type === 'number') {
+                            settings[key] = input.value ? parseFloat(input.value) : null;
+                        } else {
+                            settings[key] = input.value || null;
+                        }
+                    });
+
+                    // Add tool and MCP connection collections (special handling).
+                    settings.toolNames = this.getSelectedToolNames();
+                    settings.mcpConnectionIds = this.getSelectedMcpConnectionIds();
+
+                    this.connection.invoke("SaveSettings", itemId, settings)
+                        .catch(err => console.error('Error saving settings:', err));
                 },
                 initializeInteraction(itemId, force) {
                     if (this.isInteractionStarted && !force) {
