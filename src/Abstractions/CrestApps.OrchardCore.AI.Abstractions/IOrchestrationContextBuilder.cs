@@ -7,10 +7,10 @@ namespace CrestApps.OrchardCore.AI;
 /// </summary>
 /// <remarks>
 /// The default implementation creates an empty context, then executes the
-/// registered <see cref="IOrchestrationContextHandler"/> pipeline in the following order:
-/// 1) <see cref="IOrchestrationContextHandler.BuildingAsync(OrchestrationContextBuildingContext)"/>,
+/// registered <see cref="IOrchestrationContextBuilderHandler"/> pipeline in the following order:
+/// 1) <see cref="IOrchestrationContextBuilderHandler.BuildingAsync(OrchestrationContextBuildingContext)"/>,
 /// 2) the optional <paramref name="configure"/> delegate,
-/// 3) <see cref="IOrchestrationContextHandler.BuiltAsync(OrchestrationContextBuiltContext)"/>.
+/// 3) <see cref="IOrchestrationContextBuilderHandler.BuiltAsync(OrchestrationContextBuiltContext)"/>.
 /// </remarks>
 public interface IOrchestrationContextBuilder
 {

@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.Handlers;
 /// and sets it on <see cref="OrchestrationContext.Properties"/> so the CopilotOrchestrator
 /// can read the model name and flags without coupling through <see cref="AICompletionContext"/>.
 /// </summary>
-internal sealed class CopilotOrchestrationContextHandler : IOrchestrationContextHandler
+internal sealed class CopilotOrchestrationContextHandler : IOrchestrationContextBuilderHandler
 {
     public Task BuildingAsync(OrchestrationContextBuildingContext context)
     {

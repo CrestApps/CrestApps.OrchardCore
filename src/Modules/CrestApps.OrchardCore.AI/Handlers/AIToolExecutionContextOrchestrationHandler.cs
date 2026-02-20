@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.AI.Handlers;
 /// the orchestration context is fully built. This removes the need for individual
 /// hubs (AIChatHub, ChatInteractionHub) to manually construct and store the context.
 /// </summary>
-internal sealed class AIToolExecutionContextOrchestrationHandler : IOrchestrationContextHandler
+internal sealed class AIToolExecutionContextOrchestrationHandler : IOrchestrationContextBuilderHandler
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 

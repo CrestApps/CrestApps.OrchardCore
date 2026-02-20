@@ -134,7 +134,7 @@ public sealed class DefaultOrchestrationContextBuilderTests
         Assert.Equal("After configure", capturedMessage);
     }
 
-    private static DefaultOrchestrationContextBuilder CreateBuilder(IEnumerable<IOrchestrationContextHandler> handlers)
+    private static DefaultOrchestrationContextBuilder CreateBuilder(IEnumerable<IOrchestrationContextBuilderHandler> handlers)
     {
         return new DefaultOrchestrationContextBuilder(handlers, new EmptyServiceProvider(), NullLogger<DefaultOrchestrationContextBuilder>.Instance);
     }
@@ -144,7 +144,7 @@ public sealed class DefaultOrchestrationContextBuilderTests
         public object GetService(Type serviceType) => null;
     }
 
-    private sealed class TestHandler : IOrchestrationContextHandler
+    private sealed class TestHandler : IOrchestrationContextBuilderHandler
     {
         private readonly Action<OrchestrationContextBuildingContext> _building;
         private readonly Action<OrchestrationContextBuiltContext> _built;

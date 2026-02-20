@@ -15,7 +15,7 @@ namespace CrestApps.OrchardCore.AI.DataSources.Handlers;
 /// searches the knowledge base index, and appends relevant context to the
 /// system message before the LLM call.
 /// </summary>
-internal sealed class DataSourceEarlyRagOrchestrationHandler : IOrchestrationContextHandler
+internal sealed class DataSourceEarlyRagOrchestrationHandler : IOrchestrationContextBuilderHandler
 {
     private readonly ICatalog<AIDataSource> _dataSourceStore;
     private readonly IIndexProfileStore _indexProfileStore;
