@@ -8,10 +8,10 @@ namespace CrestApps.OrchardCore.AI.Core.Models;
 public sealed class AIDataSourceRagMetadata
 {
     /// <summary>
-    /// Gets or sets whether Early RAG is enabled for this profile.
+    /// Gets or sets whether Preemptive RAG is enabled for this profile.
     /// When null, the global site setting is used.
     /// </summary>
-    public bool EnableEarlyRag { get; set; }
+    public bool EnablePreemptiveRag { get; set; }
 
     /// <summary>
     /// Gets or sets the strictness threshold for categorizing documents as relevant.

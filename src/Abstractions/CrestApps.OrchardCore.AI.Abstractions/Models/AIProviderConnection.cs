@@ -17,6 +17,8 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
 
     public string DefaultImagesDeploymentName { get; set; }
 
+    public string DefaultUtilityDeploymentName { get; set; }
+
     public bool IsDefault { get; set; }
 
     [JsonIgnore]
@@ -51,6 +53,7 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
             DefaultDeploymentName = DefaultDeploymentName,
             DefaultEmbeddingDeploymentName = DefaultEmbeddingDeploymentName,
             DefaultImagesDeploymentName = DefaultImagesDeploymentName,
+            DefaultUtilityDeploymentName = DefaultUtilityDeploymentName,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,

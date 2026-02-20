@@ -6,8 +6,8 @@
 <div class="@Orchard.GetWrapperClasses()">
     <div class="@Orchard.GetEndClasses(true)">
         <div class="form-check">
-            <input class="form-check-input" type="checkbox" asp-for="EnableEarlyRag" />
-            <label class="form-check-label" asp-for="EnableEarlyRag">
+            <input class="form-check-input" type="checkbox" asp-for="EnablePreemptiveRag" />
+            <label class="form-check-label" asp-for="EnablePreemptiveRag">
                 @T["Enable Preemptive Retrieval-Augmented Generation (RAG)"]
             </label>
             <span class="hint dashed">@T["When enabled, it reduces AI latency and could improve results. Individual profiles can override this setting."]</span>

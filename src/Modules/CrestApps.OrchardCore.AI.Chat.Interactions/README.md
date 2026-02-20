@@ -67,6 +67,7 @@ Navigate to **Artificial Intelligence > Provider Connections**, edit your connec
           "Connections": {
             "default": {
               "DefaultDeploymentName": "gpt-4o",
+              "DefaultUtilityDeploymentName": "gpt-4o-mini",
               "DefaultImagesDeploymentName": "dall-e-3"
             }
           }

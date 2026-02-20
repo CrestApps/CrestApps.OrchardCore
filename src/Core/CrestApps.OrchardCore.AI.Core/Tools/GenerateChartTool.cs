@@ -107,7 +107,13 @@ public sealed class GenerateChartTool : AIFunction
                 return "Chart generation is not available. No connection is configured.";
             }
 
-            var deploymentName = connection.GetDefaultDeploymentName(throwException: false);
+            // Prefer the utility deployment for chart generation, fall back to the default deployment.
+            var deploymentName = connection.GetDefaultUtilityDeploymentName(throwException: false);
+
+            if (string.IsNullOrEmpty(deploymentName))
+            {
+                deploymentName = connection.GetDefaultDeploymentName(throwException: false);
+            }
 
             if (string.IsNullOrEmpty(deploymentName))
             {

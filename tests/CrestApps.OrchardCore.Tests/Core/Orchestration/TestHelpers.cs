@@ -69,3 +69,20 @@ internal sealed class NullToolRegistry : IToolRegistry
         return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>([]);
     }
 }
+
+/// <summary>
+/// A no-op AI client factory for testing.
+/// </summary>
+internal sealed class NullAIClientFactory : IAIClientFactory
+{
+    public ValueTask<IChatClient> CreateChatClientAsync(string providerName, string connectionName, string deploymentName)
+        => new((IChatClient)null);
+
+    public ValueTask<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(string providerName, string connectionName, string deploymentName)
+        => new((IEmbeddingGenerator<string, Embedding<float>>)null);
+
+#pragma warning disable MEAI001
+    public ValueTask<IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null)
+        => new((IImageGenerator)null);
+#pragma warning restore MEAI001
+}

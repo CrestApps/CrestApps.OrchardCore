@@ -7,7 +7,7 @@ public class EditProfileDataSourcesViewModel
 {
     public string DataSourceId { get; set; }
 
-    public bool EnableEarlyRag { get; set; }
+    public bool EnablePreemptiveRag { get; set; }
 
     public int? Strictness { get; set; }
 

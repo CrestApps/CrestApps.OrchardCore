@@ -8,7 +8,9 @@ public sealed class McpClientFactory
     private readonly IConfiguration _configuration;
     private readonly ILoggerFactory _loggerFactory;
 
-    public McpClientFactory(IConfiguration configuration, ILoggerFactory loggerFactory)
+    public McpClientFactory(
+        IConfiguration configuration,
+        ILoggerFactory loggerFactory)
     {
         _configuration = configuration;
         _loggerFactory = loggerFactory;

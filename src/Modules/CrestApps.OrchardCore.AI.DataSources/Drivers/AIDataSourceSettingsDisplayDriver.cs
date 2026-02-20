@@ -29,7 +29,7 @@ public sealed class AIDataSourceSettingsDisplayDriver : SiteDisplayDriver<AIData
     {
         return Initialize<AIDataSourceSettingsViewModel>("AIDataSourceSettings_Edit", model =>
         {
-            model.EnableEarlyRag = settings.EnableEarlyRag;
+            model.EnablePreemptiveRag = settings.EnablePreemptiveRag;
             model.DefaultStrictness = settings.DefaultStrictness;
             model.DefaultTopNDocuments = settings.DefaultTopNDocuments;
         }).Location("Content:5%Data Sources;1")
@@ -48,7 +48,7 @@ public sealed class AIDataSourceSettingsDisplayDriver : SiteDisplayDriver<AIData
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        settings.EnableEarlyRag = model.EnableEarlyRag;
+        settings.EnablePreemptiveRag = model.EnablePreemptiveRag;
         settings.DefaultStrictness = Math.Clamp(model.DefaultStrictness, 1, 5);
         settings.DefaultTopNDocuments = Math.Clamp(model.DefaultTopNDocuments, 3, 20);
 

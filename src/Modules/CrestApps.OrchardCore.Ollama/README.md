@@ -28,9 +28,9 @@ To configure the Ollama connection, add the following settings to the `appsettin
           "Connections": {
             "Default": {
               "Endpoint": "<!-- Ollama host address -->",
-              "DefaultDeploymentName": "deepseek-v2:16b"
+              "DefaultDeploymentName": "deepseek-v2:16b",
+              "DefaultUtilityDeploymentName": "deepseek-v2:16b"
             }
-          }
         }
       }
     }

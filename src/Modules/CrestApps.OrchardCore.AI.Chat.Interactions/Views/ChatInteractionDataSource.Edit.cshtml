@@ -60,9 +60,9 @@
 
 <div class="mb-3 d-none data-source-dependent">
     <div class="form-check">
-        <input class="form-check-input" type="checkbox" asp-for="EnableEarlyRag" value="true" />
+        <input class="form-check-input" type="checkbox" asp-for="EnablePreemptiveRag" value="true" />
 
-        <label class="form-check-label" asp-for="EnableEarlyRag">
+        <label class="form-check-label" asp-for="EnablePreemptiveRag">
             @T["Enable Preemptive Retrieval-Augmented Generation (RAG)"]
             <span class="text-muted" data-bs-toggle="tooltip" title="@T["When enabled, it reduces AI latency and could improve results. Individual profiles can override this setting."]">
                 <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
