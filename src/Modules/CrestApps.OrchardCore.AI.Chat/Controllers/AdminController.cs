@@ -71,7 +71,9 @@ public sealed class AdminController : Controller
 
         if (!_aiOptions.Clients.TryGetValue(profile.Source, out var clientOptions))
         {
-            return NotFound();
+            await _notifier.WarningAsync(H["The AI profile <strong>{0}</strong> uses a provider (<em>{1}</em>) whose feature is no longer enabled. Please enable the required feature or update the profile.", profile.DisplayText, profile.Source]);
+
+            return RedirectToAction("Index", "Profiles", new { area = "CrestApps.OrchardCore.AI" });
         }
 
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))

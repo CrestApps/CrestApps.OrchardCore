@@ -30,7 +30,7 @@
 }
 
 <div class="mb-3 mx-3 p-3 overflow-y-auto h-100 rounded-2 border bg-theme" id="@chatContainerHtmlId">
-    <div class="list-group list-group-flush w-100">
+    <div class="w-100 ai-chat-messages">
         @if (Model.Session.Prompts.Count == 0)
         {
             <div id="@placeholderHtmlId" class="text-center p-3">
@@ -99,6 +99,8 @@
     }
 }
 
+<style asp-name="AIChatApp" at="Head"></style>
+<style asp-name="highlightjs" at="Head"></style>
 <script asp-name="OpenAIChatApp" at="Foot"></script>
 <script at="Foot" depends-on="OpenAIChatApp">
     openAIChatManager.initialize({
@@ -116,21 +118,5 @@
     .chat-user-prompt-input:focus {
         border: none;
         box-shadow: none;
-    }
-
-    .ai-bot-icon {
-        color: #198754;
-    }
-
-    @@keyframes ai-streaming-pulse {
-        0%, 100% { color: #198754; }
-        25% { color: #0dcaf0; }
-        50% { color: #6f42c1; }
-        75% { color: #0dcaf0; }
-    }
-
-    .ai-streaming-icon,
-    .ai-streaming-icon::before {
-        animation: ai-streaming-pulse 2s ease-in-out infinite !important;
     }
 </style>

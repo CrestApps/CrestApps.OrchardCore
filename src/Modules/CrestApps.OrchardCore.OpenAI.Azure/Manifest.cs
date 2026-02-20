@@ -12,24 +12,11 @@ using OrchardCore.Modules.Manifest;
 
 [assembly: Feature(
     Id = AzureOpenAIConstants.Feature.Area,
-    Name = "Azure OpenAI Services",
+    Name = "Azure OpenAI Chat",
     Description = "Provides AI services using Azure OpenAI models.",
     Category = "Artificial Intelligence",
-    EnabledByDependencyOnly = true,
     Dependencies =
     [
         AIConstants.Feature.Deployments,
-    ]
-)]
-
-[assembly: Feature(
-    Id = AzureOpenAIConstants.Feature.Standard,
-    Name = "Azure OpenAI Chat",
-    Description = "Enables integration with OpenAI through the Azure service provider.",
-    Category = "Artificial Intelligence",
-    Dependencies =
-    [
-        AIConstants.Feature.Area,
-        AzureOpenAIConstants.Feature.Area,
     ]
 )]

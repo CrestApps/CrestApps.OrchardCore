@@ -300,11 +300,12 @@
     animation: ai-streaming-effect 4s ease-in-out infinite;
 }
 
-.ai-admin-widget .list-group-item {
+.ai-admin-widget .ai-chat-message-item {
     position: relative;
+    padding: 0.15rem;
 }
 
-.ai-admin-widget-body .list-group-item + .list-group-item::before {
+.ai-admin-widget-body .ai-chat-message-item + .ai-chat-message-item::before {
     content: '';
     display: block;
     width: 100%;
@@ -312,7 +313,7 @@
     border-top: 1px solid var(--bs-border-color, #dee2e6);
 }
 
-.ai-admin-widget .list-group-item p:last-child {
+.ai-admin-widget .ai-chat-message-item p:last-child {
     margin-bottom: 0;
 }
 
@@ -323,7 +324,7 @@
     display: none;
 }
 
-.ai-admin-widget .list-group-item:hover .message-buttons-container {
+.ai-admin-widget .ai-chat-message-item:hover .message-buttons-container {
     display: inline-block;
 }
 

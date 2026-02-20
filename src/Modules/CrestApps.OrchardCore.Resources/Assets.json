@@ -93,5 +93,19 @@
       "Assets/js/flatpickr-culture.js"
     ],
     "output": "wwwroot/scripts/flatpickr-culture.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/highlight.js/styles/github.css"
+    ],
+    "output": "wwwroot/vendors/highlightjs/css/highlightjs.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/highlight.js/styles/github.min.css"
+    ],
+    "output": "wwwroot/vendors/highlightjs/css/highlightjs.min.css"
   }
 ]
