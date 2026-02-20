@@ -13,9 +13,10 @@ internal sealed class CopilotSessionMetadata
     public string CopilotModel { get; set; }
 
     /// <summary>
-    /// Additional Copilot execution flags (e.g., --allow-all).
+    /// Whether the Copilot session should run with --allow-all flag.
+    /// When true, the Copilot CLI is launched with --allow-all.
     /// </summary>
-    public string CopilotFlags { get; set; }
+    public bool IsAllowAll { get; set; } = true;
 
     /// <summary>
     /// The GitHub username associated with the stored credential.

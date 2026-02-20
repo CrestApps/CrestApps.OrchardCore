@@ -40,7 +40,7 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
             var copilotSettings = interaction.As<CopilotSessionMetadata>();
 
             model.CopilotModel = copilotSettings.CopilotModel;
-            model.CopilotFlags = copilotSettings.CopilotFlags;
+            model.IsAllowAll = copilotSettings.IsAllowAll;
 
             // Only fetch auth/models when the orchestrator is actually Copilot.
             if (string.Equals(interaction.OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase) &&

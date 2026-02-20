@@ -20,12 +20,12 @@ internal sealed class CopilotChatInteractionSettingsHandler : IChatInteractionSe
         }
 
         var copilotModel = GetString(settings, "copilotModel");
-        var copilotFlags = GetString(settings, "copilotFlags");
+        var isAllowAll = GetBool(settings, "isAllowAll");
 
         interaction.Put(new CopilotSessionMetadata
         {
             CopilotModel = copilotModel,
-            CopilotFlags = copilotFlags,
+            IsAllowAll = isAllowAll,
         });
 
         return Task.CompletedTask;
@@ -42,5 +42,23 @@ internal sealed class CopilotChatInteractionSettingsHandler : IChatInteractionSe
         }
 
         return null;
+    }
+
+    private static bool GetBool(JsonElement element, string propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var prop))
+        {
+            if (prop.ValueKind == JsonValueKind.True)
+            {
+                return true;
+            }
+
+            if (prop.ValueKind == JsonValueKind.String)
+            {
+                return string.Equals(prop.GetString(), "true", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        return false;
     }
 }

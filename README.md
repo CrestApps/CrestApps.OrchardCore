@@ -12,6 +12,7 @@ CrestApps provides a collection of open-source modules designed to enhance **Orc
     - [AI Module](#ai-module)
     - [AI Chat Module](#ai-chat-module)
     - [AI Chat Interactions Module](#ai-chat-interactions-module)
+    - [AI Copilot Orchestrator Module](#ai-copilot-orchestrator-module)
     - [AI Data Sources Module](#ai-data-sources-module)
     - [Orchard Core AI Agent Module](#orchard-core-ai-agent-module)
     - [Model Context Protocol (MCP) Module](#model-context-protocol-mcp-module)
@@ -93,6 +94,9 @@ Enables ad-hoc AI chat experiences with configurable parameters, document upload
 - [AI Documents (OpenXml)](src/Modules/CrestApps.OrchardCore.AI.Documents.OpenXml/README.md) - Word, Excel, PowerPoint support
 - [AI Documents (Azure AI Search)](src/Modules/CrestApps.OrchardCore.AI.Documents.AzureAI/README.md) - Azure AI Search provider for documents
 - [AI Documents (Elasticsearch)](src/Modules/CrestApps.OrchardCore.AI.Documents.Elasticsearch/README.md) - Elasticsearch provider for documents
+
+#### AI Copilot Orchestrator Module
+Provides a GitHub Copilot SDK-based orchestrator as an alternative to the default Progressive Tool Orchestrator. Features include popup GitHub OAuth authentication, per-profile model and flag configuration, profile-level credential storage, and an extensible settings pipeline. See the [AI Copilot Orchestrator README](src/Modules/CrestApps.OrchardCore.AI.Chat.Copilot/README.md) for more details.
 
 #### AI Data Sources Module
 Provides provider-agnostic Data Sources (RAG) management, knowledge base indexing, early RAG, and the DataSourceSearch tool. See the [AI Data Sources README](src/Modules/CrestApps.OrchardCore.AI.DataSources/README.md).

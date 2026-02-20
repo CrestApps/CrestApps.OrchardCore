@@ -39,8 +39,8 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
         {
             var copilotSettings = profile.As<CopilotSessionMetadata>();
 
-            model.CopilotModel = copilotSettings?.CopilotModel;
-            model.CopilotFlags = copilotSettings?.CopilotFlags;
+            model.CopilotModel = copilotSettings.CopilotModel;
+            model.IsAllowAll = copilotSettings.IsAllowAll;
 
             // Check if current user has authenticated with GitHub
             var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
@@ -80,7 +80,7 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
             var copilotSettings = new CopilotSessionMetadata
             {
                 CopilotModel = model.CopilotModel,
-                CopilotFlags = model.CopilotFlags,
+                IsAllowAll = model.IsAllowAll,
             };
 
             // Copy the current user's GitHub credential to the profile so

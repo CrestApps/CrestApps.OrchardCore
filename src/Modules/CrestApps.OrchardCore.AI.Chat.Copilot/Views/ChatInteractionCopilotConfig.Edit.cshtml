@@ -54,12 +54,13 @@
         <span class="hint">@T["Select the Copilot model to use for this interaction."]</span>
     </div>
 
-    @* Copilot Flags — always in DOM for form binding, toggled by JS *@
+    @* Allow All — always in DOM for form binding, toggled by JS *@
     <div class="mb-3 @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-flags-group">
-        <label asp-for="CopilotFlags" class="form-label">@T["Copilot Flags"]</label>
-        <input asp-for="CopilotFlags" class="form-control" placeholder="--allow-all" />
-        <span asp-validation-for="CopilotFlags" class="text-danger"></span>
-        <span class="hint">@T["Optional Copilot execution flags (e.g., --allow-all). Separate multiple flags with spaces."]</span>
+        <div class="form-check">
+            <input asp-for="IsAllowAll" class="form-check-input" type="checkbox" />
+            <label asp-for="IsAllowAll" class="form-check-label">@T["Allow all tool executions"]</label>
+        </div>
+        <span class="hint">@T["When checked, the Copilot CLI runs with the --allow-all flag, permitting all tool executions without confirmation."]</span>
     </div>
 </div>
 

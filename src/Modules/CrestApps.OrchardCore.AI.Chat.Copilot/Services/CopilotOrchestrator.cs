@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
@@ -101,9 +102,12 @@ public sealed class CopilotOrchestrator : IOrchestrator
         };
 
         // Read Copilot-specific metadata from the orchestration context.
-        if (context.Properties.TryGetValue(nameof(Models.CopilotSessionMetadata), out var metadataObj)
-            && metadataObj is Models.CopilotSessionMetadata metadata)
+        CopilotSessionMetadata metadata = null;
+
+        if (context.Properties.TryGetValue(nameof(CopilotSessionMetadata), out var metadataObj)
+            && metadataObj is CopilotSessionMetadata md)
         {
+            metadata = md;
             sessionConfig.Model = metadata.CopilotModel;
         }
 
@@ -127,23 +131,55 @@ public sealed class CopilotOrchestrator : IOrchestrator
         // Configure MCP servers so Copilot can manage MCP tools natively.
         await ConfigureMcpServersAsync(context, sessionConfig, cancellationToken);
 
-        // Get the GitHub access token. Prefer profile-level credentials when available,
-        // falling back to the current user's credentials.
+        // Build client options with authentication and CLI flags.
+        var clientOptions = BuildClientOptions(context, metadata);
+
+        string responseText;
+
+        try
+        {
+            responseText = await RunCopilotSessionAsync(clientOptions, sessionConfig, context, cancellationToken);
+        }
+        catch (IOException ex)
+        {
+            _logger.LogError(ex, "CopilotOrchestrator: CLI process error. The Copilot CLI may have crashed or failed to start.");
+            responseText = "The Copilot service encountered an error and could not process your request. Please try again.";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "CopilotOrchestrator: Unexpected error during Copilot session.");
+            responseText = "An unexpected error occurred while communicating with Copilot. Please try again.";
+        }
+
+        yield return new ChatResponseUpdate
+        {
+            Role = ChatRole.Assistant,
+            Contents = [new TextContent(responseText)],
+        };
+    }
+
+    /// <summary>
+    /// Builds client options from the metadata and context, using the SDK's
+    /// <c>GithubToken</c> property for authentication and <c>CliArgs</c> for
+    /// Copilot execution flags.
+    /// </summary>
+    private CopilotClientOptions BuildClientOptions(
+        OrchestrationContext context,
+        CopilotSessionMetadata metadata)
+    {
         var clientOptions = new CopilotClientOptions();
         string accessToken = null;
 
         // First, try profile-level credentials from the metadata.
-        if (context.Properties.TryGetValue(nameof(Models.CopilotSessionMetadata), out var metaObj2)
-            && metaObj2 is Models.CopilotSessionMetadata profileMeta
-            && !string.IsNullOrEmpty(profileMeta.ProtectedAccessToken))
+        if (metadata is not null && !string.IsNullOrEmpty(metadata.ProtectedAccessToken))
         {
-            accessToken = _oauthService.UnprotectAccessToken(profileMeta);
+            accessToken = _oauthService.UnprotectAccessToken(metadata);
 
             if (!string.IsNullOrEmpty(accessToken) && _logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
                     "CopilotOrchestrator: Using profile-level credential from {Username}",
-                    profileMeta.GitHubUsername);
+                    metadata.GitHubUsername);
             }
         }
 
@@ -155,12 +191,12 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
             if (user?.Identity?.IsAuthenticated == true)
             {
-                var orchardUser = await _userManager.GetUserAsync(user);
+                var orchardUser = _userManager.GetUserAsync(user).GetAwaiter().GetResult();
 
                 if (orchardUser is not null)
                 {
-                    var userId = await _userManager.GetUserIdAsync(orchardUser);
-                    accessToken = await _oauthService.GetValidAccessTokenAsync(userId, cancellationToken);
+                    var userId = _userManager.GetUserIdAsync(orchardUser).GetAwaiter().GetResult();
+                    accessToken = _oauthService.GetValidAccessTokenAsync(userId).GetAwaiter().GetResult();
 
                     if (!string.IsNullOrEmpty(accessToken) && _logger.IsEnabled(LogLevel.Debug))
                     {
@@ -174,10 +210,9 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
         if (!string.IsNullOrEmpty(accessToken))
         {
-            clientOptions.Environment = new Dictionary<string, string>
-            {
-                ["GITHUB_TOKEN"] = accessToken
-            };
+            // Use the SDK's GithubToken property for authentication.
+            // This sets UseLoggedInUser = false automatically.
+            clientOptions.GithubToken = accessToken;
         }
         else
         {
@@ -186,6 +221,25 @@ public sealed class CopilotOrchestrator : IOrchestrator
                 "The session may fail without authentication.");
         }
 
+        // Pass the --allow-all flag as a CLI argument when enabled.
+        if (metadata is not null && metadata.IsAllowAll)
+        {
+            clientOptions.CliArgs = ["--allow-all"];
+        }
+
+        return clientOptions;
+    }
+
+    /// <summary>
+    /// Runs a Copilot session and returns the complete response text.
+    /// Isolated into its own method so the caller can wrap with error handling.
+    /// </summary>
+    private async Task<string> RunCopilotSessionAsync(
+        CopilotClientOptions clientOptions,
+        SessionConfig sessionConfig,
+        OrchestrationContext context,
+        CancellationToken cancellationToken)
+    {
         await using var client = new CopilotClient(clientOptions);
         await using var session = await client.CreateSessionAsync(sessionConfig, cancellationToken);
 
@@ -232,11 +286,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
             responseText = "AI drew blank and no message was generated!";
         }
 
-        yield return new ChatResponseUpdate
-        {
-            Role = ChatRole.Assistant,
-            Contents = [new TextContent(responseText)],
-        };
+        return responseText;
     }
 
     /// <summary>
@@ -331,23 +381,23 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
             if (connection.Source == McpConstants.TransportTypes.Sse)
             {
-                var metadata = connection.As<SseMcpConnectionMetadata>();
+                var sseMetadata = connection.As<SseMcpConnectionMetadata>();
 
-                if (metadata?.Endpoint is not null)
+                if (sseMetadata?.Endpoint is not null)
                 {
                     mcpDescription.Append(" (SSE: ");
-                    mcpDescription.Append(metadata.Endpoint);
+                    mcpDescription.Append(sseMetadata.Endpoint);
                     mcpDescription.Append(')');
                 }
             }
             else if (connection.Source == McpConstants.TransportTypes.StdIo)
             {
-                var metadata = connection.As<StdioMcpConnectionMetadata>();
+                var stdioMetadata = connection.As<StdioMcpConnectionMetadata>();
 
-                if (!string.IsNullOrEmpty(metadata?.Command))
+                if (!string.IsNullOrEmpty(stdioMetadata?.Command))
                 {
                     mcpDescription.Append(" (StdIO: ");
-                    mcpDescription.Append(metadata.Command);
+                    mcpDescription.Append(stdioMetadata.Command);
                     mcpDescription.Append(')');
                 }
             }
