@@ -25,17 +25,34 @@ public static class DictionaryExtensions
         return uri;
     }
 
-    public static string GetDefaultDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
-        => entry.GetStringValue("DefaultDeploymentName", throwException);
+    public static string GetChatDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("ChatDeploymentName", throwException);
 
-    public static string GetDefaultEmbeddingDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
-        => entry.GetStringValue("DefaultEmbeddingDeploymentName", throwException);
+    public static string GetEmbeddingDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("EmbeddingDeploymentName", throwException);
 
-    public static string GetDefaultImagesDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
-        => entry.GetStringValue("DefaultImagesDeploymentName", throwException);
+    public static string GetImagesDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("ImagesDeploymentName", throwException);
 
-    public static string GetDefaultUtilityDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
-        => entry.GetStringValue("DefaultUtilityDeploymentName", throwException);
+    public static string GetUtilityDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("UtilityDeploymentName", throwException);
+
+    public static string GetChatDeploymentOrDefaultName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("ChatDeploymentName", false)
+        ?? entry.GetStringValue("DeploymentName", false)
+        ?? entry.GetStringValue("DefaultDeploymentName", throwException);
+
+    public static string GetEmbeddingDeploymentOrDefaultName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("EmbeddingDeploymentName", false)
+        ?? entry.GetStringValue("DefaultEmbeddingDeploymentName", throwException);
+
+    public static string GetImagesDeploymentOrDefaultName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("ImagesDeploymentName", false)
+        ?? entry.GetStringValue("DefaultImagesDeploymentName", throwException);
+
+    public static string GetUtilityDeploymentOrDefaultName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("UtilityDeploymentName", false)
+        ?? entry.GetStringValue("DefaultUtilityDeploymentName", throwException);
 
     public static string GetStringValue(this IDictionary<string, object> entry, string key, bool throwException = false)
     {

@@ -27,14 +27,19 @@ Add the following section to your `appsettings.json` to configure Azure OpenAI:
       "Providers": {
         "Azure": {
           "DefaultConnectionName": "<!-- Default connection name -->",
-          "DefaultDeploymentName": "<!-- Default deployment name -->",
+          "DefaultChatDeploymentName": "<!-- Default deployment name for chat completions -->",
+          "DefaultUtilityDeploymentName": "<!-- Optional: a lightweight model for auxiliary tasks -->",
+          "DefaultEmbeddingDeploymentName": "<!-- Optional: the default embedding deployment name -->",
+          "DefaultImagesDeploymentName": "<!-- Optional: the default image generation deployment name -->",
           "Connections": {
             "<!-- Unique connection name, ideally your Azure AccountName -->": {
               "Endpoint": "https://<!-- Your Azure Resource Name -->.openai.azure.com/",
               "AuthenticationType": "ApiKey",
               "ApiKey": "<!-- API Key for your Azure AI instance -->",
-              "DefaultDeploymentName": "<!-- Default deployment name -->",
-              "DefaultUtilityDeploymentName": "<!-- Optional: a lightweight model for auxiliary tasks -->"
+              "ChatDeploymentName": "<!-- Deployment name for chat completions -->",
+              "UtilityDeploymentName": "<!-- Optional: a lightweight model for auxiliary tasks -->",
+              "EmbeddingDeploymentName": "<!-- Optional: the embedding deployment name -->",
+              "ImagesDeploymentName": "<!-- Optional: the image generation deployment name -->"
             }
           }
         }

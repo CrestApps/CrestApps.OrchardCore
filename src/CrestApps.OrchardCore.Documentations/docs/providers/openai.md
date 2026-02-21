@@ -29,12 +29,17 @@ To configure a connection, add the following settings to the `appsettings.json` 
       "Providers": {
         "OpenAI": {
           "DefaultConnectionName": "openai-cloud",
-          "DefaultDeploymentName": "gpt-4o-mini",
+          "DefaultChatDeploymentName": "gpt-4o-mini",
+          "DefaultUtilityDeploymentName": "gpt-4o-mini",
+          "DefaultEmbeddingDeploymentName": "",
+          "DefaultImagesDeploymentName": "",
           "Connections": {
             "openai-cloud": {
               "ApiKey": "<!-- Your API Key Goes Here -->",
-              "DefaultDeploymentName": "gpt-4o-mini",
-              "DefaultUtilityDeploymentName": "gpt-4o-mini"
+              "ChatDeploymentName": "gpt-4o-mini",
+              "UtilityDeploymentName": "gpt-4o-mini",
+              "EmbeddingDeploymentName": "",
+              "ImagesDeploymentName": ""
             }
           }
         }
@@ -85,12 +90,18 @@ To configure DeepSeek, add the following settings:
       "Providers": {
         "OpenAI": {
           "DefaultConnectionName": "deepseek",
-          "DefaultDeploymentName": "deepseek-chat",
+          "DefaultChatDeploymentName": "deepseek-chat",
+          "DefaultUtilityDeploymentName": "",
+          "DefaultEmbeddingDeploymentName": "",
+          "DefaultImagesDeploymentName": "",
           "Connections": {
             "deepseek": {
               "Endpoint": "https://api.deepseek.com/v1",
               "ApiKey": "<!-- Your API Key Goes Here -->",
-              "DefaultDeploymentName": "deepseek-chat"
+              "ChatDeploymentName": "deepseek-chat",
+              "UtilityDeploymentName": "",
+              "EmbeddingDeploymentName": "",
+              "ImagesDeploymentName": ""
             }
           }
         }
@@ -100,7 +111,7 @@ To configure DeepSeek, add the following settings:
 }
 ```
 
-> The `DefaultConnectionName` and `DefaultDeploymentName` under the `OpenAI` node are required only if you want to set the `deepseek` connection as the default OpenAI connection when AI profiles use the default setting.  
+> The `DefaultConnectionName` and `DefaultChatDeploymentName` under the `OpenAI` node are required only if you want to set the `deepseek` connection as the default OpenAI connection when AI profiles use the default setting.  
 
 #### Configuration via AI Connection Management  
 
@@ -116,7 +127,7 @@ If you are using the **AI Connection Management** feature, you can configure Dee
           "Source": "OpenAI",
           "Name": "deepseek",
           "IsDefault": false,
-          "DefaultDeploymentName": "deepseek-chat",
+          "ChatDeploymentName": "deepseek-chat",
           "DisplayText": "DeepSeek",
           "Properties": {
             "OpenAIConnectionMetadata": {
@@ -144,12 +155,18 @@ To connect to **Google Gemini**, **Together AI**, **vLLM**, or any other support
       "Providers": {
         "OpenAI": {
           "DefaultConnectionName": "google-gemini",
-          "DefaultDeploymentName": "gemini-pro",
+          "DefaultChatDeploymentName": "gemini-pro",
+          "DefaultUtilityDeploymentName": "",
+          "DefaultEmbeddingDeploymentName": "",
+          "DefaultImagesDeploymentName": "",
           "Connections": {
             "google-gemini": {
               "Endpoint": "https://generativelanguage.googleapis.com/v1",
               "ApiKey": "<!-- Your Google Gemini API Key -->",
-              "DefaultDeploymentName": "gemini-pro"
+              "ChatDeploymentName": "gemini-pro",
+              "UtilityDeploymentName": "",
+              "EmbeddingDeploymentName": "",
+              "ImagesDeploymentName": ""
             }
           }
         }

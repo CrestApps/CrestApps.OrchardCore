@@ -410,7 +410,7 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
             return null;
         }
 
-        var deploymentName = connection.GetDefaultEmbeddingDeploymentName(throwException: false);
+        var deploymentName = connection.GetEmbeddingDeploymentOrDefaultName(throwException: false);
 
         if (string.IsNullOrEmpty(deploymentName))
         {

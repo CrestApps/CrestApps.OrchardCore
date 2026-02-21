@@ -443,11 +443,11 @@ public sealed class DefaultOrchestrator : IOrchestrator
         }
 
         // Prefer the utility deployment, fall back to the default deployment.
-        var deploymentName = connection.GetDefaultUtilityDeploymentName(throwException: false);
+        var deploymentName = connection.GetUtilityDeploymentOrDefaultName(throwException: false);
 
         if (string.IsNullOrEmpty(deploymentName))
         {
-            deploymentName = connection.GetDefaultDeploymentName(throwException: false);
+            deploymentName = connection.GetChatDeploymentOrDefaultName(throwException: false);
         }
 
         if (string.IsNullOrEmpty(deploymentName))

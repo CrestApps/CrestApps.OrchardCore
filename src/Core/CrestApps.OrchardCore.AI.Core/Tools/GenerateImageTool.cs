@@ -92,7 +92,7 @@ public sealed class GenerateImageTool : AIFunction
                 return "Image generation is not available. No connection is configured.";
             }
 
-            var deploymentName = connection.GetDefaultImagesDeploymentName(throwException: false);
+            var deploymentName = connection.GetImagesDeploymentOrDefaultName(throwException: false);
 
             if (string.IsNullOrEmpty(deploymentName))
             {

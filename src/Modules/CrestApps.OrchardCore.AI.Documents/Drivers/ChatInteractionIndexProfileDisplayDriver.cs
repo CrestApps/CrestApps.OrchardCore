@@ -48,7 +48,7 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
                 foreach (var (connectionName, connection) in provider.Connections)
                 {
                     // Check if this connection has embedding deployments configured
-                    var embeddingDeploymentName = connection.GetDefaultEmbeddingDeploymentName(false);
+                    var embeddingDeploymentName = connection.GetEmbeddingDeploymentOrDefaultName(false);
 
                     if (string.IsNullOrEmpty(embeddingDeploymentName))
                     {

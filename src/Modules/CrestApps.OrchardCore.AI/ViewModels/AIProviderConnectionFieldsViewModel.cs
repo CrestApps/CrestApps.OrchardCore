@@ -10,13 +10,13 @@ public class AIProviderConnectionFieldsViewModel
 
     public bool IsDefault { get; set; }
 
-    public string DefaultDeploymentName { get; set; }
+    public string ChatDeploymentName { get; set; }
 
-    public string DefaultEmbeddingDeploymentName { get; set; }
+    public string EmbeddingDeploymentName { get; set; }
 
-    public string DefaultImagesDeploymentName { get; set; }
+    public string ImagesDeploymentName { get; set; }
 
-    public string DefaultUtilityDeploymentName { get; set; }
+    public string UtilityDeploymentName { get; set; }
 
     [BindNever]
     public bool IsNew { get; set; }

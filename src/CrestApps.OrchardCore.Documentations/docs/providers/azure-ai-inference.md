@@ -27,14 +27,19 @@ To configure the OpenAI connection, add the following settings to the `appsettin
       "Providers": {
         "AzureAIInference": {
           "DefaultConnectionName": "default",
-          "DefaultDeploymentName": "Phi-3-medium-4k-instruct",
+          "DefaultChatDeploymentName": "Phi-3-medium-4k-instruct",
+          "DefaultUtilityDeploymentName": "Phi-3-medium-4k-instruct",
+          "DefaultEmbeddingDeploymentName": "",
+          "DefaultImagesDeploymentName": "",
           "Connections": {
             "default": {
               "Endpoint": "https://<!-- Your Azure Resource Name -->.services.ai.azure.com/models",
               "AuthenticationType": "ApiKey",
               "ApiKey": "<!-- Your GitHub Access Token goes here -->",
-              "DefaultDeploymentName": "Phi-3-medium-4k-instruct",
-              "DefaultUtilityDeploymentName": "Phi-3-medium-4k-instruct"
+              "ChatDeploymentName": "Phi-3-medium-4k-instruct",
+              "UtilityDeploymentName": "Phi-3-medium-4k-instruct",
+              "EmbeddingDeploymentName": "",
+              "ImagesDeploymentName": ""
             }
           }
         }
