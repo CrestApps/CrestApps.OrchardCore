@@ -1,5 +1,7 @@
 # CrestApps Omnichannel (Orchestrator)
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/omnichannel).**
+
 The `CrestApps.OrchardCore.Omnichannel` module is the foundation of CrestApps’ Omnichannel suite. It provides the core concepts and services that allow Orchard Core to orchestrate inbound and outbound communication across channels such as **SMS**, **Email**, and **Phone** (and more).
 
 This module is intentionally “headless”: it focuses on the orchestration layer and shared primitives and is meant to be paired with UI/CRM modules (like Omnichannel Management) and channel providers (like SMS automation).

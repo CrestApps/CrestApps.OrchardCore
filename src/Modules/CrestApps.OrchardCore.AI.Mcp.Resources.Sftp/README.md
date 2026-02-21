@@ -1,5 +1,7 @@
 # MCP SFTP Resource Handler
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/mcp/sftp).**
+
 The **SFTP Resource Handler** module provides SFTP (SSH File Transfer Protocol) resource support for the MCP Server, allowing remote files on SFTP servers to be exposed as MCP resources.
 
 ## Overview

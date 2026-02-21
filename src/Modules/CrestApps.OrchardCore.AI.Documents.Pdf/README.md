@@ -1,5 +1,7 @@
 # AI Documents (PDF) Support
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/documents/pdf).**
+
 This module extends the AI Documents feature with PDF document support.
 
 ## Features

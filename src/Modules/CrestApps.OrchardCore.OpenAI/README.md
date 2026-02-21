@@ -1,5 +1,7 @@
 ## Table of Contents
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/providers/openai).**
+
 - [OpenAI Chat Feature](#openai-chat-feature)
   - [Configuration](#configuration)
   - [Using AI Deployments](#using-ai-deployments)

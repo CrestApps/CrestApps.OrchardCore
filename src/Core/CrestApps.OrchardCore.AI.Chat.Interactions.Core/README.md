@@ -1,5 +1,7 @@
 # AI Chat Interactions Core
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/ai-chat-interactions-core).**
+
 Shared core types and helpers used by AI Chat Interactions modules.
 
 ## Purpose

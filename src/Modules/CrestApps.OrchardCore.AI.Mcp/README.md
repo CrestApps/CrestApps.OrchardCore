@@ -1,5 +1,7 @@
 ## Table of Contents
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/mcp).**
+
 - [Model Context Protocol (MCP)](#model-context-protocol-mcp)
 - [Features](#features)
   - [Model Context Protocol (MCP) Client Feature](#model-context-protocol-mcp-client-feature)

@@ -1,5 +1,7 @@
 ## Table of Contents
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/ai-services).**
+
 - [AI Services Feature](#ai-services-feature)
   - [Configuration](#configuration)
   - [Provider Configuration](#provider-configuration)

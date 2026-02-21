@@ -1,5 +1,7 @@
 # CrestApps.OrchardCore.AI.DataSources.AzureAI
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/data-sources/azure-ai).**
+
 ## Overview
 
 This module provides Azure AI Search support for AI data source knowledge base indexes. It enables vector search and document embedding storage using Azure AI Search's vector capabilities, allowing AI tools to perform Retrieval-Augmented Generation (RAG) searches against Azure AI Search indexes.

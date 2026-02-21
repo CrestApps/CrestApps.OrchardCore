@@ -1,5 +1,7 @@
 # MCP FTP/FTPS Resource Handler
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/mcp/ftp).**
+
 The **FTP/FTPS Resource Handler** module provides FTP and FTPS resource support for the MCP Server, allowing remote files on FTP servers to be exposed as MCP resources.
 
 ## Overview

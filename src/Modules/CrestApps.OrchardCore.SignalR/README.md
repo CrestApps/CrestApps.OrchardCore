@@ -1,5 +1,7 @@
 ## SignalR Feature
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/modules/signalr).**
+
 The **SignalR** module enables seamless integration of SignalR within Orchard Core.
 
 ### Creating a Hub

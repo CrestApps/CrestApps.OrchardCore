@@ -1,5 +1,7 @@
 # CrestApps SMS Omnichannel Automation (AI)
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/omnichannel/sms).**
+
 The `CrestApps.OrchardCore.Omnichannel.Sms` module enables **AI-driven SMS automation** for Omnichannel activities.
 
 It allows Orchard Core (through the Omnichannel Management CRM) to assign an activity to an AI agent that communicates with a contact over SMS as if it were a real call center agent.

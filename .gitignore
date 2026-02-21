@@ -464,3 +464,11 @@ src/DealerSolutions.FormatterTest
 !**/App_Data/HostStorage
 ms-cache
 .agents
+
+##
+## Docusaurus (src/docs)
+##
+src/docs/node_modules/
+src/docs/build/
+src/docs/.docusaurus/
+src/docs/.cache-loader/

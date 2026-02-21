@@ -1,5 +1,7 @@
 # AI Documents (Elasticsearch)
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/documents/elasticsearch).**
+
 This module integrates Elasticsearch as an embedding and search provider for the AI Documents feature.
 
 ## Features

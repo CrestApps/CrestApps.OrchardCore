@@ -1,5 +1,7 @@
 # AI Documents (Azure AI Search)
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/documents/azure-ai).**
+
 This module integrates Azure AI Search as an embedding and search provider for the AI Documents feature.
 
 ## Features

@@ -1,5 +1,7 @@
 # AI Copilot Orchestrator (`CrestApps.OrchardCore.AI.Chat.Copilot`)
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/ai-copilot).**
+
 ## Summary
 
 Provides a GitHub Copilot SDK-based orchestrator for AI chat sessions in Orchard Core. This module integrates the [GitHub Copilot SDK for .NET](https://github.com/github/copilot-sdk) as an alternative orchestrator alongside the default Progressive Tool Orchestrator.
