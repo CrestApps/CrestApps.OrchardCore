@@ -1,5 +1,7 @@
 ## Table of Contents
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/providers/azure-openai).**
+
 - [Azure OpenAI Services Integration](#azure-openai-services-integration)
   - [Configuration](#configuration)
   - [How to Retrieve Azure OpenAI Credentials](#how-to-retrieve-azure-openai-credentials)

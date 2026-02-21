@@ -1,5 +1,7 @@
 # CrestApps.OrchardCore.AI.DataSources.Elasticsearch
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/data-sources/elasticsearch).**
+
 ## Overview
 
 This module provides Elasticsearch support for AI data source knowledge base indexes. It enables vector search and document embedding storage using Elasticsearch's k-NN capabilities, allowing AI tools to perform Retrieval-Augmented Generation (RAG) searches against Elasticsearch indexes.

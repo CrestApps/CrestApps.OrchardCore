@@ -1,5 +1,7 @@
 # AI Chat Interactions Module
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/ai-chat-interactions).**
+
 This module provides ad-hoc AI chat interactions with configurable parameters, enabling users to chat with AI models without requiring predefined AI Profiles.
 
 ## Features

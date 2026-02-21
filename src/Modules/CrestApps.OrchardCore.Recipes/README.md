@@ -1,5 +1,7 @@
 # CrestApps Recipes
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/modules/recipes).**
+
 **CrestApps Recipes** adds JSON-Schema support for Orchard Core recipes.
 
 It exposes strongly-typed, per-step JSON schema definitions (one schema per recipe step) that match how Orchard Core actually parses and executes each step (i.e., the classes inheriting from `NamedRecipeStepHandler`).

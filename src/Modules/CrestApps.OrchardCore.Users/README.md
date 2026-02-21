@@ -1,5 +1,7 @@
 ## Table of Contents
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/modules/users).**
+
 - [Features](#features)
   - [User Display Name](#user-display-name)
   - [User Avatar](#user-avatar)

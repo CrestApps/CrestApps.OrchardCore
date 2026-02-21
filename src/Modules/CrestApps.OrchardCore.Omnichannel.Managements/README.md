@@ -1,5 +1,7 @@
 # CrestApps Omnichannel Management (Mini-CRM)
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/omnichannel/management).**
+
 The `CrestApps.OrchardCore.Omnichannel.Managements` module is a **mini-CRM** built on Orchard Core.
 
 It provides everything you need to manage **contacts**, define your **workflows**, and run activity-driven processes (manual or AI-automated) across communication channels such as SMS, Email, and Phone.

@@ -1,5 +1,7 @@
 ## Ollama AI Chat Feature  
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/providers/ollama).**
+
 The **Ollama AI Chat** allows developers to interact with any Ollama model seamlessly. You can explore all supported models at [Ollama Search](https://ollama.com/search).  
 
 ### Running Ollama Locally  

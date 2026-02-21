@@ -1,5 +1,7 @@
 ## Orchard Core AI Agent Feature
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/ai-agent).**
+
 The **Orchard Core AI Agent** feature extends the functionality of the **AI Services** feature by enabling intelligent agents to perform tasks on your Orchard Core site.
 
 ### Getting Started

@@ -1,5 +1,7 @@
 # AI Data Sources (`CrestApps.OrchardCore.AI.DataSources`)
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/data-sources).**
+
 ## Overview
 
 This module provides AI data source management, knowledge base (KB) indexing, and Retrieval-Augmented Generation (RAG) search capabilities for Orchard Core. It enables any AI provider and orchestrator to leverage structured data sources for contextual AI responses.

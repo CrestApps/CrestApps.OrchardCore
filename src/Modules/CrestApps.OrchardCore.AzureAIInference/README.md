@@ -1,5 +1,7 @@
 ## Azure AI Inference Chat Feature
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/providers/azure-ai-inference).**
+
 The **Azure AI Inference Chat** feature enhances the **AI Services** functionality by integrating GitHub models using Azure AI Inference provider. It provides a suite of services to interact with these models, enabling advanced AI capabilities.
 
 ### Configuration

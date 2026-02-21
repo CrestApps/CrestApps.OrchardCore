@@ -1,5 +1,7 @@
 # CrestApps.OrchardCore.Samples.McpClient
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/samples/mcp-client).**
+
 This sample project is a small ASP.NET Core Razor Pages app that connects to the MCP server hosted by `CrestApps.OrchardCore.Cms.Web` when running with Aspire. It provides a tabbed UI to explore MCP capabilities:
 
 - **Home** – Prerequisites and setup instructions.

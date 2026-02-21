@@ -1,5 +1,7 @@
 # AI Documents (OpenXml) Support
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/ai/documents/openxml).**
+
 This module extends the AI Documents feature with Microsoft Office document support (Word, Excel, PowerPoint).
 
 ## Features

@@ -1,5 +1,7 @@
 ## Enhanced Roles
 
+> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/modules/roles).**
+
 Extends the Orchard Core Roles module with additional reusable components like `RolePickerPart`.
 
 ### RolePickerPart
