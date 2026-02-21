@@ -1,5 +1,9 @@
-## Resources
+# CrestApps Resources
 
-> 📖 **Full documentation is available at [orchardcore.crestapps.com](https://orchardcore.crestapps.com/docs/modules/resources).**
+Extends Resources module with additional scripts and stylesheets.
 
-Extends the Resources module with additional reusable scripts and stylesheets
+## Documentation
+
+For complete documentation, configuration guides, and examples, visit the official documentation site:
+
+👉 **[CrestApps Resources Documentation](https://orchardcore.crestapps.com/docs/modules/resources)**

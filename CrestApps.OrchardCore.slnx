@@ -1,0 +1,84 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Abstractions/">
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.AI.Abstractions/CrestApps.OrchardCore.AI.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Users.Abstractions/CrestApps.OrchardCore.Users.Abstractions.csproj" />
+  </Folder>
+  <Folder Name="/Common/">
+    <Project Path="src/Common/CrestApps.Support/CrestApps.Support.csproj" />
+  </Folder>
+  <Folder Name="/Core/">
+    <Project Path="src/Core/CrestApps.Azure.Core/CrestApps.Azure.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.AI.Mcp.Core/CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.OpenAI.Azure.Core/CrestApps.OrchardCore.OpenAI.Azure.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.OpenAI.Core/CrestApps.OrchardCore.OpenAI.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Roles.Core/CrestApps.OrchardCore.Roles.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.SignalR.Core/CrestApps.OrchardCore.SignalR.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Users.Core/CrestApps.OrchardCore.Users.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </Folder>
+  <Folder Name="/Docs/">
+    <Project Path="src/CrestApps.OrchardCore.Documentations/CrestApps.OrchardCore.Documentations.csproj" />
+  </Folder>
+  <Folder Name="/Modules/">
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Agent/CrestApps.OrchardCore.AI.Agent.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Chat.Copilot/CrestApps.OrchardCore.AI.Chat.Copilot.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/CrestApps.OrchardCore.AI.Chat.Interactions.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Chat/CrestApps.OrchardCore.AI.Chat.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.DataSources.AzureAI/CrestApps.OrchardCore.AI.DataSources.AzureAI.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.DataSources.Elasticsearch/CrestApps.OrchardCore.AI.DataSources.Elasticsearch.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.DataSources/CrestApps.OrchardCore.AI.DataSources.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Documents.AzureAI/CrestApps.OrchardCore.AI.Documents.AzureAI.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Documents.Elasticsearch/CrestApps.OrchardCore.AI.Documents.Elasticsearch.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Documents.OpenXml/CrestApps.OrchardCore.AI.Documents.OpenXml.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Documents.Pdf/CrestApps.OrchardCore.AI.Documents.Pdf.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Documents/CrestApps.OrchardCore.AI.Documents.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Mcp.Resources.Ftp/CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Mcp.Resources.Sftp/CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Mcp/CrestApps.OrchardCore.AI.Mcp.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AzureAIInference/CrestApps.OrchardCore.AzureAIInference.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.ContentAccessControl/CrestApps.OrchardCore.ContentAccessControl.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Ollama/CrestApps.OrchardCore.Ollama.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Omnichannel.EventGrid/CrestApps.OrchardCore.Omnichannel.EventGrid.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/CrestApps.OrchardCore.Omnichannel.Managements.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/CrestApps.OrchardCore.Omnichannel.Sms.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Omnichannel/CrestApps.OrchardCore.Omnichannel.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.OpenAI.Azure/CrestApps.OrchardCore.OpenAI.Azure.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.OpenAI/CrestApps.OrchardCore.OpenAI.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Recipes/CrestApps.OrchardCore.Recipes.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Resources/CrestApps.OrchardCore.Resources.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Users/CrestApps.OrchardCore.Users.csproj" />
+  </Folder>
+  <Folder Name="/ProjectItems/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="gulpfile.js" />
+    <File Path="NuGet.config" />
+    <File Path="package.json" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Startup/">
+    <Project Path="src/Startup/CrestApps.Aspire.AppHost/CrestApps.Aspire.AppHost.csproj" />
+    <Project Path="src/Startup/CrestApps.OrchardCore.Cms.Web/CrestApps.OrchardCore.Cms.Web.csproj" />
+    <Project Path="src/Startup/CrestApps.OrchardCore.Samples.McpClient/CrestApps.OrchardCore.Samples.McpClient.csproj" />
+  </Folder>
+  <Folder Name="/Targets/">
+    <Project Path="src/Targets/CrestApps.OrchardCore.Cms.Core.Targets/CrestApps.OrchardCore.Cms.Core.Targets.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj" />
+  </Folder>
+</Solution>
