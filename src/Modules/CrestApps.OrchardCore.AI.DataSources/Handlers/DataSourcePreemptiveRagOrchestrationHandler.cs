@@ -1,7 +1,9 @@
 using System.Text;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
@@ -11,11 +13,11 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.AI.DataSources.Handlers;
 
 /// <summary>
-/// Orchestration handler that performs Early RAG: embeds the user's query,
-/// searches the knowledge base index, and appends relevant context to the
-/// system message before the LLM call.
+/// Preemptive RAG handler for data sources. Receives pre-extracted search queries
+/// from the coordinator, embeds them, searches the knowledge base index, and appends
+/// relevant context to the system message.
 /// </summary>
-internal sealed class DataSourceEarlyRagOrchestrationHandler : IOrchestrationContextHandler
+internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
 {
     private readonly ICatalog<AIDataSource> _dataSourceStore;
     private readonly IIndexProfileStore _indexProfileStore;
@@ -24,13 +26,13 @@ internal sealed class DataSourceEarlyRagOrchestrationHandler : IOrchestrationCon
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
 
-    public DataSourceEarlyRagOrchestrationHandler(
+    public DataSourcePreemptiveRagHandler(
         ICatalog<AIDataSource> dataSourceStore,
         IIndexProfileStore indexProfileStore,
         IAIClientFactory aiClientFactory,
         ISiteService siteService,
         IServiceProvider serviceProvider,
-        ILogger<DataSourceEarlyRagOrchestrationHandler> logger)
+        ILogger<DataSourcePreemptiveRagHandler> logger)
     {
         _dataSourceStore = dataSourceStore;
         _indexProfileStore = indexProfileStore;
@@ -40,61 +42,31 @@ internal sealed class DataSourceEarlyRagOrchestrationHandler : IOrchestrationCon
         _logger = logger;
     }
 
-    public Task BuildingAsync(OrchestrationContextBuildingContext context)
-        => Task.CompletedTask;
-
-    public async Task BuiltAsync(OrchestrationContextBuiltContext context)
+    public async Task HandleAsync(PreemptiveRagContext context)
     {
-        if (context.Context.CompletionContext == null ||
-            string.IsNullOrEmpty(context.Context.CompletionContext.DataSourceId) ||
-            string.IsNullOrEmpty(context.Context.UserMessage))
+        if (context.OrchestrationContext.CompletionContext == null ||
+            string.IsNullOrEmpty(context.OrchestrationContext.CompletionContext.DataSourceId))
         {
             return;
         }
 
-        // Determine whether Early RAG should be used.
         var ragMetadata = GetRagMetadata(context.Resource);
-        var isEarlyRagEnabled = await IsEarlyRagEnabledAsync(ragMetadata, context.Context);
-
-        if (!isEarlyRagEnabled)
-        {
-            return;
-        }
 
         try
         {
-            await InjectEarlyRagContextAsync(context.Context, ragMetadata);
+            await InjectPreemptiveRagContextAsync(context, ragMetadata);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during Early RAG injection for data source '{DataSourceId}'.",
-                context.Context.CompletionContext.DataSourceId);
+            _logger.LogError(ex, "Error during Preemptive RAG injection for data source '{DataSourceId}'.",
+                context.OrchestrationContext.CompletionContext.DataSourceId);
         }
     }
 
-    private async Task<bool> IsEarlyRagEnabledAsync(AIDataSourceRagMetadata ragMetadata, OrchestrationContext context)
+    private async Task InjectPreemptiveRagContextAsync(PreemptiveRagContext context, AIDataSourceRagMetadata ragMetadata)
     {
-        // If tools are disabled but a data source is configured, force Early RAG.
-        if (context.DisableTools)
-        {
-            return true;
-        }
-
-        // Check per-profile setting first.
-        if (ragMetadata?.EnableEarlyRag == true)
-        {
-            return ragMetadata.EnableEarlyRag;
-        }
-
-        // Fall back to global site setting.
-        var siteSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
-
-        return siteSettings.EnableEarlyRag;
-    }
-
-    private async Task InjectEarlyRagContextAsync(OrchestrationContext context, AIDataSourceRagMetadata ragMetadata)
-    {
-        var dataSourceId = context.CompletionContext.DataSourceId;
+        var orchestrationContext = context.OrchestrationContext;
+        var dataSourceId = orchestrationContext.CompletionContext.DataSourceId;
         var dataSource = await _dataSourceStore.FindByIdAsync(dataSourceId);
 
         if (dataSource == null || string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName))
@@ -136,10 +108,10 @@ internal sealed class DataSourceEarlyRagOrchestrationHandler : IOrchestrationCon
             return;
         }
 
-        // Generate embedding for the user query.
-        var embeddings = await embeddingGenerator.GenerateAsync([context.UserMessage]);
+        // Generate embeddings for all search queries.
+        var embeddings = await embeddingGenerator.GenerateAsync(context.Queries);
 
-        if (embeddings == null || embeddings.Count == 0 || embeddings[0]?.Vector == null)
+        if (embeddings == null || embeddings.Count == 0)
         {
             return;
         }
@@ -162,20 +134,53 @@ internal sealed class DataSourceEarlyRagOrchestrationHandler : IOrchestrationCon
             }
         }
 
-        // Perform vector search.
-        var results = await searchService.SearchAsync(
-            masterProfile,
-            embeddings[0].Vector.ToArray(),
-            dataSourceId,
-            topN,
-            providerFilter);
+        // Perform vector search for each embedding and combine results.
+        var allResults = new List<DataSourceSearchResult>();
+        var seenChunkIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (results == null || !results.Any())
+        foreach (var embedding in embeddings)
+        {
+            if (embedding?.Vector == null)
+            {
+                continue;
+            }
+
+            var results = await searchService.SearchAsync(
+                masterProfile,
+                embedding.Vector.ToArray(),
+                dataSourceId,
+                topN,
+                providerFilter);
+
+            if (results == null)
+            {
+                continue;
+            }
+
+            foreach (var result in results)
+            {
+                // Deduplicate by reference and chunk index to avoid injecting the same chunk multiple times.
+                var chunkKey = $"{result.ReferenceId}:{result.ChunkIndex}";
+
+                if (seenChunkIds.Add(chunkKey))
+                {
+                    allResults.Add(result);
+                }
+            }
+        }
+
+        // Sort by score descending and take top N.
+        var finalResults = allResults
+            .OrderByDescending(r => r.Score)
+            .Take(topN)
+            .AsEnumerable();
+
+        if (!finalResults.Any())
         {
             if (ragMetadata?.IsInScope == true)
             {
-                context.SystemMessageBuilder.AppendLine("\n\n[Data Source Context]");
-                context.SystemMessageBuilder.AppendLine("No relevant content was found in the configured data source. Only answer based on the data source content. If no relevant content exists, inform the user.");
+                orchestrationContext.SystemMessageBuilder.AppendLine("\n\n[Data Source Context]");
+                orchestrationContext.SystemMessageBuilder.AppendLine("No relevant content was found in the configured data source. Only answer based on the data source content. If no relevant content exists, inform the user.");
             }
 
             return;
@@ -185,9 +190,9 @@ internal sealed class DataSourceEarlyRagOrchestrationHandler : IOrchestrationCon
         if (strictness > 0)
         {
             var threshold = strictness / 5.0f;
-            results = results.Where(r => r.Score >= threshold);
+            finalResults = finalResults.Where(r => r.Score >= threshold);
 
-            if (!results.Any())
+            if (!finalResults.Any())
             {
                 return;
             }
@@ -203,7 +208,7 @@ internal sealed class DataSourceEarlyRagOrchestrationHandler : IOrchestrationCon
             sb.AppendLine("IMPORTANT: Only answer based on the data source content. If the context does not contain relevant information, inform the user that the answer is not available in the data source.");
         }
 
-        if (!context.DisableTools)
+        if (!orchestrationContext.DisableTools)
         {
             sb.AppendLine($"If you need additional context or more relevant information, use the '{SystemToolNames.SearchDataSources}' tool to retrieve more documents from the data source.");
         }
@@ -211,7 +216,7 @@ internal sealed class DataSourceEarlyRagOrchestrationHandler : IOrchestrationCon
         var docIndex = 1;
         var seenReferences = new Dictionary<string, (int Index, string Title)>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var result in results)
+        foreach (var result in finalResults)
         {
             if (string.IsNullOrWhiteSpace(result.Content))
             {
@@ -251,7 +256,7 @@ internal sealed class DataSourceEarlyRagOrchestrationHandler : IOrchestrationCon
             }
         }
 
-        context.SystemMessageBuilder.Append(sb);
+        orchestrationContext.SystemMessageBuilder.Append(sb);
     }
 
     private static AIDataSourceRagMetadata GetRagMetadata(object resource)

@@ -7,8 +7,6 @@ public class EditProfileDataSourcesViewModel
 {
     public string DataSourceId { get; set; }
 
-    public bool EnableEarlyRag { get; set; }
-
     public int? Strictness { get; set; }
 
     public int? TopNDocuments { get; set; }

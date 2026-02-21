@@ -56,6 +56,15 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DefaultUtilityDeploymentName" class="@Orchard.GetLabelClasses()">@T["Utility deployment name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input type="text" asp-for="DefaultUtilityDeploymentName" class="form-control" />
+        <span asp-validation-for="DefaultUtilityDeploymentName" class="text-danger"></span>
+        <span class="hint">@T["Optional lightweight model used for auxiliary tasks such as query rewriting, intent detection, and chart generation. When empty, the chat deployment name is used as a fallback."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
     <div class="@Orchard.GetEndClasses(true)">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="IsDefault">

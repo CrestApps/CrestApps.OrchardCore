@@ -46,6 +46,9 @@ public sealed class Startup : StartupBase
         // Add document processing system tools and supporting services.
         services.AddDefaultDocumentProcessingServices();
 
+        // Register the document Preemptive RAG handler.
+        services.AddScoped<IPreemptiveRagHandler, DocumentPreemptiveRagHandler>();
+
         // Register the RAG search system tool.
         services.AddAITool<SearchDocumentsTool>(SearchDocumentsTool.TheName)
             .WithTitle("Search Documents")

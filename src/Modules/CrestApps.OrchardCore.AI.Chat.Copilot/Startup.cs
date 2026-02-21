@@ -31,7 +31,7 @@ public sealed class Startup : StartupBase
         services.AddHttpClient()
             .AddScoped<GitHubOAuthService>();
 
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextHandler, CopilotOrchestrationContextHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, CopilotOrchestrationContextHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IChatInteractionSettingsHandler, CopilotChatInteractionSettingsHandler>());
 
         services.AddDisplayDriver<AIProfile, AIProfileCopilotDisplayDriver>();

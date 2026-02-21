@@ -324,6 +324,8 @@ public sealed class ProgressiveToolOrchestratorTests
     {
         return new DefaultOrchestrator(
             completionService ?? new FakeCompletionService("default response"),
+            new FakeAIClientFactory(),
+            Options.Create(new AIProviderOptions()),
             toolRegistry ?? new FakeToolRegistry([]),
             new LuceneTextTokenizer(),
             Options.Create(new ProgressiveToolOrchestratorOptions()),
@@ -451,5 +453,22 @@ public sealed class ProgressiveToolOrchestratorTests
             return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(
                 _entries.Take(topK).ToList());
         }
+    }
+
+    /// <summary>
+    /// A fake AI client factory that returns null for all client types.
+    /// </summary>
+    private sealed class FakeAIClientFactory : IAIClientFactory
+    {
+        public ValueTask<IChatClient> CreateChatClientAsync(string providerName, string connectionName, string deploymentName)
+            => new((IChatClient)null);
+
+        public ValueTask<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(string providerName, string connectionName, string deploymentName)
+            => new((IEmbeddingGenerator<string, Embedding<float>>)null);
+
+#pragma warning disable MEAI001
+        public ValueTask<IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null)
+            => new((IImageGenerator)null);
+#pragma warning restore MEAI001
     }
 }

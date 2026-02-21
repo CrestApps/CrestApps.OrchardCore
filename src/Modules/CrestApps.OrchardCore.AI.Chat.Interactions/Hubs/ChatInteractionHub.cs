@@ -188,7 +188,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                         Strictness = GetInt(settings, "strictness"),
                         TopNDocuments = GetInt(settings, "topNDocuments"),
                         IsInScope = GetBool(settings, "isInScope") ?? true,
-                        EnableEarlyRag = GetBool(settings, "enableEarlyRag") ?? false,
                         Filter = GetString(settings, "filter"),
                     });
                 }

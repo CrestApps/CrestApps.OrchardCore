@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.AI.Models;
 /// Provides the input context for an <see cref="IOrchestrator"/> execution.
 /// Contains the user message, conversation history, completion settings,
 /// document references, and extensible properties populated by
-/// <see cref="IOrchestrationContextHandler"/> implementations.
+/// <see cref="IOrchestrationContextBuilderHandler"/> implementations.
 /// </summary>
 /// <remarks>
 /// Instances are created by <see cref="IOrchestrationContextBuilder"/> using a handler pipeline,
@@ -65,7 +65,7 @@ public sealed class OrchestrationContext
 
     /// <summary>
     /// Gets the extensible property bag for additional context contributed by
-    /// <see cref="IOrchestrationContextHandler"/> implementations.
+    /// <see cref="IOrchestrationContextBuilderHandler"/> implementations.
     /// </summary>
     public Dictionary<string, object> Properties { get; } = new(StringComparer.OrdinalIgnoreCase);
 }

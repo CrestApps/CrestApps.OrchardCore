@@ -1,5 +1,4 @@
 using System.Text;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
@@ -18,7 +17,7 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 /// and tool descriptions. The resource ID is resolved server-side from
 /// <see cref="AIToolExecutionContext.Resource"/> — it is never exposed to the model.
 /// </remarks>
-public sealed class DocumentOrchestrationHandler : IOrchestrationContextHandler
+public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderHandler
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
 

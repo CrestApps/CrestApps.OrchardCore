@@ -29,7 +29,8 @@ Add the following section to your `appsettings.json` to configure Azure OpenAI:
               "Endpoint": "https://<!-- Your Azure Resource Name -->.openai.azure.com/",
               "AuthenticationType": "ApiKey",
               "ApiKey": "<!-- API Key for your Azure AI instance -->",
-              "DefaultDeploymentName": "<!-- Default deployment name -->"
+              "DefaultDeploymentName": "<!-- Default deployment name -->",
+              "DefaultUtilityDeploymentName": "<!-- Optional: a lightweight model for auxiliary tasks -->"
             }
           }
         }

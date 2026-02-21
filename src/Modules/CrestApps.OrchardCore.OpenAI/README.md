@@ -28,7 +28,8 @@ To configure a connection, add the following settings to the `appsettings.json` 
           "Connections": {
             "openai-cloud": {
               "ApiKey": "<!-- Your API Key Goes Here -->",
-              "DefaultDeploymentName": "gpt-4o-mini"
+              "DefaultDeploymentName": "gpt-4o-mini",
+              "DefaultUtilityDeploymentName": "gpt-4o-mini"
             }
           }
         }

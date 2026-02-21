@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.AI;
 /// Handlers are resolved from DI and executed in reverse registration order to allow last-registered
 /// handlers to run first.
 /// </remarks>
-public interface IOrchestrationContextHandler
+public interface IOrchestrationContextBuilderHandler
 {
     /// <summary>
     /// Called while the <see cref="OrchestrationContext"/> is being constructed, before the optional caller

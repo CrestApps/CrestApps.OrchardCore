@@ -6,12 +6,12 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 
 public sealed class DefaultOrchestrationContextBuilder : IOrchestrationContextBuilder
 {
-    private readonly IEnumerable<IOrchestrationContextHandler> _handlers;
+    private readonly IEnumerable<IOrchestrationContextBuilderHandler> _handlers;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
 
     public DefaultOrchestrationContextBuilder(
-        IEnumerable<IOrchestrationContextHandler> handlers,
+        IEnumerable<IOrchestrationContextBuilderHandler> handlers,
         IServiceProvider serviceProvider,
         ILogger<DefaultOrchestrationContextBuilder> logger)
     {

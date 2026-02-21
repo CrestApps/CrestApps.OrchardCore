@@ -106,6 +106,13 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
             connection.DefaultDeploymentName = defaultDeploymentName;
         }
 
+        var defaultUtilityDeploymentName = data[nameof(AIProviderConnection.DefaultUtilityDeploymentName)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(defaultUtilityDeploymentName))
+        {
+            connection.DefaultUtilityDeploymentName = defaultUtilityDeploymentName;
+        }
+
         var isDefault = data[nameof(AIProviderConnection.IsDefault)]?.GetValue<bool>();
 
         if (isDefault == true)

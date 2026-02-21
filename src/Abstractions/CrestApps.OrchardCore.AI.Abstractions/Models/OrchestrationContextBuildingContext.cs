@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.AI.Models;
 /// </summary>
 /// <remarks>
 /// This context is provided to <c>BuildingAsync</c> handlers in the
-/// <see cref="IOrchestrationContextHandler"/> pipeline, allowing implementations to enrich,
+/// <see cref="IOrchestrationContextBuilderHandler"/> pipeline, allowing implementations to enrich,
 /// validate, or otherwise modify the mutable <see cref="Context"/> based on the source
 /// <see cref="Resource"/>.
 /// </remarks>

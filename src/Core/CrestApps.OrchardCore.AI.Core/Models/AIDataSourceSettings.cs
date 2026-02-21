@@ -2,7 +2,7 @@ namespace CrestApps.OrchardCore.AI.Core.Models;
 
 /// <summary>
 /// Global site settings for AI Data Source behavior.
-/// Configures default values for Early RAG and retrieval parameters.
+/// Configures default values for Preemptive RAG and retrieval parameters.
 /// </summary>
 public sealed class AIDataSourceSettings
 {
@@ -13,13 +13,6 @@ public sealed class AIDataSourceSettings
     public const int MinTopNDocuments = 3;
 
     public const int MaxTopNDocuments = 20;
-
-    /// <summary>
-    /// Gets or sets whether Early RAG is enabled by default for data source profiles.
-    /// When true, relevant context from data sources is injected into the system message
-    /// before the LLM call. Individual profiles can override this setting.
-    /// </summary>
-    public bool EnableEarlyRag { get; set; } = true;
 
     /// <summary>
     /// Gets or sets the default strictness threshold (1-5) for data source retrieval.

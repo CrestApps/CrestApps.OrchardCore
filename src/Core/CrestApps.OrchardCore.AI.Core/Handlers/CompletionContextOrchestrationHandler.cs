@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 /// from the resource using the existing <see cref="IAICompletionContextBuilder"/> pipeline,
 /// and resolves the <see cref="OrchestrationContext.SourceName"/>.
 /// </summary>
-internal sealed class CompletionContextOrchestrationHandler : IOrchestrationContextHandler
+internal sealed class CompletionContextOrchestrationHandler : IOrchestrationContextBuilderHandler
 {
     private readonly IAICompletionContextBuilder _completionContextBuilder;
 

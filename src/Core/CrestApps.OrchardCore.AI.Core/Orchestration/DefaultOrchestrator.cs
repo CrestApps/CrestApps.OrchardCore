@@ -24,6 +24,8 @@ public sealed class DefaultOrchestrator : IOrchestrator
     public const string OrchestratorName = "default";
 
     private readonly IAICompletionService _completionService;
+    private readonly IAIClientFactory _aiClientFactory;
+    private readonly AIProviderOptions _providerOptions;
     private readonly IToolRegistry _toolRegistry;
     private readonly ITextTokenizer _tokenizer;
     private readonly ProgressiveToolOrchestratorOptions _options;
@@ -31,12 +33,16 @@ public sealed class DefaultOrchestrator : IOrchestrator
 
     public DefaultOrchestrator(
         IAICompletionService completionService,
+        IAIClientFactory aiClientFactory,
+        IOptions<AIProviderOptions> providerOptions,
         IToolRegistry toolRegistry,
         ITextTokenizer tokenizer,
         IOptions<ProgressiveToolOrchestratorOptions> options,
         ILogger<DefaultOrchestrator> logger)
     {
         _completionService = completionService;
+        _aiClientFactory = aiClientFactory;
+        _providerOptions = providerOptions.Value;
         _toolRegistry = toolRegistry;
         _tokenizer = tokenizer;
         _options = options.Value;
@@ -127,6 +133,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
 
     /// <summary>
     /// Runs the planning phase: a lightweight LLM call to identify required capabilities.
+    /// Uses the utility model when configured, falling back to the default deployment.
     /// </summary>
     internal async Task<string> PlanAsync(
         OrchestrationContext context,
@@ -160,24 +167,47 @@ public sealed class DefaultOrchestrator : IOrchestrator
                 Keep your response concise (under 200 words).
                 """;
 
-            var planningContext = new AICompletionContext
+            var chatClient = await TryCreateUtilityChatClientAsync(context);
+
+            string plan;
+
+            if (chatClient != null)
             {
-                ConnectionName = context.CompletionContext.ConnectionName,
-                DeploymentId = context.CompletionContext.DeploymentId,
-                DisableTools = true,
-                SystemMessage = planningSystemPrompt,
-                Temperature = 0.1f,
-                MaxTokens = 300,
-                UseCaching = false,
-            };
+                // Use the utility model directly for the planning call.
+                var messages = GetPlanningMessages(context);
+                messages.Insert(0, new ChatMessage(ChatRole.System, planningSystemPrompt));
 
-            var response = await _completionService.CompleteAsync(
-                context.SourceName,
-                GetPlanningMessages(context),
-                planningContext,
-                cancellationToken);
+                var chatOptions = new ChatOptions
+                {
+                    Temperature = 0.1f,
+                    MaxOutputTokens = 300,
+                };
 
-            var plan = response?.Messages?.FirstOrDefault(m => m.Role == ChatRole.Assistant)?.Text;
+                var response = await chatClient.GetResponseAsync(messages, chatOptions, cancellationToken);
+                plan = response?.Text;
+            }
+            else
+            {
+                // Fall back to the completion service with the default model.
+                var planningContext = new AICompletionContext
+                {
+                    ConnectionName = context.CompletionContext.ConnectionName,
+                    DeploymentId = context.CompletionContext.DeploymentId,
+                    DisableTools = true,
+                    SystemMessage = planningSystemPrompt,
+                    Temperature = 0.1f,
+                    MaxTokens = 300,
+                    UseCaching = false,
+                };
+
+                var response = await _completionService.CompleteAsync(
+                    context.SourceName,
+                    GetPlanningMessages(context),
+                    planningContext,
+                    cancellationToken);
+
+                plan = response?.Messages?.FirstOrDefault(m => m.Role == ChatRole.Assistant)?.Text;
+            }
 
             if (_logger.IsEnabled(LogLevel.Debug) && !string.IsNullOrWhiteSpace(plan))
             {
@@ -384,5 +414,47 @@ public sealed class DefaultOrchestrator : IOrchestrator
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Attempts to create a chat client using the utility deployment name.
+    /// Returns <c>null</c> if no utility or default deployment is configured.
+    /// </summary>
+    private async Task<IChatClient> TryCreateUtilityChatClientAsync(OrchestrationContext context)
+    {
+        var providerName = context.SourceName;
+        var connectionName = context.CompletionContext?.ConnectionName;
+
+        if (string.IsNullOrEmpty(providerName) ||
+            !_providerOptions.Providers.TryGetValue(providerName, out var provider))
+        {
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(connectionName))
+        {
+            connectionName = provider.DefaultConnectionName;
+        }
+
+        if (string.IsNullOrEmpty(connectionName) ||
+            !provider.Connections.TryGetValue(connectionName, out var connection))
+        {
+            return null;
+        }
+
+        // Prefer the utility deployment, fall back to the default deployment.
+        var deploymentName = connection.GetDefaultUtilityDeploymentName(throwException: false);
+
+        if (string.IsNullOrEmpty(deploymentName))
+        {
+            deploymentName = connection.GetDefaultDeploymentName(throwException: false);
+        }
+
+        if (string.IsNullOrEmpty(deploymentName))
+        {
+            return null;
+        }
+
+        return await _aiClientFactory.CreateChatClientAsync(providerName, connectionName, deploymentName);
     }
 }

@@ -39,7 +39,6 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
             model.Strictness = dataSourceSettings.GetStrictness(ragMetadata.Strictness);
             model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
             model.IsInScope = ragMetadata.IsInScope;
-            model.EnableEarlyRag = context.IsNew ? dataSourceSettings.EnableEarlyRag : ragMetadata.EnableEarlyRag;
             model.Filter = ragMetadata.Filter;
 
             var metadata = profile.As<AIProfileDataSourceMetadata>();

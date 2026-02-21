@@ -22,7 +22,7 @@ public static class ServiceCollectionExtensions
         // Register the tabular batch result cache (uses IDistributedCache)
         services.TryAddSingleton<ITabularBatchResultCache, TabularBatchResultCache>();
 
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextHandler, DocumentOrchestrationHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, DocumentOrchestrationHandler>());
 
         // Register document system tools (available when documents are attached).
         services.AddAITool<ListDocumentsTool>(ListDocumentsTool.TheName)
