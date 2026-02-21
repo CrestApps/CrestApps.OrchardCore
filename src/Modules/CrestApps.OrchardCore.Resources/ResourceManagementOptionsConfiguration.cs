@@ -100,8 +100,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js",
                 "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js")
             .SetCdnIntegrity(
-                "sha384-ckHiE7G6MBk/VbsEcbfcaFLRwMRNnHMOP4LQwuAfJJTMKHGEcsFXkTjl1HBO7UBR",
-                "sha384-ckHiE7G6MBk/VbsEcbfcaFLRwMRNnHMOP4LQwuAfJJTMKHGEcsFXkTjl1HBO7UBR")
+                "sha384-RH2xi4eIQ/gjtbs9fUXM68sLSi99C7ZWBRX1vDrVv6GQXRibxXLbwO2NGZB74MbU",
+                "sha384-RH2xi4eIQ/gjtbs9fUXM68sLSi99C7ZWBRX1vDrVv6GQXRibxXLbwO2NGZB74MbU")
             .SetVersion("11.11.1");
 
         _manifest

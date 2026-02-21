@@ -24,6 +24,9 @@ var fs = require("graceful-fs"),
 // For compat with older versions of Node.js.
 require("es6-promise").polyfill();
 
+// Suppress Node.js deprecation warnings during build output.
+// process.noDeprecation = true;
+
 // To suppress memory leak warning from gulp.watch().
 require("events").EventEmitter.prototype._maxListeners = 100;
 
@@ -121,9 +124,16 @@ function resolveAssetGroupPaths(assetGroup, assetManifestPath) {
     assetGroup.inputs.forEach(inputPath => {
 
         var resolvedPath = path.resolve(path.join(assetGroup.basePath, inputPath)).replace(/\\/g, '/');
+        var isNodeModulesPath = inputPath.startsWith("node_modules/") || inputPath.startsWith("./node_modules/");
 
         if (resolvedPath.includes('*')) {
             var sortedPaths = glob.sync(resolvedPath, {});
+
+            // Fall back to repo root 'node_modules' when modules are not restored locally.
+            if (isNodeModulesPath && sortedPaths.length === 0) {
+                var rootResolvedPath = path.resolve(inputPath).replace(/\\/g, '/');
+                sortedPaths = glob.sync(rootResolvedPath, {});
+            }
 
             sortedPaths.sort();
 
@@ -131,6 +141,14 @@ function resolveAssetGroupPaths(assetGroup, assetManifestPath) {
                 inputPaths.push(sortedPath.replace(/\\/g, '/'));
             });
         } else {
+            // Fall back to repo root 'node_modules' when modules are not restored locally.
+            if (isNodeModulesPath && !fs.existsSync(resolvedPath)) {
+                var rootResolvedPath = path.resolve(inputPath).replace(/\\/g, '/');
+                if (fs.existsSync(rootResolvedPath)) {
+                    resolvedPath = rootResolvedPath;
+                }
+            }
+
             inputPaths.push(resolvedPath);
         }
     });
@@ -205,6 +223,7 @@ function buildCssPipeline(assetGroup, doConcat, doRebuild) {
         .pipe(gulpif("*.less", less()))
         .pipe(gulpif("*.scss", scss({
             precision: 10,
+            silenceDeprecations: ["legacy-js-api"],
 
         })))
         .pipe(gulpif(doConcat, concat(assetGroup.outputFileName)))
@@ -239,7 +258,8 @@ function buildCssPipeline(assetGroup, doConcat, doRebuild) {
         .pipe(gulpif(generateSourceMaps, sourcemaps.init()))
         .pipe(gulpif("*.less", less()))
         .pipe(gulpif("*.scss", scss({
-            precision: 10
+            precision: 10,
+            silenceDeprecations: ["legacy-js-api"]
         })))
         .pipe(gulpif(doConcat, concat(assetGroup.outputFileName)))
         .pipe(gulpif(generateRTL, postcss([rtl()])))
@@ -266,12 +286,6 @@ function buildJsPipeline(assetGroup, doConcat, doRebuild) {
         declaration: false,
         noImplicitAny: true,
         noEmitOnError: true,
-        lib: [
-            "dom",
-            "es5",
-            "scripthost",
-            "es2015.iterable"
-        ],
         target: "es5",
     };
 
