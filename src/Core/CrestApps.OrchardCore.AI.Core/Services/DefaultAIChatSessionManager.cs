@@ -38,6 +38,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             SessionId = IdGenerator.GenerateId(),
             ProfileId = profile.ItemId,
             CreatedUtc = _clock.UtcNow,
+            LastActivityUtc = _clock.UtcNow,
         };
 
         var user = _httpContextAccessor.HttpContext?.User;

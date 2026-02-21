@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
@@ -30,6 +31,7 @@ public sealed class GitHubOAuthService
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly LinkGenerator _linkGenerator;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IClock _clock;
     private readonly ILogger<GitHubOAuthService> _logger;
 
     public GitHubOAuthService(
@@ -39,6 +41,7 @@ public sealed class GitHubOAuthService
         IHttpContextAccessor httpContextAccessor,
         LinkGenerator linkGenerator,
         IHttpClientFactory httpClientFactory,
+        IClock clock,
         ILogger<GitHubOAuthService> logger)
     {
         _userManager = userManager;
@@ -47,6 +50,7 @@ public sealed class GitHubOAuthService
         _httpContextAccessor = httpContextAccessor;
         _linkGenerator = linkGenerator;
         _httpClientFactory = httpClientFactory;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -143,7 +147,7 @@ public sealed class GitHubOAuthService
             ProtectedAccessToken = tokenProtector.Protect(accessToken),
             ProtectedRefreshToken = null, // GitHub OAuth doesn't provide refresh tokens
             ExpiresAt = null, // GitHub tokens don't have explicit expiration
-            UpdatedUtc = DateTime.UtcNow
+            UpdatedUtc = _clock.UtcNow,
         };
 
         usr.Put(credentials);
@@ -294,7 +298,7 @@ public sealed class GitHubOAuthService
                 ProtectedRefreshToken = null,
                 GitHubUsername = null,
                 ExpiresAt = null,
-                UpdatedUtc = DateTime.UtcNow
+                UpdatedUtc = _clock.UtcNow,
             });
 
             await _userManager.UpdateAsync(usr);
@@ -313,7 +317,7 @@ public sealed class GitHubOAuthService
         }
 
         // Check if token is not expired
-        if (credential.ExpiresAt.HasValue && credential.ExpiresAt.Value < DateTime.UtcNow)
+        if (credential.ExpiresAt.HasValue && credential.ExpiresAt.Value < _clock.UtcNow)
         {
             return false;
         }

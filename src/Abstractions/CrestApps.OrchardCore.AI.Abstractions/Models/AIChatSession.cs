@@ -46,4 +46,25 @@ public sealed class AIChatSession : Entity
     /// This property helps track the start time of the session in a standardized format (UTC).
     /// </summary>
     public DateTime CreatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC date and time of the last activity in this session.
+    /// </summary>
+    public DateTime LastActivityUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC date and time when the session was closed due to inactivity.
+    /// </summary>
+    public DateTime? ClosedAtUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status of the chat session.
+    /// </summary>
+    public ChatSessionStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the extracted data fields for this session.
+    /// Keys are field names from the data extraction configuration.
+    /// </summary>
+    public Dictionary<string, ExtractedFieldState> ExtractedData { get; set; } = [];
 }

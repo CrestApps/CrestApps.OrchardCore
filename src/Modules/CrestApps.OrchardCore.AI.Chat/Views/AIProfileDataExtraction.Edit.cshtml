@@ -1,0 +1,131 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+
+@model AIProfileDataExtractionViewModel
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="EnableDataExtraction" data-toggle-target="#dataExtractionSettings">
+        <label class="form-check-label" asp-for="EnableDataExtraction">@T["Enable Data Extraction"]</label>
+        <span class="hint dashed">@T["When enabled, the system will extract structured data from chat messages."]</span>
+    </div>
+</div>
+
+<div id="dataExtractionSettings" style="@(Model.EnableDataExtraction ? "" : "display:none")">
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label class="form-label" asp-for="ExtractionCheckInterval">@T["Extraction Check Interval"]</label>
+            <input type="number" class="form-control" asp-for="ExtractionCheckInterval" min="1" />
+            <span class="hint">@T["Run extraction every N user messages. Default is 1 (every message)."]</span>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label" asp-for="SessionInactivityTimeoutInMinutes">@T["Session Inactivity Timeout (minutes)"]</label>
+            <input type="number" class="form-control" asp-for="SessionInactivityTimeoutInMinutes" min="1" />
+            <span class="hint">@T["Sessions inactive longer than this duration will be automatically closed. Default is 30 minutes."]</span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">@T["Extraction Entries"]</label>
+        <span class="hint dashed d-block mb-2">@T["Define the fields to extract from the conversation."]</span>
+
+        <div id="extractionEntriesContainer">
+            @for (var i = 0; i < Model.Entries.Count; i++)
+            {
+                <div class="card mb-2 extraction-entry-card">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                        <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 entry-collapse-toggle" data-bs-toggle="collapse" href="#entryCollapse_@i" role="button" aria-expanded="true">
+                            <i class="fa-solid fa-chevron-down me-1"></i>
+                            <span class="entry-name-display fw-semibold">@(string.IsNullOrWhiteSpace(Model.Entries[i].Name) ? T["New Entry"] : Model.Entries[i].Name)</span>
+                        </a>
+                        <button type="button" class="btn btn-sm btn-danger remove-entry-btn" title="@T["Remove"]">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                    <div id="entryCollapse_@i" class="collapse show">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">@T["Name"]</label>
+                                <input type="text" class="form-control entry-name-input" name="@Html.NameFor(m => m.Entries[i].Name)" value="@Model.Entries[i].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., customer_name"]" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">@T["Description"]</label>
+                                <input type="text" class="form-control" name="@Html.NameFor(m => m.Entries[i].Description)" value="@Model.Entries[i].Description" placeholder="@T["What to extract"]" />
+                            </div>
+                            <div class="form-check mb-2">
+                                <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Entries[i].AllowMultipleValues)" value="true" @(Model.Entries[i].AllowMultipleValues ? "checked" : "") />
+                                <label class="form-check-label">@T["Allow Multiple Values"]</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Entries[i].IsUpdatable)" value="true" @(Model.Entries[i].IsUpdatable ? "checked" : "") />
+                                <label class="form-check-label">@T["Updatable"]</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        <button type="button" class="btn btn-sm btn-success" id="addExtractionEntry"><i class="fa-solid fa-plus"></i> @T["Add Entry"]</button>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        var toggleCheckbox = document.querySelector('[data-toggle-target="#dataExtractionSettings"]');
+        var target = document.getElementById('dataExtractionSettings');
+        if (toggleCheckbox && target) {
+            toggleCheckbox.addEventListener('change', function () {
+                target.style.display = this.checked ? '' : 'none';
+            });
+        }
+
+        var container = document.getElementById('extractionEntriesContainer');
+        var addButton = document.getElementById('addExtractionEntry');
+
+        if (addButton && container) {
+            addButton.addEventListener('click', function () {
+                var index = container.querySelectorAll('.extraction-entry-card').length;
+                var prefix = '@Html.NameFor(m => m.Entries)';
+                var collapseId = 'entryCollapse_' + index;
+                var card = document.createElement('div');
+                card.className = 'card mb-2 extraction-entry-card';
+                card.innerHTML =
+                    '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
+                        '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 entry-collapse-toggle" data-bs-toggle="collapse" href="#' + collapseId + '" role="button" aria-expanded="true">' +
+                            '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                            '<span class="entry-name-display fw-semibold">New Entry</span>' +
+                        '</a>' +
+                        '<button type="button" class="btn btn-sm btn-danger remove-entry-btn" title="Remove"><i class="fa-solid fa-trash"></i></button>' +
+                    '</div>' +
+                    '<div id="' + collapseId + '" class="collapse show">' +
+                        '<div class="card-body">' +
+                            '<div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control entry-name-input" name="' + prefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., customer_name" /></div>' +
+                            '<div class="mb-3"><label class="form-label">Description</label><input type="text" class="form-control" name="' + prefix + '[' + index + '].Description" placeholder="What to extract" /></div>' +
+                            '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="' + prefix + '[' + index + '].AllowMultipleValues" value="true" /><label class="form-check-label">Allow Multiple Values</label></div>' +
+                            '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="' + prefix + '[' + index + '].IsUpdatable" value="true" /><label class="form-check-label">Updatable</label></div>' +
+                        '</div>' +
+                    '</div>';
+                container.appendChild(card);
+            });
+        }
+
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.remove-entry-btn')) {
+                var card = e.target.closest('.extraction-entry-card');
+                if (card) card.remove();
+            }
+        });
+
+        // Update card header name display when the Name input changes.
+        document.addEventListener('input', function (e) {
+            if (e.target.classList.contains('entry-name-input')) {
+                var card = e.target.closest('.extraction-entry-card');
+                if (card) {
+                    var display = card.querySelector('.entry-name-display');
+                    if (display) {
+                        display.textContent = e.target.value || 'New Entry';
+                    }
+                }
+            }
+        });
+    });
+</script>

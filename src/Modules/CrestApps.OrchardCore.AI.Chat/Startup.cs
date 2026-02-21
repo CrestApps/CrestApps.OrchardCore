@@ -34,7 +34,8 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfileMenuDisplayDriver>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatAdminMenu>()
-            .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>();
+            .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileDataExtractionDisplayDriver>();
 
         services.Configure<HubOptions<AIChatHub>>(options =>
         {

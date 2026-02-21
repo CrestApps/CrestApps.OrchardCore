@@ -70,7 +70,7 @@ public sealed class InMemoryMcpCapabilityEmbeddingCacheTests
         };
 
         var callCount = 0;
-        var generator = new FakeEmbeddingGenerator(new float[] { 1f }, () => callCount++);
+        var generator = new FakeEmbeddingGenerator([1f], () => callCount++);
 
         await _cache.GetOrCreateEmbeddingsAsync(capabilities, generator, TestContext.Current.CancellationToken);
         _cache.Invalidate("conn1");

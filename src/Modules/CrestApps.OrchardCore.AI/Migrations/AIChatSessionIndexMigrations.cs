@@ -53,4 +53,24 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
 
         return 1;
     }
+
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table =>
+        {
+            table.AddColumn<int>("Status", column => column.WithDefault(0));
+            table.AddColumn<DateTime>("LastActivityUtc");
+        }, collection: AIConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
+            .CreateIndex("IDX_AIChatSessionIndex_Status",
+                "DocumentId",
+                "ProfileId",
+                "Status",
+                "LastActivityUtc"),
+            collection: AIConstants.CollectionName
+        );
+
+        return 2;
+    }
 }

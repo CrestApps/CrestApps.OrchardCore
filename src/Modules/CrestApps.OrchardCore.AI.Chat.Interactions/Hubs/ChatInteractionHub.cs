@@ -401,7 +401,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 ItemId = IdGenerator.GenerateId(),
                 ChatInteractionId = itemId,
                 Role = ChatRole.Assistant,
-                CreatedUtc = DateTime.UtcNow,
+                CreatedUtc = _clock.UtcNow,
             };
 
             var builder = new StringBuilder();

@@ -113,8 +113,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css",
                 "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.css")
             .SetCdnIntegrity(
-                "sha384-WtUWkflhGUQ3MK2tFYXjWfMm/V8wQ5zBSAJDQ97BKUV1FG/lSUIMKFa7lEexSSqe",
-                "sha384-E4p1vLSqqOpseRx1IxsBhi/AzNnHMEBMGsNhillDLNmBTfAPGIHR/Rh7S/netUJM")
+                "sha384-eFTL69TLRZTkNfYZOLM+G04821K1qZao/4QLJbet1pP4tcF+fdXq/9CdqAbWRl/L",
+                "sha384-Uhn9VRzdRxBVYRT2aPFl8ECva7znqyZwWiqpE3v4GTBe8y2XrpwTWZtU1U5vujcN")
             .SetVersion("11.11.1");
     }
 
