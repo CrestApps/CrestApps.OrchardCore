@@ -51,7 +51,7 @@ To connect your application to a remote MCP server using SSE:
 
 Now that the connection is added, you can create an AI profile that uses this connection:
 
-👉 [Learn how to create an AI Profile](../ai/ai-services#creating-ai-profiles)
+👉 [Learn how to create an AI Profile](../ai-services#creating-ai-profiles)
 
 ##### 📄 Alternative: Recipe-Based Setup (SSE)
 
@@ -127,7 +127,7 @@ Download and install [Docker Desktop](https://www.docker.com/products/docker-des
 
 Now that the connection is added, you can create an AI profile that uses it:
 
-👉 [Learn how to create an AI Profile](../ai/ai-services#creating-ai-profiles)
+👉 [Learn how to create an AI Profile](../ai-services#creating-ai-profiles)
 
 ##### 📄 Alternative: Recipe-Based Setup (Stdio)
 
