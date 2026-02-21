@@ -46,11 +46,32 @@ public sealed class McpResourceTypeEntry
     public LocalizedString Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the path patterns supported by this resource type.
-    /// These are displayed in the UI to help users understand what path formats are valid.
-    /// The full URI is constructed as {type}://{itemId}/{path} where {type} is the resource type
-    /// and {itemId} is the system-generated identifier.
-    /// Example: ["{path}", "id/{contentItemId}", "{contentType}/list"]
+    /// Gets or sets the variables supported by this resource type.
+    /// These are displayed in the UI to help users understand what variables can be used in URI patterns.
     /// </summary>
-    public string[] UriPatterns { get; set; } = [];
+    public McpResourceVariable[] SupportedVariables { get; set; } = [];
+}
+
+/// <summary>
+/// Describes a variable that a resource type handler supports.
+/// Users can include these variables (wrapped in braces) in their URI patterns.
+/// </summary>
+public sealed class McpResourceVariable
+{
+    public McpResourceVariable(string name)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(name);
+
+        Name = name;
+    }
+
+    /// <summary>
+    /// Gets the variable name (e.g., "path", "stepName").
+    /// </summary>
+    public string Name { get; }
+
+    /// <summary>
+    /// Gets or sets a description of the variable displayed in the UI.
+    /// </summary>
+    public LocalizedString Description { get; set; }
 }

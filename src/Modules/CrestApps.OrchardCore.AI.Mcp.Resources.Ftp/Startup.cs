@@ -24,7 +24,10 @@ public sealed class Startup : StartupBase
         {
             entry.DisplayName = S["FTP/FTPS"];
             entry.Description = S["Reads content from FTP/FTPS servers."];
-            entry.UriPatterns = ["{path}"];
+            entry.SupportedVariables =
+            [
+                new McpResourceVariable("path") { Description = S["The remote file path on the FTP server."] },
+            ];
         });
 
         services.AddDisplayDriver<McpResource, FtpResourceDisplayDriver>();

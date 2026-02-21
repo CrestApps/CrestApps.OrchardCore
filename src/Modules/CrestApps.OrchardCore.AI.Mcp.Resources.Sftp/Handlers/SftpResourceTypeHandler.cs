@@ -29,7 +29,7 @@ public sealed class SftpResourceTypeHandler : McpResourceTypeHandlerBase
         _logger = logger;
     }
 
-    protected override async Task<ReadResourceResult> GetResultAsync(McpResource resource, McpResourceUri resourceUri, CancellationToken cancellationToken)
+    protected override async Task<ReadResourceResult> GetResultAsync(McpResource resource, IReadOnlyDictionary<string, string> variables, CancellationToken cancellationToken)
     {
         // Get connection details from metadata
         var metadata = resource.As<SftpConnectionMetadata>();
@@ -85,8 +85,9 @@ public sealed class SftpResourceTypeHandler : McpResourceTypeHandlerBase
             }
         }
 
-        // The path portion of the resource URI is the remote file path.
-        var remotePath = "/" + resourceUri.Path;
+        // The path variable is the remote file path.
+        variables.TryGetValue("path", out var pathValue);
+        var remotePath = "/" + (pathValue ?? string.Empty);
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {

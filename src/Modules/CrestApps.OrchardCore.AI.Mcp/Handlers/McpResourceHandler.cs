@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
@@ -82,7 +81,7 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
             entry.DisplayText = displayText;
         }
 
-        // Populate the Resource from data if provided
+        // Populate the Resource from data if provided.
         var resourceData = data?[nameof(McpResource.Resource)];
 
         if (resourceData != null)
@@ -96,13 +95,8 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
             var uri = resourceData[nameof(Resource.Uri)]?.ToString();
             if (!string.IsNullOrWhiteSpace(uri))
             {
-                // Extract the path portion if a full URI is provided, otherwise treat as a path.
-                var path = McpResourceUri.TryParse(uri, out var parsed)
-                    ? parsed.Path
-                    : uri;
-
-                // Always construct the full URI from the source type, item ID, and path.
-                entry.Resource.Uri = McpResourceUri.Build(entry.Source, entry.ItemId, path);
+                // Build the full URI: {source}://{itemId}/{userPath}
+                entry.Resource.Uri = BuildUri(entry.Source, entry.ItemId, uri);
             }
 
             var name = resourceData[nameof(Resource.Name)]?.ToString();
@@ -131,5 +125,46 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Builds the full resource URI from source type, item ID, and user-provided path.
+    /// Format: {source}://{itemId}/{path} or {source}://{itemId} when path is empty.
+    /// </summary>
+    internal static string BuildUri(string source, string itemId, string path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return $"{source}://{itemId}";
+        }
+
+        // Strip any leading slash from user path.
+        path = path.TrimStart('/');
+
+        return $"{source}://{itemId}/{path}";
+    }
+
+    /// <summary>
+    /// Extracts the user-provided path portion from a full resource URI.
+    /// Given "file://abc123/docs/{fileName}", returns "docs/{fileName}".
+    /// </summary>
+    internal static string ExtractPath(string uri, string source, string itemId)
+    {
+        var prefix = $"{source}://{itemId}";
+
+        if (string.IsNullOrEmpty(uri) || !uri.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return uri;
+        }
+
+        var remainder = uri[prefix.Length..];
+
+        if (remainder.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        // Strip the leading slash.
+        return remainder.TrimStart('/');
     }
 }

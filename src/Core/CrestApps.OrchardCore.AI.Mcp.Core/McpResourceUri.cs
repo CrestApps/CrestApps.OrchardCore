@@ -1,88 +1,109 @@
+using System.Text;
+using System.Text.RegularExpressions;
+
 namespace CrestApps.OrchardCore.AI.Mcp.Core;
 
 /// <summary>
-/// Represents a parsed MCP resource URI with the format {scheme}://{itemId}/{path}.
-/// Provides centralized parsing, building, and path extraction for resource URIs.
+/// Provides URI template matching and building utilities for MCP resources.
+/// Supports matching incoming URIs against URI templates with named variables
+/// (e.g., "recipe-step-schema://my-resource/{stepName}") and extracting variable values.
 /// </summary>
-public sealed class McpResourceUri
+public static partial class McpResourceUri
 {
     /// <summary>
-    /// Gets the URI scheme, which corresponds to the resource type (e.g., "file", "content", "ftp").
+    /// Attempts to match an actual URI against a URI template pattern and extract variable values.
+    /// For example, template "recipe-step-schema://my-resource/{stepName}" matched against
+    /// "recipe-step-schema://my-resource/feature" yields { "stepName": "feature" }.
     /// </summary>
-    public string Scheme { get; }
-
-    /// <summary>
-    /// Gets the system-generated item identifier extracted from the URI host.
-    /// </summary>
-    public string ItemId { get; }
-
-    /// <summary>
-    /// Gets the path portion of the URI (everything after {scheme}://{itemId}/).
-    /// </summary>
-    public string Path { get; }
-
-    // Gets the full URI string in the format {scheme}://{itemId}/{path}.
-    public string Uri => $"{Scheme}://{ItemId}/{Path}";
-
-    public override string ToString()
+    /// <param name="uriTemplate">The URI template pattern containing {variable} placeholders.</param>
+    /// <param name="actualUri">The actual URI to match against the template.</param>
+    /// <param name="variables">When successful, the extracted variable name-value pairs.</param>
+    /// <returns><c>true</c> if the URI matches the template; otherwise, <c>false</c>.</returns>
+    public static bool TryMatch(string uriTemplate, string actualUri, out IReadOnlyDictionary<string, string> variables)
     {
-        return Uri;
-    }
+        variables = null;
 
-    private McpResourceUri(string scheme, string itemId, string path)
-    {
-        Scheme = scheme;
-        ItemId = itemId;
-        Path = path;
-    }
-
-    /// <summary>
-    /// Attempts to parse a full resource URI into its components.
-    /// </summary>
-    /// <param name="uri">The URI string to parse.</param>
-    /// <param name="result">When successful, the parsed <see cref="McpResourceUri"/>.</param>
-    /// <returns><c>true</c> if the URI was parsed successfully; otherwise, <c>false</c>.</returns>
-    public static bool TryParse(string uri, out McpResourceUri result)
-    {
-        result = null;
-
-        if (string.IsNullOrEmpty(uri) || !System.Uri.TryCreate(uri, UriKind.Absolute, out var parsedUri))
+        if (string.IsNullOrEmpty(uriTemplate) || string.IsNullOrEmpty(actualUri))
         {
             return false;
         }
 
-        var scheme = parsedUri.Scheme;
-        var itemId = parsedUri.Host;
+        // Collect all variable matches first so we know which is the last one.
+        var matches = new List<(int Index, int Length, string Name)>();
 
-        // Use UnescapeDataString to preserve characters like { and } that System.Uri encodes.
-        var path = System.Uri.UnescapeDataString(parsedUri.AbsolutePath).TrimStart('/');
+        foreach (var match in VariablePlaceholderRegex().EnumerateMatches(uriTemplate))
+        {
+            var varName = uriTemplate[(match.Index + 1)..(match.Index + match.Length - 1)];
+            matches.Add((match.Index, match.Length, varName));
+        }
 
-        if (string.IsNullOrEmpty(scheme) || string.IsNullOrEmpty(itemId))
+        // Build a regex by splitting the template into literal segments and variable placeholders.
+        // This avoids relying on Regex.Escape behavior for { and } characters.
+        var variableNames = new List<string>();
+        var regexBuilder = new StringBuilder("^");
+        var lastIndex = 0;
+
+        for (var i = 0; i < matches.Count; i++)
+        {
+            var (index, length, varName) = matches[i];
+
+            // Escape the literal part before this variable.
+            if (index > lastIndex)
+            {
+                regexBuilder.Append(Regex.Escape(uriTemplate[lastIndex..index]));
+            }
+
+            variableNames.Add(varName);
+
+            // The last variable in the template uses .+ to allow multi-segment paths (e.g., "docs/report.pdf").
+            // All other variables use [^/]+ to match a single path segment.
+            var capturePattern = i == matches.Count - 1 ? ".+" : "[^/]+";
+            regexBuilder.Append($"(?<{varName}>{capturePattern})");
+
+            lastIndex = index + length;
+        }
+
+        // Append any remaining literal text after the last variable.
+        if (lastIndex < uriTemplate.Length)
+        {
+            regexBuilder.Append(Regex.Escape(uriTemplate[lastIndex..]));
+        }
+
+        regexBuilder.Append('$');
+
+        var regex = new Regex(regexBuilder.ToString(), RegexOptions.IgnoreCase);
+        var regexMatch = regex.Match(actualUri);
+
+        if (!regexMatch.Success)
         {
             return false;
         }
 
-        result = new McpResourceUri(scheme, itemId, path);
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var name in variableNames)
+        {
+            var group = regexMatch.Groups[name];
+
+            if (group.Success)
+            {
+                result[name] = Uri.UnescapeDataString(group.Value);
+            }
+        }
+
+        variables = result;
 
         return true;
     }
 
     /// <summary>
-    /// Constructs a full resource URI from its components.
+    /// Determines whether the given URI contains template variables (e.g., {name}).
     /// </summary>
-    /// <param name="scheme">The URI scheme (resource type).</param>
-    /// <param name="itemId">The system-generated item identifier.</param>
-    /// <param name="path">The path portion of the URI.</param>
-    /// <returns>The constructed URI string, or <see cref="string.Empty"/> if the path is empty.</returns>
-    public static string Build(string scheme, string itemId, string path)
+    public static bool IsTemplate(string uri)
     {
-        ArgumentException.ThrowIfNullOrEmpty(scheme);
-        ArgumentException.ThrowIfNullOrEmpty(itemId);
-
-        var trimmedPath = path?.TrimStart('/') ?? string.Empty;
-
-        return string.IsNullOrEmpty(trimmedPath)
-            ? string.Empty
-            : $"{scheme}://{itemId}/{trimmedPath}";
+        return !string.IsNullOrEmpty(uri) && uri.Contains('{');
     }
+
+    [GeneratedRegex(@"\{(\w+)\}")]
+    private static partial Regex VariablePlaceholderRegex();
 }

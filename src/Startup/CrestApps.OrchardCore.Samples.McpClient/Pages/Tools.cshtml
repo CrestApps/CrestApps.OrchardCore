@@ -19,6 +19,10 @@
 
 @if (Model.Tools?.Count > 0)
 {
+    <div class="mb-3">
+        <input type="text" id="toolSearch" class="form-control" placeholder="Search tools by name or description…" />
+    </div>
+
     <div class="accordion" id="toolsAccordion">
         @for (var i = 0; i < Model.Tools.Count; i++)
         {
@@ -26,7 +30,7 @@
             var collapseId = $"collapse-tool-{i}";
             var headerId = $"header-tool-{i}";
 
-            <div class="accordion-item">
+            <div class="accordion-item searchable-item" data-search-text="@tool.Name?.ToLowerInvariant() @tool.Description?.ToLowerInvariant()">
                 <h2 class="accordion-header" id="@headerId">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId">
                         <span class="fw-semibold">@tool.Name</span>
@@ -52,6 +56,8 @@
             </div>
         }
     </div>
+
+    <p class="text-muted mt-2" id="toolNoResults" style="display:none">No tools match your search.</p>
 }
 else
 {
@@ -84,3 +90,22 @@ else
         </div>
     </div>
 }
+
+<script>
+    (function () {
+        var searchInput = document.getElementById('toolSearch');
+        if (!searchInput) return;
+        var items = document.querySelectorAll('#toolsAccordion .searchable-item');
+        var noResults = document.getElementById('toolNoResults');
+        searchInput.addEventListener('input', function () {
+            var query = this.value.toLowerCase().trim();
+            var visible = 0;
+            items.forEach(function (item) {
+                var match = !query || item.dataset.searchText.indexOf(query) !== -1;
+                item.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+            noResults.style.display = visible === 0 && query ? '' : 'none';
+        });
+    })();
+</script>

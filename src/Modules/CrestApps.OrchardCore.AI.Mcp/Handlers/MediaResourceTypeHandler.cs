@@ -8,7 +8,8 @@ using OrchardCore.Media;
 namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 
 /// <summary>
-/// Handles media:// URI resources by reading content from Orchard Core's media store.
+/// Handles media resources by reading content from Orchard Core's media store.
+/// Supported variable: {path} - the media path to read.
 /// </summary>
 public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
 {
@@ -27,9 +28,9 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
         _logger = logger;
     }
 
-    protected override async Task<ReadResourceResult> GetResultAsync(McpResource resource, McpResourceUri resourceUri, CancellationToken cancellationToken)
+    protected override async Task<ReadResourceResult> GetResultAsync(McpResource resource, IReadOnlyDictionary<string, string> variables, CancellationToken cancellationToken)
     {
-        var mediaPath = resourceUri.Path;
+        variables.TryGetValue("path", out var mediaPath);
 
         if (string.IsNullOrEmpty(mediaPath))
         {

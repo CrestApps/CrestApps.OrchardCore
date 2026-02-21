@@ -4,8 +4,8 @@ using ModelContextProtocol.Protocol;
 namespace CrestApps.OrchardCore.AI.Mcp.Core;
 
 /// <summary>
-/// Base class for MCP resource type handlers that provides common URI parsing logic.
-/// Subclasses only need to implement the <see cref="GetResultAsync(McpResource, McpResourceUri, CancellationToken)"/> method.
+/// Base class for MCP resource type handlers that provides common logic.
+/// Subclasses only need to implement the <see cref="GetResultAsync(McpResource, IReadOnlyDictionary{string, string}, CancellationToken)"/> method.
 /// </summary>
 public abstract class McpResourceTypeHandlerBase : IMcpResourceTypeHandler
 {
@@ -20,24 +20,22 @@ public abstract class McpResourceTypeHandlerBase : IMcpResourceTypeHandler
     public string Type { get; }
 
     /// <inheritdoc/>
-    public Task<ReadResourceResult> ReadAsync(McpResource resource, McpResourceUri resourceUri, CancellationToken cancellationToken = default)
+    public Task<ReadResourceResult> ReadAsync(McpResource resource, IReadOnlyDictionary<string, string> variables, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(resource);
-        ArgumentNullException.ThrowIfNull(resourceUri);
+        ArgumentNullException.ThrowIfNull(variables);
 
-        ArgumentException.ThrowIfNullOrEmpty(resourceUri?.Uri);
-
-        return GetResultAsync(resource, resourceUri, cancellationToken);
+        return GetResultAsync(resource, variables, cancellationToken);
     }
 
     /// <summary>
-    /// Reads the resource content using the parsed URI.
+    /// Reads the resource content using the extracted URI variables.
     /// </summary>
     /// <param name="resource">The MCP resource definition.</param>
-    /// <param name="resourceUri">The parsed resource URI.</param>
+    /// <param name="variables">The variables extracted from the URI pattern match.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>A task containing the read resource result.</returns>
-    protected abstract Task<ReadResourceResult> GetResultAsync(McpResource resource, McpResourceUri resourceUri, CancellationToken cancellationToken);
+    protected abstract Task<ReadResourceResult> GetResultAsync(McpResource resource, IReadOnlyDictionary<string, string> variables, CancellationToken cancellationToken);
 
     /// <summary>
     /// Creates a <see cref="ReadResourceResult"/> containing an error message instead of throwing an exception.

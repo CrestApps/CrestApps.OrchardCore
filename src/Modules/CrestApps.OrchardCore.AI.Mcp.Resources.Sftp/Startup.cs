@@ -24,7 +24,10 @@ public sealed class Startup : StartupBase
         {
             entry.DisplayName = S["SFTP"];
             entry.Description = S["Reads content from SFTP servers."];
-            entry.UriPatterns = ["{path}"];
+            entry.SupportedVariables =
+            [
+                new McpResourceVariable("path") { Description = S["The remote file path on the SFTP server."] },
+            ];
         });
 
         services.AddDisplayDriver<McpResource, SftpResourceDisplayDriver>();
