@@ -25,7 +25,7 @@ public abstract class AICompletionServiceBase
     {
         if (connectionName is not null && provider.Connections.TryGetValue(connectionName, out var connection))
         {
-            var deploymentName = connection.GetDefaultDeploymentName();
+            var deploymentName = connection.GetChatDeploymentOrDefaultName();
 
             if (!string.IsNullOrEmpty(deploymentName))
             {
@@ -33,7 +33,7 @@ public abstract class AICompletionServiceBase
             }
         }
 
-        return provider.DefaultDeploymentName;
+        return provider.DefaultChatDeploymentName;
     }
 
     protected static int GetTotalMessagesToSkip(int totalMessages, int pastMessageCount)

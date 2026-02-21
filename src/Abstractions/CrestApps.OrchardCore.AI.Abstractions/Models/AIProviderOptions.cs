@@ -13,7 +13,13 @@ public sealed class AIProvider
 {
     public string DefaultConnectionName { get; set; }
 
-    public string DefaultDeploymentName { get; set; }
+    public string DefaultChatDeploymentName { get; set; }
+
+    public string DefaultEmbeddingDeploymentName { get; set; }
+
+    public string DefaultImagesDeploymentName { get; set; }
+
+    public string DefaultUtilityDeploymentName { get; set; }
 
     public IDictionary<string, AIProviderConnectionEntry> Connections { get; set; }
 }

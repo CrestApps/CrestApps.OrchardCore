@@ -64,9 +64,10 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
                     defaultConnection = connection;
                 }
 
-                mappingContext.Values["DefaultDeploymentName"] = connection.DefaultDeploymentName;
-                mappingContext.Values["DefaultEmbeddingDeploymentName"] = connection.DefaultEmbeddingDeploymentName;
-                mappingContext.Values["DefaultUtilityDeploymentName"] = connection.DefaultUtilityDeploymentName;
+                mappingContext.Values["ChatDeploymentName"] = connection.ChatDeploymentName;
+                mappingContext.Values["EmbeddingDeploymentName"] = connection.EmbeddingDeploymentName;
+                mappingContext.Values["UtilityDeploymentName"] = connection.UtilityDeploymentName;
+                mappingContext.Values["ImagesDeploymentName"] = connection.ImagesDeploymentName;
                 mappingContext.Values["ConnectionNameAlias"] = connection.Name;
 
                 _handlers.Invoke((handler, ctx) => handler.Initializing(ctx), mappingContext, _logger);
@@ -77,13 +78,13 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
             if (defaultConnection is not null)
             {
                 provider.DefaultConnectionName = defaultConnection.ItemId;
-                provider.DefaultDeploymentName = defaultConnection.DefaultDeploymentName;
+                provider.DefaultChatDeploymentName = defaultConnection.ChatDeploymentName;
             }
             else
             {
-                if (string.IsNullOrEmpty(provider.DefaultDeploymentName))
+                if (string.IsNullOrEmpty(provider.DefaultChatDeploymentName))
                 {
-                    provider.DefaultDeploymentName = provider.Connections.FirstOrDefault().Value.GetDefaultDeploymentName();
+                    provider.DefaultChatDeploymentName = provider.Connections.FirstOrDefault().Value.GetChatDeploymentOrDefaultName();
                 }
 
                 if (string.IsNullOrEmpty(provider.DefaultConnectionName))

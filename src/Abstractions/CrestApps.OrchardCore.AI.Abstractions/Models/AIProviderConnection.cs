@@ -1,23 +1,24 @@
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using CrestApps.OrchardCore.AI.Json;
 using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI.Models;
 
+[JsonConverter(typeof(AIProviderConnectionJsonConverter))]
 public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, IDisplayTextAwareModel, ICloneable<AIProviderConnection>
 {
     public string Name { get; set; }
 
     public string DisplayText { get; set; }
 
-    public string DefaultDeploymentName { get; set; }
+    public string ChatDeploymentName { get; set; }
 
-    public string DefaultEmbeddingDeploymentName { get; set; }
+    public string EmbeddingDeploymentName { get; set; }
 
-    public string DefaultImagesDeploymentName { get; set; }
+    public string ImagesDeploymentName { get; set; }
 
-    public string DefaultUtilityDeploymentName { get; set; }
+    public string UtilityDeploymentName { get; set; }
 
     public bool IsDefault { get; set; }
 
@@ -25,13 +26,6 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
     public string ProviderName
     {
         get => Source;
-        set => Source = value;
-    }
-
-    [JsonInclude]
-    [JsonPropertyName(nameof(ProviderName))]
-    private string _providerNameBackingField
-    {
         set => Source = value;
     }
 
@@ -50,14 +44,14 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
             Name = Name,
             DisplayText = DisplayText,
             IsDefault = IsDefault,
-            DefaultDeploymentName = DefaultDeploymentName,
-            DefaultEmbeddingDeploymentName = DefaultEmbeddingDeploymentName,
-            DefaultImagesDeploymentName = DefaultImagesDeploymentName,
-            DefaultUtilityDeploymentName = DefaultUtilityDeploymentName,
+            ChatDeploymentName = ChatDeploymentName,
+            EmbeddingDeploymentName = EmbeddingDeploymentName,
+            ImagesDeploymentName = ImagesDeploymentName,
+            UtilityDeploymentName = UtilityDeploymentName,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,
-            Properties = Properties.Clone(),
+            Properties = Properties.DeepClone().AsObject(),
         };
     }
 }

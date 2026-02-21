@@ -19,7 +19,7 @@ public abstract class AIClientProviderBase : IAIClientProvider
     {
         if (string.IsNullOrEmpty(deploymentName))
         {
-            deploymentName = connection.GetDefaultDeploymentName(false);
+            deploymentName = connection.GetChatDeploymentOrDefaultName(false);
         }
 
         if (string.IsNullOrEmpty(deploymentName))
@@ -38,7 +38,7 @@ public abstract class AIClientProviderBase : IAIClientProvider
     {
         if (string.IsNullOrEmpty(deploymentName))
         {
-            deploymentName = connection.GetDefaultEmbeddingDeploymentName(false);
+            deploymentName = connection.GetEmbeddingDeploymentOrDefaultName(false);
         }
 
         if (string.IsNullOrEmpty(deploymentName))
@@ -59,7 +59,7 @@ public abstract class AIClientProviderBase : IAIClientProvider
     {
         if (string.IsNullOrEmpty(deploymentName))
         {
-            deploymentName = connection.GetDefaultImagesDeploymentName(false);
+            deploymentName = connection.GetImagesDeploymentOrDefaultName(false);
         }
 
         if (string.IsNullOrEmpty(deploymentName))

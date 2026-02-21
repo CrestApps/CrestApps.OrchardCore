@@ -44,10 +44,10 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
         {
             model.DisplayText = connection.DisplayText;
             model.Name = connection.Name;
-            model.DefaultDeploymentName = connection.DefaultDeploymentName;
-            model.DefaultEmbeddingDeploymentName = connection.DefaultEmbeddingDeploymentName;
-            model.DefaultImagesDeploymentName = connection.DefaultImagesDeploymentName;
-            model.DefaultUtilityDeploymentName = connection.DefaultUtilityDeploymentName;
+            model.ChatDeploymentName = connection.ChatDeploymentName;
+            model.EmbeddingDeploymentName = connection.EmbeddingDeploymentName;
+            model.ImagesDeploymentName = connection.ImagesDeploymentName;
+            model.UtilityDeploymentName = connection.UtilityDeploymentName;
             model.IsDefault = connection.IsDefault;
             model.IsNew = context.IsNew;
 
@@ -79,16 +79,16 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The Title is required."]);
         }
 
-        if (string.IsNullOrWhiteSpace(model.DefaultDeploymentName))
+        if (string.IsNullOrWhiteSpace(model.ChatDeploymentName))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DefaultDeploymentName), S["Default deployment name is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ChatDeploymentName), S["Default deployment name is required."]);
         }
 
         connection.DisplayText = model.DisplayText;
-        connection.DefaultDeploymentName = model.DefaultDeploymentName;
-        connection.DefaultEmbeddingDeploymentName = model.DefaultEmbeddingDeploymentName;
-        connection.DefaultImagesDeploymentName = model.DefaultImagesDeploymentName;
-        connection.DefaultUtilityDeploymentName = model.DefaultUtilityDeploymentName;
+        connection.ChatDeploymentName = model.ChatDeploymentName;
+        connection.EmbeddingDeploymentName = model.EmbeddingDeploymentName;
+        connection.ImagesDeploymentName = model.ImagesDeploymentName;
+        connection.UtilityDeploymentName = model.UtilityDeploymentName;
         connection.IsDefault = model.IsDefault;
 
         _shellReleaseManager.RequestRelease();

@@ -38,12 +38,17 @@ To configure the Ollama connection, add the following settings to the `appsettin
       "Providers": {
         "Ollama": {
           "DefaultConnectionName": "Default",
-          "DefaultDeploymentName": "deepseek-v2:16b",
+          "DefaultChatDeploymentName": "deepseek-v2:16b",
+          "DefaultUtilityDeploymentName": "deepseek-v2:16b",
+          "DefaultEmbeddingDeploymentName": "",
+          "DefaultImagesDeploymentName": "",
           "Connections": {
             "Default": {
               "Endpoint": "<!-- Ollama host address -->",
-              "DefaultDeploymentName": "deepseek-v2:16b",
-              "DefaultUtilityDeploymentName": "deepseek-v2:16b"
+              "ChatDeploymentName": "deepseek-v2:16b",
+              "UtilityDeploymentName": "deepseek-v2:16b",
+              "EmbeddingDeploymentName": "",
+              "ImagesDeploymentName": ""
             }
         }
       }

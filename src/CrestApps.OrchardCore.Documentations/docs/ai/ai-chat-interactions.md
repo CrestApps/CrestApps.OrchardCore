@@ -64,7 +64,7 @@ The base module ships with a small set of default intents that enable image and 
 
 ### Configuration
 
-To enable image generation, configure the `DefaultImagesDeploymentName` in your AI provider connection settings.
+To enable image generation, configure the `ImagesDeploymentName` in your AI provider connection settings.
 
 **Option 1: Admin UI**
 
@@ -80,9 +80,10 @@ Navigate to **Artificial Intelligence > Provider Connections**, edit your connec
         "OpenAI": {
           "Connections": {
             "default": {
-              "DefaultDeploymentName": "gpt-4o",
-              "DefaultUtilityDeploymentName": "gpt-4o-mini",
-              "DefaultImagesDeploymentName": "dall-e-3"
+              "ChatDeploymentName": "gpt-4o",
+              "UtilityDeploymentName": "gpt-4o-mini",
+              "EmbeddingDeploymentName": "",
+              "ImagesDeploymentName": "dall-e-3"
             }
           }
         }

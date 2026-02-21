@@ -48,15 +48,16 @@ Below is an example configuration:
       "Providers": {
         "<!-- Provider name goes here (valid values: 'OpenAI', 'Azure', 'AzureAIInference', or 'Ollama') -->": {
           "DefaultConnectionName": "<!-- The default connection name to use from the Connections list -->",
-          "DefaultDeploymentName": "<!-- The default deployment name -->",
+          "DefaultChatDeploymentName": "<!-- The default deployment name for chat completions -->",
           "DefaultUtilityDeploymentName": "<!-- Optional: a lightweight model for auxiliary tasks like query rewriting and planning -->",
           "DefaultEmbeddingDeploymentName": "<!-- The default embedding deployment name (optional, for embedding services) -->",
           "DefaultImagesDeploymentName": "<!-- The default deployment name for image generation (optional, e.g., 'dall-e-3') -->",
           "Connections": {
             "<!-- Connection name goes here -->": {
-              "DefaultDeploymentName": "<!-- The default deployment name for this connection -->",
-              "DefaultUtilityDeploymentName": "<!-- Optional: a lightweight model for auxiliary tasks -->",
-              "DefaultImagesDeploymentName": "<!-- The image generation deployment name (optional, e.g., 'dall-e-3') -->"
+              "ChatDeploymentName": "<!-- The deployment name for this connection -->",
+              "UtilityDeploymentName": "<!-- Optional: a lightweight model for auxiliary tasks -->",
+              "EmbeddingDeploymentName": "<!-- The embedding deployment name (optional) -->",
+              "ImagesDeploymentName": "<!-- The image generation deployment name (optional, e.g., 'dall-e-3') -->"
               // Provider-specific settings go here
             }
           }
@@ -83,12 +84,23 @@ Below is an example configuration:
 
 #### Deployment Name Settings
 
+**Provider-level settings** (apply to all connections under a provider):
+
 | Setting | Description | Required |
 |---------|-------------|----------|
-| `DefaultDeploymentName` | The default model for chat completions | Yes |
-| `DefaultUtilityDeploymentName` | A lightweight model for auxiliary tasks such as query rewriting, planning, and chart generation. Falls back to `DefaultDeploymentName` when not set. | No |
+| `DefaultChatDeploymentName` | The default model for chat completions | Yes |
+| `DefaultUtilityDeploymentName` | The default lightweight model for auxiliary tasks (e.g., query rewriting, planning). Falls back to `DefaultChatDeploymentName` when not set. | No |
 | `DefaultEmbeddingDeploymentName` | The model for generating embeddings (for RAG/vector search) | No |
 | `DefaultImagesDeploymentName` | The model for image generation (e.g., `dall-e-3`). Required for image generation features. | No |
+
+**Connection-level settings** (specific to an individual connection):
+
+| Setting | Description | Required |
+|---------|-------------|----------|
+| `ChatDeploymentName` | The model for chat completions for this connection | Yes |
+| `UtilityDeploymentName` | A lightweight model for auxiliary tasks such as query rewriting, planning, and chart generation. Falls back to `ChatDeploymentName` when not set. | No |
+| `EmbeddingDeploymentName` | The model for generating embeddings (for RAG/vector search) | No |
+| `ImagesDeploymentName` | The model for image generation (e.g., `dall-e-3`). Required for image generation features. | No |
 
 ---
 
@@ -206,8 +218,8 @@ You can add or update a connection using **recipes**. Below is a recipe for addi
           "Source": "OpenAI",
           "Name": "deepseek",
           "IsDefault": false,
-          "DefaultDeploymentName": "deepseek-chat",
-          "DefaultUtilityDeploymentName": "deepseek-chat",
+          "ChatDeploymentName": "deepseek-chat",
+          "UtilityDeploymentName": "deepseek-chat",
           "DisplayText": "DeepSeek",
           "Properties": {
             "OpenAIConnectionMetadata": {
@@ -497,7 +509,7 @@ public sealed class CustomCompletionClient : NamedAICompletionClient
     protected override IChatClient GetChatClient(AIProviderConnection connection, AICompletionContext context, string deploymentName)
     {
         return new OpenAIClient(connection.GetApiKey())
-            .AsChatClient(connection.GetDefaultDeploymentName());
+            .AsChatClient(connection.GetChatDeploymentOrDefaultName());
     }
 }
 ```

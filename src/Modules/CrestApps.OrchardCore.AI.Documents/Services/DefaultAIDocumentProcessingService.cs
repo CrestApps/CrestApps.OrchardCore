@@ -54,7 +54,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
 
             if (!string.IsNullOrEmpty(connectionName) && provider.Connections.TryGetValue(connectionName, out var connection))
             {
-                deploymentName = connection.GetDefaultEmbeddingDeploymentName(false);
+                deploymentName = connection.GetEmbeddingDeploymentOrDefaultName(false);
             }
         }
 
