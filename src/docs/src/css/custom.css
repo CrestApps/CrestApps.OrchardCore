@@ -1,39 +1,76 @@
 /**
  * CrestApps custom theme colors.
- * Gold/amber primary from the CrestApps brand logo.
+ * Derived from the CrestApps logo:
+ *   #191718 near-black, #d9d9d9 silver, #eaa429 amber, #d88500 dark amber.
+ * Primary uses the logo's near-black (#181618) per brand guidelines.
  */
 
 :root {
-  --ifm-color-primary: #c08a0a;
-  --ifm-color-primary-dark: #ad7c09;
-  --ifm-color-primary-darker: #a37509;
-  --ifm-color-primary-darkest: #866007;
-  --ifm-color-primary-light: #d3980b;
-  --ifm-color-primary-lighter: #dda00c;
-  --ifm-color-primary-lightest: #f0b326;
+  --ifm-color-primary: #181618;
+  --ifm-color-primary-dark: #111011;
+  --ifm-color-primary-darker: #0d0c0d;
+  --ifm-color-primary-darkest: #000000;
+  --ifm-color-primary-light: #2c292c;
+  --ifm-color-primary-lighter: #3a373a;
+  --ifm-color-primary-lightest: #504d50;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
   --ifm-navbar-background-color: #ffffff;
   --ifm-font-family-base: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu,
     Cantarell, Noto Sans, sans-serif;
+  --crestapps-amber: #eaa429;
+  --crestapps-dark-amber: #d88500;
 }
 
 [data-theme='dark'] {
-  --ifm-color-primary: #f0a500;
-  --ifm-color-primary-dark: #d89500;
-  --ifm-color-primary-darker: #cc8d00;
-  --ifm-color-primary-darkest: #a87400;
-  --ifm-color-primary-light: #f5b31f;
-  --ifm-color-primary-lighter: #f6b930;
-  --ifm-color-primary-lightest: #f8ca5c;
+  --ifm-color-primary: #d9d9d9;
+  --ifm-color-primary-dark: #c3c3c3;
+  --ifm-color-primary-darker: #b8b8b8;
+  --ifm-color-primary-darkest: #979797;
+  --ifm-color-primary-light: #e2e2e2;
+  --ifm-color-primary-lighter: #e8e8e8;
+  --ifm-color-primary-lightest: #f5f5f5;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
-  --ifm-navbar-background-color: #1b1b1d;
+  --ifm-navbar-background-color: #181618;
 }
 
 .navbar {
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
 }
 
+.hero--primary {
+  background-color: #181618;
+  color: #d9d9d9;
+}
+
+.hero--primary .hero__title {
+  color: #ffffff;
+}
+
+.hero--primary .button--secondary {
+  background-color: #eaa429;
+  border-color: #eaa429;
+  color: #181618;
+}
+
+.hero--primary .button--secondary:hover {
+  background-color: #d88500;
+  border-color: #d88500;
+  color: #ffffff;
+}
+
+.hero--primary .button--outline.button--secondary {
+  background-color: transparent;
+  border-color: #d9d9d9;
+  color: #d9d9d9;
+}
+
+.hero--primary .button--outline.button--secondary:hover {
+  background-color: #eaa429;
+  border-color: #eaa429;
+  color: #181618;
+}
+
 .footer--dark {
-  background-color: #2d2d2d;
+  background-color: #181618;
 }
