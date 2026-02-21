@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'src/docs/**'
-  push_tags:
     tags:
       - 'v*.*.*'
   workflow_dispatch:

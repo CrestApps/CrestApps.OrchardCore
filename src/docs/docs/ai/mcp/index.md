@@ -304,7 +304,7 @@ Resources can be exported and imported via recipes:
 
 ### Admin Chat UI with Time MCP Server Integration (MCP Demonstration)
 
-![Screen cast of the admin chat](../../../docs/images/mcp-integration.gif)
+![Screen cast of the admin chat](/img/docs/mcp-integration.gif)
 
 ---
 

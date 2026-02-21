@@ -1,41 +1,34 @@
-# Website
+# CrestApps.OrchardCore.Docs
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+Documentation site for the [CrestApps.OrchardCore](https://github.com/CrestApps/CrestApps.OrchardCore) project, built with [Docusaurus 3.9](https://docusaurus.io/).
 
-## Installation
-
-```bash
-yarn
-```
+**Live site:** [orchardcore.crestapps.com](https://orchardcore.crestapps.com)
 
 ## Local Development
 
 ```bash
-yarn start
+npm install
+npm start
 ```
 
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
+This starts a local development server at `http://localhost:3000`. Most changes are reflected live without restarting.
 
 ## Build
 
 ```bash
-yarn build
+npm run build
 ```
 
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
+Generates static content into the `build` directory.
+
+## Versioning
+
+Docs versions are created automatically on tag pushes matching `v*.*.*` via the GitHub Actions workflow. To create a version manually:
+
+```bash
+npx docusaurus docs:version 2.0.0
+```
 
 ## Deployment
 
-Using SSH:
-
-```bash
-USE_SSH=true yarn deploy
-```
-
-Not using SSH:
-
-```bash
-GIT_USER=<Your GitHub username> yarn deploy
-```
-
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+The site is deployed automatically to GitHub Pages via the `deploy_docs.yml` workflow on every push to `main` or version tag push.

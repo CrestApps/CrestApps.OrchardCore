@@ -18,7 +18,7 @@ The **AI Chat** feature builds upon the **AI Services** feature by adding AI cha
 
 ### Admin Chat User Interface
 
-![Screen cast of the admin chat](../../../docs/images/admin-ui-sample.gif)
+![Screen cast of the admin chat](/img/docs/admin-ui-sample.gif)
 
 ---
 
@@ -69,4 +69,4 @@ The frontend widget shares the same UI behavior as the admin widget, including:
 
 #### Frontend Widget Screen Cast
 
-![Screen cast of the frontend widget](../../../docs/images/widget-ui-sample.gif)
+![Screen cast of the frontend widget](/img/docs/widget-ui-sample.gif)

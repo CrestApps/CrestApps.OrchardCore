@@ -19,7 +19,6 @@ const config = {
   projectName: 'CrestApps.OrchardCore',
 
   onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
 
   i18n: {
     defaultLocale: 'en',
@@ -153,7 +152,7 @@ const config = {
       prism: {
         theme: prismThemes.github,
         darkTheme: prismThemes.dracula,
-        additionalLanguages: ['csharp', 'json', 'bash', 'xml'],
+        additionalLanguages: ['csharp', 'json', 'bash'],
       },
     }),
 };
