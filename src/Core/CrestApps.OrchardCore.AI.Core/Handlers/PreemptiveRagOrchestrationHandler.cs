@@ -41,18 +41,18 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
             return;
         }
 
+        // IMPORTANRT: If there are no handler, there is no need to extract queries.
+        // This can happen if no feature provide implemenation.
+        if (!_handlers.Any())
+        {
+            return;
+        }
+
         var settings = await _siteService.GetSettingsAsync<DefaultOrchestratorSettings>();
 
         // Skip if preemptive RAG is disabled and tools are available.
         // When tools are disabled, preemptive RAG is the only way to inject external context.
         if (!settings.EnablePreemptiveRag && !context.Context.DisableTools)
-        {
-            return;
-        }
-
-        // IMPORTANRT: If there are no handler, there is no need to extract queries.
-        // This can happen if no feature provide implemenation.
-        if (!_handlers.Any())
         {
             return;
         }
