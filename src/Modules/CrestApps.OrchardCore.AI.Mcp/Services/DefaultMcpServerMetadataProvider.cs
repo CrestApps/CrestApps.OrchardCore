@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Services;
 
@@ -14,6 +15,7 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataCache
     private readonly McpService _mcpService;
     private readonly IDistributedCache _cache;
     private readonly IMcpCapabilityEmbeddingCacheProvider _embeddingCache;
+    private readonly IClock _clock;
     private readonly McpMetadataCacheOptions _cacheOptions;
     private readonly ILogger _logger;
 
@@ -22,11 +24,13 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataCache
         IDistributedCache cache,
         IMcpCapabilityEmbeddingCacheProvider embeddingCache,
         IOptions<McpMetadataCacheOptions> cacheOptions,
+        IClock clock,
         ILogger<DefaultMcpServerMetadataProvider> logger)
     {
         _mcpService = mcpService;
         _cache = cache;
         _embeddingCache = embeddingCache;
+        _clock = clock;
         _cacheOptions = cacheOptions.Value;
         _logger = logger;
     }
@@ -108,7 +112,7 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataCache
         {
             ConnectionId = connection.ItemId,
             ConnectionDisplayText = connection.DisplayText,
-            FetchedUtc = DateTime.UtcNow,
+            FetchedUtc = _clock.UtcNow,
         };
 
         try

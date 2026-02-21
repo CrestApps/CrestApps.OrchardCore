@@ -100,8 +100,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js",
                 "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js")
             .SetCdnIntegrity(
-                "sha384-ckHiE7G6MBk/VbsEcbfcaFLRwMRNnHMOP4LQwuAfJJTMKHGEcsFXkTjl1HBO7UBR",
-                "sha384-ckHiE7G6MBk/VbsEcbfcaFLRwMRNnHMOP4LQwuAfJJTMKHGEcsFXkTjl1HBO7UBR")
+                "sha384-RH2xi4eIQ/gjtbs9fUXM68sLSi99C7ZWBRX1vDrVv6GQXRibxXLbwO2NGZB74MbU",
+                "sha384-RH2xi4eIQ/gjtbs9fUXM68sLSi99C7ZWBRX1vDrVv6GQXRibxXLbwO2NGZB74MbU")
             .SetVersion("11.11.1");
 
         _manifest
@@ -113,8 +113,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css",
                 "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.css")
             .SetCdnIntegrity(
-                "sha384-WtUWkflhGUQ3MK2tFYXjWfMm/V8wQ5zBSAJDQ97BKUV1FG/lSUIMKFa7lEexSSqe",
-                "sha384-E4p1vLSqqOpseRx1IxsBhi/AzNnHMEBMGsNhillDLNmBTfAPGIHR/Rh7S/netUJM")
+                "sha384-eFTL69TLRZTkNfYZOLM+G04821K1qZao/4QLJbet1pP4tcF+fdXq/9CdqAbWRl/L",
+                "sha384-Uhn9VRzdRxBVYRT2aPFl8ECva7znqyZwWiqpE3v4GTBe8y2XrpwTWZtU1U5vujcN")
             .SetVersion("11.11.1");
     }
 

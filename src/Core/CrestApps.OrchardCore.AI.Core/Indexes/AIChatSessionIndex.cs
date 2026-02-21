@@ -15,4 +15,8 @@ public sealed class AIChatSessionIndex : MapIndex
     public string UserId { get; set; }
 
     public string ClientId { get; set; }
+
+    public int Status { get; set; }
+
+    public DateTime LastActivityUtc { get; set; }
 }

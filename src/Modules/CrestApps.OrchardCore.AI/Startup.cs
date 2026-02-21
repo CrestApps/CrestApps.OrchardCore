@@ -34,6 +34,7 @@ using OrchardCore.Recipes;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
+using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.AI;
 
@@ -104,6 +105,8 @@ public sealed class WorkflowsStartup : StartupBase
 
         services.AddActivity<AICompletionFromProfileTask, AICompletionFromProfileTaskDisplayDriver>();
         services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigTaskDisplayDriver>();
+        services.AddActivity<AIChatSessionFieldExtractedEvent, AIChatSessionFieldExtractedEventDisplayDriver>();
+        services.AddActivity<AIChatSessionClosedEvent, AIChatSessionClosedEventDisplayDriver>();
     }
 }
 
@@ -171,7 +174,11 @@ public sealed class ChatCoreStartup : StartupBase
         services
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
             .AddDataMigration<AIChatSessionIndexMigrations>()
-            .AddIndexProvider<AIChatSessionIndexProvider>();
+            .AddIndexProvider<AIChatSessionIndexProvider>()
+            .AddSingleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>();
+
+        // Register the data extraction service.
+        services.AddScoped<DataExtractionService>();
 
         // Register orchestration services for AI Profile chat
         services.AddOrchestrationServices();

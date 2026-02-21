@@ -27,6 +27,8 @@ internal sealed class AIChatSessionIndexProvider : IndexProvider<AIChatSession>
                     ClientId = session.ClientId,
                     CreatedUtc = session.CreatedUtc,
                     Title = Str.Truncate(session.Title, 255),
+                    Status = (int)session.Status,
+                    LastActivityUtc = session.LastActivityUtc,
                 };
             });
     }
