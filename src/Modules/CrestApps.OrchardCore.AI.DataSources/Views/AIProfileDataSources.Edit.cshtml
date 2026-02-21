@@ -60,18 +60,6 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses("data-source-dependent")">
-    <div class="@Orchard.GetEndClasses(true)">
-        <div class="form-check">
-            <input class="form-check-input" type="checkbox" asp-for="EnablePreemptiveRag" value="true" />
-            <label class="form-check-label" asp-for="EnablePreemptiveRag">
-                @T["Enable Preemptive Retrieval-Augmented Generation (RAG)"]
-            </label>
-            <span class="hint dashed">@T["When enabled, it reduces AI latency and could improve results. Individual profiles can override this setting."]</span>
-        </div>
-    </div>
-</div>
-
 <script>
     document.addEventListener('DOMContentLoaded', function () {
 

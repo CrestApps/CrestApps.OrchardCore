@@ -176,6 +176,9 @@ public sealed class ChatCoreStartup : StartupBase
         // Register orchestration services for AI Profile chat
         services.AddOrchestrationServices();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, AIToolExecutionContextOrchestrationHandler>());
+
+        // Register the default orchestrator settings UI.
+        services.AddSiteDisplayDriver<DefaultOrchestratorSettingsDisplayDriver>();
     }
 }
 

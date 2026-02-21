@@ -15,13 +15,6 @@ public sealed class AIDataSourceSettings
     public const int MaxTopNDocuments = 20;
 
     /// <summary>
-    /// Gets or sets whether Preemptive RAG is enabled by default for data source profiles.
-    /// When true, relevant context from data sources is injected into the system message
-    /// before the LLM call. Individual profiles can override this setting.
-    /// </summary>
-    public bool EnablePreemptiveRag { get; set; } = true;
-
-    /// <summary>
     /// Gets or sets the default strictness threshold (1-5) for data source retrieval.
     /// Used when a profile does not specify its own Strictness value.
     /// </summary>

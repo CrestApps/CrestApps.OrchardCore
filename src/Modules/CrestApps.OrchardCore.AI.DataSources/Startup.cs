@@ -41,7 +41,7 @@ public sealed class Startup : StartupBase
             .AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
-        services.AddScoped<IOrchestrationContextBuilderHandler, DataSourcePreemptiveRagOrchestrationHandler>();
+        services.AddScoped<IPreemptiveRagHandler, DataSourcePreemptiveRagHandler>();
 
         services.AddScoped<DataSourceIndexingService>();
         services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();

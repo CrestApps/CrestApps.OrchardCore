@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
@@ -7,7 +6,6 @@ using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Settings;
@@ -15,25 +13,12 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.AI.DataSources.Handlers;
 
 /// <summary>
-/// Orchestration handler that performs Preemptive RAG: rewrites the user's query
-/// into focused search terms, embeds them, searches the knowledge base index,
-/// and appends relevant context to the system message before the LLM call.
+/// Preemptive RAG handler for data sources. Receives pre-extracted search queries
+/// from the coordinator, embeds them, searches the knowledge base index, and appends
+/// relevant context to the system message.
 /// </summary>
-internal sealed class DataSourcePreemptiveRagOrchestrationHandler : IOrchestrationContextBuilderHandler
+internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
 {
-    private const string SearchQueryExtractionPrompt = """
-        You are a search query extraction assistant. Given a user message, extract 1 to 3 short, 
-        focused search queries that capture the key information needs. Each query should be a concise 
-        phrase suitable for semantic search against a knowledge base.
-
-        Rules:
-        1. Return ONLY a JSON array of strings. Example: ["query one", "query two"]
-        2. Do NOT include any explanation, markdown, or formatting outside the JSON array.
-        3. Strip out pleasantries, filler words, and irrelevant context.
-        4. Each query should be self-contained and specific.
-        5. If the user message is already a clear, focused question, return it as a single-element array.
-        """;
-
     private readonly ICatalog<AIDataSource> _dataSourceStore;
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IAIClientFactory _aiClientFactory;
@@ -41,13 +26,13 @@ internal sealed class DataSourcePreemptiveRagOrchestrationHandler : IOrchestrati
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
 
-    public DataSourcePreemptiveRagOrchestrationHandler(
+    public DataSourcePreemptiveRagHandler(
         ICatalog<AIDataSource> dataSourceStore,
         IIndexProfileStore indexProfileStore,
         IAIClientFactory aiClientFactory,
         ISiteService siteService,
         IServiceProvider serviceProvider,
-        ILogger<DataSourcePreemptiveRagOrchestrationHandler> logger)
+        ILogger<DataSourcePreemptiveRagHandler> logger)
     {
         _dataSourceStore = dataSourceStore;
         _indexProfileStore = indexProfileStore;
@@ -57,61 +42,31 @@ internal sealed class DataSourcePreemptiveRagOrchestrationHandler : IOrchestrati
         _logger = logger;
     }
 
-    public Task BuildingAsync(OrchestrationContextBuildingContext context)
-        => Task.CompletedTask;
-
-    public async Task BuiltAsync(OrchestrationContextBuiltContext context)
+    public async Task HandleAsync(PreemptiveRagContext context)
     {
-        if (context.Context.CompletionContext == null ||
-            string.IsNullOrEmpty(context.Context.CompletionContext.DataSourceId) ||
-            string.IsNullOrEmpty(context.Context.UserMessage))
+        if (context.OrchestrationContext.CompletionContext == null ||
+            string.IsNullOrEmpty(context.OrchestrationContext.CompletionContext.DataSourceId))
         {
             return;
         }
 
-        // Determine whether Preemptive RAG should be used.
         var ragMetadata = GetRagMetadata(context.Resource);
-        var isPreemptiveRagEnabled = await IsPreemptiveRagEnabledAsync(ragMetadata, context.Context);
-
-        if (!isPreemptiveRagEnabled)
-        {
-            return;
-        }
 
         try
         {
-            await InjectPreemptiveRagContextAsync(context.Context, ragMetadata);
+            await InjectPreemptiveRagContextAsync(context, ragMetadata);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during Preemptive RAG injection for data source '{DataSourceId}'.",
-                context.Context.CompletionContext.DataSourceId);
+                context.OrchestrationContext.CompletionContext.DataSourceId);
         }
     }
 
-    private async Task<bool> IsPreemptiveRagEnabledAsync(AIDataSourceRagMetadata ragMetadata, OrchestrationContext context)
+    private async Task InjectPreemptiveRagContextAsync(PreemptiveRagContext context, AIDataSourceRagMetadata ragMetadata)
     {
-        // If tools are disabled but a data source is configured, force Preemptive RAG.
-        if (context.DisableTools)
-        {
-            return true;
-        }
-
-        // Check per-profile setting first.
-        if (ragMetadata?.EnablePreemptiveRag == true)
-        {
-            return ragMetadata.EnablePreemptiveRag;
-        }
-
-        // Fall back to global site setting.
-        var siteSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
-
-        return siteSettings.EnablePreemptiveRag;
-    }
-
-    private async Task InjectPreemptiveRagContextAsync(OrchestrationContext context, AIDataSourceRagMetadata ragMetadata)
-    {
-        var dataSourceId = context.CompletionContext.DataSourceId;
+        var orchestrationContext = context.OrchestrationContext;
+        var dataSourceId = orchestrationContext.CompletionContext.DataSourceId;
         var dataSource = await _dataSourceStore.FindByIdAsync(dataSourceId);
 
         if (dataSource == null || string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName))
@@ -153,11 +108,8 @@ internal sealed class DataSourcePreemptiveRagOrchestrationHandler : IOrchestrati
             return;
         }
 
-        // Extract focused search queries from the user message using a utility model.
-        var searchQueries = await ExtractSearchQueriesAsync(context);
-
         // Generate embeddings for all search queries.
-        var embeddings = await embeddingGenerator.GenerateAsync(searchQueries);
+        var embeddings = await embeddingGenerator.GenerateAsync(context.Queries);
 
         if (embeddings == null || embeddings.Count == 0)
         {
@@ -227,8 +179,8 @@ internal sealed class DataSourcePreemptiveRagOrchestrationHandler : IOrchestrati
         {
             if (ragMetadata?.IsInScope == true)
             {
-                context.SystemMessageBuilder.AppendLine("\n\n[Data Source Context]");
-                context.SystemMessageBuilder.AppendLine("No relevant content was found in the configured data source. Only answer based on the data source content. If no relevant content exists, inform the user.");
+                orchestrationContext.SystemMessageBuilder.AppendLine("\n\n[Data Source Context]");
+                orchestrationContext.SystemMessageBuilder.AppendLine("No relevant content was found in the configured data source. Only answer based on the data source content. If no relevant content exists, inform the user.");
             }
 
             return;
@@ -256,7 +208,7 @@ internal sealed class DataSourcePreemptiveRagOrchestrationHandler : IOrchestrati
             sb.AppendLine("IMPORTANT: Only answer based on the data source content. If the context does not contain relevant information, inform the user that the answer is not available in the data source.");
         }
 
-        if (!context.DisableTools)
+        if (!orchestrationContext.DisableTools)
         {
             sb.AppendLine($"If you need additional context or more relevant information, use the '{SystemToolNames.SearchDataSources}' tool to retrieve more documents from the data source.");
         }
@@ -304,144 +256,7 @@ internal sealed class DataSourcePreemptiveRagOrchestrationHandler : IOrchestrati
             }
         }
 
-        context.SystemMessageBuilder.Append(sb);
-    }
-
-    /// <summary>
-    /// Uses a lightweight LLM call to extract focused search queries from the user's message.
-    /// Falls back to the raw user message if no chat client is available.
-    /// </summary>
-    private async Task<IList<string>> ExtractSearchQueriesAsync(OrchestrationContext context)
-    {
-        var chatClient = await TryCreateUtilityChatClientAsync(context);
-
-        if (chatClient == null)
-        {
-            // Fallback: use the raw user message as-is.
-            return [context.UserMessage];
-        }
-
-        try
-        {
-            var messages = new List<ChatMessage>
-            {
-                new(ChatRole.System, SearchQueryExtractionPrompt),
-                new(ChatRole.User, context.UserMessage),
-            };
-
-            var chatOptions = new ChatOptions
-            {
-                Temperature = 0.2f,
-                MaxOutputTokens = 200,
-            };
-
-            var response = await chatClient.GetResponseAsync(messages, chatOptions);
-
-            if (response == null || string.IsNullOrWhiteSpace(response.Text))
-            {
-                return [context.UserMessage];
-            }
-
-            // Parse the JSON array of search queries.
-            var queries = ParseSearchQueries(response.Text);
-
-            return queries.Count > 0 ? queries : [context.UserMessage];
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to extract search queries using utility model. Falling back to raw user message.");
-
-            return [context.UserMessage];
-        }
-    }
-
-    /// <summary>
-    /// Parses a JSON array of search query strings from the LLM response.
-    /// </summary>
-    private static List<string> ParseSearchQueries(string responseText)
-    {
-        var text = responseText.Trim();
-
-        // Strip markdown code fences if the model wraps the JSON.
-        if (text.StartsWith("```", StringComparison.Ordinal))
-        {
-            var firstNewLine = text.IndexOf('\n');
-
-            if (firstNewLine > 0)
-            {
-                var lastFence = text.LastIndexOf("```", StringComparison.Ordinal);
-
-                if (lastFence > firstNewLine)
-                {
-                    text = text[(firstNewLine + 1)..lastFence].Trim();
-                }
-            }
-        }
-
-        try
-        {
-            var queries = JsonSerializer.Deserialize<List<string>>(text);
-
-            if (queries != null)
-            {
-                return queries
-                    .Where(q => !string.IsNullOrWhiteSpace(q))
-                    .ToList();
-            }
-        }
-        catch (JsonException)
-        {
-            // Ignore parse errors; caller will fall back to the raw user message.
-        }
-
-        return [];
-    }
-
-    /// <summary>
-    /// Attempts to create a chat client using the utility deployment name if configured,
-    /// falling back to the default deployment name.
-    /// </summary>
-    private async Task<IChatClient> TryCreateUtilityChatClientAsync(OrchestrationContext context)
-    {
-        var providerName = context.SourceName;
-        var connectionName = context.CompletionContext?.ConnectionName;
-
-        if (string.IsNullOrEmpty(providerName))
-        {
-            return null;
-        }
-
-        var providerOptions = _serviceProvider.GetRequiredService<IOptions<AIProviderOptions>>().Value;
-
-        if (!providerOptions.Providers.TryGetValue(providerName, out var provider))
-        {
-            return null;
-        }
-
-        if (string.IsNullOrEmpty(connectionName))
-        {
-            connectionName = provider.DefaultConnectionName;
-        }
-
-        if (string.IsNullOrEmpty(connectionName) || !provider.Connections.TryGetValue(connectionName, out var connection))
-        {
-            return null;
-        }
-
-        // Prefer the utility deployment, fall back to the default deployment.
-        var deploymentName = connection.GetDefaultUtilityDeploymentName(throwException: false);
-
-        if (string.IsNullOrEmpty(deploymentName))
-        {
-            deploymentName = connection.GetDefaultDeploymentName(throwException: false);
-        }
-
-        if (string.IsNullOrEmpty(deploymentName))
-        {
-            return null;
-        }
-
-        return await _aiClientFactory.CreateChatClientAsync(providerName, connectionName, deploymentName);
+        orchestrationContext.SystemMessageBuilder.Append(sb);
     }
 
     private static AIDataSourceRagMetadata GetRagMetadata(object resource)

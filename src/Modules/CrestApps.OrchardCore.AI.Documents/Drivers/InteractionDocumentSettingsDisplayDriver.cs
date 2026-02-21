@@ -42,7 +42,7 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
         {
             viewModel.IndexProfileName = section.IndexProfileName;
 
-            var items = await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
+            var items= await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
 
             // Here you would typically populate the IndexProfiles from your data source.
             viewModel.IndexProfiles = items.Select(x => new SelectListItem(x.Name, x.Name));

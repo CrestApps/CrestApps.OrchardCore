@@ -140,6 +140,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOrchestrationContextBuilder, DefaultOrchestrationContextBuilder>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, CompletionContextOrchestrationHandler>());
 
+        // Register the preemptive search query provider (shared by DataSource and Document RAG handlers).
+        services.AddScoped<PreemptiveSearchQueryProvider>();
+
+        // Register the preemptive RAG coordinator that dispatches to all IPreemptiveRagHandler implementations.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, PreemptiveRagOrchestrationHandler>());
+
         // Register the tool registry and default providers.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, LocalToolRegistryProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, SystemToolRegistryProvider>());

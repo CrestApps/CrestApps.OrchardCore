@@ -12,4 +12,6 @@ public sealed class InteractionDocumentSettings
     /// Default is 3.
     /// </summary>
     public int TopN { get; set; } = 3;
+
+
 }

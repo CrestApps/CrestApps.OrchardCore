@@ -13,8 +13,6 @@ public class EditChatInteractionDataSourceViewModel
 
     public bool IsInScope { get; set; }
 
-    public bool EnablePreemptiveRag { get; set; }
-
     public string Filter { get; set; }
 
     [BindNever]

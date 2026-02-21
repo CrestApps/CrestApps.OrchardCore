@@ -44,7 +44,6 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             model.Strictness = dataSourceSettings.GetStrictness(ragMetadata.Strictness);
             model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
             model.IsInScope = ragMetadata.IsInScope;
-            model.EnablePreemptiveRag = context.IsNew ? dataSourceSettings.EnablePreemptiveRag : ragMetadata.EnablePreemptiveRag;
             model.Filter = ragMetadata.Filter;
 
             model.DataSources = await _dataSourceStore.GetAllAsync();
@@ -97,7 +96,6 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             Strictness = strictness,
             TopNDocuments = topN,
             IsInScope = model.IsInScope,
-            EnablePreemptiveRag = model.EnablePreemptiveRag,
             Filter = model.Filter,
         });
 

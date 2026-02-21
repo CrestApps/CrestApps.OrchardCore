@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
+
+@model DefaultOrchestratorSettingsViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnablePreemptiveRag" />
+            <label class="form-check-label" asp-for="EnablePreemptiveRag">
+                @T["Enable Preemptive Retrieval-Augmented Generation (RAG)"]
+            </label>
+            <span class="hint dashed">@T["When enabled, user queries are rewritten into focused search terms and used to retrieve relevant context from data sources and documents before the LLM call. This improves response accuracy and can reduce latency. When tools are disabled on a profile, preemptive RAG is always active regardless of this setting."]</span>
+        </div>
+    </div>
+</div>
