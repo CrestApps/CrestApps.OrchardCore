@@ -23,7 +23,7 @@
 <p>Use the navigation tabs above to explore each MCP capability:</p>
 
 <div class="row g-3">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card h-100">
             <div class="card-body">
                 <h5 class="card-title">Tools</h5>
@@ -32,7 +32,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card h-100">
             <div class="card-body">
                 <h5 class="card-title">Prompts</h5>
@@ -41,12 +41,21 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="card h-100">
             <div class="card-body">
                 <h5 class="card-title">Resources</h5>
-                <p class="card-text">List all MCP resources and read their content by URI.</p>
+                <p class="card-text">List concrete MCP resources with fixed URIs and read their content directly.</p>
                 <a asp-page="/Resources" class="btn btn-primary btn-sm">Go to Resources</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Resource Templates</h5>
+                <p class="card-text">Browse parameterized resource templates, fill in variables, and read content.</p>
+                <a asp-page="/ResourceTemplates" class="btn btn-primary btn-sm">Go to Templates</a>
             </div>
         </div>
     </div>

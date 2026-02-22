@@ -188,103 +188,94 @@ MCP Resources allow you to expose various data sources through the MCP protocol.
 
 ### Built-in Resource Types
 
-| Type | URI Pattern | Description |
-|------|-------------|-------------|
-| **File** | `file://{itemId}/{path}` | Local file system access |
-| **Content** | `content://{itemId}/...` | Orchard Core content items |
-| **Recipe Schema** | `recipe-schema://{itemId}/...` | JSON schema definitions |
-| **FTP/FTPS** | `ftp://{itemId}/{path}` | Remote files via FTP (separate module) |
-| **SFTP** | `sftp://{itemId}/{path}` | Remote files via SSH (separate module) |
+| Type | Supported Variables | Description |
+|------|---------------------|-------------|
+| **File** (`file`) | `{providerName}`, `{fileName}` | File access via named file providers |
+| **Media** (`media`) | `{path}` | Orchard Core media library files |
+| **Content Item** (`content-item`) | `{contentItemId}`, `{contentItemVersionId}` | Fetch a specific content item by ID or version |
+| **Content Type** (`content-type`) | `{contentType}` | List all published content items of a type |
+| **Recipe Schema** (`recipe-schema`) | *(none)* | Full JSON schema for all recipe steps |
+| **Recipe Step Schema** (`recipe-step-schema`) | `{stepName}` | JSON schema for a specific recipe step |
+| **Recipe** (`recipe`) | `{recipeName}` | Recipe content by name |
+| **FTP/FTPS** (`ftp`) | `{path}` | Remote files via FTP (separate module) |
+| **SFTP** (`sftp`) | `{path}` | Remote files via SSH (separate module) |
+
+### How URI Patterns Work
+
+Each resource instance has a URI that is auto-constructed by the system as:
+
+```
+{source}://{itemId}/{path}
+```
+
+- **`{source}`**: the resource type name (e.g., `file`, `content-item`, `recipe`)
+- **`{itemId}`**: the auto-generated resource instance identifier
+- **`{path}`**: the user-defined path portion with optional variable placeholders
+
+When creating a resource in the admin UI, you only provide the **path** portion. The system automatically prepends the scheme and resource ID. For example:
+
+- Path: `{providerName}/{fileName}` → Full URI: `file://abc123/{providerName}/{fileName}`
+- Path: `steps/{stepName}` → Full URI: `recipe-step-schema://def456/steps/{stepName}`
+- Path: *(empty)* → Full URI: `recipe-schema://ghi789`
+
+The MCP server uses **URI template routing** to match incoming requests. It parses the scheme and resource ID from the URI for direct lookup, then extracts variable values from the path. The last variable in a path can match multi-segment values (e.g., `{fileName}` matches `documents/report.pdf`).
 
 ### Creating Resources via Admin UI
 
 1. Navigate to **Artificial Intelligence** → **MCP Resources**
 2. Click **Add Resource**
-3. Select a resource type (e.g., File, Content, FTP)
+3. Select a resource type (e.g., File, Content Item, Recipe Step Schema)
 4. Fill in the required fields:
    - **Display Text**: A friendly name for the resource
-   - **URI**: The resource URI following the type's pattern
+   - **Path**: The path portion of the URI, using any supported variables shown in the UI (e.g., `{providerName}/{fileName}`). Leave empty for resource types with no variables.
    - **Name**: The MCP resource name (used by clients)
    - **Title**: Optional human-readable title
    - **Description**: Optional description
    - **MIME Type**: Content type of the resource
-5. Configure type-specific settings (e.g., FTP connection details)
+5. Configure type-specific settings if needed
 6. Save the resource
 
-### Content Resource Strategies
-
-The Content resource type supports multiple URI patterns through the strategy provider pattern:
-
-| Pattern | Description |
-|---------|-------------|
-| `content://{itemId}/id/{contentItemId}` | Get a specific content item by ID |
-| `content://{itemId}/{contentType}/list` | List all content items of a type |
-| `content://{itemId}/{contentType}/{contentItemId}` | Get content item by type and ID |
-
-#### Extending Content Resources
-
-You can add custom content resource strategies by implementing `IContentResourceStrategyProvider`:
-
-```csharp
-public class SearchContentResourceStrategy : IContentResourceStrategyProvider
-{
-    public string[] UriPatterns => ["content://{itemId}/{contentType}/search"];
-    
-    public bool CanHandle(Uri uri)
-    {
-        // Check if URI matches your pattern
-        return uri.Segments.Length >= 4 && 
-               uri.Segments[^1].TrimEnd('/') == "search";
-    }
-    
-    public async Task<ReadResourceResult> ReadAsync(
-        McpResource resource, 
-        Uri uri, 
-        CancellationToken cancellationToken)
-    {
-        // Implement your search logic
-    }
-}
-```
-
-Register your strategy in `Startup.cs`:
-
-```csharp
-services.AddContentResourceStrategy<SearchContentResourceStrategy>();
-```
-
-The strategy's URI patterns are automatically added to the Content resource type's displayed patterns in the UI.
+The admin UI displays a **URI preview** showing the full constructed URI, and lists the **supported variables** for the selected resource type so you know which placeholders to include in your path.
 
 ### Registering Custom Resource Types
 
-You can register custom resource types with their handlers:
+You can register custom resource types with their handlers. Each handler should handle **one purpose only** and declare its supported variables:
 
 ```csharp
 services.AddMcpResourceType<DatabaseResourceTypeHandler>("database", entry =>
 {
     entry.DisplayName = S["Database"];
     entry.Description = S["Query data from databases."];
-    entry.UriPatterns = ["db://{itemId}/{table}/{id}"];
+    entry.SupportedVariables =
+    [
+        new McpResourceVariable("table") { Description = S["The database table name."] },
+        new McpResourceVariable("id") { Description = S["The row ID to fetch."] },
+    ];
 });
 ```
 
-Implement the handler:
+Implement the handler by extending `McpResourceTypeHandlerBase`:
 
 ```csharp
-public class DatabaseResourceTypeHandler : IMcpResourceTypeHandler
+public class DatabaseResourceTypeHandler : McpResourceTypeHandlerBase
 {
-    public string Type => "database";
-    
-    public async Task<ReadResourceResult> ReadAsync(
-        McpResource resource, 
+    public DatabaseResourceTypeHandler() : base("database") { }
+
+    protected override Task<ReadResourceResult> GetResultAsync(
+        McpResource resource,
+        IReadOnlyDictionary<string, string> variables,
         CancellationToken cancellationToken)
     {
-        var uri = new Uri(resource.Resource.Uri);
-        // Parse URI and query database
+        variables.TryGetValue("table", out var table);
+        variables.TryGetValue("id", out var id);
+
+        // Query database using table and id
         // Return ReadResourceResult with content
     }
 }
 ```
+
+The `variables` dictionary contains values extracted from the URI pattern match. For example, if the user defined the path `{table}/{id}` and a client requests `database://abc123/users/42`, the handler receives `{ "table": "users", "id": "42" }`.
 
 ### Resource Type Modules
 
@@ -307,7 +298,7 @@ Resources can be exported and imported via recipes:
           "Source": "file",
           "DisplayText": "Configuration File",
           "Resource": {
-            "Uri": "file://abc123/etc/config.json",
+            "Uri": "file://configs/{providerName}/{fileName}",
             "Name": "config-file",
             "Description": "Application configuration",
             "MimeType": "application/json"

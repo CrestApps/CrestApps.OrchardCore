@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Samples.McpClient.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -6,27 +7,27 @@ using ModelContextProtocol.Protocol;
 
 namespace CrestApps.OrchardCore.Samples.McpClient.Pages;
 
-public sealed class ResourcesModel : PageModel
+public sealed partial class ResourceTemplatesModel : PageModel
 {
     private readonly McpClientFactory _clientFactory;
 
-    public ResourcesModel(McpClientFactory clientFactory)
+    public ResourceTemplatesModel(McpClientFactory clientFactory)
     {
         _clientFactory = clientFactory;
     }
 
-    public IList<McpClientResource> Resources { get; private set; } = [];
+    public IList<McpClientResourceTemplate> Templates { get; private set; } = [];
 
     public string ErrorMessage { get; private set; }
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
-        await LoadResourcesAsync(cancellationToken);
+        await LoadTemplatesAsync(cancellationToken);
     }
 
     public async Task<IActionResult> OnPostRefreshAsync(CancellationToken cancellationToken)
     {
-        await LoadResourcesAsync(cancellationToken);
+        await LoadTemplatesAsync(cancellationToken);
 
         return Page();
     }
@@ -68,18 +69,47 @@ public sealed class ResourcesModel : PageModel
         }
     }
 
-    private async Task LoadResourcesAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Extracts parameter names from {param} placeholders in a URI template string.
+    /// </summary>
+    public static IReadOnlyList<string> ExtractParameters(string uriTemplate)
+    {
+        if (string.IsNullOrEmpty(uriTemplate))
+        {
+            return [];
+        }
+
+        var matches = ParameterPattern().Matches(uriTemplate);
+
+        if (matches.Count == 0)
+        {
+            return [];
+        }
+
+        var parameters = new List<string>(matches.Count);
+
+        foreach (Match match in matches)
+        {
+            parameters.Add(match.Groups[1].Value);
+        }
+
+        return parameters;
+    }
+
+    private async Task LoadTemplatesAsync(CancellationToken cancellationToken)
     {
         try
         {
             var client = await _clientFactory.CreateAsync(cancellationToken);
-            var result = await client.ListResourcesAsync(options: null, cancellationToken);
-            Resources = result;
+            Templates = await client.ListResourceTemplatesAsync(options: null, cancellationToken);
         }
         catch (Exception ex)
         {
             ErrorMessage ??= ex.Message;
-            Resources = [];
+            Templates = [];
         }
     }
+
+    [GeneratedRegex(@"\{([^}]+)\}")]
+    private static partial Regex ParameterPattern();
 }

@@ -19,10 +19,14 @@
 
 @if (Model.Prompts?.Count > 0)
 {
-    <ul class="list-group">
+    <div class="mb-3">
+        <input type="text" id="promptSearch" class="form-control" placeholder="Search prompts by name or description…" />
+    </div>
+
+    <ul class="list-group" id="promptsList">
         @foreach (var prompt in Model.Prompts)
         {
-            <li class="list-group-item">
+            <li class="list-group-item searchable-item" data-search-text="@prompt.Name?.ToLowerInvariant() @prompt.Description?.ToLowerInvariant()">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <div class="fw-semibold">@prompt.Name</div>
@@ -39,6 +43,8 @@
             </li>
         }
     </ul>
+
+    <p class="text-muted mt-2" id="promptNoResults" style="display:none">No prompts match your search.</p>
 }
 else
 {
@@ -75,3 +81,22 @@ else
         </div>
     </div>
 }
+
+<script>
+    (function () {
+        var searchInput = document.getElementById('promptSearch');
+        if (!searchInput) return;
+        var items = document.querySelectorAll('#promptsList .searchable-item');
+        var noResults = document.getElementById('promptNoResults');
+        searchInput.addEventListener('input', function () {
+            var query = this.value.toLowerCase().trim();
+            var visible = 0;
+            items.forEach(function (item) {
+                var match = !query || item.dataset.searchText.indexOf(query) !== -1;
+                item.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+            noResults.style.display = visible === 0 && query ? '' : 'none';
+        });
+    })();
+</script>

@@ -21,15 +21,27 @@ public class McpResourceFieldsViewModel
     public string Source { get; set; }
 
     /// <summary>
-    /// <summary>
     /// Gets or sets the system-generated item identifier.
     /// </summary>
     [BindNever]
     public string McpPromptItemId { get; set; }
 
     /// <summary>
-    /// Gets or sets the URI path patterns for the resource type, to display as help text in the UI.
+    /// Gets or sets a preview of the full constructed URI (e.g., "file://abc123/docs/{fileName}").
     /// </summary>
     [BindNever]
-    public string[] UriPatterns { get; set; } = [];
+    public string UriPreview { get; set; }
+
+    /// <summary>
+    /// Gets or sets the supported variables for the resource type, to display as help text in the UI.
+    /// </summary>
+    [BindNever]
+    public McpResourceVariableViewModel[] SupportedVariables { get; set; } = [];
+}
+
+public class McpResourceVariableViewModel
+{
+    public string Name { get; set; }
+
+    public string Description { get; set; }
 }
