@@ -27,7 +27,7 @@ public sealed class McpResourceTypeHandlerBaseTests
     }
 
     [Fact]
-    public async Task ReadAsync_WithNullResourceUri_ThrowsArgumentNullException()
+    public async Task ReadAsync_WithNullVariables_ThrowsArgumentNullException()
     {
         var handler = new TestHandler("test");
         var resource = CreateResource("test://item1/some/path");
@@ -40,28 +40,41 @@ public sealed class McpResourceTypeHandlerBaseTests
     public async Task ReadAsync_WithNullResource_ThrowsArgumentNullException()
     {
         var handler = new TestHandler("test");
-
-        _ = McpResourceUri.TryParse("test://item1/some/path", out var resourceUri);
+        var variables = new Dictionary<string, string>();
 
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => handler.ReadAsync(null, resourceUri, TestContext.Current.CancellationToken));
+            () => handler.ReadAsync(null, variables, TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task ReadAsync_WithValidUri_DelegatesToProtectedMethod()
+    public async Task ReadAsync_WithValidInputs_DelegatesToProtectedMethod()
     {
         var handler = new TestHandler("test");
         var resource = CreateResource("test://item1/some/path");
+        var variables = new Dictionary<string, string>
+        {
+            ["path"] = "some/path",
+        };
 
-        _ = McpResourceUri.TryParse("test://item1/some/path", out var resourceUri);
-
-        var result = await handler.ReadAsync(resource, resourceUri, TestContext.Current.CancellationToken);
+        var result = await handler.ReadAsync(resource, variables, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
-        Assert.NotNull(handler.LastResourceUri);
-        Assert.Equal("test", handler.LastResourceUri.Scheme);
-        Assert.Equal("item1", handler.LastResourceUri.ItemId);
-        Assert.Equal("some/path", handler.LastResourceUri.Path);
+        Assert.NotNull(handler.LastVariables);
+        Assert.Equal("some/path", handler.LastVariables["path"]);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithEmptyVariables_DelegatesToProtectedMethod()
+    {
+        var handler = new TestHandler("test");
+        var resource = CreateResource("test://item1/some/path");
+        var variables = new Dictionary<string, string>();
+
+        var result = await handler.ReadAsync(resource, variables, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.NotNull(handler.LastVariables);
+        Assert.Empty(handler.LastVariables);
     }
 
     private static McpResource CreateResource(string uri)
@@ -80,15 +93,15 @@ public sealed class McpResourceTypeHandlerBaseTests
 
     private sealed class TestHandler : McpResourceTypeHandlerBase
     {
-        public McpResourceUri LastResourceUri { get; private set; }
+        public IReadOnlyDictionary<string, string> LastVariables { get; private set; }
 
         public TestHandler(string type) : base(type)
         {
         }
 
-        protected override Task<ReadResourceResult> GetResultAsync(McpResource resource, McpResourceUri resourceUri, CancellationToken cancellationToken)
+        protected override Task<ReadResourceResult> GetResultAsync(McpResource resource, IReadOnlyDictionary<string, string> variables, CancellationToken cancellationToken)
         {
-            LastResourceUri = resourceUri;
+            LastVariables = variables;
 
             return Task.FromResult(new ReadResourceResult
             {

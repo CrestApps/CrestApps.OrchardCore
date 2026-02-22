@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Samples.McpClient.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -7,7 +6,7 @@ using ModelContextProtocol.Protocol;
 
 namespace CrestApps.OrchardCore.Samples.McpClient.Pages;
 
-public sealed partial class ResourcesModel : PageModel
+public sealed class ResourcesModel : PageModel
 {
     private readonly McpClientFactory _clientFactory;
 
@@ -69,33 +68,6 @@ public sealed partial class ResourcesModel : PageModel
         }
     }
 
-    /// <summary>
-    /// Extracts parameter names from {param} placeholders in a URI string.
-    /// </summary>
-    public static IReadOnlyList<string> ExtractParameters(string uri)
-    {
-        if (string.IsNullOrEmpty(uri))
-        {
-            return [];
-        }
-
-        var matches = ParameterPattern().Matches(uri);
-
-        if (matches.Count == 0)
-        {
-            return [];
-        }
-
-        var parameters = new List<string>(matches.Count);
-
-        foreach (Match match in matches)
-        {
-            parameters.Add(match.Groups[1].Value);
-        }
-
-        return parameters;
-    }
-
     private async Task LoadResourcesAsync(CancellationToken cancellationToken)
     {
         try
@@ -110,7 +82,4 @@ public sealed partial class ResourcesModel : PageModel
             Resources = [];
         }
     }
-
-    [GeneratedRegex(@"\{([^}]+)\}")]
-    private static partial Regex ParameterPattern();
 }

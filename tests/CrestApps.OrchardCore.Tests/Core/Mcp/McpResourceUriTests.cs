@@ -5,139 +5,102 @@ namespace CrestApps.OrchardCore.Tests.Core.Mcp;
 public sealed class McpResourceUriTests
 {
     [Theory]
-    [InlineData("file://abc123/path/to/file.txt", "file", "abc123", "path/to/file.txt")]
-    [InlineData("content://item1/id/contentItem456", "content", "item1", "id/contentItem456")]
-    [InlineData("ftp://res99/documents/report.pdf", "ftp", "res99", "documents/report.pdf")]
-    [InlineData("recipe-schema://item5/ContentDefinition", "recipe-schema", "item5", "ContentDefinition")]
-    [InlineData("media://item7/images/logo.png", "media", "item7", "images/logo.png")]
-    [InlineData("sftp://item8/remote/data.csv", "sftp", "item8", "remote/data.csv")]
-    public void TryParse_WithValidUri_ReturnsTrue(string uri, string expectedScheme, string expectedItemId, string expectedPath)
+    [InlineData("file://server/{path}", "file://server/documents/report.pdf", "path", "documents/report.pdf")]
+    [InlineData("recipe-step-schema://steps/{stepName}", "recipe-step-schema://steps/feature", "stepName", "feature")]
+    [InlineData("content-item://items/{contentItemId}", "content-item://items/abc123", "contentItemId", "abc123")]
+    public void TryMatch_WithSingleVariable_ExtractsCorrectly(string template, string uri, string expectedVar, string expectedValue)
     {
-        var result = McpResourceUri.TryParse(uri, out var parsed);
+        var result = McpResourceUri.TryMatch(template, uri, out var variables);
 
         Assert.True(result);
-        Assert.NotNull(parsed);
-        Assert.Equal(expectedScheme, parsed.Scheme);
-        Assert.Equal(expectedItemId, parsed.ItemId);
-        Assert.Equal(expectedPath, parsed.Path);
+        Assert.NotNull(variables);
+        Assert.Equal(expectedValue, variables[expectedVar]);
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("not-a-uri")]
-    [InlineData("://missing-scheme")]
-    public void TryParse_WithInvalidUri_ReturnsFalse(string uri)
+    [Fact]
+    public void TryMatch_WithMultipleVariables_ExtractsAll()
     {
-        var result = McpResourceUri.TryParse(uri, out var parsed);
+        var template = "content-type://items/{contentType}/{contentItemId}";
+        var uri = "content-type://items/Article/abc123";
+
+        var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
+        Assert.True(result);
+        Assert.Equal("Article", variables["contentType"]);
+        Assert.Equal("abc123", variables["contentItemId"]);
+    }
+
+    [Fact]
+    public void TryMatch_WithNoVariables_MatchesExactUri()
+    {
+        var template = "recipe-schema://full-schema/recipe";
+        var uri = "recipe-schema://full-schema/recipe";
+
+        var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
+        Assert.True(result);
+        Assert.NotNull(variables);
+        Assert.Empty(variables);
+    }
+
+    [Fact]
+    public void TryMatch_WithNonMatchingUri_ReturnsFalse()
+    {
+        var template = "file://server/{path}";
+        var uri = "ftp://other/documents/report.pdf";
+
+        var result = McpResourceUri.TryMatch(template, uri, out var variables);
 
         Assert.False(result);
-        Assert.Null(parsed);
-    }
-
-    [Fact]
-    public void TryParse_WithEmptyPath_ReturnsEmptyPathString()
-    {
-        var result = McpResourceUri.TryParse("file://abc123/", out var parsed);
-
-        Assert.True(result);
-        Assert.Equal(string.Empty, parsed.Path);
+        Assert.Null(variables);
     }
 
     [Theory]
-    [InlineData("file", "abc123", "path/to/file.txt", "file://abc123/path/to/file.txt")]
-    [InlineData("content", "item1", "id/contentItem456", "content://item1/id/contentItem456")]
-    [InlineData("recipe-schema", "item5", "feature", "recipe-schema://item5/feature")]
-    public void Build_WithValidInputs_ReturnsExpectedUri(string scheme, string itemId, string path, string expected)
+    [InlineData(null, "file://server/path")]
+    [InlineData("", "file://server/path")]
+    [InlineData("file://server/{path}", null)]
+    [InlineData("file://server/{path}", "")]
+    public void TryMatch_WithNullOrEmptyInputs_ReturnsFalse(string template, string uri)
     {
-        var result = McpResourceUri.Build(scheme, itemId, path);
+        var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
+        Assert.False(result);
+        Assert.Null(variables);
+    }
+
+    [Fact]
+    public void TryMatch_IsCaseInsensitive()
+    {
+        var template = "Recipe-Schema://Steps/{stepName}";
+        var uri = "recipe-schema://steps/Feature";
+
+        var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
+        Assert.True(result);
+        Assert.Equal("Feature", variables["stepName"]);
+    }
+
+    [Fact]
+    public void TryMatch_DoesNotMatchPartialUri()
+    {
+        var template = "file://server/{path}";
+        var uri = "other://server/path/extra/segments";
+
+        var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
+        Assert.False(result);
+    }
+
+    [Theory]
+    [InlineData("file://server/{path}", true)]
+    [InlineData("recipe-schema://full-schema/recipe", false)]
+    [InlineData("content-type://items/{contentType}/{contentItemId}", true)]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    public void IsTemplate_ReturnsExpected(string uri, bool expected)
+    {
+        var result = McpResourceUri.IsTemplate(uri);
 
         Assert.Equal(expected, result);
-    }
-
-    [Theory]
-    [InlineData("file", "abc123", null)]
-    [InlineData("file", "abc123", "")]
-    public void Build_WithEmptyPath_ReturnsEmptyString(string scheme, string itemId, string path)
-    {
-        var result = McpResourceUri.Build(scheme, itemId, path);
-
-        Assert.Equal(string.Empty, result);
-    }
-
-    [Fact]
-    public void Build_WithNullScheme_ThrowsArgumentException()
-    {
-        Assert.ThrowsAny<ArgumentException>(() => McpResourceUri.Build(null, "abc123", "path"));
-    }
-
-    [Fact]
-    public void Build_WithEmptyScheme_ThrowsArgumentException()
-    {
-        Assert.ThrowsAny<ArgumentException>(() => McpResourceUri.Build(string.Empty, "abc123", "path"));
-    }
-
-    [Fact]
-    public void Build_WithNullItemId_ThrowsArgumentException()
-    {
-        Assert.ThrowsAny<ArgumentException>(() => McpResourceUri.Build("file", null, "path"));
-    }
-
-    [Fact]
-    public void Build_WithEmptyItemId_ThrowsArgumentException()
-    {
-        Assert.ThrowsAny<ArgumentException>(() => McpResourceUri.Build("file", string.Empty, "path"));
-    }
-
-    [Fact]
-    public void Build_TrimsLeadingSlashFromPath()
-    {
-        var result = McpResourceUri.Build("file", "abc123", "/path/to/file.txt");
-
-        Assert.Equal("file://abc123/path/to/file.txt", result);
-    }
-
-    [Fact]
-    public void ToString_ReturnsBuiltUri()
-    {
-        _ = McpResourceUri.TryParse("content://item1/id/abc", out var parsed);
-
-        Assert.Equal("content://item1/id/abc", parsed.ToString());
-    }
-
-    [Fact]
-    public void TryParse_Roundtrip_PreservesAllComponents()
-    {
-        var original = McpResourceUri.Build("ftp", "itemX", "remote/path/file.txt");
-
-        _ = McpResourceUri.TryParse(original, out var parsed);
-
-        Assert.Equal("ftp", parsed.Scheme);
-        Assert.Equal("itemx", parsed.ItemId);
-        Assert.Equal("remote/path/file.txt", parsed.Path);
-        Assert.Equal(original.ToLowerInvariant(), parsed.ToString().ToLowerInvariant());
-    }
-
-    [Theory]
-    [InlineData("content://item1/{contentType}/list", "{contentType}/list")]
-    [InlineData("content://item1/{contentType}/{contentItemId}", "{contentType}/{contentItemId}")]
-    [InlineData("recipe-schema://item5/{step-name}", "{step-name}")]
-    public void TryParse_PreservesCurlyBracesInPath(string uri, string expectedPath)
-    {
-        var result = McpResourceUri.TryParse(uri, out var parsed);
-
-        Assert.True(result);
-        Assert.Equal(expectedPath, parsed.Path);
-    }
-
-    [Fact]
-    public void TryParse_BuildRoundtrip_PreservesCurlyBraces()
-    {
-        var original = McpResourceUri.Build("content", "item1", "{contentType}/list");
-
-        _ = McpResourceUri.TryParse(original, out var parsed);
-
-        Assert.Equal("{contentType}/list", parsed.Path);
-        Assert.Equal(original, parsed.ToString());
     }
 }

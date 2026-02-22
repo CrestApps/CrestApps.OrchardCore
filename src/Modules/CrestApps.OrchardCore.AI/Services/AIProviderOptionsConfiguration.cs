@@ -100,15 +100,37 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
                     provider.DefaultConnectionName = connections.FirstOrDefault().Key;
                 }
 
-                var defaultDeploymentName = providerNode["DefaultDeploymentName"]?.GetValue<string>();
+                var defaultDeploymentName = providerNode["DefaultChatDeploymentName"]?.GetValue<string>()
+                    ?? providerNode["DefaultDeploymentName"]?.GetValue<string>();
 
                 if (!string.IsNullOrEmpty(defaultDeploymentName))
                 {
-                    provider.DefaultDeploymentName = defaultDeploymentName;
+                    provider.DefaultChatDeploymentName = defaultDeploymentName;
                 }
                 else
                 {
-                    provider.DefaultDeploymentName = connections.FirstOrDefault().Value?.GetDefaultDeploymentName(false);
+                    provider.DefaultChatDeploymentName = connections.FirstOrDefault().Value?.GetChatDeploymentOrDefaultName(false);
+                }
+
+                var defaultEmbeddingDeploymentName = providerNode["DefaultEmbeddingDeploymentName"]?.GetValue<string>();
+
+                if (!string.IsNullOrEmpty(defaultEmbeddingDeploymentName))
+                {
+                    provider.DefaultEmbeddingDeploymentName = defaultEmbeddingDeploymentName;
+                }
+
+                var defaultImagesDeploymentName = providerNode["DefaultImagesDeploymentName"]?.GetValue<string>();
+
+                if (!string.IsNullOrEmpty(defaultImagesDeploymentName))
+                {
+                    provider.DefaultImagesDeploymentName = defaultImagesDeploymentName;
+                }
+
+                var defaultUtilityDeploymentName = providerNode["DefaultUtilityDeploymentName"]?.GetValue<string>();
+
+                if (!string.IsNullOrEmpty(defaultUtilityDeploymentName))
+                {
+                    provider.DefaultUtilityDeploymentName = defaultUtilityDeploymentName;
                 }
 
                 options.Providers.Add(providerName, provider);

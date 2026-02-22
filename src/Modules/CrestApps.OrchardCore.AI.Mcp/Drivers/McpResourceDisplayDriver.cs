@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.Extensions.Localization;
@@ -43,26 +42,31 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
             model.McpPromptItemId = entry.ItemId;
             model.DisplayText = entry.DisplayText;
 
-            // Get the URI patterns from the options for this resource type
+            // Get the supported variables from the options for this resource type.
             if (!string.IsNullOrEmpty(entry.Source) &&
                 _mcpOptions.ResourceTypes.TryGetValue(entry.Source, out var typeEntry) &&
-                typeEntry.UriPatterns is not null)
+                typeEntry.SupportedVariables is not null)
             {
-                model.UriPatterns = typeEntry.UriPatterns;
+                model.SupportedVariables = typeEntry.SupportedVariables
+                    .Select(v => new McpResourceVariableViewModel
+                    {
+                        Name = v.Name,
+                        Description = v.Description?.Value,
+                    })
+                    .ToArray();
             }
 
             if (entry.Resource is not null)
             {
-                // Extract the path portion from the full URI ({scheme}://{itemId}/{path}).
-                if (McpResourceUri.TryParse(entry.Resource.Uri, out var resourceUri))
-                {
-                    model.Path = resourceUri.Path;
-                }
-
+                // Extract the user-provided path from the full URI for editing.
+                model.Path = Handlers.McpResourceHandler.ExtractPath(entry.Resource.Uri, entry.Source, entry.ItemId);
                 model.Name = entry.Resource.Name;
                 model.Description = entry.Resource.Description;
                 model.MimeType = entry.Resource.MimeType;
             }
+
+            // Build a URI preview for display.
+            model.UriPreview = Handlers.McpResourceHandler.BuildUri(entry.Source, entry.ItemId, model.Path);
         }).Location("Content:1");
     }
 
@@ -75,11 +79,6 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
         if (string.IsNullOrWhiteSpace(model.DisplayText))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The Display Text is required."]);
-        }
-
-        if (string.IsNullOrWhiteSpace(model.Path))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Path), S["The path is required."]);
         }
 
         if (string.IsNullOrWhiteSpace(model.Name))
@@ -95,8 +94,8 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
             Name = string.Empty,
         };
 
-        // Construct the full URI from the protocol (source type), item ID, and user-provided path.
-        entry.Resource.Uri = McpResourceUri.Build(entry.Source, entry.ItemId, model.Path);
+        // Build the full URI from the user-provided path.
+        entry.Resource.Uri = Handlers.McpResourceHandler.BuildUri(entry.Source, entry.ItemId, model.Path);
 
         entry.Resource.Name = model.Name ?? string.Empty;
         entry.Resource.Title = entry.DisplayText;

@@ -166,12 +166,19 @@ public sealed class McpServerStartup : StartupBase
             .AddScoped<ICatalogEntryHandler<McpResource>, McpResourceHandler>()
             .AddDisplayDriver<McpResource, McpResourceDisplayDriver>();
 
+        // Register the file provider resolver.
+        services.AddScoped<IMcpFileProviderResolver, DefaultMcpFileProviderResolver>();
+
         // Register built-in File resource type handler.
         services.AddMcpResourceType<FileResourceTypeHandler>(FileResourceTypeHandler.TypeName, entry =>
         {
             entry.DisplayName = S["File"];
-            entry.Description = S["Reads content from local files."];
-            entry.UriPatterns = ["filesystem/{path}"];
+            entry.Description = S["Reads content from file providers."];
+            entry.SupportedVariables =
+            [
+                new McpResourceVariable("providerName") { Description = S["The name of the file provider to use."] },
+                new McpResourceVariable("fileName") { Description = S["The file path within the provider."] },
+            ];
         });
 
         _ = services.AddMcpServer(options =>
@@ -395,20 +402,24 @@ public sealed class McpContentResourceStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // Register the content resource strategy providers for extensibility.
-        services.AddScoped<IContentResourceStrategyProvider, ContentByIdResourceStrategy>();
-        services.AddScoped<IContentResourceStrategyProvider, ContentByTypeResourceStrategy>();
-
-        services.AddMcpResourceType<ContentResourceTypeHandler>(ContentResourceTypeHandler.TypeName, entry =>
+        services.AddMcpResourceType<ContentByIdResourceTypeHandler>(ContentByIdResourceTypeHandler.TypeName, entry =>
         {
-            entry.DisplayName = S["Content"];
-            entry.Description = S["Reads content items from Orchard Core."];
-            // Patterns are dynamically aggregated from registered IContentResourceStrategyProvider implementations.
-            entry.UriPatterns =
+            entry.DisplayName = S["Content Item"];
+            entry.Description = S["Retrieves a specific content item by its ID or version ID."];
+            entry.SupportedVariables =
             [
-                "id/{contentItemId}",
-                "{contentType}/{contentItemId}",
-                "{contentType}/list",
+                new McpResourceVariable("contentItemId") { Description = S["The content item ID to retrieve."] },
+                new McpResourceVariable("contentItemVersionId") { Description = S["The content item version ID to retrieve a specific version."] },
+            ];
+        });
+
+        services.AddMcpResourceType<ContentByTypeResourceTypeHandler>(ContentByTypeResourceTypeHandler.TypeName, entry =>
+        {
+            entry.DisplayName = S["Content Type"];
+            entry.Description = S["Lists all published content items of a given content type."];
+            entry.SupportedVariables =
+            [
+                new McpResourceVariable("contentType") { Description = S["The content type to query."] },
             ];
         });
     }
@@ -430,12 +441,26 @@ public sealed class McpRecipeSchemaResourceStartup : StartupBase
         services.AddMcpResourceType<RecipeSchemaResourceTypeHandler>(RecipeSchemaResourceTypeHandler.TypeName, entry =>
         {
             entry.DisplayName = S["Recipe Schema"];
-            entry.Description = S["Provides JSON schema definitions for recipe steps."];
-            entry.UriPatterns =
+            entry.Description = S["Provides the full JSON schema definition for recipes including all steps."];
+        });
+
+        services.AddMcpResourceType<RecipeStepSchemaResourceTypeHandler>(RecipeStepSchemaResourceTypeHandler.TypeName, entry =>
+        {
+            entry.DisplayName = S["Recipe Step Schema"];
+            entry.Description = S["Provides the JSON schema for a specific recipe step."];
+            entry.SupportedVariables =
             [
-                "recipe",
-                "recipe/{recipe-name}",
-                "step/{step-name}"
+                new McpResourceVariable("stepName") { Description = S["The name of the recipe step."] },
+            ];
+        });
+
+        services.AddMcpResourceType<RecipeContentResourceTypeHandler>(RecipeContentResourceTypeHandler.TypeName, entry =>
+        {
+            entry.DisplayName = S["Recipe"];
+            entry.Description = S["Returns the JSON content of a specific recipe by name."];
+            entry.SupportedVariables =
+            [
+                new McpResourceVariable("recipeName") { Description = S["The name of the recipe to retrieve."] },
             ];
         });
     }
@@ -458,7 +483,10 @@ public sealed class McpMediaResourceStartup : StartupBase
         {
             entry.DisplayName = S["Media"];
             entry.Description = S["Reads files from Orchard Core's media store."];
-            entry.UriPatterns = ["{path}"];
+            entry.SupportedVariables =
+            [
+                new McpResourceVariable("path") { Description = S["The media path to read."] },
+            ];
         });
     }
 }

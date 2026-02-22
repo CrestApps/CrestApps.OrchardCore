@@ -66,9 +66,9 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
             context.Result.Fail(new ValidationResult(S["Invalid source."], [nameof(AIProviderConnection.Source)]));
         }
 
-        if (string.IsNullOrWhiteSpace(context.Model.DefaultDeploymentName))
+        if (string.IsNullOrWhiteSpace(context.Model.ChatDeploymentName))
         {
-            context.Result.Fail(new ValidationResult(S["Deployment name is required."], [nameof(AIProviderConnection.DefaultDeploymentName)]));
+            context.Result.Fail(new ValidationResult(S["Chat Deployment name is required."], [nameof(AIProviderConnection.ChatDeploymentName)]));
         }
     }
 
@@ -99,18 +99,32 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
             }
         }
 
-        var defaultDeploymentName = data[nameof(AIProviderConnection.DefaultDeploymentName)]?.GetValue<string>()?.Trim();
+        var defaultDeploymentName = data[nameof(AIProviderConnection.ChatDeploymentName)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(defaultDeploymentName))
         {
-            connection.DefaultDeploymentName = defaultDeploymentName;
+            connection.ChatDeploymentName = defaultDeploymentName;
         }
 
-        var defaultUtilityDeploymentName = data[nameof(AIProviderConnection.DefaultUtilityDeploymentName)]?.GetValue<string>()?.Trim();
+        var defaultUtilityDeploymentName = data[nameof(AIProviderConnection.UtilityDeploymentName)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(defaultUtilityDeploymentName))
         {
-            connection.DefaultUtilityDeploymentName = defaultUtilityDeploymentName;
+            connection.UtilityDeploymentName = defaultUtilityDeploymentName;
+        }
+
+        var embeddingDeploymentName = data[nameof(AIProviderConnection.EmbeddingDeploymentName)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(embeddingDeploymentName))
+        {
+            connection.EmbeddingDeploymentName = embeddingDeploymentName;
+        }
+
+        var imagesDeploymentName = data[nameof(AIProviderConnection.ImagesDeploymentName)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(imagesDeploymentName))
+        {
+            connection.ImagesDeploymentName = imagesDeploymentName;
         }
 
         var isDefault = data[nameof(AIProviderConnection.IsDefault)]?.GetValue<bool>();

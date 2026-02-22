@@ -1,10 +1,6 @@
 @page
 @model CrestApps.OrchardCore.Samples.McpClient.Pages.ResourcesModel
 
-@{
-    IReadOnlyList<string> GetParameters(string uri) => CrestApps.OrchardCore.Samples.McpClient.Pages.ResourcesModel.ExtractParameters(uri);
-}
-
 <h1>Resources</h1>
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
@@ -15,7 +11,7 @@
 }
 
 <div class="d-flex align-items-center gap-3 mb-3">
-    <p class="text-muted mb-0">Resources registered on the MCP server. Click "Read" to retrieve the content.</p>
+    <p class="text-muted mb-0">Concrete resources registered on the MCP server. Click "Get" to retrieve the content.</p>
     <form method="post" asp-page-handler="Refresh" class="d-inline">
         <button class="btn btn-secondary btn-sm" type="submit">Refresh</button>
     </form>
@@ -23,17 +19,19 @@
 
 @if (Model.Resources?.Count > 0)
 {
+    <div class="mb-3">
+        <input type="text" id="resourceSearch" class="form-control" placeholder="Search resources by name, description, or URI…" />
+    </div>
+
     <div class="accordion" id="resourcesAccordion">
         @for (var i = 0; i < Model.Resources.Count; i++)
         {
             var resource = Model.Resources[i];
-            var parameters = GetParameters(resource.Uri);
-            var hasParams = parameters.Count > 0;
             var collapseId = $"collapse-resource-{i}";
             var headerId = $"header-resource-{i}";
             var resultId = $"result-resource-{i}";
 
-            <div class="accordion-item">
+            <div class="accordion-item searchable-item" data-search-text="@((resource.Title ?? resource.Name)?.ToLowerInvariant()) @resource.Description?.ToLowerInvariant() @resource.Uri?.ToLowerInvariant()">
                 <h2 class="accordion-header" id="@headerId">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId">
                         <span class="fw-semibold">@(resource.Title ?? resource.Name)</span>
@@ -49,20 +47,8 @@
                             <code class="small text-break">@resource.Uri</code>
                         </div>
 
-                        <div class="resource-form" data-uri-template="@resource.Uri" data-result-target="#@resultId">
-                            @if (hasParams)
-                            {
-                                <div class="row g-2 align-items-end mb-2">
-                                    @foreach (var param in parameters)
-                                    {
-                                        <div class="col-auto">
-                                            <label class="form-label small mb-0">@param</label>
-                                            <input type="text" data-param="@param" class="form-control form-control-sm" placeholder="@param" required />
-                                        </div>
-                                    }
-                                </div>
-                            }
-                            <button class="btn btn-primary btn-sm btn-read-resource" type="button">Read</button>
+                        <div class="resource-form" data-uri="@resource.Uri" data-result-target="#@resultId">
+                            <button class="btn btn-primary btn-sm btn-read-resource" type="button">Get</button>
                         </div>
 
                         <div id="@resultId" class="mt-3" style="display:none">
@@ -72,6 +58,8 @@
             </div>
         }
     </div>
+
+    <p class="text-muted mt-2" id="resourceNoResults" style="display:none">No resources match your search.</p>
 }
 else
 {
@@ -82,25 +70,8 @@ else
     document.querySelectorAll('.btn-read-resource').forEach(function (btn) {
         btn.addEventListener('click', function () {
             var container = btn.closest('.resource-form');
-            var template = container.dataset.uriTemplate;
+            var uri = container.dataset.uri;
             var resultDiv = document.querySelector(container.dataset.resultTarget);
-
-            // Replace parameter placeholders with input values.
-            var uri = template;
-            container.querySelectorAll('input[data-param]').forEach(function (input) {
-                if (input.required && !input.value.trim()) {
-                    input.reportValidity();
-                    return;
-                }
-                uri = uri.split('{' + input.dataset.param + '}').join(input.value);
-            });
-
-            // Check if any required fields are empty.
-            var missing = false;
-            container.querySelectorAll('input[required]').forEach(function (input) {
-                if (!input.value.trim()) { missing = true; }
-            });
-            if (missing) { return; }
 
             btn.disabled = true;
             btn.textContent = 'Reading…';
@@ -149,10 +120,28 @@ else
             })
             .finally(function () {
                 btn.disabled = false;
-                btn.textContent = 'Read';
+                btn.textContent = 'Get';
             });
         });
     });
+
+    // Client-side search.
+    (function () {
+        var searchInput = document.getElementById('resourceSearch');
+        if (!searchInput) return;
+        var items = document.querySelectorAll('#resourcesAccordion .searchable-item');
+        var noResults = document.getElementById('resourceNoResults');
+        searchInput.addEventListener('input', function () {
+            var query = this.value.toLowerCase().trim();
+            var visible = 0;
+            items.forEach(function (item) {
+                var match = !query || item.dataset.searchText.indexOf(query) !== -1;
+                item.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+            noResults.style.display = visible === 0 && query ? '' : 'none';
+        });
+    })();
 
     function escapeHtml(text) {
         var div = document.createElement('div');

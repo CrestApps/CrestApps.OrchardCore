@@ -18,7 +18,8 @@ public interface IMcpResourceTypeHandler
     /// Reads the resource content and returns the result.
     /// </summary>
     /// <param name="resource">The MCP resource definition.</param>
+    /// <param name="variables">The variables extracted from matching the request URI against the resource's URI pattern.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>A task containing the read resource result.</returns>
-    Task<ReadResourceResult> ReadAsync(McpResource resource, McpResourceUri resourceUri, CancellationToken cancellationToken = default);
+    Task<ReadResourceResult> ReadAsync(McpResource resource, IReadOnlyDictionary<string, string> variables, CancellationToken cancellationToken = default);
 }

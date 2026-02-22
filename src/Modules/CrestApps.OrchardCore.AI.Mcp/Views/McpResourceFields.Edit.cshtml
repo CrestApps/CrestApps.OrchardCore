@@ -22,33 +22,33 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Path" class="@Orchard.GetLabelClasses()">@T["URI"]</label>
+    <label asp-for="Path" class="@Orchard.GetLabelClasses()">@T["Path"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <div class="input-group">
-            @if (Model.IsNew)
-            {
-                <span class="input-group-text"><code>@(Model.Source)://{itemId}/</code></span>
-            }
-            else
-            {
-                <span class="input-group-text"><code>@(Model.Source)://@(Model.McpPromptItemId)/</code></span>
-            }
-            <input type="text" asp-for="Path" class="form-control" />
-        </div>
+        <input type="text" asp-for="Path" class="form-control" />
         <span asp-validation-for="Path" class="text-danger"></span>
-        @if (Model.UriPatterns?.Length > 0)
+        @if (!string.IsNullOrEmpty(Model.UriPreview))
         {
-            <span class="hint">@T["Provide the path portion of the URI. Supported patterns:"]</span>
+            <span class="hint">@T["Full URI: {0}", Model.UriPreview]</span>
+        }
+        @if (Model.SupportedVariables?.Length > 0)
+        {
+            <span class="hint">@T["You may use the following variables in the path:"]</span>
             <ul class="hint list-unstyled ms-3 mb-0">
-                @foreach (var pattern in Model.UriPatterns)
+                @foreach (var variable in Model.SupportedVariables)
                 {
-                    <li><code>@pattern</code></li>
+                    <li>
+                        <code>{@variable.Name}</code>
+                        @if (!string.IsNullOrEmpty(variable.Description))
+                        {
+                            <text> &mdash; @variable.Description</text>
+                        }
+                    </li>
                 }
             </ul>
         }
         else
         {
-            <span class="hint">@T["Provide the path portion of the resource URI."]</span>
+            <span class="hint">@T["Provide the path portion of the URI for this resource. Leave empty if no path is needed."]</span>
         }
     </div>
 </div>

@@ -145,7 +145,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
         try
         {
 
-            var client = await _aIClientFactory.CreateChatClientAsync(ProviderName, ConnectionName ?? provider.DefaultConnectionName, DeploymentName ?? provider.DefaultDeploymentName);
+            var client = await _aIClientFactory.CreateChatClientAsync(ProviderName, ConnectionName ?? provider.DefaultConnectionName, DeploymentName ?? provider.DefaultChatDeploymentName);
 
             var chatOptions = new ChatOptions
             {

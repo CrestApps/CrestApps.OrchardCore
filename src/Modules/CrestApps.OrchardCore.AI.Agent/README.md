@@ -1,21 +1,9 @@
-## Orchard Core AI Agent Feature
+# Orchard Core AI Agent
 
-The **Orchard Core AI Agent** feature extends the functionality of the **AI Services** feature by enabling intelligent agents to perform tasks on your Orchard Core site.
+Use natural language to run tasks, manage content, interact with OrchardCore features, and do much more with integrated AI-powered tools.
 
-### Getting Started
+## Documentation
 
-1. **Install the Package**  
-   Add the `CrestApps.OrchardCore.AI.Agent` package to your startup web project.
+For complete documentation, configuration guides, and examples, visit the official documentation site:
 
-2. **Enable the Feature**  
-   In the **Orchard Core Admin**, go to the Features section and enable **Orchard Core AI Agent**.
-
-### Configuring AI Agents
-
-Once the feature is enabled:
-
-- Navigate to your AI Profiles.
-- Create a new profile or edit an existing one.
-- Under the **Capabilities** tab, assign the capabilities you want the AI Agent to perform.
-
-This allows you to tailor each agent’s abilities to suit your specific site tasks and workflows.
+👉 **[Orchard Core AI Agent Documentation](https://orchardcore.crestapps.com/docs/ai/ai-agent)**
