@@ -1,7 +1,7 @@
 ---
-sidebar_label: AI Copilot
+sidebar_label: Copilot Integration
 sidebar_position: 5
-title: AI Copilot Orchestrator
+title: Copilot Integration
 description: GitHub Copilot SDK-based orchestrator for AI chat sessions in Orchard Core.
 ---
 
@@ -47,7 +47,7 @@ Provides a GitHub Copilot SDK-based orchestrator for AI chat sessions in Orchard
    - Note the Client ID and Client Secret
 
 2. Configure Copilot settings in Orchard Core:
-   - Go to Configuration → Settings → Copilot
+   - Go to **Settings** → **Copilot**
    - Enter your GitHub OAuth App Client ID
    - Enter your GitHub OAuth App Client Secret (stored encrypted)
    - Save settings

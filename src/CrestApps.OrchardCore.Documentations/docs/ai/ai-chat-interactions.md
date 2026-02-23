@@ -2,7 +2,7 @@
 sidebar_label: AI Chat Interactions
 sidebar_position: 3
 title: AI Chat Interactions Module
-description: Ad-hoc AI chat interactions with configurable parameters, tool integration, prompt routing, and image/chart generation.
+description: Ad-hoc AI chat interactions with configurable parameters, tool integration, and document support.
 ---
 
 | | |
@@ -14,7 +14,7 @@ Provides ad-hoc AI chat interactions with configurable parameters without predef
 
 ## Overview
 
-This module provides ad-hoc AI chat interactions with configurable parameters, enabling users to chat with AI models without requiring predefined AI Profiles.
+This module provides ad-hoc AI chat interactions with configurable parameters, enabling users to chat with AI models without requiring predefined AI Profiles. The orchestrator manages all AI dependencies including tools, MCP connections, and document handling.
 
 ## Capabilities
 
@@ -23,9 +23,10 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 - Configurable parameters — customize temperature, TopP, max tokens, frequency/presence penalties, and past messages count
 - Tool integration — select from available AI tools and MCP connections
 - Connection/deployment selection — choose specific connections and deployments for each interaction
-- Prompt routing (intent detection + strategies) — automatically classifies the user prompt and routes it to a registered prompt-processing strategy
+- Orchestrator selection — choose which orchestrator runtime manages the session (e.g., Default, Copilot)
 - Image generation — generate images from text prompts using AI image generation models
 - Chart generation — generate chart specifications from prompts (for rendering as a chart)
+- Document upload — upload documents and chat against your own data via RAG
 
 ## Getting Started
 
@@ -34,33 +35,30 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 3. Click **+ New Chat** and select an AI provider
 4. Configure your chat settings and start chatting
 
+## Orchestration
+
+Each chat interaction session is bound to an orchestrator that manages the execution pipeline. The orchestrator handles:
+
+- **Tool scoping** — selecting and invoking the right tools based on context
+- **MCP connections** — discovering and using capabilities from connected MCP servers
+- **Document handling** — providing uploaded document context to the AI model
+- **Iterative execution** — managing multi-step tool-call loops
+
+The default orchestrator (`DefaultOrchestrator`) is used unless a different one is selected (e.g., the Copilot orchestrator).
+
 ## Related Features
 
 ### AI Documents
 
-For document upload and document-aware prompt processing (RAG and non-RAG strategies), see the [Documents feature documentation](documents/).
+For document upload and RAG support, see the [Documents feature documentation](documents/).
 
 > Note: The `AI Documents` feature is provided on demand and is only enabled when another feature that requires it is enabled (for example one of the document indexing provider features). To configure document indexing you must enable either the `AI Documents (Azure AI Search)` feature or the `AI Documents (Elasticsearch)` feature in Orchard Core admin.
 
-The Documents feature supports Elasticsearch and Azure AI Search as embedding and search providers, ensure you enable the corresponding feature for your chosen provider in Orchard Core admin.
+The Documents feature supports Elasticsearch and Azure AI Search as embedding and search providers. Ensure you enable the corresponding feature for your chosen provider in Orchard Core admin.
 
-## Prompt Routing (Intent-Based Processing)
+## Image and Chart Generation
 
-Prompt routing is part of the base `CrestApps.OrchardCore.AI.Chat.Interactions` feature.
-
-- **Intent detection** is performed by an AI classifier when available.
-- When no intent model is configured/available, the system can fall back to a keyword-based detector.
-- **Strategies** are registered services that decide whether to handle a prompt based on the detected intent.
-
-### Built-in Intents
-
-The base module ships with a small set of default intents that enable image and chart experiences.
-
-| Intent | Description | Example Prompts |
-|--------|-------------|-----------------|
-| `GenerateImage` | Generate an image from a text description | "Generate an image of a sunset", "Create a picture of a cat" |
-| `GenerateImageWithHistory` | Generate an image using conversation context | "Based on the above, draw a diagram", "Make a visual of what we discussed" |
-| `GenerateChart` | Generate a chart/graph description or spec | "Create a bar chart", "Draw a pie chart of sales data" |
+Image and chart generation are handled by AI tools that the orchestrator can invoke based on the user's request.
 
 ### Configuration
 

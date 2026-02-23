@@ -7,22 +7,37 @@ const sidebars = {
     'getting-started',
     {
       type: 'category',
-      label: 'AI Suite',
+      label: 'Artificial Intelligence Suite',
       collapsed: false,
       items: [
+        'ai/overview',
         'ai/ai-services',
         'ai/ai-chat',
         'ai/ai-chat-interactions',
-        'ai/ai-chat-interactions-core',
+        'ai/ai-profiles-code',
+        'ai/ai-tools',
+        'ai/ai-workflows',
+        'ai/consuming-ai-services',
         'ai/ai-copilot',
         'ai/ai-agent',
+        {
+          type: 'category',
+          label: 'AI Providers',
+          items: [
+            'providers/overview',
+            'providers/azure-ai-inference',
+            'providers/azure-openai',
+            'providers/ollama',
+            'providers/openai',
+          ],
+        },
         {
           type: 'category',
           label: 'Data Sources',
           items: [
             'ai/data-sources/index',
-            'ai/data-sources/elasticsearch',
             'ai/data-sources/azure-ai',
+            'ai/data-sources/elasticsearch',
           ],
         },
         {
@@ -30,10 +45,10 @@ const sidebars = {
           label: 'Documents',
           items: [
             'ai/documents/index',
-            'ai/documents/pdf',
-            'ai/documents/openxml',
             'ai/documents/azure-ai',
             'ai/documents/elasticsearch',
+            'ai/documents/openxml',
+            'ai/documents/pdf',
           ],
         },
         {
@@ -41,6 +56,8 @@ const sidebars = {
           label: 'Model Context Protocol (MCP)',
           items: [
             'ai/mcp/index',
+            'ai/mcp/client',
+            'ai/mcp/server',
             'ai/mcp/ftp',
             'ai/mcp/sftp',
           ],
@@ -49,41 +66,41 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'AI Providers',
-      items: [
-        'providers/openai',
-        'providers/azure-openai',
-        'providers/azure-ai-inference',
-        'providers/ollama',
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Omnichannel Suite',
+      label: 'Omnichannel Communications',
       items: [
         'omnichannel/index',
+        'omnichannel/event-grid',
         'omnichannel/management',
         'omnichannel/sms',
-        'omnichannel/event-grid',
       ],
     },
     {
       type: 'category',
       label: 'Standard Modules',
       items: [
-        'modules/users',
-        'modules/signalr',
-        'modules/roles',
+        'modules/overview',
         'modules/content-access-control',
-        'modules/resources',
         'modules/recipes',
+        'modules/resources',
+        'modules/roles',
+        'modules/signalr',
+        'modules/users',
       ],
     },
     {
       type: 'category',
       label: 'Samples',
       items: [
+        'samples/overview',
         'samples/mcp-client',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Changelog',
+      items: [
+        'changelog/overview',
+        'changelog/v2.0.0',
       ],
     },
   ],

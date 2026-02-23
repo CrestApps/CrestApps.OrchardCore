@@ -23,7 +23,7 @@ Extends the Orchard Core Users module by adding functionality to cache users.
 
 Provides a way to display a user's display name.
 
-To set the display name format, navigate to `Configuration` >> `Settings` >> `User Display Name`.
+To set the display name format, navigate to **Settings** → **User Display Name**.
 
 If you want to display the user display name in your project via code, you may do so by using the `IDisplayNameProvider` interface.
 
@@ -68,4 +68,4 @@ The `includeDisabledUsers` parameter within the `indexUsers` step is optional an
 
 Provides a way to display a user's avatar.
 
-To change the default settings, navigate to `Configuration` >> `Settings` >> `User Avatars`.
+To change the default settings, navigate to **Settings** → **User Avatars**.

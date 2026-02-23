@@ -51,6 +51,8 @@ Orchard Core offers a **flexible and scalable** foundation for building dynamic,
 - **Security** – Designed following industry best practices to ensure application safety.  
 - **Performance** – Optimized for speed and efficiency to maximize Orchard Core's potential.  
 
+📖 **Documentation**: For detailed guides, tutorials, and API references, visit the [CrestApps Orchard Core Documentation](https://orchardcore.crestapps.com/docs).
+
 ## Project Structure
 
 The CrestApps repository is organized for clarity and ease of use. You can find all modules in the `src/Modules` folder, with each structured for independent usage and configuration.  
@@ -213,7 +215,7 @@ Follow these steps to get started with CrestApps:
 This project is actively maintained and evolves alongside Orchard Core.
 
 * If you're using Orchard Core versions from `2.1` up to `2.3`, please use package version `1.2.x`.
-* For Orchard Core `3.0.0-preview-18908` and later, please use version `2.0.0-beta-0009` or newer.
+* For Orchard Core `3.0.0-preview-18908` and later, please use version `2.0.0-preview-0001` or newer.
 
 **Note:** In Orchard Core v3 multiple breaking changes were introduced to improve the framework. As a result, we had to divide development into two branches to maintain compatibility.
 
@@ -260,4 +262,4 @@ We welcome contributions from the community! To contribute:
 
 ## License
 
-CrestApps is licensed under the **MIT License**. See the [LICENSE](https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt) file for more details.
+CrestApps is licensed under the **MIT License**. See the [LICENSE](https://opensource.org/licenses/MIT) file for more details.

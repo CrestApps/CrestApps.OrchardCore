@@ -28,7 +28,7 @@ You describe what you want the AI to do (tone, rules, goals), and the AI carries
 
 ## Enable the feature
 
-1. In Orchard Core Admin, go to `Configuration` → `Features`.
+1. In Orchard Core Admin, go to `Tools` → `Features`.
 2. Enable `SMS Omnichannel Automation`.
 
 ## Typical setup (high level)
