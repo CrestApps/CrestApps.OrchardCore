@@ -387,10 +387,10 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             await _promptStore.CreateAsync(userPrompt);
 
-            if (string.IsNullOrEmpty(interaction.Title))
+            var needsTitleUpdate = string.IsNullOrEmpty(interaction.Title);
+            if (needsTitleUpdate)
             {
                 interaction.Title = Str.Truncate(prompt, 255);
-                await _interactionManager.UpdateAsync(interaction);
             }
 
             // Load all prompts for building transcript
@@ -475,6 +475,14 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 }
 
                 await _promptStore.CreateAsync(assistantPrompt);
+            }
+
+            // Update the interaction title after streaming is done to avoid holding
+            // database locks for the duration of the AI response, which can cause
+            // deadlocks with concurrent SaveSettings calls.
+            if (needsTitleUpdate)
+            {
+                await _interactionManager.UpdateAsync(interaction);
             }
 
             await _documentStore.CommitAsync();

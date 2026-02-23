@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Orchestration;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -121,8 +120,6 @@ public sealed class DefaultOrchestratorResolverTests
         services.AddSingleton<IAIClientFactory, NullAIClientFactory>();
         services.AddSingleton<IToolRegistry, NullToolRegistry>();
         services.AddSingleton<ITextTokenizer, LuceneTextTokenizer>();
-        services.AddSingleton(Options.Create(new AIProviderOptions()));
-        services.AddSingleton(Options.Create(new ProgressiveToolOrchestratorOptions()));
         services.AddLogging(builder => builder.ClearProviders());
     }
 }

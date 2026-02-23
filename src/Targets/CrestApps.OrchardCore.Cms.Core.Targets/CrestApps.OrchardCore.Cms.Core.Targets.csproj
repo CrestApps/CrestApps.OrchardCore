@@ -11,11 +11,25 @@
     <PackageTags>$(PackageTags) OrchardCoreCMS CMS</PackageTags>
   </PropertyGroup>
 
+  <!-- Add ".props" and ".targets" files in the package specific to the "Cms.Core" bundle -->
+
   <ItemGroup>
+    <None Include="CrestApps.OrchardCore.Cms.Core.Targets.props" Pack="true">
+      <PackagePath>build\CrestApps.OrchardCore.Cms.Core.Targets.props</PackagePath>
+    </None>
     <None Include="CrestApps.OrchardCore.Cms.Core.Targets.targets" Pack="true">
       <PackagePath>build\CrestApps.OrchardCore.Cms.Core.Targets.targets</PackagePath>
     </None>
   </ItemGroup>
+
+  <!--
+    When a package is not directly referenced, e.g only through the reference of this bundle package,
+    the files in its build folder are not evaluated on building if this folder is marked as private.
+    This can be defined by using the 'PrivateAssets' attribute.
+
+    Here, only project references are used but when packing the bundle they become package references,
+    and with the same 'PrivateAssets' attribute.
+  -->
 
   <ItemGroup>
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI\CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />

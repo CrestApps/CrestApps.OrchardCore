@@ -108,4 +108,4 @@ We welcome contributions from the community! To contribute:
 
 ## License
 
-CrestApps is licensed under the **MIT License**. See the [LICENSE](https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt) file for more details.
+CrestApps is licensed under the **MIT License**. See the [LICENSE](https://opensource.org/licenses/MIT) file for more details.

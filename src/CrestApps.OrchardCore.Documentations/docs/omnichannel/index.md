@@ -1,7 +1,7 @@
 ---
-sidebar_label: Orchestrator
+sidebar_label: Overview
 sidebar_position: 1
-title: CrestApps Omnichannel (Orchestrator)
+title: Omnichannel Communications
 description: Core orchestration services for inbound and outbound communication across channels such as SMS, Email, and Phone.
 ---
 

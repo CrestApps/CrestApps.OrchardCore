@@ -58,6 +58,7 @@ internal sealed class DataSourceElasticsearchIndexProfileHandler : DataSourceInd
         {
             Dims = embeddingDimensions,
             Index = true,
+            Similarity = DenseVectorSimilarity.Cosine,
         };
         metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.Filters] = new ObjectProperty
         {

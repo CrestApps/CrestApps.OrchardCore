@@ -2,7 +2,7 @@
 sidebar_label: Overview
 sidebar_position: 1
 title: AI Documents
-description: Document upload, text extraction, embedding, and RAG capabilities for AI Chat Interactions and AI Profiles.
+description: Document upload, text extraction, embedding, and RAG capabilities for AI Chat Interactions, AI Profiles, and AI Chat Sessions.
 ---
 
 | | |
@@ -34,6 +34,7 @@ The base feature (`CrestApps.OrchardCore.AI.Documents`) provides the shared infr
 |---------|-----|-------------|
 | **AI Documents for Chat Interactions** | `CrestApps.OrchardCore.AI.Documents.ChatInteractions` | Provides document upload and Retrieval-Augmented Generation (RAG) support for AI Chat Interactions. |
 | **AI Documents for Profiles** | `CrestApps.OrchardCore.AI.Documents.Profiles` | Provides document upload and Retrieval-Augmented Generation (RAG) support for AI Profiles. |
+| **AI Documents for Chat Sessions** | `CrestApps.OrchardCore.AI.Documents.ChatSessions` | Provides document upload and RAG support for AI Chat Sessions and AI Chat Widgets. |
 
 ## AI Documents for Chat Interactions
 
@@ -56,40 +57,19 @@ Documents uploaded to a chat interaction are **scoped to that session**.
 - **RAG Integration**: Relevant document chunks are retrieved and used as context for AI responses
 - **Document Management**: View, manage, and remove uploaded documents within a chat session
 
-### Intent-Aware Document Processing
+### Document Processing
 
-When documents are attached to a chat interaction, the shared prompt routing pipeline detects the user's intent and invokes the registered strategies.
+When documents are attached to a chat interaction, the orchestrator manages document context automatically. It coordinates text extraction, chunking, embedding, and retrieval to provide relevant document content to the AI model.
 
-#### Supported Document Intents
+The orchestrator supports various document-related operations:
 
-| Intent | Description | Example Prompts |
-|--------|-------------|-----------------|
-| `DocumentQnA` | Question answering using RAG | "What does this document say about X?" |
-| `SummarizeDocument` | Document summarization | "Summarize this document", "Give me a brief overview" |
-| `AnalyzeTabularData` | CSV/Excel data analysis | "Calculate the total sales", "Show me the average" |
-| `ExtractStructuredData` | Structured data extraction | "Extract all email addresses", "List all names" |
-| `CompareDocuments` | Multi-document comparison | "Compare these documents", "What are the differences?" |
-| `TransformFormat` | Content reformatting | "Convert to bullet points", "Make it a table" |
-| `GeneralChatWithReference` | General chat using document context | Default fallback |
-
-#### Processing Strategies
-
-Each intent is handled by a specialized strategy:
-
-- **RAG Strategy**: Uses vector search to find relevant chunks (for `DocumentQnA`)
-- **Summarization Strategy**: Provides full document content (bypasses vector search)
-- **Tabular Analysis Strategy**: Parses structured data for calculations
-- **Extraction Strategy**: Focuses on content extraction
-- **Comparison Strategy**: Provides multi-document content
-- **Transformation Strategy**: Provides content for reformatting
-- **General Reference Strategy**: Provides context when asking general questions that reference documents
-
-### API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/ai/chat-interactions/upload-document` | POST | Upload one or more documents to a chat interaction |
-| `/ai/chat-interactions/remove-document` | POST | Remove a document from a chat interaction |
+- **Question Answering (RAG)** — Uses vector search to find relevant document chunks for answering questions
+- **Summarization** — Provides full document content for summarization requests
+- **Tabular Analysis** — Parses structured data (CSV, Excel) for calculations and analysis
+- **Data Extraction** — Extracts structured information from documents
+- **Document Comparison** — Provides multi-document content for comparison
+- **Content Transformation** — Provides content for reformatting or conversion
+- **General Reference** — Provides context when asking general questions that reference documents
 
 ### Getting Started
 
@@ -156,6 +136,56 @@ There are no separate API endpoints for profile document management — everythi
 3. Use the **Documents** tab to upload text-based documents.
 4. Configure the **Top N Results** setting to control how many matching chunks are included as context.
 
+## AI Documents for Chat Sessions
+
+| | |
+| --- | --- |
+| **Feature Name** | AI Documents for Chat Sessions |
+| **Feature ID** | `CrestApps.OrchardCore.AI.Documents.ChatSessions` |
+
+Provides document upload and Retrieval-Augmented Generation (RAG) support directly within AI Chat Sessions and AI Chat Widgets (both admin and frontend).
+
+When enabled, users can attach documents to any chat session via drag-and-drop or file browser. Documents are indexed using the same shared infrastructure (text extraction, chunking, embedding, and vector search) used by Chat Interactions and Profiles.
+
+Unlike profile documents (which persist across all sessions), chat session documents are **scoped to the individual session** — similar to chat interaction documents.
+
+### Key Capabilities
+
+- **Document Upload**: Drag-and-drop or browse to attach files directly in the chat input area
+- **Visual Attach Button**: A persistent "Attach files" button appears above the chat input when enabled
+- **Document Pills**: Attached documents are shown as compact pill badges with remove (X) buttons
+- **Drag-and-Drop Highlight**: The input area highlights when files are dragged over it
+- **Text Extraction & Embedding**: Uploaded documents are automatically extracted, chunked, and embedded for vector search
+- **RAG Integration**: Relevant chunks are retrieved and used as context for AI responses
+- **Per-Profile Opt-In**: Each AI Profile has an **Allow Documents & Attachments** checkbox (unchecked by default) to control whether document upload is available
+
+### Per-Profile Opt-In
+
+Because document processing is resource-intensive, document upload is **not enabled by default** even when the feature is active. Administrators must explicitly opt in for each AI Profile:
+
+1. Navigate to **Artificial Intelligence > AI Profiles** and edit a profile.
+2. In the **Documents** section, check **Allow Documents & Attachments**.
+3. Save the profile.
+
+For **AI Chat Widget** content items, the same checkbox appears on the widget editor under the AI profile part settings.
+
+### Supported UIs
+
+| UI | Where | Notes |
+|----|-------|-------|
+| **AI Chat Session** | Admin > Artificial Intelligence > AI Chat | Full session page |
+| **AI Chat Admin Widget** | Floating admin widget | Compact chat widget on admin pages |
+| **AI Chat Widget** | Frontend content widget | Public-facing chat widget |
+
+### Getting Started
+
+1. **Set up an indexing provider**: Enable Elasticsearch or Azure AI Search in the Orchard Core admin.
+2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "ChatDocuments").
+3. **Configure settings**: Navigate to **Settings > Chat Interaction** and select your new index.
+4. **Enable the feature**: Enable `AI Documents for Chat Sessions` in the admin dashboard.
+5. **Opt in per profile**: Edit the desired AI Profile and check **Allow Documents & Attachments**.
+6. Open a chat session — the attach button and drag-and-drop zone are now available.
+
 ## Supported Document Formats
 
 | Format | Extension | Notes |
@@ -181,29 +211,6 @@ There are no separate API endpoints for profile document management — everythi
 | Setting | Description | Default |
 |---------|-------------|---------|
 | Top N Results | Number of top matching document chunks to include as context | 3 |
-
-## Adding Custom Processing Strategies
-
-To add a custom document processing strategy with a custom intent:
-
-1. Register your intent using `AddPromptProcessingIntent()`
-2. Implement `IPromptProcessingStrategy`
-3. Register your strategy using `AddPromptProcessingStrategy<T>()`
-
-Important: Intents must be registered via `AddPromptProcessingIntent()` to be recognized by the AI intent detector. If an intent is not registered, it will not be included in the AI classification prompt and your strategy will never be invoked.
-
-### Registering in Startup (example)
-
-```csharp
-public override void ConfigureServices(IServiceCollection services)
-{
-    services.AddPromptProcessingIntent(
-        "MyCustomDocumentIntent",
-        "The user wants to perform a custom operation on the documents, such as [describe when this intent applies].");
-
-    services.AddPromptProcessingStrategy<MyCustomDocumentStrategy>();
-}
-```
 
 ## Troubleshooting
 

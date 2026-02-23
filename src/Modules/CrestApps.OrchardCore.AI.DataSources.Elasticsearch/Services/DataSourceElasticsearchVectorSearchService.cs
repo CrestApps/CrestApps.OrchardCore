@@ -79,16 +79,16 @@ internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVe
 
             var response = await _elasticClient.SearchAsync<JsonObject>(s => s
                 .Indices(indexProfile.IndexFullName)
-                .Query(q => q
-                    .Bool(b => b
-                        .Must(mustQueries.ToArray())
-                    )
-                )
                 .Knn(k => k
                     .Field(DataSourceConstants.ColumnNames.Embedding)
                     .QueryVector(embedding)
                     .K(topN)
                     .NumCandidates(topN * 10)
+                    .Filter(f => f
+                        .Bool(b => b
+                            .Must(mustQueries.ToArray())
+                        )
+                    )
                 )
                 .Size(topN)
             , cancellationToken);

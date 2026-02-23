@@ -7,6 +7,7 @@ const config = {
   title: 'CrestApps Orchard Core',
   tagline: 'Open-source modules to enhance Orchard Core CMS',
   favicon: 'img/favicon.ico',
+  titleDelimiter: '|',
 
   future: {
     v4: true,
@@ -107,22 +108,22 @@ const config = {
                 to: '/docs/getting-started',
               },
               {
-                label: 'AI Modules',
-                to: '/docs/ai/ai-services',
+                label: 'AI Suite',
+                to: '/docs/ai/overview',
               },
               {
-                label: 'Providers',
-                to: '/docs/providers/openai',
+                label: 'AI Providers',
+                to: '/docs/providers/overview',
+              },
+              {
+                label: 'Consuming AI Services',
+                to: '/docs/ai/consuming-ai-services',
               },
             ],
           },
           {
             title: 'Community',
             items: [
-              {
-                label: 'GitHub Discussions',
-                href: 'https://github.com/CrestApps/CrestApps.OrchardCore/discussions',
-              },
               {
                 label: 'Issues',
                 href: 'https://github.com/CrestApps/CrestApps.OrchardCore/issues',
@@ -138,7 +139,7 @@ const config = {
               },
               {
                 label: 'NuGet Packages',
-                href: 'https://www.nuget.org/profiles/CrestApps',
+                href: 'https://www.nuget.org/profiles/malhayek',
               },
               {
                 label: 'CrestApps',
@@ -147,7 +148,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} CrestApps. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} CrestApps.`,
       },
       prism: {
         theme: prismThemes.github,

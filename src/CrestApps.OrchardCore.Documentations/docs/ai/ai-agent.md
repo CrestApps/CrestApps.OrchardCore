@@ -1,5 +1,5 @@
 ---
-sidebar_label: AI Agent
+sidebar_label: Orchard Core Agent
 sidebar_position: 6
 title: Orchard Core AI Agent Feature
 description: Intelligent agents that perform tasks on your Orchard Core site using AI capabilities.

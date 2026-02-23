@@ -131,7 +131,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddOrchestrationServices(this IServiceCollection services)
     {
         services.AddOptions<OrchestratorOptions>();
-        services.AddOptions<ProgressiveToolOrchestratorOptions>();
+        services.AddOptions<DefaultOrchestratorOptions>();
 
         // Register the shared tokenizer used by the tool registry and orchestrator.
         services.TryAddSingleton<ITextTokenizer, LuceneTextTokenizer>();

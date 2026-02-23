@@ -428,26 +428,43 @@ window.chatInteractionManager = function () {
           return message.role === 'indicator';
         },
         sendMessage: function sendMessage() {
-          var trimmedPrompt = this.prompt.trim();
-          if (!trimmedPrompt) {
-            return;
-          }
-          this.addMessage({
-            role: 'user',
-            content: trimmedPrompt
-          });
+          var _this4 = this;
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+            var trimmedPrompt, clearHistoryBtn;
+            return _regenerator().w(function (_context2) {
+              while (1) switch (_context2.n) {
+                case 0:
+                  trimmedPrompt = _this4.prompt.trim();
+                  if (trimmedPrompt) {
+                    _context2.n = 1;
+                    break;
+                  }
+                  return _context2.a(2);
+                case 1:
+                  _context2.n = 2;
+                  return _this4.flushPendingSave();
+                case 2:
+                  _this4.addMessage({
+                    role: 'user',
+                    content: trimmedPrompt
+                  });
 
-          // Show the clear history button since we now have prompts
-          var clearHistoryBtn = document.getElementById('clearHistoryBtn');
-          if (clearHistoryBtn) {
-            clearHistoryBtn.classList.remove('d-none');
-          }
-          this.streamMessage(trimmedPrompt);
-          this.inputElement.value = '';
-          this.prompt = '';
+                  // Show the clear history button since we now have prompts
+                  clearHistoryBtn = document.getElementById('clearHistoryBtn');
+                  if (clearHistoryBtn) {
+                    clearHistoryBtn.classList.remove('d-none');
+                  }
+                  _this4.streamMessage(trimmedPrompt);
+                  _this4.inputElement.value = '';
+                  _this4.prompt = '';
+                case 3:
+                  return _context2.a(2);
+              }
+            }, _callee2);
+          }))();
         },
         streamMessage: function streamMessage(trimmedPrompt) {
-          var _this4 = this;
+          var _this5 = this;
           if (this.stream) {
             this.stream.dispose();
             this.stream = null;
@@ -461,20 +478,20 @@ window.chatInteractionManager = function () {
           var currentItemId = this.getItemId();
           this.stream = this.connection.stream("SendMessage", currentItemId, trimmedPrompt).subscribe({
             next: function next(chunk) {
-              var message = _this4.messages[messageIndex];
+              var message = _this5.messages[messageIndex];
               if (!message) {
                 if (chunk.sessionId && !currentItemId) {
-                  _this4.setItemId(chunk.sessionId);
+                  _this5.setItemId(chunk.sessionId);
                 }
-                _this4.hideTypingIndicator();
-                messageIndex = _this4.messages.length;
+                _this5.hideTypingIndicator();
+                messageIndex = _this5.messages.length;
                 var newMessage = {
                   role: "assistant",
                   content: "",
                   htmlContent: "",
                   isStreaming: true
                 };
-                _this4.messages.push(newMessage);
+                _this5.messages.push(newMessage);
                 message = newMessage;
               }
               if (chunk.references && _typeof(chunk.references) === "object" && Object.keys(chunk.references).length) {
@@ -497,41 +514,41 @@ window.chatInteractionManager = function () {
               }
               message.content = content;
               message.htmlContent = parseMarkdownContent(content, message);
-              _this4.messages[messageIndex] = message;
-              _this4.$nextTick(function () {
+              _this5.messages[messageIndex] = message;
+              _this5.$nextTick(function () {
                 renderChartsInMessage(message);
-                _this4.scrollToBottom();
+                _this5.scrollToBottom();
               });
             },
             complete: function complete() {
-              var _this4$stream;
-              _this4.processReferences(references, messageIndex);
-              _this4.streamingFinished();
-              var msg = _this4.messages[messageIndex];
+              var _this5$stream;
+              _this5.processReferences(references, messageIndex);
+              _this5.streamingFinished();
+              var msg = _this5.messages[messageIndex];
               if (msg) {
                 msg.isStreaming = false;
               }
               if (!msg || !msg.content) {
                 // No content received at all.
-                _this4.hideTypingIndicator();
+                _this5.hideTypingIndicator();
               }
-              (_this4$stream = _this4.stream) === null || _this4$stream === void 0 || _this4$stream.dispose();
-              _this4.stream = null;
+              (_this5$stream = _this5.stream) === null || _this5$stream === void 0 || _this5$stream.dispose();
+              _this5.stream = null;
             },
             error: function error(err) {
-              var _this4$stream2;
-              _this4.processReferences(references, messageIndex);
-              _this4.streamingFinished();
-              var msg = _this4.messages[messageIndex];
+              var _this5$stream2;
+              _this5.processReferences(references, messageIndex);
+              _this5.streamingFinished();
+              var msg = _this5.messages[messageIndex];
               if (msg) {
                 msg.isStreaming = false;
               }
-              _this4.hideTypingIndicator();
-              if (!_this4.isNavigatingAway) {
-                _this4.addMessage(_this4.getServiceDownMessage());
+              _this5.hideTypingIndicator();
+              if (!_this5.isNavigatingAway) {
+                _this5.addMessage(_this5.getServiceDownMessage());
               }
-              (_this4$stream2 = _this4.stream) === null || _this4$stream2 === void 0 || _this4$stream2.dispose();
-              _this4.stream = null;
+              (_this5$stream2 = _this5.stream) === null || _this5$stream2 === void 0 || _this5$stream2.dispose();
+              _this5.stream = null;
               console.error("Stream error:", err);
             }
           });
@@ -584,6 +601,11 @@ window.chatInteractionManager = function () {
               this.messages[i].isStreaming = false;
             }
           }
+
+          // Save any settings that were deferred during streaming.
+          if (this.settingsDirty) {
+            this.debouncedSaveSettings();
+          }
         },
         showTypingIndicator: function showTypingIndicator() {
           this.addMessage({
@@ -600,12 +622,12 @@ window.chatInteractionManager = function () {
           return removedCount;
         },
         scrollToBottom: function scrollToBottom() {
-          var _this5 = this;
+          var _this6 = this;
           if (!this.autoScroll) {
             return;
           }
           setTimeout(function () {
-            _this5.chatContainer.scrollTop = _this5.chatContainer.scrollHeight - _this5.chatContainer.clientHeight;
+            _this6.chatContainer.scrollTop = _this6.chatContainer.scrollHeight - _this6.chatContainer.clientHeight;
           }, 50);
         },
         handleUserInput: function handleUserInput(event) {
@@ -624,7 +646,7 @@ window.chatInteractionManager = function () {
           this.showPlaceholder();
         },
         initializeApp: function initializeApp() {
-          var _this6 = this;
+          var _this7 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
@@ -632,59 +654,59 @@ window.chatInteractionManager = function () {
 
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this6.stream) {
+            if (!_this7.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this6.chatContainer.scrollHeight - _this6.chatContainer.clientHeight - _this6.chatContainer.scrollTop <= threshold;
-            _this6.autoScroll = atBottom;
+            var atBottom = _this7.chatContainer.scrollHeight - _this7.chatContainer.clientHeight - _this7.chatContainer.scrollTop <= threshold;
+            _this7.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keyup', function (event) {
-            if (_this6.stream != null) {
+            if (_this7.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
-              _this6.buttonElement.click();
+              _this7.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this6.handleUserInput(e);
+            _this7.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this6.buttonElement.removeAttribute('disabled');
+              _this7.buttonElement.removeAttribute('disabled');
             } else {
-              _this6.buttonElement.setAttribute('disabled', true);
+              _this7.buttonElement.setAttribute('disabled', true);
             }
           });
           this.inputElement.addEventListener('paste', function (e) {
             // Use setTimeout to allow the paste to complete before checking the value
             setTimeout(function () {
-              _this6.prompt = _this6.inputElement.value;
-              if (_this6.inputElement.value.trim()) {
-                _this6.buttonElement.removeAttribute('disabled');
+              _this7.prompt = _this7.inputElement.value;
+              if (_this7.inputElement.value.trim()) {
+                _this7.buttonElement.removeAttribute('disabled');
               } else {
-                _this6.buttonElement.setAttribute('disabled', true);
+                _this7.buttonElement.setAttribute('disabled', true);
               }
             }, 0);
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this6.stream != null) {
-              _this6.stream.dispose();
-              _this6.stream = null;
-              _this6.streamingFinished();
-              _this6.hideTypingIndicator();
+            if (_this7.stream != null) {
+              _this7.stream.dispose();
+              _this7.stream = null;
+              _this7.streamingFinished();
+              _this7.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this6.messages.length > 0) {
-                var lastMsg = _this6.messages[_this6.messages.length - 1];
+              if (_this7.messages.length > 0) {
+                var lastMsg = _this7.messages[_this7.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this6.messages.pop();
+                  _this7.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this6.sendMessage();
+            _this7.sendMessage();
           });
           var chatInteractionItems = document.getElementsByClassName('chat-interaction-history-item');
           for (var i = 0; i < chatInteractionItems.length; i++) {
@@ -695,7 +717,7 @@ window.chatInteractionManager = function () {
                 console.error('An element with the class chat-interaction-history-item with no data-interaction-id set.');
                 return;
               }
-              _this6.loadInteraction(itemId);
+              _this7.loadInteraction(itemId);
             });
           }
           for (var _i6 = 0; _i6 < config.messages.length; _i6++) {
@@ -730,24 +752,24 @@ window.chatInteractionManager = function () {
             // Checkboxes & selects save immediately
             if (isCheckbox || isSelect) {
               input.addEventListener('change', function () {
-                _this6.settingsDirty = true;
-                _this6.debouncedSaveSettings();
+                _this7.settingsDirty = true;
+                _this7.debouncedSaveSettings();
               });
               return;
             }
 
             // Text / textarea / number inputs → save on blur if changed
             input.addEventListener('focus', function () {
-              _this6.initialFieldValues.set(input, input.value);
+              _this7.initialFieldValues.set(input, input.value);
             });
             input.addEventListener('blur', function () {
-              var initialValue = _this6.initialFieldValues.get(input);
+              var initialValue = _this7.initialFieldValues.get(input);
               var hasChanged = initialValue !== undefined && input.value !== initialValue;
               if (hasChanged) {
-                _this6.settingsDirty = true;
-                _this6.debouncedSaveSettings();
+                _this7.settingsDirty = true;
+                _this7.debouncedSaveSettings();
               }
-              _this6.initialFieldValues["delete"](input);
+              _this7.initialFieldValues["delete"](input);
             });
           });
 
@@ -755,8 +777,8 @@ window.chatInteractionManager = function () {
           var toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]');
           toolCheckboxes.forEach(function (checkbox) {
             checkbox.addEventListener('change', function () {
-              _this6.settingsDirty = true;
-              _this6.debouncedSaveSettings();
+              _this7.settingsDirty = true;
+              _this7.debouncedSaveSettings();
             });
           });
 
@@ -764,8 +786,8 @@ window.chatInteractionManager = function () {
           var groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
           groupToggleCheckboxes.forEach(function (toggle) {
             toggle.addEventListener('change', function () {
-              _this6.settingsDirty = true;
-              _this6.debouncedSaveSettings();
+              _this7.settingsDirty = true;
+              _this7.debouncedSaveSettings();
             });
           });
 
@@ -773,8 +795,8 @@ window.chatInteractionManager = function () {
           var mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]');
           mcpCheckboxes.forEach(function (checkbox) {
             checkbox.addEventListener('change', function () {
-              _this6.settingsDirty = true;
-              _this6.debouncedSaveSettings();
+              _this7.settingsDirty = true;
+              _this7.debouncedSaveSettings();
             });
           });
 
@@ -784,7 +806,7 @@ window.chatInteractionManager = function () {
             clearHistoryBtn.addEventListener('click', function () {
               var itemId = clearHistoryBtn.getAttribute('data-interaction-id');
               if (itemId) {
-                _this6.clearHistory(itemId);
+                _this7.clearHistory(itemId);
               }
             });
           }
@@ -818,18 +840,24 @@ window.chatInteractionManager = function () {
           });
         },
         debouncedSaveSettings: function debouncedSaveSettings() {
-          var _this7 = this;
+          var _this8 = this;
           // Clear any existing timeout to reset the debounce timer
           if (this.saveSettingsTimeout) {
             clearTimeout(this.saveSettingsTimeout);
           }
+
+          // Don't save while streaming — it will be saved when streaming completes.
+          if (this.stream) {
+            return;
+          }
+
           // Set a new timeout to save after 850ms of no changes
           this.saveSettingsTimeout = setTimeout(function () {
-            if (_this7.settingsDirty) {
-              _this7.saveSettings();
-              _this7.settingsDirty = false;
+            if (_this8.settingsDirty) {
+              _this8.saveSettings();
+              _this8.settingsDirty = false;
             }
-            _this7.saveSettingsTimeout = null;
+            _this8.saveSettingsTimeout = null;
           }, 850);
         },
         getSelectedToolNames: function getSelectedToolNames() {
@@ -863,7 +891,7 @@ window.chatInteractionManager = function () {
         saveSettings: function saveSettings() {
           var itemId = this.getItemId();
           if (!itemId) {
-            return;
+            return Promise.resolve();
           }
           var settings = {};
 
@@ -887,9 +915,20 @@ window.chatInteractionManager = function () {
           // Add tool and MCP connection collections (special handling).
           settings.toolNames = this.getSelectedToolNames();
           settings.mcpConnectionIds = this.getSelectedMcpConnectionIds();
-          this.connection.invoke("SaveSettings", itemId, settings)["catch"](function (err) {
+          return this.connection.invoke("SaveSettings", itemId, settings)["catch"](function (err) {
             return console.error('Error saving settings:', err);
           });
+        },
+        flushPendingSave: function flushPendingSave() {
+          if (this.saveSettingsTimeout) {
+            clearTimeout(this.saveSettingsTimeout);
+            this.saveSettingsTimeout = null;
+          }
+          if (this.settingsDirty) {
+            this.settingsDirty = false;
+            return this.saveSettings();
+          }
+          return Promise.resolve();
         },
         initializeInteraction: function initializeInteraction(itemId, force) {
           if (this.isInteractionStarted && !force) {
@@ -908,19 +947,19 @@ window.chatInteractionManager = function () {
         }
       },
       mounted: function mounted() {
-        var _this8 = this;
-        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-          return _regenerator().w(function (_context2) {
-            while (1) switch (_context2.n) {
+        var _this9 = this;
+        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+          return _regenerator().w(function (_context3) {
+            while (1) switch (_context3.n) {
               case 0:
-                _context2.n = 1;
-                return _this8.startConnection();
+                _context3.n = 1;
+                return _this9.startConnection();
               case 1:
-                _this8.initializeApp();
+                _this9.initializeApp();
               case 2:
-                return _context2.a(2);
+                return _context3.a(2);
             }
-          }, _callee2);
+          }, _callee3);
         }))();
         window.addEventListener('beforeunload', this.handleBeforeUnload);
       },
