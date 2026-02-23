@@ -221,11 +221,11 @@ public sealed class DataExtractionService
             return null;
         }
 
-        var deploymentName = connection.GetDefaultUtilityDeploymentName(throwException: false);
+        var deploymentName = connection.GetUtilityDeploymentName(throwException: false);
 
         if (string.IsNullOrEmpty(deploymentName))
         {
-            deploymentName = connection.GetDefaultDeploymentName(throwException: false);
+            deploymentName = connection.GetChatDeploymentName(throwException: false);
         }
 
         if (string.IsNullOrEmpty(deploymentName))

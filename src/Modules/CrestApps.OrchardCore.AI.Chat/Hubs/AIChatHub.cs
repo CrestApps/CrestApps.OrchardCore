@@ -306,7 +306,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         (var chatSession, var isNew) = await GetSessionsAsync(_sessionManager, sessionId, profile, prompt);
 
-<<<<<<< ma/add-chat-data-extractions
         var utcNow = _clock.UtcNow;
 
         // Handle session reopen if closed.
@@ -318,7 +317,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         // Update last activity.
         chatSession.LastActivityUtc = utcNow;
-=======
+
         // Generate a title when the session was created without one (e.g., via document upload).
         if (!isNew && chatSession.Title == AIConstants.DefaultBlankSessionTitle && !string.IsNullOrWhiteSpace(prompt))
         {
@@ -332,7 +331,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 chatSession.Title = Str.Truncate(prompt, 255);
             }
         }
->>>>>>> main
 
         chatSession.Prompts.Add(new AIChatSessionPrompt
         {
