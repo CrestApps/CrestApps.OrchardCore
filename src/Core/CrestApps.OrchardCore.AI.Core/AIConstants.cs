@@ -12,6 +12,8 @@ public static class AIConstants
 
     public const string DefaultBlankMessage = "AI drew blank and no message was generated!";
 
+    public const string DefaultBlankSessionTitle = "Untitled";
+
     public const string CollectionName = "AI";
 
     public const string ConnectionProtectorName = "AIProviderConnection";
@@ -50,6 +52,8 @@ public static class AIConstants
         public const string ProfileDocuments = "CrestApps.OrchardCore.AI.Documents.Profiles";
 
         public const string ChatAdminWidget = "CrestApps.OrchardCore.AI.Chat.AdminWidget";
+
+        public const string ChatSessionDocuments = "CrestApps.OrchardCore.AI.Documents.ChatSessions";
     }
 
     public static readonly string AIDocumentsIndexingTaskType = "AIDocuments";
@@ -59,6 +63,8 @@ public static class AIConstants
         public const string Profile = "profile";
 
         public const string ChatInteraction = "chat-interaction";
+
+        public const string ChatSession = "chat-session";
     }
 
     public static class ColumnNames
@@ -95,5 +101,9 @@ public static class AIConstants
         public const string ChatInteractionUploadDocument = "ChatInteractionUploadDocument";
 
         public const string ChatInteractionRemoveDocument = "ChatInteractionRemoveDocument";
+
+        public const string ChatSessionUploadDocument = "ChatSessionUploadDocument";
+
+        public const string ChatSessionRemoveDocument = "ChatSessionRemoveDocument";
     }
 }

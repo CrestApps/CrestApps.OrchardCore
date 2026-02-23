@@ -390,3 +390,16 @@
         max-height: calc(100vh - 5rem);
     }
 }
+
+/* Document attachment bar */
+.ai-admin-widget .ai-chat-doc-bar {
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    font-size: 0.8rem;
+}
+
+/* Drag-over highlight for the widget input area */
+.ai-admin-widget-input.ai-chat-drag-over {
+    outline: 2px dashed var(--ai-widget-primary, #41b670) !important;
+    outline-offset: -2px;
+    background-color: rgba(65, 182, 112, 0.05) !important;
+}

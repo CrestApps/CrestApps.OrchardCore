@@ -1,7 +1,13 @@
 @using CrestApps.OrchardCore.AI.Chat.Hubs
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.Models
 @using CrestApps.OrchardCore.AI.Models
 @using CrestApps.OrchardCore.SignalR.Core.Services
+@using OrchardCore.Entities
 @using OrchardCore.Environment.Shell
+@using OrchardCore.Environment.Shell.Scope
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Options
 
 @inject HubRouteManager HubRouteManager
 @inject ShellSettings ShellSettings
@@ -28,8 +34,21 @@
     var historyPanelId = $"{baseId}_HistoryPanel";
     var closeHistoryBtnId = $"{baseId}_CloseHistory";
     var restoreSizeBtnId = $"{baseId}_RestoreSize";
+    var documentBarHtmlId = $"{baseId}_DocumentBar";
 
     var storagePrefix = $"{ShellSettings.Name}-{baseId}";
+
+    var shellFeaturesManager = ShellScope.Services.GetRequiredService<IShellFeaturesManager>();
+    var enabledFeatures = await shellFeaturesManager.GetEnabledFeaturesAsync();
+    var sessionDocumentsFeatureEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatSessionDocuments);
+    var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled
+        && profile.As<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
+    var allowedExtensions = string.Empty;
+    if (sessionDocumentsEnabled)
+    {
+        var chatDocOptions = ShellScope.Services.GetRequiredService<IOptions<ChatDocumentsOptions>>();
+        allowedExtensions = string.Join(", ", chatDocOptions.Value.AllowedFileExtensions);
+    }
 }
 
 <!-- Toggle Button (green circle ring with robot icon) -->
@@ -74,6 +93,10 @@
 
     <!-- Input Area -->
     <div class="ai-admin-widget-input">
+        @if (sessionDocumentsEnabled)
+        {
+            <div id="@documentBarHtmlId" class="d-none"></div>
+        }
         <div class="ai-admin-widget-input-wrapper">
             <textarea class="ai-admin-widget-prompt"
                       id="@userPromptHtmlId"
@@ -142,6 +165,15 @@
             sendButtonElementSelector: '#@buttonHtmlId',
             placeholderElementSelector: '#@placeholderHtmlId',
             messages: [],
+            @if (sessionDocumentsEnabled)
+            {
+                @:sessionDocumentsEnabled: true,
+                @:documentBarSelector: '#@documentBarHtmlId',
+                @:uploadDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument)',
+                @:removeDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument)',
+                @:allowedExtensions: '@allowedExtensions',
+                @:existingDocuments: [],
+            }
             messageTemplate: `
                 <div>
                     <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">

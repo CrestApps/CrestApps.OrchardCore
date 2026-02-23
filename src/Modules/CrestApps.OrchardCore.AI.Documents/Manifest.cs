@@ -45,3 +45,15 @@ using OrchardCore.Modules.Manifest;
         AIConstants.Feature.ChatCore,
     ]
 )]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.ChatSessionDocuments,
+    Name = "AI Documents for Chat Sessions",
+    Description = "Provides document upload and Retrieval-Augmented Generation (RAG) support for AI Chat Sessions and Widgets.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        ChatInteractionsConstants.Feature.ChatDocuments,
+        AIConstants.Feature.Chat,
+    ]
+)]
