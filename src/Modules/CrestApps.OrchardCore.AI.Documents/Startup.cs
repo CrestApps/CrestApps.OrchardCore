@@ -89,3 +89,19 @@ public sealed class ProfileDocumentsStartup : StartupBase
         services.AddDisplayDriver<AIProfile, AIProfileDocumentsDisplayDriver>();
     }
 }
+
+[Feature(AIConstants.Feature.ChatSessionDocuments)]
+public sealed class ChatSessionDocumentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<AIProfile, AIProfileSessionDocumentsDisplayDriver>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes
+            .AddUploadSessionDocumentEndpoint()
+            .AddRemoveSessionDocumentEndpoint();
+    }
+}

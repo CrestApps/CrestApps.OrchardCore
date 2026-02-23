@@ -304,12 +304,207 @@ function parseMarkdownContent(content, message) {
                     autoScroll: true,
                     stream: null,
                     messages: [],
-                    prompt: ''
+                    prompt: '',
+                    documents: config.existingDocuments || [],
+                    isUploading: false,
+                    isDragOver: false,
+                    documentBar: null
                 };
             },
             methods: {
                 handleBeforeUnload() {
                     this.isNavigatingAway = true;
+                },
+                handleDragOver(e) {
+                    if (!config.sessionDocumentsEnabled) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.isDragOver = true;
+                    var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
+                    if (inputArea) inputArea.classList.add('ai-chat-drag-over');
+                },
+                handleDragLeave(e) {
+                    if (!config.sessionDocumentsEnabled) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.isDragOver = false;
+                    var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
+                    if (inputArea) inputArea.classList.remove('ai-chat-drag-over');
+                },
+                handleDrop(e) {
+                    if (!config.sessionDocumentsEnabled) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.isDragOver = false;
+                    var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
+                    if (inputArea) inputArea.classList.remove('ai-chat-drag-over');
+                    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        this.uploadFiles(e.dataTransfer.files);
+                    }
+                },
+                triggerFileInput() {
+                    if (!config.sessionDocumentsEnabled) return;
+                    var fileInput = document.getElementById('ai-chat-doc-input');
+                    if (fileInput) fileInput.click();
+                },
+                handleFileInputChange(e) {
+                    var files = e.target.files;
+                    if (files && files.length > 0) {
+                        this.uploadFiles(files);
+                    }
+                    e.target.value = '';
+                },
+                async uploadFiles(files) {
+                    if (!config.uploadDocumentUrl) return;
+
+                    var sessionId = this.getSessionId();
+                    var profileId = this.getProfileId();
+
+                    if (!sessionId && !profileId) {
+                        console.warn('Cannot upload documents without a session or profile.');
+                        return;
+                    }
+
+                    this.isUploading = true;
+                    try {
+                        var formData = new FormData();
+                        if (sessionId) {
+                            formData.append('sessionId', sessionId);
+                        } else {
+                            formData.append('profileId', profileId);
+                        }
+                        for (var i = 0; i < files.length; i++) {
+                            formData.append('files', files[i]);
+                        }
+
+                        var response = await fetch(config.uploadDocumentUrl, {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            var errorText = await response.text();
+                            console.error('Upload failed:', errorText);
+                            return;
+                        }
+
+                        var result = await response.json();
+
+                        // If the server created a new session, initialize it.
+                        if (result.sessionId && !sessionId) {
+                            this.initializeSession(result.sessionId);
+                        }
+
+                        if (result.uploaded && result.uploaded.length > 0) {
+                            for (var j = 0; j < result.uploaded.length; j++) {
+                                this.documents.push(result.uploaded[j]);
+                            }
+                        }
+                        if (result.failed && result.failed.length > 0) {
+                            for (var k = 0; k < result.failed.length; k++) {
+                                console.warn('File failed to upload:', result.failed[k].fileName, result.failed[k].error);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Upload error:', err);
+                    } finally {
+                        this.isUploading = false;
+                    }
+                },
+                async removeDocument(doc) {
+                    if (!config.removeDocumentUrl) return;
+
+                    try {
+                        var sessionId = this.getSessionId();
+                        var response = await fetch(config.removeDocumentUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ itemId: sessionId, documentId: doc.documentId })
+                        });
+
+                        if (response.ok) {
+                            var idx = this.documents.indexOf(doc);
+                            if (idx > -1) this.documents.splice(idx, 1);
+                        } else {
+                            var errorText = await response.text();
+                            console.error('Failed to remove document:', response.status, errorText);
+                        }
+                    } catch (err) {
+                        console.error('Remove document error:', err);
+                    }
+                },
+                formatFileSize(bytes) {
+                    if (bytes < 1024) return bytes + ' B';
+                    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                },
+                renderDocumentBar() {
+                    if (!this.documentBar) return;
+
+                    if (!config.sessionDocumentsEnabled) {
+                        this.documentBar.classList.add('d-none');
+                        return;
+                    }
+
+                    this.documentBar.classList.remove('d-none');
+
+                    var html = '<div class="ai-chat-doc-bar d-flex flex-wrap align-items-center gap-1 p-2">';
+
+                    for (var i = 0; i < this.documents.length; i++) {
+                        var doc = this.documents[i];
+                        var name = doc.fileName || 'Document';
+                        if (name.length > 20) name = name.substring(0, 17) + '...';
+                        html += '<span class="badge bg-secondary bg-opacity-25 text-dark d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;" title="' + this.escapeHtml(doc.fileName || '') + '">';
+                        html += '<i class="fa-solid fa-file-lines" style="font-size: 0.7rem;"></i> ';
+                        html += this.escapeHtml(name);
+                        html += ' <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.5rem;" data-doc-index="' + i + '" aria-label="Remove"></button>';
+                        html += '</span>';
+                    }
+
+                    if (this.isUploading) {
+                        html += '<span class="badge bg-info bg-opacity-25 text-dark d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;">';
+                        html += '<span class="spinner-border spinner-border-sm" style="width: 0.7rem; height: 0.7rem;"></span> Uploading...';
+                        html += '</span>';
+                    }
+
+                    html += '<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill ai-chat-doc-add-btn d-inline-flex align-items-center gap-1" style="font-size: 0.75rem; padding: 0.15rem 0.5rem;" title="Attach documents">';
+                    html += '<i class="fa-solid fa-paperclip"></i>';
+                    if (this.documents.length === 0 && !this.isUploading) {
+                        html += ' <span>Attach files</span>';
+                    }
+                    html += '</button>';
+
+                    html += '</div>';
+
+                    this.documentBar.innerHTML = html;
+
+                    // Bind remove handlers
+                    var self = this;
+                    var closeButtons = this.documentBar.querySelectorAll('.btn-close');
+                    for (var j = 0; j < closeButtons.length; j++) {
+                        closeButtons[j].addEventListener('click', (function(idx) {
+                            return function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                var docToRemove = self.documents[idx];
+                                if (docToRemove) self.removeDocument(docToRemove);
+                            };
+                        })(parseInt(closeButtons[j].getAttribute('data-doc-index'))));
+                    }
+
+                    // Bind add button
+                    var addBtn = this.documentBar.querySelector('.ai-chat-doc-add-btn');
+                    if (addBtn) {
+                        addBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            self.triggerFileInput();
+                        });
+                    }
+                },
+                escapeHtml(text) {
+                    var div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
                 },
                 async startConnection() {
                     this.connection = new signalR.HubConnectionBuilder()
@@ -325,6 +520,7 @@ function parseMarkdownContent(content, message) {
                     this.connection.on("LoadSession", (data) => {
                         this.initializeSession(data.sessionId, true);
                         this.messages = [];
+                        this.documents = data.documents || [];
 
                         (data.messages ?? []).forEach(msg => {
                             this.addMessage(msg);
@@ -702,6 +898,7 @@ function parseMarkdownContent(content, message) {
                         localStorage.removeItem(this.chatWidgetStateSession);
                     }
                     this.messages = [];
+                    this.documents = [];
                     this.showPlaceholder();
                 },
                 initializeApp() {
@@ -709,6 +906,34 @@ function parseMarkdownContent(content, message) {
                     this.buttonElement = document.querySelector(config.sendButtonElementSelector);
                     this.chatContainer = document.querySelector(config.chatContainerElementSelector);
                     this.placeholder = document.querySelector(config.placeholderElementSelector);
+
+                    // Initialize document bar if enabled.
+                    if (config.sessionDocumentsEnabled && config.documentBarSelector) {
+                        this.documentBar = document.querySelector(config.documentBarSelector);
+                        if (this.documentBar) {
+                            this.renderDocumentBar();
+
+                            // Create hidden file input for document uploads.
+                            var fileInput = document.createElement('input');
+                            fileInput.type = 'file';
+                            fileInput.id = 'ai-chat-doc-input';
+                            fileInput.className = 'd-none';
+                            fileInput.multiple = true;
+                            if (config.allowedExtensions) {
+                                fileInput.accept = config.allowedExtensions;
+                            }
+                            fileInput.addEventListener('change', (e) => this.handleFileInputChange(e));
+                            this.documentBar.parentElement.appendChild(fileInput);
+
+                            // Set up drag-and-drop on the input area.
+                            var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
+                            if (inputArea) {
+                                inputArea.addEventListener('dragover', (e) => this.handleDragOver(e));
+                                inputArea.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+                                inputArea.addEventListener('drop', (e) => this.handleDrop(e));
+                            }
+                        }
+                    }
 
                     // Pause auto-scroll when the user manually scrolls up during streaming.
                     this.chatContainer.addEventListener('scroll', () => {
@@ -922,6 +1147,13 @@ function parseMarkdownContent(content, message) {
                 copyResponse(message) {
                     navigator.clipboard.writeText(message);
                 }
+            },
+            watch: {
+                documents: {
+                    handler() { this.renderDocumentBar(); },
+                    deep: true
+                },
+                isUploading() { this.renderDocumentBar(); }
             },
             mounted() {
                 (async () => {

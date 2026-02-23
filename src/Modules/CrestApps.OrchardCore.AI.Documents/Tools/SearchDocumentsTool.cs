@@ -84,6 +84,18 @@ public sealed class SearchDocumentsTool : AIFunction
                 referenceType = AIConstants.DocumentReferenceTypes.Profile;
             }
 
+            // When the resource is a profile, check if there's a session with documents.
+            if (referenceType == AIConstants.DocumentReferenceTypes.Profile)
+            {
+                var httpContext = httpContextAccessor?.HttpContext;
+                if (httpContext?.Items[nameof(AIChatSession)] is AIChatSession session &&
+                    session.Documents is { Count: > 0 })
+                {
+                    resourceId = session.SessionId;
+                    referenceType = AIConstants.DocumentReferenceTypes.ChatSession;
+                }
+            }
+
             if (string.IsNullOrEmpty(resourceId) || string.IsNullOrEmpty(referenceType))
             {
                 return "Document search requires an active chat interaction session or AI profile.";
