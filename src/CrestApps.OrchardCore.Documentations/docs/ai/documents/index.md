@@ -56,33 +56,19 @@ Documents uploaded to a chat interaction are **scoped to that session**.
 - **RAG Integration**: Relevant document chunks are retrieved and used as context for AI responses
 - **Document Management**: View, manage, and remove uploaded documents within a chat session
 
-### Intent-Aware Document Processing
+### Document Processing
 
-When documents are attached to a chat interaction, the shared prompt routing pipeline detects the user's intent and invokes the registered strategies.
+When documents are attached to a chat interaction, the orchestrator manages document context automatically. It coordinates text extraction, chunking, embedding, and retrieval to provide relevant document content to the AI model.
 
-#### Supported Document Intents
+The orchestrator supports various document-related operations:
 
-| Intent | Description | Example Prompts |
-|--------|-------------|-----------------|
-| `DocumentQnA` | Question answering using RAG | "What does this document say about X?" |
-| `SummarizeDocument` | Document summarization | "Summarize this document", "Give me a brief overview" |
-| `AnalyzeTabularData` | CSV/Excel data analysis | "Calculate the total sales", "Show me the average" |
-| `ExtractStructuredData` | Structured data extraction | "Extract all email addresses", "List all names" |
-| `CompareDocuments` | Multi-document comparison | "Compare these documents", "What are the differences?" |
-| `TransformFormat` | Content reformatting | "Convert to bullet points", "Make it a table" |
-| `GeneralChatWithReference` | General chat using document context | Default fallback |
-
-#### Processing Strategies
-
-Each intent is handled by a specialized strategy:
-
-- **RAG Strategy**: Uses vector search to find relevant chunks (for `DocumentQnA`)
-- **Summarization Strategy**: Provides full document content (bypasses vector search)
-- **Tabular Analysis Strategy**: Parses structured data for calculations
-- **Extraction Strategy**: Focuses on content extraction
-- **Comparison Strategy**: Provides multi-document content
-- **Transformation Strategy**: Provides content for reformatting
-- **General Reference Strategy**: Provides context when asking general questions that reference documents
+- **Question Answering (RAG)** — Uses vector search to find relevant document chunks for answering questions
+- **Summarization** — Provides full document content for summarization requests
+- **Tabular Analysis** — Parses structured data (CSV, Excel) for calculations and analysis
+- **Data Extraction** — Extracts structured information from documents
+- **Document Comparison** — Provides multi-document content for comparison
+- **Content Transformation** — Provides content for reformatting or conversion
+- **General Reference** — Provides context when asking general questions that reference documents
 
 ### API Endpoints
 
@@ -181,29 +167,6 @@ There are no separate API endpoints for profile document management — everythi
 | Setting | Description | Default |
 |---------|-------------|---------|
 | Top N Results | Number of top matching document chunks to include as context | 3 |
-
-## Adding Custom Processing Strategies
-
-To add a custom document processing strategy with a custom intent:
-
-1. Register your intent using `AddPromptProcessingIntent()`
-2. Implement `IPromptProcessingStrategy`
-3. Register your strategy using `AddPromptProcessingStrategy<T>()`
-
-Important: Intents must be registered via `AddPromptProcessingIntent()` to be recognized by the AI intent detector. If an intent is not registered, it will not be included in the AI classification prompt and your strategy will never be invoked.
-
-### Registering in Startup (example)
-
-```csharp
-public override void ConfigureServices(IServiceCollection services)
-{
-    services.AddPromptProcessingIntent(
-        "MyCustomDocumentIntent",
-        "The user wants to perform a custom operation on the documents, such as [describe when this intent applies].");
-
-    services.AddPromptProcessingStrategy<MyCustomDocumentStrategy>();
-}
-```
 
 ## Troubleshooting
 

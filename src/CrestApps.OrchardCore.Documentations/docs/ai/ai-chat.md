@@ -48,7 +48,7 @@ The **AI Chat Admin Widget** adds a floating chat widget to the Orchard Core adm
 
 #### Configuring the Admin Widget
 
-Navigate to **Settings** > **Artificial Intelligence** >> **Admin Widget** to configure:
+Navigate to **Settings** → **Artificial Intelligence** → **Admin Widget** to configure:
 
 - **Profile**: Select the AI chat profile to use for the admin widget. 
 - **Max Sessions**: Set the maximum number of previous chat sessions displayed in the history panel (1–50).

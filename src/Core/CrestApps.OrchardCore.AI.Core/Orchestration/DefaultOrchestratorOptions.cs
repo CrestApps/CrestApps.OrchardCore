@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.AI.Core.Orchestration;
 /// <summary>
 /// Configuration options for the progressive tool orchestrator.
 /// </summary>
-public sealed class ProgressiveToolOrchestratorOptions
+public sealed class DefaultOrchestratorOptions
 {
     /// <summary>
     /// Gets or sets the maximum number of tools to include in the initial scoped set
