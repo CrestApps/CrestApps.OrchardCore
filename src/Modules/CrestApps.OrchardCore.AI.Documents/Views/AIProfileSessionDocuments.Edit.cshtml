@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.AI.Documents.ViewModels
+
+@model EditAIProfileSessionDocumentsViewModel
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="AllowSessionDocuments" />
+        <label class="form-check-label" asp-for="AllowSessionDocuments">@T["Allow Documents & Attachments"]</label>
+        <span class="hint">@T["When enabled, users can upload and attach documents to chat sessions using this profile. Documents will be indexed for AI-powered search and Retrieval-Augmented Generation (RAG)."]</span>
+    </div>
+</div>

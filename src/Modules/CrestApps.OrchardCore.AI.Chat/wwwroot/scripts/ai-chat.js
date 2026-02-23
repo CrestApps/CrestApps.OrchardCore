@@ -272,72 +272,321 @@ window.openAIChatManager = function () {
           autoScroll: true,
           stream: null,
           messages: [],
-          prompt: ''
+          prompt: '',
+          documents: config.existingDocuments || [],
+          isUploading: false,
+          isDragOver: false,
+          documentBar: null
         };
       },
       methods: {
         handleBeforeUnload: function handleBeforeUnload() {
           this.isNavigatingAway = true;
         },
-        startConnection: function startConnection() {
+        handleDragOver: function handleDragOver(e) {
+          if (!config.sessionDocumentsEnabled) return;
+          e.preventDefault();
+          e.stopPropagation();
+          this.isDragOver = true;
+          var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
+          if (inputArea) inputArea.classList.add('ai-chat-drag-over');
+        },
+        handleDragLeave: function handleDragLeave(e) {
+          if (!config.sessionDocumentsEnabled) return;
+          e.preventDefault();
+          e.stopPropagation();
+          this.isDragOver = false;
+          var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
+          if (inputArea) inputArea.classList.remove('ai-chat-drag-over');
+        },
+        handleDrop: function handleDrop(e) {
+          if (!config.sessionDocumentsEnabled) return;
+          e.preventDefault();
+          e.stopPropagation();
+          this.isDragOver = false;
+          var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
+          if (inputArea) inputArea.classList.remove('ai-chat-drag-over');
+          if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            this.uploadFiles(e.dataTransfer.files);
+          }
+        },
+        triggerFileInput: function triggerFileInput() {
+          if (!config.sessionDocumentsEnabled) return;
+          var fileInput = document.getElementById('ai-chat-doc-input');
+          if (fileInput) fileInput.click();
+        },
+        handleFileInputChange: function handleFileInputChange(e) {
+          var files = e.target.files;
+          if (files && files.length > 0) {
+            this.uploadFiles(files);
+          }
+          e.target.value = '';
+        },
+        uploadFiles: function uploadFiles(files) {
           var _this = this;
           return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-            var _t;
+            var sessionId, profileId, formData, i, response, errorText, result, j, k, _t;
             return _regenerator().w(function (_context) {
               while (1) switch (_context.p = _context.n) {
                 case 0:
-                  _this.connection = new signalR.HubConnectionBuilder().withUrl(config.signalRHubUrl).withAutomaticReconnect().build();
+                  if (config.uploadDocumentUrl) {
+                    _context.n = 1;
+                    break;
+                  }
+                  return _context.a(2);
+                case 1:
+                  sessionId = _this.getSessionId();
+                  profileId = _this.getProfileId();
+                  if (!(!sessionId && !profileId)) {
+                    _context.n = 2;
+                    break;
+                  }
+                  console.warn('Cannot upload documents without a session or profile.');
+                  return _context.a(2);
+                case 2:
+                  _this.isUploading = true;
+                  _context.p = 3;
+                  formData = new FormData();
+                  if (sessionId) {
+                    formData.append('sessionId', sessionId);
+                  } else {
+                    formData.append('profileId', profileId);
+                  }
+                  for (i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                  }
+                  _context.n = 4;
+                  return fetch(config.uploadDocumentUrl, {
+                    method: 'POST',
+                    body: formData
+                  });
+                case 4:
+                  response = _context.v;
+                  if (response.ok) {
+                    _context.n = 6;
+                    break;
+                  }
+                  _context.n = 5;
+                  return response.text();
+                case 5:
+                  errorText = _context.v;
+                  console.error('Upload failed:', errorText);
+                  return _context.a(2);
+                case 6:
+                  _context.n = 7;
+                  return response.json();
+                case 7:
+                  result = _context.v;
+                  // If the server created a new session, initialize it.
+                  if (result.sessionId && !sessionId) {
+                    _this.initializeSession(result.sessionId);
+                  }
+                  if (result.uploaded && result.uploaded.length > 0) {
+                    for (j = 0; j < result.uploaded.length; j++) {
+                      _this.documents.push(result.uploaded[j]);
+                    }
+                  }
+                  if (result.failed && result.failed.length > 0) {
+                    for (k = 0; k < result.failed.length; k++) {
+                      console.warn('File failed to upload:', result.failed[k].fileName, result.failed[k].error);
+                    }
+                  }
+                  _context.n = 9;
+                  break;
+                case 8:
+                  _context.p = 8;
+                  _t = _context.v;
+                  console.error('Upload error:', _t);
+                case 9:
+                  _context.p = 9;
+                  _this.isUploading = false;
+                  return _context.f(9);
+                case 10:
+                  return _context.a(2);
+              }
+            }, _callee, null, [[3, 8, 9, 10]]);
+          }))();
+        },
+        removeDocument: function removeDocument(doc) {
+          var _this2 = this;
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+            var sessionId, response, idx, errorText, _t2;
+            return _regenerator().w(function (_context2) {
+              while (1) switch (_context2.p = _context2.n) {
+                case 0:
+                  if (config.removeDocumentUrl) {
+                    _context2.n = 1;
+                    break;
+                  }
+                  return _context2.a(2);
+                case 1:
+                  _context2.p = 1;
+                  sessionId = _this2.getSessionId();
+                  _context2.n = 2;
+                  return fetch(config.removeDocumentUrl, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      itemId: sessionId,
+                      documentId: doc.documentId
+                    })
+                  });
+                case 2:
+                  response = _context2.v;
+                  if (!response.ok) {
+                    _context2.n = 3;
+                    break;
+                  }
+                  idx = _this2.documents.indexOf(doc);
+                  if (idx > -1) _this2.documents.splice(idx, 1);
+                  _context2.n = 5;
+                  break;
+                case 3:
+                  _context2.n = 4;
+                  return response.text();
+                case 4:
+                  errorText = _context2.v;
+                  console.error('Failed to remove document:', response.status, errorText);
+                case 5:
+                  _context2.n = 7;
+                  break;
+                case 6:
+                  _context2.p = 6;
+                  _t2 = _context2.v;
+                  console.error('Remove document error:', _t2);
+                case 7:
+                  return _context2.a(2);
+              }
+            }, _callee2, null, [[1, 6]]);
+          }))();
+        },
+        formatFileSize: function formatFileSize(bytes) {
+          if (bytes < 1024) return bytes + ' B';
+          if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+          return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        },
+        renderDocumentBar: function renderDocumentBar() {
+          if (!this.documentBar) return;
+          if (!config.sessionDocumentsEnabled) {
+            this.documentBar.classList.add('d-none');
+            return;
+          }
+          this.documentBar.classList.remove('d-none');
+          var html = '<div class="ai-chat-doc-bar d-flex flex-wrap align-items-center gap-1 p-2">';
+          for (var i = 0; i < this.documents.length; i++) {
+            var doc = this.documents[i];
+            var name = doc.fileName || 'Document';
+            if (name.length > 20) name = name.substring(0, 17) + '...';
+            html += '<span class="badge bg-secondary bg-opacity-25 text-dark d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;" title="' + this.escapeHtml(doc.fileName || '') + '">';
+            html += '<i class="fa-solid fa-file-lines" style="font-size: 0.7rem;"></i> ';
+            html += this.escapeHtml(name);
+            html += ' <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.5rem;" data-doc-index="' + i + '" aria-label="Remove"></button>';
+            html += '</span>';
+          }
+          if (this.isUploading) {
+            html += '<span class="badge bg-info bg-opacity-25 text-dark d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;">';
+            html += '<span class="spinner-border spinner-border-sm" style="width: 0.7rem; height: 0.7rem;"></span> Uploading...';
+            html += '</span>';
+          }
+          html += '<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill ai-chat-doc-add-btn d-inline-flex align-items-center gap-1" style="font-size: 0.75rem; padding: 0.15rem 0.5rem;" title="Attach documents">';
+          html += '<i class="fa-solid fa-paperclip"></i>';
+          if (this.documents.length === 0 && !this.isUploading) {
+            html += ' <span>Attach files</span>';
+          }
+          html += '</button>';
+          html += '</div>';
+          this.documentBar.innerHTML = html;
+
+          // Bind remove handlers
+          var self = this;
+          var closeButtons = this.documentBar.querySelectorAll('.btn-close');
+          for (var j = 0; j < closeButtons.length; j++) {
+            closeButtons[j].addEventListener('click', function (idx) {
+              return function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var docToRemove = self.documents[idx];
+                if (docToRemove) self.removeDocument(docToRemove);
+              };
+            }(parseInt(closeButtons[j].getAttribute('data-doc-index'))));
+          }
+
+          // Bind add button
+          var addBtn = this.documentBar.querySelector('.ai-chat-doc-add-btn');
+          if (addBtn) {
+            addBtn.addEventListener('click', function (e) {
+              e.preventDefault();
+              self.triggerFileInput();
+            });
+          }
+        },
+        escapeHtml: function escapeHtml(text) {
+          var div = document.createElement('div');
+          div.textContent = text;
+          return div.innerHTML;
+        },
+        startConnection: function startConnection() {
+          var _this3 = this;
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+            var _t3;
+            return _regenerator().w(function (_context3) {
+              while (1) switch (_context3.p = _context3.n) {
+                case 0:
+                  _this3.connection = new signalR.HubConnectionBuilder().withUrl(config.signalRHubUrl).withAutomaticReconnect().build();
 
                   // Allow long-running operations (e.g., multi-step MCP tool calls)
                   // without the client disconnecting prematurely.
-                  _this.connection.serverTimeoutInMilliseconds = 600000;
-                  _this.connection.keepAliveIntervalInMilliseconds = 15000;
-                  _this.connection.on("LoadSession", function (data) {
+                  _this3.connection.serverTimeoutInMilliseconds = 600000;
+                  _this3.connection.keepAliveIntervalInMilliseconds = 15000;
+                  _this3.connection.on("LoadSession", function (data) {
                     var _data$messages;
-                    _this.initializeSession(data.sessionId, true);
-                    _this.messages = [];
+                    _this3.initializeSession(data.sessionId, true);
+                    _this3.messages = [];
+                    _this3.documents = data.documents || [];
                     ((_data$messages = data.messages) !== null && _data$messages !== void 0 ? _data$messages : []).forEach(function (msg) {
-                      _this.addMessage(msg);
-                      _this.$nextTick(function () {
+                      _this3.addMessage(msg);
+                      _this3.$nextTick(function () {
                         renderChartsInMessage(msg);
                       });
                     });
                   });
-                  _this.connection.on("ReceiveError", function (error) {
+                  _this3.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
                   });
-                  _this.connection.onreconnecting(function () {
+                  _this3.connection.onreconnecting(function () {
                     console.warn("SignalR: reconnecting...");
                   });
-                  _this.connection.onreconnected(function () {
+                  _this3.connection.onreconnected(function () {
                     console.info("SignalR: reconnected.");
                   });
-                  _this.connection.onclose(function (error) {
-                    if (_this.isNavigatingAway) {
+                  _this3.connection.onclose(function (error) {
+                    if (_this3.isNavigatingAway) {
                       return;
                     }
                     if (error) {
                       console.warn("SignalR connection closed with error:", error.message || error);
                     }
                   });
-                  _context.p = 1;
-                  _context.n = 2;
-                  return _this.connection.start();
+                  _context3.p = 1;
+                  _context3.n = 2;
+                  return _this3.connection.start();
                 case 2:
-                  _context.n = 4;
+                  _context3.n = 4;
                   break;
                 case 3:
-                  _context.p = 3;
-                  _t = _context.v;
-                  console.error("SignalR Connection Error: ", _t);
+                  _context3.p = 3;
+                  _t3 = _context3.v;
+                  console.error("SignalR Connection Error: ", _t3);
                 case 4:
-                  return _context.a(2);
+                  return _context3.a(2);
               }
-            }, _callee, null, [[1, 3]]);
+            }, _callee3, null, [[1, 3]]);
           }))();
         },
         addMessageInternal: function addMessageInternal(message) {
-          var _this2 = this;
+          var _this4 = this;
           this.fireEvent(new CustomEvent("addingOpenAIPromotMessage", {
             detail: {
               message: message
@@ -345,7 +594,7 @@ window.openAIChatManager = function () {
           }));
           this.messages.push(message);
           this.$nextTick(function () {
-            _this2.fireEvent(new CustomEvent("addedOpenAIPromotMessage", {
+            _this4.fireEvent(new CustomEvent("addedOpenAIPromotMessage", {
               detail: {
                 message: message
               }
@@ -353,7 +602,7 @@ window.openAIChatManager = function () {
           });
         },
         addMessage: function addMessage(message) {
-          var _this3 = this;
+          var _this5 = this;
           if (message.content) {
             var processedContent = message.content.trim();
             if (message.references && _typeof(message.references) === "object" && Object.keys(message.references).length) {
@@ -382,17 +631,17 @@ window.openAIChatManager = function () {
           this.$nextTick(function () {
             // Render any pending charts once the DOM is updated
             renderChartsInMessage(message);
-            _this3.scrollToBottom();
+            _this5.scrollToBottom();
           });
         },
         addMessages: function addMessages(messages) {
-          var _this4 = this;
+          var _this6 = this;
           for (var i = 0; i < messages.length; i++) {
             this.addMessageInternal(messages[i]);
           }
           this.hidePlaceholder();
           this.$nextTick(function () {
-            _this4.scrollToBottom();
+            _this6.scrollToBottom();
           });
         },
         hidePlaceholder: function hidePlaceholder() {
@@ -427,7 +676,7 @@ window.openAIChatManager = function () {
           this.prompt = '';
         },
         streamMessage: function streamMessage(profileId, trimmedPrompt, sessionProfileId) {
-          var _this5 = this;
+          var _this7 = this;
           if (this.stream) {
             this.stream.dispose();
             this.stream = null;
@@ -443,14 +692,14 @@ window.openAIChatManager = function () {
           var currentSessionId = this.getSessionId();
           this.stream = this.connection.stream("SendMessage", profileId, trimmedPrompt, currentSessionId, sessionProfileId).subscribe({
             next: function next(chunk) {
-              var message = _this5.messages[messageIndex];
+              var message = _this7.messages[messageIndex];
               if (!message) {
                 if (chunk.sessionId && !currentSessionId) {
-                  _this5.initializeSession(chunk.sessionId);
+                  _this7.initializeSession(chunk.sessionId);
                 }
-                _this5.hideTypingIndicator();
+                _this7.hideTypingIndicator();
                 // Re-assign the index after hiding the typing indicator.
-                messageIndex = _this5.messages.length;
+                messageIndex = _this7.messages.length;
                 var newMessage = {
                   role: "assistant",
                   title: chunk.title,
@@ -458,7 +707,7 @@ window.openAIChatManager = function () {
                   htmlContent: "",
                   isStreaming: true
                 };
-                _this5.messages.push(newMessage);
+                _this7.messages.push(newMessage);
                 message = newMessage;
               }
               if (chunk.title && (!message.title || message.title !== chunk.title)) {
@@ -489,41 +738,41 @@ window.openAIChatManager = function () {
               // Update the existing message
               message.content = content;
               message.htmlContent = parseMarkdownContent(content, message);
-              _this5.messages[messageIndex] = message;
-              _this5.$nextTick(function () {
+              _this7.messages[messageIndex] = message;
+              _this7.$nextTick(function () {
                 renderChartsInMessage(message);
-                _this5.scrollToBottom();
+                _this7.scrollToBottom();
               });
             },
             complete: function complete() {
-              var _this5$stream;
-              _this5.processReferences(references, messageIndex);
-              _this5.streamingFinished();
-              var msg = _this5.messages[messageIndex];
+              var _this7$stream;
+              _this7.processReferences(references, messageIndex);
+              _this7.streamingFinished();
+              var msg = _this7.messages[messageIndex];
               if (msg) {
                 msg.isStreaming = false;
               }
               if (!msg || !msg.content) {
                 // No content received at all.
-                _this5.hideTypingIndicator();
+                _this7.hideTypingIndicator();
               }
-              (_this5$stream = _this5.stream) === null || _this5$stream === void 0 || _this5$stream.dispose();
-              _this5.stream = null;
+              (_this7$stream = _this7.stream) === null || _this7$stream === void 0 || _this7$stream.dispose();
+              _this7.stream = null;
             },
             error: function error(err) {
-              var _this5$stream2;
-              _this5.processReferences(references, messageIndex);
-              _this5.streamingFinished();
-              var msg = _this5.messages[messageIndex];
+              var _this7$stream2;
+              _this7.processReferences(references, messageIndex);
+              _this7.streamingFinished();
+              var msg = _this7.messages[messageIndex];
               if (msg) {
                 msg.isStreaming = false;
               }
-              _this5.hideTypingIndicator();
-              if (!_this5.isNavigatingAway) {
-                _this5.addMessage(_this5.getServiceDownMessage());
+              _this7.hideTypingIndicator();
+              if (!_this7.isNavigatingAway) {
+                _this7.addMessage(_this7.getServiceDownMessage());
               }
-              (_this5$stream2 = _this5.stream) === null || _this5$stream2 === void 0 || _this5$stream2.dispose();
-              _this5.stream = null;
+              (_this7$stream2 = _this7.stream) === null || _this7$stream2 === void 0 || _this7$stream2.dispose();
+              _this7.stream = null;
               console.error("Stream error:", err);
             }
           });
@@ -624,12 +873,12 @@ window.openAIChatManager = function () {
           return removedCount;
         },
         scrollToBottom: function scrollToBottom() {
-          var _this6 = this;
+          var _this8 = this;
           if (!this.autoScroll) {
             return;
           }
           setTimeout(function () {
-            _this6.chatContainer.scrollTop = _this6.chatContainer.scrollHeight - _this6.chatContainer.clientHeight;
+            _this8.chatContainer.scrollTop = _this8.chatContainer.scrollHeight - _this8.chatContainer.clientHeight;
           }, 50);
         },
         handleUserInput: function handleUserInput(event) {
@@ -648,66 +897,103 @@ window.openAIChatManager = function () {
             localStorage.removeItem(this.chatWidgetStateSession);
           }
           this.messages = [];
+          this.documents = [];
           this.showPlaceholder();
         },
         initializeApp: function initializeApp() {
-          var _this7 = this;
+          var _this9 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
           this.placeholder = document.querySelector(config.placeholderElementSelector);
 
+          // Initialize document bar if enabled.
+          if (config.sessionDocumentsEnabled && config.documentBarSelector) {
+            this.documentBar = document.querySelector(config.documentBarSelector);
+            if (this.documentBar) {
+              this.renderDocumentBar();
+
+              // Create hidden file input for document uploads.
+              var fileInput = document.createElement('input');
+              fileInput.type = 'file';
+              fileInput.id = 'ai-chat-doc-input';
+              fileInput.className = 'd-none';
+              fileInput.multiple = true;
+              if (config.allowedExtensions) {
+                fileInput.accept = config.allowedExtensions;
+              }
+              fileInput.addEventListener('change', function (e) {
+                return _this9.handleFileInputChange(e);
+              });
+              this.documentBar.parentElement.appendChild(fileInput);
+
+              // Set up drag-and-drop on the input area.
+              var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
+              if (inputArea) {
+                inputArea.addEventListener('dragover', function (e) {
+                  return _this9.handleDragOver(e);
+                });
+                inputArea.addEventListener('dragleave', function (e) {
+                  return _this9.handleDragLeave(e);
+                });
+                inputArea.addEventListener('drop', function (e) {
+                  return _this9.handleDrop(e);
+                });
+              }
+            }
+          }
+
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this7.stream) {
+            if (!_this9.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this7.chatContainer.scrollHeight - _this7.chatContainer.clientHeight - _this7.chatContainer.scrollTop <= threshold;
-            _this7.autoScroll = atBottom;
+            var atBottom = _this9.chatContainer.scrollHeight - _this9.chatContainer.clientHeight - _this9.chatContainer.scrollTop <= threshold;
+            _this9.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keydown', function (event) {
-            if (_this7.stream != null) {
+            if (_this9.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
-              _this7.buttonElement.click();
+              _this9.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this7.handleUserInput(e);
+            _this9.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this7.buttonElement.removeAttribute('disabled');
+              _this9.buttonElement.removeAttribute('disabled');
             } else {
-              _this7.buttonElement.setAttribute('disabled', true);
+              _this9.buttonElement.setAttribute('disabled', true);
             }
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this7.stream != null) {
-              _this7.stream.dispose();
-              _this7.stream = null;
-              _this7.streamingFinished();
-              _this7.hideTypingIndicator();
+            if (_this9.stream != null) {
+              _this9.stream.dispose();
+              _this9.stream = null;
+              _this9.streamingFinished();
+              _this9.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this7.messages.length > 0) {
-                var lastMsg = _this7.messages[_this7.messages.length - 1];
+              if (_this9.messages.length > 0) {
+                var lastMsg = _this9.messages[_this9.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this7.messages.pop();
+                  _this9.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this7.sendMessage();
+            _this9.sendMessage();
           });
           var promptGenerators = document.getElementsByClassName('profile-generated-prompt');
           for (var i = 0; i < promptGenerators.length; i++) {
             promptGenerators[i].addEventListener('click', function (e) {
               e.preventDefault();
-              _this7.generatePrompt(e.target);
+              _this9.generatePrompt(e.target);
             });
           }
           var chatSessions = document.getElementsByClassName('chat-session-history-item');
@@ -719,8 +1005,8 @@ window.openAIChatManager = function () {
                 console.error('an element with the class chat-session-history-item with no data-session-id set.');
                 return;
               }
-              _this7.loadSession(sessionId);
-              _this7.showChatScreen();
+              _this9.loadSession(sessionId);
+              _this9.showChatScreen();
             });
           }
           for (var _i6 = 0; _i6 < config.messages.length; _i6++) {
@@ -772,7 +1058,7 @@ window.openAIChatManager = function () {
           }
         },
         initializeWidget: function initializeWidget() {
-          var _this8 = this;
+          var _this0 = this;
           if (!config.widget.chatWidgetContainer) {
             console.error('The widget chatWidgetContainer is required.');
             return;
@@ -798,14 +1084,14 @@ window.openAIChatManager = function () {
             var showHistoryButton = document.querySelector(config.widget.showHistoryButton);
             if (showHistoryButton) {
               showHistoryButton.addEventListener('click', function () {
-                _this8.chatHistorySection.classList.toggle('show');
+                _this0.chatHistorySection.classList.toggle('show');
               });
             }
             if (config.widget.closeHistoryButton) {
               var closeHistoryButton = document.querySelector(config.widget.closeHistoryButton);
               if (closeHistoryButton) {
                 closeHistoryButton.addEventListener('click', function () {
-                  _this8.showChatScreen();
+                  _this0.showChatScreen();
                 });
               }
             }
@@ -814,8 +1100,8 @@ window.openAIChatManager = function () {
             var newChatButton = document.querySelector(config.widget.newChatButton);
             if (newChatButton) {
               newChatButton.addEventListener('click', function () {
-                _this8.resetSession();
-                _this8.showChatScreen();
+                _this0.resetSession();
+                _this0.showChatScreen();
               });
             }
           }
@@ -837,23 +1123,34 @@ window.openAIChatManager = function () {
           navigator.clipboard.writeText(message);
         }
       },
+      watch: {
+        documents: {
+          handler: function handler() {
+            this.renderDocumentBar();
+          },
+          deep: true
+        },
+        isUploading: function isUploading() {
+          this.renderDocumentBar();
+        }
+      },
       mounted: function mounted() {
-        var _this9 = this;
-        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-          return _regenerator().w(function (_context2) {
-            while (1) switch (_context2.n) {
+        var _this1 = this;
+        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+          return _regenerator().w(function (_context4) {
+            while (1) switch (_context4.n) {
               case 0:
-                _context2.n = 1;
-                return _this9.startConnection();
+                _context4.n = 1;
+                return _this1.startConnection();
               case 1:
-                _this9.initializeApp();
+                _this1.initializeApp();
                 if (config.widget) {
-                  _this9.initializeWidget();
+                  _this1.initializeWidget();
                 }
               case 2:
-                return _context2.a(2);
+                return _context4.a(2);
             }
-          }, _callee2);
+          }, _callee4);
         }))();
         window.addEventListener('beforeunload', this.handleBeforeUnload);
       },

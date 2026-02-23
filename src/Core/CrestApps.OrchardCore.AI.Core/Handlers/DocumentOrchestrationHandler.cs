@@ -48,6 +48,19 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
 
     public Task BuiltAsync(OrchestrationContextBuiltContext context)
     {
+        // Check for session documents after configure has run,
+        // since the session is set via the configure callback
+        // which executes between BuildingAsync and BuiltAsync.
+        if (context.Context.Documents is not { Count: > 0 } &&
+            context.Resource is AIProfile &&
+            context.Context.CompletionContext?.AdditionalProperties is not null &&
+            context.Context.CompletionContext.AdditionalProperties.TryGetValue("Session", out var sessionObj) &&
+            sessionObj is AIChatSession session &&
+            session.Documents is { Count: > 0 })
+        {
+            context.Context.Documents = session.Documents;
+        }
+
         if (context.Context.Documents is not { Count: > 0 } ||
             context.Context.CompletionContext is null)
         {

@@ -40,8 +40,11 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 
     public async Task HandleAsync(PreemptiveRagContext context)
     {
-        // Only proceed if documents are attached.
-        if (context.OrchestrationContext.Documents is not { Count: > 0 })
+        // Only proceed if documents are attached (either on the orchestration context
+        // or on the session via AdditionalProperties, since session documents are
+        // populated after BuildingAsync via the configure callback).
+        if (context.OrchestrationContext.Documents is not { Count: > 0 } &&
+            !HasSessionDocuments(context.OrchestrationContext))
         {
             return;
         }
@@ -122,6 +125,16 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
         {
             resourceId = profile.ItemId;
             referenceType = AIConstants.DocumentReferenceTypes.Profile;
+
+            // If the profile has no documents, check for session documents.
+            if (context.OrchestrationContext.CompletionContext?.AdditionalProperties is not null &&
+                context.OrchestrationContext.CompletionContext.AdditionalProperties.TryGetValue("Session", out var sessionObj) &&
+                sessionObj is AIChatSession session &&
+                session.Documents is { Count: > 0 })
+            {
+                resourceId = session.SessionId;
+                referenceType = AIConstants.DocumentReferenceTypes.ChatSession;
+            }
         }
 
         if (string.IsNullOrEmpty(resourceId) || string.IsNullOrEmpty(referenceType))
@@ -202,5 +215,13 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
         }
 
         orchestrationContext.SystemMessageBuilder.Append(sb);
+    }
+
+    private static bool HasSessionDocuments(OrchestrationContext orchestrationContext)
+    {
+        return orchestrationContext.CompletionContext?.AdditionalProperties is not null &&
+            orchestrationContext.CompletionContext.AdditionalProperties.TryGetValue("Session", out var sessionObj) &&
+            sessionObj is AIChatSession session &&
+            session.Documents is { Count: > 0 };
     }
 }
