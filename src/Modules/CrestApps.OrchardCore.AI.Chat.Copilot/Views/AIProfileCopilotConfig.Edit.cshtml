@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.AI.Chat.Copilot.Models
 @using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels
 @using OrchardCore
 @using CrestApps.OrchardCore.AI.Chat.Copilot
@@ -9,57 +10,70 @@
         <legend class="@Orchard.GetLabelClasses()">@T["Copilot Configuration"]</legend>
         <div class="@Orchard.GetEndClasses()">
 
-            @* GitHub Authentication Section — toggled dynamically via JS *@
-            <div class="mb-3">
-                <label class="form-label">@T["GitHub Authentication"]</label>
+            @if (Model.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
+            {
+                @* GitHub Authentication Section — toggled dynamically via JS *@
+                <div class="mb-3">
+                    <label class="form-label">@T["GitHub Authentication"]</label>
 
-                @* Connected state *@
-                <div id="ap-github-connected" class="@(Model.IsAuthenticated ? "" : "d-none")">
-                    <div class="alert alert-success d-flex align-items-center justify-content-between py-2">
-                        <span>
-                            <i class="fas fa-check-circle"></i>
-                            @T["Connected as"] <strong id="ap-github-username">@Model.GitHubUsername</strong>
-                        </span>
-                        <a href="#" class="btn btn-sm btn-outline-danger ms-2" id="ap-disconnect-github" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]">
-                            <i class="fa-solid fa-power-off"></i>
+                    @* Connected state *@
+                    <div id="ap-github-connected" class="@(Model.IsAuthenticated ? "" : "d-none")">
+                        <div class="alert alert-success d-flex align-items-center justify-content-between py-2">
+                            <span>
+                                <i class="fas fa-check-circle"></i>
+                                @T["Connected as"] <strong id="ap-github-username">@Model.GitHubUsername</strong>
+                            </span>
+                            <a href="#" class="btn btn-sm btn-outline-danger ms-2" id="ap-disconnect-github" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]">
+                                <i class="fa-solid fa-power-off"></i>
+                            </a>
+                        </div>
+                        <div class="alert alert-warning py-2">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            @T["Using the Copilot orchestrator will allow any user chatting with this AI Profile to utilize your GitHub credentials, not their own."]
+                        </div>
+                    </div>
+
+                    @* Disconnected state *@
+                    <div id="ap-github-disconnected" class="@(Model.IsAuthenticated ? "d-none" : "")">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            @T["Copilot requires GitHub authentication. Sign in with your GitHub account to continue."]
+                        </div>
+                        <a href="#" class="btn btn-primary" id="ap-connect-github">
+                            <i class="fab fa-github"></i> @T["Sign in with GitHub"]
                         </a>
                     </div>
-                    <div class="alert alert-warning py-2">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        @T["Using the Copilot orchestrator will allow any user chatting with this AI Profile to utilize your GitHub credentials, not their own."]
+
+                    @* Loading state *@
+                    <div id="ap-github-loading" class="d-none">
+                        <div class="d-flex align-items-center text-muted py-2">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            @T["Checking GitHub connection..."]
+                        </div>
                     </div>
+
+                    <span class="hint">@T["GitHub OAuth is required for Copilot. Your access token will be securely stored and reused across sessions."]</span>
                 </div>
 
-                @* Disconnected state *@
-                <div id="ap-github-disconnected" class="@(Model.IsAuthenticated ? "d-none" : "")">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        @T["Copilot requires GitHub authentication. Sign in with your GitHub account to continue."]
-                    </div>
-                    <a href="#" class="btn btn-primary" id="ap-connect-github">
-                        <i class="fab fa-github"></i> @T["Sign in with GitHub"]
-                    </a>
+                @* Copilot Model Selection — dropdown from GitHub API *@
+                <div class="mb-3">
+                    <label asp-for="CopilotModel" class="form-label">@T["Copilot Model"]</label>
+                    <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select">
+                    </select>
+                    <span asp-validation-for="CopilotModel" class="text-danger"></span>
+                    <span class="hint">@T["Select the Copilot model to use for this profile."]</span>
                 </div>
-
-                @* Loading state *@
-                <div id="ap-github-loading" class="d-none">
-                    <div class="d-flex align-items-center text-muted py-2">
-                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                        @T["Checking GitHub connection..."]
-                    </div>
+            }
+            else
+            {
+                @* BYOK mode — model is a text input (user specifies model name manually) *@
+                <div class="mb-3">
+                    <label asp-for="CopilotModel" class="form-label">@T["Model Override"]</label>
+                    <input asp-for="CopilotModel" class="form-control" placeholder="@T["Leave empty to use the default model from settings"]" />
+                    <span asp-validation-for="CopilotModel" class="text-danger"></span>
+                    <span class="hint">@T["Optionally override the model name for this profile. Leave empty to use the default model configured in Copilot settings."]</span>
                 </div>
-
-                <span class="hint">@T["GitHub OAuth is required for Copilot. Your access token will be securely stored and reused across sessions."]</span>
-            </div>
-
-            @* Copilot Model Selection *@
-            <div class="mb-3">
-                <label asp-for="CopilotModel" class="form-label">@T["Copilot Model"]</label>
-                <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select">
-                </select>
-                <span asp-validation-for="CopilotModel" class="text-danger"></span>
-                <span class="hint">@T["Select the Copilot model to use for this profile."]</span>
-            </div>
+            }
 
             @* Allow All *@
             <div class="mb-3">
@@ -73,6 +87,8 @@
     </fieldset>
 </div>
 
+@if (Model.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
+{
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
         const connectButton = document.getElementById('ap-connect-github');
@@ -180,3 +196,4 @@
         }
     });
 </script>
+}

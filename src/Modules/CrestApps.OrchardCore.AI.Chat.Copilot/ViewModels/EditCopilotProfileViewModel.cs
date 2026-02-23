@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -32,4 +33,11 @@ public class EditCopilotProfileViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> AvailableModels { get; set; }
+
+    /// <summary>
+    /// The authentication type configured at the site level.
+    /// Used by views to conditionally show GitHub OAuth or BYOK UI.
+    /// </summary>
+    [BindNever]
+    public CopilotAuthenticationType AuthenticationType { get; set; }
 }

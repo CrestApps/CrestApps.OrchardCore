@@ -148,7 +148,7 @@
                         <div>
                             <div v-if="message.role === 'user'" class="ai-admin-widget-msg-role ai-admin-widget-msg-role-user">@T["You"]</div>
                             <div v-else-if="message.role !== 'indicator'" class="ai-admin-widget-msg-role ai-admin-widget-msg-role-assistant">
-                                <i :class="'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')" style="font-size: 0.7rem;"></i>
+                                <i :class="'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')"></i>
                                 @T["Assistant"]
                             </div>
                             <div class="min-w-0">
@@ -166,7 +166,7 @@
             `,
             indicatorTemplate: `
                 <div class="ai-admin-widget-msg-role ai-admin-widget-msg-role-assistant">
-                    <i class="fa fa-robot ai-streaming-icon" style="font-size: 0.7rem; display: inline-block;"></i>
+                    <i class="fa fa-robot ai-streaming-icon" style="display: inline-block;"></i>
                     @T["Assistant"]
                 </div>
             `
