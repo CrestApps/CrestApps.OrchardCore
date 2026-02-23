@@ -114,6 +114,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 Id = chatSession.ProfileId,
                 Type = profile.Type.ToString()
             },
+            chatSession.Documents,
             Messages = chatSession.Prompts.Select(message => new AIChatResponseMessageDetailed
             {
                 Id = message.Id,
@@ -291,6 +292,20 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         (var chatSession, var isNew) = await GetSessionsAsync(_sessionManager, sessionId, profile, prompt);
 
+        // Generate a title when the session was created without one (e.g., via document upload).
+        if (!isNew && chatSession.Title == AIConstants.DefaultBlankSessionTitle && !string.IsNullOrWhiteSpace(prompt))
+        {
+            if (profile.TitleType == AISessionTitleType.Generated)
+            {
+                chatSession.Title = await GetGeneratedTitleAsync(profile, prompt);
+            }
+
+            if (string.IsNullOrEmpty(chatSession.Title) || chatSession.Title == AIConstants.DefaultBlankSessionTitle)
+            {
+                chatSession.Title = Str.Truncate(prompt, 255);
+            }
+        }
+
         chatSession.Prompts.Add(new AIChatSessionPrompt
         {
             Id = IdGenerator.GenerateId(),
@@ -318,6 +333,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
             ctx.ConversationHistory = transcript.ToList();
             ctx.CompletionContext.AdditionalProperties["Session"] = chatSession;
         });
+
+        // Store the session in HttpContext so document tools can resolve session documents.
+        var httpContext = Context.GetHttpContext();
+        httpContext.Items[nameof(AIChatSession)] = chatSession;
 
         // Resolve the orchestrator for this profile and execute the completion.
         var orchestrator = _orchestratorResolver.Resolve(profile.OrchestratorName);

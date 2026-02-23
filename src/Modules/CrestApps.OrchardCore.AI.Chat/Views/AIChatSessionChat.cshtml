@@ -11,6 +11,10 @@
 @using OrchardCore.Entities
 @using System.Text.Json
 @using OrchardCore.Environment.Shell
+@using OrchardCore.Environment.Shell.Scope
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Options
+@using CrestApps.OrchardCore.AI.Core.Models
 
 @model ChatSessionCapsuleViewModel
 
@@ -25,8 +29,22 @@
     var userPromptHtmlId = $"{baseId}_UserPrompt";
     var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
+    var documentBarHtmlId = $"{baseId}_DocumentBar";
 
     var promptGeneratedProfiles = await ProfilesCatalog.GetAsync(AIProfileType.TemplatePrompt);
+
+    var shellFeaturesManager = ShellScope.Services.GetRequiredService<IShellFeaturesManager>();
+    var enabledFeatures = await shellFeaturesManager.GetEnabledFeaturesAsync();
+    var sessionDocumentsFeatureEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatSessionDocuments);
+    var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled
+        && Model.Profile != null
+        && Model.Profile.As<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
+    var allowedExtensions = string.Empty;
+    if (sessionDocumentsEnabled)
+    {
+        var chatDocOptions = ShellScope.Services.GetRequiredService<IOptions<ChatDocumentsOptions>>();
+        allowedExtensions = string.Join(", ", chatDocOptions.Value.AllowedFileExtensions);
+    }
 }
 
 <div class="container-fluid d-flex flex-column h-100">
@@ -48,6 +66,10 @@
     <div class="flex-shrink-0 mb-3">
 
         <div class="text-bg-light rounded border w-100">
+        @if (sessionDocumentsEnabled)
+        {
+            <div id="@documentBarHtmlId" class="d-none"></div>
+        }
         <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
 
         <div class="d-flex justify-content-between px-3 my-2">
@@ -112,7 +134,16 @@
         inputElementSelector: '#@userPromptHtmlId',
         sendButtonElementSelector: '#@buttonHtmlId',
         placeholderElementSelector: '#@placeholderHtmlId',
-        messages: @Html.Raw(JsonSerializer.Serialize(prompts, JOptions.CamelCase))
+        messages: @Html.Raw(JsonSerializer.Serialize(prompts, JOptions.CamelCase)),
+        @if (sessionDocumentsEnabled)
+        {
+            @:sessionDocumentsEnabled: true,
+            @:documentBarSelector: '#@documentBarHtmlId',
+            @:uploadDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument)',
+            @:removeDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument)',
+            @:allowedExtensions: '@allowedExtensions',
+            @:existingDocuments: @Html.Raw(JsonSerializer.Serialize(Model.Session.Documents ?? new List<ChatInteractionDocumentInfo>(), JOptions.CamelCase)),
+        }
     });
 </script>
 

@@ -42,6 +42,12 @@ public sealed class AIChatSession : Entity
     public string ClientId { get; set; }
 
     /// <summary>
+    /// Gets or sets the collection of document references attached to this session.
+    /// Documents are uploaded by users and used for RAG (Retrieval-Augmented Generation).
+    /// </summary>
+    public IList<ChatInteractionDocumentInfo> Documents { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the UTC date and time when the session was first created.
     /// This property helps track the start time of the session in a standardized format (UTC).
     /// </summary>
