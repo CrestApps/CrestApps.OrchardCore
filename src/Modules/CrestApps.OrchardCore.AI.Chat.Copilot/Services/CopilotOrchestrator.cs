@@ -1,17 +1,22 @@
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using GitHub.Copilot.SDK;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
+using OrchardCore.Settings;
 using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
@@ -29,17 +34,23 @@ public sealed class CopilotOrchestrator : IOrchestrator
     private readonly IToolRegistry _toolRegistry;
     private readonly GitHubOAuthService _oauthService;
     private readonly UserManager<IUser> _userManager;
+    private readonly ISiteService _siteService;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger _logger;
 
     public CopilotOrchestrator(
         IToolRegistry toolRegistry,
         GitHubOAuthService oauthService,
         UserManager<IUser> userManager,
+        ISiteService siteService,
+        IDataProtectionProvider dataProtectionProvider,
         ILogger<CopilotOrchestrator> logger)
     {
         _toolRegistry = toolRegistry;
         _oauthService = oauthService;
         _userManager = userManager;
+        _siteService = siteService;
+        _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
     }
 
@@ -79,7 +90,11 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
                 if (aiTool is AIFunction function)
                 {
-                    tools.Add(function);
+                    // Wrap the function so that arguments.Services is always set when
+                    // the Copilot SDK invokes the tool. The SDK does not populate
+                    // AIFunctionArguments.Services, but tools rely on it to resolve
+                    // scoped services (e.g., IHttpContextAccessor, ISiteService).
+                    tools.Add(new ServiceInjectedAIFunction(function, context.ServiceProvider));
                 }
             }
             catch (Exception ex)
@@ -111,6 +126,20 @@ public sealed class CopilotOrchestrator : IOrchestrator
             sessionConfig.Model = metadata.CopilotModel;
         }
 
+        // Load site-level settings to determine authentication mode.
+        var settings = await _siteService.GetSettingsAsync<CopilotSettings>();
+
+        if (settings.AuthenticationType == CopilotAuthenticationType.ApiKey)
+        {
+            // BYOK mode — configure provider on the session config.
+            // The GitHub token is NOT used in this mode; instead, the API key
+            // is passed via SessionConfig.Provider (see ConfigureByokProvider).
+            ConfigureByokProvider(sessionConfig, settings);
+        }
+
+        // For GitHub OAuth mode, the access token is resolved and set on
+        // CopilotClientOptions.GithubToken inside BuildClientOptions below.
+
         if (tools.Count > 0)
         {
             sessionConfig.Tools = tools;
@@ -129,10 +158,10 @@ public sealed class CopilotOrchestrator : IOrchestrator
         }
 
         // Configure MCP servers so Copilot can manage MCP tools natively.
-        await ConfigureMcpServersAsync(context, sessionConfig, cancellationToken);
+        await ConfigureMcpServersAsync(context, sessionConfig);
 
         // Build client options with authentication and CLI flags.
-        var clientOptions = BuildClientOptions(context, metadata);
+        var clientOptions = BuildClientOptions(context, metadata, settings);
 
         string responseText;
 
@@ -160,65 +189,79 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
     /// <summary>
     /// Builds client options from the metadata and context, using the SDK's
-    /// <c>GithubToken</c> property for authentication and <c>CliArgs</c> for
-    /// Copilot execution flags.
+    /// <c>GithubToken</c> property for GitHub OAuth or <c>UseLoggedInUser = false</c>
+    /// for BYOK authentication, and <c>CliArgs</c> for Copilot execution flags.
     /// </summary>
     private CopilotClientOptions BuildClientOptions(
         OrchestrationContext context,
-        CopilotSessionMetadata metadata)
+        CopilotSessionMetadata metadata,
+        CopilotSettings settings)
     {
         var clientOptions = new CopilotClientOptions();
-        string accessToken = null;
 
-        // First, try profile-level credentials from the metadata.
-        if (metadata is not null && !string.IsNullOrEmpty(metadata.ProtectedAccessToken))
+        if (settings.AuthenticationType == CopilotAuthenticationType.ApiKey)
         {
-            accessToken = _oauthService.UnprotectAccessToken(metadata);
+            // BYOK mode — no GitHub token needed; provider config is on SessionConfig.
+            clientOptions.UseLoggedInUser = false;
 
-            if (!string.IsNullOrEmpty(accessToken) && _logger.IsEnabled(LogLevel.Debug))
+            if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.LogDebug(
-                    "CopilotOrchestrator: Using profile-level credential from {Username}",
-                    metadata.GitHubUsername);
+                _logger.LogDebug("CopilotOrchestrator: Using BYOK (API Key) authentication with provider '{ProviderType}'.", settings.ProviderType);
             }
-        }
-
-        // Fall back to the current user's credentials.
-        if (string.IsNullOrEmpty(accessToken) && context.ServiceProvider is not null)
-        {
-            var httpContextAccessor = context.ServiceProvider.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
-            var user = httpContextAccessor?.HttpContext?.User;
-
-            if (user?.Identity?.IsAuthenticated == true)
-            {
-                var orchardUser = _userManager.GetUserAsync(user).GetAwaiter().GetResult();
-
-                if (orchardUser is not null)
-                {
-                    var userId = _userManager.GetUserIdAsync(orchardUser).GetAwaiter().GetResult();
-                    accessToken = _oauthService.GetValidAccessTokenAsync(userId).GetAwaiter().GetResult();
-
-                    if (!string.IsNullOrEmpty(accessToken) && _logger.IsEnabled(LogLevel.Debug))
-                    {
-                        _logger.LogDebug(
-                            "CopilotOrchestrator: Using user-level credential for user {UserId}",
-                            userId);
-                    }
-                }
-            }
-        }
-
-        if (!string.IsNullOrEmpty(accessToken))
-        {
-            // Use the SDK's GithubToken property for authentication.
-            // This sets UseLoggedInUser = false automatically.
-            clientOptions.GithubToken = accessToken;
         }
         else
         {
-            _logger.LogWarning(
-                "CopilotOrchestrator: No valid GitHub access token found. " +
-                "The session may fail without authentication.");
+            // GitHub OAuth mode — resolve access token.
+            string accessToken = null;
+
+            // First, try profile-level credentials from the metadata.
+            if (metadata is not null && !string.IsNullOrEmpty(metadata.ProtectedAccessToken))
+            {
+                accessToken = _oauthService.UnprotectAccessToken(metadata);
+
+                if (!string.IsNullOrEmpty(accessToken) && _logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "CopilotOrchestrator: Using profile-level credential from {Username}",
+                        metadata.GitHubUsername);
+                }
+            }
+
+            // Fall back to the current user's credentials.
+            if (string.IsNullOrEmpty(accessToken) && context.ServiceProvider is not null)
+            {
+                var httpContextAccessor = context.ServiceProvider.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
+                var user = httpContextAccessor?.HttpContext?.User;
+
+                if (user?.Identity?.IsAuthenticated == true)
+                {
+                    var orchardUser = _userManager.GetUserAsync(user).GetAwaiter().GetResult();
+
+                    if (orchardUser is not null)
+                    {
+                        var userId = _userManager.GetUserIdAsync(orchardUser).GetAwaiter().GetResult();
+                        accessToken = _oauthService.GetValidAccessTokenAsync(userId).GetAwaiter().GetResult();
+
+                        if (!string.IsNullOrEmpty(accessToken) && _logger.IsEnabled(LogLevel.Debug))
+                        {
+                            _logger.LogDebug(
+                                "CopilotOrchestrator: Using user-level credential for user {UserId}",
+                                userId);
+                        }
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(accessToken))
+            {
+                clientOptions.GithubToken = accessToken;
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "CopilotOrchestrator: No valid GitHub access token found. " +
+                    "The session may fail without authentication.");
+            }
         }
 
         // Pass the --allow-all flag as a CLI argument when enabled.
@@ -228,6 +271,61 @@ public sealed class CopilotOrchestrator : IOrchestrator
         }
 
         return clientOptions;
+    }
+
+    /// <summary>
+    /// Configures the BYOK provider on the session config using the site-level settings.
+    /// </summary>
+    private void ConfigureByokProvider(SessionConfig sessionConfig, CopilotSettings settings)
+    {
+        // Use model from metadata if set, otherwise fall back to site default.
+        if (string.IsNullOrEmpty(sessionConfig.Model))
+        {
+            sessionConfig.Model = settings.DefaultModel;
+        }
+
+        var providerConfig = new ProviderConfig
+        {
+            Type = settings.ProviderType ?? "openai",
+            BaseUrl = settings.BaseUrl,
+        };
+
+        // Decrypt and set the API key.
+        if (!string.IsNullOrEmpty(settings.ProtectedApiKey))
+        {
+            try
+            {
+                var protector = _dataProtectionProvider.CreateProtector("CrestApps.OrchardCore.AI.Chat.Copilot.Settings");
+                providerConfig.ApiKey = protector.Unprotect(settings.ProtectedApiKey);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "CopilotOrchestrator: Failed to unprotect BYOK API key.");
+            }
+        }
+
+        if (!string.IsNullOrEmpty(settings.WireApi))
+        {
+            providerConfig.WireApi = settings.WireApi;
+        }
+
+        if (string.Equals(settings.ProviderType, "azure", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrEmpty(settings.AzureApiVersion))
+        {
+            providerConfig.Azure = new AzureOptions
+            {
+                ApiVersion = settings.AzureApiVersion,
+            };
+        }
+
+        sessionConfig.Provider = providerConfig;
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "CopilotOrchestrator: Configured BYOK provider type='{Type}', baseUrl='{BaseUrl}', model='{Model}'.",
+                providerConfig.Type, providerConfig.BaseUrl, sessionConfig.Model);
+        }
     }
 
     /// <summary>
@@ -245,7 +343,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
         var responseBuilder = new StringBuilder();
         var completionSource = new TaskCompletionSource<bool>();
-        var hasError = false;
+        string errorMessage = null;
 
         using var subscription = session.On(ev =>
         {
@@ -259,10 +357,13 @@ public sealed class CopilotOrchestrator : IOrchestrator
             }
             else if (ev is SessionErrorEvent errorEvent)
             {
+                var data = errorEvent.Data;
+
                 _logger.LogError(
-                    "CopilotOrchestrator: Session error - {ErrorType}: {Message}",
-                    errorEvent.Data?.ErrorType, errorEvent.Data?.Message);
-                hasError = true;
+                    "CopilotOrchestrator: Session error - {ErrorType}: {Message} (StatusCode: {StatusCode})",
+                    data?.ErrorType, data?.Message, data?.StatusCode);
+
+                errorMessage = BuildErrorMessage(data);
                 completionSource.TrySetResult(false);
             }
         });
@@ -279,14 +380,59 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
         await completionSource.Task.WaitAsync(cancellationToken);
 
+        if (!string.IsNullOrEmpty(errorMessage))
+        {
+            return errorMessage;
+        }
+
         var responseText = responseBuilder.ToString();
 
-        if (string.IsNullOrWhiteSpace(responseText) && !hasError)
+        if (string.IsNullOrWhiteSpace(responseText))
         {
             responseText = "AI drew blank and no message was generated!";
         }
 
         return responseText;
+    }
+
+    /// <summary>
+    /// Builds a user-facing error message from the Copilot session error data.
+    /// </summary>
+    private static string BuildErrorMessage(SessionErrorData data)
+    {
+        if (data is null)
+        {
+            return "The Copilot service encountered an error. Please try again.";
+        }
+
+        var sb = new StringBuilder();
+
+        if (data.StatusCode.HasValue)
+        {
+            var statusCode = (int)data.StatusCode.Value;
+
+            sb.Append(statusCode switch
+            {
+                401 => "**Copilot Authentication failed.** The API key may be invalid or expired. Please verify your API key in the Copilot settings.",
+                403 => "**Copilot Access denied.** The API key does not have permission to access this resource. Please check your API key permissions.",
+                404 => "**Copilot Endpoint not found.** The base URL may be incorrect. Please verify the provider URL in the Copilot settings.",
+                429 => "**Copilot Rate limit exceeded.** Too many requests were sent. Please wait a moment and try again.",
+                >= 500 => $"**Copilot Provider service error (HTTP {statusCode}).** The model provider is experiencing issues. Please try again later.",
+                _ => $"**Copilot Request failed (HTTP {statusCode}).**",
+            });
+        }
+        else
+        {
+            sb.Append("**Copilot session error.**");
+        }
+
+        if (!string.IsNullOrEmpty(data.Message))
+        {
+            sb.Append(' ');
+            sb.Append(data.Message);
+        }
+
+        return sb.ToString();
     }
 
     /// <summary>
@@ -339,8 +485,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
     /// </summary>
     private async Task ConfigureMcpServersAsync(
         OrchestrationContext context,
-        SessionConfig sessionConfig,
-        CancellationToken cancellationToken)
+        SessionConfig sessionConfig)
     {
         var mcpConnectionIds = context.CompletionContext.McpConnectionIds;
 
@@ -424,6 +569,50 @@ public sealed class CopilotOrchestrator : IOrchestrator
                 "CopilotOrchestrator: Configured {Count} MCP connection(s): [{Connections}]",
                 connections.Count,
                 string.Join(", ", connections.Select(c => c.DisplayText ?? c.ItemId)));
+        }
+    }
+
+    /// <summary>
+    /// A thin wrapper around an <see cref="AIFunction"/> that ensures
+    /// <see cref="AIFunctionArguments.Services"/> is always set before the
+    /// inner function is invoked. The Copilot SDK does not populate this
+    /// property, but OrchardCore tools depend on it for scoped service resolution.
+    /// </summary>
+    private sealed class ServiceInjectedAIFunction : AIFunction
+    {
+        private readonly AIFunction _inner;
+        private readonly IServiceProvider _services;
+
+        public ServiceInjectedAIFunction(AIFunction inner, IServiceProvider services)
+        {
+            _inner = inner;
+            _services = services;
+        }
+
+        public override string Name => _inner.Name;
+
+        public override string Description => _inner.Description;
+
+        public override JsonElement JsonSchema => _inner.JsonSchema;
+
+        public override JsonElement? ReturnJsonSchema => _inner.ReturnJsonSchema;
+
+        public override IReadOnlyDictionary<string, object> AdditionalProperties
+            => _inner.AdditionalProperties;
+
+        public override JsonSerializerOptions JsonSerializerOptions
+            => _inner.JsonSerializerOptions;
+
+        public override MethodInfo UnderlyingMethod
+            => _inner.UnderlyingMethod;
+
+        protected override ValueTask<object> InvokeCoreAsync(
+            AIFunctionArguments arguments,
+            CancellationToken cancellationToken)
+        {
+            arguments.Services ??= _services;
+
+            return _inner.InvokeAsync(arguments, cancellationToken);
         }
     }
 }
