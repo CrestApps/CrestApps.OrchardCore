@@ -1,5 +1,7 @@
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.OrchardCore.AI.Core.Handlers;
@@ -88,7 +90,11 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
                 if (aiTool is AIFunction function)
                 {
-                    tools.Add(function);
+                    // Wrap the function so that arguments.Services is always set when
+                    // the Copilot SDK invokes the tool. The SDK does not populate
+                    // AIFunctionArguments.Services, but tools rely on it to resolve
+                    // scoped services (e.g., IHttpContextAccessor, ISiteService).
+                    tools.Add(new ServiceInjectedAIFunction(function, context.ServiceProvider));
                 }
             }
             catch (Exception ex)
@@ -563,6 +569,50 @@ public sealed class CopilotOrchestrator : IOrchestrator
                 "CopilotOrchestrator: Configured {Count} MCP connection(s): [{Connections}]",
                 connections.Count,
                 string.Join(", ", connections.Select(c => c.DisplayText ?? c.ItemId)));
+        }
+    }
+
+    /// <summary>
+    /// A thin wrapper around an <see cref="AIFunction"/> that ensures
+    /// <see cref="AIFunctionArguments.Services"/> is always set before the
+    /// inner function is invoked. The Copilot SDK does not populate this
+    /// property, but OrchardCore tools depend on it for scoped service resolution.
+    /// </summary>
+    private sealed class ServiceInjectedAIFunction : AIFunction
+    {
+        private readonly AIFunction _inner;
+        private readonly IServiceProvider _services;
+
+        public ServiceInjectedAIFunction(AIFunction inner, IServiceProvider services)
+        {
+            _inner = inner;
+            _services = services;
+        }
+
+        public override string Name => _inner.Name;
+
+        public override string Description => _inner.Description;
+
+        public override JsonElement JsonSchema => _inner.JsonSchema;
+
+        public override JsonElement? ReturnJsonSchema => _inner.ReturnJsonSchema;
+
+        public override IReadOnlyDictionary<string, object> AdditionalProperties
+            => _inner.AdditionalProperties;
+
+        public override JsonSerializerOptions JsonSerializerOptions
+            => _inner.JsonSerializerOptions;
+
+        public override MethodInfo UnderlyingMethod
+            => _inner.UnderlyingMethod;
+
+        protected override ValueTask<object> InvokeCoreAsync(
+            AIFunctionArguments arguments,
+            CancellationToken cancellationToken)
+        {
+            arguments.Services ??= _services;
+
+            return _inner.InvokeAsync(arguments, cancellationToken);
         }
     }
 }
