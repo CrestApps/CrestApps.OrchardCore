@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.AI.Core.Orchestration;
 /// with scoped tool injection and progressive tool expansion.
 /// </summary>
 /// <remarks>
-/// <para>When the number of available tools exceeds the <see cref="ProgressiveToolOrchestratorOptions.PlanningThreshold"/>,
+/// <para>When the number of available tools exceeds the <see cref="DefaultOrchestratorOptions.PlanningThreshold"/>,
 /// the orchestrator runs a lightweight planning phase to identify required capabilities,
 /// then scopes the tool set to only the most relevant tools.</para>
 /// <para>For small tool sets (below the threshold), all configured tools are injected directly
@@ -28,7 +28,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
     private readonly AIProviderOptions _providerOptions;
     private readonly IToolRegistry _toolRegistry;
     private readonly ITextTokenizer _tokenizer;
-    private readonly ProgressiveToolOrchestratorOptions _options;
+    private readonly DefaultOrchestratorOptions _options;
     private readonly ILogger _logger;
 
     public DefaultOrchestrator(
@@ -37,7 +37,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
         IOptions<AIProviderOptions> providerOptions,
         IToolRegistry toolRegistry,
         ITextTokenizer tokenizer,
-        IOptions<ProgressiveToolOrchestratorOptions> options,
+        IOptions<DefaultOrchestratorOptions> options,
         ILogger<DefaultOrchestrator> logger)
     {
         _completionService = completionService;

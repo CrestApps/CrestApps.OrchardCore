@@ -328,7 +328,7 @@ public sealed class ProgressiveToolOrchestratorTests
             Options.Create(new AIProviderOptions()),
             toolRegistry ?? new FakeToolRegistry([]),
             new LuceneTextTokenizer(),
-            Options.Create(new ProgressiveToolOrchestratorOptions()),
+            Options.Create(new DefaultOrchestratorOptions()),
             NullLogger<DefaultOrchestrator>.Instance);
     }
 
