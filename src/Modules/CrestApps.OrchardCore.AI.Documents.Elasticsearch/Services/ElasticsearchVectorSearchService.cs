@@ -48,25 +48,25 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
         {
             var response = await _elasticClient.SearchAsync<JsonObject>(s => s
                 .Indices(indexProfile.IndexFullName)
-                .Query(q => q
-                    .Bool(b => b
-                        .Must(
-                            m => m.Term(t => t
-                                .Field(AIConstants.ColumnNames.ReferenceId)
-                                .Value(referenceId)
-                            ),
-                            m => m.Term(t => t
-                                .Field(AIConstants.ColumnNames.ReferenceType)
-                                .Value(referenceType)
-                            )
-                        )
-                    )
-                )
                 .Knn(k => k
                     .Field(AIConstants.ColumnNames.Embedding)
                     .QueryVector(embedding)
                     .K(topN)
                     .NumCandidates(topN * 10)
+                    .Filter(f => f
+                        .Bool(b => b
+                            .Must(
+                                m => m.Term(t => t
+                                    .Field(AIConstants.ColumnNames.ReferenceId)
+                                    .Value(referenceId)
+                                ),
+                                m => m.Term(t => t
+                                    .Field(AIConstants.ColumnNames.ReferenceType)
+                                    .Value(referenceType)
+                                )
+                            )
+                        )
+                    )
                 )
                 .Size(topN)
             , cancellationToken);

@@ -449,12 +449,16 @@ window.chatInteractionManager = function () {
                 isIndicator(message) {
                     return message.role === 'indicator';
                 },
-                sendMessage() {
+                async sendMessage() {
                     let trimmedPrompt = this.prompt.trim();
 
                     if (!trimmedPrompt) {
                         return;
                     }
+
+                    // Flush any pending settings save before sending a message
+                    // to prevent concurrent hub calls that can cause database deadlocks.
+                    await this.flushPendingSave();
 
                     this.addMessage({
                         role: 'user',
@@ -628,6 +632,11 @@ window.chatInteractionManager = function () {
                         if (this.messages[i].isStreaming) {
                             this.messages[i].isStreaming = false;
                         }
+                    }
+
+                    // Save any settings that were deferred during streaming.
+                    if (this.settingsDirty) {
+                        this.debouncedSaveSettings();
                     }
                 },
                 showTypingIndicator() {
@@ -887,6 +896,12 @@ window.chatInteractionManager = function () {
                     if (this.saveSettingsTimeout) {
                         clearTimeout(this.saveSettingsTimeout);
                     }
+
+                    // Don't save while streaming — it will be saved when streaming completes.
+                    if (this.stream) {
+                        return;
+                    }
+
                     // Set a new timeout to save after 850ms of no changes
                     this.saveSettingsTimeout = setTimeout(() => {
                         if (this.settingsDirty) {
@@ -933,7 +948,7 @@ window.chatInteractionManager = function () {
                 saveSettings() {
                     const itemId = this.getItemId();
                     if (!itemId) {
-                        return;
+                        return Promise.resolve();
                     }
 
                     const settings = {};
@@ -965,8 +980,21 @@ window.chatInteractionManager = function () {
                     settings.toolNames = this.getSelectedToolNames();
                     settings.mcpConnectionIds = this.getSelectedMcpConnectionIds();
 
-                    this.connection.invoke("SaveSettings", itemId, settings)
+                    return this.connection.invoke("SaveSettings", itemId, settings)
                         .catch(err => console.error('Error saving settings:', err));
+                },
+                flushPendingSave() {
+                    if (this.saveSettingsTimeout) {
+                        clearTimeout(this.saveSettingsTimeout);
+                        this.saveSettingsTimeout = null;
+                    }
+
+                    if (this.settingsDirty) {
+                        this.settingsDirty = false;
+                        return this.saveSettings();
+                    }
+
+                    return Promise.resolve();
                 },
                 initializeInteraction(itemId, force) {
                     if (this.isInteractionStarted && !force) {
