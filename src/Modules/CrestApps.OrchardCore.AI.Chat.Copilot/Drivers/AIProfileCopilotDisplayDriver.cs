@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Http;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
+using OrchardCore.Settings;
 using USR = OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
@@ -18,6 +20,7 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
     private readonly GitHubOAuthService _oauthService;
     private readonly UserManager<USR.IUser> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
 
@@ -25,11 +28,13 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
         GitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,
         IHttpContextAccessor httpContextAccessor,
+        ISiteService siteService,
         IStringLocalizer<AIProfileCopilotDisplayDriver> stringLocalizer)
     {
         _oauthService = oauthService;
         _userManager = userManager;
         _httpContextAccessor = httpContextAccessor;
+        _siteService = siteService;
         S = stringLocalizer;
     }
 
@@ -42,29 +47,40 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
             model.CopilotModel = copilotSettings.CopilotModel;
             model.IsAllowAll = copilotSettings.IsAllowAll;
 
-            // Check if current user has authenticated with GitHub
-            var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
-            if (user != null)
-            {
-                var userId = await _userManager.GetUserIdAsync(user);
-                model.IsAuthenticated = await _oauthService.IsAuthenticatedAsync(userId);
-                if (model.IsAuthenticated)
-                {
-                    var credential = await _oauthService.GetCredentialAsync(userId);
-                    model.GitHubUsername = credential?.GitHubUsername;
+            // Load site-level settings to determine auth mode.
+            var siteSettings = await _siteService.GetSettingsAsync<CopilotSettings>();
+            model.AuthenticationType = siteSettings.AuthenticationType;
 
-                    // Load available models dynamically from GitHub API.
-                    var models = await _oauthService.ListModelsAsync(userId);
-                    if (models.Count > 0)
+            if (siteSettings.AuthenticationType == CopilotAuthenticationType.ApiKey)
+            {
+                // BYOK mode — no GitHub auth needed; model is a text input.
+                model.AvailableModels = [];
+            }
+            else
+            {
+                // GitHub OAuth mode — check auth and load models from GitHub API.
+                var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
+                if (user != null)
+                {
+                    var userId = await _userManager.GetUserIdAsync(user);
+                    model.IsAuthenticated = await _oauthService.IsAuthenticatedAsync(userId);
+                    if (model.IsAuthenticated)
                     {
-                        model.AvailableModels = models
-                            .Select(m => new SelectListItem(m.Name, m.Id))
-                            .ToList();
+                        var credential = await _oauthService.GetCredentialAsync(userId);
+                        model.GitHubUsername = credential?.GitHubUsername;
+
+                        var models = await _oauthService.ListModelsAsync(userId);
+                        if (models.Count > 0)
+                        {
+                            model.AvailableModels = models
+                                .Select(m => new SelectListItem(m.Name, m.Id))
+                                .ToList();
+                        }
                     }
                 }
-            }
 
-            model.AvailableModels ??= [];
+                model.AvailableModels ??= [];
+            }
         }).Location("Content:3.5");
     }
 
@@ -83,20 +99,25 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
                 IsAllowAll = model.IsAllowAll,
             };
 
-            // Copy the current user's GitHub credential to the profile so
-            // any chat session using this profile can reuse the token.
-            var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
-            if (user is not null)
-            {
-                var userId = await _userManager.GetUserIdAsync(user);
-                var credentials = await _oauthService.GetProtectedCredentialsAsync(userId);
+            var siteSettings = await _siteService.GetSettingsAsync<CopilotSettings>();
 
-                if (credentials is not null)
+            if (siteSettings.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
+            {
+                // Copy the current user's GitHub credential to the profile so
+                // any chat session using this profile can reuse the token.
+                var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
+                if (user is not null)
                 {
-                    copilotSettings.GitHubUsername = credentials.GitHubUsername;
-                    copilotSettings.ProtectedAccessToken = credentials.ProtectedAccessToken;
-                    copilotSettings.ProtectedRefreshToken = credentials.ProtectedRefreshToken;
-                    copilotSettings.ExpiresAt = credentials.ExpiresAt;
+                    var userId = await _userManager.GetUserIdAsync(user);
+                    var credentials = await _oauthService.GetProtectedCredentialsAsync(userId);
+
+                    if (credentials is not null)
+                    {
+                        copilotSettings.GitHubUsername = credentials.GitHubUsername;
+                        copilotSettings.ProtectedAccessToken = credentials.ProtectedAccessToken;
+                        copilotSettings.ProtectedRefreshToken = credentials.ProtectedRefreshToken;
+                        copilotSettings.ExpiresAt = credentials.ExpiresAt;
+                    }
                 }
             }
 

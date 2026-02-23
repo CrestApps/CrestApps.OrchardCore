@@ -1,62 +1,207 @@
+@using CrestApps.OrchardCore.AI.Chat.Copilot.Models
 @model CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels.CopilotSettingsViewModel
 
 <fieldset class="form-group">
     <div class="row">
         <div class="col-12">
-            <h3>@T["GitHub App Configuration"]</h3>
-            <p class="hint">@T["Configure the GitHub App credentials for Copilot authentication."]</p>
-        </div>
-    </div>
-
-    <div class="mb-4">
-        <h4 class="mb-2">@T["How to create a GitHub App"]</h4>
-        <div class="ps-3">
-            <ol>
-                <li>
-                    @T["In GitHub, go to <strong>Settings</strong> &rarr; <strong>Developer settings</strong> &rarr; <strong>GitHub Apps</strong> and click <strong>New GitHub App</strong>. You can also open {0}.",
-                    Html.Raw("<a href=\"https://github.com/settings/apps/new\" target=\"_blank\" rel=\"noopener noreferrer\">this link</a>")]
-                </li>
-                <li>@T["Enter an <strong>App name</strong> (e.g., \"Orchard Copilot Integration\") and your site's <strong>Homepage URL</strong>."]</li>
-                <li>
-                    @T["Under <strong>Callback URL</strong>, enter the following value:"]
-                    <div class="input-group mt-1 mb-2" style="max-width: 600px;">
-                        <input type="text" class="form-control" readonly value="@Model.ComputedCallbackUrl" id="computed-callback-url" />
-                        <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('computed-callback-url').value)">
-                            <i class="fa-regular fa-copy" aria-hidden="true"></i> @T["Copy"]
-                        </button>
-                    </div>
-                </li>
-                <li>@T["Webhooks are <strong>not required</strong> for this integration. Under <strong>Webhook</strong>, uncheck <strong>Active</strong> (it is enabled by default in GitHub)."]</li>
-                <li>@T["Under <strong>Permissions</strong>, grant <strong>Copilot Chat &rarr; Read-only</strong> access under \"Account permissions\" to allow model listing."]</li>
-                <li>@T["Choose where the app can be installed (only your account, or any account) and click <strong>Create GitHub App</strong>."]</li>
-                <li>@T["On the app's settings page, copy the <strong>Client ID</strong> and paste it below."]</li>
-                <li>@T["Click <strong>Generate a new client secret</strong>, copy the generated secret, and paste it below."]</li>
-            </ol>
-            <p class="hint">
-                @T["Docs: {0}",
-                                Html.Raw("<a href=\"https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps\" target=\"_blank\" rel=\"noopener noreferrer\">About creating GitHub Apps</a>")]
-            </p>
+            <h3>@T["Copilot Authentication"]</h3>
+            <p class="hint">@T["Configure how the Copilot orchestrator authenticates with the AI provider."]</p>
         </div>
     </div>
 
     <div class="mb-3">
-        <label asp-for="ClientId" class="form-label">@T["Client ID"]</label>
-        <input asp-for="ClientId" class="form-control" />
-        <span asp-validation-for="ClientId" class="text-danger"></span>
-        <span class="hint">@T["The Client ID from your GitHub App."]</span>
+        <label asp-for="AuthenticationType" class="form-label">@T["Authentication Type"]</label>
+        <select asp-for="AuthenticationType" asp-items="Model.AuthenticationTypes" class="form-select" id="copilot-auth-type">
+        </select>
+        <span class="hint">@T["Choose how the Copilot orchestrator authenticates. \"GitHub Signed-in User\" requires a GitHub Copilot subscription. \"API Key (BYOK)\" uses your own API key from a model provider."]</span>
     </div>
 
-    <div class="mb-3">
-        <label asp-for="ClientSecret" class="form-label">@T["Client Secret"]</label>
-        <input asp-for="ClientSecret" type="password" class="form-control" placeholder="@T["Enter new secret to update"]" />
-        <span asp-validation-for="ClientSecret" class="text-danger"></span>
-        @if (Model.HasSecret)
-        {
-            <span class="hint text-success">@T["A client secret has been securely stored. Enter a new value to replace it, or leave empty to keep the existing secret."]</span>
-        }
-        else
-        {
-            <span class="hint">@T["The Client Secret from your GitHub App."]</span>
-        }
+    @* ── GitHub OAuth Section ── *@
+    <div id="copilot-github-oauth-section" class="@(Model.AuthenticationType == CopilotAuthenticationType.ApiKey ? "d-none" : "")">
+        <div class="mb-4">
+            <h4 class="mb-2">@T["How to create a GitHub App"]</h4>
+            <div class="ps-3">
+                <ol>
+                    <li>
+                        @T["In GitHub, go to <strong>Settings</strong> &rarr; <strong>Developer settings</strong> &rarr; <strong>GitHub Apps</strong> and click <strong>New GitHub App</strong>. You can also open {0}.",
+                        Html.Raw("<a href=\"https://github.com/settings/apps/new\" target=\"_blank\" rel=\"noopener noreferrer\">this link</a>")]
+                    </li>
+                    <li>@T["Enter an <strong>App name</strong> (e.g., \"Orchard Copilot Integration\") and your site's <strong>Homepage URL</strong>."]</li>
+                    <li>
+                        @T["Under <strong>Callback URL</strong>, enter the following value:"]
+                        <div class="input-group mt-1 mb-2" style="max-width: 600px;">
+                            <input type="text" class="form-control" readonly value="@Model.ComputedCallbackUrl" id="computed-callback-url" />
+                            <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('computed-callback-url').value)">
+                                <i class="fa-regular fa-copy" aria-hidden="true"></i> @T["Copy"]
+                            </button>
+                        </div>
+                    </li>
+                    <li>@T["Webhooks are <strong>not required</strong> for this integration. Under <strong>Webhook</strong>, uncheck <strong>Active</strong> (it is enabled by default in GitHub)."]</li>
+                    <li>@T["Under <strong>Permissions</strong>, grant <strong>Copilot Chat &rarr; Read-only</strong> access under \"Account permissions\" to allow model listing."]</li>
+                    <li>@T["Choose where the app can be installed (only your account, or any account) and click <strong>Create GitHub App</strong>."]</li>
+                    <li>@T["On the app's settings page, copy the <strong>Client ID</strong> and paste it below."]</li>
+                    <li>@T["Click <strong>Generate a new client secret</strong>, copy the generated secret, and paste it below."]</li>
+                </ol>
+                <p class="hint">
+                    @T["Docs: {0}",
+                                    Html.Raw("<a href=\"https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps\" target=\"_blank\" rel=\"noopener noreferrer\">About creating GitHub Apps</a>")]
+                </p>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ClientId" class="form-label">@T["Client ID"]</label>
+            <input asp-for="ClientId" class="form-control" />
+            <span asp-validation-for="ClientId" class="text-danger"></span>
+            <span class="hint">@T["The Client ID from your GitHub App."]</span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ClientSecret" class="form-label">@T["Client Secret"]</label>
+            <input asp-for="ClientSecret" type="password" class="form-control" placeholder="@T["Enter new secret to update"]" />
+            <span asp-validation-for="ClientSecret" class="text-danger"></span>
+            @if (Model.HasSecret)
+            {
+                <span class="hint text-success">@T["A client secret has been securely stored. Enter a new value to replace it, or leave empty to keep the existing secret."]</span>
+            }
+            else
+            {
+                <span class="hint">@T["The Client Secret from your GitHub App."]</span>
+            }
+        </div>
+    </div>
+
+    @* ── BYOK (API Key) Section ── *@
+    <div id="copilot-api-key-section" class="@(Model.AuthenticationType == CopilotAuthenticationType.ApiKey ? "" : "d-none")">
+        <div class="mb-4">
+            <h4 class="mb-2">@T["API Key (BYOK) Configuration"]</h4>
+            <p class="hint">@T["Use your own API key from a model provider. No GitHub Copilot subscription is required. {0}",
+                Html.Raw("<a href=\"https://github.com/github/copilot-sdk/blob/main/docs/auth/byok.md\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more about BYOK</a>")]</p>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ProviderType" class="form-label">@T["Provider Type"]</label>
+            <select asp-for="ProviderType" asp-items="Model.ProviderTypes" class="form-select" id="copilot-provider-type">
+            </select>
+            <span asp-validation-for="ProviderType" class="text-danger"></span>
+            <span class="hint">@T["Select the AI provider type."]</span>
+        </div>
+
+        @* Provider-specific instructions *@
+        <div id="copilot-provider-instructions">
+            <div class="copilot-provider-hint copilot-provider-hint-openai @(Model.ProviderType != "openai" ? "d-none" : "")">
+                <div class="alert alert-info py-2 mb-3">
+                    <strong>@T["OpenAI / OpenAI-compatible"]</strong><br />
+                    @T["Works with OpenAI API and any OpenAI-compatible endpoint (Ollama, vLLM, LiteLLM, Azure AI Foundry with <code>/openai/v1/</code> path, etc.)."]<br />
+                    @T["<strong>Base URL</strong> should include the full path, e.g., <code>https://api.openai.com/v1</code> or <code>http://localhost:11434/v1</code> for Ollama."]<br />
+                    @T["API key is optional for local providers like Ollama."]
+                </div>
+            </div>
+            <div class="copilot-provider-hint copilot-provider-hint-azure @(Model.ProviderType != "azure" ? "d-none" : "")">
+                <div class="alert alert-info py-2 mb-3">
+                    <strong>@T["Azure OpenAI"]</strong><br />
+                    @T["Use for native Azure OpenAI endpoints at <code>*.openai.azure.com</code>."]<br />
+                    @T["<strong>Base URL</strong> should be the deployment URL, e.g., <code>https://&lt;deployment-name&gt;.openai.azure.com/</code>. Do <strong>not</strong> include <code>/openai/v1</code> — the SDK handles path construction."]<br />
+                    @T["An <strong>API Key</strong> and <strong>Azure API Version</strong> are required."]
+                </div>
+            </div>
+            <div class="copilot-provider-hint copilot-provider-hint-anthropic @(Model.ProviderType != "anthropic" ? "d-none" : "")">
+                <div class="alert alert-info py-2 mb-3">
+                    <strong>@T["Anthropic"]</strong><br />
+                    @T["For direct Anthropic API access to Claude models."]<br />
+                    @T["<strong>Base URL</strong> should be <code>https://api.anthropic.com</code>."]
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="BaseUrl" class="form-label">@T["Base URL"]</label>
+            <input asp-for="BaseUrl" class="form-control" id="copilot-base-url" placeholder="https://api.openai.com/v1" />
+            <span asp-validation-for="BaseUrl" class="text-danger"></span>
+            <span class="hint">@T["The API endpoint URL for your provider."]</span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ApiKey" class="form-label">@T["API Key"]</label>
+            <input asp-for="ApiKey" type="password" class="form-control" placeholder="@T["Enter API key"]" />
+            <span asp-validation-for="ApiKey" class="text-danger"></span>
+            @if (Model.HasApiKey)
+            {
+                <span class="hint text-success">@T["An API key has been securely stored. Enter a new value to replace it, or leave empty to keep the existing key."]</span>
+            }
+            else
+            {
+                <span class="hint">@T["The API key from your provider. Optional for local providers like Ollama."]</span>
+            }
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="DefaultModel" class="form-label">@T["Default Model"]</label>
+            <input asp-for="DefaultModel" class="form-control" placeholder="gpt-4o" />
+            <span asp-validation-for="DefaultModel" class="text-danger"></span>
+            <span class="hint">@T["The model name or deployment name to use (e.g., \"gpt-4o\", \"claude-3.5-sonnet\"). This is required for BYOK."]</span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="WireApi" class="form-label">@T["Wire API Format"]</label>
+            <select asp-for="WireApi" asp-items="Model.WireApiOptions" class="form-select">
+            </select>
+            <span class="hint">@T["\"Chat Completions\" works for most models. Use \"Responses\" for GPT-5 series models that support the newer responses format."]</span>
+        </div>
+
+        <div class="mb-3 @(Model.ProviderType != "azure" ? "d-none" : "")" id="copilot-azure-version-group">
+            <label asp-for="AzureApiVersion" class="form-label">@T["Azure API Version"]</label>
+            <input asp-for="AzureApiVersion" class="form-control" placeholder="2024-10-21" />
+            <span asp-validation-for="AzureApiVersion" class="text-danger"></span>
+            <span class="hint">@T["Required for Azure provider. Default: <code>2024-10-21</code>."]</span>
+        </div>
     </div>
 </fieldset>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        const authTypeSelect = document.getElementById('copilot-auth-type');
+        const githubSection = document.getElementById('copilot-github-oauth-section');
+        const apiKeySection = document.getElementById('copilot-api-key-section');
+        const providerTypeSelect = document.getElementById('copilot-provider-type');
+        const azureVersionGroup = document.getElementById('copilot-azure-version-group');
+        const providerHints = document.querySelectorAll('.copilot-provider-hint');
+
+        function toggleAuthSections() {
+            const isApiKey = authTypeSelect.value === '@(nameof(CopilotAuthenticationType.ApiKey))';
+            githubSection.classList.toggle('d-none', isApiKey);
+            apiKeySection.classList.toggle('d-none', !isApiKey);
+        }
+
+        function toggleProviderHints() {
+            const providerType = providerTypeSelect.value;
+            providerHints.forEach(function (el) {
+                el.classList.add('d-none');
+            });
+            const activeHint = document.querySelector('.copilot-provider-hint-' + providerType);
+            if (activeHint) {
+                activeHint.classList.remove('d-none');
+            }
+            azureVersionGroup.classList.toggle('d-none', providerType !== 'azure');
+
+            // Update Base URL placeholder based on provider type.
+            const baseUrlInput = document.getElementById('copilot-base-url');
+            if (baseUrlInput) {
+                const placeholders = {
+                    'openai': 'https://api.openai.com/v1',
+                    'azure': 'https://<deployment-name>.openai.azure.com/',
+                    'anthropic': 'https://api.anthropic.com',
+                };
+                baseUrlInput.setAttribute('placeholder', placeholders[providerType] || 'https://api.openai.com/v1');
+            }
+        }
+
+        if (authTypeSelect) {
+            authTypeSelect.addEventListener('change', toggleAuthSections);
+        }
+
+        if (providerTypeSelect) {
+            providerTypeSelect.addEventListener('change', toggleProviderHints);
+        }
+    });
+</script>
