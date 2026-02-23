@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+using CrestApps.OrchardCore.AI.Core;
 using Elastic.Clients.Elasticsearch.Mapping;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Models;
@@ -59,6 +59,7 @@ public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndex
         {
             Dims = embeddingDimensions,
             Index = true,
+            Similarity = DenseVectorSimilarity.Cosine,
         };
 
         indexProfile.Put(metadata);
