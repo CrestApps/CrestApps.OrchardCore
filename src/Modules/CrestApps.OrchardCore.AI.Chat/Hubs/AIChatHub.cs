@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Data.Documents;
 using OrchardCore.Liquid;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 
@@ -29,6 +30,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly IAICompletionContextBuilder _completionContextBuilder;
     private readonly IOrchestrationContextBuilder _orchestrationContextBuilder;
     private readonly IOrchestratorResolver _orchestratorResolver;
+    private readonly IEnumerable<IAIChatSessionHandler> _sessionHandlers;
+    private readonly IClock _clock;
     private readonly ILogger<AIChatHub> _logger;
 
     protected readonly IStringLocalizer S;
@@ -43,6 +46,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
         IAICompletionContextBuilder completionContextBuilder,
         IOrchestrationContextBuilder orchestrationContextBuilder,
         IOrchestratorResolver orchestratorResolver,
+        IEnumerable<IAIChatSessionHandler> sessionHandlers,
+        IClock clock,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
     {
@@ -55,6 +60,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _completionContextBuilder = completionContextBuilder;
         _orchestrationContextBuilder = orchestrationContextBuilder;
         _orchestratorResolver = orchestratorResolver;
+        _sessionHandlers = sessionHandlers;
+        _clock = clock;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -292,6 +299,18 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         (var chatSession, var isNew) = await GetSessionsAsync(_sessionManager, sessionId, profile, prompt);
 
+        var utcNow = _clock.UtcNow;
+
+        // Handle session reopen if closed.
+        if (chatSession.Status == ChatSessionStatus.Closed)
+        {
+            chatSession.Status = ChatSessionStatus.Active;
+            chatSession.ClosedAtUtc = null;
+        }
+
+        // Update last activity.
+        chatSession.LastActivityUtc = utcNow;
+
         // Generate a title when the session was created without one (e.g., via document upload).
         if (!isNew && chatSession.Title == AIConstants.DefaultBlankSessionTitle && !string.IsNullOrWhiteSpace(prompt))
         {
@@ -391,6 +410,14 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             chatSession.Prompts.Add(assistantMessage);
         }
+
+        var context = new ChatMessageCompletedContext
+        {
+            Profile = profile,
+            ChatSession = chatSession,
+        };
+
+        await _sessionHandlers.InvokeAsync((handler, ctx) => handler.MessageCompletedAsync(ctx), context, _logger);
 
         await _sessionManager.SaveAsync(chatSession);
     }
@@ -511,5 +538,4 @@ public class AIChatHub : Hub<IAIChatHubClient>
             await writer.WriteAsync(partialMessage, cancellationToken);
         }
     }
-
 }

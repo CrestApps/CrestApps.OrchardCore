@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Models;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.AI.Core.Indexes;
@@ -15,4 +16,8 @@ public sealed class AIChatSessionIndex : MapIndex
     public string UserId { get; set; }
 
     public string ClientId { get; set; }
+
+    public ChatSessionStatus Status { get; set; }
+
+    public DateTime LastActivityUtc { get; set; }
 }
