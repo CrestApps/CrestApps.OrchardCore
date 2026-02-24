@@ -179,6 +179,7 @@ public sealed class ChatCoreStartup : StartupBase
 
         // Register the data extraction service.
         services.AddScoped<DataExtractionService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());
 
         // Register orchestration services for AI Profile chat
         services.AddOrchestrationServices();

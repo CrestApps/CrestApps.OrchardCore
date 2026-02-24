@@ -11,6 +11,11 @@
 </div>
 
 <div id="dataExtractionSettings" style="@(Model.EnableDataExtraction ? "" : "display:none")">
+    <div class="alert alert-info mb-3">
+        <i class="fa-solid fa-circle-info me-1"></i>
+        @T["Data extraction runs after each qualifying message exchange. Additionally, when an AI session is closed (either due to inactivity or natural conversation ending), a final extraction is automatically performed to capture any remaining data."]
+    </div>
+
     <div class="row mb-3">
         <div class="col-md-6">
             <label class="form-label" asp-for="ExtractionCheckInterval">@T["Extraction Check Interval"]</label>
@@ -20,7 +25,7 @@
         <div class="col-md-6">
             <label class="form-label" asp-for="SessionInactivityTimeoutInMinutes">@T["Session Inactivity Timeout (minutes)"]</label>
             <input type="number" class="form-control" asp-for="SessionInactivityTimeoutInMinutes" min="1" />
-            <span class="hint">@T["Sessions inactive longer than this duration will be automatically closed. Default is 30 minutes."]</span>
+            <span class="hint">@T["Sessions inactive longer than this duration will be automatically closed. Must be at least 1 minute. Default is 30 minutes."]</span>
         </div>
     </div>
 
@@ -46,18 +51,22 @@
                             <div class="mb-3">
                                 <label class="form-label">@T["Name"]</label>
                                 <input type="text" class="form-control entry-name-input" name="@Html.NameFor(m => m.Entries[i].Name)" value="@Model.Entries[i].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., customer_name"]" />
+                                <span class="hint">@T["A unique identifier for this field. Only alphanumeric characters and underscores are allowed."]</span>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">@T["Description"]</label>
                                 <input type="text" class="form-control" name="@Html.NameFor(m => m.Entries[i].Description)" value="@Model.Entries[i].Description" placeholder="@T["What to extract"]" />
+                                <span class="hint">@T["Describes what data to extract from the conversation. The AI model uses this to understand what to look for."]</span>
                             </div>
                             <div class="form-check mb-2">
                                 <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Entries[i].AllowMultipleValues)" value="true" @(Model.Entries[i].AllowMultipleValues ? "checked" : "") />
                                 <label class="form-check-label">@T["Allow Multiple Values"]</label>
+                                <span class="hint dashed">@T["When enabled, the field can accumulate multiple extracted values across messages (e.g., a list of mentioned product names)."]</span>
                             </div>
                             <div class="form-check mb-2">
                                 <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Entries[i].IsUpdatable)" value="true" @(Model.Entries[i].IsUpdatable ? "checked" : "") />
                                 <label class="form-check-label">@T["Updatable"]</label>
+                                <span class="hint dashed">@T["When enabled, the extracted value can be replaced if the user provides updated information in a later message."]</span>
                             </div>
                         </div>
                     </div>
@@ -98,10 +107,10 @@
                     '</div>' +
                     '<div id="' + collapseId + '" class="collapse show">' +
                         '<div class="card-body">' +
-                            '<div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control entry-name-input" name="' + prefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., customer_name" /></div>' +
-                            '<div class="mb-3"><label class="form-label">Description</label><input type="text" class="form-control" name="' + prefix + '[' + index + '].Description" placeholder="What to extract" /></div>' +
-                            '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="' + prefix + '[' + index + '].AllowMultipleValues" value="true" /><label class="form-check-label">Allow Multiple Values</label></div>' +
-                            '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="' + prefix + '[' + index + '].IsUpdatable" value="true" /><label class="form-check-label">Updatable</label></div>' +
+                            '<div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control entry-name-input" name="' + prefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., customer_name" /><span class="hint">A unique identifier for this field. Only alphanumeric characters and underscores are allowed.</span></div>' +
+                            '<div class="mb-3"><label class="form-label">Description</label><input type="text" class="form-control" name="' + prefix + '[' + index + '].Description" placeholder="What to extract" /><span class="hint">Describes what data to extract from the conversation. The AI model uses this to understand what to look for.</span></div>' +
+                            '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="' + prefix + '[' + index + '].AllowMultipleValues" value="true" /><label class="form-check-label">Allow Multiple Values</label><span class="hint dashed">When enabled, the field can accumulate multiple extracted values across messages.</span></div>' +
+                            '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="' + prefix + '[' + index + '].IsUpdatable" value="true" /><label class="form-check-label">Updatable</label><span class="hint dashed">When enabled, the extracted value can be replaced if the user provides updated information.</span></div>' +
                         '</div>' +
                     '</div>';
                 container.appendChild(card);

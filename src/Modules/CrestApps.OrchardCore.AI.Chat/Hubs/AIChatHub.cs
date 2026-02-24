@@ -3,23 +3,19 @@ using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.Support;
 using Fluid;
 using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Data.Documents;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
-using OrchardCore.Workflows.Services;
 
 namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 
@@ -34,8 +30,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly IAICompletionContextBuilder _completionContextBuilder;
     private readonly IOrchestrationContextBuilder _orchestrationContextBuilder;
     private readonly IOrchestratorResolver _orchestratorResolver;
-    private readonly DataExtractionService _dataExtractionService;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IEnumerable<IAIChatSessionHandler> _sessionHandlers;
     private readonly IClock _clock;
     private readonly ILogger<AIChatHub> _logger;
 
@@ -51,8 +46,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         IAICompletionContextBuilder completionContextBuilder,
         IOrchestrationContextBuilder orchestrationContextBuilder,
         IOrchestratorResolver orchestratorResolver,
-        DataExtractionService dataExtractionService,
-        IServiceProvider serviceProvider,
+        IEnumerable<IAIChatSessionHandler> sessionHandlers,
         IClock clock,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
@@ -66,8 +60,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _completionContextBuilder = completionContextBuilder;
         _orchestrationContextBuilder = orchestrationContextBuilder;
         _orchestratorResolver = orchestratorResolver;
-        _dataExtractionService = dataExtractionService;
-        _serviceProvider = serviceProvider;
+        _sessionHandlers = sessionHandlers;
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
@@ -418,8 +411,13 @@ public class AIChatHub : Hub<IAIChatHubClient>
             chatSession.Prompts.Add(assistantMessage);
         }
 
-        // Run data extraction after the main AI response.
-        await RunDataExtractionAsync(profile, chatSession, prompt, assistantMessage.Content, utcNow, cancellationToken);
+        var context = new ChatMessageCompletedContext
+        {
+            Profile = profile,
+            ChatSession = chatSession,
+        };
+
+        await _sessionHandlers.InvokeAsync((handler, ctx) => handler.MessageCompletedAsync(ctx), context, _logger);
 
         await _sessionManager.SaveAsync(chatSession);
     }
@@ -540,86 +538,4 @@ public class AIChatHub : Hub<IAIChatHubClient>
             await writer.WriteAsync(partialMessage, cancellationToken);
         }
     }
-
-    private async Task RunDataExtractionAsync(
-        AIProfile profile,
-        AIChatSession chatSession,
-        string userMessage,
-        string assistantMessage,
-        DateTime utcNow,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var settings = profile.GetSettings<AIProfileDataExtractionSettings>();
-
-            var promptCount = chatSession.Prompts.Count(p => p.Role == ChatRole.User);
-
-            if (!DataExtractionService.ShouldExtract(settings, promptCount))
-            {
-                return;
-            }
-
-            var fieldsToExtract = DataExtractionService.GetFieldsToExtract(settings, chatSession);
-
-            if (fieldsToExtract.Count == 0)
-            {
-                return;
-            }
-
-            var results = await _dataExtractionService.ExtractAsync(
-                profile, chatSession, fieldsToExtract,
-                assistantMessage, userMessage, cancellationToken);
-
-            if (results.Count == 0)
-            {
-                return;
-            }
-
-            var changeSet = DataExtractionService.ApplyExtraction(chatSession, settings, results, utcNow);
-
-            // Trigger workflow events for each newly extracted field.
-            foreach (var field in changeSet.NewFields)
-            {
-                await TriggerFieldExtractedEventAsync(chatSession, profile, field, utcNow);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Data extraction failed for session '{SessionId}'.", chatSession.SessionId);
-        }
-    }
-
-    private async Task TriggerFieldExtractedEventAsync(AIChatSession chatSession, AIProfile profile, ExtractedFieldChange field, DateTime utcNow)
-    {
-        try
-        {
-            var workflowManager = _serviceProvider.GetService<IWorkflowManager>();
-
-            if (workflowManager == null)
-            {
-                return;
-            }
-
-            var input = new Dictionary<string, object>
-            {
-                { "SessionId", chatSession.SessionId },
-                { "ProfileId", profile.ItemId },
-                { "FieldName", field.FieldName },
-                { "Value", field.Value },
-                { "IsMultiple", field.IsMultiple },
-                { "Timestamp", utcNow },
-            };
-
-            await workflowManager.TriggerEventAsync(
-                nameof(AIChatSessionFieldExtractedEvent),
-                input,
-                correlationId: chatSession.SessionId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to trigger AIChatSessionFieldExtractedEvent for session '{SessionId}'.", chatSession.SessionId);
-        }
-    }
-
 }

@@ -51,7 +51,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 
             // Query active sessions that are past the inactivity timeout.
             var inactiveSessions = await session.Query<AIChatSession, AIChatSessionIndex>(
-                    i => i.ProfileId == profile.ItemId,
+                    i => i.ProfileId == profile.ItemId && i.Status == ChatSessionStatus.Active && i.LastActivityUtc < cutoffUtc,
                     collection: AIConstants.CollectionName)
                 .ListAsync(cancellationToken);
 
@@ -60,16 +60,6 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 if (cancellationToken.IsCancellationRequested)
                 {
                     break;
-                }
-
-                if (chatSession.Status != ChatSessionStatus.Active)
-                {
-                    continue;
-                }
-
-                if (chatSession.LastActivityUtc >= cutoffUtc)
-                {
-                    continue;
                 }
 
                 chatSession.Status = ChatSessionStatus.Closed;
@@ -82,12 +72,12 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                     logger.LogDebug("Closed inactive AI chat session '{SessionId}' for profile '{ProfileId}'.", chatSession.SessionId, profile.ItemId);
                 }
 
-                // Trigger workflow event if workflows are available.
-                try
-                {
-                    var workflowManager = serviceProvider.GetService<IWorkflowManager>();
+                var workflowManager = serviceProvider.GetService<IWorkflowManager>();
 
-                    if (workflowManager != null)
+                if (workflowManager != null)
+                {
+                    // Trigger workflow event if workflows are available.
+                    try
                     {
                         var input = new Dictionary<string, object>
                         {
@@ -101,10 +91,10 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                             input,
                             correlationId: chatSession.SessionId);
                     }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to trigger AIChatSessionClosedEvent for session '{SessionId}'.", chatSession.SessionId);
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to trigger AIChatSessionClosedEvent for session '{SessionId}'.", chatSession.SessionId);
+                    }
                 }
             }
         }

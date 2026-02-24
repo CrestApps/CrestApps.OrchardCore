@@ -82,7 +82,7 @@ public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfi
 
         if (model.SessionInactivityTimeoutInMinutes < 1)
         {
-            model.SessionInactivityTimeoutInMinutes = 30;
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SessionInactivityTimeoutInMinutes), S["Session Inactivity Timeout must be at least 1 minute."]);
         }
 
         profile.AlterSettings<AIProfileDataExtractionSettings>(settings =>

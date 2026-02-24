@@ -100,7 +100,8 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
                     provider.DefaultConnectionName = connections.FirstOrDefault().Key;
                 }
 
-                var defaultDeploymentName = providerNode["DefaultChatDeploymentName"]?.GetValue<string>()
+                var defaultDeploymentName = providerNode["ChatDeploymentName"]?.GetValue<string>()
+                    ?? providerNode["DefaultChatDeploymentName"]?.GetValue<string>()
                     ?? providerNode["DefaultDeploymentName"]?.GetValue<string>();
 
                 if (!string.IsNullOrEmpty(defaultDeploymentName))
@@ -112,21 +113,24 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
                     provider.DefaultChatDeploymentName = connections.FirstOrDefault().Value?.GetChatDeploymentOrDefaultName(false);
                 }
 
-                var defaultEmbeddingDeploymentName = providerNode["DefaultEmbeddingDeploymentName"]?.GetValue<string>();
+                var defaultEmbeddingDeploymentName = providerNode["EmbeddingDeploymentName"]?.GetValue<string>()
+                    ?? providerNode["DefaultEmbeddingDeploymentName"]?.GetValue<string>();
 
                 if (!string.IsNullOrEmpty(defaultEmbeddingDeploymentName))
                 {
                     provider.DefaultEmbeddingDeploymentName = defaultEmbeddingDeploymentName;
                 }
 
-                var defaultImagesDeploymentName = providerNode["DefaultImagesDeploymentName"]?.GetValue<string>();
+                var defaultImagesDeploymentName = providerNode["ImagesDeploymentName"]?.GetValue<string>()
+                    ?? providerNode["DefaultImagesDeploymentName"]?.GetValue<string>();
 
                 if (!string.IsNullOrEmpty(defaultImagesDeploymentName))
                 {
                     provider.DefaultImagesDeploymentName = defaultImagesDeploymentName;
                 }
 
-                var defaultUtilityDeploymentName = providerNode["DefaultUtilityDeploymentName"]?.GetValue<string>();
+                var defaultUtilityDeploymentName = providerNode["UtilityDeploymentName"]?.GetValue<string>()
+                    ?? providerNode["DefaultUtilityDeploymentName"]?.GetValue<string>();
 
                 if (!string.IsNullOrEmpty(defaultUtilityDeploymentName))
                 {

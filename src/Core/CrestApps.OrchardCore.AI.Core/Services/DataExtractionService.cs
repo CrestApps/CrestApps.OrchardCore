@@ -1,33 +1,67 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Core;
+using J2N.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
 public sealed class DataExtractionService
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-    };
-
     private readonly IAIClientFactory _clientFactory;
+    private readonly IClock _clock;
     private readonly AIProviderOptions _providerOptions;
     private readonly ILogger _logger;
 
     public DataExtractionService(
         IAIClientFactory clientFactory,
         IOptions<AIProviderOptions> providerOptions,
+        IClock clock,
         ILogger<DataExtractionService> logger)
     {
         _clientFactory = clientFactory;
+        _clock = clock;
         _providerOptions = providerOptions.Value;
         _logger = logger;
     }
 
-    public static bool ShouldExtract(AIProfileDataExtractionSettings settings, int promptCount)
+    /// <summary>
+    /// Runs the full extraction pipeline: checks whether extraction should run,
+    /// determines which fields to extract, calls the AI model, and applies results
+    /// to the session. Returns the change set (may be empty).
+    /// </summary>
+    public async Task<ExtractionChangeSet> ProcessAsync(
+        AIProfile profile,
+        AIChatSession session,
+        CancellationToken cancellationToken = default)
+    {
+        var settings = profile.GetSettings<AIProfileDataExtractionSettings>();
+        var promptCount = session.Prompts.Count(p => p.Role == ChatRole.User);
+
+        if (!ShouldExtract(settings, promptCount))
+        {
+            return null;
+        }
+
+        var fieldsToExtract = GetFieldsToExtract(settings, session);
+
+        if (fieldsToExtract.Count == 0)
+        {
+            return null;
+        }
+
+        var (results, sessionEnded) = await ExtractAsync(profile, session, fieldsToExtract, cancellationToken);
+
+        var changeSet = ApplyExtraction(session, settings, results);
+        changeSet.SessionEnded = sessionEnded;
+
+        return changeSet;
+    }
+
+    private static bool ShouldExtract(AIProfileDataExtractionSettings settings, int promptCount)
     {
         if (!settings.EnableDataExtraction)
         {
@@ -47,7 +81,7 @@ public sealed class DataExtractionService
         return promptCount % settings.ExtractionCheckInterval == 0;
     }
 
-    public static List<DataExtractionEntry> GetFieldsToExtract(AIProfileDataExtractionSettings settings, AIChatSession session)
+    private static List<DataExtractionEntry> GetFieldsToExtract(AIProfileDataExtractionSettings settings, AIChatSession session)
     {
         var fieldsToExtract = new List<DataExtractionEntry>();
 
@@ -74,20 +108,23 @@ public sealed class DataExtractionService
         return fieldsToExtract;
     }
 
-    public async Task<List<ExtractionResult>> ExtractAsync(
+    private async Task<(List<ExtractionResult> Results, bool SessionEnded)> ExtractAsync(
         AIProfile profile,
         AIChatSession session,
         List<DataExtractionEntry> fieldsToExtract,
-        string lastAssistantMessage,
-        string latestUserMessage,
         CancellationToken cancellationToken = default)
     {
         if (fieldsToExtract.Count == 0)
         {
-            return [];
+            return ([], false);
         }
 
-        var prompt = BuildExtractionPrompt(fieldsToExtract, session.ExtractedData, lastAssistantMessage, latestUserMessage);
+        var prompt = BuildExtractionPrompt(fieldsToExtract, session);
+
+        if (string.IsNullOrEmpty(prompt))
+        {
+            return ([], false);
+        }
 
         try
         {
@@ -96,7 +133,7 @@ public sealed class DataExtractionService
             if (chatClient == null)
             {
                 _logger.LogWarning("Unable to create a chat client for data extraction on profile '{ProfileId}'.", profile.ItemId);
-                return [];
+                return ([], false);
             }
 
             var messages = new List<ChatMessage>
@@ -105,38 +142,30 @@ public sealed class DataExtractionService
                 new(ChatRole.User, prompt),
             };
 
-            var response = await chatClient.GetResponseAsync(messages, new ChatOptions
+            var response = await chatClient.GetResponseAsync<ExtractionResponse>(messages, new ChatOptions
             {
                 Temperature = 0f,
                 MaxOutputTokens = 1024,
-            }, cancellationToken);
+            }, null, cancellationToken);
 
-            if (response?.Messages == null || response.Messages.Count == 0)
+            if (response.Result is null || response.Result is null || response.Result.Fields.Count == 0)
             {
-                return [];
+                return ([], false);
             }
 
-            var responseText = response.Messages[response.Messages.Count - 1].Text?.Trim();
-
-            if (string.IsNullOrEmpty(responseText))
-            {
-                return [];
-            }
-
-            return ParseExtractionResponse(responseText);
+            return (response.Result.Fields, response.Result.SessionEnded);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Data extraction failed for session '{SessionId}'.", session.SessionId);
-            return [];
+            return ([], false);
         }
     }
 
-    public static ExtractionChangeSet ApplyExtraction(
+    private ExtractionChangeSet ApplyExtraction(
         AIChatSession session,
         AIProfileDataExtractionSettings settings,
-        List<ExtractionResult> results,
-        DateTime utcNow)
+        List<ExtractionResult> results)
     {
         var changeSet = new ExtractionChangeSet();
 
@@ -163,6 +192,8 @@ public sealed class DataExtractionService
 
             if (entry.AllowMultipleValues)
             {
+                var now = _clock.UtcNow;
+
                 foreach (var value in result.Values)
                 {
                     if (string.IsNullOrWhiteSpace(value))
@@ -173,7 +204,7 @@ public sealed class DataExtractionService
                     if (!state.Values.Contains(value, StringComparer.OrdinalIgnoreCase))
                     {
                         state.Values.Add(value);
-                        state.LastExtractedUtc = utcNow;
+                        state.LastExtractedUtc = now;
                         changeSet.NewFields.Add(new ExtractedFieldChange(entry.Name, value, entry.AllowMultipleValues));
                     }
                 }
@@ -190,13 +221,13 @@ public sealed class DataExtractionService
                 if (state.Values.Count == 0)
                 {
                     state.Values.Add(value);
-                    state.LastExtractedUtc = utcNow;
+                    state.LastExtractedUtc = _clock.UtcNow;
                     changeSet.NewFields.Add(new ExtractedFieldChange(entry.Name, value, false));
                 }
                 else if (entry.IsUpdatable)
                 {
                     state.Values[0] = value;
-                    state.LastExtractedUtc = utcNow;
+                    state.LastExtractedUtc = _clock.UtcNow;
                     changeSet.NewFields.Add(new ExtractedFieldChange(entry.Name, value, false));
                 }
             }
@@ -240,98 +271,128 @@ public sealed class DataExtractionService
     {
         return
             """
-            You are a data extraction assistant. Your job is to extract specific fields from the user's latest message.
+            You are a data extraction assistant. Your job is to extract specific fields from the user's latest message and detect whether the conversation has naturally ended.
             Rules:
             - Only extract from the latest user message.
             - Use the last assistant message only for context interpretation.
             - Do not hallucinate values. Only extract what is explicitly stated.
-            - Return strict JSON only. No explanations, no markdown.
+            - Clean and normalize extracted values: strip trailing or leading punctuation (e.g., "!", "@", ".", ",") that is clearly not part of the value. For example, "Mike@" should be extracted as "Mike", and "mike@checkboxsigns.com!" should be extracted as "mike@checkboxsigns.com".
+            - Use context to infer the correct value type. For example, if the field is "email", recognize email-like patterns even if surrounded by stray characters.
+            - Return valid JSON only. Do NOT wrap the response in markdown code fences (```). No explanations, no comments.
             - Only return fields that were requested.
             - Return an empty fields array if nothing is found.
+            - Set "sessionEnded" to true if the user's message indicates a natural farewell or conversation ending (e.g., "Thank you, bye!", "That's all I needed", "Have a great day!", "Goodbye"). Otherwise, set it to false.
             - Response format:
-            {"fields":[{"name":"fieldName","values":["value1"],"confidence":0.95}]}
+            {"fields":[{"name":"fieldName","values":["value1"],"confidence":0.95}],"sessionEnded":false}
             """;
     }
 
-    private static string BuildExtractionPrompt(
-        List<DataExtractionEntry> fieldsToExtract,
-        Dictionary<string, ExtractedFieldState> currentState,
-        string lastAssistantMessage,
-        string latestUserMessage)
+    private static string BuildExtractionPrompt(List<DataExtractionEntry> fieldsToExtract, AIChatSession session)
     {
-        var parts = new List<string>
-        {
-            "Extract the following fields from the user's latest message.",
-            "",
-            "Fields to extract:",
-        };
+        var builder = new StringBuffer("Extract the following fields from the user's latest message.");
+
+        builder.AppendLine("Fields to extract:");
 
         foreach (var field in fieldsToExtract)
         {
-            var desc = string.IsNullOrEmpty(field.Description)
-                ? field.Name
-                : field.Description;
+            builder.AppendLine();
+            builder.Append("- ");
+            builder.Append(field.Name);
+            builder.Append(": ");
 
-            parts.Add($"- {field.Name}: {desc} (multiple: {field.AllowMultipleValues.ToString().ToLowerInvariant()})");
+            if (!string.IsNullOrEmpty(field.Description))
+            {
+                builder.Append(field.Description);
+                builder.Append(" ");
+            }
+
+            builder.Append("(multiple: ");
+            builder.Append(field.AllowMultipleValues.ToString().ToLowerInvariant());
+            builder.Append(")");
         }
 
-        if (currentState.Count > 0)
+        if (session.ExtractedData?.Count > 0)
         {
-            parts.Add("");
-            parts.Add("Current extracted state:");
+            builder.AppendLine();
+            builder.Append("Current extracted state:");
 
-            foreach (var (key, state) in currentState)
+            foreach (var (key, state) in session.ExtractedData)
             {
-                if (state.Values.Count > 0)
+                if (state.Values.Count == 0)
                 {
-                    parts.Add($"- {key}: [{string.Join(", ", state.Values)}]");
+                    continue;
                 }
+
+                builder.Append("- ");
+                builder.Append(key);
+                builder.Append(": [");
+
+                foreach (var value in state.Values)
+                {
+                    builder.Append(value);
+                    builder.Append(", ");
+                }
+
+                builder.Append("]");
             }
+        }
+
+        // Find the last user message and the assistant message immediately before it.
+        string lastUserMessage = null;
+        string lastAssistantMessage = null;
+
+        for (var i = session.Prompts.Count - 1; i >= 0; i--)
+        {
+            if (lastUserMessage is null && session.Prompts[i].Role == ChatRole.User)
+            {
+                lastUserMessage = session.Prompts[i].Content?.Trim();
+
+                // Look for the assistant message immediately before this user message.
+                for (var j = i - 1; j >= 0; j--)
+                {
+                    if (session.Prompts[j].Role == ChatRole.Assistant)
+                    {
+                        lastAssistantMessage = session.Prompts[j].Content?.Trim();
+                        break;
+                    }
+                }
+
+                break;
+            }
+        }
+
+        if (string.IsNullOrEmpty(lastUserMessage))
+        {
+            return null;
         }
 
         if (!string.IsNullOrEmpty(lastAssistantMessage))
         {
-            parts.Add("");
-            parts.Add("Last assistant message:");
-            parts.Add(lastAssistantMessage);
+            builder.AppendLine();
+            builder.Append("Last assistant message: ");
+            builder.Append(lastAssistantMessage);
         }
 
-        parts.Add("");
-        parts.Add("Latest user message:");
-        parts.Add(latestUserMessage);
+        builder.AppendLine();
+        builder.Append("Latest user message: ");
+        builder.Append(lastUserMessage);
 
-        return string.Join("\n", parts);
+        return builder.ToString();
     }
 
-    private static List<ExtractionResult> ParseExtractionResponse(string responseText)
+    private static (List<ExtractionResult> Results, bool SessionEnded) ParseExtractionResponse(string responseText)
     {
-        // Strip markdown code fences if present.
-        if (responseText.StartsWith("```", StringComparison.Ordinal))
-        {
-            var firstNewline = responseText.IndexOf('\n');
+        var parsed = JsonSerializer.Deserialize<ExtractionResponse>(responseText, JSOptions.CaseInsensitive);
 
-            if (firstNewline >= 0)
-            {
-                responseText = responseText[(firstNewline + 1)..];
-            }
-
-            if (responseText.EndsWith("```", StringComparison.Ordinal))
-            {
-                responseText = responseText[..^3];
-            }
-
-            responseText = responseText.Trim();
-        }
-
-        var parsed = JsonSerializer.Deserialize<ExtractionResponse>(responseText, _jsonOptions);
-
-        return parsed?.Fields ?? [];
+        return (parsed?.Fields ?? [], parsed?.SessionEnded ?? false);
     }
 }
 
 public sealed class ExtractionResponse
 {
     public List<ExtractionResult> Fields { get; set; } = [];
+
+    public bool SessionEnded { get; set; }
 }
 
 public sealed class ExtractionResult
@@ -346,6 +407,8 @@ public sealed class ExtractionResult
 public sealed class ExtractionChangeSet
 {
     public List<ExtractedFieldChange> NewFields { get; set; } = [];
+
+    public bool SessionEnded { get; set; }
 }
 
 public sealed record ExtractedFieldChange(string FieldName, string Value, bool IsMultiple);

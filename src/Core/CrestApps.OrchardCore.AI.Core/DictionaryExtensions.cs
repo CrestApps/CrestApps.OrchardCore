@@ -26,16 +26,21 @@ public static class DictionaryExtensions
     }
 
     public static string GetChatDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
-        => entry.GetStringValue("ChatDeploymentName", throwException);
+        => entry.GetStringValue("ChatDeploymentName", throwException)
+            ?? entry.GetStringValue("DefaultChatDeploymentName", throwException)
+            ?? entry.GetStringValue("DefaultDeploymentName", throwException);
 
     public static string GetEmbeddingDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
-        => entry.GetStringValue("EmbeddingDeploymentName", throwException);
+        => entry.GetStringValue("EmbeddingDeploymentName", throwException)
+            ?? entry.GetStringValue("DefaultEmbeddingDeploymentName", throwException);
 
     public static string GetImagesDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
-        => entry.GetStringValue("ImagesDeploymentName", throwException);
+        => entry.GetStringValue("ImagesDeploymentName", throwException)
+            ?? entry.GetStringValue("DefaultImagesDeploymentName", throwException);
 
     public static string GetUtilityDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
-        => entry.GetStringValue("UtilityDeploymentName", throwException);
+        => entry.GetStringValue("UtilityDeploymentName", throwException)
+            ?? entry.GetStringValue("DefaultUtilityDeploymentName", throwException);
 
     public static string GetChatDeploymentOrDefaultName(this IDictionary<string, object> entry, bool throwException = true)
         => entry.GetStringValue("ChatDeploymentName", false)

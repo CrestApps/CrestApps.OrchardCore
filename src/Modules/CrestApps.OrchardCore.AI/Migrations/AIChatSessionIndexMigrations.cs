@@ -14,6 +14,8 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
                 .Column<string>("SessionId", column => column.WithLength(26))
                 .Column<string>("UserId", column => column.WithLength(26))
                 .Column<string>("ClientId", column => column.WithLength(64))
+                .Column<string>("Status", column => column.WithDefault("Active"))
+                .Column<DateTime>("LastActivityUtc")
                 .Column<DateTime>("CreatedUtc")
                 .Column<string>("Title", column => column.WithLength(255)),
             collection: AIConstants.CollectionName
@@ -51,19 +53,29 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
             collection: AIConstants.CollectionName
         );
 
-        return 1;
+
+        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
+            .CreateIndex("IDX_AIChatSessionIndex_ProfileStatusLastActivityUtc",
+                "DocumentId",
+                "ProfileId",
+                "Status",
+                "LastActivityUtc"),
+            collection: AIConstants.CollectionName
+        );
+
+        return 2;
     }
 
     public async Task<int> UpdateFrom1Async()
     {
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table =>
         {
-            table.AddColumn<int>("Status", column => column.WithDefault(0));
+            table.AddColumn<string>("Status", column => column.WithDefault("Active"));
             table.AddColumn<DateTime>("LastActivityUtc");
         }, collection: AIConstants.CollectionName);
 
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
-            .CreateIndex("IDX_AIChatSessionIndex_Status",
+            .CreateIndex("IDX_AIChatSessionIndex_ProfileStatusLastActivityUtc",
                 "DocumentId",
                 "ProfileId",
                 "Status",
