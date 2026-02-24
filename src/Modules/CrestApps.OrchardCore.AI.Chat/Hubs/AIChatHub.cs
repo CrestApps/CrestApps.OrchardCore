@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Support;
 using Fluid;
@@ -10,6 +12,7 @@ using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -132,6 +135,42 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 References = message.References,
             })
         });
+    }
+
+    public async Task RateSession(string sessionId, bool isPositive)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            return;
+        }
+
+        var chatSession = await _sessionManager.FindAsync(sessionId);
+
+        if (chatSession is null)
+        {
+            return;
+        }
+
+        var profile = await _profileManager.FindByIdAsync(chatSession.ProfileId);
+
+        if (profile is null)
+        {
+            return;
+        }
+
+        var httpContext = Context.GetHttpContext();
+
+        if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+        {
+            return;
+        }
+
+        var eventService = httpContext.RequestServices.GetService<AIChatSessionEventService>();
+
+        if (eventService is not null)
+        {
+            await eventService.RecordUserRatingAsync(sessionId, isPositive);
+        }
     }
 
     private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
@@ -362,6 +401,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
+        var stopwatch = Stopwatch.StartNew();
 
         await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext, cancellationToken))
         {
@@ -402,6 +442,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
             await writer.WriteAsync(partialMessage, cancellationToken);
         }
 
+        stopwatch.Stop();
+
         if (builder.Length > 0)
         {
             assistantMessage.Content = builder.ToString();
@@ -415,6 +457,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         {
             Profile = profile,
             ChatSession = chatSession,
+            ResponseLatencyMs = stopwatch.Elapsed.TotalMilliseconds,
         };
 
         await _sessionHandlers.InvokeAsync((handler, ctx) => handler.MessageCompletedAsync(ctx), context, _logger);

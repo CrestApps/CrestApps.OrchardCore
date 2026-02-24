@@ -25,6 +25,14 @@ var defaultConfig = {
                             <button class="btn btn-sm btn-link text-secondary p-0 button-message-toolbox" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
                                 <i class="fa-solid fa-copy"></i>
                             </button>
+                            <template v-if="metricsEnabled && message.role === 'assistant'">
+                                <button class="btn btn-sm btn-link p-0 button-message-toolbox" :class="sessionRating === true ? 'text-success' : 'text-secondary'" @click="rateSession(true)" title="Thumbs up">
+                                    <i class="fa-solid fa-thumbs-up"></i>
+                                </button>
+                                <button class="btn btn-sm btn-link p-0 button-message-toolbox" :class="sessionRating === false ? 'text-danger' : 'text-secondary'" @click="rateSession(false)" title="Thumbs down">
+                                    <i class="fa-solid fa-thumbs-down"></i>
+                                </button>
+                            </template>
                         </span>
                     </div>
                 </div>
@@ -308,7 +316,9 @@ function parseMarkdownContent(content, message) {
                     documents: config.existingDocuments || [],
                     isUploading: false,
                     isDragOver: false,
-                    documentBar: null
+                    documentBar: null,
+                    metricsEnabled: !!config.metricsEnabled,
+                    sessionRating: null
                 };
             },
             methods: {
@@ -894,6 +904,7 @@ function parseMarkdownContent(content, message) {
                 resetSession() {
                     this.setSessionId('');
                     this.isSessionStarted = false;
+                    this.sessionRating = null;
                     if (this.widgetIsInitialized) {
                         localStorage.removeItem(this.chatWidgetStateSession);
                     }
@@ -1146,6 +1157,18 @@ function parseMarkdownContent(content, message) {
                 },
                 copyResponse(message) {
                     navigator.clipboard.writeText(message);
+                },
+                rateSession(isPositive) {
+                    var sessionId = this.getSessionId();
+
+                    if (!sessionId || !this.connection) {
+                        return;
+                    }
+
+                    this.sessionRating = isPositive;
+                    this.connection.invoke("RateSession", sessionId, isPositive).catch(function (err) {
+                        console.error('Failed to rate session:', err);
+                    });
                 }
             },
             watch: {

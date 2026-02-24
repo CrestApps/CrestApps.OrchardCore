@@ -13,6 +13,7 @@ const sidebars = {
         'ai/index',
         'ai/ai',
         'ai/ai-chat',
+        'ai/ai-chat-analytics',
         'ai/ai-chat-interactions',
         'ai/ai-profiles-code',
         'ai/ai-tools',

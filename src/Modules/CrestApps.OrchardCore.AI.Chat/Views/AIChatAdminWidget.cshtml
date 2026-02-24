@@ -49,6 +49,9 @@
         var chatDocOptions = ShellScope.Services.GetRequiredService<IOptions<ChatDocumentsOptions>>();
         allowedExtensions = string.Join(", ", chatDocOptions.Value.AllowedFileExtensions);
     }
+
+    var metricsEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics)
+        && profile.As<AIProfileAnalyticsMetadata>().EnableSessionMetrics;
 }
 
 <!-- Toggle Button (green circle ring with robot icon) -->
@@ -165,6 +168,7 @@
             sendButtonElementSelector: '#@buttonHtmlId',
             placeholderElementSelector: '#@placeholderHtmlId',
             messages: [],
+            metricsEnabled: @(metricsEnabled ? "true" : "false"),
             @if (sessionDocumentsEnabled)
             {
                 @:sessionDocumentsEnabled: true,
@@ -190,6 +194,14 @@
                                     <button class="btn btn-sm btn-link text-secondary p-0" @@click="copyResponse(message.content)" title="@T["Copy"]">
                                         <i class="fa-solid fa-copy" style="font-size: 0.75rem;"></i>
                                     </button>
+                                    <template v-if="metricsEnabled && message.role === 'assistant'">
+                                        <button class="btn btn-sm btn-link p-0" :class="sessionRating === true ? 'text-success' : 'text-secondary'" @@click="rateSession(true)" title="@T["Thumbs up"]">
+                                            <i class="fa-solid fa-thumbs-up" style="font-size: 0.75rem;"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-link p-0" :class="sessionRating === false ? 'text-danger' : 'text-secondary'" @@click="rateSession(false)" title="@T["Thumbs down"]">
+                                            <i class="fa-solid fa-thumbs-down" style="font-size: 0.75rem;"></i>
+                                        </button>
+                                    </template>
                                 </span>
                             </div>
                         </div>

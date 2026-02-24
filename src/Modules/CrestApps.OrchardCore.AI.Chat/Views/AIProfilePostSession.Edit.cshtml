@@ -1,0 +1,152 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.OrchardCore.AI.Models
+
+@model AIProfilePostSessionViewModel
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="EnablePostSessionProcessing" data-toggle-target="#postSessionSettings">
+        <label class="form-check-label" asp-for="EnablePostSessionProcessing">@T["Enable Post-Session Processing"]</label>
+        <span class="hint dashed">@T["When enabled, the system will run AI-powered analysis on the complete conversation after the session is closed."]</span>
+    </div>
+</div>
+
+<div id="postSessionSettings" style="@(Model.EnablePostSessionProcessing ? "" : "display:none")">
+    <div class="alert alert-info mb-3">
+        <i class="fa-solid fa-circle-info me-1"></i>
+        @T["Post-session processing runs after a chat session is closed (either due to inactivity or natural conversation ending). The AI model analyzes the complete conversation transcript to produce the configured results."]
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">@T["Post-Session Tasks"]</label>
+        <span class="hint dashed d-block mb-2">@T["Define the tasks to run when a session closes. Each task produces a structured result stored on the session."]</span>
+
+        <div id="postSessionTasksContainer">
+            @for (var i = 0; i < Model.Tasks.Count; i++)
+            {
+                <div class="card mb-2 post-session-task-card">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                        <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 task-collapse-toggle" data-bs-toggle="collapse" href="#taskCollapse_@i" role="button" aria-expanded="true">
+                            <i class="fa-solid fa-chevron-down me-1"></i>
+                            <span class="task-name-display fw-semibold">@(string.IsNullOrWhiteSpace(Model.Tasks[i].Name) ? T["New Task"] : Model.Tasks[i].Name)</span>
+                        </a>
+                        <button type="button" class="btn btn-sm btn-danger remove-task-btn" title="@T["Remove"]">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                    <div id="taskCollapse_@i" class="collapse show">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">@T["Name"]</label>
+                                <input type="text" class="form-control task-name-input" name="@Html.NameFor(m => m.Tasks[i].Name)" value="@Model.Tasks[i].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., disposition"]" />
+                                <span class="hint">@T["A unique identifier for this task. Only alphanumeric characters and underscores are allowed."]</span>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">@T["Type"]</label>
+                                <select class="form-select task-type-select" name="@Html.NameFor(m => m.Tasks[i].Type)">
+                                    @foreach (var taskType in Enum.GetValues<PostSessionTaskType>())
+                                    {
+                                        <option value="@taskType" selected="@(Model.Tasks[i].Type == taskType)">@taskType</option>
+                                    }
+                                </select>
+                                <span class="hint">@T["The type of analysis to perform. Disposition selects from a predefined list, Summary generates a text summary, Sentiment classifies the overall tone, Custom uses your instructions."]</span>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">@T["Instructions"]</label>
+                                <textarea class="form-control" name="@Html.NameFor(m => m.Tasks[i].Instructions)" rows="3" placeholder="@T["Optional instructions for the AI model"]">@Model.Tasks[i].Instructions</textarea>
+                                <span class="hint">@T["Additional instructions for the AI model when processing this task. Required for Custom type."]</span>
+                            </div>
+                            <div class="mb-3 task-options-group" style="@(Model.Tasks[i].Type == PostSessionTaskType.Disposition ? "" : "display:none")">
+                                <label class="form-label">@T["Options"]</label>
+                                <textarea class="form-control" name="@Html.NameFor(m => m.Tasks[i].Options)" rows="4" placeholder="@T["One option per line, e.g.:\nResolved\nEscalated\nAbandoned"]">@Model.Tasks[i].Options</textarea>
+                                <span class="hint">@T["For Disposition type: enter one option per line. The AI model will select the best matching option from this list."]</span>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Tasks[i].IsRequired)" value="true" @(Model.Tasks[i].IsRequired ? "checked" : "") />
+                                <label class="form-check-label">@T["Required"]</label>
+                                <span class="hint dashed">@T["When enabled, this task must produce a result for the post-session processing to be considered complete."]</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        <button type="button" class="btn btn-sm btn-success" id="addPostSessionTask"><i class="fa-solid fa-plus"></i> @T["Add Task"]</button>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        var toggleCheckbox = document.querySelector('[data-toggle-target="#postSessionSettings"]');
+        var target = document.getElementById('postSessionSettings');
+        if (toggleCheckbox && target) {
+            toggleCheckbox.addEventListener('change', function () {
+                target.style.display = this.checked ? '' : 'none';
+            });
+        }
+
+        var container = document.getElementById('postSessionTasksContainer');
+        var addButton = document.getElementById('addPostSessionTask');
+
+        if (addButton && container) {
+            addButton.addEventListener('click', function () {
+                var index = container.querySelectorAll('.post-session-task-card').length;
+                var prefix = '@Html.NameFor(m => m.Tasks)';
+                var collapseId = 'taskCollapse_' + index;
+                var card = document.createElement('div');
+                card.className = 'card mb-2 post-session-task-card';
+                card.innerHTML =
+                    '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
+                        '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 task-collapse-toggle" data-bs-toggle="collapse" href="#' + collapseId + '" role="button" aria-expanded="true">' +
+                            '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                            '<span class="task-name-display fw-semibold">New Task</span>' +
+                        '</a>' +
+                        '<button type="button" class="btn btn-sm btn-danger remove-task-btn" title="Remove"><i class="fa-solid fa-trash"></i></button>' +
+                    '</div>' +
+                    '<div id="' + collapseId + '" class="collapse show">' +
+                        '<div class="card-body">' +
+                            '<div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control task-name-input" name="' + prefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., disposition" /><span class="hint">A unique identifier for this task. Only alphanumeric characters and underscores are allowed.</span></div>' +
+                            '<div class="mb-3"><label class="form-label">Type</label><select class="form-select task-type-select" name="' + prefix + '[' + index + '].Type"><option value="Disposition">Disposition</option><option value="Summary">Summary</option><option value="Sentiment">Sentiment</option><option value="Custom">Custom</option></select><span class="hint">The type of analysis to perform.</span></div>' +
+                            '<div class="mb-3"><label class="form-label">Instructions</label><textarea class="form-control" name="' + prefix + '[' + index + '].Instructions" rows="3" placeholder="Optional instructions for the AI model"></textarea><span class="hint">Additional instructions for the AI model when processing this task.</span></div>' +
+                            '<div class="mb-3 task-options-group"><label class="form-label">Options</label><textarea class="form-control" name="' + prefix + '[' + index + '].Options" rows="4" placeholder="One option per line"></textarea><span class="hint">For Disposition type: enter one option per line.</span></div>' +
+                            '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="' + prefix + '[' + index + '].IsRequired" value="true" /><label class="form-check-label">Required</label><span class="hint dashed">When enabled, this task must produce a result.</span></div>' +
+                        '</div>' +
+                    '</div>';
+                container.appendChild(card);
+            });
+        }
+
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.remove-task-btn')) {
+                var card = e.target.closest('.post-session-task-card');
+                if (card) card.remove();
+            }
+        });
+
+        // Update card header name display when the Name input changes.
+        document.addEventListener('input', function (e) {
+            if (e.target.classList.contains('task-name-input')) {
+                var card = e.target.closest('.post-session-task-card');
+                if (card) {
+                    var display = card.querySelector('.task-name-display');
+                    if (display) {
+                        display.textContent = e.target.value || 'New Task';
+                    }
+                }
+            }
+        });
+
+        // Show/hide Options field based on Type selection.
+        document.addEventListener('change', function (e) {
+            if (e.target.classList.contains('task-type-select')) {
+                var card = e.target.closest('.post-session-task-card');
+                if (card) {
+                    var optionsGroup = card.querySelector('.task-options-group');
+                    if (optionsGroup) {
+                        optionsGroup.style.display = e.target.value === 'Disposition' ? '' : 'none';
+                    }
+                }
+            }
+        });
+    });
+</script>

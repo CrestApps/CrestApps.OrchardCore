@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.AI.Workflows.Models
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AIChatSessionPostProcessedEvent>
+
+<header>
+    <h4>
+        <i class="fa-regular fa-comment" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["AI Chat Session Post-Processed"])
+    </h4>
+</header>

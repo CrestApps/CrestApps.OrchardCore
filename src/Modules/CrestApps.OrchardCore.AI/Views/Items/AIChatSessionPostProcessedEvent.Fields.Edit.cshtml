@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model AIChatSessionPostProcessedEventViewModel
+
+<div class="mb-3">
+    <label class="form-label" asp-for="ProfileId">@T["Profile"]</label>
+    <select class="form-select" asp-for="ProfileId" asp-items="Model.Profiles">
+        <option value="">@T["Any profile"]</option>
+    </select>
+    <span class="hint">@T["Optionally filter this event to a specific AI chat profile."]</span>
+</div>

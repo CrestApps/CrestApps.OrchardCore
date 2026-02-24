@@ -35,7 +35,8 @@ public sealed class Startup : StartupBase
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatAdminMenu>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
-            .AddDisplayDriver<AIProfile, AIProfileDataExtractionDisplayDriver>();
+            .AddDisplayDriver<AIProfile, AIProfileDataExtractionDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfilePostSessionDisplayDriver>();
 
         services.Configure<HubOptions<AIChatHub>>(options =>
         {
@@ -78,5 +79,25 @@ public sealed class AdminWidgetStartup : StartupBase
         {
             options.Filters.Add<AIChatAdminWidgetFilter>();
         });
+    }
+}
+
+[Feature(AIConstants.Feature.ChatAnalytics)]
+public sealed class ChatAnalyticsUIStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddPermissionProvider<ChatAnalyticsPermissionProvider>()
+            .AddNavigationProvider<ChatAnalyticsAdminMenu>()
+            .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsDateRangeFilterDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsProfileFilterDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsOverviewDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsTimeOfDayDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsDayOfWeekDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsUserSegmentDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsPerformanceDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsFeedbackDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileAnalyticsDisplayDriver>();
     }
 }

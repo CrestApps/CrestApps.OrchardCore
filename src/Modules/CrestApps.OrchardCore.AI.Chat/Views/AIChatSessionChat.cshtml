@@ -45,6 +45,10 @@
         var chatDocOptions = ShellScope.Services.GetRequiredService<IOptions<ChatDocumentsOptions>>();
         allowedExtensions = string.Join(", ", chatDocOptions.Value.AllowedFileExtensions);
     }
+
+    var metricsEnabled = Model.Profile != null
+        && enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics)
+        && Model.Profile.As<AIProfileAnalyticsMetadata>().EnableSessionMetrics;
 }
 
 <div class="container-fluid d-flex flex-column h-100">
@@ -135,6 +139,7 @@
         sendButtonElementSelector: '#@buttonHtmlId',
         placeholderElementSelector: '#@placeholderHtmlId',
         messages: @Html.Raw(JsonSerializer.Serialize(prompts, JOptions.CamelCase)),
+        metricsEnabled: @(metricsEnabled ? "true" : "false"),
         @if (sessionDocumentsEnabled)
         {
             @:sessionDocumentsEnabled: true,

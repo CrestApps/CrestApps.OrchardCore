@@ -7,20 +7,20 @@ namespace CrestApps.OrchardCore.Core.Services;
 public class NamedSourceCatalogManager<T> : SourceCatalogManager<T>, INamedCatalogManager<T>, ISourceCatalogManager<T>, INamedSourceCatalogManager<T>
     where T : CatalogItem, INameAwareModel, ISourceAwareModel, new()
 {
-    protected readonly INamedSourceCatalog<T> NamedSourceModelStore;
+    protected readonly INamedSourceCatalog<T> NamedSourceCatalog;
 
     public NamedSourceCatalogManager(
-        INamedSourceCatalog<T> store,
+        INamedSourceCatalog<T> catalog,
         IEnumerable<ICatalogEntryHandler<T>> handlers,
         ILogger<NamedSourceCatalogManager<T>> logger)
-        : base(store, handlers, logger)
+        : base(catalog, handlers, logger)
     {
-        NamedSourceModelStore = store;
+        NamedSourceCatalog = catalog;
     }
 
     public async ValueTask<T> FindByNameAsync(string name)
     {
-        var entry = await NamedSourceModelStore.FindByNameAsync(name);
+        var entry = await NamedSourceCatalog.FindByNameAsync(name);
 
         if (entry is not null)
         {
@@ -32,7 +32,7 @@ public class NamedSourceCatalogManager<T> : SourceCatalogManager<T>, INamedCatal
 
     public async ValueTask<T> GetAsync(string name, string source)
     {
-        var entry = await NamedSourceModelStore.GetAsync(name, source);
+        var entry = await NamedSourceCatalog.GetAsync(name, source);
 
         if (entry is not null)
         {

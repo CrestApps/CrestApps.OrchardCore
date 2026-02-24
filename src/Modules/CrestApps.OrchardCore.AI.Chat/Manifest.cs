@@ -36,3 +36,15 @@ using OrchardCore.Modules.Manifest;
         AIConstants.Feature.OrchardCoreAIAgent,
     ]
 )]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.ChatAnalytics,
+    Name = "AI Chat Analytics",
+    Description = "Tracks chat widget usage metrics (unique visitors, handle time, containment rate, abandonment rate) and provides reporting with extensible display drivers.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Chat,
+        AIConstants.Feature.ChatCore,
+    ]
+)]

@@ -1,0 +1,11 @@
+@model CrestApps.OrchardCore.AI.Chat.ViewModels.ChatAnalyticsProfileFilterViewModel
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <label class="form-label" asp-for="ProfileId">@T["AI Profile"]</label>
+        <select class="form-select" asp-for="ProfileId" asp-items="Model.Profiles">
+            <option value="">@T["All profiles"]</option>
+        </select>
+        <span class="hint">@T["Optionally filter analytics to a specific AI chat profile."]</span>
+    </div>
+</div>

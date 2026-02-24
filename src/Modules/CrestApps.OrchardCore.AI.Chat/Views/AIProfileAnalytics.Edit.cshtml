@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+
+@model EditAIProfileAnalyticsViewModel
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="EnableSessionMetrics" />
+        <label class="form-check-label" asp-for="EnableSessionMetrics">@T["Enable Session Metrics"]</label>
+        <span class="hint">@T["When enabled, session metrics such as usage, token consumption, response latency, and user feedback are captured for analytics. Metrics can be viewed in the Chat Analytics dashboard."]</span>
+    </div>
+</div>

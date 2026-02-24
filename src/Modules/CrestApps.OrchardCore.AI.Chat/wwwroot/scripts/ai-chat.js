@@ -29,7 +29,7 @@ window.openAIChatManager = function () {
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
-    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                        Assistant\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent || message.content\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
+    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                        Assistant\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent || message.content\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <button class=\"btn btn-sm btn-link p-0 button-message-toolbox\" :class=\"sessionRating === true ? 'text-success' : 'text-secondary'\" @click=\"rateSession(true)\" title=\"Thumbs up\">\n                                    <i class=\"fa-solid fa-thumbs-up\"></i>\n                                </button>\n                                <button class=\"btn btn-sm btn-link p-0 button-message-toolbox\" :class=\"sessionRating === false ? 'text-danger' : 'text-secondary'\" @click=\"rateSession(false)\" title=\"Thumbs down\">\n                                    <i class=\"fa-solid fa-thumbs-down\"></i>\n                                </button>\n                            </template>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
     indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <i class=\"fa fa-robot ai-streaming-icon\" style=\"display: inline-block;\"></i>\n            Assistant\n        </div>\n    "
   };
   var renderer = new marked.Renderer();
@@ -276,7 +276,9 @@ window.openAIChatManager = function () {
           documents: config.existingDocuments || [],
           isUploading: false,
           isDragOver: false,
-          documentBar: null
+          documentBar: null,
+          metricsEnabled: !!config.metricsEnabled,
+          sessionRating: null
         };
       },
       methods: {
@@ -893,6 +895,7 @@ window.openAIChatManager = function () {
         resetSession: function resetSession() {
           this.setSessionId('');
           this.isSessionStarted = false;
+          this.sessionRating = null;
           if (this.widgetIsInitialized) {
             localStorage.removeItem(this.chatWidgetStateSession);
           }
@@ -1121,6 +1124,16 @@ window.openAIChatManager = function () {
         },
         copyResponse: function copyResponse(message) {
           navigator.clipboard.writeText(message);
+        },
+        rateSession: function rateSession(isPositive) {
+          var sessionId = this.getSessionId();
+          if (!sessionId || !this.connection) {
+            return;
+          }
+          this.sessionRating = isPositive;
+          this.connection.invoke("RateSession", sessionId, isPositive)["catch"](function (err) {
+            console.error('Failed to rate session:', err);
+          });
         }
       },
       watch: {

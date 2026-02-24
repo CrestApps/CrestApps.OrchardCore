@@ -1,0 +1,77 @@
+@model CrestApps.OrchardCore.AI.Chat.ViewModels.ChatAnalyticsFeedbackViewModel
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fa-regular fa-face-smile me-1"></i>@T["User Feedback"]
+            <i class="fa-solid fa-circle-info ms-1 small" data-bs-toggle="tooltip" title="@T["Summary of user satisfaction ratings collected during chat sessions. Users can rate their experience with thumbs up or thumbs down."]"></i>
+        </h5>
+    </div>
+    <div class="card-body">
+        @if (Model.HasData)
+        {
+            <div class="row text-center">
+                <div class="col-md-3 mb-3">
+                    <div class="border rounded p-3">
+                        <div class="fs-2 fw-bold text-success">
+                            <i class="fa-solid fa-thumbs-up me-1"></i>@Model.ThumbsUpCount
+                        </div>
+                        <div class="text-muted">
+                            @T["Positive Ratings"]
+                            <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The number of sessions where users gave a thumbs up, indicating a satisfactory experience."]"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="border rounded p-3">
+                        <div class="fs-2 fw-bold text-danger">
+                            <i class="fa-solid fa-thumbs-down me-1"></i>@Model.ThumbsDownCount
+                        </div>
+                        <div class="text-muted">
+                            @T["Negative Ratings"]
+                            <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The number of sessions where users gave a thumbs down, indicating a poor experience. Review these sessions to identify improvement areas."]"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="border rounded p-3">
+                        <div class="fs-2 fw-bold text-success">@Model.ThumbsUpPercent%</div>
+                        <div class="text-muted">
+                            @T["Satisfaction Rate"]
+                            <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The percentage of positive ratings out of all sessions that received feedback. A higher satisfaction rate indicates the bot is meeting user expectations."]"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="border rounded p-3">
+                        <div class="fs-2 fw-bold text-info">@Model.FeedbackRatePercent%</div>
+                        <div class="text-muted">
+                            @T["Feedback Rate"]
+                            <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The percentage of total sessions where users provided a rating. A low feedback rate may indicate users aren't being prompted to rate, or they find the rating mechanism inconvenient."]"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (Model.TotalSessionsWithFeedback > 0)
+            {
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <div class="progress" style="height: 30px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: @(Model.ThumbsUpPercent)%">
+                                <i class="fa-solid fa-thumbs-up me-1"></i>@Model.ThumbsUpPercent%
+                            </div>
+                            <div class="progress-bar bg-danger" role="progressbar" style="width: @(Model.ThumbsDownPercent)%">
+                                <i class="fa-solid fa-thumbs-down me-1"></i>@Model.ThumbsDownPercent%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-muted mb-0">@T["No feedback data available. Feedback metrics are collected when users rate their chat experience using thumbs up/down buttons."]</p>
+        }
+    </div>
+</div>
