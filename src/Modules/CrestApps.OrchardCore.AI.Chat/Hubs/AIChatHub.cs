@@ -198,6 +198,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         // Notify the caller of the updated rating.
         await Clients.Caller.MessageRated(messageId, prompt.UserRating);
+
+        await _documentStore.CommitAsync();
     }
 
     private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)

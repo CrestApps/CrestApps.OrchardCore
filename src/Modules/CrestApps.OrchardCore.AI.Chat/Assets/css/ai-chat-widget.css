@@ -328,6 +328,12 @@
     display: inline-block;
 }
 
+.ai-admin-widget .spark-effect i,
+.ai-admin-widget .spark-effect svg {
+    display: inline-block;
+    animation: spark-burst 0.5s ease-out;
+}
+
 .ai-admin-widget-placeholder {
     display: flex;
     flex-direction: column;

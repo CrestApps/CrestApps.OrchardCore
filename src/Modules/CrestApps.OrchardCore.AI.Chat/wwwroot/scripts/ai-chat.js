@@ -29,7 +29,12 @@ window.openAIChatManager = function () {
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
-    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                        Assistant\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent || message.content\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox\" @click=\"rateMessage(message, true)\" title=\"Thumbs up\">\n                                    <i :class=\"message.userRating === true ? 'fa-solid fa-thumbs-up' : 'fa-regular fa-thumbs-up'\" style=\"font-size: 0.9rem;\"></i>\n                                </button>\n                                <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox\" @click=\"rateMessage(message, false)\" title=\"Thumbs down\">\n                                    <i :class=\"message.userRating === false ? 'fa-solid fa-thumbs-down' : 'fa-regular fa-thumbs-down'\" style=\"font-size: 0.9rem;\"></i>\n                                </button>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                <i class=\"fa-solid fa-copy\" style=\"font-size: 0.9rem;\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
+    userLabel: 'You',
+    assistantLabel: 'Assistant',
+    thumbsUpTitle: 'Thumbs up',
+    thumbsDownTitle: 'Thumbs down',
+    copyTitle: 'Click here to copy response to clipboard.',
+    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent || message.content\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
     indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <i class=\"fa fa-robot ai-streaming-icon\" style=\"display: inline-block;\"></i>\n            Assistant\n        </div>\n    "
   };
   var renderer = new marked.Renderer();
@@ -277,7 +282,12 @@ window.openAIChatManager = function () {
           isUploading: false,
           isDragOver: false,
           documentBar: null,
-          metricsEnabled: !!config.metricsEnabled
+          metricsEnabled: !!config.metricsEnabled,
+          userLabel: config.userLabel,
+          assistantLabel: config.assistantLabel,
+          thumbsUpTitle: config.thumbsUpTitle,
+          thumbsDownTitle: config.thumbsDownTitle,
+          copyTitle: config.copyTitle
         };
       },
       methods: {
@@ -552,6 +562,11 @@ window.openAIChatManager = function () {
                         renderChartsInMessage(msg);
                       });
                     });
+
+                    // Update feedback icons in the DOM after all messages have rendered.
+                    _this3.$nextTick(function () {
+                      _this3.refreshAllFeedbackIcons();
+                    });
                   });
                   _this3.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
@@ -612,6 +627,10 @@ window.openAIChatManager = function () {
         },
         addMessage: function addMessage(message) {
           var _this5 = this;
+          // Ensure userRating is always defined for Vue reactivity.
+          if (message.userRating === undefined) {
+            message.userRating = null;
+          }
           if (message.content) {
             var processedContent = message.content.trim();
             if (message.references && _typeof(message.references) === "object" && Object.keys(message.references).length) {
@@ -715,7 +734,8 @@ window.openAIChatManager = function () {
                   title: chunk.title,
                   content: "",
                   htmlContent: "",
-                  isStreaming: true
+                  isStreaming: true,
+                  userRating: null
                 };
                 _this7.messages.push(newMessage);
                 message = newMessage;
@@ -1024,6 +1044,11 @@ window.openAIChatManager = function () {
             this.addMessage(config.messages[_i6]);
           }
 
+          // Update feedback icons in the DOM after initial messages have rendered.
+          this.$nextTick(function () {
+            _this9.refreshAllFeedbackIcons();
+          });
+
           // Delegate click for code block copy buttons.
           if (this.chatContainer) {
             this.chatContainer.addEventListener('click', function (e) {
@@ -1133,10 +1158,72 @@ window.openAIChatManager = function () {
         copyResponse: function copyResponse(message) {
           navigator.clipboard.writeText(message);
         },
-        rateMessage: function rateMessage(message, isPositive) {
+        updateFeedbackIcons: function updateFeedbackIcons(container, userRating) {
+          if (!container) {
+            return;
+          }
+          var upBtn = container.querySelector('.rate-up-btn');
+          var downBtn = container.querySelector('.rate-down-btn');
+
+          // Font Awesome SVG+JS replaces <i> with <svg>, so we must replace
+          // the entire button content and let Font Awesome re-process.
+          if (upBtn) {
+            var upClass = userRating === true ? 'fa-solid fa-thumbs-up' : 'fa-regular fa-thumbs-up';
+            upBtn.innerHTML = '<i class="' + upClass + '" style="font-size: 0.9rem;"></i>';
+          }
+          if (downBtn) {
+            var downClass = userRating === false ? 'fa-solid fa-thumbs-down' : 'fa-regular fa-thumbs-down';
+            downBtn.innerHTML = '<i class="' + downClass + '" style="font-size: 0.9rem;"></i>';
+          }
+
+          // Trigger Font Awesome SVG+JS to convert the new <i> elements.
+          if (window.FontAwesome && FontAwesome.dom && FontAwesome.dom.i2svg) {
+            FontAwesome.dom.i2svg({
+              node: container
+            });
+          }
+        },
+        refreshAllFeedbackIcons: function refreshAllFeedbackIcons() {
+          var containers = this.$el.querySelectorAll('.ai-chat-message-assistant-feedback');
+          for (var i = 0; i < containers.length; i++) {
+            var msgId = containers[i].getAttribute('data-message-id');
+            var msg = this.messages.find(function (m) {
+              return m.id === msgId;
+            });
+            if (msg) {
+              this.updateFeedbackIcons(containers[i], msg.userRating);
+            }
+          }
+        },
+        rateMessage: function rateMessage(message, isPositive, event) {
           var sessionId = this.getSessionId();
           if (!sessionId || !message.id || !this.connection) {
             return;
+          }
+
+          // Toggle: clicking the same rating again clears it.
+          var newRating = message.userRating === isPositive ? null : isPositive;
+          message.userRating = newRating;
+
+          // Find the feedback container by message ID for reliable DOM targeting.
+          var feedbackContainer = this.$el.querySelector('.ai-chat-message-assistant-feedback[data-message-id="' + message.id + '"]');
+          this.updateFeedbackIcons(feedbackContainer, newRating);
+
+          // Trigger spark animation after Font Awesome has re-processed icons.
+          if (newRating !== null && feedbackContainer) {
+            setTimeout(function () {
+              var btnClass = isPositive ? '.rate-up-btn' : '.rate-down-btn';
+              var btn = feedbackContainer.querySelector(btnClass);
+              if (btn) {
+                btn.classList.remove('spark-effect');
+                void btn.offsetWidth;
+                btn.classList.add('spark-effect');
+                btn.addEventListener('animationend', function onEnd() {
+                  btn.removeEventListener('animationend', onEnd);
+                  btn.classList.remove('spark-effect');
+                });
+              }
+            }, 50);
           }
           this.connection.invoke("RateMessage", sessionId, message.id, isPositive)["catch"](function (err) {
             console.error('Failed to rate message:', err);
