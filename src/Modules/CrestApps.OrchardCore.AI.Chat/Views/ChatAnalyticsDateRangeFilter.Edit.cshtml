@@ -3,17 +3,13 @@
 <style asp-name="flatpickr"></style>
 <script asp-name="flatpickr" at="Foot"></script>
 
-<div class="row mb-3">
-    <div class="col-md-6">
-        <label class="form-label" asp-for="StartDate">@T["Start Date"]</label>
-        <input type="text" class="form-control" asp-for="StartDate" placeholder="@T["Select start date..."]" />
-        <span class="hint">@T["Filter sessions starting from this date."]</span>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label" asp-for="EndDate">@T["End Date"]</label>
-        <input type="text" class="form-control" asp-for="EndDate" placeholder="@T["Select end date..."]" />
-        <span class="hint">@T["Filter sessions up to this date."]</span>
-    </div>
+<div class="col p-1">
+    <label class="visually-hidden" asp-for="StartDate">@T["From"]</label>
+    <input type="text" class="form-control flatpickr-input" asp-for="StartDate" placeholder="@T["From"]" readonly="readonly" />
+</div>
+<div class="col p-1">
+    <label class="visually-hidden" asp-for="EndDate">@T["To"]</label>
+    <input type="text" class="form-control flatpickr-input" asp-for="EndDate" placeholder="@T["To"]" readonly="readonly" />
 </div>
 
 <script at="Foot" depends-on="flatpickr">

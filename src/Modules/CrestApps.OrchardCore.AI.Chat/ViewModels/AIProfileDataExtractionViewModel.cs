@@ -8,6 +8,10 @@ public class AIProfileDataExtractionViewModel
 
     public int SessionInactivityTimeoutInMinutes { get; set; } = 30;
 
+    public bool EnableSessionMetrics { get; set; }
+
+    public bool IsAnalyticsFeatureEnabled { get; set; }
+
     public List<DataExtractionEntryViewModel> Entries { get; set; } = [];
 }
 

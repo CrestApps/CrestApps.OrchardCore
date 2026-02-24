@@ -24,11 +24,12 @@
         <div id="postSessionTasksContainer">
             @for (var i = 0; i < Model.Tasks.Count; i++)
             {
+                var task = Model.Tasks[i];
                 <div class="card mb-2 post-session-task-card">
                     <div class="card-header d-flex justify-content-between align-items-center py-2">
                         <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 task-collapse-toggle" data-bs-toggle="collapse" href="#taskCollapse_@i" role="button" aria-expanded="true">
                             <i class="fa-solid fa-chevron-down me-1"></i>
-                            <span class="task-name-display fw-semibold">@(string.IsNullOrWhiteSpace(Model.Tasks[i].Name) ? T["New Task"] : Model.Tasks[i].Name)</span>
+                            <span class="task-name-display fw-semibold">@(string.IsNullOrWhiteSpace(task.Name) ? T["New Task"] : task.Name)</span>
                         </a>
                         <button type="button" class="btn btn-sm btn-danger remove-task-btn" title="@T["Remove"]">
                             <i class="fa-solid fa-trash"></i>
@@ -38,33 +39,56 @@
                         <div class="card-body">
                             <div class="mb-3">
                                 <label class="form-label">@T["Name"]</label>
-                                <input type="text" class="form-control task-name-input" name="@Html.NameFor(m => m.Tasks[i].Name)" value="@Model.Tasks[i].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., disposition"]" />
+                                <input type="text" class="form-control task-name-input" name="@Html.NameFor(m => m.Tasks[i].Name)" value="@task.Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., disposition"]" />
                                 <span class="hint">@T["A unique identifier for this task. Only alphanumeric characters and underscores are allowed."]</span>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">@T["Type"]</label>
                                 <select class="form-select task-type-select" name="@Html.NameFor(m => m.Tasks[i].Type)">
-                                    @foreach (var taskType in Enum.GetValues<PostSessionTaskType>())
-                                    {
-                                        <option value="@taskType" selected="@(Model.Tasks[i].Type == taskType)">@taskType</option>
-                                    }
+                                    <option value="Semantic" selected="@(task.Type == PostSessionTaskType.Semantic)">@T["Semantic"]</option>
+                                    <option value="PredefinedOptions" selected="@(task.Type == PostSessionTaskType.PredefinedOptions)">@T["Predefined Options"]</option>
                                 </select>
-                                <span class="hint">@T["The type of analysis to perform. Disposition selects from a predefined list, Summary generates a text summary, Sentiment classifies the overall tone, Custom uses your instructions."]</span>
+                                <span class="hint">@T["Predefined Options: the AI selects from a list of values you define. Semantic: the AI generates freeform text based on your instructions."]</span>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">@T["Instructions"]</label>
-                                <textarea class="form-control" name="@Html.NameFor(m => m.Tasks[i].Instructions)" rows="3" placeholder="@T["Optional instructions for the AI model"]">@Model.Tasks[i].Instructions</textarea>
-                                <span class="hint">@T["Additional instructions for the AI model when processing this task. Required for Custom type."]</span>
+                                <textarea class="form-control" name="@Html.NameFor(m => m.Tasks[i].Instructions)" rows="3" placeholder="@T["Optional instructions for the AI model"]">@task.Instructions</textarea>
+                                <span class="hint">@T["Additional instructions for the AI model when processing this task."]</span>
                             </div>
-                            <div class="mb-3 task-options-group" style="@(Model.Tasks[i].Type == PostSessionTaskType.Disposition ? "" : "display:none")">
-                                <label class="form-label">@T["Options"]</label>
-                                <textarea class="form-control" name="@Html.NameFor(m => m.Tasks[i].Options)" rows="4" placeholder="@T["One option per line, e.g.:\nResolved\nEscalated\nAbandoned"]">@Model.Tasks[i].Options</textarea>
-                                <span class="hint">@T["For Disposition type: enter one option per line. The AI model will select the best matching option from this list."]</span>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Tasks[i].IsRequired)" value="true" @(Model.Tasks[i].IsRequired ? "checked" : "") />
-                                <label class="form-check-label">@T["Required"]</label>
-                                <span class="hint dashed">@T["When enabled, this task must produce a result for the post-session processing to be considered complete."]</span>
+                            <div class="task-options-group" style="@(task.Type == PostSessionTaskType.PredefinedOptions ? "" : "display:none")">
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Tasks[i].AllowMultipleValues)" value="true" @(task.AllowMultipleValues ? "checked" : "") />
+                                    <label class="form-check-label">@T["Allow Multiple Values"]</label>
+                                    <span class="hint dashed">@T["When enabled, the AI model can select more than one option from the list."]</span>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">@T["Options"]</label>
+                                    <span class="hint dashed d-block mb-2">@T["Define the options the AI model can select from. Each option has a value and an optional description to guide the AI."]</span>
+                                    <div class="task-options-container">
+                                        @for (var j = 0; j < task.Options.Count; j++)
+                                        {
+                                            <div class="card mb-2 task-option-card">
+                                                <div class="card-header d-flex justify-content-between align-items-center py-1">
+                                                    <span class="option-value-display fw-semibold small">@(string.IsNullOrWhiteSpace(task.Options[j].Value) ? T["New Option"] : task.Options[j].Value)</span>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger remove-option-btn" title="@T["Remove"]">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                                <div class="card-body py-2">
+                                                    <div class="mb-2">
+                                                        <label class="form-label small">@T["Value"]</label>
+                                                        <input type="text" class="form-control form-control-sm option-value-input" name="@Html.NameFor(m => m.Tasks[i].Options[j].Value)" value="@task.Options[j].Value" required placeholder="@T["e.g., Resolved"]" />
+                                                    </div>
+                                                    <div class="mb-1">
+                                                        <label class="form-label small">@T["Description"]</label>
+                                                        <input type="text" class="form-control form-control-sm" name="@Html.NameFor(m => m.Tasks[i].Options[j].Description)" value="@task.Options[j].Description" placeholder="@T["Optional: helps the AI understand when to select this option"]" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-success add-option-btn"><i class="fa-solid fa-plus"></i> @T["Add Option"]</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -87,11 +111,27 @@
 
         var container = document.getElementById('postSessionTasksContainer');
         var addButton = document.getElementById('addPostSessionTask');
+        var tasksPrefix = '@Html.NameFor(m => m.Tasks)';
+
+        function createOptionCard(taskIndex, optionIndex) {
+            var optionPrefix = tasksPrefix + '[' + taskIndex + '].Options';
+            var card = document.createElement('div');
+            card.className = 'card mb-2 task-option-card';
+            card.innerHTML =
+                '<div class="card-header d-flex justify-content-between align-items-center py-1">' +
+                    '<span class="option-value-display fw-semibold small">@T["New Option"]</span>' +
+                    '<button type="button" class="btn btn-sm btn-outline-danger remove-option-btn" title="@T["Remove"]"><i class="fa-solid fa-trash"></i></button>' +
+                '</div>' +
+                '<div class="card-body py-2">' +
+                    '<div class="mb-2"><label class="form-label small">@T["Value"]</label><input type="text" class="form-control form-control-sm option-value-input" name="' + optionPrefix + '[' + optionIndex + '].Value" required placeholder="@T["e.g., Resolved"]" /></div>' +
+                    '<div class="mb-1"><label class="form-label small">@T["Description"]</label><input type="text" class="form-control form-control-sm" name="' + optionPrefix + '[' + optionIndex + '].Description" placeholder="@T["Optional: helps the AI understand when to select this option"]" /></div>' +
+                '</div>';
+            return card;
+        }
 
         if (addButton && container) {
             addButton.addEventListener('click', function () {
                 var index = container.querySelectorAll('.post-session-task-card').length;
-                var prefix = '@Html.NameFor(m => m.Tasks)';
                 var collapseId = 'taskCollapse_' + index;
                 var card = document.createElement('div');
                 card.className = 'card mb-2 post-session-task-card';
@@ -99,27 +139,51 @@
                     '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
                         '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 task-collapse-toggle" data-bs-toggle="collapse" href="#' + collapseId + '" role="button" aria-expanded="true">' +
                             '<i class="fa-solid fa-chevron-down me-1"></i>' +
-                            '<span class="task-name-display fw-semibold">New Task</span>' +
+                            '<span class="task-name-display fw-semibold">@T["New Task"]</span>' +
                         '</a>' +
-                        '<button type="button" class="btn btn-sm btn-danger remove-task-btn" title="Remove"><i class="fa-solid fa-trash"></i></button>' +
+                        '<button type="button" class="btn btn-sm btn-danger remove-task-btn" title="@T["Remove"]"><i class="fa-solid fa-trash"></i></button>' +
                     '</div>' +
                     '<div id="' + collapseId + '" class="collapse show">' +
                         '<div class="card-body">' +
-                            '<div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control task-name-input" name="' + prefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., disposition" /><span class="hint">A unique identifier for this task. Only alphanumeric characters and underscores are allowed.</span></div>' +
-                            '<div class="mb-3"><label class="form-label">Type</label><select class="form-select task-type-select" name="' + prefix + '[' + index + '].Type"><option value="Disposition">Disposition</option><option value="Summary">Summary</option><option value="Sentiment">Sentiment</option><option value="Custom">Custom</option></select><span class="hint">The type of analysis to perform.</span></div>' +
-                            '<div class="mb-3"><label class="form-label">Instructions</label><textarea class="form-control" name="' + prefix + '[' + index + '].Instructions" rows="3" placeholder="Optional instructions for the AI model"></textarea><span class="hint">Additional instructions for the AI model when processing this task.</span></div>' +
-                            '<div class="mb-3 task-options-group"><label class="form-label">Options</label><textarea class="form-control" name="' + prefix + '[' + index + '].Options" rows="4" placeholder="One option per line"></textarea><span class="hint">For Disposition type: enter one option per line.</span></div>' +
-                            '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="' + prefix + '[' + index + '].IsRequired" value="true" /><label class="form-check-label">Required</label><span class="hint dashed">When enabled, this task must produce a result.</span></div>' +
+                            '<div class="mb-3"><label class="form-label">@T["Name"]</label><input type="text" class="form-control task-name-input" name="' + tasksPrefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., disposition"]" /><span class="hint">@T["A unique identifier for this task. Only alphanumeric characters and underscores are allowed."]</span></div>' +
+                            '<div class="mb-3"><label class="form-label">@T["Type"]</label><select class="form-select task-type-select" name="' + tasksPrefix + '[' + index + '].Type"><option value="Semantic">@T["Semantic"]</option><option value="PredefinedOptions">@T["Predefined Options"]</option></select><span class="hint">@T["Predefined Options: the AI selects from a list of values you define. Semantic: the AI generates freeform text based on your instructions."]</span></div>' +
+                            '<div class="mb-3"><label class="form-label">@T["Instructions"]</label><textarea class="form-control" name="' + tasksPrefix + '[' + index + '].Instructions" rows="3" placeholder="@T["Optional instructions for the AI model"]"></textarea><span class="hint">@T["Additional instructions for the AI model when processing this task."]</span></div>' +
+                            '<div class="task-options-group" style="display:none">' +
+                                '<div class="form-check mb-3"><input type="checkbox" class="form-check-input" name="' + tasksPrefix + '[' + index + '].AllowMultipleValues" value="true" /><label class="form-check-label">@T["Allow Multiple Values"]</label><span class="hint dashed">@T["When enabled, the AI model can select more than one option from the list."]</span></div>' +
+                                '<div class="mb-3"><label class="form-label">@T["Options"]</label><span class="hint dashed d-block mb-2">@T["Define the options the AI model can select from."]</span><div class="task-options-container"></div><button type="button" class="btn btn-sm btn-outline-success add-option-btn"><i class="fa-solid fa-plus"></i> @T["Add Option"]</button></div>' +
+                            '</div>' +
                         '</div>' +
                     '</div>';
                 container.appendChild(card);
             });
         }
 
+        // Remove task card.
         document.addEventListener('click', function (e) {
             if (e.target.closest('.remove-task-btn')) {
                 var card = e.target.closest('.post-session-task-card');
                 if (card) card.remove();
+            }
+        });
+
+        // Remove option card.
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.remove-option-btn')) {
+                var card = e.target.closest('.task-option-card');
+                if (card) card.remove();
+            }
+        });
+
+        // Add option card.
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.add-option-btn')) {
+                var taskCard = e.target.closest('.post-session-task-card');
+                if (taskCard) {
+                    var taskIndex = Array.from(container.querySelectorAll('.post-session-task-card')).indexOf(taskCard);
+                    var optionsContainer = taskCard.querySelector('.task-options-container');
+                    var optionIndex = optionsContainer.querySelectorAll('.task-option-card').length;
+                    optionsContainer.appendChild(createOptionCard(taskIndex, optionIndex));
+                }
             }
         });
 
@@ -130,20 +194,33 @@
                 if (card) {
                     var display = card.querySelector('.task-name-display');
                     if (display) {
-                        display.textContent = e.target.value || 'New Task';
+                        display.textContent = e.target.value || '@T["New Task"]';
                     }
                 }
             }
         });
 
-        // Show/hide Options field based on Type selection.
+        // Update option card header when option value changes.
+        document.addEventListener('input', function (e) {
+            if (e.target.classList.contains('option-value-input')) {
+                var card = e.target.closest('.task-option-card');
+                if (card) {
+                    var display = card.querySelector('.option-value-display');
+                    if (display) {
+                        display.textContent = e.target.value || '@T["New Option"]';
+                    }
+                }
+            }
+        });
+
+        // Show/hide Options group based on Type selection.
         document.addEventListener('change', function (e) {
             if (e.target.classList.contains('task-type-select')) {
                 var card = e.target.closest('.post-session-task-card');
                 if (card) {
                     var optionsGroup = card.querySelector('.task-options-group');
                     if (optionsGroup) {
-                        optionsGroup.style.display = e.target.value === 'Disposition' ? '' : 'none';
+                        optionsGroup.style.display = e.target.value === 'PredefinedOptions' ? '' : 'none';
                     }
                 }
             }

@@ -30,12 +30,18 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
                     Name = t.Name,
                     Type = t.Type,
                     Instructions = t.Instructions,
-                    Options = t.Options.Count > 0 ? string.Join("\n", t.Options) : string.Empty,
-                    IsRequired = t.IsRequired,
+                    AllowMultipleValues = t.AllowMultipleValues,
+                    Options = t.Options
+                        .Select(o => new PostSessionTaskOptionViewModel
+                        {
+                            Value = o.Value,
+                            Description = o.Description,
+                        })
+                        .ToList(),
                 })
                 .ToList();
 
-        }).Location("Content:10#Post-Session Processing:10");
+        }).Location("Content:10#Data Processing & Metrics:10");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
@@ -72,12 +78,26 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
                     context.Updater.ModelState.AddModelError(Prefix, nameof(model.Tasks), S["Task name '{0}' is invalid. Only alphanumeric characters and underscores are allowed.", task.Name]);
                 }
 
-                if (task.Type == PostSessionTaskType.Disposition)
+                // Clean up options: remove entries with empty values.
+                task.Options = task.Options?.Where(o => !string.IsNullOrWhiteSpace(o.Value)).ToList() ?? [];
+
+                if (task.Type == PostSessionTaskType.PredefinedOptions)
                 {
-                    var options = ParseOptions(task.Options);
-                    if (options.Count == 0)
+                    if (task.Options.Count == 0)
                     {
-                        context.Updater.ModelState.AddModelError(Prefix, nameof(model.Tasks), S["Disposition task '{0}' requires at least one option.", task.Name]);
+                        context.Updater.ModelState.AddModelError(Prefix, nameof(model.Tasks), S["Task '{0}' requires at least one option when using Predefined Options type.", task.Name]);
+                    }
+
+                    // Check for duplicate option values within a task.
+                    var duplicateOptions = task.Options
+                        .GroupBy(o => o.Value, StringComparer.OrdinalIgnoreCase)
+                        .Where(g => g.Count() > 1)
+                        .Select(g => g.Key)
+                        .ToList();
+
+                    foreach (var duplicate in duplicateOptions)
+                    {
+                        context.Updater.ModelState.AddModelError(Prefix, nameof(model.Tasks), S["Duplicate option value '{0}' in task '{1}'. Option values must be unique.", duplicate, task.Name]);
                     }
                 }
             }
@@ -91,25 +111,18 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
                 Name = t.Name,
                 Type = t.Type,
                 Instructions = t.Instructions,
-                Options = ParseOptions(t.Options),
-                IsRequired = t.IsRequired,
+                AllowMultipleValues = t.AllowMultipleValues,
+                Options = t.Type == PostSessionTaskType.PredefinedOptions
+                    ? t.Options.Select(o => new PostSessionTaskOption
+                    {
+                        Value = o.Value,
+                        Description = o.Description,
+                    }).ToList()
+                    : [],
             }).ToList();
         });
 
         return Edit(profile, context);
-    }
-
-    private static List<string> ParseOptions(string options)
-    {
-        if (string.IsNullOrWhiteSpace(options))
-        {
-            return [];
-        }
-
-        return options
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(o => !string.IsNullOrWhiteSpace(o))
-            .ToList();
     }
 
     private static bool IsValidKey(string name)

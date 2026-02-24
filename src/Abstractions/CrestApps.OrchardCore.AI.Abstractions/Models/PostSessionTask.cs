@@ -18,19 +18,21 @@ public sealed class PostSessionTask
 
     /// <summary>
     /// Gets or sets the user-provided instructions for the AI model.
-    /// For Disposition type, this describes how to select from the options.
-    /// For Custom type, this provides the full processing instructions.
+    /// For <see cref="PostSessionTaskType.PredefinedOptions"/>, this describes how to select from the options.
+    /// For <see cref="PostSessionTaskType.Semantic"/>, this provides the full processing instructions.
     /// </summary>
     public string Instructions { get; set; }
 
     /// <summary>
-    /// Gets or sets the list of predefined options for this task.
-    /// Used primarily for Disposition type (e.g., "Resolved", "Escalated", "Abandoned").
+    /// Gets or sets whether the AI model can select multiple options.
+    /// Only applicable when <see cref="Type"/> is <see cref="PostSessionTaskType.PredefinedOptions"/>.
     /// </summary>
-    public List<string> Options { get; set; } = [];
+    public bool AllowMultipleValues { get; set; }
 
     /// <summary>
-    /// Gets or sets whether this task is required for the post-session processing to be considered complete.
+    /// Gets or sets the list of predefined options for this task.
+    /// Required when <see cref="Type"/> is <see cref="PostSessionTaskType.PredefinedOptions"/>.
+    /// Each option has a value and an optional description to guide the AI model.
     /// </summary>
-    public bool IsRequired { get; set; }
+    public List<PostSessionTaskOption> Options { get; set; } = [];
 }

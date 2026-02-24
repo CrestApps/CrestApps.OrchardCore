@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 /// </summary>
 public sealed class AIChatAnalyticsDayOfWeekDisplayDriver : DisplayDriver<AIChatAnalyticsReport>
 {
-    protected readonly IStringLocalizer S;
+    internal readonly IStringLocalizer S;
 
     public AIChatAnalyticsDayOfWeekDisplayDriver(IStringLocalizer<AIChatAnalyticsDayOfWeekDisplayDriver> stringLocalizer)
     {

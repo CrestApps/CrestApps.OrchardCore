@@ -1,28 +1,28 @@
 ---
-sidebar_label: AI Chat Analytics
+sidebar_label: AI Chat Session Analytics
 sidebar_position: 3
-title: AI Chat Analytics
+title: AI Chat Session Analytics
 description: Comprehensive analytics and reporting for AI chat sessions in Orchard Core, including conversation metrics, performance tracking, user segmentation, and feedback analysis.
 ---
 
 | | |
 | --- | --- |
-| **Feature Name** | AI Chat Analytics |
+| **Feature Name** | AI Chat Session Analytics |
 | **Feature ID** | `CrestApps.OrchardCore.AI.Chat.Analytics` |
 
 Provides comprehensive analytics and reporting for AI chat sessions. Track conversation metrics, user engagement, model performance, and user satisfaction through an admin dashboard.
 
 ## Overview
 
-The **AI Chat Analytics** feature captures detailed metrics about every chat session — including session duration, message counts, resolution outcomes, response latency, token usage, and user feedback. All data is displayed through an interactive admin dashboard with filterable reports.
+The **AI Chat Session Analytics** feature captures detailed metrics about every chat session — including session duration, message counts, resolution outcomes, response latency, token usage, and user feedback. All data is displayed through an interactive admin dashboard with filterable reports.
 
 ### Enabling Analytics
 
 1. Go to **Tools** > **Features** in the admin menu.
-2. Search for **AI Chat Analytics** and enable it.
+2. Search for **AI Chat Session Analytics** and enable it.
 3. Open each **AI Profile** where you want to collect metrics.
 4. In the **Analytics** section of the profile editor, check **Enable Session Metrics**.
-5. Navigate to **Artificial Intelligence** > **Chat Analytics** in the admin menu.
+5. Navigate to **Artificial Intelligence** > **Chat Session Analytics** in the admin menu.
 
 > **Note:** Session metrics collection is disabled by default. You must enable it per-profile in the profile editor.
 
@@ -260,3 +260,108 @@ Then register in your module's `Startup.cs`:
 ```csharp
 services.AddDisplayDriver<AIChatAnalyticsReport, MyCustomMetricDisplayDriver>();
 ```
+
+---
+
+## AI Tools for Analytics
+
+When the **AI Chat Session Analytics** feature is enabled alongside the **Orchard Core AI Agent** feature, three AI tools become available for use in chat profiles:
+
+### Query Chat Session Metrics
+
+| | |
+| --- | --- |
+| **Tool Name** | `queryChatSessionMetrics` |
+| **Category** | AI Analytics |
+
+Queries aggregated chat session metrics from the analytics index. Returns statistics like total sessions, average messages per session, resolution rate, average handle time, token usage, rating distribution, and breakdowns by hour-of-day and day-of-week.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `profileId` | string | Optional. Filter metrics to a specific AI profile by its ID. |
+| `startDateUtc` | string | Optional. Start date in ISO 8601 format. |
+| `endDateUtc` | string | Optional. End date in ISO 8601 format. |
+
+:::tip
+Combine this tool with the **Generate Chart** tool to create visual dashboards. The AI model can query metrics and then render them as Chart.js visualizations.
+:::
+
+### List AI Profiles
+
+| | |
+| --- | --- |
+| **Tool Name** | `listAIProfiles` |
+| **Category** | AI Profiles |
+
+Lists AI profiles with optional filters for type and enabled features.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `type` | string | Optional. Filter by profile type: `Chat`, `Utility`, or `Embedding`. |
+| `onlyWithMetricsEnabled` | boolean | Optional. Only return profiles with session analytics enabled. |
+| `onlyWithDataExtraction` | boolean | Optional. Only return profiles with data extraction enabled. |
+| `onlyWithPostSessionProcessing` | boolean | Optional. Only return profiles with post-session processing enabled. |
+
+### View AI Profile
+
+| | |
+| --- | --- |
+| **Tool Name** | `viewAIProfile` |
+| **Category** | AI Profiles |
+
+Retrieves detailed configuration for a specific AI profile including analytics settings, data extraction entries, and post-session processing tasks.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `profileId` | string | The unique ID of the AI profile. |
+| `profileName` | string | The technical name (used if `profileId` is not provided). |
+
+---
+
+## Post-Session Processing
+
+Post-session processing runs after a chat session is closed and performs AI-powered analysis on the full conversation transcript. Configure tasks in the **Data Processing** tab of each AI profile.
+
+### Task Types
+
+| Type | Description |
+| --- | --- |
+| **Predefined Options** | The AI selects one or more values from a predefined list. Used for dispositions, classifications, or any scenario where outcomes are known upfront. Each option has a **Value** (the identifier stored as the result) and an optional **Description** (helps the AI understand when to select this option). An **Allow Multiple Values** checkbox controls whether the AI can select more than one option. |
+| **Semantic** | The AI generates freeform text based on the provided instructions. Used for summaries, sentiment analysis, or any open-ended analysis task. |
+
+### Configuring Tasks
+
+1. Edit the AI profile in **Artificial Intelligence** > **Profiles**.
+2. Open the **Data Processing** tab.
+3. Check **Enable Post-Session Processing**.
+4. Click **Add Task** to create a new task.
+5. Configure the task:
+   - **Name**: A unique identifier (alphanumeric + underscores only).
+   - **Type**: Choose **Predefined Options** or **Semantic**.
+   - **Instructions**: Guidance for the AI model on how to process this task.
+   - For **Predefined Options**: Add options with values and optional descriptions.
+6. Save the profile.
+
+### Example: Disposition Task
+
+A typical disposition task classifies the outcome of a conversation:
+
+- **Name**: `disposition`
+- **Type**: Predefined Options
+- **Instructions**: "Classify the outcome of this conversation based on the user's final state."
+- **Options**:
+  - Value: `Resolved`, Description: "The user's question or issue was fully addressed."
+  - Value: `Escalated`, Description: "The user requested to speak with a human agent."
+  - Value: `Abandoned`, Description: "The user left without completing their request."
+
+### Example: Semantic Summary Task
+
+- **Name**: `summary`
+- **Type**: Semantic
+- **Instructions**: "Write a concise 2-3 sentence summary of the conversation."

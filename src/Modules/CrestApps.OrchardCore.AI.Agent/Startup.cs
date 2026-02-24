@@ -1,7 +1,9 @@
+using CrestApps.OrchardCore.AI.Agent.Analytics;
 using CrestApps.OrchardCore.AI.Agent.Communications;
 using CrestApps.OrchardCore.AI.Agent.Contents;
 using CrestApps.OrchardCore.AI.Agent.ContentTypes;
 using CrestApps.OrchardCore.AI.Agent.Features;
+using CrestApps.OrchardCore.AI.Agent.Profiles;
 using CrestApps.OrchardCore.AI.Agent.Recipes;
 using CrestApps.OrchardCore.AI.Agent.Roles;
 using CrestApps.OrchardCore.AI.Agent.Services;
@@ -498,6 +500,52 @@ public sealed class WorkflowsRecipesStartup : StartupBase
             .WithTitle(S["List Workflow Activities"])
             .WithDescription(S["List all available tasks and activities a workflow."])
             .WithCategory(S["Workflow Management"])
+            .Selectable();
+    }
+}
+
+[Feature(AIConstants.Feature.OrchardCoreAIAgent)]
+public sealed class ProfilesStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public ProfilesStartup(IStringLocalizer<ProfilesStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAITool<ListAIProfilesTool>(ListAIProfilesTool.TheName)
+            .WithTitle(S["List AI Profiles"])
+            .WithDescription(S["Lists AI profiles with optional filters for type, analytics, data extraction, and post-session processing."])
+            .WithCategory(S["AI Profiles"])
+            .Selectable();
+
+        services.AddAITool<ViewAIProfileTool>(ViewAIProfileTool.TheName)
+            .WithTitle(S["View AI Profile"])
+            .WithDescription(S["Retrieves detailed configuration for a specific AI profile by ID or name."])
+            .WithCategory(S["AI Profiles"])
+            .Selectable();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.OrchardCoreAIAgent, AIConstants.Feature.ChatAnalytics)]
+public sealed class ChatAnalyticsToolsStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public ChatAnalyticsToolsStartup(IStringLocalizer<ChatAnalyticsToolsStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAITool<QueryChatSessionMetricsTool>(QueryChatSessionMetricsTool.TheName)
+            .WithTitle(S["Query Chat Session Metrics"])
+            .WithDescription(S["Queries aggregated chat session analytics metrics with optional date range and profile filters. Returns statistics for generating charts and reports."])
+            .WithCategory(S["AI Analytics"])
             .Selectable();
     }
 }

@@ -6,22 +6,15 @@ namespace CrestApps.OrchardCore.AI.Models;
 public enum PostSessionTaskType
 {
     /// <summary>
-    /// Determines the outcome/result of the chat session from a predefined list of options.
+    /// The AI selects one or more values from a predefined list of options.
+    /// Used for dispositions, classifications, or any scenario where the user
+    /// defines the possible outcomes upfront.
     /// </summary>
-    Disposition,
+    PredefinedOptions,
 
     /// <summary>
-    /// Generates a concise summary of the chat session.
+    /// The AI generates a freeform text value based on the provided instructions.
+    /// Used for summaries, sentiment analysis, or any open-ended analysis.
     /// </summary>
-    Summary,
-
-    /// <summary>
-    /// Analyzes the overall sentiment of the conversation (Positive, Negative, Neutral).
-    /// </summary>
-    Sentiment,
-
-    /// <summary>
-    /// A custom task with user-provided instructions.
-    /// </summary>
-    Custom,
+    Semantic,
 }

@@ -14,7 +14,7 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
         {
             var metadata = profile.As<AIProfileAnalyticsMetadata>();
             model.EnableSessionMetrics = metadata.EnableSessionMetrics;
-        }).Location("Content:5#Analytics:10")
+        }).Location("Content:10#Data Processing & Metrics:15")
         .RenderWhen(() => Task.FromResult(profile.Type == AIProfileType.Chat));
     }
 

@@ -191,17 +191,17 @@
                                 <h6 v-if="message.title" class="mb-1" style="font-size: 0.8rem;">{{ message.title }}</h6>
                                 <div v-html="message.htmlContent || message.content" style="font-size: 0.85rem; line-height: 1.5;"></div>
                                 <span class="message-buttons-container" v-if="!isIndicator(message)">
-                                    <button class="btn btn-sm btn-link text-secondary p-0" @@click="copyResponse(message.content)" title="@T["Copy"]">
-                                        <i class="fa-solid fa-copy" style="font-size: 0.75rem;"></i>
-                                    </button>
                                     <template v-if="metricsEnabled && message.role === 'assistant'">
-                                        <button class="btn btn-sm btn-link p-0" :class="sessionRating === true ? 'text-success' : 'text-secondary'" @@click="rateSession(true)" title="@T["Thumbs up"]">
-                                            <i class="fa-solid fa-thumbs-up" style="font-size: 0.75rem;"></i>
+                                        <button class="btn btn-sm btn-link text-success p-0 me-2" @@click="rateMessage(message, true)" title="@T["Thumbs up"]">
+                                            <i :class="message.userRating === true ? 'fa-solid fa-thumbs-up' : 'fa-regular fa-thumbs-up'" style="font-size: 0.9rem;"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-link p-0" :class="sessionRating === false ? 'text-danger' : 'text-secondary'" @@click="rateSession(false)" title="@T["Thumbs down"]">
-                                            <i class="fa-solid fa-thumbs-down" style="font-size: 0.75rem;"></i>
+                                        <button class="btn btn-sm btn-link text-danger p-0 me-2" @@click="rateMessage(message, false)" title="@T["Thumbs down"]">
+                                            <i :class="message.userRating === false ? 'fa-solid fa-thumbs-down' : 'fa-regular fa-thumbs-down'" style="font-size: 0.9rem;"></i>
                                         </button>
                                     </template>
+                                    <button class="btn btn-sm btn-link text-secondary p-0" @@click="copyResponse(message.content)" title="@T["Copy"]">
+                                        <i class="fa-solid fa-copy" style="font-size: 0.9rem;"></i>
+                                    </button>
                                 </span>
                             </div>
                         </div>

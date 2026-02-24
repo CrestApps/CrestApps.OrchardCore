@@ -16,5 +16,7 @@ public sealed class AIChatSessionPrompt
 
     public IEnumerable<string> ContentItemIds { get; set; }
 
+    public bool? UserRating { get; set; }
+
     public Dictionary<string, AICompletionReference> References { get; set; }
 }

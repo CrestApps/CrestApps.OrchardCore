@@ -112,18 +112,41 @@ public sealed class PostSessionProcessingService
                 continue;
             }
 
-            // For Disposition type, validate the value is one of the configured options.
-            if (task.Type == PostSessionTaskType.Disposition && task.Options.Count > 0)
+            // For PredefinedOptions type, validate the value(s) against the configured options.
+            if (task.Type == PostSessionTaskType.PredefinedOptions && task.Options.Count > 0)
             {
-                var matchedOption = task.Options.FirstOrDefault(o =>
-                    string.Equals(o, result.Value, StringComparison.OrdinalIgnoreCase));
+                var optionValues = task.Options.Select(o => o.Value).ToList();
 
-                if (matchedOption == null)
+                if (task.AllowMultipleValues)
                 {
-                    continue;
-                }
+                    // Validate each comma-separated value.
+                    var selectedValues = result.Value
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-                result.Value = matchedOption;
+                    var validValues = selectedValues
+                        .Where(v => optionValues.Any(o => string.Equals(o, v, StringComparison.OrdinalIgnoreCase)))
+                        .Select(v => optionValues.First(o => string.Equals(o, v, StringComparison.OrdinalIgnoreCase)))
+                        .ToList();
+
+                    if (validValues.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    result.Value = string.Join(", ", validValues);
+                }
+                else
+                {
+                    var matchedOption = optionValues.FirstOrDefault(o =>
+                        string.Equals(o, result.Value, StringComparison.OrdinalIgnoreCase));
+
+                    if (matchedOption == null)
+                    {
+                        continue;
+                    }
+
+                    result.Value = matchedOption;
+                }
             }
 
             applied[task.Name] = new PostSessionResult
@@ -175,10 +198,8 @@ public sealed class PostSessionProcessingService
             You are a post-session analysis assistant. Your job is to analyze a completed chat conversation and produce structured results for the requested tasks.
             Rules:
             - Analyze the ENTIRE conversation transcript provided.
-            - For Disposition tasks: select the single best matching option from the provided list. If none clearly apply, select the closest match.
-            - For Summary tasks: write a concise summary of the conversation (2-4 sentences).
-            - For Sentiment tasks: classify the overall conversation sentiment as exactly one of: "Positive", "Negative", or "Neutral".
-            - For Custom tasks: follow the provided instructions exactly.
+            - For PredefinedOptions tasks: select the best matching option(s) from the provided list. Use the option descriptions to guide your selection. If "allowMultiple" is true, you may select more than one option separated by commas. If false, select exactly one.
+            - For Semantic tasks: follow the provided instructions and produce a freeform text result.
             - Return valid JSON only. Do NOT wrap the response in markdown code fences (```). No explanations, no comments.
             - Only return tasks that were requested.
             - Response format:
@@ -208,10 +229,32 @@ public sealed class PostSessionProcessingService
                 builder.Append(task.Instructions);
             }
 
-            if (task.Options.Count > 0)
+            if (task.Type == PostSessionTaskType.PredefinedOptions && task.Options.Count > 0)
             {
+                if (task.AllowMultipleValues)
+                {
+                    builder.Append(" [allowMultiple=true]");
+                }
+
                 builder.Append(" Options: [");
-                builder.Append(string.Join(", ", task.Options));
+
+                for (var i = 0; i < task.Options.Count; i++)
+                {
+                    if (i > 0)
+                    {
+                        builder.Append(", ");
+                    }
+
+                    builder.Append(task.Options[i].Value);
+
+                    if (!string.IsNullOrWhiteSpace(task.Options[i].Description))
+                    {
+                        builder.Append(" (");
+                        builder.Append(task.Options[i].Description);
+                        builder.Append(")");
+                    }
+                }
+
                 builder.Append("]");
             }
         }

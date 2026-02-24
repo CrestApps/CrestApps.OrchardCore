@@ -22,17 +22,17 @@ var defaultConfig = {
                         <h4 v-if="message.title">{{ message.title }}</h4>
                         <div v-html="message.htmlContent || message.content"></div>
                         <span class="message-buttons-container" v-if="!isIndicator(message)">
-                            <button class="btn btn-sm btn-link text-secondary p-0 button-message-toolbox" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
-                                <i class="fa-solid fa-copy"></i>
-                            </button>
                             <template v-if="metricsEnabled && message.role === 'assistant'">
-                                <button class="btn btn-sm btn-link p-0 button-message-toolbox" :class="sessionRating === true ? 'text-success' : 'text-secondary'" @click="rateSession(true)" title="Thumbs up">
-                                    <i class="fa-solid fa-thumbs-up"></i>
+                                <button class="btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox" @click="rateMessage(message, true)" title="Thumbs up">
+                                    <i :class="message.userRating === true ? 'fa-solid fa-thumbs-up' : 'fa-regular fa-thumbs-up'" style="font-size: 0.9rem;"></i>
                                 </button>
-                                <button class="btn btn-sm btn-link p-0 button-message-toolbox" :class="sessionRating === false ? 'text-danger' : 'text-secondary'" @click="rateSession(false)" title="Thumbs down">
-                                    <i class="fa-solid fa-thumbs-down"></i>
+                                <button class="btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox" @click="rateMessage(message, false)" title="Thumbs down">
+                                    <i :class="message.userRating === false ? 'fa-solid fa-thumbs-down' : 'fa-regular fa-thumbs-down'" style="font-size: 0.9rem;"></i>
                                 </button>
                             </template>
+                            <button class="btn btn-sm btn-link text-secondary p-0 button-message-toolbox" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
+                                <i class="fa-solid fa-copy" style="font-size: 0.9rem;"></i>
+                            </button>
                         </span>
                     </div>
                 </div>
@@ -318,7 +318,6 @@ function parseMarkdownContent(content, message) {
                     isDragOver: false,
                     documentBar: null,
                     metricsEnabled: !!config.metricsEnabled,
-                    sessionRating: null
                 };
             },
             methods: {
@@ -546,6 +545,13 @@ function parseMarkdownContent(content, message) {
                         console.error("SignalR Error: ", error);
                     });
 
+                    this.connection.on("MessageRated", (messageId, userRating) => {
+                        var msg = this.messages.find(m => m.id === messageId);
+                        if (msg) {
+                            msg.userRating = userRating;
+                        }
+                    });
+
                     this.connection.onreconnecting(() => {
                         console.warn("SignalR: reconnecting...");
                     });
@@ -689,6 +695,7 @@ function parseMarkdownContent(content, message) {
                                     // Re-assign the index after hiding the typing indicator.
                                     messageIndex = this.messages.length;
                                     let newMessage = {
+                                        id: chunk.messageId,
                                         role: "assistant",
                                         title: chunk.title,
                                         content: "",
@@ -1158,16 +1165,15 @@ function parseMarkdownContent(content, message) {
                 copyResponse(message) {
                     navigator.clipboard.writeText(message);
                 },
-                rateSession(isPositive) {
+                rateMessage(message, isPositive) {
                     var sessionId = this.getSessionId();
 
-                    if (!sessionId || !this.connection) {
+                    if (!sessionId || !message.id || !this.connection) {
                         return;
                     }
 
-                    this.sessionRating = isPositive;
-                    this.connection.invoke("RateSession", sessionId, isPositive).catch(function (err) {
-                        console.error('Failed to rate session:', err);
+                    this.connection.invoke("RateMessage", sessionId, message.id, isPositive).catch(function (err) {
+                        console.error('Failed to rate message:', err);
                     });
                 }
             },

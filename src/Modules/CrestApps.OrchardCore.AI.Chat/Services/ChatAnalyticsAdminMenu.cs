@@ -18,9 +18,9 @@ public sealed class ChatAnalyticsAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Artificial Intelligence"], ai => ai
-                .Add(S["Chat Analytics"], S["Chat Analytics"].PrefixPosition(), analytics => analytics
-                    .AddClass("chat-analytics")
-                    .Id("chatAnalytics")
+                .Add(S["Chat Session Analytics"], S["Chat Session Analytics"].PrefixPosition(), analytics => analytics
+                    .AddClass("chat-session-analytics")
+                    .Id("chatSessionAnalytics")
                     .Permission(ChatAnalyticsPermissionProvider.ViewChatAnalytics)
                     .Action("Index", "ChatAnalytics", new RouteValueDictionary
                     {

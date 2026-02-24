@@ -9,18 +9,20 @@ using Microsoft.AspNetCore.Mvc;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
+using OrchardCore.Modules;
 using YesSql;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 
-[Admin("AI/ChatAnalytics/{action=Index}", "ChatAnalytics.{action}")]
+[Admin("AI/ChatAnalytics/{action}", "ChatAnalytics.{action}")]
 public sealed class ChatAnalyticsController : Controller
 {
     private readonly ISession _session;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDisplayManager<AIChatAnalyticsFilter> _filterDisplayManager;
     private readonly IDisplayManager<AIChatAnalyticsReport> _reportDisplayManager;
+    private readonly IClock _clock;
     private readonly IUpdateModelAccessor _updateModelAccessor;
 
     public ChatAnalyticsController(
@@ -28,12 +30,14 @@ public sealed class ChatAnalyticsController : Controller
         IAuthorizationService authorizationService,
         IDisplayManager<AIChatAnalyticsFilter> filterDisplayManager,
         IDisplayManager<AIChatAnalyticsReport> reportDisplayManager,
+        IClock clock,
         IUpdateModelAccessor updateModelAccessor)
     {
         _session = session;
         _authorizationService = authorizationService;
         _filterDisplayManager = filterDisplayManager;
         _reportDisplayManager = reportDisplayManager;
+        _clock = clock;
         _updateModelAccessor = updateModelAccessor;
     }
 
@@ -102,7 +106,7 @@ public sealed class ChatAnalyticsController : Controller
             ShowReport = true,
         };
 
-        return View("Index", viewModel);
+        return View(nameof(Index), viewModel);
     }
 
     [HttpPost]
@@ -125,9 +129,9 @@ public sealed class ChatAnalyticsController : Controller
 
         // Generate CSV content for export.
         var csv = GenerateCsvContent(events);
-        var fileName = $"chat-analytics-{DateTime.UtcNow:yyyyMMdd-HHmmss}.csv";
+        var fileName = $"chat-analytics-{_clock.UtcNow:yyyyMMdd-HHmmss}.csv";
 
-        return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", fileName);
+        return File(Encoding.UTF8.GetBytes(csv), "text/csv", fileName);
     }
 
     private async Task<IReadOnlyList<AIChatSessionEvent>> ExecuteQueryAsync(AIChatAnalyticsFilter filter)

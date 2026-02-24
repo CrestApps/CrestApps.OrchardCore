@@ -10,7 +10,14 @@ public class PostSessionTaskViewModel
 
     public string Instructions { get; set; }
 
-    public string Options { get; set; }
+    public bool AllowMultipleValues { get; set; }
 
-    public bool IsRequired { get; set; }
+    public List<PostSessionTaskOptionViewModel> Options { get; set; } = [];
+}
+
+public class PostSessionTaskOptionViewModel
+{
+    public string Value { get; set; }
+
+    public string Description { get; set; }
 }

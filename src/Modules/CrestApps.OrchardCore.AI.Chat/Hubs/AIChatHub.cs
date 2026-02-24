@@ -132,14 +132,15 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 IsGeneratedPrompt = message.IsGeneratedPrompt,
                 Title = message.Title,
                 Content = message.Content,
+                UserRating = message.UserRating,
                 References = message.References,
             })
         });
     }
 
-    public async Task RateSession(string sessionId, bool isPositive)
+    public async Task RateMessage(string sessionId, string messageId, bool isPositive)
     {
-        if (string.IsNullOrWhiteSpace(sessionId))
+        if (string.IsNullOrWhiteSpace(sessionId) || string.IsNullOrWhiteSpace(messageId))
         {
             return;
         }
@@ -165,12 +166,38 @@ public class AIChatHub : Hub<IAIChatHubClient>
             return;
         }
 
+        var prompt = chatSession.Prompts.FirstOrDefault(p => p.Id == messageId);
+
+        if (prompt is null)
+        {
+            return;
+        }
+
+        // Toggle: if the user clicks the same rating again, clear it.
+        prompt.UserRating = prompt.UserRating == isPositive ? null : isPositive;
+
+        await _sessionManager.SaveAsync(chatSession);
+
+        // Also update session-level rating for analytics.
         var eventService = httpContext.RequestServices.GetService<AIChatSessionEventService>();
 
         if (eventService is not null)
         {
-            await eventService.RecordUserRatingAsync(sessionId, isPositive);
+            // Compute session-level rating from the latest message ratings.
+            var ratings = chatSession.Prompts
+                .Where(p => p.UserRating.HasValue)
+                .Select(p => p.UserRating.Value)
+                .ToList();
+
+            if (ratings.Count > 0)
+            {
+                var positiveCount = ratings.Count(r => r);
+                await eventService.RecordUserRatingAsync(sessionId, positiveCount >= ratings.Count - positiveCount);
+            }
         }
+
+        // Notify the caller of the updated rating.
+        await Clients.Caller.MessageRated(messageId, prompt.UserRating);
     }
 
     private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
