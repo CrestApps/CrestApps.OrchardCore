@@ -4,7 +4,7 @@
 
 ## Project Overview
 
-CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core CMS**, a modular application framework built on **ASP.NET Core/.NET 10**. The repository contains AI modules, user management enhancements, content access control, and other CMS extensions.
+CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core CMS**, a modular application framework built on **ASP.NET Core/.NET 10**. The repository contains AI modules, omnichannel communication, user management enhancements, content access control, and other CMS extensions.
 
 **License**: MIT  
 **Target Framework**: .NET 10.0 (net10.0)  
@@ -72,6 +72,13 @@ dotnet run
 # Admin setup occurs on first run
 ```
 
+**Aspire Orchestration**: For full-stack local development with Ollama, Elasticsearch, and Redis, use the Aspire AppHost:
+
+```bash
+cd src/Startup/CrestApps.Aspire.AppHost
+dotnet run
+```
+
 ### Validation Scenarios
 
 **When the build succeeds**, always validate changes by:
@@ -95,24 +102,69 @@ dotnet run
 ### Key Directories
 ```
 src/
-├── Modules/                    # All CrestApps modules
-│   ├── CrestApps.OrchardCore.AI/           # AI core services
-│   ├── CrestApps.OrchardCore.AI.Chat/      # AI chat interface  
-│   ├── CrestApps.OrchardCore.AI.Agent/     # AI agents
-│   ├── CrestApps.OrchardCore.AI.Mcp/       # Model Context Protocol
-│   ├── CrestApps.OrchardCore.OpenAI/       # OpenAI integration
-│   ├── CrestApps.OrchardCore.OpenAI.Azure/ # Azure OpenAI
-│   ├── CrestApps.OrchardCore.Ollama/       # Ollama integration
-│   ├── CrestApps.OrchardCore.Users/        # Enhanced user management
-│   ├── CrestApps.OrchardCore.Roles/        # Enhanced roles
-│   ├── CrestApps.OrchardCore.ContentAccessControl/ # Content permissions
-│   ├── CrestApps.OrchardCore.SignalR/      # SignalR integration
-│   └── CrestApps.OrchardCore.Resources/    # Shared resources
-├── Core/                       # Core libraries
-├── Abstractions/              # Interface definitions
-├── Startup/                   # Web applications
-│   └── CrestApps.OrchardCore.Cms.Web/     # Main CMS web app
-└── Targets/                   # Package bundles
+├── Abstractions/               # Shared interface/abstraction libraries
+│   ├── CrestApps.OrchardCore.Abstractions/         # Core abstractions
+│   ├── CrestApps.OrchardCore.AI.Abstractions/      # AI abstractions
+│   └── CrestApps.OrchardCore.Users.Abstractions/   # User abstractions
+├── Common/                     # Shared utility libraries
+│   └── CrestApps.Support/                          # General support utilities
+├── Core/                       # Core service libraries (not Orchard modules)
+│   ├── CrestApps.Azure.Core/                       # Azure utilities
+│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Core/  # Chat interaction core services
+│   ├── CrestApps.OrchardCore.AI.Core/              # AI core services
+│   ├── CrestApps.OrchardCore.AI.Mcp.Core/          # MCP core services
+│   ├── CrestApps.OrchardCore.Core/                 # General OrchardCore core
+│   ├── CrestApps.OrchardCore.Omnichannel.Core/     # Omnichannel core services
+│   ├── CrestApps.OrchardCore.OpenAI.Azure.Core/    # Azure OpenAI core
+│   ├── CrestApps.OrchardCore.OpenAI.Core/          # OpenAI core services
+│   ├── CrestApps.OrchardCore.Recipes.Core/         # Recipes core services
+│   ├── CrestApps.OrchardCore.Roles.Core/           # Roles core services
+│   ├── CrestApps.OrchardCore.SignalR.Core/         # SignalR core services
+│   ├── CrestApps.OrchardCore.Users.Core/           # Users core services
+│   └── CrestApps.OrchardCore.YesSql.Core/          # YesSql core utilities
+├── Modules/                    # All CrestApps Orchard Core modules
+│   ├── CrestApps.OrchardCore.AI/                   # AI base services and deployments
+│   ├── CrestApps.OrchardCore.AI.Agent/             # AI agents
+│   ├── CrestApps.OrchardCore.AI.Chat/              # AI chat interface and profiles
+│   ├── CrestApps.OrchardCore.AI.Chat.Copilot/      # GitHub Copilot-style AI chat
+│   ├── CrestApps.OrchardCore.AI.Chat.Interactions/ # Real-time AI chat interactions (SignalR hub)
+│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Documents/          # Document-based chat interactions
+│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Documents.AzureAI/  # Azure AI document interactions
+│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Documents.Elasticsearch/ # Elasticsearch document interactions
+│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml/            # OpenXml document chat interactions
+│   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Pdf/                # PDF document chat interactions
+│   ├── CrestApps.OrchardCore.AI.DataSources/                          # AI data source management
+│   ├── CrestApps.OrchardCore.AI.DataSources.AzureAI/                  # Azure AI Search data sources
+│   ├── CrestApps.OrchardCore.AI.DataSources.Elasticsearch/            # Elasticsearch data sources
+│   ├── CrestApps.OrchardCore.AI.Documents/                            # AI document indexing and management
+│   ├── CrestApps.OrchardCore.AI.Documents.AzureAI/                    # Azure AI document storage
+│   ├── CrestApps.OrchardCore.AI.Documents.Elasticsearch/              # Elasticsearch document storage
+│   ├── CrestApps.OrchardCore.AI.Documents.OpenXml/                    # OpenXml document parsing
+│   ├── CrestApps.OrchardCore.AI.Documents.Pdf/                        # PDF document parsing
+│   ├── CrestApps.OrchardCore.AI.Mcp/                                  # Model Context Protocol server
+│   ├── CrestApps.OrchardCore.AI.Mcp.Resources.Ftp/                    # MCP FTP resource handler
+│   ├── CrestApps.OrchardCore.AI.Mcp.Resources.Sftp/                   # MCP SFTP resource handler
+│   ├── CrestApps.OrchardCore.AzureAIInference/     # Azure AI Inference / GitHub Models provider
+│   ├── CrestApps.OrchardCore.ContentAccessControl/ # Content item access control
+│   ├── CrestApps.OrchardCore.Ollama/               # Ollama (local LLM) provider
+│   ├── CrestApps.OrchardCore.Omnichannel/          # Omnichannel communication base
+│   ├── CrestApps.OrchardCore.Omnichannel.EventGrid/ # Event Grid omnichannel integration
+│   ├── CrestApps.OrchardCore.Omnichannel.Managements/ # Omnichannel management UI
+│   ├── CrestApps.OrchardCore.Omnichannel.Sms/      # SMS omnichannel channel
+│   ├── CrestApps.OrchardCore.OpenAI/               # OpenAI provider
+│   ├── CrestApps.OrchardCore.OpenAI.Azure/         # Azure OpenAI provider
+│   ├── CrestApps.OrchardCore.Recipes/              # Recipe enhancements
+│   ├── CrestApps.OrchardCore.Resources/            # Shared frontend resources
+│   ├── CrestApps.OrchardCore.Roles/                # Enhanced roles management
+│   ├── CrestApps.OrchardCore.SignalR/              # SignalR integration
+│   └── CrestApps.OrchardCore.Users/               # Enhanced user management
+├── CrestApps.OrchardCore.Documentations/  # Docusaurus documentation site
+├── Startup/                    # Runnable applications
+│   ├── CrestApps.Aspire.AppHost/                   # .NET Aspire orchestration host
+│   ├── CrestApps.OrchardCore.Cms.Web/              # Main CMS web application
+│   └── CrestApps.OrchardCore.Samples.McpClient/    # MCP client sample application
+└── Targets/                    # MSBuild package bundle targets
+    └── CrestApps.OrchardCore.Cms.Core.Targets/
 
 tests/
 └── CrestApps.OrchardCore.Tests/    # Unit test project
@@ -121,10 +173,11 @@ tests/
 ```
 
 ### Important Files
-- `CrestApps.OrchardCore.sln` - Main solution file
+- `CrestApps.OrchardCore.slnx` - Main solution file (Visual Studio XML format)
 - `global.json` - .NET SDK version (10.0.100)
-- `Directory.Build.props` - Common MSBuild properties
-- `NuGet.config` - Package source configuration (includes CloudSmith feed)
+- `Directory.Build.props` - Common MSBuild properties (TFM, versioning, analysis rules)
+- `Directory.Packages.props` - Centralized NuGet package versions
+- `NuGet.config` - Package source configuration (includes CloudSmith feed for Orchard Core previews)
 - `package.json` - npm dependencies and scripts
 - `gulpfile.js` - Asset build configuration
 - `.editorconfig` - Code style and formatting rules
@@ -139,13 +192,25 @@ tests/
 5. **Update Targets**: Add a reference to the new module in the targets project `src/Targets/CrestApps.OrchardCore.Cms.Core.Targets/CrestApps.OrchardCore.Cms.Core.Targets.targets` so it is discoverable by Orchard Core.
 
 ### Working with AI Modules
-- **Base AI Module**: `CrestApps.OrchardCore.AI` - start here for AI-related changes
-- **Chat Interface**: `CrestApps.OrchardCore.AI.Chat` - UI and chat functionality
-- **Integrations**: Specific provider modules (OpenAI, Azure, Ollama)
+- **Base AI Module**: `CrestApps.OrchardCore.AI` - start here for AI-related changes; manages deployments and provider connections
+- **Chat Interface**: `CrestApps.OrchardCore.AI.Chat` - AI chat profiles and UI
+- **Real-time Chat**: `CrestApps.OrchardCore.AI.Chat.Interactions` - SignalR-based interactive chat hub
+- **Copilot Chat**: `CrestApps.OrchardCore.AI.Chat.Copilot` - GitHub Copilot-style embedded chat experience
+- **Document Indexing**: `CrestApps.OrchardCore.AI.Documents` - indexes documents for AI retrieval
+- **Data Sources**: `CrestApps.OrchardCore.AI.DataSources` - configures external AI data sources
+- **MCP Server**: `CrestApps.OrchardCore.AI.Mcp` - exposes Orchard Core content as MCP resources
+- **AI Agents**: `CrestApps.OrchardCore.AI.Agent` - defines reusable AI agents/tools
+- **Provider modules**: `CrestApps.OrchardCore.OpenAI`, `CrestApps.OrchardCore.OpenAI.Azure`, `CrestApps.OrchardCore.Ollama`, `CrestApps.OrchardCore.AzureAIInference`
+
+### Working with Omnichannel Modules
+- **Base Module**: `CrestApps.OrchardCore.Omnichannel` - unified communication layer
+- **SMS Channel**: `CrestApps.OrchardCore.Omnichannel.Sms` - SMS messaging support
+- **Event Grid**: `CrestApps.OrchardCore.Omnichannel.EventGrid` - Azure Event Grid integration
+- **Management UI**: `CrestApps.OrchardCore.Omnichannel.Managements` - admin management interface
 
 ### Frontend Development
-- CSS/SCSS files are in individual module directories
-- TypeScript/JavaScript files are built using gulp pipeline
+- CSS/SCSS files are in individual module `Assets/` directories
+- TypeScript/JavaScript files are built using the gulp pipeline
 - Run `npm run rebuild` after any frontend changes
 - Use `npm run watch` for development with auto-rebuild
 
@@ -155,6 +220,14 @@ tests/
 3. Run `dotnet build` for backend changes (if network allows)
 4. Run `dotnet test` for unit tests (if build succeeds)
 5. Start web application and test manually
+
+### Documentation Workflow
+
+Whenever code is modified, you MUST update the documentation project located at `src/CrestApps.OrchardCore.Documentations`:
+
+1. **Update feature documentation first** – find the relevant page under `src/CrestApps.OrchardCore.Documentations/docs/` and keep it accurate with the latest behavior.
+2. **Add a changelog entry** – add an entry to the changelog in the same documentation project describing what changed, why it changed, and any breaking or behavioral impact.
+3. **Documentation changes are NOT optional** – code changes without documentation updates are considered incomplete.
 
 ## Troubleshooting
 
@@ -298,6 +371,13 @@ Every module MUST have a README.md file with:
 - Usage examples
 - Dependencies on other modules
 
+### Documentation Project
+The Docusaurus documentation site is located at `src/CrestApps.OrchardCore.Documentations`. It contains:
+- Feature documentation under `docs/`
+- Module-specific guides under `docs/modules/`, `docs/ai/`, `docs/omnichannel/`, `docs/providers/`
+- A changelog under `docs/changelog/`
+- Getting started guide and samples
+
 ### Code Documentation
 - XML documentation comments for public APIs
 - Inline comments for complex logic only
@@ -367,7 +447,7 @@ npm run watch
 1. **Build Validation**: Ensure both .NET and asset builds succeed
 2. **Test Coverage**: Add tests for new features and bug fixes
 3. **Code Quality**: Follow coding standards and conventions
-4. **Documentation**: Update README files and code comments
+4. **Documentation**: Update README files, code comments, and the Docusaurus docs in `src/CrestApps.OrchardCore.Documentations`
 5. **Commit Messages**: Write clear, descriptive commit messages
 6. **Branch Naming**: Use descriptive branch names (e.g., `feature/ai-chat-improvements`, `fix/user-avatar-bug`)
 
@@ -445,6 +525,16 @@ services.AddNavigationProvider<MyAdminMenu>();
 - ❌ Don't skip writing tests for new features
 - ❌ Don't commit commented-out code
 - ❌ Don't use `System.Range` or `System.Index` operators (enforced as warning)
+- ❌ Don't leave unused services injected through dependency injection
+- ❌ Don't leave unused `using` statements in source files
+
+## Code Cleanup (Required After Completing Work)
+
+After completing any code change, always clean up:
+
+- Remove any **unused services** that were injected through dependency injection but are no longer referenced in the class body.
+- Remove any **unused `using` statements** from all modified source files.
+- Prefer clarity over cleverness; do not introduce undocumented behavior.
 
 ## Useful Resources
 
