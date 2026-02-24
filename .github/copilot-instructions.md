@@ -228,6 +228,7 @@ Whenever code is modified, you MUST update the documentation project located at 
 1. **Update feature documentation first** – find the relevant page under `src/CrestApps.OrchardCore.Documentations/docs/` and keep it accurate with the latest behavior.
 2. **Add a changelog entry** – add an entry to the changelog in the same documentation project describing what changed, why it changed, and any breaking or behavioral impact.
 3. **Documentation changes are NOT optional** – code changes without documentation updates are considered incomplete.
+4. **Validate the docs build** – after updating documentation, verify the Docusaurus site builds successfully and all internal links resolve correctly. The CI pipeline runs link-checking; failing to validate locally will cause workflow failures.
 
 ## Troubleshooting
 
@@ -277,6 +278,9 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **Range/Index operators**: Avoid using range/index operators (enforced as warning)
 - **Code Analysis**: `AnalysisLevel` is set to `latest-Recommended`
 - **Implicit usings**: Enabled globally
+- **Date/time**: Never use `DateTime.UtcNow`. Always inject `IClock` in the constructor (e.g., `IClock clock`) and store it as `private readonly IClock _clock = clock;`, then call `_clock.UtcNow` in methods
+- **One type per file**: Every public type must live in its own file. The file name must always match the type name (e.g., `MyService.cs` for `class MyService`)
+- **sealed classes**: Seal all classes by default (`sealed class`), **except** ViewModel classes that are consumed by any Orchard Core display driver — those must remain unsealed because the framework creates runtime proxies for them and proxies cannot be created from sealed types
 
 ### Module Structure Conventions
 
@@ -388,7 +392,7 @@ The Docusaurus documentation site is located at `src/CrestApps.OrchardCore.Docum
 
 Before committing:
 1. Run `npm run rebuild` - asset build must complete cleanly
-2. Run `dotnet build` (if network allows) - solution must build without warnings
+2. Run `dotnet build -warnaserror` (if network allows) - the build must produce **zero warnings**; fix every warning across the entire project, not only in files you changed, before running with `-warnaserror`
 3. Run `dotnet test` (if build succeeds) - all tests must pass
 4. Verify no uncommitted asset changes with `git status`
 
@@ -521,12 +525,15 @@ services.AddNavigationProvider<MyAdminMenu>();
 - ❌ Don't bypass Orchard Core's dependency injection
 - ❌ Don't hardcode connection strings or secrets
 - ❌ Don't use synchronous I/O operations (use async/await)
-- ❌ Don't ignore compiler warnings (TreatWarningsAsErrors is enabled)
+- ❌ Don't ignore compiler warnings (TreatWarningsAsErrors is enabled) — fix all warnings in the entire project, not just changed files
 - ❌ Don't skip writing tests for new features
 - ❌ Don't commit commented-out code
 - ❌ Don't use `System.Range` or `System.Index` operators (enforced as warning)
 - ❌ Don't leave unused services injected through dependency injection
 - ❌ Don't leave unused `using` statements in source files
+- ❌ Don't use `DateTime.UtcNow` — inject `IClock` and use `_clock.UtcNow` instead
+- ❌ Don't seal ViewModel classes that are used by any Orchard Core display driver — the framework requires unsealed types to generate runtime proxies
+- ❌ Don't put multiple public types in a single file — each public type must be in its own file whose name matches the type name
 
 ## Code Cleanup (Required After Completing Work)
 
