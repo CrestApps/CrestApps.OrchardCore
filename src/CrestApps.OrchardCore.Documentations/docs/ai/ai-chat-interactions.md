@@ -26,7 +26,7 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 - Orchestrator selection — choose which orchestrator runtime manages the session (e.g., Default, Copilot)
 - Image generation — generate images from text prompts using AI image generation models
 - Chart generation — generate chart specifications from prompts (for rendering as a chart)
-- Document upload — upload documents and chat against your own data via RAG
+- Document upload — upload documents and chat against your own data via retrieval-augmented generation (RAG)
 
 ## Getting Started
 
@@ -39,20 +39,23 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 
 Each chat interaction session is bound to an orchestrator that manages the execution pipeline. The orchestrator handles:
 
+- **Planning** — breaking the request into steps and deciding what to do next
 - **Tool scoping** — selecting and invoking the right tools based on context
 - **MCP connections** — discovering and using capabilities from connected MCP servers
-- **Document handling** — providing uploaded document context to the AI model
+- **Document handling** — providing uploaded document context to the AI model (retrieval-augmented generation (RAG))
 - **Iterative execution** — managing multi-step tool-call loops
 
-The default orchestrator (`DefaultOrchestrator`) is used unless a different one is selected (e.g., the Copilot orchestrator).
+The default orchestrator (`DefaultOrchestrator`) is our state-of-the-art orchestrator responsible for gluing together everything the model needs to do useful work: planning, tool selection and execution, document context, and multi-step reasoning loops. It is effectively the brain behind chat interactions and the overall model behavior, unless you select a different orchestrator (for example, the Copilot orchestrator).
 
 ## Related Features
 
 ### AI Documents
 
-For document upload and RAG support, see the [Documents feature documentation](documents/).
+For document upload and retrieval-augmented generation (RAG) support, see the [Documents feature documentation](documents/).
 
-> Note: The `AI Documents` feature is provided on demand and is only enabled when another feature that requires it is enabled (for example one of the document indexing provider features). To configure document indexing you must enable either the `AI Documents (Azure AI Search)` feature or the `AI Documents (Elasticsearch)` feature in Orchard Core admin.
+:::note Note
+The `AI Documents` feature is provided on demand and is only enabled when another feature that requires it is enabled (for example one of the document indexing provider features). To configure document indexing you must enable either the `AI Documents (Azure AI Search)` feature or the `AI Documents (Elasticsearch)` feature in Orchard Core admin.
+:::
 
 The Documents feature supports Elasticsearch and Azure AI Search as embedding and search providers. Ensure you enable the corresponding feature for your chosen provider in Orchard Core admin.
 

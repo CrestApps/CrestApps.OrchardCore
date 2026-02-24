@@ -12,7 +12,9 @@ description: JSON-Schema support for Orchard Core recipes with per-step validati
 
 Provides recipe steps for CrestApps modules.
 
-> **Note:** This feature is enabled by dependency only.
+:::note Note
+This feature is enabled by dependency only.
+:::
 
 ## Overview
 

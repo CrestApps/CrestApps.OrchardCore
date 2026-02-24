@@ -1,6 +1,7 @@
 ---
 sidebar_label: AI Services and Configuration
 sidebar_position: 1
+slug: /ai/ai
 title: AI Services
 description: Foundational infrastructure for interacting with AI models through configurable profiles and service integrations in Orchard Core.
 ---
@@ -20,7 +21,32 @@ Once enabled, a new **Artificial Intelligence** menu item appears in the admin d
 
 An **AI Profile** defines how the AI system interacts with users — including its welcome message, system message, and response behavior.
 
-> **Note:** This feature does **not** include any AI completion client implementations such as **OpenAI**. It only provides the **user interface** and **core services** for managing AI profiles. You must install and configure a compatible provider module (e.g., `OpenAI`, `Azure`, `AzureAIInference`, or `Ollama`) separately.
+:::note
+This feature does **not** include any AI completion client implementations such as **OpenAI**. It only provides the **user interface** and **core services** for managing AI profiles. You must install and configure a compatible provider module (e.g., `OpenAI`, `Azure`, `AzureAIInference`, or `Ollama`) separately.
+:::
+---
+
+## Data Extraction (AI Profiles)
+
+AI Profiles can be configured to **extract structured data** from the chat session as the conversation progresses (for example: name, email, product of interest, budget, meeting time, etc.).
+
+To configure this, edit an AI Profile in the admin UI and open the **Data Extractions** tab (added by `AIProfileDataExtractionDisplayDriver`).
+
+### Configuration
+
+1. Go to **Artificial Intelligence → AI Profiles** and edit a profile.
+2. Open the **Data Extractions** tab.
+3. Check **Enable Data Extraction**.
+4. Configure:
+   - **Extraction Check Interval** — run extraction every N user messages (default: 1).
+   - **Session Inactivity Timeout (minutes)** — sessions inactive longer than this are automatically closed and a final extraction is run (default: 30).
+   - **Extraction Entries** — the fields to extract:
+     - **Name** — a unique key (letters, digits, underscore), e.g. `customer_name`.
+     - **Description** — what to extract (this is what the model uses as guidance).
+     - **Allow Multiple Values** — accumulate multiple values over time (e.g., multiple mentioned products).
+     - **Updatable** — allow replacing the previous value if the user corrects it later.
+
+Extracted values are stored on the chat session (`ExtractedData`) and are updated after each qualifying message exchange. The extraction model uses the profile's **Utility deployment** when configured, and falls back to the chat deployment otherwise.
 
 ---
 
@@ -90,7 +116,7 @@ Below is an example configuration:
 |---------|-------------|----------|
 | `DefaultChatDeploymentName` | The default model for chat completions | Yes |
 | `DefaultUtilityDeploymentName` | The default lightweight model for auxiliary tasks (e.g., query rewriting, planning). Falls back to `DefaultChatDeploymentName` when not set. | No |
-| `DefaultEmbeddingDeploymentName` | The model for generating embeddings (for RAG/vector search) | No |
+| `DefaultEmbeddingDeploymentName` | The model for generating embeddings (for retrieval-augmented generation (RAG) / vector search) | No |
 | `DefaultImagesDeploymentName` | The model for image generation (e.g., `dall-e-3`). Required for image generation features. | No |
 
 **Connection-level settings** (specific to an individual connection):
@@ -99,7 +125,7 @@ Below is an example configuration:
 |---------|-------------|----------|
 | `ChatDeploymentName` | The model for chat completions for this connection | Yes |
 | `UtilityDeploymentName` | A lightweight model for auxiliary tasks such as query rewriting, planning, and chart generation. Falls back to `ChatDeploymentName` when not set. | No |
-| `EmbeddingDeploymentName` | The model for generating embeddings (for RAG/vector search) | No |
+| `EmbeddingDeploymentName` | The model for generating embeddings (for retrieval-augmented generation (RAG) / vector search) | No |
 | `ImagesDeploymentName` | The model for image generation (e.g., `dall-e-3`). Required for image generation features. | No |
 
 ---
@@ -122,7 +148,7 @@ Each provider can define multiple connections, and the `DefaultConnectionName` d
 
 ### Microsoft.AI.Extensions
 
-The AI module is built on top of [Microsoft.Extensions.AI](https://www.nuget.org/packages/Microsoft.Extensions.AI), making it easy to integrate AI services into your application. We provide the `IAIClientFactory` service, which allows you to easily create standard services such as `IChatClient` and `IEmbeddingGenerator` for any of your configured providers and connections.
+The AI module is built on top of [Microsoft.Extensions.AI](https://www.nuget.org/packages/Microsoft.Extensions.AI), making it easy to integrate AI services into your application. We provide the `IAIClientFactory` service, which allows you to easily create standard services such as `IChatClient`, `IEmbeddingGenerator` and `IImageGenerator` for any of your configured providers and connections.
 
 Simply inject `IAIClientFactory` into your service and use the `CreateChatClientAsync` or `CreateEmbeddingGeneratorAsync` methods to obtain the required client.
 
@@ -203,9 +229,9 @@ You need to use a paid plan for all of these even when using models that are fre
   - **Endpoint**: `https://api.openai.com/v1/`.
   - **API Key**: Generate one in [OpenAI Platform](https://platform.openai.com/account/api-keys).
 
-#### Creating AI Profiles  
+#### Creating AI Profiles
 
-After setting up a connection, you can create **AI Profiles** to interact with the configured model.  
+After setting up a connection, you can create **AI Profiles** to interact with the configured model.
 
 #### Recipes
 
@@ -241,7 +267,7 @@ This recipe ensures that a **DeepSeek** connection is added or updated within th
 
 If a connection with the same `Name` and `Source` already exists, the recipe updates its properties. Otherwise, it creates a new connection.
 
-Data source (RAG/Knowledge Base) documentation is in the `CrestApps.OrchardCore.AI.DataSources` module: [README](data-sources/).
+Data source (retrieval-augmented generation (RAG) / Knowledge Base) documentation is in the `CrestApps.OrchardCore.AI.DataSources` module: [README](data-sources/).
 
 For managing AI tools, see [AI Tools](ai-tools).
 

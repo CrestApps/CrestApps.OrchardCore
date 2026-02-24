@@ -256,8 +256,9 @@ public sealed class CustomCompletionClient : NamedAICompletionClient
 }
 ```
 
-> **Note:**
-> The `CustomCompletionClient` class inherits from `NamedAICompletionClient`. If the provider supports multiple deployments, consider inheriting from `DeploymentAwareAICompletionClient` instead.
+:::note Note
+The `CustomCompletionClient` class inherits from `NamedAICompletionClient`. If the provider supports multiple deployments, consider inheriting from `DeploymentAwareAICompletionClient` instead.
+:::
 
 Next, implement the `IAIClientProvider` interface. You may look at the codebase for an implementation example. Finally, register the services:
 

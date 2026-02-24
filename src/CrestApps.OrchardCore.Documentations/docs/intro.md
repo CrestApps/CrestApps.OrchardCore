@@ -21,26 +21,17 @@ CrestApps provides a collection of open-source modules designed to enhance **[Or
 
 Integrate most AI providers like **OpenAI**, **Azure OpenAI**, **Azure AI Inference**, **Ollama**, and more into your Orchard Core website. The AI suite includes:
 
-- **[Overview](ai/overview)** – Introduction to the AI Suite
-- **[AI Services](ai/ai-services)** – Foundation for all AI modules with profile and connection management
+- **[Overview](ai/)** – Introduction to the AI Suite
+- **[AI](ai/ai/)** – Foundation for all AI modules with profile and connection management
 - **[AI Chat](ai/ai-chat)** – Chat interfaces for interacting with AI models
 - **[AI Chat Interactions](ai/ai-chat-interactions)** – Ad-hoc chat with configurable parameters and document upload
 - **[Consuming AI Services](ai/consuming-ai-services)** – Using AI services programmatically via code
 - **[Copilot Integration](ai/ai-copilot)** – GitHub Copilot SDK-based orchestration
-- **[Data Sources](ai/data-sources/)** – RAG/knowledge base indexing and vector search
+- **[Data Sources](ai/data-sources/)** – Retrieval-augmented generation (RAG) / knowledge base indexing and vector search
 - **[Documents](ai/documents/)** – Document upload, text extraction, and embedding
 - **[MCP](ai/mcp/)** – Model Context Protocol client and server support
 - **[Orchard Core Agent](ai/ai-agent)** – Intelligent agents that perform tasks on your site
-- **[AI Providers](providers/overview)** – Connect to OpenAI, Azure OpenAI, Azure AI Inference, Ollama, and more
-
-### Omnichannel Communications
-
-Unified communication orchestration:
-
-- **[Overview](omnichannel/)** – Core orchestration services
-- **[Event Grid](omnichannel/event-grid)** – Azure Event Grid integration
-- **[Management](omnichannel/management)** – Mini-CRM for contacts, campaigns, and activities
-- **[SMS Automation](omnichannel/sms)** – AI-driven SMS automation
+- **[AI Providers](providers/)** – Connect to OpenAI, Azure OpenAI, Azure AI Inference, Ollama, and more
 
 ### Standard Modules
 
@@ -52,6 +43,15 @@ Essential CMS enhancements:
 - **[Roles](modules/roles)** – Enhanced role management
 - **[SignalR](modules/signalr)** – Real-time communication
 - **[Users](modules/users)** – Enhanced user management
+
+### Omnichannel Communications
+
+Unified communication orchestration:
+
+- **[Overview](omnichannel/)** – Core orchestration services
+- **[Event Grid](omnichannel/event-grid)** – Azure Event Grid integration
+- **[Management](omnichannel/management)** – Mini-CRM for contacts, campaigns, and activities
+- **[SMS Automation](omnichannel/sms)** – AI-driven SMS automation
 
 ## Package Management
 

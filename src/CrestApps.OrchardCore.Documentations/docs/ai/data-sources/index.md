@@ -143,4 +143,6 @@ To fix this:
    - Go to **Artificial Intelligence > Data Sources**.
    - Click **Sync** on each data source to re-index documents with embeddings.
 
-> **Note:** Without an embedding connection, data sources will appear configured but the KB index will remain empty. AI profiles using these data sources will not have any context documents to enhance their responses.
+:::note Note
+Without an embedding connection, data sources will appear configured but the KB index will remain empty. AI profiles using these data sources will not have any context documents to enhance their responses.
+:::

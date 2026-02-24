@@ -32,68 +32,116 @@ Provides a GitHub Copilot SDK-based orchestrator for AI chat sessions in Orchard
 
 ## Prerequisites
 
-- A valid **GitHub Copilot subscription**
-- **GitHub OAuth App** configured for authentication
 - **GitHub Copilot CLI** installed and available in PATH (bundled with the SDK NuGet package)
+
+Depending on which authentication mode you choose:
+
+- **GitHub Signed-in User (GitHub OAuth)**: a valid **GitHub Copilot subscription** and a **GitHub OAuth App**
+- **API Key (Bring your own key)**: an API key (and endpoint) for a supported model provider
 
 ## Configuration
 
-### GitHub OAuth Setup
+Configure the Copilot orchestrator at **Settings → Copilot**. The main choice is which **authentication type** you want to use.
+
+| Authentication type | When to use | What you configure |
+|---|---|---|
+| **GitHub OAuth (GitHub Signed-in User)** (`GitHubOAuth`) | You want to use GitHub Copilot entitlements and user-scoped access | GitHub OAuth app (client ID/secret) and user/profile sign-in |
+| **API Key (Bring your own key)** (`ApiKey`) | You want to use your own model provider credentials (no Copilot subscription required) | Provider type, base URL, API key, default model, wire format |
+
+### Authentication: GitHub OAuth (GitHub Signed-in User)
+
+Use this mode when you want the orchestrator to authenticate to Copilot via GitHub and use the models available to that signed-in identity.
+
+#### Settings (site/tenant)
+
+- **GitHub OAuth App Client ID**
+- **GitHub OAuth App Client Secret** (stored encrypted)
+
+#### GitHub OAuth App setup
 
 1. Create a GitHub OAuth App:
-   - Go to GitHub Settings → Developer settings → OAuth Apps
-   - Click "New OAuth App"
-   - Set Authorization callback URL to: `https://your-domain.com/copilot/OAuthCallback`
-   - Note the Client ID and Client Secret
+   - GitHub Settings → Developer settings → OAuth Apps → **New OAuth App**
+   - **Authorization callback URL**: `https://your-domain.com/copilot/OAuthCallback`
+   - Copy the **Client ID** and **Client Secret**
+2. In Orchard Core: go to **Settings → Copilot** and enter the client ID/secret.
 
-2. Configure Copilot settings in Orchard Core:
-   - Go to **Settings** → **Copilot**
-   - Enter your GitHub OAuth App Client ID
-   - Enter your GitHub OAuth App Client Secret (stored encrypted)
-   - Save settings
+#### Required OAuth scopes
 
-3. Required OAuth scopes:
-   - `user:email` - To identify the user
-   - `read:org` - To access Copilot on behalf of the user
+- `user:email` — to identify the user
+- `read:org` — to access Copilot on behalf of the user
+
+### Authentication: API Key (Bring your own key)
+
+Use this mode when you want Copilot orchestration but prefer to call a model provider directly using your own credentials.
+
+You only need to define “Bring your own key” once—after configuration, this document refers to it as **API Key authentication**.
+
+#### Settings (site/tenant)
+
+- **Provider Type** — which provider the API key targets
+- **Base URL** — provider endpoint
+- **API Key** — stored encrypted (optional for local providers like Ollama)
+- **Default Model** — model/deployment name used for sessions
+- **Wire API Format** — `completions` or `responses`
+- **Azure API Version** — required when Provider Type is Azure OpenAI
+
+#### Provider Types
+
+- **OpenAI / OpenAI-compatible** (`openai`) — Works with OpenAI and OpenAI-compatible endpoints (Ollama, vLLM, LiteLLM, etc.). Base URL typically includes the full path, e.g. `https://api.openai.com/v1`.
+- **Azure OpenAI** (`azure`) — For native Azure OpenAI endpoints (`*.openai.azure.com`). Base URL should be the resource URL (do **not** add `/openai/v1`).
+- **Anthropic** (`anthropic`) — For direct Anthropic API access to Claude models. Base URL is typically `https://api.anthropic.com`.
+
+#### Wire API Format
+
+The **Wire API Format** controls the HTTP format used by the underlying SDK:
+
+- **Chat Completions** (`completions`) — the default and most compatible option
+- **Responses** (`responses`) — use this when targeting GPT-5 series models that support the newer responses format
+
+#### Setup steps
+
+1. Go to **Settings → Copilot**.
+2. Set **Authentication Type** to **API Key (Bring your own key)**.
+3. Choose a **Provider Type**.
+4. Configure the settings listed above.
+5. Save settings.
 
 ## Usage
 
-### Chat Interactions
+Usage differs slightly depending on the authentication type selected in **Settings → Copilot**.
 
-When a Chat Interaction is configured with the Copilot orchestrator:
+In all modes, **Allow All** is checked by default (passes `--allow-all` to the Copilot CLI) and settings are saved automatically via SignalR using the extensible `IChatInteractionSettingsHandler` pipeline.
 
-1. The user must be authenticated with GitHub (via the Sign in with GitHub button)
-2. The **Copilot Model** dropdown shows available models from the user's GitHub account
-3. The first model is auto-selected; there is no "Default model" option since model availability depends on the user's access
-4. **Allow All** checkbox is checked by default, enabling the `--allow-all` flag for the Copilot CLI process
-5. Settings are saved automatically via SignalR when any form field changes, using the extensible `IChatInteractionSettingsHandler` pipeline
+### GitHub OAuth authentication
 
-### AI Profiles
+#### Chat Interactions
 
-When creating or editing an AI Profile with the Copilot orchestrator:
+1. The user authenticates with GitHub (via the **Sign in with GitHub** button).
+2. The **Copilot Model** dropdown shows available models from the user's GitHub account.
+3. The first model is auto-selected; there is no site-level “Default model” because model availability depends on the signed-in identity.
 
-1. Select **GitHub Copilot Orchestrator** from the Orchestrator dropdown
-2. The Connection and Deployment fields are hidden (not used by Copilot)
-3. The **Copilot Configuration** section appears with:
-   - **GitHub Authentication** — Click "Sign in with GitHub" to authenticate via a popup window (your form data is preserved)
-   - **Credential Warning** — If already connected, a warning explains that your GitHub credentials will be shared with all users chatting via this AI Profile
-   - **Copilot Model** — Select which model to use (GPT-4o, Claude Sonnet, etc.)
-   - **Allow All** — Checkbox (default checked) to run with `--allow-all` flag
-4. When the profile is saved, your encrypted GitHub credentials are stored on the profile entity so any chat session using this profile can authenticate without requiring individual user tokens
+#### AI Profiles
 
-### Authentication Flow
+1. Select **GitHub Copilot Orchestrator** from the Orchestrator dropdown.
+2. The Connection and Deployment fields are hidden (not used by Copilot).
+3. The **Copilot Configuration** section includes GitHub sign-in and a model picker.
 
-**Chat Interactions (user-scoped)**:
-1. Click "Sign in with GitHub" in the Copilot section
-2. Authorize the application in the popup window
-3. Your access token is stored on your user account (encrypted)
-4. Each user authenticates individually
+#### Credential scope
 
-**AI Profiles (profile-scoped)**:
-1. Click "Sign in with GitHub" in the AI Profile editor (opens in a popup)
-2. Authorize the application — the popup closes and the page updates automatically
-3. When you save the AI Profile, your encrypted credentials are copied to the profile
-4. Any user chatting via this profile uses the stored credentials (not their own)
+- **Chat Interactions** are typically **user-scoped**: the access token is stored on the user account (encrypted), and each user signs in individually.
+- **AI Profiles** can be **profile-scoped**: when you sign in while editing a profile, the encrypted credentials can be stored on the profile so any chat session using the profile can authenticate without requiring each user to sign in.
+
+### API Key authentication
+
+#### Chat Interactions
+
+- No GitHub sign-in is required.
+- The session uses the **Default Model** configured in **Settings → Copilot**.
+
+#### AI Profiles
+
+- GitHub authentication and model listing are not used.
+- The profile relies on the site-level API key settings (provider type, base URL, and default model).
 
 ## Architecture
 

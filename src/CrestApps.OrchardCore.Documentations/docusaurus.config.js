@@ -109,11 +109,11 @@ const config = {
               },
               {
                 label: 'AI Suite',
-                to: '/docs/ai/overview',
+                to: '/docs/ai',
               },
               {
                 label: 'AI Providers',
-                to: '/docs/providers/overview',
+                to: '/docs/providers',
               },
               {
                 label: 'Consuming AI Services',
