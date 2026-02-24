@@ -10,8 +10,8 @@ const sidebars = {
       label: 'Artificial Intelligence Suite',
       collapsed: false,
       items: [
-        'ai/overview',
-        'ai/ai-services',
+        'ai/index',
+        'ai/ai',
         'ai/ai-chat',
         'ai/ai-chat-interactions',
         'ai/ai-profiles-code',
@@ -24,7 +24,7 @@ const sidebars = {
           type: 'category',
           label: 'AI Providers',
           items: [
-            'providers/overview',
+            'providers/index',
             'providers/azure-ai-inference',
             'providers/azure-openai',
             'providers/ollama',
@@ -78,7 +78,7 @@ const sidebars = {
       type: 'category',
       label: 'Standard Modules',
       items: [
-        'modules/overview',
+        'modules/index',
         'modules/content-access-control',
         'modules/recipes',
         'modules/resources',
@@ -91,7 +91,7 @@ const sidebars = {
       type: 'category',
       label: 'Samples',
       items: [
-        'samples/overview',
+        'samples/index',
         'samples/mcp-client',
       ],
     },
@@ -99,7 +99,7 @@ const sidebars = {
       type: 'category',
       label: 'Changelog',
       items: [
-        'changelog/overview',
+        'changelog/index',
         'changelog/v2.0.0',
       ],
     },

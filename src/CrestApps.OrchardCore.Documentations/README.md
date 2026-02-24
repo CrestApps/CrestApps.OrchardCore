@@ -99,7 +99,7 @@ To add an entirely new section to the navigation, add a new category object to t
   label: 'My New Section',
   collapsed: true,        // true = collapsed by default, false = expanded
   items: [
-    'my-section/overview',   // maps to docs/my-section/overview.md
+    'my-section/index',   // maps to docs/my-section/index.md
     'my-section/setup',      // maps to docs/my-section/setup.md
   ],
 },

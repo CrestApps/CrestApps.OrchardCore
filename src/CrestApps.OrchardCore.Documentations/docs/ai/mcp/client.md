@@ -141,4 +141,4 @@ Prefer configuration through code? Here's how to define the same connection usin
 
 After adding an MCP connection (SSE or Stdio), create an AI profile that uses it:
 
-👉 [Learn how to create an AI Profile](../ai-services#creating-ai-profiles)
+👉 [Learn how to create an AI Profile](../ai#creating-ai-profiles)
