@@ -64,6 +64,11 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
                     defaultConnection = connection;
                 }
 
+                if (string.IsNullOrEmpty(connection.ItemId))
+                {
+                    continue;
+                }
+
                 mappingContext.Values["ChatDeploymentName"] = connection.ChatDeploymentName;
                 mappingContext.Values["EmbeddingDeploymentName"] = connection.EmbeddingDeploymentName;
                 mappingContext.Values["UtilityDeploymentName"] = connection.UtilityDeploymentName;
