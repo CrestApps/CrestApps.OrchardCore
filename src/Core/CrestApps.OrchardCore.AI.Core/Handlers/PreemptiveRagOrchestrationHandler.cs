@@ -51,16 +51,7 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
             return;
         }
 
-        var settings = await _siteService.GetSettingsAsync<DefaultOrchestratorSettings>();
-
-        // Skip if preemptive RAG is disabled and tools are available.
-        // When tools are disabled, preemptive RAG is the only way to inject external context.
-        if (!settings.EnablePreemptiveRag && !buildContext.OrchestrationContext.DisableTools)
-        {
-            return;
-        }
-
-        var usableHandler = new List<IPreemptiveRagHandler>();
+        var usableHandlers = new List<IPreemptiveRagHandler>();
 
         foreach (var handler in _handlers)
         {
@@ -69,13 +60,24 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
                 continue;
             }
 
-            usableHandler.Add(handler);
+            usableHandlers.Add(handler);
         }
 
         // IMPORTANT: If there are no usable-handlers, there is no need to extract queries.
         // This can happen if no feature provides an implementation.
-        if (usableHandler.Count == 0)
+        if (usableHandlers.Count == 0)
         {
+            return;
+        }
+
+        var settings = await _siteService.GetSettingsAsync<DefaultOrchestratorSettings>();
+        var ragMetadata = GetRagMetadata(buildContext.Resource);
+
+        // When preemptive RAG is disabled and tools are available, we skip the upfront
+        // search but still inject instructions so the model knows to call search tools.
+        if (!settings.EnablePreemptiveRag && !buildContext.OrchestrationContext.DisableTools)
+        {
+            InjectToolSearchInstructions(buildContext, ragMetadata);
             return;
         }
 
@@ -88,15 +90,13 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
 
         var ragContext = new PreemptiveRagContext(buildContext.OrchestrationContext, buildContext.Resource, queries);
 
-        await usableHandler.InvokeAsync((handler, ctx) => handler.HandleAsync(ctx), ragContext, _logger);
+        await usableHandlers.InvokeAsync((handler, ctx) => handler.HandleAsync(ctx), ragContext, _logger);
 
         // After all handlers have run, check if any references were produced.
         // If IsInScope is enabled and no preemptive references exist, inject a scoping
         // directive. The directive is intentionally soft: if the model later discovers
         // relevant content via tool calls (e.g., search_data_source or search_documents),
         // it should use that content instead of refusing to answer.
-        var ragMetadata = GetRagMetadata(buildContext.Resource);
-
         if (ragMetadata?.IsInScope != true)
         {
             // When IsInScope is false but references exist, explicitly tell the model it CAN
@@ -158,6 +158,41 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
                 When citing information from the provided context, include the corresponding reference marker (e.g., [doc:1], [doc:2]) inline in your response immediately after the relevant statement.
                 """);
 
+        }
+    }
+
+    /// <summary>
+    /// Injects system-message instructions telling the model to use search tools
+    /// when preemptive RAG is disabled but data sources or documents are available.
+    /// </summary>
+    private static void InjectToolSearchInstructions(OrchestrationContextBuiltContext buildContext, AIDataSourceRagMetadata ragMetadata)
+    {
+        if (ragMetadata?.IsInScope == true)
+        {
+            // IsInScope ON: the model MUST call search tools and MUST NOT use general knowledge.
+            buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
+                """
+
+                [Knowledge Source Instructions]
+                CRITICAL INSTRUCTION — You have access to internal knowledge sources via search tools (e.g., search_data_source, search_documents).
+                You MUST use these search tools to find relevant information before answering ANY question.
+                DO NOT use your general knowledge or training data under any circumstances.
+                If the search tools return no relevant results, you MUST inform the user that the answer is not available in the current knowledge sources. Do not guess, infer, or supplement with outside knowledge.
+                When citing information retrieved via tools, include the corresponding reference marker (e.g., [doc:1], [doc:2]) inline in your response immediately after the relevant statement.
+                """);
+        }
+        else
+        {
+            // IsInScope OFF: the model should try search tools first, then supplement with general knowledge.
+            buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
+                """
+
+                [Knowledge Source Instructions]
+                You have access to internal knowledge sources via search tools (e.g., search_data_source, search_documents).
+                When answering questions, first use these search tools to look for relevant information in the configured knowledge sources.
+                If the search tools return relevant results, use them to inform your answer and cite using reference markers (e.g., [doc:1], [doc:2]) inline in your response immediately after the relevant statement.
+                If the search tools return no relevant results, you may use your general knowledge to answer the question.
+                """);
         }
     }
 

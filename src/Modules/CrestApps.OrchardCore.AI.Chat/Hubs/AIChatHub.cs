@@ -428,6 +428,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         // Store the session in the invocation context so document tools can resolve session documents.
         AIInvocationScope.Current.Items[nameof(AIChatSession)] = chatSession;
+        AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
 
         // Resolve the orchestrator for this profile and execute the completion.
         var orchestrator = _orchestratorResolver.Resolve(profile.OrchestratorName);

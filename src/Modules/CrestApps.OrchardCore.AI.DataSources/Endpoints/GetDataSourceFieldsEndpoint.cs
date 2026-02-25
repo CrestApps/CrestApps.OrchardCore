@@ -56,12 +56,12 @@ internal static class GetDataSourceFieldsEndpoint
 
             if (string.Equals(profile.ProviderName, "Elasticsearch", StringComparison.OrdinalIgnoreCase))
             {
-                suggestedTitleField = "Content.ContentItem.DisplayText";
+                suggestedTitleField = "Content.ContentItem.DisplayText.keyword";
                 suggestedContentField = "Content.ContentItem.FullText";
             }
             else if (string.Equals(profile.ProviderName, "AzureAISearch", StringComparison.OrdinalIgnoreCase))
             {
-                suggestedTitleField = "Content__ContentItem__DisplayText__Normalized";
+                suggestedTitleField = "Content__ContentItem__DisplayText__keyword";
                 suggestedContentField = "Content__ContentItem__FullText";
             }
         }

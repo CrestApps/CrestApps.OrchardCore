@@ -1,10 +1,11 @@
-using System.Text;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DataIngestion;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
@@ -16,7 +17,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
 {
     private const int MaxEmbeddingTotalChars = 25000;
 
-    private readonly IEnumerable<IDocumentTextExtractor> _textExtractors;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IOptions<ChatDocumentsOptions> _extractorOptions;
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IOptions<AIProviderOptions> _providerOptions;
@@ -24,14 +25,14 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
     private readonly ILogger _logger;
 
     public DefaultAIDocumentProcessingService(
-        IEnumerable<IDocumentTextExtractor> textExtractors,
+        IServiceProvider serviceProvider,
         IOptions<ChatDocumentsOptions> extractorOptions,
         IAIClientFactory aiClientFactory,
         IOptions<AIProviderOptions> providerOptions,
         IClock clock,
         ILogger<DefaultAIDocumentProcessingService> logger)
     {
-        _textExtractors = textExtractors;
+        _serviceProvider = serviceProvider;
         _extractorOptions = extractorOptions;
         _aiClientFactory = aiClientFactory;
         _providerOptions = providerOptions;
@@ -86,30 +87,27 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
         var extension = Path.GetExtension(file.FileName);
         var options = _extractorOptions.Value;
 
-        var content = new StringBuilder();
-
-        using var stream = file.OpenReadStream();
-
-        foreach (var textExtractor in _textExtractors)
+        var reader = _serviceProvider.GetKeyedService<IngestionDocumentReader>(extension);
+        if (reader == null)
         {
-            stream.Seek(0, SeekOrigin.Begin);
-
-            var extractedContent = await textExtractor.ExtractAsync(stream, file.FileName, extension, file.ContentType);
-
-            if (string.IsNullOrWhiteSpace(extractedContent))
-            {
-                continue;
-            }
-
-            content.AppendLine(extractedContent);
+            return DocumentProcessingResult.Failed($"No document reader registered for extension '{extension}'.");
         }
 
-        if (content.Length == 0)
+        string text;
+        using (var stream = file.OpenReadStream())
+        {
+            var mediaType = MediaTypeHelper.InferMediaType(extension, file.ContentType);
+            var ingestionDoc = await reader.ReadAsync(stream, file.FileName, mediaType);
+
+            text = string.Join('\n', ingestionDoc.EnumerateContent()
+                .Select(e => e.Text)
+                .Where(t => !string.IsNullOrWhiteSpace(t)));
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
         {
             return DocumentProcessingResult.Failed("Could not extract text content from the document.");
         }
-
-        var text = content.ToString();
 
         // Normalize the extracted text to strip HTML, Markdown, and extraneous formatting
         // before chunking and embedding, producing cleaner vectors and reducing token usage.

@@ -92,7 +92,7 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
                 {
                     Uri = resource.Resource.Uri,
                     MimeType = mimeType,
-                    Blob = Convert.ToBase64String(bytes),
+                    Blob = bytes,
                 }
             ]
         };

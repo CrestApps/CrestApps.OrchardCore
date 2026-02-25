@@ -427,6 +427,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                     .ToList();
             });
 
+            AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
+
             // Resolve the orchestrator for this interaction and execute the completion.
             var orchestrator = _orchestratorResolver.Resolve(interaction.OrchestratorName);
 

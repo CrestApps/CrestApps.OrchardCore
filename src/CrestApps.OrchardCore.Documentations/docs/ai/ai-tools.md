@@ -96,6 +96,19 @@ services.AddAITool<GetWeatherFunction>(GetWeatherFunction.TheName)
 - **System tools** (default): Automatically included by the orchestrator based on context. Not shown in the UI. Ideal for document processing, content generation, or other infrastructure tools.
 - **Selectable tools**: Visible in the UI for users to choose per Chat Interaction or AI Profile. Use `.Selectable()` when the tool represents a user-facing capability.
 
+#### Context-Dependent System Tools
+
+Some system tool purposes are **context-gated** — the tool is only included in the tool registry when the relevant data is available:
+
+| Purpose | Condition | Examples |
+| --- | --- | --- |
+| `AIToolPurposes.DataSourceSearch` | `AICompletionContext.DataSourceId` is set (a data source is attached to the profile or interaction) | `search_data_sources` |
+| `AIToolPurposes.DocumentProcessing` | `AICompletionContextKeys.HasDocuments` is set in `AICompletionContext.AdditionalProperties` (documents are attached) | `search_documents`, `list_documents`, `read_document`, `read_tabular_data` |
+| `AIToolPurposes.ContentGeneration` | Always included (no gating) | `generate_image`, `generate_chart` |
+| No purpose set | Always included (no gating) | Any custom system tool without a purpose tag |
+
+This ensures the AI model never sees tools it cannot use, preventing hallucinated tool calls and reducing token overhead.
+
 ```csharp
 // System tool (hidden from UI, orchestrator-managed)
 services.AddAITool<ListDocumentsTool>(ListDocumentsTool.TheName)
@@ -117,8 +130,9 @@ The `AIToolPurposes` class provides well-known purpose identifiers:
 
 | Constant | Value | Description |
 | --- | --- | --- |
-| `AIToolPurposes.DocumentProcessing` | `"document_processing"` | Tools that process, read, search, or manage documents attached to a chat session. |
-| `AIToolPurposes.ContentGeneration` | `"content_generation"` | Tools that generate content such as images or charts. |
+| `AIToolPurposes.DocumentProcessing` | `"document_processing"` | Tools that process, read, search, or manage documents attached to a chat session. Only included when documents are available. |
+| `AIToolPurposes.DataSourceSearch` | `"data_source_search"` | Tools that search data source embeddings for RAG. Only included when a data source is attached. |
+| `AIToolPurposes.ContentGeneration` | `"content_generation"` | Tools that generate content such as images or charts. Always included. |
 
 You can also define custom purpose strings for domain-specific tool grouping.
 

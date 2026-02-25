@@ -16,14 +16,15 @@ internal sealed class AIToolExecutionContextOrchestrationHandler : IOrchestratio
     {
         var invocationContext = AIInvocationScope.Current;
 
-        if (invocationContext is not null)
+        if (invocationContext is null)
         {
-            invocationContext.ToolExecutionContext = new AIToolExecutionContext(context.Resource)
-            {
-                ProviderName = context.OrchestrationContext.SourceName,
-                ConnectionName = context.OrchestrationContext.CompletionContext?.ConnectionName,
-            };
+            return Task.CompletedTask;
         }
+
+        invocationContext.ToolExecutionContext ??= new AIToolExecutionContext(context.Resource);
+
+        invocationContext.ToolExecutionContext.ProviderName = context.OrchestrationContext.SourceName;
+        invocationContext.ToolExecutionContext.ConnectionName = context.OrchestrationContext.CompletionContext?.ConnectionName;
 
         return Task.CompletedTask;
     }

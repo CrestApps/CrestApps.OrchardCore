@@ -359,12 +359,12 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
                                 if (string.Equals(providerName, "Elasticsearch", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    dataSource.TitleFieldName ??= "Content.ContentItem.DisplayText.Analyzed";
+                                    dataSource.TitleFieldName ??= "Content.ContentItem.DisplayText.keyword";
                                     dataSource.ContentFieldName ??= "Content.ContentItem.FullText";
                                 }
                                 else if (string.Equals(providerName, "AzureAISearch", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    dataSource.TitleFieldName ??= "Content__ContentItem__DisplayText__Analyzed";
+                                    dataSource.TitleFieldName ??= "Content__ContentItem__DisplayText__keyword";
                                     dataSource.ContentFieldName ??= "Content__ContentItem__FullText";
                                 }
                             }

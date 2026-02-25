@@ -1,3 +1,4 @@
+using System.Text;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -15,7 +16,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Liquid;
-using System.Text;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Api;
 
@@ -156,6 +156,7 @@ internal static class ApiAICompletionEndpoint
 
             // Store the session in the invocation context so document tools can resolve session documents.
             AIInvocationScope.Current.Items[nameof(AIChatSession)] = chatSession;
+            AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
 
             // Resolve the orchestrator for this profile and execute the completion.
             var orchestrator = orchestratorResolver.Resolve(profile.OrchestratorName);

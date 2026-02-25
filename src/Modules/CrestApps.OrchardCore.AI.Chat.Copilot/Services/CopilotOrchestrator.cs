@@ -254,7 +254,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
             if (!string.IsNullOrEmpty(accessToken))
             {
-                clientOptions.GithubToken = accessToken;
+                clientOptions.GitHubToken = accessToken;
             }
             else
             {

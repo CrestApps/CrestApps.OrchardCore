@@ -186,4 +186,43 @@ public sealed class DocumentOrchestrationHandlerTests
         Assert.Single(context.CompletionContext.ToolNames);
         Assert.Contains("existing_tool", context.CompletionContext.ToolNames);
     }
+
+    [Fact]
+    public async Task BuiltAsync_WithDocuments_SetsHasDocumentsFlag()
+    {
+        var handler = CreateHandler(CreateToolOptionsWithDocTools());
+        var context = new OrchestrationContext
+        {
+            CompletionContext = new AICompletionContext(),
+            Documents =
+            [
+                new ChatInteractionDocumentInfo
+                {
+                    DocumentId = "doc1",
+                    FileName = "report.pdf",
+                    ContentType = "application/pdf",
+                    FileSize = 1024,
+                },
+            ],
+        };
+
+        await handler.BuiltAsync(new OrchestrationContextBuiltContext(new ChatInteraction(), context));
+
+        Assert.True(context.CompletionContext.AdditionalProperties.ContainsKey(AICompletionContextKeys.HasDocuments));
+        Assert.Equal(true, context.CompletionContext.AdditionalProperties[AICompletionContextKeys.HasDocuments]);
+    }
+
+    [Fact]
+    public async Task BuiltAsync_WithoutDocuments_DoesNotSetHasDocumentsFlag()
+    {
+        var handler = CreateHandler();
+        var context = new OrchestrationContext
+        {
+            CompletionContext = new AICompletionContext(),
+        };
+
+        await handler.BuiltAsync(new OrchestrationContextBuiltContext(new AIProfile(), context));
+
+        Assert.False(context.CompletionContext.AdditionalProperties.ContainsKey(AICompletionContextKeys.HasDocuments));
+    }
 }

@@ -111,7 +111,7 @@ internal sealed class DataSourceElasticsearchDocumentReader : IDataSourceDocumen
         var response = await _elasticClient.SearchAsync<JsonObject>(s => s
             .Indices(indexProfile.IndexFullName)
             .Query(q => q
-                .Ids(ids => ids.Values(new Elastic.Clients.Elasticsearch.Ids(idList)))
+                .Ids(ids => ids.Values(new Ids(idList)))
             )
             .Size(idList.Count)
         , cancellationToken);

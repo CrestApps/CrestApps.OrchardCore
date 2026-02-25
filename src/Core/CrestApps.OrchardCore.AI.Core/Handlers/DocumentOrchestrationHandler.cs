@@ -67,6 +67,10 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
             return Task.CompletedTask;
         }
 
+        // Signal document availability so system tools (e.g., search_documents)
+        // are included in the tool registry for this completion context.
+        context.OrchestrationContext.CompletionContext.AdditionalProperties[AICompletionContextKeys.HasDocuments] = true;
+
         // Discover document processing tools dynamically by purpose
         // to list their descriptions in the system message.
         var docTools = _toolDefinitions.Tools

@@ -21,7 +21,7 @@ The base feature is **enabled by dependency only** — it activates automaticall
 The base feature (`CrestApps.OrchardCore.AI.Documents`) provides the shared infrastructure used by both chat interaction and profile document features:
 
 - **Unified Document Store**: A single `IAIDocumentStore` for storing and querying documents across all reference types (chat interactions, profiles)
-- **Text Extraction**: Automatic text extraction from uploaded documents via registered extractors
+- **Text Extraction**: Automatic text extraction from uploaded documents via registered `IngestionDocumentReader` implementations (from `Microsoft.Extensions.DataIngestion`)
 - **Settings UI**: Admin settings page for configuring the default document index (**Settings > Chat Interaction**)
 - **Document Processing Tools**: AI tools for listing, reading, and searching documents
 - **RAG Search Tool**: Semantic vector search across uploaded documents
@@ -95,14 +95,14 @@ Unlike chat interaction documents (which are scoped to a single session), profil
 ### Key Capabilities
 
 - **Document Upload**: Upload text-based documents (PDF, Word, Markdown, etc.) directly to an AI Profile
-- **Automatic Text Extraction**: Content is extracted from uploaded documents using registered text extractors
+- **Automatic Text Extraction**: Content is extracted from uploaded documents using registered `IngestionDocumentReader` implementations
 - **Chunking & Embedding**: Extracted text is split into chunks and embedded for semantic vector search
 - **RAG Integration**: Relevant document chunks are automatically retrieved and used as context for AI responses
 - **Top N Configuration**: Control how many matching chunks are included as context (default: 3)
 
 ### Supported File Types
 
-Only embeddable file extensions are supported for AI Profile documents. The set of embeddable extensions is determined by the registered document text extractors. Typically, this includes:
+Only embeddable file extensions are supported for AI Profile documents. The set of embeddable extensions is determined by the registered `IngestionDocumentReader` implementations. Typically, this includes:
 
 | Format | Extension | Module Required |
 |--------|-----------|-----------------|
