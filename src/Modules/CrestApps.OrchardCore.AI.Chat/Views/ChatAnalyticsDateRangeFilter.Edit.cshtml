@@ -1,0 +1,24 @@
+@model CrestApps.OrchardCore.AI.Chat.ViewModels.ChatAnalyticsFilterViewModel
+
+<style asp-name="flatpickr"></style>
+<script asp-name="flatpickr" at="Foot"></script>
+
+<div class="col p-1">
+    <label class="visually-hidden" asp-for="StartDate">@T["From"]</label>
+    <input type="text" class="form-control flatpickr-input" asp-for="StartDate" placeholder="@T["From"]" readonly="readonly" />
+</div>
+<div class="col p-1">
+    <label class="visually-hidden" asp-for="EndDate">@T["To"]</label>
+    <input type="text" class="form-control flatpickr-input" asp-for="EndDate" placeholder="@T["To"]" readonly="readonly" />
+</div>
+
+<script at="Foot" depends-on="flatpickr">
+    flatpickr('#@Html.IdFor(m => m.StartDate)', {
+        dateFormat: 'Y-m-d',
+        allowInput: true
+    });
+    flatpickr('#@Html.IdFor(m => m.EndDate)', {
+        dateFormat: 'Y-m-d',
+        allowInput: true
+    });
+</script>

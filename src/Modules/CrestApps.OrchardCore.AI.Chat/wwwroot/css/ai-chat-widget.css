@@ -319,13 +319,19 @@
 
 .ai-admin-widget .message-buttons-container {
     position: absolute;
-    top: 0.25rem;
+    bottom: 0.25rem;
     right: 0.25rem;
     display: none;
 }
 
 .ai-admin-widget .ai-chat-message-item:hover .message-buttons-container {
     display: inline-block;
+}
+
+.ai-admin-widget .spark-effect i,
+.ai-admin-widget .spark-effect svg {
+    display: inline-block;
+    animation: spark-burst 0.5s ease-out;
 }
 
 .ai-admin-widget-placeholder {

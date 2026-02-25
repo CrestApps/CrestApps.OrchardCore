@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
@@ -34,7 +35,6 @@ using OrchardCore.Recipes;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
-using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.AI;
 
@@ -107,6 +107,7 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigTaskDisplayDriver>();
         services.AddActivity<AIChatSessionFieldExtractedEvent, AIChatSessionFieldExtractedEventDisplayDriver>();
         services.AddActivity<AIChatSessionClosedEvent, AIChatSessionClosedEventDisplayDriver>();
+        services.AddActivity<AIChatSessionPostProcessedEvent, AIChatSessionPostProcessedEventDisplayDriver>();
     }
 }
 
@@ -181,6 +182,10 @@ public sealed class ChatCoreStartup : StartupBase
         services.AddScoped<DataExtractionService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());
 
+        // Register the post-session processing service.
+        services.AddScoped<PostSessionProcessingService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, PostSessionProcessingChatSessionHandler>());
+
         // Register orchestration services for AI Profile chat
         services.AddOrchestrationServices();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, AIToolExecutionContextOrchestrationHandler>());
@@ -238,4 +243,19 @@ public sealed class ConnectionManagementOCDeploymentsStartup : StartupBase
 }
 #endregion
 
+#region Chat Analytics Feature
 
+[Feature(AIConstants.Feature.ChatAnalytics)]
+public sealed class ChatAnalyticsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<AIChatSessionEventService>()
+            .AddDataMigration<AIChatSessionMetricsIndexMigrations>()
+            .AddIndexProvider<AIChatSessionMetricsIndexProvider>();
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, AnalyticsChatSessionHandler>());
+    }
+}
+#endregion

@@ -72,6 +72,9 @@
         var chatDocOptions = ShellScope.Services.GetRequiredService<IOptions<ChatDocumentsOptions>>();
         allowedExtensions = string.Join(", ", chatDocOptions.Value.AllowedFileExtensions);
     }
+
+    var metricsEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics)
+        && profile.As<AIProfileAnalyticsMetadata>().EnableSessionMetrics;
 }
 
 <!-- Toggle Button -->
@@ -202,6 +205,7 @@
             sendButtonElementSelector: '#@buttonHtmlId',
             placeholderElementSelector: '#@placeholderHtmlId',
             messages: [],
+            metricsEnabled: @(metricsEnabled ? "true" : "false"),
             @if (sessionDocumentsEnabled)
             {
                 @:sessionDocumentsEnabled: true,
@@ -224,8 +228,18 @@
                                 <h6 v-if="message.title" class="mb-1" style="font-size: 0.8rem;">{{ message.title }}</h6>
                                 <div v-html="message.htmlContent || message.content" style="font-size: 0.85rem; line-height: 1.5;"></div>
                                 <span class="message-buttons-container" v-if="!isIndicator(message)">
+                                    <template v-if="metricsEnabled && message.role === 'assistant'">
+                                        <span class="ai-chat-message-assistant-feedback" :data-message-id="message.id">
+                                            <button class="btn btn-sm btn-link text-success p-0 me-2 rate-up-btn" @@click="rateMessage(message, true, $event)" title="@T["Thumbs up"]">
+                                                <i class="fa-regular fa-thumbs-up" style="font-size: 0.9rem;"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-link text-danger p-0 me-2 rate-down-btn" @@click="rateMessage(message, false, $event)" title="@T["Thumbs down"]">
+                                                <i class="fa-regular fa-thumbs-down" style="font-size: 0.9rem;"></i>
+                                            </button>
+                                        </span>
+                                    </template>
                                     <button class="btn btn-sm btn-link text-secondary p-0" @@click="copyResponse(message.content)" title="@T["Copy"]">
-                                        <i class="fa-solid fa-copy" style="font-size: 0.75rem;"></i>
+                                        <i class="fa-solid fa-copy" style="font-size: 0.9rem;"></i>
                                     </button>
                                 </span>
                             </div>

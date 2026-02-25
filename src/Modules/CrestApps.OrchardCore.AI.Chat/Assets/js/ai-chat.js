@@ -1,28 +1,43 @@
 window.openAIChatManager = function () {
 
-// Defaults (can be overridden by instanceConfig)
-var defaultConfig = {
-    // UI defaults for generated media
-    generatedImageAltText: 'Generated Image',
-    generatedImageMaxWidth: 400,
-    generatedChartMaxWidth: 900,
-    downloadImageTitle: 'Download image',
-    downloadChartTitle: 'Download chart as image',
-    downloadChartButtonText: 'Download',
-    messageTemplate: `
+    // Defaults (can be overridden by instanceConfig)
+    var defaultConfig = {
+        // UI defaults for generated media
+        generatedImageAltText: 'Generated Image',
+        generatedImageMaxWidth: 400,
+        generatedChartMaxWidth: 900,
+        downloadImageTitle: 'Download image',
+        downloadChartTitle: 'Download chart as image',
+        downloadChartButtonText: 'Download',
+        userLabel: 'You',
+        assistantLabel: 'Assistant',
+        thumbsUpTitle: 'Thumbs up',
+        thumbsDownTitle: 'Thumbs down',
+        copyTitle: 'Click here to copy response to clipboard.',
+        messageTemplate: `
         <div class="ai-chat-messages">
             <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">
                 <div>
-                    <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">You</div>
+                    <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">{{ userLabel }}</div>
                     <div v-else-if="message.role !== 'indicator'" class="ai-chat-msg-role ai-chat-msg-role-assistant">
                         <i :class="'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')"></i>
-                        Assistant
+                        {{ assistantLabel }}
                     </div>
                     <div class="lh-base">
                         <h4 v-if="message.title">{{ message.title }}</h4>
                         <div v-html="message.htmlContent || message.content"></div>
                         <span class="message-buttons-container" v-if="!isIndicator(message)">
-                            <button class="btn btn-sm btn-link text-secondary p-0 button-message-toolbox" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
+                            <template v-if="metricsEnabled && message.role === 'assistant'">
+                                <span class="ai-chat-message-assistant-feedback" :data-message-id="message.id">
+                                    <button class="btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn" @click="rateMessage(message, true, $event)" :title="thumbsUpTitle">
+                                        <i class="fa-regular fa-thumbs-up"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn" @click="rateMessage(message, false, $event)" :title="thumbsDownTitle">
+                                        <i class="fa-regular fa-thumbs-down"></i>
+                                    </button>
+                                </span>
+                            </template>
+                            <button class="btn btn-sm btn-link text-secondary p-0 button-message-toolbox" @click="copyResponse(message.content)" :title="copyTitle">
                                 <i class="fa-solid fa-copy"></i>
                             </button>
                         </span>
@@ -31,52 +46,52 @@ var defaultConfig = {
             </div>
         </div>
     `,
-    indicatorTemplate: `
+        indicatorTemplate: `
         <div class="ai-chat-msg-role ai-chat-msg-role-assistant">
             <i class="fa fa-robot ai-streaming-icon" style="display: inline-block;"></i>
             Assistant
         </div>
     `
-};
+    };
 
-const renderer = new marked.Renderer();
+    const renderer = new marked.Renderer();
 
-// Modify the link rendering to open in a new tab
-renderer.link = function (data) {
-    return `<a href="${data.href}" target="_blank" rel="noopener noreferrer">${data.text}</a>`;
-};
+    // Modify the link rendering to open in a new tab
+    renderer.link = function (data) {
+        return `<a href="${data.href}" target="_blank" rel="noopener noreferrer">${data.text}</a>`;
+    };
 
-// Custom code block renderer with highlight.js integration and copy button.
-renderer.code = function (data) {
-    var code = data.text || '';
-    var lang = (data.lang || '').trim();
-    var highlighted = code;
+    // Custom code block renderer with highlight.js integration and copy button.
+    renderer.code = function (data) {
+        var code = data.text || '';
+        var lang = (data.lang || '').trim();
+        var highlighted = code;
 
-    if (typeof hljs !== 'undefined') {
-        if (lang && hljs.getLanguage(lang)) {
-            try {
-                highlighted = hljs.highlight(code, { language: lang }).value;
-            } catch (_) { }
+        if (typeof hljs !== 'undefined') {
+            if (lang && hljs.getLanguage(lang)) {
+                try {
+                    highlighted = hljs.highlight(code, { language: lang }).value;
+                } catch (_) { }
+            } else {
+                try {
+                    highlighted = hljs.highlightAuto(code).value;
+                } catch (_) { }
+            }
         } else {
-            try {
-                highlighted = hljs.highlightAuto(code).value;
-            } catch (_) { }
+            highlighted = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
-    } else {
-        highlighted = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
 
-    var langLabel = lang ? ` data-lang="${lang}"` : '';
-    return `<pre${langLabel}><button type="button" class="ai-code-copy-btn" title="Copy code"><i class="fa-solid fa-copy"></i></button><code class="hljs${lang ? ' language-' + lang : ''}">${highlighted}</code></pre>`;
-};
+        var langLabel = lang ? ` data-lang="${lang}"` : '';
+        return `<pre${langLabel}><button type="button" class="ai-code-copy-btn" title="Copy code"><i class="fa-solid fa-copy"></i></button><code class="hljs${lang ? ' language-' + lang : ''}">${highlighted}</code></pre>`;
+    };
 
-// Custom image renderer for generated images with thumbnail styling and download button.
-// Handles both URL and data-URI sources (data URIs are converted to blobs for download).
-renderer.image = function (data) {
-    const src = data.href;
-    const alt = data.text || defaultConfig.generatedImageAltText;
-    const maxWidth = defaultConfig.generatedImageMaxWidth;
-    return `<div class="generated-image-container">
+    // Custom image renderer for generated images with thumbnail styling and download button.
+    // Handles both URL and data-URI sources (data URIs are converted to blobs for download).
+    renderer.image = function (data) {
+        const src = data.href;
+        const alt = data.text || defaultConfig.generatedImageAltText;
+        const maxWidth = defaultConfig.generatedImageMaxWidth;
+        return `<div class="generated-image-container">
         <img src="${src}" alt="${alt}" class="img-thumbnail" style="max-width: ${maxWidth}px; height: auto;" />
         <div class="mt-2">
             <a href="${src}" target="_blank" download="${alt}" title="${defaultConfig.downloadImageTitle}" class="btn btn-sm btn-outline-secondary ai-download-image">
@@ -84,176 +99,176 @@ renderer.image = function (data) {
             </a>
         </div>
     </div>`;
-};
+    };
 
-// Chart counter for unique IDs
-let chartCounter = 0;
+    // Chart counter for unique IDs
+    let chartCounter = 0;
 
-// Collector for charts discovered during marked parsing.
-let _pendingCharts = [];
+    // Collector for charts discovered during marked parsing.
+    let _pendingCharts = [];
 
-function createChartHtml(chartId) {
-    const chartMaxWidth = defaultConfig.generatedChartMaxWidth;
+    function createChartHtml(chartId) {
+        const chartMaxWidth = defaultConfig.generatedChartMaxWidth;
 
-    return `<div class="chart-container" style="position: relative; width: 100%; max-width: ${chartMaxWidth}px; margin: 0 auto; height: 480px;">`
-        + `<canvas id="${chartId}" class="img-thumbnail" width="${chartMaxWidth}" height="480" style="width: 100%; height: 480px;"></canvas>`
-        + `</div>`
-        + `<div class="mt-2">`
-        + `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadChart('${chartId}')" title="${defaultConfig.downloadChartTitle}">`
-        + `<i class="fa-solid fa-download"></i> ${defaultConfig.downloadChartButtonText}`
-        + `</button>`
-        + `</div>`;
-}
-
-// Register [chart:{...json...}] as a native marked block extension so the
-// markdown parser handles chart markers inline with surrounding text.
-marked.use({
-    extensions: [{
-        name: 'chart',
-        level: 'block',
-        start(src) {
-            const idx = src.indexOf('[chart:');
-            return idx >= 0 ? idx : undefined;
-        },
-        tokenizer(src) {
-            const extracted = tryExtractChartMarker(src);
-            if (!extracted || extracted.startIndex !== 0) {
-                return undefined;
-            }
-
-            const chartId = `chat_chart_${++chartCounter}`;
-
-            return {
-                type: 'chart',
-                raw: src.substring(0, extracted.endIndex),
-                chartId: chartId,
-                json: extracted.json,
-            };
-        },
-        renderer(token) {
-            _pendingCharts.push({ chartId: token.chartId, config: token.json });
-            return createChartHtml(token.chartId);
-        }
-    }]
-});
-
-// Extract a [chart:{...json...}] marker. This avoids regex issues with nested brackets.
-function tryExtractChartMarker(text) {
-    const token = '[chart:';
-    const start = text.indexOf(token);
-    if (start < 0) {
-        return null;
+        return `<div class="chart-container" style="position: relative; width: 100%; max-width: ${chartMaxWidth}px; margin: 0 auto; height: 480px;">`
+            + `<canvas id="${chartId}" class="img-thumbnail" width="${chartMaxWidth}" height="480" style="width: 100%; height: 480px;"></canvas>`
+            + `</div>`
+            + `<div class="mt-2">`
+            + `<button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadChart('${chartId}')" title="${defaultConfig.downloadChartTitle}">`
+            + `<i class="fa-solid fa-download"></i> ${defaultConfig.downloadChartButtonText}`
+            + `</button>`
+            + `</div>`;
     }
 
-    // Find JSON object boundary by balancing braces
-    const jsonStart = start + token.length;
-    let i = jsonStart;
-    while (i < text.length && (text[i] === ' ' || text[i] === '\n' || text[i] === '\r' || text[i] === '\t')) {
-        i++;
-    }
-
-    if (i >= text.length || text[i] !== '{') {
-        return null;
-    }
-
-    let depth = 0;
-    let inString = false;
-    let escape = false;
-
-    for (; i < text.length; i++) {
-        const ch = text[i];
-
-        if (inString) {
-            if (escape) {
-                escape = false;
-                continue;
-            }
-            if (ch === '\\') {
-                escape = true;
-                continue;
-            }
-            if (ch === '"') {
-                inString = false;
-            }
-            continue;
-        }
-
-        if (ch === '"') {
-            inString = true;
-            continue;
-        }
-
-        if (ch === '{') {
-            depth++;
-        } else if (ch === '}') {
-            depth--;
-            if (depth === 0) {
-                const jsonEnd = i;
-                // Expect closing bracket after JSON
-                const closeBracketIndex = text.indexOf(']', jsonEnd + 1);
-                if (closeBracketIndex < 0) {
-                    return null;
+    // Register [chart:{...json...}] as a native marked block extension so the
+    // markdown parser handles chart markers inline with surrounding text.
+    marked.use({
+        extensions: [{
+            name: 'chart',
+            level: 'block',
+            start(src) {
+                const idx = src.indexOf('[chart:');
+                return idx >= 0 ? idx : undefined;
+            },
+            tokenizer(src) {
+                const extracted = tryExtractChartMarker(src);
+                if (!extracted || extracted.startIndex !== 0) {
+                    return undefined;
                 }
 
-                const json = text.substring(jsonStart, jsonEnd + 1).trim();
+                const chartId = `chat_chart_${++chartCounter}`;
+
                 return {
-                    startIndex: start,
-                    endIndex: closeBracketIndex + 1,
-                    json: json
+                    type: 'chart',
+                    raw: src.substring(0, extracted.endIndex),
+                    chartId: chartId,
+                    json: extracted.json,
                 };
+            },
+            renderer(token) {
+                _pendingCharts.push({ chartId: token.chartId, config: token.json });
+                return createChartHtml(token.chartId);
+            }
+        }]
+    });
+
+    // Extract a [chart:{...json...}] marker. This avoids regex issues with nested brackets.
+    function tryExtractChartMarker(text) {
+        const token = '[chart:';
+        const start = text.indexOf(token);
+        if (start < 0) {
+            return null;
+        }
+
+        // Find JSON object boundary by balancing braces
+        const jsonStart = start + token.length;
+        let i = jsonStart;
+        while (i < text.length && (text[i] === ' ' || text[i] === '\n' || text[i] === '\r' || text[i] === '\t')) {
+            i++;
+        }
+
+        if (i >= text.length || text[i] !== '{') {
+            return null;
+        }
+
+        let depth = 0;
+        let inString = false;
+        let escape = false;
+
+        for (; i < text.length; i++) {
+            const ch = text[i];
+
+            if (inString) {
+                if (escape) {
+                    escape = false;
+                    continue;
+                }
+                if (ch === '\\') {
+                    escape = true;
+                    continue;
+                }
+                if (ch === '"') {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (ch === '"') {
+                inString = true;
+                continue;
+            }
+
+            if (ch === '{') {
+                depth++;
+            } else if (ch === '}') {
+                depth--;
+                if (depth === 0) {
+                    const jsonEnd = i;
+                    // Expect closing bracket after JSON
+                    const closeBracketIndex = text.indexOf(']', jsonEnd + 1);
+                    if (closeBracketIndex < 0) {
+                        return null;
+                    }
+
+                    const json = text.substring(jsonStart, jsonEnd + 1).trim();
+                    return {
+                        startIndex: start,
+                        endIndex: closeBracketIndex + 1,
+                        json: json
+                    };
+                }
             }
         }
+
+        return null;
     }
 
-    return null;
-}
-
-function renderChartsInMessage(message) {
-    if (!message || !message._pendingCharts || !message._pendingCharts.length) {
-        return;
-    }
-
-    for (const c of message._pendingCharts) {
-        const canvas = document.getElementById(c.chartId);
-        if (!canvas) {
-            continue;
+    function renderChartsInMessage(message) {
+        if (!message || !message._pendingCharts || !message._pendingCharts.length) {
+            return;
         }
 
-        if (typeof Chart === 'undefined') {
-            console.error('Chart.js is not available on the page.');
-            continue;
-        }
-
-        try {
-            // Destroy existing chart instance if re-rendering
-            if (canvas._chartInstance) {
-                canvas._chartInstance.destroy();
+        for (const c of message._pendingCharts) {
+            const canvas = document.getElementById(c.chartId);
+            if (!canvas) {
+                continue;
             }
 
-            const cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
-            cfg.options ??= {};
-            cfg.options.responsive = true;
-            cfg.options.maintainAspectRatio = false;
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js is not available on the page.');
+                continue;
+            }
 
-            canvas._chartInstance = new Chart(canvas, cfg);
-        } catch (e) {
-            console.error('Error creating chart:', e);
+            try {
+                // Destroy existing chart instance if re-rendering
+                if (canvas._chartInstance) {
+                    canvas._chartInstance.destroy();
+                }
+
+                const cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
+                cfg.options ??= {};
+                cfg.options.responsive = true;
+                cfg.options.maintainAspectRatio = false;
+
+                canvas._chartInstance = new Chart(canvas, cfg);
+            } catch (e) {
+                console.error('Error creating chart:', e);
+            }
         }
+
+        // Prevent re-render work
+        message._pendingCharts = [];
     }
 
-    // Prevent re-render work
-    message._pendingCharts = [];
-}
-
-// Parse markdown content via marked (which natively handles [chart:...] markers
-// through the registered extension) and collect pending chart configs for later
-// Chart.js rendering.
-function parseMarkdownContent(content, message) {
-    _pendingCharts = [];
-    const html = marked.parse(content, { renderer });
-    message._pendingCharts = _pendingCharts.length > 0 ? [..._pendingCharts] : [];
-    return html;
-}
+    // Parse markdown content via marked (which natively handles [chart:...] markers
+    // through the registered extension) and collect pending chart configs for later
+    // Chart.js rendering.
+    function parseMarkdownContent(content, message) {
+        _pendingCharts = [];
+        const html = marked.parse(content, { renderer });
+        message._pendingCharts = _pendingCharts.length > 0 ? [..._pendingCharts] : [];
+        return html;
+    }
 
     const initialize = (instanceConfig) => {
 
@@ -308,7 +323,13 @@ function parseMarkdownContent(content, message) {
                     documents: config.existingDocuments || [],
                     isUploading: false,
                     isDragOver: false,
-                    documentBar: null
+                    documentBar: null,
+                    metricsEnabled: !!config.metricsEnabled,
+                    userLabel: config.userLabel,
+                    assistantLabel: config.assistantLabel,
+                    thumbsUpTitle: config.thumbsUpTitle,
+                    thumbsDownTitle: config.thumbsDownTitle,
+                    copyTitle: config.copyTitle,
                 };
             },
             methods: {
@@ -482,8 +503,8 @@ function parseMarkdownContent(content, message) {
                     var self = this;
                     var closeButtons = this.documentBar.querySelectorAll('.btn-close');
                     for (var j = 0; j < closeButtons.length; j++) {
-                        closeButtons[j].addEventListener('click', (function(idx) {
-                            return function(e) {
+                        closeButtons[j].addEventListener('click', (function (idx) {
+                            return function (e) {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 var docToRemove = self.documents[idx];
@@ -495,7 +516,7 @@ function parseMarkdownContent(content, message) {
                     // Bind add button
                     var addBtn = this.documentBar.querySelector('.ai-chat-doc-add-btn');
                     if (addBtn) {
-                        addBtn.addEventListener('click', function(e) {
+                        addBtn.addEventListener('click', function (e) {
                             e.preventDefault();
                             self.triggerFileInput();
                         });
@@ -530,10 +551,21 @@ function parseMarkdownContent(content, message) {
                             });
                         });
 
+                        // Update feedback icons in the DOM after all messages have rendered.
+                        this.$nextTick(() => {
+                            this.refreshAllFeedbackIcons();
+                        });
                     });
 
                     this.connection.on("ReceiveError", (error) => {
                         console.error("SignalR Error: ", error);
+                    });
+
+                    this.connection.on("MessageRated", (messageId, userRating) => {
+                        var msg = this.messages.find(m => m.id === messageId);
+                        if (msg) {
+                            msg.userRating = userRating;
+                        }
                     });
 
                     this.connection.onreconnecting(() => {
@@ -569,6 +601,11 @@ function parseMarkdownContent(content, message) {
                     });
                 },
                 addMessage(message) {
+
+                    // Ensure userRating is always defined for Vue reactivity.
+                    if (message.userRating === undefined) {
+                        message.userRating = null;
+                    }
 
                     if (message.content) {
                         let processedContent = message.content.trim();
@@ -679,11 +716,13 @@ function parseMarkdownContent(content, message) {
                                     // Re-assign the index after hiding the typing indicator.
                                     messageIndex = this.messages.length;
                                     let newMessage = {
+                                        id: chunk.messageId,
                                         role: "assistant",
                                         title: chunk.title,
                                         content: "",
                                         htmlContent: "",
                                         isStreaming: true,
+                                        userRating: null,
                                     };
 
                                     this.messages.push(newMessage);
@@ -894,6 +933,7 @@ function parseMarkdownContent(content, message) {
                 resetSession() {
                     this.setSessionId('');
                     this.isSessionStarted = false;
+                    this.sessionRating = null;
                     if (this.widgetIsInitialized) {
                         localStorage.removeItem(this.chatWidgetStateSession);
                     }
@@ -1024,6 +1064,11 @@ function parseMarkdownContent(content, message) {
                         this.addMessage(config.messages[i]);
                     }
 
+                    // Update feedback icons in the DOM after initial messages have rendered.
+                    this.$nextTick(() => {
+                        this.refreshAllFeedbackIcons();
+                    });
+
                     // Delegate click for code block copy buttons.
                     if (this.chatContainer) {
                         this.chatContainer.addEventListener('click', (e) => {
@@ -1146,6 +1191,83 @@ function parseMarkdownContent(content, message) {
                 },
                 copyResponse(message) {
                     navigator.clipboard.writeText(message);
+                },
+                updateFeedbackIcons(container, userRating) {
+                    if (!container) {
+                        return;
+                    }
+
+                    var upBtn = container.querySelector('.rate-up-btn');
+                    var downBtn = container.querySelector('.rate-down-btn');
+
+                    // Font Awesome SVG+JS replaces <i> with <svg>, so we must replace
+                    // the entire button content and let Font Awesome re-process.
+                    if (upBtn) {
+                        var upClass = userRating === true ? 'fa-solid fa-thumbs-up' : 'fa-regular fa-thumbs-up';
+                        upBtn.innerHTML = '<i class="' + upClass + '" style="font-size: 0.9rem;"></i>';
+                    }
+
+                    if (downBtn) {
+                        var downClass = userRating === false ? 'fa-solid fa-thumbs-down' : 'fa-regular fa-thumbs-down';
+                        downBtn.innerHTML = '<i class="' + downClass + '" style="font-size: 0.9rem;"></i>';
+                    }
+
+                    // Trigger Font Awesome SVG+JS to convert the new <i> elements.
+                    if (window.FontAwesome && FontAwesome.dom && FontAwesome.dom.i2svg) {
+                        FontAwesome.dom.i2svg({ node: container });
+                    }
+                },
+                refreshAllFeedbackIcons() {
+                    var containers = this.$el.querySelectorAll('.ai-chat-message-assistant-feedback');
+
+                    for (var i = 0; i < containers.length; i++) {
+                        var msgId = containers[i].getAttribute('data-message-id');
+                        var msg = this.messages.find(m => m.id === msgId);
+
+                        if (msg) {
+                            this.updateFeedbackIcons(containers[i], msg.userRating);
+                        }
+                    }
+                },
+                rateMessage(message, isPositive, event) {
+                    var sessionId = this.getSessionId();
+
+                    if (!sessionId || !message.id || !this.connection) {
+                        return;
+                    }
+
+                    // Toggle: clicking the same rating again clears it.
+                    var newRating = message.userRating === isPositive ? null : isPositive;
+                    message.userRating = newRating;
+
+                    // Find the feedback container by message ID for reliable DOM targeting.
+                    var feedbackContainer = this.$el.querySelector(
+                        '.ai-chat-message-assistant-feedback[data-message-id="' + message.id + '"]'
+                    );
+
+                    this.updateFeedbackIcons(feedbackContainer, newRating);
+
+                    // Trigger spark animation after Font Awesome has re-processed icons.
+                    if (newRating !== null && feedbackContainer) {
+                        setTimeout(() => {
+                            var btnClass = isPositive ? '.rate-up-btn' : '.rate-down-btn';
+                            var btn = feedbackContainer.querySelector(btnClass);
+
+                            if (btn) {
+                                btn.classList.remove('spark-effect');
+                                void btn.offsetWidth;
+                                btn.classList.add('spark-effect');
+                                btn.addEventListener('animationend', function onEnd() {
+                                    btn.removeEventListener('animationend', onEnd);
+                                    btn.classList.remove('spark-effect');
+                                });
+                            }
+                        }, 50);
+                    }
+
+                    this.connection.invoke("RateMessage", sessionId, message.id, isPositive).catch(function (err) {
+                        console.error('Failed to rate message:', err);
+                    });
                 }
             },
             watch: {

@@ -1,0 +1,57 @@
+@model CrestApps.OrchardCore.AI.Chat.ViewModels.ChatAnalyticsIndexViewModel
+
+<zone Name="Title"><h1>@T["AI Chat Session Analytics"]</h1></zone>
+
+<div class="card bg-default">
+    <div class="card-header">
+        <form asp-action="Index" method="post">
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-5 no-gutters">
+                @await DisplayAsync(Model.FilterShape)
+                <div class="col p-1">
+                    <button type="submit" class="btn btn-dark">
+                        <i class="fas fa-filter"></i> @T["Show"]
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="card-body p-3">
+        @if (Model.ShowReport && Model.ReportShape != null)
+        {
+            @await DisplayAsync(Model.ReportShape)
+
+            <div class="mt-3 p-2">
+                <form asp-action="Export" method="post">
+                    @if (Model.Filter.StartDateUtc.HasValue)
+                    {
+                        <input type="hidden" name="StartDate" value="@Model.Filter.StartDateUtc.Value.ToString("o")" />
+                    }
+                    @if (Model.Filter.EndDateUtc.HasValue)
+                    {
+                        <input type="hidden" name="EndDate" value="@Model.Filter.EndDateUtc.Value.ToString("o")" />
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Filter.ProfileId))
+                    {
+                        <input type="hidden" name="ProfileId" value="@Model.Filter.ProfileId" />
+                    }
+                    <button type="submit" class="btn btn-outline-secondary">
+                        <i class="fa-solid fa-file-csv me-1"></i>@T["Export as CSV"]
+                    </button>
+                </form>
+            </div>
+        }
+        else if (Model.ShowReport)
+        {
+            <p class="card-text text-center">
+                @T["No data found for the selected filters."]
+            </p>
+        }
+        else
+        {
+            <p class="card-text text-center">
+                @T["Use the above form to run the report"]
+            </p>
+        }
+    </div>
+</div>

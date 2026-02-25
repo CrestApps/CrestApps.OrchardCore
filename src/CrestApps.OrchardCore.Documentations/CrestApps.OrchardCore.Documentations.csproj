@@ -14,10 +14,6 @@
   <!-- Include all Docusaurus files -->
   <ItemGroup>
     <None Include="..\docs\**\*.*" Exclude="..\docs\node_modules\**;..\docs\build\**;..\docs\.docusaurus\**" Link="docs\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
 
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="..\docs\docs\ai\ai-chat-interactions-core.md" />
-  </ItemGroup>
-  
 </Project>

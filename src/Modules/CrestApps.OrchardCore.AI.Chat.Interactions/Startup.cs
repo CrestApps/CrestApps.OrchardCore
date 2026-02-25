@@ -54,7 +54,7 @@ public sealed class Startup : StartupBase
 
             .AddPermissionProvider<ChatInteractionPermissionProvider>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionDisplayDriver>()
-            .AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>()
+
             .AddDisplayDriver<ChatInteraction, ChatInteractionToolsDisplayDriver>()
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
@@ -88,5 +88,14 @@ public sealed class DataSourceStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<ChatInteraction, ChatInteractionDataSourceDisplayDriver>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.Deployments)]
+public sealed class DeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>();
     }
 }

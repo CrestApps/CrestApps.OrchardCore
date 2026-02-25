@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.ViewModels;
@@ -22,8 +23,7 @@ public sealed class AIChatSessionFieldExtractedEventDisplayDriver : ActivityDisp
     protected override async ValueTask EditActivityAsync(AIChatSessionFieldExtractedEvent activity, AIChatSessionFieldExtractedEventViewModel model)
     {
         model.ProfileId = activity.ProfileId;
-        model.Profiles = (await _profilesCatalog.GetAllAsync())
-            .Where(p => p.Type == AIProfileType.Chat)
+        model.Profiles = (await _profilesCatalog.GetAsync(AIProfileType.Chat))
             .Select(p => new SelectListItem(p.DisplayText, p.ItemId));
     }
 

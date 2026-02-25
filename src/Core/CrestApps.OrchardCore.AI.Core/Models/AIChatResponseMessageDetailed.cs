@@ -12,5 +12,7 @@ public sealed class AIChatResponseMessageDetailed : AIResponseMessage
 
     public string Title { get; set; }
 
+    public bool? UserRating { get; set; }
+
     public Dictionary<string, AICompletionReference> References { get; set; }
 }

@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Support;
 using Fluid;
@@ -10,6 +12,7 @@ using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -129,9 +132,74 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 IsGeneratedPrompt = message.IsGeneratedPrompt,
                 Title = message.Title,
                 Content = message.Content,
+                UserRating = message.UserRating,
                 References = message.References,
             })
         });
+    }
+
+    public async Task RateMessage(string sessionId, string messageId, bool isPositive)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId) || string.IsNullOrWhiteSpace(messageId))
+        {
+            return;
+        }
+
+        var chatSession = await _sessionManager.FindAsync(sessionId);
+
+        if (chatSession is null)
+        {
+            return;
+        }
+
+        var profile = await _profileManager.FindByIdAsync(chatSession.ProfileId);
+
+        if (profile is null)
+        {
+            return;
+        }
+
+        var httpContext = Context.GetHttpContext();
+
+        if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+        {
+            return;
+        }
+
+        var prompt = chatSession.Prompts.FirstOrDefault(p => p.Id == messageId);
+
+        if (prompt is null)
+        {
+            return;
+        }
+
+        // Toggle: if the user clicks the same rating again, clear it.
+        prompt.UserRating = prompt.UserRating == isPositive ? null : isPositive;
+
+        await _sessionManager.SaveAsync(chatSession);
+
+        // Also update session-level rating for analytics.
+        var eventService = httpContext.RequestServices.GetService<AIChatSessionEventService>();
+
+        if (eventService is not null)
+        {
+            // Compute session-level rating from the latest message ratings.
+            var ratings = chatSession.Prompts
+                .Where(p => p.UserRating.HasValue)
+                .Select(p => p.UserRating.Value)
+                .ToList();
+
+            if (ratings.Count > 0)
+            {
+                var positiveCount = ratings.Count(r => r);
+                await eventService.RecordUserRatingAsync(sessionId, positiveCount >= ratings.Count - positiveCount);
+            }
+        }
+
+        // Notify the caller of the updated rating.
+        await Clients.Caller.MessageRated(messageId, prompt.UserRating);
+
+        await _documentStore.CommitAsync();
     }
 
     private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
@@ -362,6 +430,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
+        var stopwatch = Stopwatch.StartNew();
 
         await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext, cancellationToken))
         {
@@ -402,6 +471,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
             await writer.WriteAsync(partialMessage, cancellationToken);
         }
 
+        stopwatch.Stop();
+
         if (builder.Length > 0)
         {
             assistantMessage.Content = builder.ToString();
@@ -415,6 +486,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         {
             Profile = profile,
             ChatSession = chatSession,
+            ResponseLatencyMs = stopwatch.Elapsed.TotalMilliseconds,
         };
 
         await _sessionHandlers.InvokeAsync((handler, ctx) => handler.MessageCompletedAsync(ctx), context, _logger);

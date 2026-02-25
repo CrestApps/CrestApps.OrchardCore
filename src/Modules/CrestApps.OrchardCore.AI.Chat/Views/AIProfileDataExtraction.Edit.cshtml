@@ -2,6 +2,25 @@
 
 @model AIProfileDataExtractionViewModel
 
+<div class="row mb-3">
+    <div class="col-md-6">
+        <label class="form-label" asp-for="SessionInactivityTimeoutInMinutes">@T["Session Inactivity Timeout (minutes)"]</label>
+        <input type="number" class="form-control" asp-for="SessionInactivityTimeoutInMinutes" min="1" />
+        <span class="hint">@T["Sessions inactive longer than this duration will be automatically closed. Must be at least 1 minute. Default is 30 minutes."]</span>
+    </div>
+</div>
+
+@if (Model.IsAnalyticsFeatureEnabled)
+{
+    <div class="mb-3">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableSessionMetrics" />
+            <label class="form-check-label" asp-for="EnableSessionMetrics">@T["Enable Session Metrics"]</label>
+            <span class="hint">@T["When enabled, session metrics such as usage, token consumption, response latency, and user feedback are captured for analytics. Metrics can be viewed in the Chat Analytics dashboard."]</span>
+        </div>
+    </div>
+}
+
 <div class="mb-3">
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="EnableDataExtraction" data-toggle-target="#dataExtractionSettings">
@@ -21,11 +40,6 @@
             <label class="form-label" asp-for="ExtractionCheckInterval">@T["Extraction Check Interval"]</label>
             <input type="number" class="form-control" asp-for="ExtractionCheckInterval" min="1" />
             <span class="hint">@T["Run extraction every N user messages. Default is 1 (every message)."]</span>
-        </div>
-        <div class="col-md-6">
-            <label class="form-label" asp-for="SessionInactivityTimeoutInMinutes">@T["Session Inactivity Timeout (minutes)"]</label>
-            <input type="number" class="form-control" asp-for="SessionInactivityTimeoutInMinutes" min="1" />
-            <span class="hint">@T["Sessions inactive longer than this duration will be automatically closed. Must be at least 1 minute. Default is 30 minutes."]</span>
         </div>
     </div>
 

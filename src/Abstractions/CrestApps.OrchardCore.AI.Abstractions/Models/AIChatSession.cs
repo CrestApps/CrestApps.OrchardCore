@@ -73,4 +73,11 @@ public sealed class AIChatSession : Entity
     /// Keys are field names from the data extraction configuration.
     /// </summary>
     public Dictionary<string, ExtractedFieldState> ExtractedData { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the results of post-session processing tasks.
+    /// Keys are task names from the post-session processing configuration.
+    /// Populated after the session is closed.
+    /// </summary>
+    public Dictionary<string, PostSessionResult> PostSessionResults { get; set; } = [];
 }

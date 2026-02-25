@@ -1,0 +1,66 @@
+@model CrestApps.OrchardCore.AI.Chat.ViewModels.ChatAnalyticsUserSegmentViewModel
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fa-solid fa-users me-1"></i>@T["User Segmentation"]
+            <i class="fa-solid fa-circle-info ms-1 small" data-bs-toggle="tooltip" title="@T["Breakdown of chat sessions by user authentication status. Shows how many sessions come from logged-in users versus anonymous visitors."]"></i>
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold text-primary">@Model.AuthenticatedSessions</div>
+                    <div class="text-muted">
+                        @T["Authenticated Sessions"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The number of chat sessions initiated by logged-in users with a known user account."]"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold text-secondary">@Model.AnonymousSessions</div>
+                    <div class="text-muted">
+                        @T["Anonymous Sessions"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The number of chat sessions from visitors who were not logged in. These are tracked by a browser-generated visitor ID."]"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold text-info">@Model.UniqueAuthenticatedUsers</div>
+                    <div class="text-muted">
+                        @T["Unique Logged-in Users"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The number of distinct authenticated user accounts that initiated chat sessions."]"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fs-2 fw-bold text-warning">@Model.UniqueAnonymousVisitors</div>
+                    <div class="text-muted">
+                        @T["Unique Anonymous Visitors"]
+                        <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The number of distinct anonymous visitors identified by their browser-generated visitor ID."]"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.AuthenticatedSessions + Model.AnonymousSessions > 0)
+        {
+            <div class="row mt-2">
+                <div class="col-12">
+                    <div class="progress" style="height: 30px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: @(Model.AuthenticatedPercent)%">
+                            @T["Authenticated"] @Model.AuthenticatedPercent%
+                        </div>
+                        <div class="progress-bar bg-secondary" role="progressbar" style="width: @(Model.AnonymousPercent)%">
+                            @T["Anonymous"] @Model.AnonymousPercent%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

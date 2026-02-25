@@ -1,25 +1,32 @@
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
 public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfile>
 {
+    private readonly IShellFeaturesManager _shellFeaturesManager;
+
     internal readonly IStringLocalizer S;
 
     public AIProfileDataExtractionDisplayDriver(
+        IShellFeaturesManager shellFeaturesManager,
         IStringLocalizer<AIProfileDataExtractionDisplayDriver> stringLocalizer)
     {
+        _shellFeaturesManager = shellFeaturesManager;
         S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
     {
-        return Initialize<AIProfileDataExtractionViewModel>("AIProfileDataExtraction_Edit", model =>
+        return Initialize<AIProfileDataExtractionViewModel>("AIProfileDataExtraction_Edit", async model =>
         {
             var settings = profile.GetSettings<AIProfileDataExtractionSettings>();
 
@@ -36,7 +43,16 @@ public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfi
                 })
                 .ToList();
 
-        }).Location("Content:10#Data Extractions:5");
+            var enabledFeatures = await _shellFeaturesManager.GetEnabledFeaturesAsync();
+            model.IsAnalyticsFeatureEnabled = profile.Type == AIProfileType.Chat
+                && enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics);
+
+            if (model.IsAnalyticsFeatureEnabled)
+            {
+                var metadata = profile.As<AIProfileAnalyticsMetadata>();
+                model.EnableSessionMetrics = metadata.EnableSessionMetrics;
+            }
+        }).Location("Content:10#Data Processing & Metrics:5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
@@ -98,6 +114,16 @@ public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfi
                 IsUpdatable = e.IsUpdatable,
             }).ToList();
         });
+
+        var enabledFeatures = await _shellFeaturesManager.GetEnabledFeaturesAsync();
+
+        if (profile.Type == AIProfileType.Chat
+            && enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics))
+        {
+            var metadata = profile.As<AIProfileAnalyticsMetadata>();
+            metadata.EnableSessionMetrics = model.EnableSessionMetrics;
+            profile.Put(metadata);
+        }
 
         return Edit(profile, context);
     }
