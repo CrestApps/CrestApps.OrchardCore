@@ -93,11 +93,7 @@ public sealed class AIChatSessionEventService
     /// Accumulates token usage and response latency metrics for the session.
     /// Called after each message completion to update running totals.
     /// </summary>
-    public async Task RecordCompletionMetricsAsync(
-        string sessionId,
-        int inputTokens,
-        int outputTokens,
-        double responseLatencyMs)
+    public async Task RecordCompletionMetricsAsync(string sessionId, int inputTokens, int outputTokens, double responseLatencyMs)
     {
         var evt = await FindEventBySessionIdAsync(sessionId);
 
@@ -136,7 +132,7 @@ public sealed class AIChatSessionEventService
 
     private async Task<AIChatSessionEvent> FindEventBySessionIdAsync(string sessionId)
     {
-        return await _session.Query<AIChatSessionEvent, Indexes.AIChatSessionMetricsIndex>(
+        return await _session.Query<AIChatSessionEvent, AIChatSessionMetricsIndex>(
                 i => i.SessionId == sessionId,
                 collection: AIConstants.CollectionName)
             .FirstOrDefaultAsync();

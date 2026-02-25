@@ -16,20 +16,17 @@ namespace CrestApps.OrchardCore.AI.Handlers;
 public sealed class DataExtractionChatSessionHandler : IAIChatSessionHandler
 {
     private readonly DataExtractionService _dataExtractionService;
-    private readonly IAIChatSessionManager _sessionManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
     public DataExtractionChatSessionHandler(
         DataExtractionService dataExtractionService,
-        IAIChatSessionManager sessionManager,
         IServiceProvider serviceProvider,
         IClock clock,
         ILogger<DataExtractionChatSessionHandler> logger)
     {
         _dataExtractionService = dataExtractionService;
-        _sessionManager = sessionManager;
         _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;

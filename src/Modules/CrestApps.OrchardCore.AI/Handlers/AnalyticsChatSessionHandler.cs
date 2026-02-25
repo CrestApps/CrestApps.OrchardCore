@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 
@@ -33,7 +34,7 @@ public sealed class AnalyticsChatSessionHandler : IAIChatSessionHandler
         try
         {
             // Record session start on first user message (message count = 1 user message).
-            var userMessageCount = context.ChatSession.Prompts.Count(p => p.Role == Microsoft.Extensions.AI.ChatRole.User);
+            var userMessageCount = context.ChatSession.Prompts.Count(p => p.Role == ChatRole.User);
 
             if (userMessageCount == 1)
             {
