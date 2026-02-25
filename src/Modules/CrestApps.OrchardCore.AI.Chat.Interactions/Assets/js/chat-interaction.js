@@ -407,17 +407,24 @@ window.chatInteractionManager = function () {
                         let processedContent = message.content.trim();
 
                         if (message.references && typeof message.references === "object" && Object.keys(message.references).length) {
-                            for (const [key, value] of Object.entries(message.references)) {
+
+                            // Only include references that were actually cited in the response.
+                            const citedRefs = Object.entries(message.references).filter(([key]) => processedContent.includes(key));
+
+                            for (const [key, value] of citedRefs) {
                                 processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
                             }
                             processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-                            processedContent += '<br><br>';
 
-                            for (const value of Object.values(message.references)) {
-                                const label = value.text || `[doc:${value.index}]`;
-                                processedContent += value.link
-                                    ? `**${value.index}**. [${label}](${value.link})<br>`
-                                    : `**${value.index}**. ${label}<br>`;
+                            if (citedRefs.length) {
+                                processedContent += '<br><br>';
+
+                                for (const [key, value] of citedRefs) {
+                                    const label = value.text || `[doc:${value.index}]`;
+                                    processedContent += value.link
+                                        ? `**${value.index}**. [${label}](${value.link})<br>`
+                                        : `**${value.index}**. ${label}<br>`;
+                                }
                             }
                         }
 
@@ -593,17 +600,33 @@ window.chatInteractionManager = function () {
                 processReferences(references, messageIndex) {
                     if (Object.keys(references).length) {
                         let message = this.messages[messageIndex];
+                        const content = message.content || '';
 
-                        message.content = (message.content?.trim() + '<br><br>' || '');
+                        // Only include references that were actually cited in the response.
+                        const citedRefs = Object.entries(references).filter(([key]) => content.includes(key));
 
-                        for (const value of Object.values(references)) {
+                        if (!citedRefs.length) {
+                            return;
+                        }
+
+                        // Replace [doc:N] markers with superscripts.
+                        let processed = content.trim();
+                        for (const [key, value] of citedRefs) {
+                            processed = processed.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
+                        }
+                        processed = processed.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+
+                        processed += '<br><br>';
+
+                        for (const [key, value] of citedRefs) {
                             const label = value.text || `[doc:${value.index}]`;
-                            message.content += value.link
+                            processed += value.link
                                 ? `**${value.index}**. [${label}](${value.link})<br>`
                                 : `**${value.index}**. ${label}<br>`;
                         }
 
-                        message.htmlContent = parseMarkdownContent(message.content, message);
+                        message.content = processed;
+                        message.htmlContent = parseMarkdownContent(processed, message);
 
                         this.messages[messageIndex] = message;
 
@@ -963,7 +986,7 @@ window.chatInteractionManager = function () {
                     // This avoids coupling the JS to specific field names — new fields added by
                     // any module are automatically included.
                     const inputs = document.querySelectorAll(
-                        'input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' +
+                        'input[name^="ChatInteraction."]:not([type="hidden"]):not([name*=".Tools["]):not([name*=".Connections["]), ' +
                         'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' +
                         'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])'
                     );

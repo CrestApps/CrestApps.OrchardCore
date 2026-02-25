@@ -51,15 +51,6 @@ public sealed class RagTextNormalizerTests
         Assert.Contains("Paragraph two.", result);
     }
 
-    [Fact]
-    public async Task NormalizeContentAsync_DecodesHtmlEntities()
-    {
-        var input = "Tom &amp; Jerry &lt;3 &gt; everyone &#x00B6;";
-        var result = await RagTextNormalizer.NormalizeContentAsync(input, TestContext.Current.CancellationToken);
-
-        Assert.Contains("Tom & Jerry", result);
-        Assert.Contains("¶", result);
-    }
 
     [Fact]
     public async Task NormalizeContentAsync_StripsMarkdownFormatting()
@@ -141,6 +132,16 @@ public sealed class RagTextNormalizerTests
     }
 
     [Fact]
+    public void NormalizeTitle_DecodesHtmlEntities()
+    {
+        var input = "Tom &amp; Jerry &lt;3 &gt; everyone &#x00B6;";
+        var result = RagTextNormalizer.NormalizeTitle(input);
+
+        Assert.Contains("Tom & Jerry", result);
+        Assert.DoesNotContain("\u00B6", result);
+    }
+
+    [Fact]
     public void NormalizeTitle_CollapsesToSingleLine()
     {
         var input = "Line One\n\nLine Two\n\nLine Three";
@@ -167,6 +168,26 @@ public sealed class RagTextNormalizerTests
         var result = RagTextNormalizer.NormalizeTitle(input);
 
         Assert.Equal(input, result);
+    }
+
+    [Fact]
+    public void NormalizeTitle_StripsPilcrowCharacter()
+    {
+        var input = "Orchard Core \u00B6";
+        var result = RagTextNormalizer.NormalizeTitle(input);
+
+        Assert.Equal("Orchard Core", result);
+    }
+
+    [Fact]
+    public void NormalizeTitle_StripsHtmlWithPilcrow()
+    {
+        var input = "Orchard Core <h1>Orchard Core<a class=\"headerlink\" href=\"https://docs.orchardcore.net/en/latest/#orchard-core\" title=\"Permanent link\">\u00B6</a></h1>";
+        var result = RagTextNormalizer.NormalizeTitle(input);
+
+        Assert.DoesNotContain("\u00B6", result);
+        Assert.DoesNotContain("<", result);
+        Assert.Contains("Orchard Core", result);
     }
 
     [Fact]

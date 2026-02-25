@@ -273,6 +273,12 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             {
                 return false;
             }
+
+            if (prop.ValueKind == JsonValueKind.String &&
+                bool.TryParse(prop.GetString(), out var b))
+            {
+                return b;
+            }
         }
 
         return null;

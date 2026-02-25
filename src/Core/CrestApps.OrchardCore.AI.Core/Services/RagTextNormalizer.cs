@@ -103,7 +103,12 @@ public static partial class RagTextNormalizer
         text = HtmlTagRegex().Replace(text, string.Empty);
 
         // Decode HTML entities (e.g., &amp; → &, &#x00B6; → ¶).
-        return WebUtility.HtmlDecode(text);
+        text = WebUtility.HtmlDecode(text);
+
+        // Remove pilcrow signs (¶) commonly left over from Markdown headerlink anchors.
+        text = text.Replace("\u00B6", string.Empty);
+
+        return text;
     }
 
     private static async Task<IngestionDocument> ParseDocumentAsync(string text, CancellationToken cancellationToken)

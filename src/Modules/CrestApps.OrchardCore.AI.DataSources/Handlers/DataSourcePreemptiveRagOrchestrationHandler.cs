@@ -41,14 +41,26 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         _logger = logger;
     }
 
-    public async Task HandleAsync(PreemptiveRagContext context)
+    public ValueTask<bool> CanHandleAsync(OrchestrationContextBuiltContext context)
     {
         if (context.OrchestrationContext.CompletionContext == null ||
             string.IsNullOrEmpty(context.OrchestrationContext.CompletionContext.DataSourceId))
         {
-            return;
+            return ValueTask.FromResult(false);
         }
 
+        var ragMetadata = GetRagMetadata(context.Resource);
+
+        if (ragMetadata == null)
+        {
+            return ValueTask.FromResult(false);
+        }
+
+        return ValueTask.FromResult(true);
+    }
+
+    public async Task HandleAsync(PreemptiveRagContext context)
+    {
         var ragMetadata = GetRagMetadata(context.Resource);
 
         try

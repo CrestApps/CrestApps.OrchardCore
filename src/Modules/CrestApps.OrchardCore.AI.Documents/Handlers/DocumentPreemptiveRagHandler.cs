@@ -39,17 +39,22 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
         _logger = logger;
     }
 
-    public async Task HandleAsync(PreemptiveRagContext context)
+    public ValueTask<bool> CanHandleAsync(OrchestrationContextBuiltContext context)
     {
         // Only proceed if documents are attached (either on the orchestration context
         // or on the session via AdditionalProperties, since session documents are
         // populated after BuildingAsync via the configure callback).
-        if (context.OrchestrationContext.Documents is not { Count: > 0 } &&
-            !HasSessionDocuments(context.OrchestrationContext))
+        if (context.OrchestrationContext.Documents is { Count: > 0 } &&
+            HasSessionDocuments(context.OrchestrationContext))
         {
-            return;
+            return ValueTask.FromResult(true);
         }
 
+        return ValueTask.FromResult(false);
+    }
+
+    public async Task HandleAsync(PreemptiveRagContext context)
+    {
         var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
 
         if (string.IsNullOrEmpty(settings.IndexProfileName))

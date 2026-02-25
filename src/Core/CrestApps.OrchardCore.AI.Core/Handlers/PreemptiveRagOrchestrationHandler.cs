@@ -44,7 +44,7 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
             return;
         }
 
-        // IMPORTANT: If there are no handlers, there is no need to extract queries.
+        // IMPORTANT: If there are no handlers, there is no need to keep going or check settings.
         // This can happen if no feature provides an implementation.
         if (!_handlers.Any())
         {
@@ -60,6 +60,25 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
             return;
         }
 
+        var usableHandler = new List<IPreemptiveRagHandler>();
+
+        foreach (var handler in _handlers)
+        {
+            if (!await handler.CanHandleAsync(buildContext))
+            {
+                continue;
+            }
+
+            usableHandler.Add(handler);
+        }
+
+        // IMPORTANT: If there are no usable-handlers, there is no need to extract queries.
+        // This can happen if no feature provides an implementation.
+        if (usableHandler.Count == 0)
+        {
+            return;
+        }
+
         var queries = await _queryProvider.GetQueriesAsync(buildContext.OrchestrationContext);
 
         if (queries.Count == 0)
@@ -69,7 +88,7 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
 
         var ragContext = new PreemptiveRagContext(buildContext.OrchestrationContext, buildContext.Resource, queries);
 
-        await _handlers.InvokeAsync((handler, ctx) => handler.HandleAsync(ctx), ragContext, _logger);
+        await usableHandler.InvokeAsync((handler, ctx) => handler.HandleAsync(ctx), ragContext, _logger);
 
         // After all handlers have run, check if any references were produced.
         // If IsInScope is enabled and no preemptive references exist, inject a scoping
@@ -80,6 +99,21 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
 
         if (ragMetadata?.IsInScope != true)
         {
+            // When IsInScope is false but references exist, explicitly tell the model it CAN
+            // supplement with general knowledge. Without this, some models treat injected context
+            // as the only allowed source even without a scope constraint.
+            var hasAnyRefs = buildContext.OrchestrationContext.Properties.ContainsKey("DataSourceReferences")
+                || buildContext.OrchestrationContext.Properties.ContainsKey("DocumentReferences");
+
+            if (hasAnyRefs)
+            {
+                buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
+                    """
+
+                    Use the provided knowledge source content to inform your answer. If the provided context does not fully cover the user's question, you may supplement your response with your general knowledge. Cite information from the provided context using the corresponding reference markers (e.g., [doc:1], [doc:2]) inline.
+                    """);
+            }
+
             return;
         }
 
@@ -95,8 +129,9 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
                 buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
                     """
                     No relevant content was found in the configured knowledge sources.
-                    You must only answer based on the provided knowledge source content.
-                    Inform the user that the answer is not available in the current knowledge sources.
+                    CRITICAL INSTRUCTION — You MUST only answer based on the provided knowledge source content.
+                    DO NOT use your general knowledge or training data under any circumstances.
+                    You MUST inform the user that the answer is not available in the current knowledge sources.
                     """);
             }
             else
@@ -104,9 +139,10 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
                 buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
                     """
                     No relevant content was found during the initial search of the configured knowledge sources.
+                    CRITICAL INSTRUCTION — You MUST only answer based on knowledge source content. DO NOT use your general knowledge or training data.
                     Before concluding that no answer is available, try using the available search tools
                     (e.g., search_data_source, search_documents) to look for relevant information.
-                    If the search tools also return no relevant results, then inform the user that the answer is not available in the current knowledge sources.
+                    If the search tools also return no relevant results, you MUST inform the user that the answer is not available in the current knowledge sources.
                     """);
             }
         }
@@ -115,8 +151,10 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
             buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
                 """
 
-                IMPORTANT: Only answer based on the provided knowledge source content.
-                If the provided context does not contain relevant information, inform the user that the answer is not available in the current knowledge sources.
+                [Scope Constraint]
+                CRITICAL INSTRUCTION — You MUST only answer using the knowledge source content provided above.
+                DO NOT use your general knowledge or training data under any circumstances.
+                If the provided context does not contain information that directly answers the user's question, you MUST respond by telling the user that the requested information is not available in the current knowledge sources. Do not guess, infer, or supplement with outside knowledge.
                 When citing information from the provided context, include the corresponding reference marker (e.g., [doc:1], [doc:2]) inline in your response immediately after the relevant statement.
                 """);
 

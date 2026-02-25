@@ -612,19 +612,25 @@ window.openAIChatManager = function () {
 
                         if (message.references && typeof message.references === "object" && Object.keys(message.references).length) {
 
-                            for (const [key, value] of Object.entries(message.references)) {
+                            // Only include references that were actually cited in the response.
+                            const citedRefs = Object.entries(message.references).filter(([key]) => processedContent.includes(key));
+
+                            for (const [key, value] of citedRefs) {
                                 processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
                             }
 
                             // if we have multiple references, add a comma to ensure we don't concatenate numbers.
                             processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-                            processedContent += '<br><br>';
 
-                            for (const [key, value] of Object.entries(message.references)) {
-                                const label = value.text || key;
-                                processedContent += value.link
-                                    ? `**${value.index}**. [${label}](${value.link})<br>`
-                                    : `**${value.index}**. ${label}<br>`;
+                            if (citedRefs.length) {
+                                processedContent += '<br><br>';
+
+                                for (const [key, value] of citedRefs) {
+                                    const label = value.text || key;
+                                    processedContent += value.link
+                                        ? `**${value.index}**. [${label}](${value.link})<br>`
+                                        : `**${value.index}**. ${label}<br>`;
+                                }
                             }
                         }
 
@@ -822,17 +828,33 @@ window.openAIChatManager = function () {
                     if (Object.keys(references).length) {
 
                         let message = this.messages[messageIndex];
+                        const content = message.content || '';
 
-                        message.content = (message.content?.trim() + '<br><br>' || '');
+                        // Only include references that were actually cited in the response.
+                        const citedRefs = Object.entries(references).filter(([key]) => content.includes(key));
 
-                        for (const [key, value] of Object.entries(references)) {
+                        if (!citedRefs.length) {
+                            return;
+                        }
+
+                        // Replace [doc:N] markers with superscripts.
+                        let processed = content.trim();
+                        for (const [key, value] of citedRefs) {
+                            processed = processed.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
+                        }
+                        processed = processed.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+
+                        processed += '<br><br>';
+
+                        for (const [key, value] of citedRefs) {
                             const label = value.text || key;
-                            message.content += value.link
+                            processed += value.link
                                 ? `**${value.index}**. [${label}](${value.link})<br>`
                                 : `**${value.index}**. ${label}<br>`;
                         }
 
-                        message.htmlContent = parseMarkdownContent(message.content, message);
+                        message.content = processed;
+                        message.htmlContent = parseMarkdownContent(processed, message);
 
                         this.messages[messageIndex] = message;
 
