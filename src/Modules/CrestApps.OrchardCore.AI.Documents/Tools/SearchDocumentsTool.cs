@@ -3,8 +3,8 @@ using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -66,9 +66,9 @@ public sealed class SearchDocumentsTool : AIFunction
 
         try
         {
-            // Resolve the resource ID and type from the execution context.
-            var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
-            var executionContext = httpContextAccessor?.HttpContext?.Items[nameof(AIToolExecutionContext)] as AIToolExecutionContext;
+            // Resolve the resource ID and type from the invocation context.
+            var invocationContext = AIInvocationScope.Current;
+            var executionContext = invocationContext?.ToolExecutionContext;
 
             string resourceId = null;
             string referenceType = null;
@@ -87,8 +87,8 @@ public sealed class SearchDocumentsTool : AIFunction
             // When the resource is a profile, check if there's a session with documents.
             if (referenceType == AIConstants.DocumentReferenceTypes.Profile)
             {
-                var httpContext = httpContextAccessor?.HttpContext;
-                if (httpContext?.Items[nameof(AIChatSession)] is AIChatSession session &&
+                if (invocationContext?.Items.TryGetValue(nameof(AIChatSession), out var sessionObj) == true &&
+                    sessionObj is AIChatSession session &&
                     session.Documents is { Count: > 0 })
                 {
                     resourceId = session.SessionId;
@@ -189,12 +189,59 @@ public sealed class SearchDocumentsTool : AIFunction
             var builder = new StringBuilder();
             builder.AppendLine("Relevant content from uploaded documents:");
 
+            var seenDocuments = new Dictionary<string, (int Index, string FileName)>(StringComparer.OrdinalIgnoreCase);
+
             foreach (var result in results)
             {
-                if (result.Chunk is not null && !string.IsNullOrWhiteSpace(result.Chunk.Text))
+                if (result.Chunk is null || string.IsNullOrWhiteSpace(result.Chunk.Text))
                 {
-                    builder.AppendLine("---");
-                    builder.AppendLine(result.Chunk.Text);
+                    continue;
+                }
+
+                var documentKey = result.DocumentKey;
+
+                if (!string.IsNullOrEmpty(documentKey) && !seenDocuments.ContainsKey(documentKey))
+                {
+                    seenDocuments[documentKey] = (invocationContext.NextReferenceIndex(), RagTextNormalizer.NormalizeTitle(result.FileName));
+                }
+
+                var refIdx = !string.IsNullOrEmpty(documentKey) && seenDocuments.TryGetValue(documentKey, out var entry)
+                    ? entry.Index
+                    : invocationContext.NextReferenceIndex();
+
+                builder.AppendLine("---");
+                builder.Append("[doc:").Append(refIdx).Append("] ").AppendLine(result.Chunk.Text);
+            }
+
+            if (seenDocuments.Count > 0)
+            {
+                builder.AppendLine();
+                builder.AppendLine("References:");
+
+                foreach (var kvp in seenDocuments)
+                {
+                    builder.Append("[doc:").Append(kvp.Value.Index).Append("] = {DocumentId: \"").Append(kvp.Key).Append('"');
+
+                    if (!string.IsNullOrWhiteSpace(kvp.Value.FileName))
+                    {
+                        builder.Append(", FileName: \"").Append(kvp.Value.FileName).Append('"');
+                    }
+
+                    builder.AppendLine("}");
+                }
+
+                // Store citation metadata on the invocation context for downstream consumers.
+                foreach (var kvp in seenDocuments)
+                {
+                    var template = $"[doc:{kvp.Value.Index}]";
+                    invocationContext.ToolReferences.TryAdd(template, new AICompletionReference
+                    {
+                        Text = string.IsNullOrWhiteSpace(kvp.Value.FileName) ? template : kvp.Value.FileName,
+                        Title = kvp.Value.FileName,
+                        Index = kvp.Value.Index,
+                        ReferenceId = kvp.Key,
+                        ReferenceType = AIConstants.DataSourceReferenceTypes.Document,
+                    });
                 }
             }
 

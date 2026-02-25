@@ -80,6 +80,7 @@ internal sealed class DataSourceAzureAISearchVectorSearchService : IDataSourceVe
                     DataSourceConstants.ColumnNames.ChunkId,
                     DataSourceConstants.ColumnNames.ReferenceId,
                     DataSourceConstants.ColumnNames.DataSourceId,
+                    DataSourceConstants.ColumnNames.ReferenceType,
                     DataSourceConstants.ColumnNames.Title,
                     DataSourceConstants.ColumnNames.Content,
                     DataSourceConstants.ColumnNames.ChunkIndex,
@@ -126,6 +127,10 @@ internal sealed class DataSourceAzureAISearchVectorSearchService : IDataSourceVe
                     }
                 }
 
+                var referenceType = document.TryGetValue(DataSourceConstants.ColumnNames.ReferenceType, out var refTypeObj)
+                    ? refTypeObj?.ToString()
+                    : null;
+
                 if (!string.IsNullOrEmpty(content))
                 {
                     results.Add(new DataSourceSearchResult
@@ -134,6 +139,7 @@ internal sealed class DataSourceAzureAISearchVectorSearchService : IDataSourceVe
                         Title = title,
                         Content = content,
                         ChunkIndex = chunkIndex,
+                        ReferenceType = referenceType,
                         Score = (float)(result.Score ?? 0.0)
                     });
                 }

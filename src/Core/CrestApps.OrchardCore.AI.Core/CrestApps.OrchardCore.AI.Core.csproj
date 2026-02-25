@@ -15,7 +15,11 @@
     <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
     <PackageReference Include="OrchardCore.Liquid.Abstractions" />
     <PackageReference Include="Lucene.Net.Analysis.Common" />
+    <PackageReference Include="Markdig" />
     <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.DataIngestion" />
+    <PackageReference Include="Microsoft.Extensions.DataIngestion.Markdig" />
+    <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" />
     <PackageReference Include="OrchardCore.Indexing.Core" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
   </ItemGroup>

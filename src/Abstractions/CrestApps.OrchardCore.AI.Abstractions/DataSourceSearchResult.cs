@@ -26,6 +26,12 @@ public sealed class DataSourceSearchResult
     public int ChunkIndex { get; set; }
 
     /// <summary>
+    /// Gets or sets the reference type that identifies the kind of source
+    /// (e.g., "Content" for Orchard Core content items, or the source index profile type).
+    /// </summary>
+    public string ReferenceType { get; set; }
+
+    /// <summary>
     /// Gets or sets the similarity score.
     /// </summary>
     public float Score { get; set; }

@@ -2,9 +2,9 @@ using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -62,16 +62,16 @@ public sealed class DataSourceSearchTool : AIFunction
 
         try
         {
-            var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
-            var executionContext = httpContextAccessor?.HttpContext?.Items[nameof(AIToolExecutionContext)] as AIToolExecutionContext;
+            var invocationContext = AIInvocationScope.Current;
+            var executionContext = invocationContext?.ToolExecutionContext;
 
             if (executionContext == null)
             {
                 return "Data source search requires an active AI execution context.";
             }
 
-            // Get the data source ID from the completion context.
-            var dataSourceId = httpContextAccessor?.HttpContext?.Items["DataSourceId"] as string;
+            // Get the data source ID from the invocation context.
+            var dataSourceId = invocationContext.DataSourceId;
 
             if (string.IsNullOrEmpty(dataSourceId))
             {
@@ -187,7 +187,7 @@ public sealed class DataSourceSearchTool : AIFunction
 
             if (strictness > 0)
             {
-                var threshold = strictness / 5.0f;
+                var threshold = strictness / (float)AIDataSourceSettings.MaxStrictness;
                 results = results.Where(r => r.Score >= threshold);
 
                 if (!results.Any())
@@ -205,8 +205,7 @@ public sealed class DataSourceSearchTool : AIFunction
             var builder = new StringBuilder();
             builder.AppendLine("Relevant content from data source:");
 
-            var docIndex = 1;
-            var seenReferences = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var seenReferences = new Dictionary<string, (int Index, string Title, string ReferenceType)>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var result in results)
             {
@@ -218,22 +217,21 @@ public sealed class DataSourceSearchTool : AIFunction
                 if (!string.IsNullOrEmpty(result.ReferenceId) &&
                     !seenReferences.ContainsKey(result.ReferenceId))
                 {
-                    seenReferences[result.ReferenceId] = docIndex;
+                    seenReferences[result.ReferenceId] = (invocationContext.NextReferenceIndex(), RagTextNormalizer.NormalizeTitle(result.Title), result.ReferenceType);
                 }
 
-                var refLabel = !string.IsNullOrEmpty(result.ReferenceId) && seenReferences.TryGetValue(result.ReferenceId, out var refIdx)
-                    ? $"[doc:{refIdx}]"
-                    : $"[doc:{docIndex}]";
+                var refLabel = !string.IsNullOrEmpty(result.ReferenceId) && seenReferences.TryGetValue(result.ReferenceId, out var entry)
+                    ? $"[doc:{entry.Index}]"
+                    : $"[doc:{invocationContext.NextReferenceIndex()}]";
 
                 builder.AppendLine("---");
 
                 if (!string.IsNullOrWhiteSpace(result.Title))
                 {
-                    builder.AppendLine($"{refLabel} Title: {result.Title}");
+                    builder.Append(refLabel).Append(" Title: ").AppendLine(result.Title);
                 }
 
-                builder.AppendLine($"{refLabel} {result.Content}");
-                docIndex++;
+                builder.Append(refLabel).Append(' ').AppendLine(result.Content);
             }
 
             if (seenReferences.Count > 0)
@@ -243,7 +241,21 @@ public sealed class DataSourceSearchTool : AIFunction
 
                 foreach (var kvp in seenReferences)
                 {
-                    builder.AppendLine($"[doc:{kvp.Value}] = {kvp.Key}");
+                    builder.Append("[doc:").Append(kvp.Value.Index).Append("] = ").AppendLine(kvp.Key);
+                }
+
+                // Store citation metadata on the invocation context for downstream consumers.
+                foreach (var kvp in seenReferences)
+                {
+                    var template = $"[doc:{kvp.Value.Index}]";
+                    invocationContext.ToolReferences.TryAdd(template, new AICompletionReference
+                    {
+                        Text = string.IsNullOrWhiteSpace(kvp.Value.Title) ? template : kvp.Value.Title,
+                        Title = kvp.Value.Title,
+                        Index = kvp.Value.Index,
+                        ReferenceId = kvp.Key,
+                        ReferenceType = kvp.Value.ReferenceType,
+                    });
                 }
             }
 

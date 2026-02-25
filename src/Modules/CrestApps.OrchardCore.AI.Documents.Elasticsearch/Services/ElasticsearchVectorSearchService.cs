@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
@@ -105,6 +104,14 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
 
                 if (!string.IsNullOrEmpty(chunkText))
                 {
+                    var documentKey = document.TryGetPropertyValue(AIConstants.ColumnNames.DocumentId, out var docIdNode)
+                        ? docIdNode?.GetValue<string>()
+                        : null;
+
+                    var fileName = document.TryGetPropertyValue(AIConstants.ColumnNames.FileName, out var fileNameNode)
+                        ? fileNameNode?.GetValue<string>()
+                        : null;
+
                     results.Add(new DocumentChunkSearchResult
                     {
                         Chunk = new ChatInteractionDocumentChunk
@@ -112,6 +119,8 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
                             Text = chunkText,
                             Index = chunkIndex,
                         },
+                        DocumentKey = documentKey,
+                        FileName = fileName,
                         Score = (float)(hit.Score ?? 0.0),
                     });
                 }

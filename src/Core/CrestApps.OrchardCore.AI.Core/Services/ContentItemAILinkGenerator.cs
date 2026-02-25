@@ -3,12 +3,12 @@ using Microsoft.AspNetCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class DefaultAILinkGenerator : IAILinkGenerator
+public sealed class ContentItemAILinkGenerator : IAIReferenceLinkResolver
 {
     private readonly LinkGenerator _linkGenerator;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public DefaultAILinkGenerator(
+    public ContentItemAILinkGenerator(
         LinkGenerator linkGenerator,
         IHttpContextAccessor httpContextAccessor)
     {
@@ -16,11 +16,11 @@ public sealed class DefaultAILinkGenerator : IAILinkGenerator
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public string GetContentItemPath(string contentItemId, IDictionary<string, object> metadata)
+    public string ResolveLink(string referenceId, IDictionary<string, object> metadata)
     {
-        if (string.IsNullOrEmpty(contentItemId))
+        if (string.IsNullOrEmpty(referenceId))
         {
-            ArgumentException.ThrowIfNullOrEmpty(contentItemId);
+            return null;
         }
 
         var routeValues = new RouteValueDictionary()
@@ -28,7 +28,7 @@ public sealed class DefaultAILinkGenerator : IAILinkGenerator
             { "Area", "OrchardCore.Contents" },
             { "Controller", "Item" },
             { "Action", "Display" },
-            { "contentItemId", contentItemId },
+            { "contentItemId", referenceId },
         };
 
         return _linkGenerator.GetPathByRouteValues(_httpContextAccessor.HttpContext, routeName: null, values: routeValues);

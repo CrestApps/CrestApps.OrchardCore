@@ -2,7 +2,7 @@ using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Models;
-using Microsoft.AspNetCore.Http;
+
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -49,8 +49,7 @@ public sealed class ReadDocumentTool : AIFunction
             return "Unable to find a 'document_id' argument in the arguments parameter.";
         }
 
-        var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
-        var executionContext = httpContextAccessor?.HttpContext?.Items[nameof(AIToolExecutionContext)] as AIToolExecutionContext;
+        var executionContext = AIInvocationScope.Current?.ToolExecutionContext;
 
         if (executionContext?.Resource is ChatInteraction interaction)
         {

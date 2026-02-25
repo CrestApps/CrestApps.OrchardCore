@@ -3,7 +3,6 @@ using System.ClientModel.Primitives;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Azure.AI.OpenAI;
-using Azure.AI.OpenAI.Chat;
 using Azure.Identity;
 using CrestApps.Azure.Core;
 using CrestApps.Azure.Core.Models;
@@ -13,7 +12,6 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
-using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
@@ -25,7 +23,6 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
     private readonly INamedCatalog<AIDeployment> _deploymentStore;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly IAILinkGenerator _linkGenerator;
     private readonly IEnumerable<IAICompletionServiceHandler> _completionServiceHandlers;
     private readonly DefaultAIOptions _defaultOptions;
     private readonly ILogger _logger;
@@ -37,7 +34,6 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         IOptions<AIProviderOptions> providerOptions,
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory,
-        IAILinkGenerator linkGenerator,
         IEnumerable<IAICompletionServiceHandler> completionServiceHandlers,
         IOptions<DefaultAIOptions> defaultOptions,
         ILogger<AzureOpenAICompletionClient> logger)
@@ -46,7 +42,6 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         _deploymentStore = deploymentStore;
         _serviceProvider = serviceProvider;
         _loggerFactory = loggerFactory;
-        _linkGenerator = linkGenerator;
         _completionServiceHandlers = completionServiceHandlers;
         _defaultOptions = defaultOptions.Value;
         _logger = logger;
@@ -173,46 +168,6 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                 },
             };
 
-#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-            var messageContext = data.Value.GetMessageContext();
-#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-
-            if (messageContext?.Citations is not null && messageContext.Citations.Count > 0)
-            {
-                var linkContext = new Dictionary<string, object>
-                {
-                    { "prompt", currentPrompt },
-                };
-
-                var contentItemIds = new HashSet<string>();
-                var references = new Dictionary<string, AICompletionReference>();
-                foreach (var citation in messageContext.Citations)
-                {
-                    if (string.IsNullOrEmpty(citation.FilePath))
-                    {
-                        continue;
-                    }
-
-                    contentItemIds.Add(citation.FilePath);
-                    var templateIndex = references.Count + 1;
-                    var template = $"[doc{templateIndex}]";
-
-                    references[template] = new AICompletionReference
-                    {
-                        Text = string.IsNullOrEmpty(citation.Title) ? template : citation.Title,
-                        Link = _linkGenerator.GetContentItemPath(citation.FilePath, linkContext),
-                        Title = citation.Title,
-                        Index = templateIndex,
-                    };
-                }
-
-                result.AdditionalProperties = new Microsoft.Extensions.AI.AdditionalPropertiesDictionary
-                {
-                    {"ContentItemIds", contentItemIds },
-                    {"References", references },
-                };
-            }
-
             return result;
         }
         catch (Exception ex)
@@ -266,8 +221,6 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         var functions = await ResolveToolsAsync(context, deploymentName);
 
         var chatOptions = GetOptions(context, functions);
-
-        Dictionary<string, object> linkContext = null;
 
         ChatCompletionOptions subSequenceContext = null;
 
@@ -359,47 +312,6 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                     if (update.Role is not null)
                     {
                         result.Role = new Microsoft.Extensions.AI.ChatRole(update.Role.ToString().ToLowerInvariant());
-                    }
-
-#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-                    var updateContext = update.GetMessageContext();
-#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-
-                    if (updateContext?.Citations is not null && updateContext.Citations.Count > 0)
-                    {
-                        linkContext ??= new Dictionary<string, object>
-                        {
-                            { "prompt", currentPrompt },
-                        };
-
-                        var contentItemIds = new HashSet<string>();
-                        var references = new Dictionary<string, AICompletionReference>();
-                        foreach (var citation in updateContext.Citations)
-                        {
-                            if (string.IsNullOrEmpty(citation.FilePath))
-                            {
-                                continue;
-                            }
-
-                            contentItemIds.Add(citation.FilePath);
-                            var templateIndex = references.Count + 1;
-
-                            var template = $"[doc{templateIndex}]";
-
-                            references[template] = new AICompletionReference
-                            {
-                                Text = string.IsNullOrEmpty(citation.Title) ? template : citation.Title,
-                                Index = templateIndex,
-                                Link = _linkGenerator.GetContentItemPath(citation.FilePath, linkContext),
-                                Title = citation.Title,
-                            };
-                        }
-
-                        result.AdditionalProperties = new Microsoft.Extensions.AI.AdditionalPropertiesDictionary
-                        {
-                            {"ContentItemIds", contentItemIds },
-                            {"References", references },
-                        };
                     }
 
                     yield return result;

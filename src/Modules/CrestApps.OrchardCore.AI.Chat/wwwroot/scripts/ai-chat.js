@@ -648,7 +648,8 @@ window.openAIChatManager = function () {
                 var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
                   _key = _Object$entries2$_i[0],
                   _value = _Object$entries2$_i[1];
-                processedContent += "**".concat(_value.index, "**. [").concat(_value.text, "](").concat(_value.link, ")<br>");
+                var label = _value.text || _key;
+                processedContent += _value.link ? "**".concat(_value.index, "**. [").concat(label, "](").concat(_value.link, ")<br>") : "**".concat(_value.index, "**. ").concat(label, "<br>");
               }
             }
             message.content = processedContent;
@@ -824,7 +825,8 @@ window.openAIChatManager = function () {
               var _Object$entries5$_i = _slicedToArray(_Object$entries5[_i5], 2),
                 key = _Object$entries5$_i[0],
                 value = _Object$entries5$_i[1];
-              message.content += "**".concat(value.index, "**. [").concat(value.text, "](").concat(value.link, ")<br>");
+              var label = value.text || key;
+              message.content += value.link ? "**".concat(value.index, "**. [").concat(label, "](").concat(value.link, ")<br>") : "**".concat(value.index, "**. ").concat(label, "<br>");
             }
             message.htmlContent = parseMarkdownContent(message.content, message);
             this.messages[messageIndex] = message;

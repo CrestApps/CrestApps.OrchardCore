@@ -133,6 +133,10 @@ internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVe
                     chunkIndex = chunkIndexNode.GetValue<int>();
                 }
 
+                var referenceType = document.TryGetPropertyValue(DataSourceConstants.ColumnNames.ReferenceType, out var refTypeNode)
+                    ? refTypeNode?.GetValue<string>()
+                    : null;
+
                 if (!string.IsNullOrEmpty(content))
                 {
                     results.Add(new DataSourceSearchResult
@@ -141,6 +145,7 @@ internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVe
                         Title = title,
                         Content = content,
                         ChunkIndex = chunkIndex,
+                        ReferenceType = referenceType,
                         Score = (float)(hit.Score ?? 0.0),
                     });
                 }

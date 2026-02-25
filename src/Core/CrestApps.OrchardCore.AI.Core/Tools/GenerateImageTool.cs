@@ -2,7 +2,6 @@ using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -58,13 +57,11 @@ public sealed class GenerateImageTool : AIFunction
 
         try
         {
-            var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-
-            var executionContext = httpContextAccessor.HttpContext?.Items[nameof(AIToolExecutionContext)] as AIToolExecutionContext;
+            var executionContext = AIInvocationScope.Current?.ToolExecutionContext;
 
             if (executionContext is null)
             {
-                return $"Image generation is not available. The {nameof(AIToolExecutionContext)} is missing from the HttpContext.";
+                return $"Image generation is not available. The {nameof(AIToolExecutionContext)} is missing from the invocation context.";
             }
 
             var providerName = executionContext.ProviderName;
@@ -131,7 +128,7 @@ public sealed class GenerateImageTool : AIFunction
 
                 if (!string.IsNullOrWhiteSpace(imageUri))
                 {
-                    builder.AppendLine($"![Generated Image]({imageUri})");
+                    builder.Append("![Generated Image](").Append(imageUri).AppendLine(")");
                     builder.AppendLine();
                 }
             }

@@ -216,7 +216,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
 
             foreach (var failed in failedBatches)
             {
-                builder.AppendLine($"- Rows {failed.RowStartIndex}-{failed.RowEndIndex}: {failed.ErrorMessage ?? "Unknown error"}");
+                builder.Append("- Rows ").Append(failed.RowStartIndex).Append('-').Append(failed.RowEndIndex).Append(": ").AppendLine(failed.ErrorMessage ?? "Unknown error");
             }
         }
 
@@ -334,7 +334,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
 
         builder.AppendLine("Process the following tabular data rows according to the instructions below.");
         builder.AppendLine();
-        builder.AppendLine($"This is batch {batch.BatchIndex + 1}, containing rows {batch.RowStartIndex} through {batch.RowEndIndex} from file: {batch.FileName ?? "Unknown"}");
+        builder.Append("This is batch ").Append(batch.BatchIndex + 1).Append(", containing rows ").Append(batch.RowStartIndex).Append(" through ").Append(batch.RowEndIndex).Append(" from file: ").AppendLine(batch.FileName ?? "Unknown");
         builder.AppendLine();
         builder.AppendLine("--- DATA START ---");
         builder.AppendLine(batch.GetContent());

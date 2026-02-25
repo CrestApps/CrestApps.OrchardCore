@@ -621,7 +621,10 @@ window.openAIChatManager = function () {
                             processedContent += '<br><br>';
 
                             for (const [key, value] of Object.entries(message.references)) {
-                                processedContent += `**${value.index}**. [${value.text}](${value.link})<br>`;
+                                const label = value.text || key;
+                                processedContent += value.link
+                                    ? `**${value.index}**. [${label}](${value.link})<br>`
+                                    : `**${value.index}**. ${label}<br>`;
                             }
                         }
 
@@ -823,7 +826,10 @@ window.openAIChatManager = function () {
                         message.content = (message.content?.trim() + '<br><br>' || '');
 
                         for (const [key, value] of Object.entries(references)) {
-                            message.content += `**${value.index}**. [${value.text}](${value.link})<br>`;
+                            const label = value.text || key;
+                            message.content += value.link
+                                ? `**${value.index}**. [${label}](${value.link})<br>`
+                                : `**${value.index}**. ${label}<br>`;
                         }
 
                         message.htmlContent = parseMarkdownContent(message.content, message);

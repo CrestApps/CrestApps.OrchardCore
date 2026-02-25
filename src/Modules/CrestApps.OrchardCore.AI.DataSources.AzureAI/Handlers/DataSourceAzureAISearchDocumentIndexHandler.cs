@@ -25,6 +25,7 @@ internal sealed class DataSourceAzureAISearchDocumentIndexHandler : IDocumentInd
         context.DocumentIndex.Set(DataSourceConstants.ColumnNames.ChunkId, embeddingDocument.ChunkId, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(DataSourceConstants.ColumnNames.ReferenceId, embeddingDocument.ReferenceId, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(DataSourceConstants.ColumnNames.DataSourceId, embeddingDocument.DataSourceId, DocumentIndexOptions.Store);
+        context.DocumentIndex.Set(DataSourceConstants.ColumnNames.ReferenceType, embeddingDocument.ReferenceType, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(DataSourceConstants.ColumnNames.ChunkIndex, embeddingDocument.ChunkIndex, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(DataSourceConstants.ColumnNames.Title, embeddingDocument.Title, DocumentIndexOptions.Store);
         context.DocumentIndex.Set(DataSourceConstants.ColumnNames.Content, embeddingDocument.Content, DocumentIndexOptions.Store);

@@ -2,6 +2,7 @@ using System.Text;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -202,16 +203,67 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
         sb.AppendLine("\n\n[Uploaded Document Context]");
         sb.AppendLine("The following content was retrieved from the user's uploaded documents via semantic search. Use this information to answer the user's question accurately.");
         sb.AppendLine("If the documents do not contain relevant information, use your general knowledge to answer instead.");
+        sb.AppendLine("When citing information, include the corresponding reference marker (e.g., [doc:1]) inline in your response immediately after the relevant statement.");
 
         if (!orchestrationContext.DisableTools)
         {
-            sb.AppendLine($"If you need additional context, use the '{SystemToolNames.SearchDocuments}' tool to search for more content in the uploaded documents.");
+            sb.Append("If you need additional context, use the '").Append(SystemToolNames.SearchDocuments).AppendLine("' tool to search for more content in the uploaded documents.");
         }
+
+        var invocationContext = AIInvocationScope.Current;
+        var seenDocuments = new Dictionary<string, (int Index, string FileName)>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var result in finalResults)
         {
+            var documentKey = result.DocumentKey;
+
+            if (!string.IsNullOrEmpty(documentKey) && !seenDocuments.ContainsKey(documentKey))
+            {
+                seenDocuments[documentKey] = (invocationContext?.NextReferenceIndex() ?? seenDocuments.Count + 1, RagTextNormalizer.NormalizeTitle(result.FileName));
+            }
+
+            var refIdx = !string.IsNullOrEmpty(documentKey) && seenDocuments.TryGetValue(documentKey, out var entry)
+                ? entry.Index
+                : invocationContext?.NextReferenceIndex() ?? seenDocuments.Count + 1;
+
             sb.AppendLine("---");
-            sb.AppendLine(result.Chunk.Text);
+            sb.Append("[doc:").Append(refIdx).Append("] ").AppendLine(result.Chunk.Text);
+        }
+
+        if (seenDocuments.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("References:");
+
+            foreach (var kvp in seenDocuments)
+            {
+                sb.Append("[doc:").Append(kvp.Value.Index).Append("] = {DocumentId: \"").Append(kvp.Key).Append('"');
+
+                if (!string.IsNullOrWhiteSpace(kvp.Value.FileName))
+                {
+                    sb.Append(", FileName: \"").Append(kvp.Value.FileName).Append('"');
+                }
+
+                sb.AppendLine("}");
+            }
+
+            // Store citation metadata on the orchestration context for downstream consumers.
+            var citationMap = new Dictionary<string, AICompletionReference>();
+
+            foreach (var kvp in seenDocuments)
+            {
+                var template = $"[doc:{kvp.Value.Index}]";
+                citationMap[template] = new AICompletionReference
+                {
+                    Text = string.IsNullOrWhiteSpace(kvp.Value.FileName) ? template : kvp.Value.FileName,
+                    Title = kvp.Value.FileName,
+                    Index = kvp.Value.Index,
+                    ReferenceId = kvp.Key,
+                    ReferenceType = AIConstants.DataSourceReferenceTypes.Document,
+                };
+            }
+
+            orchestrationContext.Properties["DocumentReferences"] = citationMap;
         }
 
         orchestrationContext.SystemMessageBuilder.Append(sb);

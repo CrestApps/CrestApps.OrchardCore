@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.DataSources.Services;
+using CrestApps.OrchardCore.AI.Core.Services;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 

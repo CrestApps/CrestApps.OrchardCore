@@ -1,10 +1,10 @@
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.AI.DataSources.Services;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundJobs;
+using CrestApps.OrchardCore.AI.Core.Services;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Handlers;
 

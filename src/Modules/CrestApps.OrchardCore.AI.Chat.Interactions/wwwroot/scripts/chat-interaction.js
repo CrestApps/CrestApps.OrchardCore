@@ -395,7 +395,8 @@ window.chatInteractionManager = function () {
               processedContent += '<br><br>';
               for (var _i2 = 0, _Object$values = Object.values(message.references); _i2 < _Object$values.length; _i2++) {
                 var _value = _Object$values[_i2];
-                processedContent += "**".concat(_value.index, "**. [").concat(_value.text, "](").concat(_value.link, ")<br>");
+                var label = _value.text || "[doc:".concat(_value.index, "]");
+                processedContent += _value.link ? "**".concat(_value.index, "**. [").concat(label, "](").concat(_value.link, ")<br>") : "**".concat(_value.index, "**. ").concat(label, "<br>");
               }
             }
             message.content = processedContent;
@@ -567,7 +568,8 @@ window.chatInteractionManager = function () {
             message.content = ((_message$content = message.content) === null || _message$content === void 0 ? void 0 : _message$content.trim()) + '<br><br>' || '';
             for (var _i5 = 0, _Object$values2 = Object.values(references); _i5 < _Object$values2.length; _i5++) {
               var value = _Object$values2[_i5];
-              message.content += "**".concat(value.index, "**. [").concat(value.text, "](").concat(value.link, ")<br>");
+              var label = value.text || "[doc:".concat(value.index, "]");
+              message.content += value.link ? "**".concat(value.index, "**. [").concat(label, "](").concat(value.link, ")<br>") : "**".concat(value.index, "**. ").concat(label, "<br>");
             }
             message.htmlContent = parseMarkdownContent(message.content, message);
             this.messages[messageIndex] = message;

@@ -57,6 +57,28 @@ Each data source can be configured with:
 - **Key Field** — Maps to the document reference ID for citations.
 - **Filters** — OData filter expressions for scoping search results.
 
+## Citation & Reference Tracking
+
+When the AI model uses content from a data source, the system produces `[doc:N]` citation markers in the response text. Each marker maps to a reference with:
+
+- **ReferenceId** — The source document key (e.g., a content item ID).
+- **ReferenceType** — The type of the source index (e.g., the index profile type). This determines how links are generated for the reference.
+- **Title** — The document title from the source index.
+
+References are collected from both **preemptive RAG** (context injected before AI completion) and **tool-based search** (the `SearchDataSources` tool invoked by the AI model during conversation).
+
+All reference indices are coordinated through a shared counter on `AIInvocationScope.Current`, ensuring that `[doc:N]` indices are unique across data source references, document references, and tool-invoked searches within the same request. See [AI Tools — Invocation Context](../ai-tools.md#invocation-context-aiinvocationscope) for details.
+
+### Custom Link Resolvers
+
+By default, references are shown without links unless a link resolver is registered for the reference type. To generate links for a custom reference type, implement `IAIReferenceLinkResolver` and register it as a keyed service:
+
+```csharp
+services.AddKeyedScoped<IAIReferenceLinkResolver, MyCustomLinkResolver>("MyIndexType");
+```
+
+The resolver receives the `referenceId` and optional metadata, and returns a URL string (or `null` for no link).
+
 ## Recipes
 
 ### Creating a Data Source

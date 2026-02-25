@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.AI.DataSources.Services;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Services;
@@ -20,6 +19,7 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
+using CrestApps.OrchardCore.AI.Core.Services;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Controllers;
 

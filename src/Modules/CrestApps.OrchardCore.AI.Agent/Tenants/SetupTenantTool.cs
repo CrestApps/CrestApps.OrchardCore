@@ -253,7 +253,7 @@ public sealed class SetupTenantTool : AIFunction
 
             foreach (var error in setupContext.Errors)
             {
-                builder.AppendLine($"{error.Key}: {error.Value}");
+                builder.Append(error.Key).Append(": ").AppendLine(error.Value);
             }
 
             return builder.ToString();

@@ -22,6 +22,8 @@ public static class DataSourceConstants
 
         public const string Timestamp = "timestamp";
 
+        public const string ReferenceType = "referenceType";
+
         public const string Filters = "filters";
     }
 }

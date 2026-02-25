@@ -122,7 +122,7 @@ public sealed class DefaultOrchestrationContextBuilderTests
             building: null,
             built: ctx =>
             {
-                capturedMessage = ((OrchestrationContext)ctx.Context).UserMessage;
+                capturedMessage = ((OrchestrationContext)ctx.OrchestrationContext).UserMessage;
             });
         var builder = CreateBuilder([handler]);
 

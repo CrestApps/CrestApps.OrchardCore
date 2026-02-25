@@ -414,7 +414,10 @@ window.chatInteractionManager = function () {
                             processedContent += '<br><br>';
 
                             for (const value of Object.values(message.references)) {
-                                processedContent += `**${value.index}**. [${value.text}](${value.link})<br>`;
+                                const label = value.text || `[doc:${value.index}]`;
+                                processedContent += value.link
+                                    ? `**${value.index}**. [${label}](${value.link})<br>`
+                                    : `**${value.index}**. ${label}<br>`;
                             }
                         }
 
@@ -594,7 +597,10 @@ window.chatInteractionManager = function () {
                         message.content = (message.content?.trim() + '<br><br>' || '');
 
                         for (const value of Object.values(references)) {
-                            message.content += `**${value.index}**. [${value.text}](${value.link})<br>`;
+                            const label = value.text || `[doc:${value.index}]`;
+                            message.content += value.link
+                                ? `**${value.index}**. [${label}](${value.link})<br>`
+                                : `**${value.index}**. ${label}<br>`;
                         }
 
                         message.htmlContent = parseMarkdownContent(message.content, message);

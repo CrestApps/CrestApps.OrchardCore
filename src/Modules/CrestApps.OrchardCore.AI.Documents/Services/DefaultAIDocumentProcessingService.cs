@@ -1,7 +1,7 @@
 using System.Text;
-using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -14,8 +14,6 @@ namespace CrestApps.OrchardCore.AI.Documents.Services;
 
 public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingService
 {
-    private const int ChunkSize = 2000;
-    private const int ChunkOverlap = 200;
     private const int MaxEmbeddingTotalChars = 25000;
 
     private readonly IEnumerable<IDocumentTextExtractor> _textExtractors;
@@ -112,6 +110,11 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
         }
 
         var text = content.ToString();
+
+        // Normalize the extracted text to strip HTML, Markdown, and extraneous formatting
+        // before chunking and embedding, producing cleaner vectors and reducing token usage.
+        text = await RagTextNormalizer.NormalizeContentAsync(text);
+
         var now = _clock.UtcNow;
 
         var document = new AIDocument
@@ -129,7 +132,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
 
         if (ShouldGenerateEmbeddings(extension, text.Length, embeddingGenerator, options))
         {
-            var textChunks = ChunkText(text);
+            var textChunks = await RagTextNormalizer.NormalizeAndChunkAsync(text);
             textChunks = LimitChunksForEmbedding(textChunks);
 
             if (textChunks.Count > 0)
@@ -207,138 +210,5 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
         }
 
         return limitedChunks;
-    }
-
-    private static List<string> ChunkText(string text)
-    {
-        var chunks = new List<string>();
-
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return chunks;
-        }
-
-        var paragraphs = Regex.Split(text, @"\n\s*\n")
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .Select(p => p.Trim())
-            .ToList();
-
-        var currentChunk = new StringBuilder();
-
-        foreach (var paragraph in paragraphs)
-        {
-            if (currentChunk.Length + paragraph.Length + 2 <= ChunkSize)
-            {
-                if (currentChunk.Length > 0)
-                {
-                    currentChunk.Append("\n\n");
-                }
-                currentChunk.Append(paragraph);
-            }
-            else
-            {
-                if (currentChunk.Length > 0)
-                {
-                    chunks.Add(currentChunk.ToString());
-
-                    var overlapText = GetOverlapText(currentChunk.ToString(), ChunkOverlap);
-                    currentChunk.Clear();
-                    if (!string.IsNullOrEmpty(overlapText))
-                    {
-                        currentChunk.Append(overlapText);
-                        currentChunk.Append("\n\n");
-                    }
-                }
-
-                if (paragraph.Length > ChunkSize)
-                {
-                    var subChunks = SplitLongParagraph(paragraph);
-                    foreach (var subChunk in subChunks)
-                    {
-                        chunks.Add(subChunk);
-                    }
-                }
-                else
-                {
-                    currentChunk.Append(paragraph);
-                }
-            }
-        }
-
-        if (currentChunk.Length > 0)
-        {
-            chunks.Add(currentChunk.ToString());
-        }
-
-        return chunks;
-    }
-
-    private static string GetOverlapText(string text, int overlapSize)
-    {
-        if (text.Length <= overlapSize)
-        {
-            return text;
-        }
-
-        var lastPart = text[^overlapSize..];
-        var sentenceStart = lastPart.IndexOf(". ");
-        if (sentenceStart > 0 && sentenceStart < overlapSize / 2)
-        {
-            return lastPart[(sentenceStart + 2)..].Trim();
-        }
-
-        return lastPart.Trim();
-    }
-
-    private static List<string> SplitLongParagraph(string paragraph)
-    {
-        var chunks = new List<string>();
-
-        var sentences = Regex.Split(paragraph, @"(?<=[.!?])\s+")
-            .Where(s => !string.IsNullOrWhiteSpace(s))
-            .ToList();
-
-        var currentChunk = new StringBuilder();
-
-        foreach (var sentence in sentences)
-        {
-            if (currentChunk.Length + sentence.Length + 1 <= ChunkSize)
-            {
-                if (currentChunk.Length > 0)
-                {
-                    currentChunk.Append(' ');
-                }
-                currentChunk.Append(sentence);
-            }
-            else
-            {
-                if (currentChunk.Length > 0)
-                {
-                    chunks.Add(currentChunk.ToString());
-                    currentChunk.Clear();
-                }
-
-                if (sentence.Length > ChunkSize)
-                {
-                    chunks.Add(sentence.Substring(0, Math.Min(sentence.Length, ChunkSize)));
-                    var remaining = sentence.Substring(Math.Min(sentence.Length, ChunkSize));
-                    if (!string.IsNullOrWhiteSpace(remaining))
-                    {
-                        currentChunk.Append(remaining);
-                    }
-                }
-                else
-                {
-                    currentChunk.Append(sentence);
-                }
-            }
-        }
-
-        if (currentChunk.Length > 0)
-        {
-            chunks.Add(currentChunk.ToString());
-        }
-
-        return chunks;
     }
 }

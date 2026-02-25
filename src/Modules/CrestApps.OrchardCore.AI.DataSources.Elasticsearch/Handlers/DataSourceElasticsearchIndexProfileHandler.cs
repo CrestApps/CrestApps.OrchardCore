@@ -50,6 +50,7 @@ internal sealed class DataSourceElasticsearchIndexProfileHandler : DataSourceInd
         metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.ChunkId] = new KeywordProperty();
         metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.ReferenceId] = new KeywordProperty();
         metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.DataSourceId] = new KeywordProperty();
+        metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.ReferenceType] = new KeywordProperty();
         metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.ChunkIndex] = new IntegerNumberProperty();
         metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.Title] = new TextProperty();
         metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.Content] = new TextProperty();
