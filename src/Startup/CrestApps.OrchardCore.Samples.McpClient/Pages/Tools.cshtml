@@ -1,5 +1,6 @@
 @page
 @model CrestApps.OrchardCore.Samples.McpClient.Pages.ToolsModel
+@using System.Text.Json
 
 <h1>Tools</h1>
 
@@ -29,6 +30,9 @@
             var tool = Model.Tools[i];
             var collapseId = $"collapse-tool-{i}";
             var headerId = $"header-tool-{i}";
+            var resultId = $"result-tool-{i}";
+            var inputSchema = tool.ProtocolTool?.InputSchema;
+            var schemaJson = inputSchema.HasValue ? inputSchema.Value.GetRawText() : "{}";
 
             <div class="accordion-item searchable-item" data-search-text="@tool.Name?.ToLowerInvariant() @tool.Description?.ToLowerInvariant()">
                 <h2 class="accordion-header" id="@headerId">
@@ -42,15 +46,13 @@
                 </h2>
                 <div id="@collapseId" class="accordion-collapse collapse" data-bs-parent="#toolsAccordion">
                     <div class="accordion-body">
-                        <form method="post" asp-page-handler="CallTool">
-                            <input type="hidden" name="toolName" value="@tool.Name" />
-                            <div class="mb-3">
-                                <label class="form-label">Arguments (JSON)</label>
-                                <textarea name="arguments" class="form-control font-monospace" rows="3" placeholder='{"key": "value"}'></textarea>
-                                <div class="form-text">Provide tool arguments as a JSON object. Leave empty for no arguments.</div>
-                            </div>
-                            <button class="btn btn-primary btn-sm" type="submit">Call Tool</button>
-                        </form>
+                        <div class="tool-form" data-tool-name="@tool.Name" data-schema="@schemaJson" data-result-target="#@resultId">
+                            <div class="tool-arguments"></div>
+                            <button class="btn btn-primary btn-sm btn-call-tool" type="button">Call Tool</button>
+                        </div>
+
+                        <div id="@resultId" class="mt-3" style="display:none">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -64,35 +66,191 @@ else
     <p class="text-muted">No tools were returned by the MCP server.</p>
 }
 
-@if (Model.CallResult is not null)
-{
-    <div class="card mt-4">
-        <div class="card-header">Result: @Model.SelectedToolName</div>
-        <div class="card-body">
-            @if (Model.CallResult.Content?.Count > 0)
-            {
-                @foreach (var content in Model.CallResult.Content)
-                {
-                    if (content is ModelContextProtocol.Protocol.TextContentBlock textBlock)
-                    {
-                        <pre class="bg-light p-3 rounded mb-2">@textBlock.Text</pre>
-                    }
-                    else
-                    {
-                        <p class="text-muted">Unsupported content type: @content.Type</p>
-                    }
-                }
-            }
-            else
-            {
-                <p class="text-muted">No content returned.</p>
-            }
-        </div>
-    </div>
-}
-
 <script>
     (function () {
+        // Build dynamic argument inputs from JSON Schema.
+        document.querySelectorAll('.tool-form').forEach(function (form) {
+            var schema;
+            try {
+                schema = JSON.parse(form.dataset.schema || '{}');
+            } catch (e) {
+                schema = {};
+            }
+
+            var container = form.querySelector('.tool-arguments');
+            var properties = schema.properties || {};
+            var required = schema.required || [];
+            var keys = Object.keys(properties);
+
+            if (keys.length === 0) {
+                return;
+            }
+
+            var row = document.createElement('div');
+            row.className = 'row g-2 mb-2';
+
+            keys.forEach(function (key) {
+                var prop = properties[key];
+                var isRequired = required.indexOf(key) !== -1;
+                var col = document.createElement('div');
+                col.className = 'col-md-6 col-lg-4';
+
+                var label = document.createElement('label');
+                label.className = 'form-label small mb-0';
+                label.textContent = key;
+                if (isRequired) {
+                    var badge = document.createElement('span');
+                    badge.className = 'text-danger ms-1';
+                    badge.textContent = '*';
+                    label.appendChild(badge);
+                }
+
+                var input;
+                var propType = prop.type || 'string';
+
+                if (propType === 'boolean') {
+                    input = document.createElement('select');
+                    input.className = 'form-select form-select-sm';
+                    var optEmpty = document.createElement('option');
+                    optEmpty.value = '';
+                    optEmpty.textContent = '— select —';
+                    var optTrue = document.createElement('option');
+                    optTrue.value = 'true';
+                    optTrue.textContent = 'true';
+                    var optFalse = document.createElement('option');
+                    optFalse.value = 'false';
+                    optFalse.textContent = 'false';
+                    input.appendChild(optEmpty);
+                    input.appendChild(optTrue);
+                    input.appendChild(optFalse);
+                } else if (propType === 'integer' || propType === 'number') {
+                    input = document.createElement('input');
+                    input.type = 'number';
+                    input.className = 'form-control form-control-sm';
+                    if (propType === 'integer') {
+                        input.step = '1';
+                    } else {
+                        input.step = 'any';
+                    }
+                } else {
+                    input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'form-control form-control-sm';
+                }
+
+                input.dataset.argName = key;
+                input.dataset.argType = propType;
+
+                if (prop.description) {
+                    input.title = prop.description;
+                    input.placeholder = prop.description;
+                } else {
+                    input.placeholder = key;
+                }
+
+                if (isRequired) {
+                    input.required = true;
+                }
+
+                col.appendChild(label);
+                col.appendChild(input);
+                row.appendChild(col);
+            });
+
+            container.appendChild(row);
+        });
+
+        // Handle Call Tool button clicks via AJAX.
+        document.querySelectorAll('.btn-call-tool').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var form = btn.closest('.tool-form');
+                var toolName = form.dataset.toolName;
+                var resultDiv = document.querySelector(form.dataset.resultTarget);
+
+                // Collect arguments from dynamic inputs.
+                var args = {};
+                var missing = false;
+                form.querySelectorAll('[data-arg-name]').forEach(function (input) {
+                    var name = input.dataset.argName;
+                    var type = input.dataset.argType;
+                    var value = input.value.trim();
+
+                    if (input.required && !value) {
+                        input.reportValidity();
+                        missing = true;
+                        return;
+                    }
+
+                    if (value === '') {
+                        return;
+                    }
+
+                    if (type === 'boolean') {
+                        args[name] = value === 'true';
+                    } else if (type === 'integer') {
+                        args[name] = parseInt(value, 10);
+                    } else if (type === 'number') {
+                        args[name] = parseFloat(value);
+                    } else {
+                        args[name] = value;
+                    }
+                });
+
+                if (missing) {
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.textContent = 'Calling…';
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = '<p class="text-muted">Loading…</p>';
+
+                var formData = new FormData();
+                formData.append('toolName', toolName);
+                formData.append('arguments', JSON.stringify(args));
+
+                fetch('?handler=CallTool', {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: formData
+                })
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    if (data.error) {
+                        resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(data.error) + '</div>';
+                        return;
+                    }
+                    if (!data.contents || data.contents.length === 0) {
+                        resultDiv.innerHTML = '<p class="text-muted mb-0">No content returned.</p>';
+                        return;
+                    }
+                    var alertClass = data.isError ? 'alert-warning' : '';
+                    var html = '';
+                    if (data.isError) {
+                        html += '<div class="alert alert-warning mb-2"><strong>Tool returned an error</strong></div>';
+                    }
+                    data.contents.forEach(function (c) {
+                        if (c.type === 'text') {
+                            html += '<pre class="bg-light p-3 rounded mb-2" style="max-height:400px;overflow:auto">' + escapeHtml(c.text) + '</pre>';
+                        } else {
+                            html += '<p class="text-muted">Unsupported content type: ' + escapeHtml(c.contentType || 'unknown') + '</p>';
+                        }
+                    });
+                    resultDiv.innerHTML = html;
+                })
+                .catch(function (err) {
+                    resultDiv.innerHTML = '<div class="alert alert-danger mb-0">' + escapeHtml(err.message || 'An error occurred.') + '</div>';
+                })
+                .finally(function () {
+                    btn.disabled = false;
+                    btn.textContent = 'Call Tool';
+                });
+            });
+        });
+
+        // Client-side search.
         var searchInput = document.getElementById('toolSearch');
         if (!searchInput) return;
         var items = document.querySelectorAll('#toolsAccordion .searchable-item');
@@ -107,5 +265,15 @@ else
             });
             noResults.style.display = visible === 0 && query ? '' : 'none';
         });
+
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.appendChild(document.createTextNode(text));
+            return div.innerHTML;
+        }
     })();
 </script>
+
+@* Antiforgery token for AJAX calls *@
+<form id="__AjaxAntiForgeryForm" method="post" style="display:none">
+</form>

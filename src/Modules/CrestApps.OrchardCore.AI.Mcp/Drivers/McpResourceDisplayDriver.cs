@@ -95,7 +95,7 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
         };
 
         // Build the full URI from the user-provided path.
-        entry.Resource.Uri = Handlers.McpResourceHandler.BuildUri(entry.Source, entry.ItemId, model.Path);
+        entry.Resource.Uri = Handlers.McpResourceHandler.BuildUri(entry.Source, entry.ItemId, model.Path?.Trim());
 
         entry.Resource.Name = model.Name ?? string.Empty;
         entry.Resource.Title = entry.DisplayText;

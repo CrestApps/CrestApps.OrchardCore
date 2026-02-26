@@ -59,6 +59,11 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
             return CreateErrorResult(resource.Resource.Uri, $"File not found: {fileName}");
         }
 
+        if (fileInfo.IsDirectory)
+        {
+            return CreateErrorResult(resource.Resource.Uri, $"The path '{fileName}' is a directory, not a file. Only file resources are supported.");
+        }
+
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug("Reading file resource from provider '{ProviderName}': {FileName}", providerName, fileName);
