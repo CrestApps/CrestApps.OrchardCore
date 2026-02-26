@@ -1,7 +1,7 @@
-using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Models;
+using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -120,7 +120,7 @@ public sealed class GenerateImageTool : AIFunction
                 return "No images were generated.";
             }
 
-            var builder = new StringBuilder();
+            using var builder = ZString.CreateStringBuilder();
 
             foreach (var contentItem in result.Contents)
             {
@@ -128,7 +128,9 @@ public sealed class GenerateImageTool : AIFunction
 
                 if (!string.IsNullOrWhiteSpace(imageUri))
                 {
-                    builder.Append("![Generated Image](").Append(imageUri).AppendLine(")");
+                    builder.Append("![Generated Image](");
+                    builder.Append(imageUri);
+                    builder.AppendLine(")");
                     builder.AppendLine();
                 }
             }

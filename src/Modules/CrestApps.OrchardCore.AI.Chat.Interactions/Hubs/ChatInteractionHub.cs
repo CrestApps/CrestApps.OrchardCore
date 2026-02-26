@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
@@ -9,6 +8,7 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using CrestApps.Support;
+using Cysharp.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
@@ -415,7 +415,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 CreatedUtc = _clock.UtcNow,
             };
 
-            var builder = new StringBuilder();
+            var builder = ZString.CreateStringBuilder();
 
             // Build the orchestration context using the handler pipeline.
             var orchestratorContext = await _orchestrationContextBuilder.BuildAsync(interaction, ctx =>

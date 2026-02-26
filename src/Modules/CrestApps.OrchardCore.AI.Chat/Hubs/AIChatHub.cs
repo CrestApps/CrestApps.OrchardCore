@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -7,6 +6,7 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Support;
+using Cysharp.Text;
 using Fluid;
 using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
@@ -429,7 +429,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             Title = profile.PromptSubject,
         };
 
-        var builder = new StringBuilder();
+        var builder = ZString.CreateStringBuilder();
 
         // Build the orchestration context using the handler pipeline.
         var orchestratorContext = await _orchestrationContextBuilder.BuildAsync(profile, ctx =>
@@ -532,7 +532,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             c.UserMarkdownInResponse = true;
         });
 
-        var builder = new StringBuilder();
+        var builder = ZString.CreateStringBuilder();
 
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();

@@ -1,8 +1,8 @@
-using System.Text;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
+using Cysharp.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
@@ -196,7 +196,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         }
 
         // Build context injection.
-        var sb = new StringBuilder();
+        using var sb = ZString.CreateStringBuilder();
         sb.AppendLine("\n\n[Data Source Context]");
         sb.AppendLine("The following context was retrieved from the configured data source. Use this information to answer the user's question accurately and directly without mentioning or referencing the retrieval process.");
         sb.AppendLine("When citing information, include the corresponding reference marker (e.g., [doc:1]) inline in your response immediately after the relevant statement.");
@@ -231,7 +231,10 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
                 : invocationContext?.NextReferenceIndex() ?? seenReferences.Count + 1;
 
             sb.AppendLine("---");
-            sb.Append("[doc:").Append(refIdx).Append("] ").AppendLine(result.Content);
+            sb.Append("[doc:");
+            sb.Append(refIdx);
+            sb.Append("] ");
+            sb.AppendLine(result.Content);
         }
 
         if (seenReferences.Count > 0)
@@ -241,11 +244,17 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
 
             foreach (var kvp in seenReferences)
             {
-                sb.Append("[doc:").Append(kvp.Value.Index).Append("] = {ReferenceId: \"").Append(kvp.Key).Append('"');
+                sb.Append("[doc:");
+                sb.Append(kvp.Value.Index);
+                sb.Append("] = {ReferenceId: \"");
+                sb.Append(kvp.Key);
+                sb.Append('"');
 
                 if (!string.IsNullOrWhiteSpace(kvp.Value.Title))
                 {
-                    sb.Append(", Title: \"").Append(kvp.Value.Title).Append('"');
+                    sb.Append(", Title: \"");
+                    sb.Append(kvp.Value.Title);
+                    sb.Append('"');
                 }
 
                 sb.AppendLine("}");

@@ -22,6 +22,7 @@
     <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" />
     <PackageReference Include="OrchardCore.Indexing.Core" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="ZString" />
   </ItemGroup>
 
   <ItemGroup>

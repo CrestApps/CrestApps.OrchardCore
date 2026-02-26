@@ -1,8 +1,8 @@
-using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Models;
+using Cysharp.Text;
 
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -138,14 +138,18 @@ public sealed class ReadTabularDataTool : AIFunction
             return content;
         }
 
-        var builder = new StringBuilder();
+        using var builder = ZString.CreateStringBuilder();
 
         for (var i = 0; i <= maxRows && i < lines.Length; i++)
         {
             builder.AppendLine(lines[i]);
         }
 
-        builder.Append("... (truncated, showing first ").Append(maxRows).Append(" of ").Append(lines.Length - 1).AppendLine(" data rows)");
+        builder.Append("... (truncated, showing first ");
+        builder.Append(maxRows);
+        builder.Append(" of ");
+        builder.Append(lines.Length - 1);
+        builder.AppendLine(" data rows)");
 
         return builder.ToString();
     }

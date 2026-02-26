@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+using Cysharp.Text;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -57,7 +58,7 @@ public sealed class TabularBatchResultCache : ITabularBatchResultCache
         {
             return string.Empty;
         }
-        var builder = new StringBuilder();
+        var builder = ZString.CreateStringBuilder();
 
         foreach (var (fileName, content) in documents.OrderBy(d => d.FileName))
         {

@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
+using Cysharp.Text;
 using GitHub.Copilot.SDK;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
@@ -405,7 +406,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
             return "The Copilot service encountered an error. Please try again.";
         }
 
-        var sb = new StringBuilder();
+        var sb = ZString.CreateStringBuilder();
 
         if (data.StatusCode.HasValue)
         {
@@ -446,7 +447,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
             return context.UserMessage;
         }
 
-        var sb = new StringBuilder();
+        var sb = ZString.CreateStringBuilder();
         sb.AppendLine("[Conversation History]");
 
         foreach (var message in context.ConversationHistory)
@@ -515,7 +516,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
         // TODO: When the Copilot SDK adds native McpServers support on SessionConfig,
         // configure each connection directly. For now, describe available MCP servers
         // in the system message so Copilot is aware of them.
-        var mcpDescription = new StringBuilder();
+        var mcpDescription = ZString.CreateStringBuilder();
         mcpDescription.AppendLine();
         mcpDescription.AppendLine("[Available MCP Servers]");
 

@@ -1,4 +1,3 @@
-using System.Text;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -6,6 +5,7 @@ using CrestApps.OrchardCore.AI.Endpoints.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using CrestApps.Support;
+using Cysharp.Text;
 using Fluid;
 using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
@@ -170,7 +170,7 @@ internal static class ApiAICompletionEndpoint
 
             var contentItemIds = new HashSet<string>();
             var references = new Dictionary<string, AICompletionReference>();
-            var builder = new StringBuilder();
+            var builder = ZString.CreateStringBuilder();
 
             // Collect preemptive RAG references.
             citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);

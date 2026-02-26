@@ -20,6 +20,7 @@
     <PackageVersion Include="NuGet.Versioning" Version="7.0.1" />
     <PackageVersion Include="OllamaSharp" Version="5.4.16" />
     <PackageVersion Include="SSH.NET" Version="2025.1.0" />
+    <PackageVersion Include="ZString" Version="2.6.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.4.7" />
     <PackageVersion Include="YesSql.Core" Version="5.4.7" />
     <PackageVersion Include="ModelContextProtocol" Version="1.0.0" />
@@ -106,6 +107,10 @@
     <PackageVersion Include="xunit.analyzers" Version="1.27.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="xunit.runner.inproc" Version="3.2.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Benchmark Packages -->
+    <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- Aspire Packages -->

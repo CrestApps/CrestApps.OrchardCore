@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
+using Cysharp.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrchardCore.Admin;
@@ -151,7 +152,7 @@ public sealed class ChatAnalyticsController : Controller
 
     private static string GenerateCsvContent(IReadOnlyList<AIChatSessionEvent> events)
     {
-        var builder = new StringBuilder();
+        using var builder = ZString.CreateStringBuilder();
         builder.AppendLine("SessionId,ProfileId,VisitorId,UserId,IsAuthenticated,SessionStartedUtc,SessionEndedUtc,MessageCount,HandleTimeSeconds,IsResolved");
 
         foreach (var evt in events)
