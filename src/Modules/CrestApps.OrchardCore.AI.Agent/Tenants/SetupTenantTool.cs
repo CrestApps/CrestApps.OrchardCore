@@ -1,6 +1,6 @@
-using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
+using Cysharp.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -249,11 +249,14 @@ public sealed class SetupTenantTool : AIFunction
         // Check if any Setup component failed (e.g., database connection validation).
         if (setupContext.Errors.Count > 0)
         {
-            var builder = new StringBuilder("Failed to setup the tenant due to the following errors:");
+            using var builder = ZString.CreateStringBuilder();
+            builder.Append("Failed to setup the tenant due to the following errors:");
 
             foreach (var error in setupContext.Errors)
             {
-                builder.Append(error.Key).Append(": ").AppendLine(error.Value);
+                builder.Append(error.Key);
+                builder.Append(": ");
+                builder.AppendLine(error.Value);
             }
 
             return builder.ToString();

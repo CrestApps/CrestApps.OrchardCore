@@ -79,6 +79,7 @@
     <Project Path="src/Targets/CrestApps.OrchardCore.Cms.Core.Targets/CrestApps.OrchardCore.Cms.Core.Targets.csproj" />
   </Folder>
   <Folder Name="/Tests/">
+    <Project Path="tests/CrestApps.OrchardCore.Benchmarks/CrestApps.OrchardCore.Benchmarks.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj" />
   </Folder>
 </Solution>

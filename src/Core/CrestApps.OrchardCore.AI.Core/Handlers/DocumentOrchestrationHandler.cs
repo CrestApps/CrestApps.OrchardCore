@@ -1,5 +1,5 @@
-using System.Text;
 using CrestApps.OrchardCore.AI.Models;
+using Cysharp.Text;
 using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
 
@@ -77,7 +77,7 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
             .Where(t => t.Value.HasPurpose(AIToolPurposes.DocumentProcessing))
             .ToList();
 
-        var sb = new StringBuilder();
+        using var sb = ZString.CreateStringBuilder();
         sb.AppendLine("\n\n[Available Documents or attachments]");
 
         if (docTools.Count > 0)

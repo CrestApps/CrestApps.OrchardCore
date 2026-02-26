@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
-using System.Text;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Models;
+using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -376,7 +376,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
     /// </summary>
     private static string BuildScoringContext(OrchestrationContext context)
     {
-        var sb = new StringBuilder();
+        using var sb = ZString.CreateStringBuilder();
 
         // Include the last assistant reply for context (e.g., "I created article X" → "yes" makes sense).
         if (context.ConversationHistory is { Count: > 0 })
@@ -397,7 +397,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
 
     private static string BuildToolSummary(IEnumerable<ToolRegistryEntry> tools)
     {
-        var sb = new StringBuilder();
+        using var sb = ZString.CreateStringBuilder();
 
         foreach (var tool in tools)
         {

@@ -1,9 +1,9 @@
-using System.Text;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
+using Cysharp.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
@@ -204,7 +204,7 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
         var orchestrationContext = context.OrchestrationContext;
 
         // Build context injection.
-        var sb = new StringBuilder();
+        using var sb = ZString.CreateStringBuilder();
         sb.AppendLine("\n\n[Uploaded Document Context]");
         sb.AppendLine("The following content was retrieved from the user's uploaded documents via semantic search. Use this information to answer the user's question accurately.");
         sb.AppendLine("If the documents do not contain relevant information, use your general knowledge to answer instead.");
@@ -212,7 +212,9 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 
         if (!orchestrationContext.DisableTools)
         {
-            sb.Append("If you need additional context, use the '").Append(SystemToolNames.SearchDocuments).AppendLine("' tool to search for more content in the uploaded documents.");
+            sb.Append("If you need additional context, use the '");
+            sb.Append(SystemToolNames.SearchDocuments);
+            sb.AppendLine("' tool to search for more content in the uploaded documents.");
         }
 
         var invocationContext = AIInvocationScope.Current;
@@ -232,7 +234,10 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
                 : invocationContext?.NextReferenceIndex() ?? seenDocuments.Count + 1;
 
             sb.AppendLine("---");
-            sb.Append("[doc:").Append(refIdx).Append("] ").AppendLine(result.Chunk.Text);
+            sb.Append("[doc:");
+            sb.Append(refIdx);
+            sb.Append("] ");
+            sb.AppendLine(result.Chunk.Text);
         }
 
         if (seenDocuments.Count > 0)
@@ -242,11 +247,17 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 
             foreach (var kvp in seenDocuments)
             {
-                sb.Append("[doc:").Append(kvp.Value.Index).Append("] = {DocumentId: \"").Append(kvp.Key).Append('"');
+                sb.Append("[doc:");
+                sb.Append(kvp.Value.Index);
+                sb.Append("] = {DocumentId: \"");
+                sb.Append(kvp.Key);
+                sb.Append('"');
 
                 if (!string.IsNullOrWhiteSpace(kvp.Value.FileName))
                 {
-                    sb.Append(", FileName: \"").Append(kvp.Value.FileName).Append('"');
+                    sb.Append(", FileName: \"");
+                    sb.Append(kvp.Value.FileName);
+                    sb.Append('"');
                 }
 
                 sb.AppendLine("}");

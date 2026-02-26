@@ -1,10 +1,10 @@
-using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
+using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -186,7 +186,7 @@ public sealed class SearchDocumentsTool : AIFunction
                 return "No relevant content was found in the uploaded documents for this query. Answer using your general knowledge instead.";
             }
 
-            var builder = new StringBuilder();
+            var builder = ZString.CreateStringBuilder();
             builder.AppendLine("Relevant content from uploaded documents:");
 
             var seenDocuments = new Dictionary<string, (int Index, string FileName)>(StringComparer.OrdinalIgnoreCase);
@@ -210,7 +210,10 @@ public sealed class SearchDocumentsTool : AIFunction
                     : invocationContext.NextReferenceIndex();
 
                 builder.AppendLine("---");
-                builder.Append("[doc:").Append(refIdx).Append("] ").AppendLine(result.Chunk.Text);
+                builder.Append("[doc:");
+                builder.Append(refIdx);
+                builder.Append("] ");
+                builder.AppendLine(result.Chunk.Text);
             }
 
             if (seenDocuments.Count > 0)
@@ -220,11 +223,17 @@ public sealed class SearchDocumentsTool : AIFunction
 
                 foreach (var kvp in seenDocuments)
                 {
-                    builder.Append("[doc:").Append(kvp.Value.Index).Append("] = {DocumentId: \"").Append(kvp.Key).Append('"');
+                    builder.Append("[doc:");
+                    builder.Append(kvp.Value.Index);
+                    builder.Append("] = {DocumentId: \"");
+                    builder.Append(kvp.Key);
+                    builder.Append('"');
 
                     if (!string.IsNullOrWhiteSpace(kvp.Value.FileName))
                     {
-                        builder.Append(", FileName: \"").Append(kvp.Value.FileName).Append('"');
+                        builder.Append(", FileName: \"");
+                        builder.Append(kvp.Value.FileName);
+                        builder.Append('"');
                     }
 
                     builder.AppendLine("}");

@@ -1,6 +1,6 @@
-using System.Text;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -181,7 +181,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
             return string.Empty;
         }
 
-        var builder = new StringBuilder();
+        var builder = ZString.CreateStringBuilder();
         var sortedResults = results.OrderBy(r => r.BatchIndex).ToList();
 
         var hasSuccessfulResults = false;
@@ -216,7 +216,12 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
 
             foreach (var failed in failedBatches)
             {
-                builder.Append("- Rows ").Append(failed.RowStartIndex).Append('-').Append(failed.RowEndIndex).Append(": ").AppendLine(failed.ErrorMessage ?? "Unknown error");
+                builder.Append("- Rows ");
+                builder.Append(failed.RowStartIndex);
+                builder.Append('-');
+                builder.Append(failed.RowEndIndex);
+                builder.Append(": ");
+                builder.AppendLine(failed.ErrorMessage ?? "Unknown error");
             }
         }
 
@@ -330,11 +335,18 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
 
     private static string BuildBatchPrompt(TabularBatch batch, string userPrompt)
     {
-        var builder = new StringBuilder();
+        using var builder = ZString.CreateStringBuilder();
 
         builder.AppendLine("Process the following tabular data rows according to the instructions below.");
         builder.AppendLine();
-        builder.Append("This is batch ").Append(batch.BatchIndex + 1).Append(", containing rows ").Append(batch.RowStartIndex).Append(" through ").Append(batch.RowEndIndex).Append(" from file: ").AppendLine(batch.FileName ?? "Unknown");
+        builder.Append("This is batch ");
+        builder.Append(batch.BatchIndex + 1);
+        builder.Append(", containing rows ");
+        builder.Append(batch.RowStartIndex);
+        builder.Append(" through ");
+        builder.Append(batch.RowEndIndex);
+        builder.Append(" from file: ");
+        builder.AppendLine(batch.FileName ?? "Unknown");
         builder.AppendLine();
         builder.AppendLine("--- DATA START ---");
         builder.AppendLine(batch.GetContent());
@@ -348,7 +360,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
 
     private static string GetBatchSystemMessage(TabularBatch batch, string baseSystemMessage)
     {
-        var builder = new StringBuilder();
+        using var builder = ZString.CreateStringBuilder();
 
         builder.AppendLine("You are performing row-level analysis over tabular data.");
         builder.AppendLine();

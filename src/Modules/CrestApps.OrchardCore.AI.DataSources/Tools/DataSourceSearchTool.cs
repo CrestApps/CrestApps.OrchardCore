@@ -1,10 +1,10 @@
-using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
+using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -202,7 +202,7 @@ public sealed class DataSourceSearchTool : AIFunction
             }
 
             // Format results with citations.
-            var builder = new StringBuilder();
+            var builder = ZString.CreateStringBuilder();
             builder.AppendLine("Relevant content from data source:");
 
             var seenReferences = new Dictionary<string, (int Index, string Title, string ReferenceType)>(StringComparer.OrdinalIgnoreCase);
@@ -228,10 +228,14 @@ public sealed class DataSourceSearchTool : AIFunction
 
                 if (!string.IsNullOrWhiteSpace(result.Title))
                 {
-                    builder.Append(refLabel).Append(" Title: ").AppendLine(result.Title);
+                    builder.Append(refLabel);
+                    builder.Append(" Title: ");
+                    builder.AppendLine(result.Title);
                 }
 
-                builder.Append(refLabel).Append(' ').AppendLine(result.Content);
+                builder.Append(refLabel);
+                builder.Append(' ');
+                builder.AppendLine(result.Content);
             }
 
             if (seenReferences.Count > 0)
@@ -241,7 +245,10 @@ public sealed class DataSourceSearchTool : AIFunction
 
                 foreach (var kvp in seenReferences)
                 {
-                    builder.Append("[doc:").Append(kvp.Value.Index).Append("] = ").AppendLine(kvp.Key);
+                    builder.Append("[doc:");
+                    builder.Append(kvp.Value.Index);
+                    builder.Append("] = ");
+                    builder.AppendLine(kvp.Key);
                 }
 
                 // Store citation metadata on the invocation context for downstream consumers.
