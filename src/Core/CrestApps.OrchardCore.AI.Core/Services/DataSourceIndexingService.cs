@@ -185,20 +185,24 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var documentIndexManager = _serviceProvider.GetKeyedService<IDocumentIndexManager>(masterProfile.ProviderName);
+        var contentManager = _serviceProvider.GetKeyedService<IDataSourceContentManager>(masterProfile.ProviderName);
 
-        if (documentIndexManager == null)
+        if (contentManager == null)
         {
-            _logger.LogWarning("No document index manager found for provider '{ProviderName}'.", masterProfile.ProviderName);
+            _logger.LogWarning("No vector search service found for provider '{ProviderName}'. Unable to delete documents for data source '{DataSourceId}'.",
+                masterProfile.ProviderName, dataSource.ItemId);
+
             return;
         }
 
         try
         {
+            var deleted = await contentManager.DeleteByDataSourceIdAsync(masterProfile, dataSource.ItemId, cancellationToken);
+
             if (_logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogInformation("Deleted documents for data source '{DataSourceId}' from master index '{IndexName}'.",
-                    dataSource.ItemId, masterProfile.IndexName);
+                _logger.LogInformation("Deleted {DeletedCount} document chunks for data source '{DataSourceId}' from master index '{IndexName}'.",
+                    deleted, dataSource.ItemId, masterProfile.IndexName);
             }
         }
         catch (Exception ex)

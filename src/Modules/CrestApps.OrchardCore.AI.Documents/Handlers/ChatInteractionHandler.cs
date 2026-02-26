@@ -88,6 +88,32 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
         var documentIndexHandlers = services.GetRequiredService<IEnumerable<IDocumentIndexHandler>>();
         var logger = services.GetRequiredService<ILogger<ChatInteractionHandler>>();
 
+        // Collect AIDocument records to delete from the store after all index profiles are processed.
+        var documentsToDelete = new Dictionary<string, AIDocument>();
+
+        // Collect chunk IDs for removed interactions once (shared across all index profiles).
+        var removedChunkIds = new List<string>();
+
+        foreach (var interaction in removedInteractions)
+        {
+            var removedDocs = await documentStore.GetDocumentsAsync(
+                interaction.ItemId,
+                AIConstants.DocumentReferenceTypes.ChatInteraction);
+
+            foreach (var doc in removedDocs)
+            {
+                documentsToDelete.TryAdd(doc.ItemId, doc);
+
+                if (doc.Chunks != null)
+                {
+                    for (var i = 0; i < doc.Chunks.Count; i++)
+                    {
+                        removedChunkIds.Add($"{doc.ItemId}_{i}");
+                    }
+                }
+            }
+        }
+
         foreach (var indexProfile in indexProfiles)
         {
             var documentIndexManager = services.GetKeyedService<IDocumentIndexManager>(indexProfile.ProviderName);
@@ -179,31 +205,17 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
                 await documentIndexManager.AddOrUpdateDocumentsAsync(indexProfile, documents);
             }
 
-            // Handle removed interactions.
-            var removedIds = new List<string>();
-
-            foreach (var interaction in removedInteractions)
+            // Delete removed interaction chunks from this index profile.
+            if (removedChunkIds.Count > 0)
             {
-                var removedDocs = await documentStore.GetDocumentsAsync(
-                    interaction.ItemId,
-                    AIConstants.DocumentReferenceTypes.ChatInteraction);
-
-                foreach (var doc in removedDocs)
-                {
-                    if (doc.Chunks != null)
-                    {
-                        for (var i = 0; i < doc.Chunks.Count; i++)
-                        {
-                            removedIds.Add($"{doc.ItemId}_{i}");
-                        }
-                    }
-                }
+                await documentIndexManager.DeleteDocumentsAsync(indexProfile, removedChunkIds);
             }
+        }
 
-            if (removedIds.Count > 0)
-            {
-                await documentIndexManager.DeleteDocumentsAsync(indexProfile, removedIds);
-            }
+        // Delete the AIDocument records from the store after all index profiles have been processed.
+        foreach (var doc in documentsToDelete.Values)
+        {
+            await documentStore.DeleteAsync(doc);
         }
     }
 }

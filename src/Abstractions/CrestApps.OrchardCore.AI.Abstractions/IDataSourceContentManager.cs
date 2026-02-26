@@ -2,11 +2,7 @@ using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI;
 
-/// <summary>
-/// Interface for searching data source embeddings in various index providers.
-/// Implementations should be registered as keyed services using the provider name.
-/// </summary>
-public interface IDataSourceVectorSearchService
+public interface IDataSourceContentManager
 {
     /// <summary>
     /// Searches for document chunks that are similar to the provided embedding vector.
@@ -24,5 +20,17 @@ public interface IDataSourceVectorSearchService
         string dataSourceId,
         int topN,
         string filter = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes all document chunks belonging to the specified data source from the index.
+    /// </summary>
+    /// <param name="indexProfile">The index profile to delete from.</param>
+    /// <param name="dataSourceId">The data source ID whose documents should be deleted.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of documents deleted.</returns>
+    Task<long> DeleteByDataSourceIdAsync(
+        IndexProfile indexProfile,
+        string dataSourceId,
         CancellationToken cancellationToken = default);
 }

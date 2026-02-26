@@ -214,6 +214,18 @@ For **AI Chat Widget** content items, the same checkbox appears on the widget ed
 |---------|-------------|---------|
 | Top N Results | Number of top matching document chunks to include as context | 3 |
 
+## Document Lifecycle & Cleanup
+
+When a chat interaction, chat session, or AI profile is deleted, all associated documents are automatically cleaned up:
+
+| Scope | What happens on deletion |
+|-------|------------------------|
+| **Chat Interaction** | Document chunks are removed from all AI document indexes. `AIDocument` records are deleted from the document store. |
+| **Chat Session** | All session documents are deleted from the document store. Document chunks are removed from all AI document indexes via a deferred task. |
+| **AI Profile** | Documents are managed via the profile editor — removing a document triggers index chunk cleanup and store deletion on save. |
+
+This ensures the AI document indexes stay free of orphaned entries when their parent resources are removed.
+
 ## Troubleshooting
 
 ### "Index Not Configured" Warning

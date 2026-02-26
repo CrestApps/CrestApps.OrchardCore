@@ -49,13 +49,6 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
             return ValueTask.FromResult(false);
         }
 
-        var ragMetadata = GetRagMetadata(context.Resource);
-
-        if (ragMetadata == null)
-        {
-            return ValueTask.FromResult(false);
-        }
-
         return ValueTask.FromResult(true);
     }
 
@@ -92,9 +85,9 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
             return;
         }
 
-        var searchService = _serviceProvider.GetKeyedService<IDataSourceVectorSearchService>(masterProfile.ProviderName);
+        var contentManager = _serviceProvider.GetKeyedService<IDataSourceContentManager>(masterProfile.ProviderName);
 
-        if (searchService == null)
+        if (contentManager == null)
         {
             return;
         }
@@ -140,7 +133,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
 
             if (filterTranslator != null)
             {
-                providerFilter = filterTranslator.Translate(ragMetadata.Filter);
+                providerFilter = filterTranslator.Translate(ragMetadata?.Filter);
             }
         }
 
@@ -155,7 +148,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
                 continue;
             }
 
-            var results = await searchService.SearchAsync(
+            var results = await contentManager.SearchAsync(
                 masterProfile,
                 embedding.Vector.ToArray(),
                 dataSourceId,

@@ -102,9 +102,9 @@ public sealed class DataSourceSearchTool : AIFunction
             }
 
             // Get the vector search service for this provider.
-            var searchService = arguments.Services.GetKeyedService<IDataSourceVectorSearchService>(masterIndexProfile.ProviderName);
+            var contentManager = arguments.Services.GetKeyedService<IDataSourceContentManager>(masterIndexProfile.ProviderName);
 
-            if (searchService == null)
+            if (contentManager == null)
             {
                 return $"No vector search service is available for provider '{masterIndexProfile.ProviderName}'.";
             }
@@ -164,7 +164,7 @@ public sealed class DataSourceSearchTool : AIFunction
             }
 
             // Perform the vector search with filter applied directly on the KB index.
-            var results = await searchService.SearchAsync(
+            var results = await contentManager.SearchAsync(
                 masterIndexProfile,
                 embeddings[0].Vector.ToArray(),
                 dataSourceId,

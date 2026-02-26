@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Handlers;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,7 +25,7 @@ public sealed class Startup : StartupBase
     {
         services.AddIndexProfileHandler<DataSourceAzureAISearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceAzureAISearchDocumentIndexHandler>();
-        services.AddKeyedScoped<IDataSourceVectorSearchService, DataSourceAzureAISearchVectorSearchService>(
+        services.AddKeyedScoped<IDataSourceContentManager, AzureAISearchDataSourceContentManager>(
             AzureAISearchConstants.ProviderName);
         services.AddKeyedScoped<IDataSourceDocumentReader, DataSourceAzureAISearchDocumentReader>(
             AzureAISearchConstants.ProviderName);
@@ -35,6 +36,23 @@ public sealed class Startup : StartupBase
         {
             o.DisplayName = S["AI Knowledge Base Index (Azure AI Search)"];
             o.Description = S["Create an Azure AI Search index to store AI knowledge base document embeddings for vector search."];
+        });
+
+        services.Configure<AIDataSourceOptions>(options =>
+        {
+            options.AddFieldMapping(AzureAISearchConstants.ProviderName, IndexingConstants.ContentsIndexSource, mapping =>
+            {
+                mapping.DefaultKeyField = "ContentItemId";
+                mapping.DefaultTitleField = "Content__ContentItem__DisplayText__keyword";
+                mapping.DefaultContentField = "Content__ContentItem__FullText";
+            });
+
+            options.AddFieldMapping(AzureAISearchConstants.ProviderName, AIConstants.AIDocumentsIndexingTaskType, mapping =>
+            {
+                mapping.DefaultKeyField = AIConstants.ColumnNames.ChunkId;
+                mapping.DefaultTitleField = AIConstants.ColumnNames.FileName;
+                mapping.DefaultContentField = AIConstants.ColumnNames.Content;
+            });
         });
     }
 }

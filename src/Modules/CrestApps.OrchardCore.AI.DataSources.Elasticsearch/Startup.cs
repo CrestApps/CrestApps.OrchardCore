@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,7 +24,7 @@ public sealed class Startup : StartupBase
     {
         services.AddIndexProfileHandler<DataSourceElasticsearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceElasticsearchDocumentIndexHandler>();
-        services.AddKeyedScoped<IDataSourceVectorSearchService, DataSourceElasticsearchVectorSearchService>(ElasticsearchConstants.ProviderName);
+        services.AddKeyedScoped<IDataSourceContentManager, ElasticsearchDataSourceContentManager>(ElasticsearchConstants.ProviderName);
         services.AddKeyedScoped<IDataSourceDocumentReader, DataSourceElasticsearchDocumentReader>(ElasticsearchConstants.ProviderName);
         services.AddKeyedSingleton<IODataFilterTranslator, ElasticsearchODataFilterTranslator>(ElasticsearchConstants.ProviderName);
 
@@ -31,6 +32,23 @@ public sealed class Startup : StartupBase
         {
             o.DisplayName = S["AI Knowledge Base Index (Elasticsearch)"];
             o.Description = S["Create an Elasticsearch index to store AI knowledge base document embeddings for vector search."];
+        });
+
+        services.Configure<AIDataSourceOptions>(options =>
+        {
+            options.AddFieldMapping(ElasticsearchConstants.ProviderName, IndexingConstants.ContentsIndexSource, mapping =>
+            {
+                mapping.DefaultKeyField = "ContentItemId";
+                mapping.DefaultTitleField = "Content.ContentItem.DisplayText.keyword";
+                mapping.DefaultContentField = "Content.ContentItem.FullText";
+            });
+
+            options.AddFieldMapping(ElasticsearchConstants.ProviderName, AIConstants.AIDocumentsIndexingTaskType, mapping =>
+            {
+                mapping.DefaultKeyField = AIConstants.ColumnNames.ChunkId;
+                mapping.DefaultTitleField = AIConstants.ColumnNames.FileName;
+                mapping.DefaultContentField = AIConstants.ColumnNames.Content;
+            });
         });
     }
 }

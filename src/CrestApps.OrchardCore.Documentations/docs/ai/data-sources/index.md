@@ -134,6 +134,12 @@ Use these methods to keep the AI KB index aligned:
 
 The IDs passed must match your data source's configured **Key Field** (e.g. `_id`, `ContentItemId`, etc.).
 
+### Deletion cleanup
+
+When a data source is deleted (via the admin UI or programmatically), all of its document chunks are automatically removed from the master knowledge base index. The system uses `IDataSourceVectorSearchService.DeleteByDataSourceIdAsync`, which leverages provider-native capabilities (Elasticsearch `DeleteByQuery`, Azure AI Search filter+batch delete) for efficient bulk removal. This runs as a background job so it does not block the admin UI.
+
+When a content item is removed from a source index, the `DataSourceContentHandler` automatically removes its chunks from the KB index in real-time via a deferred task.
+
 ## Migrating from v1 to v2
 
 Version 2 introduces **Knowledge Base (KB) indexing** with vector embeddings. During the migration, an "AI Knowledge Base Warehouse" index is automatically created for existing data sources. However, **you must configure an embedding connection** for the index to populate correctly.

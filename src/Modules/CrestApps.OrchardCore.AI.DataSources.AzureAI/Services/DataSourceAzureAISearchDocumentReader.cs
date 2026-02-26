@@ -1,8 +1,8 @@
 using System.Runtime.CompilerServices;
 using Azure.Search.Documents;
-using Azure.Search.Documents.Indexes;
 using Azure.Search.Documents.Models;
 using OrchardCore.Indexing.Models;
+using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
 
@@ -13,11 +13,11 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
 {
     private const int BatchSize = 1000;
 
-    private readonly SearchIndexClient _searchIndexClient;
+    private readonly AzureAIClientFactory _clientFactory;
 
-    public DataSourceAzureAISearchDocumentReader(SearchIndexClient searchIndexClient)
+    public DataSourceAzureAISearchDocumentReader(AzureAIClientFactory clientFactory)
     {
-        _searchIndexClient = searchIndexClient;
+        _clientFactory = clientFactory;
     }
 
     public async IAsyncEnumerable<KeyValuePair<string, SourceDocument>> ReadAsync(
@@ -32,7 +32,9 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
             yield break;
         }
 
-        var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
+        var client = _clientFactory.CreateSearchIndexClient();
+
+        var searchClient = client.GetSearchClient(indexProfile.IndexFullName);
 
         var searchOptions = new SearchOptions
         {
@@ -100,7 +102,9 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
             yield break;
         }
 
-        var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
+        var client = _clientFactory.CreateSearchIndexClient();
+
+        var searchClient = client.GetSearchClient(indexProfile.IndexFullName);
 
         // Build an OData filter to select documents by their keys.
         // Azure AI Search key field is the first field by default.

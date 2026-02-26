@@ -1,10 +1,12 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
+using OrchardCore.Contents.Indexing;
 using OrchardCore.Indexing;
-using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Endpoints;
@@ -24,6 +26,7 @@ internal static class GetDataSourceFieldsEndpoint
         string indexProfileName,
         IAuthorizationService authorizationService,
         IIndexProfileStore indexProfileStore,
+        IOptions<AIDataSourceOptions> dataSourceOptions,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIDataSources))
@@ -50,26 +53,11 @@ internal static class GetDataSourceFieldsEndpoint
         string suggestedContentField = null;
         string suggestedKeyField = null;
 
-        if (string.Equals(profile.Type, IndexingConstants.ContentsIndexSource, StringComparison.OrdinalIgnoreCase))
+        if (dataSourceOptions.Value.GetFieldMapping(profile.ProviderName, profile.Type) is DataSourceFieldMapping fieldMapping)
         {
-            suggestedKeyField = "ContentItemId";
-
-            if (string.Equals(profile.ProviderName, "Elasticsearch", StringComparison.OrdinalIgnoreCase))
-            {
-                suggestedTitleField = "Content.ContentItem.DisplayText.keyword";
-                suggestedContentField = "Content.ContentItem.FullText";
-            }
-            else if (string.Equals(profile.ProviderName, "AzureAISearch", StringComparison.OrdinalIgnoreCase))
-            {
-                suggestedTitleField = "Content__ContentItem__DisplayText__keyword";
-                suggestedContentField = "Content__ContentItem__FullText";
-            }
-        }
-        else if (string.Equals(profile.Type, AIConstants.AIDocumentsIndexingTaskType, StringComparison.OrdinalIgnoreCase))
-        {
-            suggestedKeyField = AIConstants.ColumnNames.ChunkId;
-            suggestedTitleField = AIConstants.ColumnNames.FileName;
-            suggestedContentField = AIConstants.ColumnNames.Content;
+            suggestedTitleField = fieldMapping.DefaultTitleField;
+            suggestedContentField = fieldMapping.DefaultContentField;
+            suggestedKeyField = fieldMapping.DefaultKeyField;
         }
 
         return TypedResults.Ok(new
@@ -98,6 +86,14 @@ internal static class GetDataSourceFieldsEndpoint
             {
                 foreach (var prop in mappings.AsObject())
                 {
+                    if (prop.Key == ContentIndexingConstants.DisplayTextKey)
+                    {
+                        fields.Add(new FieldInfo(ContentIndexingConstants.DisplayTextKey + ContentIndexingConstants.KeywordKey));
+                        fields.Add(new FieldInfo(ContentIndexingConstants.DisplayTextNormalizedKey));
+
+                        continue;
+                    }
+
                     fields.Add(new FieldInfo(prop.Key));
                 }
             }
