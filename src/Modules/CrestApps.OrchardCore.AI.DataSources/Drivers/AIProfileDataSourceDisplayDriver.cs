@@ -99,12 +99,13 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
 
         profile.Put(metadata);
 
-        var ragMetadata = profile.As<AIDataSourceRagMetadata>();
-        ragMetadata.Filter = model.Filter;
-        ragMetadata.Strictness = model.Strictness;
-        ragMetadata.TopNDocuments = model.TopNDocuments;
-
-        profile.Put(ragMetadata);
+        profile.Alter<AIDataSourceRagMetadata>(t =>
+        {
+            t.Filter = model.Filter;
+            t.Strictness = model.Strictness;
+            t.TopNDocuments = model.TopNDocuments;
+            t.IsInScope = model.IsInScope;
+        });
 
         return Edit(profile, context);
     }

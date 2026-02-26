@@ -110,7 +110,10 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
                 buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
                     """
 
-                    Use the provided knowledge source content to inform your answer. If the provided context does not fully cover the user's question, you may supplement your response with your general knowledge. Cite information from the provided context using the corresponding reference markers (e.g., [doc:1], [doc:2]) inline.
+                    [Response Guidelines]
+                    Use the provided knowledge source content as the primary basis for your answer.
+                    If the provided context does not fully cover the user's question, you may supplement your response with your general knowledge.
+                    When citing information from the provided context, include the corresponding reference marker (e.g., [doc:1], [doc:2]) inline immediately after the relevant statement.
                     """);
             }
 
@@ -122,14 +125,14 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
 
         if (!hasDataSourceRefs && !hasDocumentRefs)
         {
-            buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine("\n\n[Scope Constraint]");
-
             if (buildContext.OrchestrationContext.DisableTools)
             {
                 buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
                     """
+
+                    [Scope Constraint]
                     No relevant content was found in the configured knowledge sources.
-                    CRITICAL INSTRUCTION — You MUST only answer based on the provided knowledge source content.
+                    CRITICAL: You MUST only answer based on the provided knowledge source content.
                     DO NOT use your general knowledge or training data under any circumstances.
                     You MUST inform the user that the answer is not available in the current knowledge sources.
                     """);
@@ -138,10 +141,11 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
             {
                 buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
                     """
+
+                    [Scope Constraint]
                     No relevant content was found during the initial search of the configured knowledge sources.
-                    CRITICAL INSTRUCTION — You MUST only answer based on knowledge source content. DO NOT use your general knowledge or training data.
-                    Before concluding that no answer is available, try using the available search tools
-                    (e.g., search_data_source, search_documents) to look for relevant information.
+                    CRITICAL: You MUST only answer based on knowledge source content. DO NOT use your general knowledge or training data.
+                    Before concluding that no answer is available, you MUST call the available search tools (e.g., search_data_source, search_documents) to look for relevant information.
                     If the search tools also return no relevant results, you MUST inform the user that the answer is not available in the current knowledge sources.
                     """);
             }
@@ -152,12 +156,11 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
                 """
 
                 [Scope Constraint]
-                CRITICAL INSTRUCTION — You MUST only answer using the knowledge source content provided above.
+                CRITICAL: You MUST only answer using the knowledge source content provided above.
                 DO NOT use your general knowledge or training data under any circumstances.
                 If the provided context does not contain information that directly answers the user's question, you MUST respond by telling the user that the requested information is not available in the current knowledge sources. Do not guess, infer, or supplement with outside knowledge.
                 When citing information from the provided context, include the corresponding reference marker (e.g., [doc:1], [doc:2]) inline in your response immediately after the relevant statement.
                 """);
-
         }
     }
 
@@ -174,8 +177,8 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
                 """
 
                 [Knowledge Source Instructions]
-                CRITICAL INSTRUCTION — You have access to internal knowledge sources via search tools (e.g., search_data_source, search_documents).
-                You MUST use these search tools to find relevant information before answering ANY question.
+                CRITICAL: You have access to internal knowledge sources via search tools (e.g., search_data_source, search_documents).
+                You MUST call the relevant search tools to find information BEFORE generating any response.
                 DO NOT use your general knowledge or training data under any circumstances.
                 If the search tools return no relevant results, you MUST inform the user that the answer is not available in the current knowledge sources. Do not guess, infer, or supplement with outside knowledge.
                 When citing information retrieved via tools, include the corresponding reference marker (e.g., [doc:1], [doc:2]) inline in your response immediately after the relevant statement.
@@ -183,15 +186,17 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
         }
         else
         {
-            // IsInScope OFF: the model should try search tools first, then supplement with general knowledge.
+            // IsInScope OFF: the model MUST try search tools first, then may supplement with general knowledge.
             buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
                 """
 
                 [Knowledge Source Instructions]
-                You have access to internal knowledge sources via search tools (e.g., search_data_source, search_documents).
-                When answering questions, first use these search tools to look for relevant information in the configured knowledge sources.
-                If the search tools return relevant results, use them to inform your answer and cite using reference markers (e.g., [doc:1], [doc:2]) inline in your response immediately after the relevant statement.
-                If the search tools return no relevant results, you may use your general knowledge to answer the question.
+                IMPORTANT: You have access to internal knowledge sources via search tools (e.g., search_data_source, search_documents).
+                You MUST call the relevant search tools to check for information BEFORE generating any response. Do NOT skip this step.
+                After reviewing the search results:
+                1. If relevant results are found, use them as the primary basis for your answer and cite using reference markers (e.g., [doc:1], [doc:2]) inline immediately after the relevant statement.
+                2. If no relevant results are found, you may then use your general knowledge to answer the question.
+                Always search first, then respond.
                 """);
         }
     }

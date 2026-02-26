@@ -411,19 +411,33 @@ window.chatInteractionManager = function () {
                             // Only include references that were actually cited in the response.
                             const citedRefs = Object.entries(message.references).filter(([key]) => processedContent.includes(key));
 
-                            for (const [key, value] of citedRefs) {
-                                processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
-                            }
-                            processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-
                             if (citedRefs.length) {
+                                // Sort by original index so display indices follow a natural order.
+                                citedRefs.sort(([, a], [, b]) => a.index - b.index);
+
+                                // Phase 1: Replace all markers with unique placeholders.
+                                let displayIndex = 1;
+                                for (const [key, value] of citedRefs) {
+                                    const placeholder = `__CITE_${value.index}__`;
+                                    processedContent = processedContent.replaceAll(key, placeholder);
+                                    value._displayIndex = displayIndex++;
+                                    value._placeholder = placeholder;
+                                }
+
+                                // Phase 2: Replace placeholders with sequential display indices.
+                                for (const [, value] of citedRefs) {
+                                    processedContent = processedContent.replaceAll(value._placeholder, `<sup><strong>${value._displayIndex}</strong></sup>`);
+                                }
+
+                                processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+
                                 processedContent += '<br><br>';
 
                                 for (const [key, value] of citedRefs) {
                                     const label = value.text || `[doc:${value.index}]`;
                                     processedContent += value.link
-                                        ? `**${value.index}**. [${label}](${value.link})<br>`
-                                        : `**${value.index}**. ${label}<br>`;
+                                        ? `**${value._displayIndex}**. [${label}](${value.link})<br>`
+                                        : `**${value._displayIndex}**. ${label}<br>`;
                                 }
                             }
                         }
@@ -603,17 +617,34 @@ window.chatInteractionManager = function () {
                         const content = message.content || '';
 
                         // Only include references that were actually cited in the response.
-                        const citedRefs = Object.entries(references).filter(([key]) => content.includes(key));
+                        // Check both raw [doc:N] markers and already-rendered <sup> tags from streaming.
+                        const citedRefs = Object.entries(references).filter(([key, value]) =>
+                            content.includes(key) || content.includes(`<sup><strong>${value.index}</strong></sup>`)
+                        );
 
                         if (!citedRefs.length) {
                             return;
                         }
 
-                        // Replace [doc:N] markers with superscripts.
+                        // Sort by original index so display indices follow a natural order.
+                        citedRefs.sort(([, a], [, b]) => a.index - b.index);
+
+                        // Phase 1: Replace all markers with unique placeholders to avoid collisions during remapping.
                         let processed = content.trim();
+                        let displayIndex = 1;
                         for (const [key, value] of citedRefs) {
-                            processed = processed.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
+                            const placeholder = `__CITE_${value.index}__`;
+                            processed = processed.replaceAll(key, placeholder);
+                            processed = processed.replaceAll(`<sup><strong>${value.index}</strong></sup>`, placeholder);
+                            value._displayIndex = displayIndex++;
+                            value._placeholder = placeholder;
                         }
+
+                        // Phase 2: Replace placeholders with sequential display indices.
+                        for (const [, value] of citedRefs) {
+                            processed = processed.replaceAll(value._placeholder, `<sup><strong>${value._displayIndex}</strong></sup>`);
+                        }
+
                         processed = processed.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
 
                         processed += '<br><br>';
@@ -621,8 +652,8 @@ window.chatInteractionManager = function () {
                         for (const [key, value] of citedRefs) {
                             const label = value.text || `[doc:${value.index}]`;
                             processed += value.link
-                                ? `**${value.index}**. [${label}](${value.link})<br>`
-                                : `**${value.index}**. ${label}<br>`;
+                                ? `**${value._displayIndex}**. [${label}](${value.link})<br>`
+                                : `**${value._displayIndex}**. ${label}<br>`;
                         }
 
                         message.content = processed;

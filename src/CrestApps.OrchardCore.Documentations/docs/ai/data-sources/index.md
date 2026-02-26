@@ -57,6 +57,38 @@ Each data source can be configured with:
 - **Key Field** — Maps to the document reference ID for citations.
 - **Filters** — OData filter expressions for scoping search results.
 
+## Knowledge Source Behavior
+
+When a data source (or uploaded documents) is attached to an AI profile or chat interaction, the system injects contextual instructions into the AI model's system prompt. The behavior depends on two settings:
+
+### Preemptive RAG (Early Retrieval)
+
+When **Enable Preemptive RAG** is on, the system automatically searches the knowledge base **before** the model generates a response. The retrieved context is injected directly into the system prompt so the model can use it immediately.
+
+When preemptive RAG is off but the data source is still attached, the system injects instructions telling the model to **call search tools** (e.g., `search_data_source`, `search_documents`) before answering. This gives the model the ability to search on demand instead of receiving pre-fetched context.
+
+### IsInScope ("Limit Responses to Indexed Data")
+
+| Preemptive RAG | IsInScope | Behavior |
+| --- | --- | --- |
+| On | On | Context injected. Model MUST only use provided context. No general knowledge. |
+| On | Off | Context injected. Model uses context as primary source but may supplement with general knowledge. |
+| Off | On | No pre-fetched context. Model MUST call search tools first. No general knowledge allowed. |
+| Off | Off | No pre-fetched context. Model MUST call search tools first, then may use general knowledge if no results found. |
+
+### Instruction Style
+
+All instructions injected into the system prompt use a consistent bracket-header format:
+
+- `[Data Source Context]` — Preemptive RAG context from data sources
+- `[Uploaded Document Context]` — Preemptive RAG context from documents
+- `[Knowledge Source Instructions]` — Tool search directives (when preemptive RAG is off)
+- `[Scope Constraint]` — IsInScope enforcement (when no references found)
+- `[Response Guidelines]` — General guidance for using context with fallback to general knowledge
+- `[Rules]` — Numbered rules for utility prompts (chart generation, data extraction, etc.)
+
+This consistent format helps models identify and follow section-specific instructions reliably across providers.
+
 ## Citation & Reference Tracking
 
 When the AI model uses content from a data source, the system produces `[doc:N]` citation markers in the response text. Each marker maps to a reference with:

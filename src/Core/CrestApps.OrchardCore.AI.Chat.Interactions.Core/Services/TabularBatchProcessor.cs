@@ -351,14 +351,16 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
         var builder = new StringBuilder();
 
         builder.AppendLine("You are performing row-level analysis over tabular data.");
-        builder.AppendLine("1) The first row is the header with column names.");
-        builder.AppendLine("2) Process each data row independently.");
-        builder.AppendLine("3) Output exactly one result per input row.");
-        builder.AppendLine("4) Preserve verbatim excerpts when the prompt asks for exact quotes.");
-        builder.AppendLine("5) If the requested item does not exist in a row, output \"Not found\" or as specified by the user.");
-        builder.AppendLine("6) Keep output in a compact format matching the input structure.");
-        builder.AppendLine("7) Do NOT include the header row in your output unless explicitly requested.");
-        builder.AppendLine("8) Maintain the same row order as the input.");
+        builder.AppendLine();
+        builder.AppendLine("[Rules]");
+        builder.AppendLine("1. The first row is the header with column names.");
+        builder.AppendLine("2. Process each data row independently.");
+        builder.AppendLine("3. Output exactly one result per input row.");
+        builder.AppendLine("4. Preserve verbatim excerpts when the prompt asks for exact quotes.");
+        builder.AppendLine("5. If the requested item does not exist in a row, output \"Not found\" or as specified by the user.");
+        builder.AppendLine("6. Keep output in a compact format matching the input structure.");
+        builder.AppendLine("7. Do NOT include the header row in your output unless explicitly requested.");
+        builder.AppendLine("8. Maintain the same row order as the input.");
 
         if (!string.IsNullOrWhiteSpace(baseSystemMessage))
         {

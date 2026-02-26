@@ -252,7 +252,11 @@ The citation system ensures that every `[doc:N]` marker in an AI response maps t
 
 7. **Link resolution**: `CompositeAIReferenceLinkResolver` dispatches each reference to a keyed `IAIReferenceLinkResolver` based on its `ReferenceType`, generating the appropriate URL.
 
-8. **Client rendering**: The JavaScript client (`ai-chat.js` / `chat-interaction.js`) accumulates references during streaming, replaces `[doc:N]` markers with superscript links, and renders a reference list at the end of the message. References with a link are rendered as clickable titles; references without a link (e.g., uploaded documents) are shown as plain text.
+8. **Client rendering**: The JavaScript client (`ai-chat.js` / `chat-interaction.js`) accumulates references during streaming, then performs a final rendering pass:
+   - **Filter**: Only references whose `[doc:N]` key appears in the response text are included.
+   - **Sort & remap**: Cited references are sorted by their original index and assigned sequential **display indices** starting at 1. For example, if only `[doc:2]` and `[doc:5]` were cited, the user sees superscripts **1** and **2** (not 2 and 5). This avoids confusing gaps in the visible numbering.
+   - **Two-phase replacement**: To prevent collisions during remapping, all markers are first replaced with unique placeholders, then placeholders are replaced with their final display indices.
+   - **Reference list**: A numbered list is appended at the end of the message. References with a link are rendered as clickable titles; references without a link (e.g., uploaded documents) are shown as plain text.
 
 #### Text Normalization
 
