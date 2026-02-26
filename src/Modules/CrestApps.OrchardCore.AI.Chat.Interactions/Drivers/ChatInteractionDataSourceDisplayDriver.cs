@@ -6,6 +6,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
+using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
@@ -17,16 +18,19 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
 {
     private readonly ISiteService _siteService;
     private readonly ICatalog<AIDataSource> _dataSourceStore;
+    private readonly IODataValidator _oDataValidator;
 
     internal readonly IStringLocalizer<ChatInteractionDataSourceDisplayDriver> S;
 
     public ChatInteractionDataSourceDisplayDriver(
         ISiteService siteService,
         ICatalog<AIDataSource> dataSourceStore,
+        IODataValidator oDataValidator,
         IStringLocalizer<ChatInteractionDataSourceDisplayDriver> stringLocalizer)
     {
         _siteService = siteService;
         _dataSourceStore = dataSourceStore;
+        _oDataValidator = oDataValidator;
         S = stringLocalizer;
     }
 
@@ -81,14 +85,19 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
 
         if (strictness != model.Strictness)
         {
-            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.Strictness),
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Strictness),
                 S["Invalid strictness value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinStrictness, AIDataSourceSettings.MaxStrictness]);
         }
 
         if (topN != model.TopNDocuments)
         {
-            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.TopNDocuments),
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.TopNDocuments),
                 S["Invalid total retrieved documents value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinTopNDocuments, AIDataSourceSettings.MaxTopNDocuments]);
+        }
+
+        if (!string.IsNullOrWhiteSpace(model.Filter) && !_oDataValidator.IsValidFilter(model.Filter))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Filter), S["Invalid filter value. It must be a valid OData filter."]);
         }
 
         interaction.Put(new AIDataSourceRagMetadata

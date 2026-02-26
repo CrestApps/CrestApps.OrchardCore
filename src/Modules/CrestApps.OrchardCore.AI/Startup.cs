@@ -52,7 +52,9 @@ public sealed class Startup : StartupBase
         });
 
         services
-            .AddScoped<IAILinkGenerator, DefaultAILinkGenerator>()
+            .AddKeyedScoped<IAIReferenceLinkResolver, ContentItemAILinkGenerator>(AIConstants.DataSourceReferenceTypes.Content)
+            .AddScoped<CompositeAIReferenceLinkResolver>()
+            .AddScoped<CitationReferenceCollector>()
             .AddScoped<IAICompletionContextBuilderHandler, AIProfileCompletionContextBuilderHandler>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()

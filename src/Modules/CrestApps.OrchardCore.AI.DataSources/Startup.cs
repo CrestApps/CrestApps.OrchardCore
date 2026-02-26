@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.BackgroundTasks;
 using CrestApps.OrchardCore.AI.DataSources.Deployments;
 using CrestApps.OrchardCore.AI.DataSources.Drivers;

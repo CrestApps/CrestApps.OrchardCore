@@ -51,21 +51,25 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         // Check for session documents after configure has run,
         // since the session is set via the configure callback
         // which executes between BuildingAsync and BuiltAsync.
-        if (context.Context.Documents is not { Count: > 0 } &&
+        if (context.OrchestrationContext.Documents is not { Count: > 0 } &&
             context.Resource is AIProfile &&
-            context.Context.CompletionContext?.AdditionalProperties is not null &&
-            context.Context.CompletionContext.AdditionalProperties.TryGetValue("Session", out var sessionObj) &&
+            context.OrchestrationContext.CompletionContext?.AdditionalProperties is not null &&
+            context.OrchestrationContext.CompletionContext.AdditionalProperties.TryGetValue("Session", out var sessionObj) &&
             sessionObj is AIChatSession session &&
             session.Documents is { Count: > 0 })
         {
-            context.Context.Documents = session.Documents;
+            context.OrchestrationContext.Documents = session.Documents;
         }
 
-        if (context.Context.Documents is not { Count: > 0 } ||
-            context.Context.CompletionContext is null)
+        if (context.OrchestrationContext.Documents is not { Count: > 0 } ||
+            context.OrchestrationContext.CompletionContext is null)
         {
             return Task.CompletedTask;
         }
+
+        // Signal document availability so system tools (e.g., search_documents)
+        // are included in the tool registry for this completion context.
+        context.OrchestrationContext.CompletionContext.AdditionalProperties[AICompletionContextKeys.HasDocuments] = true;
 
         // Discover document processing tools dynamically by purpose
         // to list their descriptions in the system message.
@@ -101,7 +105,7 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
             sb.AppendLine("The user has uploaded the following documents as supplementary context.");
         }
 
-        foreach (var doc in context.Context.Documents)
+        foreach (var doc in context.OrchestrationContext.Documents)
         {
             sb.Append("- ");
             sb.Append(doc.DocumentId);
@@ -114,7 +118,7 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
             sb.AppendLine(")");
         }
 
-        context.Context.SystemMessageBuilder.Append(sb);
+        context.OrchestrationContext.SystemMessageBuilder.Append(sb);
 
         return Task.CompletedTask;
     }

@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
@@ -10,7 +9,7 @@ using OrchardCore.Indexing.Models;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.AI.DataSources.Services;
+namespace CrestApps.OrchardCore.AI.Core.Services;
 
 /// <summary>
 /// Service responsible for synchronizing data source documents with the master knowledge base index.
@@ -186,20 +185,24 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var documentIndexManager = _serviceProvider.GetKeyedService<IDocumentIndexManager>(masterProfile.ProviderName);
+        var contentManager = _serviceProvider.GetKeyedService<IDataSourceContentManager>(masterProfile.ProviderName);
 
-        if (documentIndexManager == null)
+        if (contentManager == null)
         {
-            _logger.LogWarning("No document index manager found for provider '{ProviderName}'.", masterProfile.ProviderName);
+            _logger.LogWarning("No vector search service found for provider '{ProviderName}'. Unable to delete documents for data source '{DataSourceId}'.",
+                masterProfile.ProviderName, dataSource.ItemId);
+
             return;
         }
 
         try
         {
+            var deleted = await contentManager.DeleteByDataSourceIdAsync(masterProfile, dataSource.ItemId, cancellationToken);
+
             if (_logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogInformation("Deleted documents for data source '{DataSourceId}' from master index '{IndexName}'.",
-                    dataSource.ItemId, masterProfile.IndexName);
+                _logger.LogInformation("Deleted {DeletedCount} document chunks for data source '{DataSourceId}' from master index '{IndexName}'.",
+                    deleted, dataSource.ItemId, masterProfile.IndexName);
             }
         }
         catch (Exception ex)
@@ -422,14 +425,14 @@ public sealed class DataSourceIndexingService
                 continue;
             }
 
-            var textChunks = ChunkText(sourceDoc.Content);
+            // Normalize content and title, then chunk using token-aware splitter.
+            sourceDoc.Title = RagTextNormalizer.NormalizeTitle(sourceDoc.Title);
+            var chunkTexts = await RagTextNormalizer.NormalizeAndChunkAsync(sourceDoc.Content, cancellationToken);
 
-            if (textChunks.Count == 0)
+            if (chunkTexts.Count == 0)
             {
                 continue;
             }
-
-            var chunkTexts = textChunks.Select(c => c.Text).ToList();
 
             try
             {
@@ -454,6 +457,7 @@ public sealed class DataSourceIndexingService
                     {
                         ReferenceId = referenceId,
                         DataSourceId = dataSource.ItemId,
+                        ReferenceType = sourceProfile.Type,
                         ChunkId = chunkId,
                         ChunkIndex = i,
                         Title = sourceDoc.Title,
@@ -661,17 +665,16 @@ public sealed class DataSourceIndexingService
                 continue;
             }
 
-            // Chunk the document content.
-            var textChunks = ChunkText(sourceDoc.Content);
+            // Normalize content and title, then chunk using token-aware splitter.
+            sourceDoc.Title = RagTextNormalizer.NormalizeTitle(sourceDoc.Title);
+            var chunkTexts = await RagTextNormalizer.NormalizeAndChunkAsync(sourceDoc.Content, cancellationToken);
 
-            if (textChunks.Count == 0)
+            if (chunkTexts.Count == 0)
             {
                 continue;
             }
 
             // Generate embeddings for all chunks.
-            var chunkTexts = textChunks.Select(c => c.Text).ToList();
-
             try
             {
                 var embeddings = await embeddingGenerator.GenerateAsync(chunkTexts, cancellationToken: cancellationToken);
@@ -695,6 +698,7 @@ public sealed class DataSourceIndexingService
                     {
                         ReferenceId = referenceId,
                         DataSourceId = dataSource.ItemId,
+                        ReferenceType = sourceProfile.Type,
                         ChunkId = chunkId,
                         ChunkIndex = i,
                         Title = sourceDoc.Title,
@@ -774,40 +778,5 @@ public sealed class DataSourceIndexingService
         var filters = new Dictionary<string, object>(sourceFields, StringComparer.OrdinalIgnoreCase);
 
         return filters.Count > 0 ? filters : null;
-    }
-
-    private static List<TextChunk> ChunkText(string text, int maxChunkSize = 500, int overlap = 50)
-    {
-        var chunks = new List<TextChunk>();
-
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return chunks;
-        }
-
-        var index = 0;
-        var chunkIndex = 0;
-
-        while (index < text.Length)
-        {
-            var length = Math.Min(maxChunkSize, text.Length - index);
-            var chunkText = text.Substring(index, length);
-
-            chunks.Add(new TextChunk
-            {
-                Text = chunkText,
-                Index = chunkIndex++,
-            });
-
-            index += maxChunkSize - overlap;
-        }
-
-        return chunks;
-    }
-
-    private sealed class TextChunk
-    {
-        public string Text { get; set; }
-        public int Index { get; set; }
     }
 }

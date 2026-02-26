@@ -3,7 +3,8 @@ namespace CrestApps.OrchardCore.AI;
 /// <summary>
 /// Ambient context that provides AI tool implementations with
 /// the provider, connection, and resource information of the current request.
-/// Stored in <c>HttpContext.Items</c> by the caller (e.g., AIChatHub).
+/// Stored in <see cref="AIInvocationContext.ToolExecutionContext"/> and accessible
+/// via <c>AIInvocationScope.Current?.ToolExecutionContext</c>.
 /// </summary>
 public sealed class AIToolExecutionContext
 {

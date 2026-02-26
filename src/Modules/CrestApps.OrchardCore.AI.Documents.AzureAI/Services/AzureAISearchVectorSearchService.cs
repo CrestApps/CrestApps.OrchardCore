@@ -106,6 +106,14 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
 
                 if (!string.IsNullOrEmpty(chunkText))
                 {
+                    var documentKey = document.TryGetValue(AIConstants.ColumnNames.DocumentId, out var docIdObj)
+                        ? docIdObj?.ToString()
+                        : null;
+
+                    var fileName = document.TryGetValue(AIConstants.ColumnNames.FileName, out var fileNameObj)
+                        ? fileNameObj?.ToString()
+                        : null;
+
                     results.Add(new DocumentChunkSearchResult
                     {
                         Chunk = new ChatInteractionDocumentChunk
@@ -113,6 +121,8 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
                             Text = chunkText,
                             Index = chunkIndex,
                         },
+                        DocumentKey = documentKey,
+                        FileName = fileName,
                         Score = (float)(result.Score ?? 0.0),
                     });
                 }

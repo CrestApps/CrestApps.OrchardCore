@@ -30,7 +30,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddDocumentTextExtractor<DefaultDocumentTextExtractor>(".txt", new ExtractorExtension(".csv", false),
+            .AddIngestionDocumentReader<PlainTextIngestionDocumentReader>(".txt", new ExtractorExtension(".csv", false),
                 ".md", ".json", ".xml", ".html", ".htm", ".log", ".yaml", ".yml");
 
         services

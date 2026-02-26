@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
 
-public sealed class ProgressiveToolOrchestratorTests
+public sealed class DefaultOrchestratorTests
 {
     [Fact]
     public void Name_ReturnsDefault()
@@ -420,7 +420,7 @@ public sealed class ProgressiveToolOrchestratorTests
             await Task.CompletedTask;
             yield return new ChatResponseUpdate
             {
-                Contents = [new Microsoft.Extensions.AI.TextContent(_streamText)],
+                Contents = [new TextContent(_streamText)],
             };
         }
     }

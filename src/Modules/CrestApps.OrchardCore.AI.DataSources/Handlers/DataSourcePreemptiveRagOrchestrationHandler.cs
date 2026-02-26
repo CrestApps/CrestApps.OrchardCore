@@ -1,9 +1,8 @@
 using System.Text;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
@@ -42,14 +41,19 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         _logger = logger;
     }
 
-    public async Task HandleAsync(PreemptiveRagContext context)
+    public ValueTask<bool> CanHandleAsync(OrchestrationContextBuiltContext context)
     {
         if (context.OrchestrationContext.CompletionContext == null ||
             string.IsNullOrEmpty(context.OrchestrationContext.CompletionContext.DataSourceId))
         {
-            return;
+            return ValueTask.FromResult(false);
         }
 
+        return ValueTask.FromResult(true);
+    }
+
+    public async Task HandleAsync(PreemptiveRagContext context)
+    {
         var ragMetadata = GetRagMetadata(context.Resource);
 
         try
@@ -81,9 +85,9 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
             return;
         }
 
-        var searchService = _serviceProvider.GetKeyedService<IDataSourceVectorSearchService>(masterProfile.ProviderName);
+        var contentManager = _serviceProvider.GetKeyedService<IDataSourceContentManager>(masterProfile.ProviderName);
 
-        if (searchService == null)
+        if (contentManager == null)
         {
             return;
         }
@@ -119,7 +123,6 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         // Get RAG settings with defaults from site settings.
         var siteSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
         var topN = siteSettings.GetTopNDocuments(ragMetadata?.TopNDocuments);
-        var strictness = siteSettings.GetStrictness(ragMetadata?.Strictness);
 
         // Translate OData filter if provided.
         string providerFilter = null;
@@ -130,7 +133,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
 
             if (filterTranslator != null)
             {
-                providerFilter = filterTranslator.Translate(ragMetadata.Filter);
+                providerFilter = filterTranslator.Translate(ragMetadata?.Filter);
             }
         }
 
@@ -145,7 +148,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
                 continue;
             }
 
-            var results = await searchService.SearchAsync(
+            var results = await contentManager.SearchAsync(
                 masterProfile,
                 embedding.Vector.ToArray(),
                 dataSourceId,
@@ -169,52 +172,45 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
             }
         }
 
+        var query = allResults.AsEnumerable();
+
+        var strictness = siteSettings.GetStrictness(ragMetadata?.Strictness);
+
+        if (strictness > 0)
+        {
+            // Apply strictness threshold.
+
+            var threshold = strictness / (float)AIDataSourceSettings.MaxStrictness;
+            query = query.Where(r => r.Score >= threshold);
+        }
+
         // Sort by score descending and take top N.
-        var finalResults = allResults
+        var finalResults = query
             .OrderByDescending(r => r.Score)
             .Take(topN)
             .AsEnumerable();
 
         if (!finalResults.Any())
         {
-            if (ragMetadata?.IsInScope == true)
-            {
-                orchestrationContext.SystemMessageBuilder.AppendLine("\n\n[Data Source Context]");
-                orchestrationContext.SystemMessageBuilder.AppendLine("No relevant content was found in the configured data source. Only answer based on the data source content. If no relevant content exists, inform the user.");
-            }
-
             return;
-        }
-
-        // Apply strictness threshold.
-        if (strictness > 0)
-        {
-            var threshold = strictness / 5.0f;
-            finalResults = finalResults.Where(r => r.Score >= threshold);
-
-            if (!finalResults.Any())
-            {
-                return;
-            }
         }
 
         // Build context injection.
         var sb = new StringBuilder();
         sb.AppendLine("\n\n[Data Source Context]");
         sb.AppendLine("The following context was retrieved from the configured data source. Use this information to answer the user's question accurately and directly without mentioning or referencing the retrieval process.");
-
-        if (ragMetadata?.IsInScope == true)
-        {
-            sb.AppendLine("IMPORTANT: Only answer based on the data source content. If the context does not contain relevant information, inform the user that the answer is not available in the data source.");
-        }
+        sb.AppendLine("When citing information, include the corresponding reference marker (e.g., [doc:1]) inline in your response immediately after the relevant statement.");
 
         if (!orchestrationContext.DisableTools)
         {
-            sb.AppendLine($"If you need additional context or more relevant information, use the '{SystemToolNames.SearchDataSources}' tool to retrieve more documents from the data source.");
+            sb.AppendLine();
+            sb.Append("If you need additional context or more relevant information, use the '");
+            sb.Append(SystemToolNames.SearchDataSources);
+            sb.Append("' tool to retrieve more documents from the data source.");
         }
 
-        var docIndex = 1;
-        var seenReferences = new Dictionary<string, (int Index, string Title)>(StringComparer.OrdinalIgnoreCase);
+        var invocationContext = AIInvocationScope.Current;
+        var seenReferences = new Dictionary<string, (int Index, string Title, string ReferenceType)>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var result in finalResults)
         {
@@ -223,19 +219,19 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
                 continue;
             }
 
-            if (!string.IsNullOrEmpty(result.ReferenceId) &&
-                !seenReferences.ContainsKey(result.ReferenceId))
+            var hasReference = !string.IsNullOrEmpty(result.ReferenceId);
+
+            if (hasReference && !seenReferences.ContainsKey(result.ReferenceId))
             {
-                seenReferences[result.ReferenceId] = (docIndex, result.Title);
+                seenReferences[result.ReferenceId] = (invocationContext?.NextReferenceIndex() ?? seenReferences.Count + 1, RagTextNormalizer.NormalizeTitle(result.Title), result.ReferenceType);
             }
 
-            var refIdx = !string.IsNullOrEmpty(result.ReferenceId) && seenReferences.TryGetValue(result.ReferenceId, out var entry)
+            var refIdx = hasReference && seenReferences.TryGetValue(result.ReferenceId, out var entry)
                 ? entry.Index
-                : docIndex;
+                : invocationContext?.NextReferenceIndex() ?? seenReferences.Count + 1;
 
             sb.AppendLine("---");
-            sb.AppendLine($"[doc:{refIdx}] {result.Content}");
-            docIndex++;
+            sb.Append("[doc:").Append(refIdx).Append("] ").AppendLine(result.Content);
         }
 
         if (seenReferences.Count > 0)
@@ -245,15 +241,33 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
 
             foreach (var kvp in seenReferences)
             {
-                sb.Append($"[doc:{kvp.Value.Index}] = {{ReferenceId: \"{kvp.Key}\"");
+                sb.Append("[doc:").Append(kvp.Value.Index).Append("] = {ReferenceId: \"").Append(kvp.Key).Append('"');
 
                 if (!string.IsNullOrWhiteSpace(kvp.Value.Title))
                 {
-                    sb.Append($", Title: \"{kvp.Value.Title}\"");
+                    sb.Append(", Title: \"").Append(kvp.Value.Title).Append('"');
                 }
 
                 sb.AppendLine("}");
             }
+
+            // Store citation metadata on the orchestration context for downstream consumers.
+            var citationMap = new Dictionary<string, AICompletionReference>();
+
+            foreach (var kvp in seenReferences)
+            {
+                var template = $"[doc:{kvp.Value.Index}]";
+                citationMap[template] = new AICompletionReference
+                {
+                    Text = string.IsNullOrWhiteSpace(kvp.Value.Title) ? template : kvp.Value.Title,
+                    Title = kvp.Value.Title,
+                    Index = kvp.Value.Index,
+                    ReferenceId = kvp.Key,
+                    ReferenceType = kvp.Value.ReferenceType,
+                };
+            }
+
+            orchestrationContext.Properties["DataSourceReferences"] = citationMap;
         }
 
         orchestrationContext.SystemMessageBuilder.Append(sb);

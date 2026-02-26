@@ -34,6 +34,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly IOrchestrationContextBuilder _orchestrationContextBuilder;
     private readonly IOrchestratorResolver _orchestratorResolver;
     private readonly IEnumerable<IAIChatSessionHandler> _sessionHandlers;
+    private readonly CitationReferenceCollector _citationCollector;
     private readonly IClock _clock;
     private readonly ILogger<AIChatHub> _logger;
 
@@ -50,6 +51,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         IOrchestrationContextBuilder orchestrationContextBuilder,
         IOrchestratorResolver orchestratorResolver,
         IEnumerable<IAIChatSessionHandler> sessionHandlers,
+        CitationReferenceCollector citationCollector,
         IClock clock,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
@@ -64,6 +66,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _orchestrationContextBuilder = orchestrationContextBuilder;
         _orchestratorResolver = orchestratorResolver;
         _sessionHandlers = sessionHandlers;
+        _citationCollector = citationCollector;
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
@@ -204,6 +207,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
     private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
     {
+        using var invocationScope = AIInvocationScope.Begin();
+
         try
         {
             if (string.IsNullOrWhiteSpace(profileId))
@@ -421,9 +426,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
             ctx.CompletionContext.AdditionalProperties["Session"] = chatSession;
         });
 
-        // Store the session in HttpContext so document tools can resolve session documents.
-        var httpContext = Context.GetHttpContext();
-        httpContext.Items[nameof(AIChatSession)] = chatSession;
+        // Store the session in the invocation context so document tools can resolve session documents.
+        AIInvocationScope.Current.Items[nameof(AIChatSession)] = chatSession;
+        AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
 
         // Resolve the orchestrator for this profile and execute the completion.
         var orchestrator = _orchestratorResolver.Resolve(profile.OrchestratorName);
@@ -432,33 +437,22 @@ public class AIChatHub : Hub<IAIChatHubClient>
         var references = new Dictionary<string, AICompletionReference>();
         var stopwatch = Stopwatch.StartNew();
 
+        // Collect preemptive RAG references before streaming so the first chunk
+        // already contains any references from data sources and documents.
+        _citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
+
         await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext, cancellationToken))
         {
-            if (chunk.AdditionalProperties is not null)
-            {
-                if (chunk.AdditionalProperties.TryGetValue<IList<string>>("ContentItemIds", out var ids))
-                {
-                    foreach (var id in ids)
-                    {
-                        contentItemIds.Add(id);
-                    }
-                }
-
-                if (chunk.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
-                {
-                    foreach (var (key, value) in referenceItems)
-                    {
-                        references[key] = value;
-                    }
-                }
-            }
-
             if (string.IsNullOrEmpty(chunk.Text))
             {
                 continue;
             }
 
             builder.Append(chunk.Text);
+
+            // Incrementally collect any new tool references that appeared during streaming
+            // (e.g., from DataSourceSearchTool or SearchDocumentsTool invoked by the AI model).
+            _citationCollector.CollectToolReferences(references, contentItemIds);
 
             var partialMessage = new CompletionPartialMessage
             {
@@ -470,6 +464,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             await writer.WriteAsync(partialMessage, cancellationToken);
         }
+
+        // Final pass to collect any tool references added by the last tool call.
+        _citationCollector.CollectToolReferences(references, contentItemIds);
 
         stopwatch.Stop();
 
@@ -525,25 +522,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, generatedPrompt)], completionContext, cancellationToken))
         {
-            if (chunk.AdditionalProperties is not null)
-            {
-                if (chunk.AdditionalProperties.TryGetValue<IList<string>>("ContentItemIds", out var ids))
-                {
-                    foreach (var id in ids)
-                    {
-                        contentItemIds.Add(id);
-                    }
-                }
-
-                if (chunk.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
-                {
-                    foreach (var (key, value) in referenceItems)
-                    {
-                        references[key] = value;
-                    }
-                }
-            }
-
             if (string.IsNullOrEmpty(chunk.Text))
             {
                 continue;
@@ -584,17 +562,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, prompt)], completionContext, cancellationToken))
         {
-            if (chunk.AdditionalProperties is not null)
-            {
-                if (chunk.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
-                {
-                    foreach (var (key, value) in referenceItems)
-                    {
-                        references[key] = value;
-                    }
-                }
-            }
-
             if (string.IsNullOrEmpty(chunk.Text))
             {
                 continue;

@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DataIngestion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
@@ -108,8 +109,21 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddDocumentTextExtractor<T>(this IServiceCollection services, params ExtractorExtension[] supportedExtensions)
-        where T : class, IDocumentTextExtractor
+    /// <summary>
+    /// Registers an <see cref="IngestionDocumentReader"/> implementation as a keyed singleton
+    /// for each supported file extension, and configures <see cref="ChatDocumentsOptions"/>
+    /// with the allowed and embeddable extensions.
+    /// </summary>
+    /// <typeparam name="T">
+    /// The <see cref="IngestionDocumentReader"/> implementation type. A single singleton instance
+    /// is shared across all registered extension keys.
+    /// </typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <param name="supportedExtensions">
+    /// The file extensions this reader handles, with optional embeddable flag.
+    /// </param>
+    public static IServiceCollection AddIngestionDocumentReader<T>(this IServiceCollection services, params ExtractorExtension[] supportedExtensions)
+        where T : IngestionDocumentReader
     {
         services.Configure<ChatDocumentsOptions>(options =>
         {
@@ -119,7 +133,17 @@ public static class ServiceCollectionExtensions
             }
         });
 
-        services.AddScoped<IDocumentTextExtractor, T>();
+        // Register the concrete type once as a singleton.
+        services.TryAddSingleton<T>();
+
+        // Register a keyed IngestionDocumentReader for each extension, resolving
+        // back to the shared singleton so only one instance is created per reader type.
+        foreach (var extension in supportedExtensions)
+        {
+            services.AddKeyedSingleton<IngestionDocumentReader>(
+                extension.Extension,
+                (sp, _) => sp.GetRequiredService<T>());
+        }
 
         return services;
     }

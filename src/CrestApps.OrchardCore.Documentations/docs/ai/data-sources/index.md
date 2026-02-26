@@ -57,6 +57,60 @@ Each data source can be configured with:
 - **Key Field** — Maps to the document reference ID for citations.
 - **Filters** — OData filter expressions for scoping search results.
 
+## Knowledge Source Behavior
+
+When a data source (or uploaded documents) is attached to an AI profile or chat interaction, the system injects contextual instructions into the AI model's system prompt. The behavior depends on two settings:
+
+### Preemptive RAG (Early Retrieval)
+
+When **Enable Preemptive RAG** is on, the system automatically searches the knowledge base **before** the model generates a response. The retrieved context is injected directly into the system prompt so the model can use it immediately.
+
+When preemptive RAG is off but the data source is still attached, the system injects instructions telling the model to **call search tools** (e.g., `search_data_source`, `search_documents`) before answering. This gives the model the ability to search on demand instead of receiving pre-fetched context.
+
+### IsInScope ("Limit Responses to Indexed Data")
+
+| Preemptive RAG | IsInScope | Behavior |
+| --- | --- | --- |
+| On | On | Context injected. Model MUST only use provided context. No general knowledge. |
+| On | Off | Context injected. Model uses context as primary source but may supplement with general knowledge. |
+| Off | On | No pre-fetched context. Model MUST call search tools first. No general knowledge allowed. |
+| Off | Off | No pre-fetched context. Model MUST call search tools first, then may use general knowledge if no results found. |
+
+### Instruction Style
+
+All instructions injected into the system prompt use a consistent bracket-header format:
+
+- `[Data Source Context]` — Preemptive RAG context from data sources
+- `[Uploaded Document Context]` — Preemptive RAG context from documents
+- `[Knowledge Source Instructions]` — Tool search directives (when preemptive RAG is off)
+- `[Scope Constraint]` — IsInScope enforcement (when no references found)
+- `[Response Guidelines]` — General guidance for using context with fallback to general knowledge
+- `[Rules]` — Numbered rules for utility prompts (chart generation, data extraction, etc.)
+
+This consistent format helps models identify and follow section-specific instructions reliably across providers.
+
+## Citation & Reference Tracking
+
+When the AI model uses content from a data source, the system produces `[doc:N]` citation markers in the response text. Each marker maps to a reference with:
+
+- **ReferenceId** — The source document key (e.g., a content item ID).
+- **ReferenceType** — The type of the source index (e.g., the index profile type). This determines how links are generated for the reference.
+- **Title** — The document title from the source index.
+
+References are collected from both **preemptive RAG** (context injected before AI completion) and **tool-based search** (the `SearchDataSources` tool invoked by the AI model during conversation).
+
+All reference indices are coordinated through a shared counter on `AIInvocationScope.Current`, ensuring that `[doc:N]` indices are unique across data source references, document references, and tool-invoked searches within the same request. See [AI Tools — Invocation Context](../ai-tools.md#invocation-context-aiinvocationscope) for details.
+
+### Custom Link Resolvers
+
+By default, references are shown without links unless a link resolver is registered for the reference type. To generate links for a custom reference type, implement `IAIReferenceLinkResolver` and register it as a keyed service:
+
+```csharp
+services.AddKeyedScoped<IAIReferenceLinkResolver, MyCustomLinkResolver>("MyIndexType");
+```
+
+The resolver receives the `referenceId` and optional metadata, and returns a URL string (or `null` for no link).
+
 ## Recipes
 
 ### Creating a Data Source
@@ -111,6 +165,12 @@ Use these methods to keep the AI KB index aligned:
 - `DataSourceIndexingService.RemoveDocumentsAsync(IEnumerable<string> documentIds)`
 
 The IDs passed must match your data source's configured **Key Field** (e.g. `_id`, `ContentItemId`, etc.).
+
+### Deletion cleanup
+
+When a data source is deleted (via the admin UI or programmatically), all of its document chunks are automatically removed from the master knowledge base index. The system uses `IDataSourceVectorSearchService.DeleteByDataSourceIdAsync`, which leverages provider-native capabilities (Elasticsearch `DeleteByQuery`, Azure AI Search filter+batch delete) for efficient bulk removal. This runs as a background job so it does not block the admin UI.
+
+When a content item is removed from a source index, the `DataSourceContentHandler` automatically removes its chunks from the KB index in real-time via a deferred task.
 
 ## Migrating from v1 to v2
 

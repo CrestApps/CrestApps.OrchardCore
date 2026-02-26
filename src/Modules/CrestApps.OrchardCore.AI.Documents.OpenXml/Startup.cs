@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Documents.OpenXml;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +9,6 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDocumentTextExtractor<OpenXmlDocumentTextExtractor>(".docx", new ExtractorExtension(".xlsx", false), ".pptx");
+        services.AddIngestionDocumentReader<OpenXmlIngestionDocumentReader>(".docx", new ExtractorExtension(".xlsx", false), ".pptx");
     }
 }

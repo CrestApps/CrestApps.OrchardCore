@@ -107,7 +107,7 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
                 {
                     Uri = resource.Resource.Uri,
                     MimeType = mimeType,
-                    Blob = Convert.ToBase64String(memoryStream.ToArray()),
+                    Blob = memoryStream.ToArray(),
                 }
             ]
         };

@@ -30,7 +30,7 @@ This module extends the AI Documents feature with PDF document support.
 
 ## Technical Details
 
-This module uses the [PdfPig](https://github.com/UglyToad/PdfPig) library for PDF text extraction. PdfPig is a fully open-source PDF library that:
+This module uses the [PdfPig](https://github.com/UglyToad/PdfPig) library for PDF text extraction via an `IngestionDocumentReader` implementation. PdfPig is a fully open-source PDF library that:
 - Extracts text content from PDF documents
 - Does not require any external dependencies
 - Works cross-platform

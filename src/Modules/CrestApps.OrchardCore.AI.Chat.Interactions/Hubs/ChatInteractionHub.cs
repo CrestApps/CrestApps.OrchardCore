@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using CrestApps.Support;
@@ -30,6 +31,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private readonly IOrchestrationContextBuilder _orchestrationContextBuilder;
     private readonly IOrchestratorResolver _orchestratorResolver;
     private readonly IEnumerable<IChatInteractionSettingsHandler> _settingsHandlers;
+    private readonly CitationReferenceCollector _citationCollector;
     private readonly IClock _clock;
     private readonly ILogger<ChatInteractionHub> _logger;
     private readonly IDocumentStore _documentStore;
@@ -44,9 +46,9 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         IOrchestrationContextBuilder orchestrationContextBuilder,
         IOrchestratorResolver orchestratorResolver,
         IEnumerable<IChatInteractionSettingsHandler> settingsHandlers,
+        CitationReferenceCollector citationCollector,
         IClock clock,
         ILogger<ChatInteractionHub> logger,
-        Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor,
         IDocumentStore documentStore,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
     {
@@ -57,6 +59,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         _orchestrationContextBuilder = orchestrationContextBuilder;
         _orchestratorResolver = orchestratorResolver;
         _settingsHandlers = settingsHandlers;
+        _citationCollector = citationCollector;
         _clock = clock;
         _logger = logger;
         _documentStore = documentStore;
@@ -270,6 +273,12 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             {
                 return false;
             }
+
+            if (prop.ValueKind == JsonValueKind.String &&
+                bool.TryParse(prop.GetString(), out var b))
+            {
+                return b;
+            }
         }
 
         return null;
@@ -339,6 +348,8 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
     private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string itemId, string prompt, CancellationToken cancellationToken)
     {
+        using var invocationScope = AIInvocationScope.Begin();
+
         try
         {
             if (string.IsNullOrWhiteSpace(itemId))
@@ -416,39 +427,29 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                     .ToList();
             });
 
+            AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
+
             // Resolve the orchestrator for this interaction and execute the completion.
             var orchestrator = _orchestratorResolver.Resolve(interaction.OrchestratorName);
 
             var contentItemIds = new HashSet<string>();
             var references = new Dictionary<string, AICompletionReference>();
 
+            // Collect preemptive RAG references before streaming so the first chunk
+            // already contains any references from data sources and documents.
+            _citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
+
             await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext, cancellationToken))
             {
-                if (chunk.AdditionalProperties is not null)
-                {
-                    if (chunk.AdditionalProperties.TryGetValue<IList<string>>("ContentItemIds", out var ids))
-                    {
-                        foreach (var id in ids)
-                        {
-                            contentItemIds.Add(id);
-                        }
-                    }
-
-                    if (chunk.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
-                    {
-                        foreach (var (key, value) in referenceItems)
-                        {
-                            references[key] = value;
-                        }
-                    }
-                }
-
                 if (string.IsNullOrEmpty(chunk.Text))
                 {
                     continue;
                 }
 
                 builder.Append(chunk.Text);
+
+                // Incrementally collect any new tool references that appeared during streaming.
+                _citationCollector.CollectToolReferences(references, contentItemIds);
 
                 var partialMessage = new CompletionPartialMessage
                 {
@@ -460,6 +461,9 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
                 await writer.WriteAsync(partialMessage, cancellationToken);
             }
+
+            // Final pass to collect any tool references added by the last tool call.
+            _citationCollector.CollectToolReferences(references, contentItemIds);
 
             if (builder.Length > 0)
             {

@@ -634,21 +634,75 @@ window.openAIChatManager = function () {
           if (message.content) {
             var processedContent = message.content.trim();
             if (message.references && _typeof(message.references) === "object" && Object.keys(message.references).length) {
-              for (var _i = 0, _Object$entries = Object.entries(message.references); _i < _Object$entries.length; _i++) {
-                var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
-                  key = _Object$entries$_i[0],
-                  value = _Object$entries$_i[1];
-                processedContent = processedContent.replaceAll(key, "<sup><strong>".concat(value.index, "</strong></sup>"));
-              }
+              // Only include references that were actually cited in the response.
+              var citedRefs = Object.entries(message.references).filter(function (_ref) {
+                var _ref2 = _slicedToArray(_ref, 1),
+                  key = _ref2[0];
+                return processedContent.includes(key);
+              });
+              if (citedRefs.length) {
+                // Sort by original index so display indices follow a natural order.
+                citedRefs.sort(function (_ref3, _ref4) {
+                  var _ref5 = _slicedToArray(_ref3, 2),
+                    a = _ref5[1];
+                  var _ref6 = _slicedToArray(_ref4, 2),
+                    b = _ref6[1];
+                  return a.index - b.index;
+                });
 
-              // if we have multiple references, add a comma to ensure we don't concatenate numbers.
-              processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-              processedContent += '<br><br>';
-              for (var _i2 = 0, _Object$entries2 = Object.entries(message.references); _i2 < _Object$entries2.length; _i2++) {
-                var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
-                  _key = _Object$entries2$_i[0],
-                  _value = _Object$entries2$_i[1];
-                processedContent += "**".concat(_value.index, "**. [").concat(_value.text, "](").concat(_value.link, ")<br>");
+                // Phase 1: Replace all markers with unique placeholders.
+                var displayIndex = 1;
+                var _iterator2 = _createForOfIteratorHelper(citedRefs),
+                  _step2;
+                try {
+                  for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+                    var _step2$value = _slicedToArray(_step2.value, 2),
+                      key = _step2$value[0],
+                      value = _step2$value[1];
+                    var placeholder = "__CITE_".concat(value.index, "__");
+                    processedContent = processedContent.replaceAll(key, placeholder);
+                    value._displayIndex = displayIndex++;
+                    value._placeholder = placeholder;
+                  }
+
+                  // Phase 2: Replace placeholders with sequential display indices.
+                } catch (err) {
+                  _iterator2.e(err);
+                } finally {
+                  _iterator2.f();
+                }
+                var _iterator3 = _createForOfIteratorHelper(citedRefs),
+                  _step3;
+                try {
+                  for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+                    var _step3$value = _slicedToArray(_step3.value, 2),
+                      _value = _step3$value[1];
+                    processedContent = processedContent.replaceAll(_value._placeholder, "<sup><strong>".concat(_value._displayIndex, "</strong></sup>"));
+                  }
+
+                  // if we have multiple references, add a comma to ensure we don't concatenate numbers.
+                } catch (err) {
+                  _iterator3.e(err);
+                } finally {
+                  _iterator3.f();
+                }
+                processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+                processedContent += '<br><br>';
+                var _iterator4 = _createForOfIteratorHelper(citedRefs),
+                  _step4;
+                try {
+                  for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+                    var _step4$value = _slicedToArray(_step4.value, 2),
+                      _key = _step4$value[0],
+                      _value2 = _step4$value[1];
+                    var label = _value2.text || _key;
+                    processedContent += _value2.link ? "**".concat(_value2._displayIndex, "**. [").concat(label, "](").concat(_value2.link, ")<br>") : "**".concat(_value2._displayIndex, "**. ").concat(label, "<br>");
+                  }
+                } catch (err) {
+                  _iterator4.e(err);
+                } finally {
+                  _iterator4.f();
+                }
               }
             }
             message.content = processedContent;
@@ -744,20 +798,20 @@ window.openAIChatManager = function () {
                 message.title = chunk.title;
               }
               if (chunk.references && _typeof(chunk.references) === "object" && Object.keys(chunk.references).length) {
-                for (var _i3 = 0, _Object$entries3 = Object.entries(chunk.references); _i3 < _Object$entries3.length; _i3++) {
-                  var _Object$entries3$_i = _slicedToArray(_Object$entries3[_i3], 2),
-                    key = _Object$entries3$_i[0],
-                    value = _Object$entries3$_i[1];
+                for (var _i = 0, _Object$entries = Object.entries(chunk.references); _i < _Object$entries.length; _i++) {
+                  var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
+                    key = _Object$entries$_i[0],
+                    value = _Object$entries$_i[1];
                   references[key] = value;
                 }
               }
               if (chunk.content) {
                 var processedContent = chunk.content;
-                for (var _i4 = 0, _Object$entries4 = Object.entries(references); _i4 < _Object$entries4.length; _i4++) {
-                  var _Object$entries4$_i = _slicedToArray(_Object$entries4[_i4], 2),
-                    _key2 = _Object$entries4$_i[0],
-                    _value2 = _Object$entries4$_i[1];
-                  processedContent = processedContent.replaceAll(_key2, "<sup><strong>".concat(_value2.index, "</strong></sup>"));
+                for (var _i2 = 0, _Object$entries2 = Object.entries(references); _i2 < _Object$entries2.length; _i2++) {
+                  var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
+                    _key2 = _Object$entries2$_i[0],
+                    _value3 = _Object$entries2$_i[1];
+                  processedContent = processedContent.replaceAll(_key2, "<sup><strong>".concat(_value3.index, "</strong></sup>"));
                 }
 
                 // Append processed content to the message.
@@ -817,16 +871,85 @@ window.openAIChatManager = function () {
         },
         processReferences: function processReferences(references, messageIndex) {
           if (Object.keys(references).length) {
-            var _message$content;
             var message = this.messages[messageIndex];
-            message.content = ((_message$content = message.content) === null || _message$content === void 0 ? void 0 : _message$content.trim()) + '<br><br>' || '';
-            for (var _i5 = 0, _Object$entries5 = Object.entries(references); _i5 < _Object$entries5.length; _i5++) {
-              var _Object$entries5$_i = _slicedToArray(_Object$entries5[_i5], 2),
-                key = _Object$entries5$_i[0],
-                value = _Object$entries5$_i[1];
-              message.content += "**".concat(value.index, "**. [").concat(value.text, "](").concat(value.link, ")<br>");
+            var content = message.content || '';
+
+            // Only include references that were actually cited in the response.
+            // Check both raw [doc:N] markers and already-rendered <sup> tags from streaming.
+            var citedRefs = Object.entries(references).filter(function (_ref7) {
+              var _ref8 = _slicedToArray(_ref7, 2),
+                key = _ref8[0],
+                value = _ref8[1];
+              return content.includes(key) || content.includes("<sup><strong>".concat(value.index, "</strong></sup>"));
+            });
+            if (!citedRefs.length) {
+              return;
             }
-            message.htmlContent = parseMarkdownContent(message.content, message);
+
+            // Sort by original index so display indices follow a natural order.
+            citedRefs.sort(function (_ref9, _ref0) {
+              var _ref1 = _slicedToArray(_ref9, 2),
+                a = _ref1[1];
+              var _ref10 = _slicedToArray(_ref0, 2),
+                b = _ref10[1];
+              return a.index - b.index;
+            });
+
+            // Phase 1: Replace all markers with unique placeholders to avoid collisions during remapping.
+            var processed = content.trim();
+            var displayIndex = 1;
+            var _iterator5 = _createForOfIteratorHelper(citedRefs),
+              _step5;
+            try {
+              for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+                var _step5$value = _slicedToArray(_step5.value, 2),
+                  key = _step5$value[0],
+                  value = _step5$value[1];
+                var placeholder = "__CITE_".concat(value.index, "__");
+                processed = processed.replaceAll(key, placeholder);
+                processed = processed.replaceAll("<sup><strong>".concat(value.index, "</strong></sup>"), placeholder);
+                value._displayIndex = displayIndex++;
+                value._placeholder = placeholder;
+              }
+
+              // Phase 2: Replace placeholders with sequential display indices.
+            } catch (err) {
+              _iterator5.e(err);
+            } finally {
+              _iterator5.f();
+            }
+            var _iterator6 = _createForOfIteratorHelper(citedRefs),
+              _step6;
+            try {
+              for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+                var _step6$value = _slicedToArray(_step6.value, 2),
+                  _value4 = _step6$value[1];
+                processed = processed.replaceAll(_value4._placeholder, "<sup><strong>".concat(_value4._displayIndex, "</strong></sup>"));
+              }
+            } catch (err) {
+              _iterator6.e(err);
+            } finally {
+              _iterator6.f();
+            }
+            processed = processed.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+            processed += '<br><br>';
+            var _iterator7 = _createForOfIteratorHelper(citedRefs),
+              _step7;
+            try {
+              for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
+                var _step7$value = _slicedToArray(_step7.value, 2),
+                  _key3 = _step7$value[0],
+                  _value5 = _step7$value[1];
+                var label = _value5.text || _key3;
+                processed += _value5.link ? "**".concat(_value5._displayIndex, "**. [").concat(label, "](").concat(_value5.link, ")<br>") : "**".concat(_value5._displayIndex, "**. ").concat(label, "<br>");
+              }
+            } catch (err) {
+              _iterator7.e(err);
+            } finally {
+              _iterator7.f();
+            }
+            message.content = processed;
+            message.htmlContent = parseMarkdownContent(processed, message);
             this.messages[messageIndex] = message;
             this.scrollToBottom();
           }
@@ -1040,8 +1163,8 @@ window.openAIChatManager = function () {
               _this9.showChatScreen();
             });
           }
-          for (var _i6 = 0; _i6 < config.messages.length; _i6++) {
-            this.addMessage(config.messages[_i6]);
+          for (var _i3 = 0; _i3 < config.messages.length; _i3++) {
+            this.addMessage(config.messages[_i3]);
           }
 
           // Update feedback icons in the DOM after initial messages have rendered.

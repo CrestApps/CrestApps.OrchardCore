@@ -8,13 +8,13 @@ using OrchardCore.Indexing.Models;
 namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 
 /// <summary>
-/// Elasticsearch implementation of <see cref="IDataSourceVectorSearchService"/>
+/// Elasticsearch implementation of <see cref="IDataSourceContentManager"/>
 /// for searching data source embedding indexes using k-NN vector similarity.
 /// </summary>
-internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVectorSearchService
+internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContentManager
 {
     private readonly ElasticsearchClient _elasticClient;
-    private readonly ILogger<DataSourceElasticsearchVectorSearchService> _logger;
+    private readonly ILogger<ElasticsearchDataSourceContentManager> _logger;
 
     internal static List<(string Kind, string Value)> BuildMustQueryDebug(string dataSourceId, string filter)
     {
@@ -33,9 +33,9 @@ internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVe
         return list;
     }
 
-    public DataSourceElasticsearchVectorSearchService(
+    public ElasticsearchDataSourceContentManager(
         ElasticsearchClient elasticClient,
-        ILogger<DataSourceElasticsearchVectorSearchService> logger)
+        ILogger<ElasticsearchDataSourceContentManager> logger)
     {
         _elasticClient = elasticClient;
         _logger = logger;
@@ -133,6 +133,10 @@ internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVe
                     chunkIndex = chunkIndexNode.GetValue<int>();
                 }
 
+                var referenceType = document.TryGetPropertyValue(DataSourceConstants.ColumnNames.ReferenceType, out var refTypeNode)
+                    ? refTypeNode?.GetValue<string>()
+                    : null;
+
                 if (!string.IsNullOrEmpty(content))
                 {
                     results.Add(new DataSourceSearchResult
@@ -141,6 +145,7 @@ internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVe
                         Title = title,
                         Content = content,
                         ChunkIndex = chunkIndex,
+                        ReferenceType = referenceType,
                         Score = (float)(hit.Score ?? 0.0),
                     });
                 }
@@ -156,6 +161,44 @@ internal sealed class DataSourceElasticsearchVectorSearchService : IDataSourceVe
             _logger.LogError(ex, "Error performing data source vector search in Elasticsearch index '{IndexName}'", indexProfile.IndexFullName);
 
             return [];
+        }
+    }
+
+    public async Task<long> DeleteByDataSourceIdAsync(
+        IndexProfile indexProfile,
+        string dataSourceId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(indexProfile);
+        ArgumentException.ThrowIfNullOrWhiteSpace(dataSourceId);
+
+        try
+        {
+            var response = await _elasticClient.DeleteByQueryAsync<JsonObject>(indexProfile.IndexFullName, d => d
+                .Query(q => q
+                    .Term(t => t
+                        .Field(DataSourceConstants.ColumnNames.DataSourceId)
+                        .Value(dataSourceId)
+                    )
+                ),
+                cancellationToken);
+
+            if (!response.IsValidResponse)
+            {
+                _logger.LogWarning("Elasticsearch delete by data source ID failed for index '{IndexName}': {Error}",
+                    indexProfile.IndexFullName, response.DebugInformation);
+
+                return 0;
+            }
+
+            return response.Deleted ?? 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting documents by data source ID '{DataSourceId}' from Elasticsearch index '{IndexName}'.",
+                dataSourceId, indexProfile.IndexFullName);
+
+            return 0;
         }
     }
 }

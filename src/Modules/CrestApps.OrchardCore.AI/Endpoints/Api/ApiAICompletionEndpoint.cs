@@ -1,5 +1,7 @@
+using System.Text;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Endpoints.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
@@ -36,6 +38,9 @@ internal static class ApiAICompletionEndpoint
        IHttpContextAccessor httpContextAccessor,
        IAICompletionService completionService,
        IAICompletionContextBuilder completionContextBuilder,
+       IOrchestrationContextBuilder orchestrationContextBuilder,
+       IOrchestratorResolver orchestratorResolver,
+       CitationReferenceCollector citationCollector,
        ILogger<T> logger,
        AICompletionRequest requestData)
     {
@@ -106,16 +111,16 @@ internal static class ApiAICompletionEndpoint
             (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, profile, completionService, userPrompt, completionContextBuilder);
         }
 
-        ChatResponse completion = null;
-        AIChatSessionPrompt message = null;
-        ChatMessage bestChoice = null;
+        AIChatSessionPrompt message;
+
+        using var invocationScope = AIInvocationScope.Begin();
 
         if (profile.Type == AIProfileType.TemplatePrompt)
         {
             var contextForTemplate = await completionContextBuilder.BuildAsync(profile);
-            completion = await completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, userPrompt)], contextForTemplate);
+            var completion = await completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, userPrompt)], contextForTemplate);
 
-            bestChoice = completion?.Messages?.FirstOrDefault();
+            var bestChoice = completion?.Messages?.FirstOrDefault();
 
             message = new AIChatSessionPrompt
             {
@@ -141,37 +146,53 @@ internal static class ApiAICompletionEndpoint
             var transcript = chatSession.Prompts.Where(x => !x.IsGeneratedPrompt)
                 .Select(prompt => new ChatMessage(prompt.Role, prompt.Content));
 
-            var context = await completionContextBuilder.BuildAsync(profile, c =>
+            // Build the orchestration context using the handler pipeline (same as the hubs).
+            var orchestratorContext = await orchestrationContextBuilder.BuildAsync(profile, ctx =>
             {
-                c.AdditionalProperties["Session"] = chatSession;
+                ctx.UserMessage = userPrompt;
+                ctx.ConversationHistory = transcript.ToList();
+                ctx.CompletionContext.AdditionalProperties["Session"] = chatSession;
             });
 
-            completion = await completionService.CompleteAsync(profile.Source, transcript, context);
+            // Store the session in the invocation context so document tools can resolve session documents.
+            AIInvocationScope.Current.Items[nameof(AIChatSession)] = chatSession;
+            AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
 
-            bestChoice = completion?.Messages?.FirstOrDefault();
+            // Resolve the orchestrator for this profile and execute the completion.
+            var orchestrator = orchestratorResolver.Resolve(profile.OrchestratorName);
+
+            var contentItemIds = new HashSet<string>();
+            var references = new Dictionary<string, AICompletionReference>();
+            var builder = new StringBuilder();
+
+            // Collect preemptive RAG references.
+            citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
+
+            await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext))
+            {
+                if (!string.IsNullOrEmpty(chunk.Text))
+                {
+                    builder.Append(chunk.Text);
+                }
+
+                // Incrementally collect any new tool references.
+                citationCollector.CollectToolReferences(references, contentItemIds);
+            }
+
+            // Final pass to collect any tool references added by the last tool call.
+            citationCollector.CollectToolReferences(references, contentItemIds);
 
             message = new AIChatSessionPrompt
             {
                 Id = IdGenerator.GenerateId(),
                 Role = ChatRole.Assistant,
                 Title = profile.PromptSubject,
-                Content = !string.IsNullOrEmpty(bestChoice?.Text)
-                ? bestChoice.Text
-                : AIConstants.DefaultBlankMessage,
+                Content = builder.Length > 0
+                    ? builder.ToString()
+                    : AIConstants.DefaultBlankMessage,
+                ContentItemIds = contentItemIds.ToList(),
+                References = references,
             };
-        }
-
-        if (completion.AdditionalProperties is not null)
-        {
-            if (completion.AdditionalProperties.TryGetValue<IList<string>>("ContentItemIds", out var contentItemIds))
-            {
-                message.ContentItemIds = contentItemIds;
-            }
-
-            if (completion.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var references))
-            {
-                message.References = references;
-            }
         }
 
         chatSession.Prompts.Add(message);
@@ -180,7 +201,7 @@ internal static class ApiAICompletionEndpoint
 
         return TypedResults.Ok(new AIChatResponse
         {
-            Success = completion?.Messages?.Any() ?? false,
+            Success = !string.IsNullOrEmpty(message.Content) && message.Content != AIConstants.DefaultBlankMessage,
             Type = profile.Type.ToString(),
             SessionId = chatSession.SessionId,
             IsNew = isNew,

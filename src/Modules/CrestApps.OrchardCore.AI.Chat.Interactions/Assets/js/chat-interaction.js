@@ -407,14 +407,38 @@ window.chatInteractionManager = function () {
                         let processedContent = message.content.trim();
 
                         if (message.references && typeof message.references === "object" && Object.keys(message.references).length) {
-                            for (const [key, value] of Object.entries(message.references)) {
-                                processedContent = processedContent.replaceAll(key, `<sup><strong>${value.index}</strong></sup>`);
-                            }
-                            processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
-                            processedContent += '<br><br>';
 
-                            for (const value of Object.values(message.references)) {
-                                processedContent += `**${value.index}**. [${value.text}](${value.link})<br>`;
+                            // Only include references that were actually cited in the response.
+                            const citedRefs = Object.entries(message.references).filter(([key]) => processedContent.includes(key));
+
+                            if (citedRefs.length) {
+                                // Sort by original index so display indices follow a natural order.
+                                citedRefs.sort(([, a], [, b]) => a.index - b.index);
+
+                                // Phase 1: Replace all markers with unique placeholders.
+                                let displayIndex = 1;
+                                for (const [key, value] of citedRefs) {
+                                    const placeholder = `__CITE_${value.index}__`;
+                                    processedContent = processedContent.replaceAll(key, placeholder);
+                                    value._displayIndex = displayIndex++;
+                                    value._placeholder = placeholder;
+                                }
+
+                                // Phase 2: Replace placeholders with sequential display indices.
+                                for (const [, value] of citedRefs) {
+                                    processedContent = processedContent.replaceAll(value._placeholder, `<sup><strong>${value._displayIndex}</strong></sup>`);
+                                }
+
+                                processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+
+                                processedContent += '<br><br>';
+
+                                for (const [key, value] of citedRefs) {
+                                    const label = value.text || `[doc:${value.index}]`;
+                                    processedContent += value.link
+                                        ? `**${value._displayIndex}**. [${label}](${value.link})<br>`
+                                        : `**${value._displayIndex}**. ${label}<br>`;
+                                }
                             }
                         }
 
@@ -590,14 +614,50 @@ window.chatInteractionManager = function () {
                 processReferences(references, messageIndex) {
                     if (Object.keys(references).length) {
                         let message = this.messages[messageIndex];
+                        const content = message.content || '';
 
-                        message.content = (message.content?.trim() + '<br><br>' || '');
+                        // Only include references that were actually cited in the response.
+                        // Check both raw [doc:N] markers and already-rendered <sup> tags from streaming.
+                        const citedRefs = Object.entries(references).filter(([key, value]) =>
+                            content.includes(key) || content.includes(`<sup><strong>${value.index}</strong></sup>`)
+                        );
 
-                        for (const value of Object.values(references)) {
-                            message.content += `**${value.index}**. [${value.text}](${value.link})<br>`;
+                        if (!citedRefs.length) {
+                            return;
                         }
 
-                        message.htmlContent = parseMarkdownContent(message.content, message);
+                        // Sort by original index so display indices follow a natural order.
+                        citedRefs.sort(([, a], [, b]) => a.index - b.index);
+
+                        // Phase 1: Replace all markers with unique placeholders to avoid collisions during remapping.
+                        let processed = content.trim();
+                        let displayIndex = 1;
+                        for (const [key, value] of citedRefs) {
+                            const placeholder = `__CITE_${value.index}__`;
+                            processed = processed.replaceAll(key, placeholder);
+                            processed = processed.replaceAll(`<sup><strong>${value.index}</strong></sup>`, placeholder);
+                            value._displayIndex = displayIndex++;
+                            value._placeholder = placeholder;
+                        }
+
+                        // Phase 2: Replace placeholders with sequential display indices.
+                        for (const [, value] of citedRefs) {
+                            processed = processed.replaceAll(value._placeholder, `<sup><strong>${value._displayIndex}</strong></sup>`);
+                        }
+
+                        processed = processed.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+
+                        processed += '<br><br>';
+
+                        for (const [key, value] of citedRefs) {
+                            const label = value.text || `[doc:${value.index}]`;
+                            processed += value.link
+                                ? `**${value._displayIndex}**. [${label}](${value.link})<br>`
+                                : `**${value._displayIndex}**. ${label}<br>`;
+                        }
+
+                        message.content = processed;
+                        message.htmlContent = parseMarkdownContent(processed, message);
 
                         this.messages[messageIndex] = message;
 
@@ -957,7 +1017,7 @@ window.chatInteractionManager = function () {
                     // This avoids coupling the JS to specific field names — new fields added by
                     // any module are automatically included.
                     const inputs = document.querySelectorAll(
-                        'input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' +
+                        'input[name^="ChatInteraction."]:not([type="hidden"]):not([name*=".Tools["]):not([name*=".Connections["]), ' +
                         'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' +
                         'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])'
                     );

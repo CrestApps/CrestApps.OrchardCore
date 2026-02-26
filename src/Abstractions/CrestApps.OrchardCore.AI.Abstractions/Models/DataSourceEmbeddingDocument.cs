@@ -17,6 +17,13 @@ public sealed class DataSourceEmbeddingDocument
     public string DataSourceId { get; set; }
 
     /// <summary>
+    /// Gets or sets the reference type that identifies the kind of source
+    /// (e.g., "Content" for Orchard Core content items, or the source index profile type).
+    /// Used to determine how links for references should be generated.
+    /// </summary>
+    public string ReferenceType { get; set; }
+
+    /// <summary>
     /// Gets or sets the unique chunk identifier (e.g., "{referenceId}_{chunkIndex}").
     /// </summary>
     public string ChunkId { get; set; }

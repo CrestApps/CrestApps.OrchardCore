@@ -3,7 +3,7 @@ using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Models;
-using Microsoft.AspNetCore.Http;
+
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -67,8 +67,7 @@ public sealed class ReadTabularDataTool : AIFunction
             maxRows = DefaultMaxRows;
         }
 
-        var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
-        var executionContext = httpContextAccessor?.HttpContext?.Items[nameof(AIToolExecutionContext)] as AIToolExecutionContext;
+        var executionContext = AIInvocationScope.Current?.ToolExecutionContext;
 
         if (executionContext?.Resource is not ChatInteraction interaction)
         {
@@ -146,7 +145,7 @@ public sealed class ReadTabularDataTool : AIFunction
             builder.AppendLine(lines[i]);
         }
 
-        builder.AppendLine($"... (truncated, showing first {maxRows} of {lines.Length - 1} data rows)");
+        builder.Append("... (truncated, showing first ").Append(maxRows).Append(" of ").Append(lines.Length - 1).AppendLine(" data rows)");
 
         return builder.ToString();
     }

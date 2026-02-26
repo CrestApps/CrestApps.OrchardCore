@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.DataSources.ViewModels;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -14,16 +14,19 @@ namespace CrestApps.OrchardCore.AI.DataSources.Drivers;
 internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly ISiteService _siteService;
+    private readonly IODataValidator _oDataValidator;
     private readonly ICatalog<AIDataSource> _dataSourceStore;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileDataSourceDisplayDriver(
         ISiteService siteService,
+        IODataValidator oDataValidator,
         ICatalog<AIDataSource> dataSourceStore,
         IStringLocalizer<AIProfileDataSourceDisplayDriver> stringLocalizer)
     {
         _siteService = siteService;
+        _oDataValidator = oDataValidator;
         _dataSourceStore = dataSourceStore;
         S = stringLocalizer;
     }
@@ -71,7 +74,38 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
             metadata.DataSourceId = null;
         }
 
+        var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
+
+        var strictness = dataSourceSettings.GetStrictness(model.Strictness);
+        var topN = dataSourceSettings.GetTopNDocuments(model.TopNDocuments);
+
+
+        if (strictness != model.Strictness)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Strictness),
+                S["Invalid strictness value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinStrictness, AIDataSourceSettings.MaxStrictness]);
+        }
+
+        if (topN != model.TopNDocuments)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.TopNDocuments),
+                S["Invalid total retrieved documents value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinTopNDocuments, AIDataSourceSettings.MaxTopNDocuments]);
+        }
+
+        if (!string.IsNullOrWhiteSpace(model.Filter) && !_oDataValidator.IsValidFilter(model.Filter))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Filter), S["Invalid filter value. It must be a valid OData filter."]);
+        }
+
         profile.Put(metadata);
+
+        profile.Alter<AIDataSourceRagMetadata>(t =>
+        {
+            t.Filter = model.Filter;
+            t.Strictness = model.Strictness;
+            t.TopNDocuments = model.TopNDocuments;
+            t.IsInScope = model.IsInScope;
+        });
 
         return Edit(profile, context);
     }

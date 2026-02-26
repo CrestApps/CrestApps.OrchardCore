@@ -56,7 +56,7 @@ public sealed partial class ResourceTemplatesModel : PageModel
                     }
                     else if (content is BlobResourceContents blobContent)
                     {
-                        contents.Add(new { type = "blob", mimeType = blobContent.MimeType, length = blobContent.Blob?.Length ?? 0 });
+                        contents.Add(new { type = "blob", mimeType = blobContent.MimeType, length = blobContent.Blob.Length });
                     }
                 }
             }

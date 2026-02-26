@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.DataSources.Services;
+using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;

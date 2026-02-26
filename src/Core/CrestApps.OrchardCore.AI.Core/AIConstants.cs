@@ -1,3 +1,5 @@
+using OrchardCore.Indexing.Core;
+
 namespace CrestApps.OrchardCore.AI.Core;
 
 public static class AIConstants
@@ -67,6 +69,20 @@ public static class AIConstants
         public const string ChatInteraction = "chat-interaction";
 
         public const string ChatSession = "chat-session";
+    }
+
+    public static class DataSourceReferenceTypes
+    {
+        /// <summary>
+        /// Reference type for content items indexed by OrchardCore.
+        /// Matches <c>IndexingConstants.ContentsIndexSource</c>.
+        /// </summary>
+        public const string Content = IndexingConstants.ContentsIndexSource;
+
+        /// <summary>
+        /// Reference type for uploaded documents in chat interactions or profiles.
+        /// </summary>
+        public const string Document = "Document";
     }
 
     public static class ColumnNames

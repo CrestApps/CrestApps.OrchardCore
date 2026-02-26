@@ -61,6 +61,13 @@ internal sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceInd
 
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
+            AzureFieldKey = DataSourceConstants.ColumnNames.ReferenceType,
+            Type = DocumentIndex.Types.Text,
+            IsFilterable = true,
+        });
+
+        metadata.IndexMappings.Add(new AzureAISearchIndexMap
+        {
             AzureFieldKey = DataSourceConstants.ColumnNames.ChunkIndex,
             Type = DocumentIndex.Types.Integer,
         });
