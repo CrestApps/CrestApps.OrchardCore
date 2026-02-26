@@ -37,6 +37,11 @@ public sealed class ChatMessageCompletedContext
     public required AIChatSession ChatSession { get; init; }
 
     /// <summary>
+    /// Gets the prompts associated with the current chat session.
+    /// </summary>
+    public required IReadOnlyList<AIChatSessionPrompt> Prompts { get; init; }
+
+    /// <summary>
     /// Gets or sets the time in milliseconds the AI took to generate the response.
     /// </summary>
     public double ResponseLatencyMs { get; init; }

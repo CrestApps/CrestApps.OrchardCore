@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -18,6 +19,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Services;
 public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 {
     private readonly IAIChatSessionManager _aIChatSessionManager;
+    private readonly IAIChatSessionPromptStore _promptStore;
     private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointCatalog;
     private readonly ISmsService _smsService;
@@ -29,6 +31,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 
     public SmsOmnichannelProcessor(
         IAIChatSessionManager aIChatSessionManager,
+        IAIChatSessionPromptStore promptStore,
         ICatalog<OmnichannelCampaign> campaignCatalog,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointCatalog,
         ISmsService smsService,
@@ -38,6 +41,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         IStringLocalizer<SmsOmnichannelProcessor> stringLocalizer)
     {
         _aIChatSessionManager = aIChatSessionManager;
+        _promptStore = promptStore;
         _campaignCatalog = campaignCatalog;
         _channelEndpointCatalog = channelEndpointCatalog;
         _smsService = smsService;
@@ -70,9 +74,10 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
                 Title = S["Automated SMS Activity"],
             };
 
-            chatSession.Prompts.Add(new AIChatSessionPrompt
+            await _promptStore.CreateAsync(new AIChatSessionPrompt
             {
-                Id = IdGenerator.GenerateId(),
+                ItemId = IdGenerator.GenerateId(),
+                SessionId = chatSession.SessionId,
                 Role = ChatRole.System,
                 Content = campaign.SystemMessage,
             });
@@ -115,9 +120,10 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
 
         if (smsResult.Succeeded)
         {
-            chatSession.Prompts.Add(new AIChatSessionPrompt
+            await _promptStore.CreateAsync(new AIChatSessionPrompt
             {
-                Id = IdGenerator.GenerateId(),
+                ItemId = IdGenerator.GenerateId(),
+                SessionId = chatSession.SessionId,
                 Role = ChatRole.Assistant,
                 Content = initialPrompt,
             });

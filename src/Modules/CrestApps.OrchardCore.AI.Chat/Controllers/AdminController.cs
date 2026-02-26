@@ -25,6 +25,7 @@ public sealed class AdminController : Controller
     private readonly IDisplayManager<AIChatSession> _sessionDisplayManager;
     private readonly IDisplayManager<AIChatSessionListOptions> _optionsDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly IShapeFactory _shapeFactory;
     private readonly AIOptions _aiOptions;
     private readonly INotifier _notifier;
 
@@ -38,6 +39,7 @@ public sealed class AdminController : Controller
         IDisplayManager<AIChatSession> sessionDisplayManager,
         IDisplayManager<AIChatSessionListOptions> optionsDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
+        IShapeFactory shapeFactory,
         IOptions<AIOptions> aiOptions,
         INotifier notifier,
         IHtmlLocalizer<AdminController> htmlLocalizer,
@@ -50,6 +52,7 @@ public sealed class AdminController : Controller
         _sessionDisplayManager = sessionDisplayManager;
         _optionsDisplayManager = optionsDisplayManager;
         _updateModelAccessor = updateModelAccessor;
+        _shapeFactory = shapeFactory;
         _aiOptions = aiOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
@@ -121,10 +124,10 @@ public sealed class AdminController : Controller
             ProfileId = profileId,
         });
 
-        foreach (var session in sessionResult.Sessions)
+        foreach (var entry in sessionResult.Sessions)
         {
-            var summary = await _sessionDisplayManager.BuildDisplayAsync(session, _updateModelAccessor.ModelUpdater, "SummaryAdmin");
-            summary.Properties["Session"] = session;
+            var summary = await _shapeFactory.CreateAsync("AIChatSessionListItem");
+            summary.Properties["Entry"] = entry;
 
             model.History.Add(summary);
         }

@@ -38,7 +38,8 @@ public sealed class DataExtractionChatSessionHandler : IAIChatSessionHandler
         {
             var changeSet = await _dataExtractionService.ProcessAsync(
                 context.Profile,
-                context.ChatSession);
+                context.ChatSession,
+                context.Prompts);
 
             if (changeSet is null)
             {

@@ -16,10 +16,7 @@ public sealed class AIChatSessionDisplayDriver : DisplayDriver<AIChatSession>
 
     public override IDisplayResult Display(AIChatSession session, BuildDisplayContext context)
     {
-        return Initialize<DisplayAIChatSessionViewModel>("AIChatSessionListItem", model =>
-        {
-            model.Session = session;
-        }).Location("SummaryAdmin", "Content");
+        return null;
     }
 
     public override async Task<IDisplayResult> EditAsync(AIChatSession session, BuildEditorContext context)

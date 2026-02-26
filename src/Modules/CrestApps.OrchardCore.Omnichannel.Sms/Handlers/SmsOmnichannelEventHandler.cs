@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -121,6 +122,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     """;
 
     private readonly IAIChatSessionManager _chatSessionManager;
+    private readonly IAIChatSessionPromptStore _promptStore;
     private readonly IAICompletionService _aICompletionService;
     private readonly IOmnichannelChannelEndpointManager _channelEndpointsManager;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
@@ -134,6 +136,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
     public SmsOmnichannelEventHandler(
         IAIChatSessionManager chatSessionManager,
+        IAIChatSessionPromptStore promptStore,
         IAICompletionService aICompletionService,
         IOmnichannelChannelEndpointManager channelEndpointsManager,
         ICatalogManager<OmnichannelCampaign> campaignManager,
@@ -145,6 +148,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IStringLocalizer<SmsOmnichannelEventHandler> stringLocalizer)
     {
         _chatSessionManager = chatSessionManager;
+        _promptStore = promptStore;
         _aICompletionService = aICompletionService;
         _channelEndpointsManager = channelEndpointsManager;
         _campaignManager = campaignManager;
@@ -225,9 +229,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             return;
         }
 
-        chatSession.Prompts.Add(new AIChatSessionPrompt
+        await _promptStore.CreateAsync(new AIChatSessionPrompt
         {
-            Id = IdGenerator.GenerateId(),
+            ItemId = IdGenerator.GenerateId(),
+            SessionId = chatSession.SessionId,
             Role = ChatRole.User,
             Content = omnichannelEvent.Message.Content
         });
@@ -239,7 +244,9 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         try
         {
-            var transcript = chatSession.Prompts.Where(x => !x.IsGeneratedPrompt)
+            var prompts = await _promptStore.GetPromptsAsync(chatSession.SessionId);
+
+            var transcript = prompts.Where(x => !x.IsGeneratedPrompt)
                 .Select(prompt => new ChatMessage(prompt.Role, prompt.Content));
 
             var context = new AICompletionContext
@@ -282,9 +289,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
             if (result.Succeeded)
             {
-                chatSession.Prompts.Add(new AIChatSessionPrompt
+                await _promptStore.CreateAsync(new AIChatSessionPrompt
                 {
-                    Id = IdGenerator.GenerateId(),
+                    ItemId = IdGenerator.GenerateId(),
+                    SessionId = chatSession.SessionId,
                     Role = ChatRole.Assistant,
                     Content = bestChoice,
                 });
@@ -301,6 +309,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     var store = scope.ServiceProvider.GetRequiredService<IOmnichannelActivityStore>();
                     var dispositionCatalog = scope.ServiceProvider.GetRequiredService<ICatalog<OmnichannelDisposition>>();
                     var clientFactory = scope.ServiceProvider.GetRequiredService<IAIClientFactory>();
+                    var deferredPromptStore = scope.ServiceProvider.GetRequiredService<IAIChatSessionPromptStore>();
                     var dispositions = await dispositionCatalog.GetAsync(campaign.DispositionIds);
                     var client = await clientFactory.CreateChatClientAsync(campaign.ProviderName, campaign.ConnectionName, campaign.DeploymentName);
 
@@ -309,8 +318,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     ContentItem subject = null;
                     ContentItem contact = null;
 
+                    var sessionPrompts = await deferredPromptStore.GetPromptsAsync(chatSession.SessionId);
+
                     var userPrompt = $"""
-                        Chat Summary: {JsonSerializer.Serialize(chatSession.Prompts)}
+                        Chat Summary: {JsonSerializer.Serialize(sessionPrompts)}
                         Campaign Goal: {campaign.CampaignGoal}
                         List of Dispositions: {JsonSerializer.Serialize(dispositions.Select(x => new { Id = x.ItemId, Name = x.DisplayText, x.Description }))}
                         """;

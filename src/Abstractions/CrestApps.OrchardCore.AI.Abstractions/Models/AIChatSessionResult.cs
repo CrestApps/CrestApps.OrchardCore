@@ -4,5 +4,5 @@ public class AIChatSessionResult
 {
     public int Count { get; set; }
 
-    public IEnumerable<AIChatSession> Sessions { get; set; }
+    public IEnumerable<AIChatSessionEntry> Sessions { get; set; }
 }

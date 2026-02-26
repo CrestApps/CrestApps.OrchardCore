@@ -180,6 +180,13 @@ public sealed class ChatCoreStartup : StartupBase
             .AddIndexProvider<AIChatSessionIndexProvider>()
             .AddSingleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>();
 
+        // Register the AI chat session prompt store.
+        services.AddScoped<DefaultAIChatSessionPromptStore>()
+            .AddScoped<IAIChatSessionPromptStore>(sp => sp.GetRequiredService<DefaultAIChatSessionPromptStore>())
+            .AddIndexProvider<AIChatSessionPromptIndexProvider>()
+            .AddDataMigration<AIChatSessionPromptIndexMigrations>()
+            .AddDataMigration<AIChatSessionPromptDataMigrations>();
+
         // Register the data extraction service.
         services.AddScoped<DataExtractionService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());

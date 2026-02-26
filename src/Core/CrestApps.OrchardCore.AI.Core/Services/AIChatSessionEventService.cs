@@ -51,7 +51,7 @@ public sealed class AIChatSessionEventService
     /// <summary>
     /// Updates the session event when a chat session ends.
     /// </summary>
-    public async Task RecordSessionEndedAsync(AIChatSession chatSession, bool isResolved)
+    public async Task RecordSessionEndedAsync(AIChatSession chatSession, int promptCount, bool isResolved)
     {
         var evt = await FindEventBySessionIdAsync(chatSession.SessionId);
 
@@ -70,7 +70,7 @@ public sealed class AIChatSessionEventService
                 IsAuthenticated = isAuthenticated,
                 SessionStartedUtc = chatSession.CreatedUtc,
                 SessionEndedUtc = chatSession.ClosedAtUtc ?? now,
-                MessageCount = chatSession.Prompts.Count,
+                MessageCount = promptCount,
                 HandleTimeSeconds = ((chatSession.ClosedAtUtc ?? now) - chatSession.CreatedUtc).TotalSeconds,
                 IsResolved = isResolved,
                 CreatedUtc = now,
@@ -83,7 +83,7 @@ public sealed class AIChatSessionEventService
         var endTime = chatSession.ClosedAtUtc ?? _clock.UtcNow;
 
         evt.SessionEndedUtc = endTime;
-        evt.MessageCount = chatSession.Prompts.Count;
+        evt.MessageCount = promptCount;
         evt.IsResolved = isResolved;
         evt.HandleTimeSeconds = (endTime - evt.SessionStartedUtc).TotalSeconds;
 
