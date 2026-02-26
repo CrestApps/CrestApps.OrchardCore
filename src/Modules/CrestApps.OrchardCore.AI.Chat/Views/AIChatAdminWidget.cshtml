@@ -171,12 +171,12 @@
             metricsEnabled: @(metricsEnabled ? "true" : "false"),
             @if (sessionDocumentsEnabled)
             {
-                    @:sessionDocumentsEnabled: true,
-                    @:documentBarSelector: '#@documentBarHtmlId',
-                    @:uploadDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument)',
-                    @:removeDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument)',
-                    @:allowedExtensions: '@allowedExtensions',
-                    @:existingDocuments: [],
+                        @:sessionDocumentsEnabled: true,
+                        @:documentBarSelector: '#@documentBarHtmlId',
+                        @:uploadDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument)',
+                        @:removeDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument)',
+                        @:allowedExtensions: '@allowedExtensions',
+                        @:existingDocuments: [],
             }
             messageTemplate: `
                 <div>
