@@ -27,6 +27,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         var clock = serviceProvider.GetRequiredService<IClock>();
         var session = serviceProvider.GetRequiredService<ISession>();
         var profileManager = serviceProvider.GetRequiredService<IAIProfileManager>();
+        var promptStore = serviceProvider.GetRequiredService<IAIChatSessionPromptStore>();
         var logger = serviceProvider.GetRequiredService<ILogger<AIChatSessionCloseBackgroundTask>>();
 
         var utcNow = clock.UtcNow;
@@ -67,11 +68,13 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 chatSession.Status = ChatSessionStatus.Closed;
                 chatSession.ClosedAtUtc = utcNow;
 
+                var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
+
                 // Run post-session processing if configured.
-                await RunPostSessionProcessingAsync(serviceProvider, profile, chatSession, logger, cancellationToken);
+                await RunPostSessionProcessingAsync(serviceProvider, profile, chatSession, prompts, logger, cancellationToken);
 
                 // Record analytics event for abandoned session (inactivity = not resolved).
-                await RecordAnalyticsEventAsync(serviceProvider, profile, chatSession, logger);
+                await RecordAnalyticsEventAsync(serviceProvider, profile, chatSession, prompts.Count, logger);
 
                 await session.SaveAsync(chatSession, false, collection: AIConstants.CollectionName, cancellationToken);
 
@@ -112,6 +115,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         IServiceProvider serviceProvider,
         AIProfile profile,
         AIChatSession chatSession,
+        IReadOnlyList<AIChatSessionPrompt> prompts,
         ILogger logger,
         CancellationToken cancellationToken)
     {
@@ -124,7 +128,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 return;
             }
 
-            var results = await postSessionService.ProcessAsync(profile, chatSession, cancellationToken);
+            var results = await postSessionService.ProcessAsync(profile, chatSession, prompts, cancellationToken);
 
             if (results is null || results.Count == 0)
             {
@@ -168,6 +172,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         IServiceProvider serviceProvider,
         AIProfile profile,
         AIChatSession chatSession,
+        int promptCount,
         ILogger logger)
     {
         if (!profile.As<AIProfileAnalyticsMetadata>().EnableSessionMetrics)
@@ -185,7 +190,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             }
 
             // Inactivity timeout = abandoned (not resolved).
-            await eventService.RecordSessionEndedAsync(chatSession, isResolved: false);
+            await eventService.RecordSessionEndedAsync(chatSession, promptCount, isResolved: false);
         }
         catch (Exception ex)
         {

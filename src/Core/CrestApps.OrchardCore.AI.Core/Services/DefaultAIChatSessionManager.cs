@@ -21,19 +21,22 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     private readonly IClientIPAddressAccessor _clientIPAddressAccessor;
     private readonly ISession _session;
     private readonly IAIDocumentStore _documentStore;
+    private readonly IAIChatSessionPromptStore _promptStore;
 
     public DefaultAIChatSessionManager(
         IClock clock,
         IHttpContextAccessor httpContextAccessor,
         IClientIPAddressAccessor clientIPAddressAccessor,
         ISession session,
-        IAIDocumentStore documentStore)
+        IAIDocumentStore documentStore,
+        IAIChatSessionPromptStore promptStore)
     {
         _clock = clock;
         _httpContextAccessor = httpContextAccessor;
         _clientIPAddressAccessor = clientIPAddressAccessor;
         _session = session;
         _documentStore = documentStore;
+        _promptStore = promptStore;
     }
 
     public async Task<AIChatSession> NewAsync(AIProfile profile, NewAIChatSessionContext context)
@@ -87,7 +90,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        var query = _session.Query<AIChatSession, AIChatSessionIndex>(i => i.UserId == userId && i.Title != null && i.ProfileId != null, collection: AIConstants.CollectionName);
+        var query = _session.QueryIndex<AIChatSessionIndex>(i => i.UserId == userId && i.Title != null && i.ProfileId != null, collection: AIConstants.CollectionName);
 
         if (!string.IsNullOrEmpty(context.ProfileId))
         {
@@ -99,14 +102,28 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             query = query.Where(i => i.Title.Contains(context.Name));
         }
 
-        return new AIChatSessionResult
-        {
-            Count = await query.CountAsync(),
-            Sessions = await query.OrderByDescending(i => i.CreatedUtc)
+        var count = await query.CountAsync();
+
+        var indexes = await query.OrderByDescending(i => i.CreatedUtc)
             .ThenBy(x => x.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ListAsync()
+            .ListAsync();
+
+        return new AIChatSessionResult
+        {
+            Count = count,
+            Sessions = indexes.Select(i => new AIChatSessionEntry
+            {
+                SessionId = i.SessionId,
+                ProfileId = i.ProfileId,
+                Title = i.Title,
+                UserId = i.UserId,
+                ClientId = i.ClientId,
+                Status = i.Status,
+                CreatedUtc = i.CreatedUtc,
+                LastActivityUtc = i.LastActivityUtc,
+            }),
         };
     }
 
@@ -178,6 +195,9 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         await CleanupSessionDocumentsAsync(chatSession);
 
+        // Delete all prompts associated with this session.
+        await _promptStore.DeleteAllPromptsAsync(chatSession.SessionId);
+
         _session.Delete(chatSession, collection: AIConstants.CollectionName);
 
         return true;
@@ -206,6 +226,9 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         foreach (var session in sessions)
         {
             await CleanupSessionDocumentsAsync(session);
+
+            // Delete all prompts associated with this session.
+            await _promptStore.DeleteAllPromptsAsync(session.SessionId);
 
             _session.Delete(session, collection: AIConstants.CollectionName);
             totalDeleted++;

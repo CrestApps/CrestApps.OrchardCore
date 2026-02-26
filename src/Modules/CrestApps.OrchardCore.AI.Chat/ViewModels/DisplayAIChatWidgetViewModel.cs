@@ -6,5 +6,5 @@ namespace CrestApps.OrchardCore.AI.Chat.ViewModels;
 public class DisplayAIChatWidgetViewModel
 {
     [BindNever]
-    public IEnumerable<AIChatSession> Sessions { get; set; }
+    public IEnumerable<AIChatSessionEntry> Sessions { get; set; }
 }

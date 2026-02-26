@@ -23,13 +23,6 @@ public sealed class AIChatSession : Entity
     public string Title { get; set; }
 
     /// <summary>
-    /// Gets or sets the collection of prompts sent during the session.
-    /// Each prompt is stored as an instance of the <see cref="AIChatSessionPrompt"/> class.
-    /// The list is initialized as an empty list by default.
-    /// </summary>
-    public IList<AIChatSessionPrompt> Prompts { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets the user identifier who created this session.
     /// This is used to associate the session with a specific user. If unavailable, <see cref="ClientId"/> is used instead.
     /// </summary>

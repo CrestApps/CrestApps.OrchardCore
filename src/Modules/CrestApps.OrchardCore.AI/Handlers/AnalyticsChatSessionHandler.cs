@@ -34,7 +34,7 @@ public sealed class AnalyticsChatSessionHandler : IAIChatSessionHandler
         try
         {
             // Record session start on first user message (message count = 1 user message).
-            var userMessageCount = context.ChatSession.Prompts.Count(p => p.Role == ChatRole.User);
+            var userMessageCount = context.Prompts.Count(p => p.Role == ChatRole.User);
 
             if (userMessageCount == 1)
             {
@@ -55,7 +55,7 @@ public sealed class AnalyticsChatSessionHandler : IAIChatSessionHandler
             if (context.ChatSession.Status == ChatSessionStatus.Closed)
             {
                 // Natural farewell = resolved.
-                await _eventService.RecordSessionEndedAsync(context.ChatSession, isResolved: true);
+                await _eventService.RecordSessionEndedAsync(context.ChatSession, context.Prompts.Count, isResolved: true);
             }
         }
         catch (Exception ex)

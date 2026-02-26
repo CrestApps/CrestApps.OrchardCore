@@ -27,6 +27,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly IAuthorizationService _authorizationService;
     private readonly IAIProfileManager _profileManager;
     private readonly IAIChatSessionManager _sessionManager;
+    private readonly IAIChatSessionPromptStore _promptStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IDocumentStore _documentStore;
     private readonly IAICompletionService _completionService;
@@ -44,6 +45,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         IAuthorizationService authorizationService,
         IAIProfileManager profileManager,
         IAIChatSessionManager sessionManager,
+        IAIChatSessionPromptStore promptStore,
         ILiquidTemplateManager liquidTemplateManager,
         IDocumentStore documentStore,
         IAICompletionService completionService,
@@ -59,6 +61,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _authorizationService = authorizationService;
         _profileManager = profileManager;
         _sessionManager = sessionManager;
+        _promptStore = promptStore;
         _liquidTemplateManager = liquidTemplateManager;
         _documentStore = documentStore;
         _completionService = completionService;
@@ -119,6 +122,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
             return;
         }
 
+        var prompts = await _promptStore.GetPromptsAsync(chatSession.SessionId);
+
         await Clients.Caller.LoadSession(new
         {
             chatSession.SessionId,
@@ -128,9 +133,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 Type = profile.Type.ToString()
             },
             chatSession.Documents,
-            Messages = chatSession.Prompts.Select(message => new AIChatResponseMessageDetailed
+            Messages = prompts.Select(message => new AIChatResponseMessageDetailed
             {
-                Id = message.Id,
+                Id = message.ItemId,
                 Role = message.Role.Value,
                 IsGeneratedPrompt = message.IsGeneratedPrompt,
                 Title = message.Title,
@@ -169,7 +174,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
             return;
         }
 
-        var prompt = chatSession.Prompts.FirstOrDefault(p => p.Id == messageId);
+        var prompt = (await _promptStore.GetPromptsAsync(chatSession.SessionId))
+            .FirstOrDefault(p => p.ItemId == messageId);
 
         if (prompt is null)
         {
@@ -179,7 +185,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         // Toggle: if the user clicks the same rating again, clear it.
         prompt.UserRating = prompt.UserRating == isPositive ? null : isPositive;
 
-        await _sessionManager.SaveAsync(chatSession);
+        await _promptStore.UpdateAsync(prompt);
 
         // Also update session-level rating for analytics.
         var eventService = httpContext.RequestServices.GetService<AIChatSessionEventService>();
@@ -187,7 +193,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
         if (eventService is not null)
         {
             // Compute session-level rating from the latest message ratings.
-            var ratings = chatSession.Prompts
+            var allPrompts = await _promptStore.GetPromptsAsync(chatSession.SessionId);
+            var ratings = allPrompts
                 .Where(p => p.UserRating.HasValue)
                 .Select(p => p.UserRating.Value)
                 .ToList();
@@ -398,20 +405,26 @@ public class AIChatHub : Hub<IAIChatHubClient>
             }
         }
 
-        chatSession.Prompts.Add(new AIChatSessionPrompt
+        var userPromptRecord = new AIChatSessionPrompt
         {
-            Id = IdGenerator.GenerateId(),
+            ItemId = IdGenerator.GenerateId(),
+            SessionId = chatSession.SessionId,
             Role = ChatRole.User,
             Content = prompt,
-        });
+        };
 
-        var transcript = chatSession.Prompts
+        await _promptStore.CreateAsync(userPromptRecord);
+
+        var existingPrompts = await _promptStore.GetPromptsAsync(chatSession.SessionId);
+
+        var transcript = existingPrompts
             .Where(x => !x.IsGeneratedPrompt)
             .Select(prompt => new ChatMessage(prompt.Role, prompt.Content));
 
         var assistantMessage = new AIChatSessionPrompt
         {
-            Id = IdGenerator.GenerateId(),
+            ItemId = IdGenerator.GenerateId(),
+            SessionId = chatSession.SessionId,
             Role = ChatRole.Assistant,
             Title = profile.PromptSubject,
         };
@@ -457,7 +470,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             var partialMessage = new CompletionPartialMessage
             {
                 SessionId = chatSession.SessionId,
-                MessageId = assistantMessage.Id,
+                MessageId = assistantMessage.ItemId,
                 Content = chunk.Text,
                 References = references,
             };
@@ -476,13 +489,16 @@ public class AIChatHub : Hub<IAIChatHubClient>
             assistantMessage.ContentItemIds = contentItemIds.ToList();
             assistantMessage.References = references;
 
-            chatSession.Prompts.Add(assistantMessage);
+            await _promptStore.CreateAsync(assistantMessage);
         }
+
+        var prompts = await _promptStore.GetPromptsAsync(chatSession.SessionId);
 
         var context = new ChatMessageCompletedContext
         {
             Profile = profile,
             ChatSession = chatSession,
+            Prompts = prompts,
             ResponseLatencyMs = stopwatch.Elapsed.TotalMilliseconds,
         };
 
@@ -504,7 +520,8 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         var assistantMessage = new AIChatSessionPrompt
         {
-            Id = IdGenerator.GenerateId(),
+            ItemId = IdGenerator.GenerateId(),
+            SessionId = chatSession.SessionId,
             Role = ChatRole.Assistant,
             IsGeneratedPrompt = true,
             Title = profile.PromptSubject,
@@ -532,7 +549,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             var partialMessage = new CompletionPartialMessage
             {
                 SessionId = sessionId,
-                MessageId = assistantMessage.Id,
+                MessageId = assistantMessage.ItemId,
                 Content = chunk.Text,
                 References = references,
             };
@@ -544,7 +561,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         assistantMessage.ContentItemIds = contentItemIds.ToList();
         assistantMessage.References = references;
 
-        chatSession.Prompts.Add(assistantMessage);
+        await _promptStore.CreateAsync(assistantMessage);
 
         await _sessionManager.SaveAsync(chatSession);
     }

@@ -22,6 +22,7 @@
 @inject IDisplayManager<AIChatSessionPrompt> DisplayManager
 @inject INamedCatalog<AIProfile> ProfilesCatalog
 @inject HubRouteManager HubRouteManager
+@inject IAIChatSessionPromptStore PromptStore
 @{
     var baseId = Html.IdForModel();
     var chatAppHtmlId = $"{baseId}_ChatApp";
@@ -54,7 +55,12 @@
 <div class="container-fluid d-flex flex-column h-100">
     <div class="flex-grow-1 overflow-y-auto p-3 mb-3 rounded-2 border bg-theme" id="@chatContainerHtmlId">
         <div class="w-100 ai-chat-messages">
-            @if (Model.Session.Prompts.Count == 0)
+            @{
+                var sessionPrompts = !string.IsNullOrEmpty(Model.Session?.SessionId)
+                    ? await PromptStore.GetPromptsAsync(Model.Session.SessionId)
+                    : Array.Empty<AIChatSessionPrompt>();
+            }
+            @if (sessionPrompts.Count == 0)
             {
                 <div id="@placeholderHtmlId" class="text-center p-3">
                     <h1 class="mb-3">
@@ -110,13 +116,13 @@
 @{
     var prompts = new List<object>();
 
-    if (Model.Session.Prompts != null)
+    if (sessionPrompts.Count > 0)
     {
-        foreach (var prompt in Model.Session.Prompts)
+        foreach (var prompt in sessionPrompts)
         {
             prompts.Add(new
             {
-                prompt.Id,
+                Id = prompt.ItemId,
                 prompt.Role,
                 prompt.Content,
                 prompt.Title,

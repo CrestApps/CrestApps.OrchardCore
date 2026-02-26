@@ -49,7 +49,8 @@ public sealed class PostSessionProcessingChatSessionHandler : IAIChatSessionHand
         {
             var results = await _postSessionProcessingService.ProcessAsync(
                 context.Profile,
-                context.ChatSession);
+                context.ChatSession,
+                context.Prompts);
 
             if (results is null || results.Count == 0)
             {

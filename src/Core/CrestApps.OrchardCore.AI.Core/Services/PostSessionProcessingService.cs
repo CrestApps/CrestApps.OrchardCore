@@ -38,6 +38,7 @@ public sealed class PostSessionProcessingService
     public async Task<Dictionary<string, PostSessionResult>> ProcessAsync(
         AIProfile profile,
         AIChatSession session,
+        IReadOnlyList<AIChatSessionPrompt> prompts,
         CancellationToken cancellationToken = default)
     {
         var settings = profile.GetSettings<AIProfilePostSessionSettings>();
@@ -57,7 +58,7 @@ public sealed class PostSessionProcessingService
                 return null;
             }
 
-            var prompt = BuildProcessingPrompt(settings.PostSessionTasks, session);
+            var prompt = BuildProcessingPrompt(settings.PostSessionTasks, prompts);
 
             if (string.IsNullOrEmpty(prompt))
             {
@@ -209,7 +210,7 @@ public sealed class PostSessionProcessingService
             """;
     }
 
-    private static string BuildProcessingPrompt(List<PostSessionTask> tasks, AIChatSession session)
+    private static string BuildProcessingPrompt(List<PostSessionTask> tasks, IReadOnlyList<AIChatSessionPrompt> prompts)
     {
         var builder = new StringBuffer("Analyze the following completed chat conversation and produce results for the requested tasks.");
 
@@ -266,7 +267,7 @@ public sealed class PostSessionProcessingService
         builder.AppendLine();
         builder.Append("Conversation transcript:");
 
-        foreach (var prompt in session.Prompts)
+        foreach (var prompt in prompts)
         {
             if (prompt.IsGeneratedPrompt)
             {

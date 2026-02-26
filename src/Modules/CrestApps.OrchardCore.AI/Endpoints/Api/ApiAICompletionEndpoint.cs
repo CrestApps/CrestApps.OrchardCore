@@ -34,6 +34,7 @@ internal static class ApiAICompletionEndpoint
        IAuthorizationService authorizationService,
        INamedCatalogManager<AIProfile> chatProfileManager,
        IAIChatSessionManager sessionManager,
+       IAIChatSessionPromptStore promptStore,
        ILiquidTemplateManager liquidTemplateManager,
        IHttpContextAccessor httpContextAccessor,
        IAICompletionService completionService,
@@ -124,7 +125,8 @@ internal static class ApiAICompletionEndpoint
 
             message = new AIChatSessionPrompt
             {
-                Id = IdGenerator.GenerateId(),
+                ItemId = IdGenerator.GenerateId(),
+                SessionId = chatSession.SessionId,
                 Role = ChatRole.Assistant,
                 IsGeneratedPrompt = true,
                 Title = profile.PromptSubject,
@@ -136,14 +138,19 @@ internal static class ApiAICompletionEndpoint
         else
         {
             // At this point, we complete as standard chat.
-            chatSession.Prompts.Add(new AIChatSessionPrompt
+            var userPromptRecord = new AIChatSessionPrompt
             {
-                Id = IdGenerator.GenerateId(),
+                ItemId = IdGenerator.GenerateId(),
+                SessionId = chatSession.SessionId,
                 Role = ChatRole.User,
                 Content = userPrompt,
-            });
+            };
 
-            var transcript = chatSession.Prompts.Where(x => !x.IsGeneratedPrompt)
+            await promptStore.CreateAsync(userPromptRecord);
+
+            var existingPrompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
+
+            var transcript = existingPrompts.Where(x => !x.IsGeneratedPrompt)
                 .Select(prompt => new ChatMessage(prompt.Role, prompt.Content));
 
             // Build the orchestration context using the handler pipeline (same as the hubs).
@@ -184,7 +191,8 @@ internal static class ApiAICompletionEndpoint
 
             message = new AIChatSessionPrompt
             {
-                Id = IdGenerator.GenerateId(),
+                ItemId = IdGenerator.GenerateId(),
+                SessionId = chatSession.SessionId,
                 Role = ChatRole.Assistant,
                 Title = profile.PromptSubject,
                 Content = builder.Length > 0
@@ -195,7 +203,7 @@ internal static class ApiAICompletionEndpoint
             };
         }
 
-        chatSession.Prompts.Add(message);
+        await promptStore.CreateAsync(message);
 
         await sessionManager.SaveAsync(chatSession);
 
@@ -207,7 +215,7 @@ internal static class ApiAICompletionEndpoint
             IsNew = isNew,
             Message = new AIChatResponseMessageDetailed
             {
-                Id = message.Id,
+                Id = message.ItemId,
                 Role = message.Role.Value,
                 IsGeneratedPrompt = message.IsGeneratedPrompt,
                 Title = message.Title,

@@ -36,10 +36,11 @@ public sealed class DataExtractionService
     public async Task<ExtractionChangeSet> ProcessAsync(
         AIProfile profile,
         AIChatSession session,
+        IReadOnlyList<AIChatSessionPrompt> prompts,
         CancellationToken cancellationToken = default)
     {
         var settings = profile.GetSettings<AIProfileDataExtractionSettings>();
-        var promptCount = session.Prompts.Count(p => p.Role == ChatRole.User);
+        var promptCount = prompts.Count(p => p.Role == ChatRole.User);
 
         if (!ShouldExtract(settings, promptCount))
         {
@@ -53,7 +54,7 @@ public sealed class DataExtractionService
             return null;
         }
 
-        var (results, sessionEnded) = await ExtractAsync(profile, session, fieldsToExtract, cancellationToken);
+        var (results, sessionEnded) = await ExtractAsync(profile, session, prompts, fieldsToExtract, cancellationToken);
 
         var changeSet = ApplyExtraction(session, settings, results);
         changeSet.SessionEnded = sessionEnded;
@@ -111,6 +112,7 @@ public sealed class DataExtractionService
     private async Task<(List<ExtractionResult> Results, bool SessionEnded)> ExtractAsync(
         AIProfile profile,
         AIChatSession session,
+        IReadOnlyList<AIChatSessionPrompt> prompts,
         List<DataExtractionEntry> fieldsToExtract,
         CancellationToken cancellationToken = default)
     {
@@ -119,7 +121,7 @@ public sealed class DataExtractionService
             return ([], false);
         }
 
-        var prompt = BuildExtractionPrompt(fieldsToExtract, session);
+        var prompt = BuildExtractionPrompt(fieldsToExtract, session, prompts);
 
         if (string.IsNullOrEmpty(prompt))
         {
@@ -289,7 +291,7 @@ public sealed class DataExtractionService
             """;
     }
 
-    private static string BuildExtractionPrompt(List<DataExtractionEntry> fieldsToExtract, AIChatSession session)
+    private static string BuildExtractionPrompt(List<DataExtractionEntry> fieldsToExtract, AIChatSession session, IReadOnlyList<AIChatSessionPrompt> prompts)
     {
         var builder = new StringBuffer("Extract the following fields from the user's latest message.");
 
@@ -343,18 +345,18 @@ public sealed class DataExtractionService
         string lastUserMessage = null;
         string lastAssistantMessage = null;
 
-        for (var i = session.Prompts.Count - 1; i >= 0; i--)
+        for (var i = prompts.Count - 1; i >= 0; i--)
         {
-            if (lastUserMessage is null && session.Prompts[i].Role == ChatRole.User)
+            if (lastUserMessage is null && prompts[i].Role == ChatRole.User)
             {
-                lastUserMessage = session.Prompts[i].Content?.Trim();
+                lastUserMessage = prompts[i].Content?.Trim();
 
                 // Look for the assistant message immediately before this user message.
                 for (var j = i - 1; j >= 0; j--)
                 {
-                    if (session.Prompts[j].Role == ChatRole.Assistant)
+                    if (prompts[j].Role == ChatRole.Assistant)
                     {
-                        lastAssistantMessage = session.Prompts[j].Content?.Trim();
+                        lastAssistantMessage = prompts[j].Content?.Trim();
                         break;
                     }
                 }

@@ -25,6 +25,7 @@ internal static class ApiAIChatSessionEndpoint
        IAuthorizationService authorizationService,
        INamedCatalogManager<AIProfile> profileManager,
        IAIChatSessionManager sessionManager,
+       IAIChatSessionPromptStore promptStore,
        ILiquidTemplateManager liquidTemplateManager,
        IHttpContextAccessor httpContextAccessor,
        string sessionId)
@@ -48,6 +49,8 @@ internal static class ApiAIChatSessionEndpoint
             return TypedResults.Forbid();
         }
 
+        var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
+
         return TypedResults.Ok(new
         {
             chatSession.SessionId,
@@ -56,9 +59,9 @@ internal static class ApiAIChatSessionEndpoint
                 Id = chatSession.ProfileId,
                 Type = profile.Type.ToString()
             },
-            Messages = chatSession.Prompts.Select(message => new AIChatResponseMessageDetailed
+            Messages = prompts.Select(message => new AIChatResponseMessageDetailed
             {
-                Id = message.Id,
+                Id = message.ItemId,
                 Role = message.Role.Value,
                 IsGeneratedPrompt = message.IsGeneratedPrompt,
                 Title = message.Title,
