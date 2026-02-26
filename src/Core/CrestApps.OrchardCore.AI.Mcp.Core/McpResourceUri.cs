@@ -23,10 +23,13 @@ public static partial class McpResourceUri
     {
         variables = null;
 
-        if (string.IsNullOrEmpty(uriTemplate) || string.IsNullOrEmpty(actualUri))
+        if (string.IsNullOrWhiteSpace(uriTemplate) || string.IsNullOrWhiteSpace(actualUri))
         {
             return false;
         }
+
+        uriTemplate = uriTemplate.Trim();
+        actualUri = actualUri.Trim();
 
         // Collect all variable matches first so we know which is the last one.
         var matches = new List<(int Index, int Length, string Name)>();
@@ -101,7 +104,7 @@ public static partial class McpResourceUri
     /// </summary>
     public static bool IsTemplate(string uri)
     {
-        return !string.IsNullOrEmpty(uri) && uri.Contains('{');
+        return !string.IsNullOrWhiteSpace(uri) && uri.AsSpan().Trim().Contains('{');
     }
 
     [GeneratedRegex(@"\{(\w+)\}")]

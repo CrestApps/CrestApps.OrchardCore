@@ -17,10 +17,6 @@ public sealed class PromptsModel : PageModel
 
     public IList<McpClientPrompt> Prompts { get; private set; } = [];
 
-    public string SelectedPromptName { get; private set; }
-
-    public GetPromptResult PromptResult { get; private set; }
-
     public string ErrorMessage { get; private set; }
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
@@ -39,31 +35,35 @@ public sealed class PromptsModel : PageModel
     {
         if (string.IsNullOrWhiteSpace(promptName))
         {
-            ErrorMessage = "Prompt name is required.";
-            await LoadPromptsAsync(cancellationToken);
-
-            return Page();
+            return new JsonResult(new { error = "Prompt name is required." });
         }
 
         try
         {
             var client = await _clientFactory.CreateAsync(cancellationToken);
 
-            SelectedPromptName = promptName;
-            PromptResult = await client.GetPromptAsync(
+            var result = await client.GetPromptAsync(
                 promptName,
                 new Dictionary<string, object>(),
                 options: null,
                 cancellationToken);
+
+            var messages = new List<object>();
+
+            if (result.Messages?.Count > 0)
+            {
+                foreach (var message in result.Messages)
+                {
+                    messages.Add(new { role = message.Role.ToString(), content = message.Content?.ToString() });
+                }
+            }
+
+            return new JsonResult(new { description = result.Description, messages });
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            return new JsonResult(new { error = ex.Message });
         }
-
-        await LoadPromptsAsync(cancellationToken);
-
-        return Page();
     }
 
     private async Task LoadPromptsAsync(CancellationToken cancellationToken)

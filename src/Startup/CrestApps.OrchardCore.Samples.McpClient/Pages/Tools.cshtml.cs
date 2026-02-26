@@ -18,10 +18,6 @@ public sealed class ToolsModel : PageModel
 
     public IList<McpClientTool> Tools { get; private set; } = [];
 
-    public string SelectedToolName { get; private set; }
-
-    public CallToolResult CallResult { get; private set; }
-
     public string ErrorMessage { get; private set; }
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
@@ -40,10 +36,7 @@ public sealed class ToolsModel : PageModel
     {
         if (string.IsNullOrWhiteSpace(toolName))
         {
-            ErrorMessage = "Tool name is required.";
-            await LoadToolsAsync(cancellationToken);
-
-            return Page();
+            return new JsonResult(new { error = "Tool name is required." });
         }
 
         try
@@ -57,17 +50,31 @@ public sealed class ToolsModel : PageModel
                 args = JsonSerializer.Deserialize<Dictionary<string, object>>(arguments) ?? [];
             }
 
-            SelectedToolName = toolName;
-            CallResult = await client.CallToolAsync(toolName, args, cancellationToken: cancellationToken);
+            var result = await client.CallToolAsync(toolName, args, cancellationToken: cancellationToken);
+
+            var contents = new List<object>();
+
+            if (result.Content?.Count > 0)
+            {
+                foreach (var content in result.Content)
+                {
+                    if (content is TextContentBlock textBlock)
+                    {
+                        contents.Add(new { type = "text", text = textBlock.Text });
+                    }
+                    else
+                    {
+                        contents.Add(new { type = "unsupported", contentType = content.Type });
+                    }
+                }
+            }
+
+            return new JsonResult(new { contents, isError = result.IsError });
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            return new JsonResult(new { error = ex.Message });
         }
-
-        await LoadToolsAsync(cancellationToken);
-
-        return Page();
     }
 
     private async Task LoadToolsAsync(CancellationToken cancellationToken)

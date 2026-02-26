@@ -29,20 +29,52 @@ The MCP server exposes the following capabilities:
 
 ## Prompt Support
 
-The MCP server exposes MCP prompts registered in Orchard Core. Prompts can be:
+MCP **Prompts** are reusable prompt templates that MCP clients can discover and invoke. They allow you to define pre-configured system or user messages that external AI agents can request on demand — for example, a "summarize" prompt that instructs the model to summarize a given document, or a "translate" prompt that translates text into a target language.
 
-- Created and managed via the admin UI under **Artificial Intelligence → MCP Prompts**
-- Registered programmatically in code
-- Discovered by external MCP clients via `ListPrompts` and invoked via `GetPrompt`
+Prompts are listed by clients via `ListPrompts` and invoked via `GetPrompt`, which returns the prompt messages for the client to include in its conversation.
+
+### Managing Prompts via Admin UI
+
+1. Navigate to **Artificial Intelligence** → **MCP Prompts**
+2. Click **Add Prompt** to create a new prompt
+3. Fill in the required fields:
+   - **Name**: A unique identifier for the prompt (used by MCP clients to reference it)
+   - **Display Text**: A human-readable name shown in the admin list
+   - **Description**: Optional description that helps clients understand what the prompt does
+4. Add one or more **Messages** to the prompt:
+   - Each message has a **Role** (e.g., `system`, `user`) and **Content** (the message text)
+   - Messages are returned in order when a client calls `GetPrompt`
+5. Save the prompt
+
+Prompts can also be registered programmatically in code or imported via recipes.
 
 ## Resource Support
 
-The MCP server exposes MCP resources registered in Orchard Core, allowing clients to access various data sources through the MCP protocol.
+MCP **Resources** represent data that MCP clients can read. A resource has a URI that the client uses to request its content. Resources come in two flavors:
+
+- **Static Resources**: Have a fixed URI with no variable placeholders (e.g., `recipe-schema://abc123/recipe`). They return the same data every time and appear in `ListResources`.
+- **Templated Resources**: Have a URI containing `{variable}` placeholders (e.g., `file://abc123/{fileName}`). The client fills in the variables when reading the resource. These appear in `ListResourceTemplates` and allow dynamic content resolution.
 
 Resources can be:
-- Created and managed via the admin UI under **Artificial Intelligence → MCP Resources**
+- Created and managed via the admin UI under **Artificial Intelligence** → **MCP Resources**
 - Registered programmatically in code
 - Discovered and accessed by external MCP clients
+
+### Managing Resources via Admin UI
+
+1. Navigate to **Artificial Intelligence** → **MCP Resources**
+2. Click **Add Resource** to create a new resource
+3. Select a **Resource Type** (e.g., File, Content Item, Recipe Step Schema). Each type defines what kind of data the resource serves and which URI variables are available.
+4. Fill in the required fields:
+   - **Display Text**: A friendly name for the resource shown in the admin list
+   - **Path**: The path portion of the URI. For templated resources, include variable placeholders from the supported variables list shown in the UI (e.g., `{fileName}`, `{contentType}`)
+   - **Name**: The MCP resource name (used by clients to identify the resource)
+   - **Title**: Optional human-readable title
+   - **Description**: Optional description that helps clients understand the resource
+   - **MIME Type**: The content type of the resource (e.g., `application/json`, `text/plain`)
+5. Save the resource
+
+The system automatically constructs the full URI by prepending the scheme and a unique resource ID to your path. For example, if you select the **File** resource type and enter `{fileName}` as the path, the full URI might be `file://abc123/{fileName}`.
 
 ### Built-in Resource Types
 
@@ -71,20 +103,6 @@ Each resource instance has a URI that is auto-constructed by the system as:
 - **`{path}`**: the user-defined path portion with optional variable placeholders
 
 When creating a resource in the admin UI, you only provide the **path** portion. The system automatically prepends the scheme and resource ID.
-
-### Creating Resources via Admin UI
-
-1. Navigate to **Artificial Intelligence** → **MCP Resources**
-2. Click **Add Resource**
-3. Select a resource type (e.g., File, Content Item, Recipe Step Schema)
-4. Fill in the required fields:
-   - **Display Text**: A friendly name for the resource
-   - **Path**: The path portion of the URI, using any supported variables shown in the UI
-   - **Name**: The MCP resource name (used by clients)
-   - **Title**: Optional human-readable title
-   - **Description**: Optional description
-   - **MIME Type**: Content type of the resource
-5. Save the resource
 
 ### Registering Custom Resource Types
 
