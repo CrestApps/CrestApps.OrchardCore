@@ -32,4 +32,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="AITemplates\Prompts\*.md" />
+  </ItemGroup>
+
 </Project>

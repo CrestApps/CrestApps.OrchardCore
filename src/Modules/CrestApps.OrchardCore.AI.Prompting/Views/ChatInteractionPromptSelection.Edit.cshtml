@@ -1,0 +1,78 @@
+@using CrestApps.OrchardCore.AI.Prompting.ViewModels
+@using System.Text.Json
+
+@model AITemplateSelectionViewModel
+
+@if (Model.AvailablePrompts is null || Model.AvailablePrompts.Count == 0)
+{
+    return;
+}
+
+<div class="mb-3">
+    <label asp-for="SelectedPromptId" class="form-label">
+        @T["Prompt Template"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Select a reusable prompt template to use as the system instructions, or choose 'Custom Instructions' to provide your own below."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <select asp-for="SelectedPromptId" asp-items="Model.AvailablePrompts" class="form-select" data-ci-prompt-selector>
+        <option value="">@T["Custom Instructions"]</option>
+    </select>
+    <div class="mt-2 text-muted small d-none" data-ci-prompt-description></div>
+</div>
+
+<div class="mb-3 @(string.IsNullOrEmpty(Model.SelectedPromptId) ? "d-none" : "")" data-ci-prompt-parameters-wrapper>
+    <label asp-for="PromptParameters" class="form-label">@T["Template Parameters"]</label>
+    <textarea asp-for="PromptParameters" class="form-control" rows="3" placeholder='@T["e.g., {\"key1\": \"value1\", \"key2\": \"value2\"}"]' data-ci-prompt-parameters></textarea>
+    <span class="hint">@T["Optional JSON key-value pairs to pass as template arguments."]</span>
+    <div class="text-danger small d-none" data-ci-prompt-parameters-error></div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        var descriptions = @Html.Raw(JsonSerializer.Serialize(Model.PromptDescriptions));
+        var selector = document.querySelector('[data-ci-prompt-selector]');
+        var descriptionEl = document.querySelector('[data-ci-prompt-description]');
+        var paramsWrapper = document.querySelector('[data-ci-prompt-parameters-wrapper]');
+        var paramsInput = document.querySelector('[data-ci-prompt-parameters]');
+        var paramsError = document.querySelector('[data-ci-prompt-parameters-error]');
+
+        function updateUI() {
+            var id = selector.value;
+            if (id && descriptions[id]) {
+                descriptionEl.textContent = descriptions[id];
+                descriptionEl.classList.remove('d-none');
+            } else {
+                descriptionEl.classList.add('d-none');
+            }
+            if (id) {
+                paramsWrapper.classList.remove('d-none');
+            } else {
+                paramsWrapper.classList.add('d-none');
+            }
+        }
+
+        function validateJson() {
+            var val = paramsInput.value.trim();
+            if (!val) {
+                paramsError.classList.add('d-none');
+                return;
+            }
+            try {
+                var obj = JSON.parse(val);
+                if (typeof obj !== 'object' || Array.isArray(obj)) throw 'not object';
+                for (var k in obj) {
+                    if (typeof obj[k] !== 'string') throw 'not string value';
+                }
+                paramsError.classList.add('d-none');
+            } catch (e) {
+                paramsError.textContent = '@T["Must be valid JSON with string key-value pairs."]';
+                paramsError.classList.remove('d-none');
+            }
+        }
+
+        selector.addEventListener('change', updateUI);
+        paramsInput.addEventListener('input', validateJson);
+        updateUI();
+    });
+</script>

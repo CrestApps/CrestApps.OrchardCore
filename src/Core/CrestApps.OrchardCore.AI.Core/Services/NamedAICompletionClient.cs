@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
@@ -29,8 +30,9 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         IServiceProvider serviceProvider,
         AIProviderOptions providerOptions,
         DefaultAIOptions defaultOptions,
-        IEnumerable<IAICompletionServiceHandler> handlers)
-        : base(providerOptions)
+        IEnumerable<IAICompletionServiceHandler> handlers,
+        IAITemplateService aiTemplateService)
+        : base(providerOptions, aiTemplateService)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;
@@ -115,7 +117,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         {
             var chatClient = await BuildClientAsync(connectionName, context, deploymentName);
 
-            var prompts = GetPrompts(messages, context);
+            var prompts = await GetPromptsAsync(messages, context);
 
             var chatOptions = await GetChatOptionsAsync(context, deploymentName, false);
 
@@ -165,7 +167,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         var chatOptions = await GetChatOptionsAsync(context, deploymentName, true);
 
-        var prompts = GetPrompts(messages, context);
+        var prompts = await GetPromptsAsync(messages, context);
 
         await foreach (var update in chatClient.GetStreamingResponseAsync(prompts, chatOptions, cancellationToken))
         {
@@ -175,13 +177,13 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         }
     }
 
-    private static List<ChatMessage> GetPrompts(IEnumerable<ChatMessage> messages, AICompletionContext context)
+    private async Task<List<ChatMessage>> GetPromptsAsync(IEnumerable<ChatMessage> messages, AICompletionContext context)
     {
         var chatMessages = messages.Where(x => (x.Role == ChatRole.User || x.Role == ChatRole.Assistant) && !string.IsNullOrEmpty(x.Text));
 
         var prompts = new List<ChatMessage>();
 
-        var systemMessage = GetSystemMessage(context);
+        var systemMessage = await GetSystemMessageAsync(context);
 
         if (!string.IsNullOrEmpty(systemMessage))
         {

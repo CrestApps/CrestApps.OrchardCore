@@ -1,3 +1,4 @@
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -19,7 +20,8 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
         IEnumerable<IAICompletionServiceHandler> handlers,
         IServiceProvider serviceProvider,
         IOptions<DefaultAIOptions> defaultOptions,
-        INamedCatalog<AIDeployment> deploymentStore
+        INamedCatalog<AIDeployment> deploymentStore,
+        IAITemplateService aiTemplateService
         ) : base(
             AzureAIInferenceConstants.ImplementationName,
             aIClientFactory,
@@ -29,7 +31,8 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
             providerOptions.Value,
             defaultOptions.Value,
             handlers,
-            deploymentStore)
+            deploymentStore,
+            aiTemplateService)
     {
     }
 

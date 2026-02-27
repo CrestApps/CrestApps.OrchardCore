@@ -1,3 +1,5 @@
+using CrestApps.AI.Prompting.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
@@ -21,6 +23,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
     private readonly ICatalog<AIDataSource> _dataSourceStore;
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IAIClientFactory _aiClientFactory;
+    private readonly IAITemplateService _templateService;
     private readonly ISiteService _siteService;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
@@ -29,6 +32,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         ICatalog<AIDataSource> dataSourceStore,
         IIndexProfileStore indexProfileStore,
         IAIClientFactory aiClientFactory,
+        IAITemplateService templateService,
         ISiteService siteService,
         IServiceProvider serviceProvider,
         ILogger<DataSourcePreemptiveRagHandler> logger)
@@ -36,6 +40,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         _dataSourceStore = dataSourceStore;
         _indexProfileStore = indexProfileStore;
         _aiClientFactory = aiClientFactory;
+        _templateService = templateService;
         _siteService = siteService;
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -197,16 +202,21 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
 
         // Build context injection.
         using var sb = ZString.CreateStringBuilder();
-        sb.AppendLine("\n\n[Data Source Context]");
-        sb.AppendLine("The following context was retrieved from the configured data source. Use this information to answer the user's question accurately and directly without mentioning or referencing the retrieval process.");
-        sb.AppendLine("When citing information, include the corresponding reference marker (e.g., [doc:1]) inline in your response immediately after the relevant statement.");
+
+        var arguments = new Dictionary<string, object>();
 
         if (!orchestrationContext.DisableTools)
         {
+            arguments["searchToolName"] = SystemToolNames.SearchDataSources;
+        }
+
+        var header = await _templateService.RenderAsync(AITemplateIds.DataSourceContextHeader, arguments);
+
+        if (!string.IsNullOrEmpty(header))
+        {
             sb.AppendLine();
-            sb.Append("If you need additional context or more relevant information, use the '");
-            sb.Append(SystemToolNames.SearchDataSources);
-            sb.Append("' tool to retrieve more documents from the data source.");
+            sb.AppendLine();
+            sb.Append(header);
         }
 
         var invocationContext = AIInvocationScope.Current;

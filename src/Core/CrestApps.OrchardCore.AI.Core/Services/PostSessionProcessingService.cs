@@ -1,3 +1,4 @@
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Models;
 using J2N.Text;
 using Microsoft.Extensions.AI;
@@ -15,17 +16,20 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class PostSessionProcessingService
 {
     private readonly IAIClientFactory _clientFactory;
+    private readonly IAITemplateService _aiTemplateService;
     private readonly IClock _clock;
     private readonly AIProviderOptions _providerOptions;
     private readonly ILogger _logger;
 
     public PostSessionProcessingService(
         IAIClientFactory clientFactory,
+        IAITemplateService aiTemplateService,
         IOptions<AIProviderOptions> providerOptions,
         IClock clock,
         ILogger<PostSessionProcessingService> logger)
     {
         _clientFactory = clientFactory;
+        _aiTemplateService = aiTemplateService;
         _clock = clock;
         _providerOptions = providerOptions.Value;
         _logger = logger;
@@ -65,9 +69,11 @@ public sealed class PostSessionProcessingService
                 return null;
             }
 
+            var systemPrompt = await _aiTemplateService.RenderAsync(AITemplateIds.PostSessionAnalysis);
+
             var messages = new List<ChatMessage>
             {
-                new(ChatRole.System, GetSystemPrompt()),
+                new(ChatRole.System, systemPrompt),
                 new(ChatRole.User, prompt),
             };
 
@@ -190,24 +196,6 @@ public sealed class PostSessionProcessingService
         }
 
         return await _clientFactory.CreateChatClientAsync(profile.Source, connectionName, deploymentName);
-    }
-
-    private static string GetSystemPrompt()
-    {
-        return
-            """
-            You are a post-session analysis assistant. Your job is to analyze a completed chat conversation and produce structured results for the requested tasks.
-
-            [Rules]
-            1. Analyze the ENTIRE conversation transcript provided.
-            2. For PredefinedOptions tasks: select the best matching option(s) from the provided list. Use the option descriptions to guide your selection. If "allowMultiple" is true, you may select more than one option separated by commas. If false, select exactly one.
-            3. For Semantic tasks: follow the provided instructions and produce a freeform text result.
-            4. Return valid JSON only. Do NOT wrap the response in markdown code fences (```). No explanations, no comments.
-            5. Only return tasks that were requested.
-
-            [Output Format]
-            {"tasks":[{"name":"taskName","value":"result"}]}
-            """;
     }
 
     private static string BuildProcessingPrompt(List<PostSessionTask> tasks, IReadOnlyList<AIChatSessionPrompt> prompts)

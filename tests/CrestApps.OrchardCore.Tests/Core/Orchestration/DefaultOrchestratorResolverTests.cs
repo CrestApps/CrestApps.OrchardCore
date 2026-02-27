@@ -1,3 +1,5 @@
+using CrestApps.AI.Prompting.Models;
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Orchestration;
@@ -118,8 +120,24 @@ public sealed class DefaultOrchestratorResolverTests
     {
         services.AddSingleton<IAICompletionService, NullCompletionService>();
         services.AddSingleton<IAIClientFactory, NullAIClientFactory>();
+        services.AddSingleton<IAITemplateService, NullAITemplateService>();
         services.AddSingleton<IToolRegistry, NullToolRegistry>();
         services.AddSingleton<ITextTokenizer, LuceneTextTokenizer>();
         services.AddLogging(builder => builder.ClearProviders());
+    }
+
+    private sealed class NullAITemplateService : IAITemplateService
+    {
+        public Task<IReadOnlyList<AITemplate>> ListAsync()
+            => Task.FromResult<IReadOnlyList<AITemplate>>([]);
+
+        public Task<AITemplate> GetAsync(string id)
+            => Task.FromResult<AITemplate>(null);
+
+        public Task<string> RenderAsync(string id, IDictionary<string, object> arguments = null)
+            => Task.FromResult<string>(null);
+
+        public Task<string> MergeAsync(IEnumerable<string> ids, IDictionary<string, object> arguments = null, string separator = "\n\n")
+            => Task.FromResult<string>(null);
     }
 }

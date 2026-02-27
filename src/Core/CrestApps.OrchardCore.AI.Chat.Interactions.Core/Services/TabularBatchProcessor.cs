@@ -1,4 +1,6 @@
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Cysharp.Text;
 using Microsoft.Extensions.AI;
@@ -14,15 +16,18 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 public sealed class TabularBatchProcessor : ITabularBatchProcessor
 {
     private readonly IAICompletionService _completionService;
+    private readonly IAITemplateService _aiTemplateService;
     private readonly RowLevelTabularBatchOptions _settings;
     private readonly ILogger<TabularBatchProcessor> _logger;
 
     public TabularBatchProcessor(
         IAICompletionService completionService,
+        IAITemplateService aiTemplateService,
         IOptions<RowLevelTabularBatchOptions> settings,
         ILogger<TabularBatchProcessor> logger)
     {
         _completionService = completionService;
+        _aiTemplateService = aiTemplateService;
         _settings = settings.Value;
         _logger = logger;
     }
@@ -255,7 +260,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
             {
                 ConnectionName = sourceContext.ConnectionName,
                 DeploymentId = sourceContext.DeploymentId,
-                SystemMessage = GetBatchSystemMessage(batch, sourceContext.SystemMessage),
+                SystemMessage = await GetBatchSystemMessageAsync(batch, sourceContext.SystemMessage),
                 Temperature = sourceContext.Temperature ?? 0.1f, // Use low temperature for consistent row processing
                 TopP = sourceContext.TopP ?? 1.0f,
                 FrequencyPenalty = sourceContext.FrequencyPenalty,
@@ -358,29 +363,15 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
         return builder.ToString();
     }
 
-    private static string GetBatchSystemMessage(TabularBatch batch, string baseSystemMessage)
+    private async Task<string> GetBatchSystemMessageAsync(TabularBatch batch, string baseSystemMessage)
     {
-        using var builder = ZString.CreateStringBuilder();
-
-        builder.AppendLine("You are performing row-level analysis over tabular data.");
-        builder.AppendLine();
-        builder.AppendLine("[Rules]");
-        builder.AppendLine("1. The first row is the header with column names.");
-        builder.AppendLine("2. Process each data row independently.");
-        builder.AppendLine("3. Output exactly one result per input row.");
-        builder.AppendLine("4. Preserve verbatim excerpts when the prompt asks for exact quotes.");
-        builder.AppendLine("5. If the requested item does not exist in a row, output \"Not found\" or as specified by the user.");
-        builder.AppendLine("6. Keep output in a compact format matching the input structure.");
-        builder.AppendLine("7. Do NOT include the header row in your output unless explicitly requested.");
-        builder.AppendLine("8. Maintain the same row order as the input.");
+        var arguments = new Dictionary<string, object>();
 
         if (!string.IsNullOrWhiteSpace(baseSystemMessage))
         {
-            builder.AppendLine();
-            builder.AppendLine("Additional context:");
-            builder.AppendLine(baseSystemMessage);
+            arguments["baseSystemMessage"] = baseSystemMessage;
         }
 
-        return builder.ToString();
+        return await _aiTemplateService.RenderAsync(AITemplateIds.TabularBatchProcessing, arguments);
     }
 }

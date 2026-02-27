@@ -1,3 +1,4 @@
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -17,7 +18,8 @@ internal sealed class OllamaAIChatCompletionClient : NamedAICompletionClient
            IServiceProvider serviceProvider,
            IOptions<AIProviderOptions> providerOptions,
            IEnumerable<IAICompletionServiceHandler> handlers,
-           IOptions<DefaultAIOptions> defaultOptions
+           IOptions<DefaultAIOptions> defaultOptions,
+           IAITemplateService aiTemplateService
            ) : base(
                OllamaConstants.ImplementationName,
                aIClientFactory, distributedCache,
@@ -25,7 +27,8 @@ internal sealed class OllamaAIChatCompletionClient : NamedAICompletionClient
                serviceProvider,
                providerOptions.Value,
                defaultOptions.Value,
-               handlers)
+               handlers,
+               aiTemplateService)
     {
     }
 

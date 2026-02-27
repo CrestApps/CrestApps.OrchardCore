@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Models;
 using Cysharp.Text;
@@ -25,6 +26,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
 
     private readonly IAICompletionService _completionService;
     private readonly IAIClientFactory _aiClientFactory;
+    private readonly IAITemplateService _aiTemplateService;
     private readonly AIProviderOptions _providerOptions;
     private readonly IToolRegistry _toolRegistry;
     private readonly ITextTokenizer _tokenizer;
@@ -34,6 +36,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
     public DefaultOrchestrator(
         IAICompletionService completionService,
         IAIClientFactory aiClientFactory,
+        IAITemplateService aiTemplateService,
         IOptions<AIProviderOptions> providerOptions,
         IToolRegistry toolRegistry,
         ITextTokenizer tokenizer,
@@ -42,6 +45,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
     {
         _completionService = completionService;
         _aiClientFactory = aiClientFactory;
+        _aiTemplateService = aiTemplateService;
         _providerOptions = providerOptions.Value;
         _toolRegistry = toolRegistry;
         _tokenizer = tokenizer;
@@ -149,23 +153,14 @@ public sealed class DefaultOrchestrator : IOrchestrator
             var mcpToolSummary = BuildToolSummary(
                 availableTools.Where(t => t.Source == ToolRegistryEntrySource.McpServer));
 
-            var planningSystemPrompt = $"""
-                You are a task planner. Analyze the user's request and identify what capabilities/tools are needed to fulfill it.
+            var arguments = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["userTools"] = userSelectedSummary,
+                ["systemTools"] = systemToolSummary,
+                ["mcpTools"] = mcpToolSummary,
+            };
 
-                The following tools were explicitly selected by the user and are always available:
-                {userSelectedSummary}
-
-                The following system tools are always available:
-                {systemToolSummary}
-
-                Additional external capabilities that may be relevant:
-                {mcpToolSummary}
-
-                Respond with a brief plan listing the required steps and which capabilities are needed.
-                Focus on identifying the NAMES of relevant capabilities from the lists above.
-                Prefer using the user-selected and system tools when they match the request.
-                Keep your response concise (under 200 words).
-                """;
+            var planningSystemPrompt = await _aiTemplateService.RenderAsync(AITemplateIds.TaskPlanning, arguments);
 
             var chatClient = await TryCreateUtilityChatClientAsync(context);
 

@@ -38,10 +38,11 @@
   <ItemGroup>
     <!-- 
       Ensure this module directly depends on the required package so that when someone installs it, 
-      they won't need to manually include the Resources. 
+      they won't need to manually include the Resources or Prompting modules. 
       This guarantees the module functions correctly and resolves the feature dependency.
     -->
     <ProjectReference Include="..\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.AI.Prompting\CrestApps.OrchardCore.AI.Prompting.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

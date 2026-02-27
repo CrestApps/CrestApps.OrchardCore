@@ -1,3 +1,4 @@
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
@@ -19,7 +20,8 @@ public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClien
         AIProviderOptions providerOptions,
         DefaultAIOptions defaultOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
-        ICatalog<AIDeployment> deploymentStore)
+        ICatalog<AIDeployment> deploymentStore,
+        IAITemplateService aiTemplateService)
         : base(
             name,
             aIClientFactory,
@@ -28,7 +30,8 @@ public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClien
             serviceProvider,
             providerOptions,
             defaultOptions,
-            handlers)
+            handlers,
+            aiTemplateService)
     {
         _store = deploymentStore;
     }

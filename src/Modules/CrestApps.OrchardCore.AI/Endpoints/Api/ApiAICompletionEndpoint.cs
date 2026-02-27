@@ -1,3 +1,4 @@
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -42,6 +43,7 @@ internal static class ApiAICompletionEndpoint
        IOrchestrationContextBuilder orchestrationContextBuilder,
        IOrchestratorResolver orchestratorResolver,
        CitationReferenceCollector citationCollector,
+       IAITemplateService aiTemplateService,
        ILogger<T> logger,
        AICompletionRequest requestData)
     {
@@ -83,7 +85,7 @@ internal static class ApiAICompletionEndpoint
                 return TypedResults.NotFound();
             }
 
-            (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, parentProfile, completionService, userPrompt: profile.Name, completionContextBuilder);
+            (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, parentProfile, completionService, userPrompt: profile.Name, completionContextBuilder, aiTemplateService);
 
             userPrompt = await liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
                 new Dictionary<string, FluidValue>()
@@ -109,7 +111,7 @@ internal static class ApiAICompletionEndpoint
                 return await GetUtilityMessageAsync(completionService, profile, userPrompt, completionContextBuilder);
             }
 
-            (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, profile, completionService, userPrompt, completionContextBuilder);
+            (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, profile, completionService, userPrompt, completionContextBuilder, aiTemplateService);
         }
 
         AIChatSessionPrompt message;
@@ -225,7 +227,7 @@ internal static class ApiAICompletionEndpoint
         });
     }
 
-    private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, IAICompletionService completionService, string userPrompt, IAICompletionContextBuilder completionContextBuilder)
+    private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, IAICompletionService completionService, string userPrompt, IAICompletionContextBuilder completionContextBuilder, IAITemplateService aiTemplateService)
     {
         if (!string.IsNullOrWhiteSpace(sessionId))
         {
@@ -243,7 +245,7 @@ internal static class ApiAICompletionEndpoint
         if (profile.TitleType == AISessionTitleType.Generated)
         {
             // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
-            chatSession.Title = await GetGeneratedTitleAsync(profile, userPrompt, completionService, completionContextBuilder);
+            chatSession.Title = await GetGeneratedTitleAsync(profile, userPrompt, completionService, completionContextBuilder, aiTemplateService);
         }
 
         if (string.IsNullOrEmpty(chatSession.Title))
@@ -258,11 +260,14 @@ internal static class ApiAICompletionEndpoint
         AIProfile profile,
         string userPrompt,
         IAICompletionService completionService,
-       IAICompletionContextBuilder completionContextBuilder)
+        IAICompletionContextBuilder completionContextBuilder,
+        IAITemplateService aiTemplateService)
     {
+        var titleSystemMessage = await aiTemplateService.RenderAsync(AITemplateIds.TitleGeneration);
+
         var context = await completionContextBuilder.BuildAsync(profile, c =>
         {
-            c.SystemMessage = AIConstants.TitleGeneratorSystemMessage;
+            c.SystemMessage = titleSystemMessage;
             c.FrequencyPenalty = 0;
             c.PresencePenalty = 0;
             c.TopP = 1;

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Threading.Channels;
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -36,6 +37,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly IOrchestratorResolver _orchestratorResolver;
     private readonly IEnumerable<IAIChatSessionHandler> _sessionHandlers;
     private readonly CitationReferenceCollector _citationCollector;
+    private readonly IAITemplateService _aiTemplateService;
     private readonly IClock _clock;
     private readonly ILogger<AIChatHub> _logger;
 
@@ -54,6 +56,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         IOrchestratorResolver orchestratorResolver,
         IEnumerable<IAIChatSessionHandler> sessionHandlers,
         CitationReferenceCollector citationCollector,
+        IAITemplateService aiTemplateService,
         IClock clock,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
@@ -70,6 +73,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _orchestratorResolver = orchestratorResolver;
         _sessionHandlers = sessionHandlers;
         _citationCollector = citationCollector;
+        _aiTemplateService = aiTemplateService;
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
@@ -349,9 +353,11 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
     private async Task<string> GetGeneratedTitleAsync(AIProfile profile, string userPrompt)
     {
+        var titleSystemMessage = await _aiTemplateService.RenderAsync(AITemplateIds.TitleGeneration);
+
         var context = await _completionContextBuilder.BuildAsync(profile, c =>
         {
-            c.SystemMessage = AIConstants.TitleGeneratorSystemMessage;
+            c.SystemMessage = titleSystemMessage;
             c.FrequencyPenalty = 0;
             c.PresencePenalty = 0;
             c.TopP = 1;

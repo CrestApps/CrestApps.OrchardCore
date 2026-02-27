@@ -1,3 +1,4 @@
+using CrestApps.AI.Prompting.Extensions;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Orchestration;
@@ -20,6 +21,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAICoreServices(this IServiceCollection services)
     {
         services
+            .AddAIPrompting()
             .AddCatalogs()
             .AddCatalogManagers()
             .AddScoped<IAIClientFactory, DefaultAIClientFactory>()

@@ -1,3 +1,4 @@
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -21,6 +22,7 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 {
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IIndexProfileStore _indexProfileStore;
+    private readonly IAITemplateService _templateService;
     private readonly ISiteService _siteService;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
@@ -28,12 +30,14 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
     public DocumentPreemptiveRagHandler(
         IAIClientFactory aiClientFactory,
         IIndexProfileStore indexProfileStore,
+        IAITemplateService templateService,
         ISiteService siteService,
         IServiceProvider serviceProvider,
         ILogger<DocumentPreemptiveRagHandler> logger)
     {
         _aiClientFactory = aiClientFactory;
         _indexProfileStore = indexProfileStore;
+        _templateService = templateService;
         _siteService = siteService;
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -205,16 +209,21 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 
         // Build context injection.
         using var sb = ZString.CreateStringBuilder();
-        sb.AppendLine("\n\n[Uploaded Document Context]");
-        sb.AppendLine("The following content was retrieved from the user's uploaded documents via semantic search. Use this information to answer the user's question accurately.");
-        sb.AppendLine("If the documents do not contain relevant information, use your general knowledge to answer instead.");
-        sb.AppendLine("When citing information, include the corresponding reference marker (e.g., [doc:1]) inline in your response immediately after the relevant statement.");
+
+        var arguments = new Dictionary<string, object>();
 
         if (!orchestrationContext.DisableTools)
         {
-            sb.Append("If you need additional context, use the '");
-            sb.Append(SystemToolNames.SearchDocuments);
-            sb.AppendLine("' tool to search for more content in the uploaded documents.");
+            arguments["searchToolName"] = SystemToolNames.SearchDocuments;
+        }
+
+        var header = await _templateService.RenderAsync(AITemplateIds.DocumentContextHeader, arguments);
+
+        if (!string.IsNullOrEmpty(header))
+        {
+            sb.AppendLine();
+            sb.AppendLine();
+            sb.Append(header);
         }
 
         var invocationContext = AIInvocationScope.Current;

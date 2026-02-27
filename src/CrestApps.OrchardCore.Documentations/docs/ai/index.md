@@ -40,6 +40,7 @@ The **Orchestrator** (`IOrchestrator`) is the central runtime that manages AI co
 | [AI](ai) | Foundation for all AI modules with profile and connection management |
 | [AI Chat](ai-chat) | Admin and frontend chat interfaces |
 | [AI Chat Interactions](ai-chat-interactions) | Ad-hoc chat with configurable parameters and document upload |
+| [AI Prompt Templates](ai-prompt-templates) | Centralized prompt management with Liquid templates and file-based discovery |
 | [Consuming AI Services](consuming-ai-services) | Using AI services programmatically via code |
 | [Copilot Integration](ai-copilot) | GitHub Copilot SDK-based orchestration |
 | [Data Sources](data-sources/) | Retrieval-augmented generation (RAG) / knowledge base indexing and vector search |

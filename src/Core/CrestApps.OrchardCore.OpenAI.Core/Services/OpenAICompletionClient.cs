@@ -1,3 +1,4 @@
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -23,7 +24,8 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
         IServiceProvider serviceProvider,
         IOptions<DefaultAIOptions> defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore,
-        IEnumerable<IOpenAIChatOptionsConfiguration> openAIChatOptionsConfigurations
+        IEnumerable<IOpenAIChatOptionsConfiguration> openAIChatOptionsConfigurations,
+        IAITemplateService aiTemplateService
         ) : base(
             OpenAIConstants.ImplementationName,
             aIClientFactory,
@@ -33,7 +35,8 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
             providerOptions.Value,
             defaultOptions.Value,
             handlers,
-            deploymentStore)
+            deploymentStore,
+            aiTemplateService)
     {
         _openAIChatOptionsConfigurations = openAIChatOptionsConfigurations;
     }
@@ -48,7 +51,8 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
         IServiceProvider serviceProvider,
         DefaultAIOptions defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore,
-        IEnumerable<IOpenAIChatOptionsConfiguration> openAIChatOptionsConfigurations
+        IEnumerable<IOpenAIChatOptionsConfiguration> openAIChatOptionsConfigurations,
+        IAITemplateService aiTemplateService
         ) : base(
             implementationName,
             aIClientFactory,
@@ -58,7 +62,8 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
             providerOptions,
             defaultOptions,
             handlers,
-            deploymentStore)
+            deploymentStore,
+            aiTemplateService)
     {
         _openAIChatOptionsConfigurations = openAIChatOptionsConfigurations;
     }
