@@ -10,11 +10,6 @@
     <PackageTags>$(PackageTags) AI MCP ModelContextProtocol</PackageTags>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="Handlers\**" />
-    <EmbeddedResource Remove="Handlers\**" />
-    <None Remove="Handlers\**" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />

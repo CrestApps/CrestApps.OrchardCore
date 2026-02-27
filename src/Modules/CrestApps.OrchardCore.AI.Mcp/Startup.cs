@@ -70,6 +70,8 @@ public sealed class Startup : StartupBase
         // Register SSE transport type.
         services
             .AddScoped<IMcpClientTransportProvider, SseClientTransportProvider>()
+            .AddScoped<IOAuth2TokenService, DefaultOAuth2TokenService>()
+            .AddScoped<ICatalogEntryHandler<McpConnection>, SseMcpConnectionSettingsHandler>()
             .AddDisplayDriver<McpConnection, SseMcpConnectionDisplayDriver>()
             .Configure<McpClientAIOptions>(options =>
             {

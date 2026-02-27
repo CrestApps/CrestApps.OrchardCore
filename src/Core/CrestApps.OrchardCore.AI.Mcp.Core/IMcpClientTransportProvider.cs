@@ -19,5 +19,5 @@ public interface IMcpClientTransportProvider
     /// </summary>
     /// <param name="connection">The MCP connection for which to obtain a transport.</param>
     /// <returns>An <see cref="IClientTransport"/> that can be used with the given connection.</returns>
-    IClientTransport Get(McpConnection connection);
+    Task<IClientTransport> GetAsync(McpConnection connection);
 }

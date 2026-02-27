@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Mcp.Deployments.Steps;
 using CrestApps.OrchardCore.Services;
@@ -48,6 +49,8 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
                 properties[property.Key] = property.Value.DeepClone();
             }
 
+            SanitizeSensitiveData(connection, properties);
+
             deploymentInfo["Properties"] = properties;
 
             connectionsData.Add(deploymentInfo);
@@ -58,5 +61,28 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
             ["name"] = step.Name,
             ["connections"] = connectionsData,
         });
+    }
+
+    private static void SanitizeSensitiveData(McpConnection connection, JsonObject properties)
+    {
+        if (!string.Equals(connection.Source, McpConstants.TransportTypes.Sse, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var metadataNode = properties[nameof(SseMcpConnectionMetadata)]?.AsObject();
+
+        if (metadataNode == null)
+        {
+            return;
+        }
+
+        // Clear all sensitive fields to prevent accidental credential exposure.
+        metadataNode[nameof(SseMcpConnectionMetadata.ApiKey)] = string.Empty;
+        metadataNode[nameof(SseMcpConnectionMetadata.BasicPassword)] = string.Empty;
+        metadataNode[nameof(SseMcpConnectionMetadata.OAuth2ClientSecret)] = string.Empty;
+        metadataNode[nameof(SseMcpConnectionMetadata.OAuth2PrivateKey)] = string.Empty;
+        metadataNode[nameof(SseMcpConnectionMetadata.OAuth2ClientCertificate)] = string.Empty;
+        metadataNode[nameof(SseMcpConnectionMetadata.OAuth2ClientCertificatePassword)] = string.Empty;
     }
 }

@@ -34,10 +34,74 @@ The **MCP Client Feature** enables your application to connect to remote MCP ser
 3. Click the **Add Connection** button.
 4. Under the **Server Sent Events (SSE)** source, click **Add**.
 5. Enter the following connection details:
-   - **Display Text**: `Remote AI Time Server`
-   - **Endpoint**: `https://localhost:1234/`
-   - **Additional Headers**: Leave empty or supply any required headers.
+   - **Display Text**: A descriptive name for the connection.
+   - **Endpoint**: The MCP server endpoint URL (e.g., `https://localhost:1234/`).
+   - **Authentication**: Select the authentication method (see below).
 6. Save the connection.
+
+### Authentication Types
+
+When configuring an SSE connection, you can choose from the following authentication methods:
+
+| Authentication Type | Description |
+|---|---|
+| **Anonymous** | No authentication required. Use for development or servers with no auth. |
+| **API Key** | Send an API key in a configurable HTTP header with an optional prefix. |
+| **Basic Authentication** | Standard HTTP Basic auth using username and password. |
+| **OAuth 2.0 Client Credentials** | Obtain an access token via the OAuth 2.0 client credentials flow. |
+| **OAuth 2.0 + Private Key JWT** | Authenticate using a signed JWT client assertion with the client credentials flow. |
+| **OAuth 2.0 + Mutual TLS (mTLS)** | Authenticate using a client certificate for mutual TLS with the client credentials flow. |
+| **Custom Headers** | Provide raw HTTP headers as JSON for advanced scenarios. |
+
+#### API Key
+
+Provide the API key value and optionally configure:
+- **Header Name**: The HTTP header name (defaults to `Authorization`).
+- **Key Prefix**: A prefix prepended to the key (e.g., `Bearer`, `ApiKey`).
+
+#### Basic Authentication
+
+Provide a **Username** and **Password**. The credentials are Base64-encoded and sent in the `Authorization` header.
+
+#### OAuth 2.0 Client Credentials
+
+Configure the following:
+- **Token Endpoint**: The OAuth 2.0 token URL (e.g., `https://auth.example.com/oauth2/token`).
+- **Client ID**: The application client identifier.
+- **Client Secret**: The application secret.
+- **Scopes**: Optional space-separated list of scopes.
+
+The module automatically acquires and caches access tokens using the `client_credentials` grant type.
+
+#### OAuth 2.0 + Private Key JWT
+
+Configure the following:
+- **Token Endpoint**: The OAuth 2.0 token URL.
+- **Client ID**: The application client identifier.
+- **Private Key (PEM)**: The RSA private key in PEM format used to sign the JWT client assertion.
+- **Key ID (kid)**: Optional key identifier included in the JWT header (required by some identity providers).
+- **Scopes**: Optional space-separated list of scopes.
+
+The module creates a signed JWT assertion using the private key and sends it to the token endpoint using the `urn:ietf:params:oauth:client-assertion-type:jwt-bearer` assertion type.
+
+#### OAuth 2.0 + Mutual TLS (mTLS)
+
+Configure the following:
+- **Token Endpoint**: The OAuth 2.0 token URL.
+- **Client ID**: The application client identifier.
+- **Client Certificate (Base64 PFX)**: The Base64-encoded PFX/PKCS#12 client certificate.
+- **Certificate Password**: Optional password for the PFX certificate file.
+- **Scopes**: Optional space-separated list of scopes.
+
+The module authenticates to the token endpoint using the client certificate for mutual TLS authentication.
+
+#### Custom Headers
+
+For advanced scenarios, provide a JSON object of HTTP header key-value pairs. This is the legacy approach and is useful when none of the standard authentication types fit your needs.
+
+:::note
+All sensitive credentials (API keys, passwords, client secrets, private keys, client certificates) are **encrypted at rest** using ASP.NET Core Data Protection and are **never included** in deployment exports.
+:::
 
 ### SSE Recipe-Based Setup
 
@@ -54,7 +118,10 @@ You can also configure the SSE connection programmatically using a recipe:
           "Properties": {
             "SseMcpConnectionMetadata": {
               "Endpoint": "https://localhost:1234/",
-              "AdditionalHeaders": {}
+              "AuthenticationType": "ApiKey",
+              "ApiKeyHeaderName": "Authorization",
+              "ApiKeyPrefix": "Bearer",
+              "ApiKey": "your-api-key-here"
             }
           }
         }
@@ -63,6 +130,10 @@ You can also configure the SSE connection programmatically using a recipe:
   ]
 }
 ```
+
+:::warning
+Sensitive values (ApiKey, BasicPassword, OAuth2ClientSecret, OAuth2PrivateKey, OAuth2ClientCertificate, OAuth2ClientCertificatePassword) provided in recipes are encrypted upon import. Do not include already-encrypted values in recipe files.
+:::
 
 ---
 

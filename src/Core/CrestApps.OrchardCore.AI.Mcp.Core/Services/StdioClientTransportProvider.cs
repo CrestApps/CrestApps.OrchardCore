@@ -9,7 +9,7 @@ public sealed class StdioClientTransportProvider : IMcpClientTransportProvider
     public bool CanHandle(McpConnection connection)
         => connection.Source == McpConstants.TransportTypes.StdIo;
 
-    public IClientTransport Get(McpConnection connection)
+    public Task<IClientTransport> GetAsync(McpConnection connection)
     {
         var metadata = connection.As<StdioMcpConnectionMetadata>();
 
@@ -22,6 +22,6 @@ public sealed class StdioClientTransportProvider : IMcpClientTransportProvider
             EnvironmentVariables = metadata.EnvironmentVariables,
         });
 
-        return transport;
+        return Task.FromResult<IClientTransport>(transport);
     }
 }
