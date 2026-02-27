@@ -40,7 +40,7 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
             context.Context.AdditionalProperties["DocumentTopN"] = interaction.DocumentTopN.Value;
         }
 
-        if (interaction.TryGet<ChatInteractionDataSourceMetadata>(out var dataSourceMetadata))
+        if (interaction.TryGet<DataSourceMetadata>(out var dataSourceMetadata))
         {
             context.Context.DataSourceId = dataSourceMetadata.DataSourceId;
         }

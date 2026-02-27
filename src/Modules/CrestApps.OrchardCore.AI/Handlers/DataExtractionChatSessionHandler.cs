@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Workflows.Models;
@@ -13,7 +14,7 @@ namespace CrestApps.OrchardCore.AI.Handlers;
 /// message exchange, triggers workflow events for newly extracted fields, and
 /// closes the session when a natural farewell is detected.
 /// </summary>
-public sealed class DataExtractionChatSessionHandler : IAIChatSessionHandler
+public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
 {
     private readonly DataExtractionService _dataExtractionService;
     private readonly IServiceProvider _serviceProvider;
@@ -32,7 +33,7 @@ public sealed class DataExtractionChatSessionHandler : IAIChatSessionHandler
         _logger = logger;
     }
 
-    public async Task MessageCompletedAsync(ChatMessageCompletedContext context)
+    public override async Task MessageCompletedAsync(ChatMessageCompletedContext context)
     {
         try
         {

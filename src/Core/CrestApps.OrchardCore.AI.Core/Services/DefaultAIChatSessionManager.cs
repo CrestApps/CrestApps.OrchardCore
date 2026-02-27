@@ -2,12 +2,8 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
-using OrchardCore.Environment.Shell.Scope;
-using OrchardCore.Indexing;
-using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -20,23 +16,26 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClientIPAddressAccessor _clientIPAddressAccessor;
     private readonly ISession _session;
-    private readonly IAIDocumentStore _documentStore;
     private readonly IAIChatSessionPromptStore _promptStore;
+    private readonly IEnumerable<IAIChatSessionHandler> _handlers;
+    private readonly ILogger _logger;
 
     public DefaultAIChatSessionManager(
         IClock clock,
         IHttpContextAccessor httpContextAccessor,
         IClientIPAddressAccessor clientIPAddressAccessor,
         ISession session,
-        IAIDocumentStore documentStore,
-        IAIChatSessionPromptStore promptStore)
+        IAIChatSessionPromptStore promptStore,
+        IEnumerable<IAIChatSessionHandler> handlers,
+        ILogger<DefaultAIChatSessionManager> logger)
     {
         _clock = clock;
         _httpContextAccessor = httpContextAccessor;
         _clientIPAddressAccessor = clientIPAddressAccessor;
         _session = session;
-        _documentStore = documentStore;
         _promptStore = promptStore;
+        _handlers = handlers;
+        _logger = logger;
     }
 
     public async Task<AIChatSession> NewAsync(AIProfile profile, NewAIChatSessionContext context)
@@ -193,12 +192,16 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             return false;
         }
 
-        await CleanupSessionDocumentsAsync(chatSession);
+        var deletingContext = new CrestApps.OrchardCore.Models.DeletingContext<AIChatSession>(chatSession);
+        await _handlers.InvokeAsync((handler, ctx) => handler.DeletingAsync(ctx), deletingContext, _logger);
 
         // Delete all prompts associated with this session.
         await _promptStore.DeleteAllPromptsAsync(chatSession.SessionId);
 
         _session.Delete(chatSession, collection: AIConstants.CollectionName);
+
+        var deletedContext = new CrestApps.OrchardCore.Models.DeletedContext<AIChatSession>(chatSession);
+        await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, _logger);
 
         return true;
     }
@@ -225,85 +228,20 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         foreach (var session in sessions)
         {
-            await CleanupSessionDocumentsAsync(session);
+            var deletingContext = new CrestApps.OrchardCore.Models.DeletingContext<AIChatSession>(session);
+            await _handlers.InvokeAsync((handler, ctx) => handler.DeletingAsync(ctx), deletingContext, _logger);
 
             // Delete all prompts associated with this session.
             await _promptStore.DeleteAllPromptsAsync(session.SessionId);
 
             _session.Delete(session, collection: AIConstants.CollectionName);
+
+            var deletedContext = new CrestApps.OrchardCore.Models.DeletedContext<AIChatSession>(session);
+            await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, _logger);
+
             totalDeleted++;
         }
 
         return totalDeleted;
-    }
-
-    /// <summary>
-    /// Removes all documents associated with the given session from the document store
-    /// and schedules deferred removal of their chunks from all AI document indexes.
-    /// </summary>
-    private async Task CleanupSessionDocumentsAsync(AIChatSession session)
-    {
-        var documents = await _documentStore.GetDocumentsAsync(
-            session.SessionId,
-            AIConstants.DocumentReferenceTypes.ChatSession);
-
-        if (documents.Count == 0)
-        {
-            return;
-        }
-
-        var chunkIds = new List<string>();
-
-        foreach (var doc in documents)
-        {
-            if (doc.Chunks != null)
-            {
-                for (var i = 0; i < doc.Chunks.Count; i++)
-                {
-                    chunkIds.Add($"{doc.ItemId}_{i}");
-                }
-            }
-
-            await _documentStore.DeleteAsync(doc);
-        }
-
-        if (chunkIds.Count > 0)
-        {
-            ShellScope.AddDeferredTask(scope => RemoveDocumentChunksAsync(scope, chunkIds));
-        }
-    }
-
-    private static async Task RemoveDocumentChunksAsync(ShellScope scope, List<string> chunkIds)
-    {
-        var services = scope.ServiceProvider;
-        var indexStore = services.GetRequiredService<IIndexProfileStore>();
-
-        var indexProfiles = await indexStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
-
-        if (!indexProfiles.Any())
-        {
-            return;
-        }
-
-        var logger = services.GetRequiredService<ILogger<DefaultAIChatSessionManager>>();
-
-        foreach (var indexProfile in indexProfiles)
-        {
-            var documentIndexManager = services.GetKeyedService<IDocumentIndexManager>(indexProfile.ProviderName);
-
-            if (documentIndexManager == null)
-            {
-                continue;
-            }
-
-            try
-            {
-                await documentIndexManager.DeleteDocumentsAsync(indexProfile, chunkIds);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error removing session document chunks from index '{IndexName}'.", indexProfile.IndexName);
-            }
-        }
     }
 }

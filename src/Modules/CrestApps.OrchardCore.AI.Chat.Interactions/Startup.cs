@@ -60,7 +60,8 @@ public sealed class Startup : StartupBase
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatInteractionsAdminMenu>()
             .AddScoped<IAICompletionContextBuilderHandler, ChatInteractionCompletionContextBuilderHandler>()
-            .AddDataMigration<ChatInteractionMigrations>();
+            .AddDataMigration<ChatInteractionMigrations>()
+            .AddDataMigration<DataSourceMetadataMigrations>();
 
         // Configure RowLevelTabularBatchSettings from configuration
         services.Configure<RowLevelTabularBatchOptions>(_configuration.GetSection("CrestApps_AI:ChatInteractions:BatchProcessing"));

@@ -181,7 +181,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
                 if (dataSource is not null)
                 {
-                    interaction.Put(new ChatInteractionDataSourceMetadata()
+                    interaction.Put(new DataSourceMetadata()
                     {
                         DataSourceId = dataSource.ItemId,
                     });
@@ -198,7 +198,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         }
         else
         {
-            interaction.Put(new ChatInteractionDataSourceMetadata());
+            interaction.Put(new DataSourceMetadata());
             interaction.Put(new AIDataSourceRagMetadata());
         }
 

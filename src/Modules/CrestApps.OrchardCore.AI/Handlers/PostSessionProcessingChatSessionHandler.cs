@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Workflows.Models;
@@ -12,7 +13,7 @@ namespace CrestApps.OrchardCore.AI.Handlers;
 /// An <see cref="IAIChatSessionHandler"/> that runs post-session processing tasks
 /// after a chat session is closed. Triggers workflow events when processing completes.
 /// </summary>
-public sealed class PostSessionProcessingChatSessionHandler : IAIChatSessionHandler
+public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandlerBase
 {
     private readonly PostSessionProcessingService _postSessionProcessingService;
     private readonly IServiceProvider _serviceProvider;
@@ -31,7 +32,7 @@ public sealed class PostSessionProcessingChatSessionHandler : IAIChatSessionHand
         _logger = logger;
     }
 
-    public async Task MessageCompletedAsync(ChatMessageCompletedContext context)
+    public override async Task MessageCompletedAsync(ChatMessageCompletedContext context)
     {
         // Only process when the session has just been closed.
         if (context.ChatSession.Status != ChatSessionStatus.Closed)
